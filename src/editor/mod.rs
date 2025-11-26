@@ -17,6 +17,8 @@ pub mod build_tool;
 pub mod platform_builder;
 pub mod terrain_editor;
 pub mod particle_editor;
+pub mod package_deploy;
+pub mod performance_monitor;
 
 pub use hierarchy::HierarchyView;
 pub use inspector::Inspector;
