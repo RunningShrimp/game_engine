@@ -1,0 +1,59 @@
+[package]
+name = "game_engine"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+winit = "0.29"
+wgpu = { version = "0.19", features = ["webgpu"] }
+pollster = "0.3"
+futures = "0.3"
+bytemuck = { version = "1", features = ["derive"] }
+image = { version = "0.24", default-features = false, features = ["png", "jpeg"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+notify = "6"
+
+# Core Architecture
+bevy_ecs = "0.13"
+glam = { version = "0.25", features = ["bytemuck", "serde"] }
+tokio = { version = "1", features = ["full"] }
+crossbeam-channel = "0.5"
+libloading = "0.8"
+
+# Physics
+rapier2d = "0.18"
+rapier3d = "0.18"
+
+# XR
+openxr = "0.18"
+
+# GUI & Tools
+egui = "0.27"
+egui-wgpu = "0.27"
+egui-winit = "0.27"
+
+# Scripting
+rquickjs = { version = "0.5", features = ["full"] }
+pyo3 = { version = "0.21", features = ["auto-initialize"], optional = true }
+
+webbrowser = "0.8"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"] }
+rand = "0.8"
+rodio = "0.21.1"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.2"
+console_error_panic_hook = "0.1"
+wasm-bindgen-futures = "0.4"
+web-sys = { version = "0.3", features = ["Window", "Response", "Headers", "Storage", "CacheStorage", "IdbFactory", "IdbDatabase", "IdbTransaction", "IdbObjectStore", "IdbOpenDbRequest", "IdbRequest"] }
+base64 = "0.22"
+[features]
+use_bevy_ecs = []
+async_assets = []
+physics_2d = []
+default = ["physics_2d"]
