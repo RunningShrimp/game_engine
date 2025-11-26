@@ -14,6 +14,9 @@ pub mod scene_editor;
 pub mod transform_gizmo;
 pub mod project_settings;
 pub mod build_tool;
+pub mod platform_builder;
+pub mod terrain_editor;
+pub mod particle_editor;
 
 pub use hierarchy::HierarchyView;
 pub use inspector::Inspector;

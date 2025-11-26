@@ -4,6 +4,7 @@ pub mod api;
 pub mod ecs_bindings;
 pub mod extended_bindings;
 pub mod physics_audio_bindings;
+pub mod graphics_ui_bindings;
 
 pub use engine::*;
 pub use system::{ScriptSystem, ScriptLanguage, ScriptValue, ScriptResult, ScriptContext};
