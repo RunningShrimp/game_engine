@@ -3,29 +3,14 @@ pub mod engine;
 pub use engine::*;
 
 use bevy_ecs::prelude::*;
-use rquickjs::{Context, Runtime};
 
-pub struct ScriptingRuntime {
-    pub runtime: Runtime,
-    pub context: Context,
+/// 脚本系统占位
+pub fn scripting_system() {
+    // TODO: 实现脚本执行逻辑
 }
 
-impl ScriptingRuntime {
-    pub fn new() -> Self {
-        let runtime = Runtime::new().unwrap();
-        let context = Context::full(&runtime).unwrap();
-        
-        Self {
-            runtime,
-            context,
-        }
-    }
-
-    pub fn run_script(&self, code: &str) -> Result<(), String> {
-        self.context.with(|ctx| {
-            ctx.eval::<(), _>(code).map_err(|e| e.to_string())
-        })
-    }
+/// 初始化脚本系统
+pub fn setup_scripting(_world: &mut World) {
+    // TODO: 初始化脚本运行时
+    // 需要重新设计线程安全的架构
 }
-
-pub fn scripting_system() {}

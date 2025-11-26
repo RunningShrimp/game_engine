@@ -2,6 +2,7 @@ use std::sync::Arc;
 use winit::dpi::PhysicalSize;
 use winit::event_loop::EventLoop;
 use winit::window::Window as WinitWindowRaw;
+use raw_window_handle::{HasRawWindowHandle, HasRawDisplayHandle};
 
 #[derive(Clone)]
 pub struct WinitWindow {
@@ -32,5 +33,30 @@ impl crate::platform::Window for WinitWindow {
     }
     fn request_redraw(&self) {
         self.window.request_redraw();
+    }
+    fn set_title(&self, title: &str) {
+        self.window.set_title(title);
+    }
+    fn set_fullscreen(&self, fullscreen: bool) {
+        if fullscreen {
+            self.window.set_fullscreen(Some(winit::window::Fullscreen::Borderless(None)));
+        } else {
+            self.window.set_fullscreen(None);
+        }
+    }
+    fn set_cursor_visible(&self, visible: bool) {
+        self.window.set_cursor_visible(visible);
+    }
+    
+    #[cfg(not(target_arch = "wasm32"))]
+    fn raw_window_handle(&self) -> raw_window_handle::RawWindowHandle {
+        use raw_window_handle::HasRawWindowHandle;
+        self.window.raw_window_handle().unwrap()
+    }
+    
+    #[cfg(not(target_arch = "wasm32"))]
+    fn raw_display_handle(&self) -> raw_window_handle::RawDisplayHandle {
+        use raw_window_handle::HasRawDisplayHandle;
+        self.window.raw_display_handle().unwrap()
     }
 }

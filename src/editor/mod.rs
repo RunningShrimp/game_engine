@@ -6,7 +6,7 @@ use winit::window::Window;
 
 pub struct EditorPlugin;
 
-#[derive(Resource)]
+// Note: EditorContext is not a Resource because egui-winit State contains non-Send types
 pub struct EditorContext {
     pub context: egui::Context,
     pub state: State,

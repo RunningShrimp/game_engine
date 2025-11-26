@@ -214,7 +214,7 @@ pub trait XrSwapchain: Send + Sync {
     fn acquire_image(&mut self) -> Result<u32, XrError>;
     fn wait_image(&mut self, timeout_ns: i64) -> Result<(), XrError>;
     fn release_image(&mut self) -> Result<(), XrError>;
-    fn get_texture_view(&self, index: u32) -> &wgpu::TextureView;
+    fn get_texture_view(&self, index: u32) -> Arc<wgpu::TextureView>;
     fn resolution(&self) -> (u32, u32);
 }
 
@@ -570,8 +570,8 @@ pub mod eye_tracking {
 /// XR 渲染上下文
 pub struct XrRenderContext {
     pub view: XrView,
-    pub render_target: wgpu::TextureView,
-    pub depth_target: wgpu::TextureView,
+    pub render_target: Arc<wgpu::TextureView>,
+    pub depth_target: Arc<wgpu::TextureView>,
 }
 
 /// 为 XR 准备渲染参数
@@ -587,10 +587,12 @@ pub fn prepare_xr_render(
     for (i, view) in views.iter().enumerate() {
         if let Some(swapchain) = swapchains.get(i) {
             // TODO: 创建深度目标
+            // Get texture views from swapchain (already wrapped in Arc)
+            let render_view = swapchain.get_texture_view(0);
             contexts.push(XrRenderContext {
                 view: view.clone(),
-                render_target: swapchain.get_texture_view(0).clone(),
-                depth_target: swapchain.get_texture_view(0).clone(), // 占位
+                render_target: render_view.clone(),
+                depth_target: render_view.clone(), // 占位
             });
         }
     }

@@ -86,7 +86,7 @@ impl Engine {
             ));
             
             if i == 0 {
-                entity.insert(Script { source: "print('Hello from JS! Entity: ' + entity_id);".to_string() });
+                entity.insert(Script { source: "print('Hello from JS! Entity: ' + entity_id);".to_string(), enabled: true });
             }
         }
 
