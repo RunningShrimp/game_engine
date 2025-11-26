@@ -1,8 +1,7 @@
-use super::api::{ScriptApi, ExtendedScriptValue};
+use super::api::ScriptApi;
 use super::system::{ScriptValue, ScriptResult};
 use bevy_ecs::prelude::*;
-use crate::ecs::{Transform, Sprite, Camera, Projection};
-use glam::{Vec3, Quat};
+use crate::ecs::{Sprite, Camera, Projection};
 use std::sync::{Arc, Mutex};
 
 /// 扩展的ECS脚本绑定 - 支持更多组件类型
@@ -30,7 +29,7 @@ impl ExtendedEcsBindings {
         
         // 添加Sprite组件
         api.register_function("add_sprite", move |args| {
-            if let Some(ScriptValue::Int(entity_id)) = args.get(0) {
+            if let Some(ScriptValue::Int(entity_id)) = args.first() {
                 let mut world = world.lock().unwrap();
                 let entity = Entity::from_bits(*entity_id as u64);
                 
@@ -50,7 +49,7 @@ impl ExtendedEcsBindings {
         // 设置Sprite颜色
         api.register_function("set_sprite_color", move |args| {
             if let (Some(ScriptValue::Int(entity_id)), Some(ScriptValue::Float(r)), Some(ScriptValue::Float(g)), Some(ScriptValue::Float(b))) = 
-                (args.get(0), args.get(1), args.get(2), args.get(3)) {
+                (args.first(), args.get(1), args.get(2), args.get(3)) {
                 let mut world = world.lock().unwrap();
                 let entity = Entity::from_bits(*entity_id as u64);
                 
@@ -70,7 +69,7 @@ impl ExtendedEcsBindings {
         // 设置Sprite UV缩放
         api.register_function("set_sprite_uv_scale", move |args| {
             if let (Some(ScriptValue::Int(entity_id)), Some(ScriptValue::Float(u)), Some(ScriptValue::Float(v))) = 
-                (args.get(0), args.get(1), args.get(2)) {
+                (args.first(), args.get(1), args.get(2)) {
                 let mut world = world.lock().unwrap();
                 let entity = Entity::from_bits(*entity_id as u64);
                 
@@ -89,7 +88,7 @@ impl ExtendedEcsBindings {
         
         // 获取Sprite信息
         api.register_function("get_sprite", move |args| {
-            if let Some(ScriptValue::Int(entity_id)) = args.get(0) {
+            if let Some(ScriptValue::Int(entity_id)) = args.first() {
                 let world = world.lock().unwrap();
                 let entity = Entity::from_bits(*entity_id as u64);
                 
@@ -115,7 +114,7 @@ impl ExtendedEcsBindings {
         
         // 添加Camera组件
         api.register_function("add_camera", move |args| {
-            if let Some(ScriptValue::Int(entity_id)) = args.get(0) {
+            if let Some(ScriptValue::Int(entity_id)) = args.first() {
                 let mut world = world.lock().unwrap();
                 let entity = Entity::from_bits(*entity_id as u64);
                 
@@ -143,13 +142,13 @@ impl ExtendedEcsBindings {
         // 设置Camera FOV
         api.register_function("set_camera_fov", move |args| {
             if let (Some(ScriptValue::Int(entity_id)), Some(ScriptValue::Float(fov))) = 
-                (args.get(0), args.get(1)) {
+                (args.first(), args.get(1)) {
                 let mut world = world.lock().unwrap();
                 let entity = Entity::from_bits(*entity_id as u64);
                 
                 if let Some(mut camera) = world.get_mut::<Camera>(entity) {
                     if let Projection::Perspective { fov, .. } = &mut camera.projection {
-                        *fov = (*fov as f32).to_radians();
+                        *fov = (*fov).to_radians();
                     }
                     ScriptResult::Success("Camera FOV updated".to_string())
                 } else {
@@ -165,7 +164,7 @@ impl ExtendedEcsBindings {
         // 设置Camera近平面和远平面
         api.register_function("set_camera_planes", move |args| {
             if let (Some(ScriptValue::Int(entity_id)), Some(ScriptValue::Float(near)), Some(ScriptValue::Float(far))) = 
-                (args.get(0), args.get(1), args.get(2)) {
+                (args.first(), args.get(1), args.get(2)) {
                 let mut world = world.lock().unwrap();
                 let entity = Entity::from_bits(*entity_id as u64);
                 
@@ -193,7 +192,7 @@ impl ExtendedEcsBindings {
         
         // 获取Camera信息
         api.register_function("get_camera", move |args| {
-            if let Some(ScriptValue::Int(entity_id)) = args.get(0) {
+            if let Some(ScriptValue::Int(entity_id)) = args.first() {
                 let world = world.lock().unwrap();
                 let entity = Entity::from_bits(*entity_id as u64);
                 

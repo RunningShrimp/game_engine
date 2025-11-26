@@ -1,4 +1,4 @@
-use super::system::{ScriptValue, ScriptResult, ScriptContext};
+use super::system::{ScriptValue, ScriptResult};
 use std::collections::HashMap;
 use glam::{Vec2, Vec3, Quat};
 
@@ -23,7 +23,7 @@ impl ScriptApi {
     fn register_builtin_functions(&mut self) {
         // 日志函数
         self.register_function("log", |args| {
-            if let Some(ScriptValue::String(msg)) = args.get(0) {
+            if let Some(ScriptValue::String(msg)) = args.first() {
                 println!("[Script] {}", msg);
                 ScriptResult::Void
             } else {
@@ -33,7 +33,7 @@ impl ScriptApi {
         
         // 数学函数
         self.register_function("sqrt", |args| {
-            if let Some(ScriptValue::Float(x)) = args.get(0) {
+            if let Some(ScriptValue::Float(x)) = args.first() {
                 ScriptResult::Success(x.sqrt().to_string())
             } else {
                 ScriptResult::Error("sqrt() requires a number argument".to_string())
@@ -41,7 +41,7 @@ impl ScriptApi {
         });
         
         self.register_function("sin", |args| {
-            if let Some(ScriptValue::Float(x)) = args.get(0) {
+            if let Some(ScriptValue::Float(x)) = args.first() {
                 ScriptResult::Success(x.sin().to_string())
             } else {
                 ScriptResult::Error("sin() requires a number argument".to_string())
@@ -49,7 +49,7 @@ impl ScriptApi {
         });
         
         self.register_function("cos", |args| {
-            if let Some(ScriptValue::Float(x)) = args.get(0) {
+            if let Some(ScriptValue::Float(x)) = args.first() {
                 ScriptResult::Success(x.cos().to_string())
             } else {
                 ScriptResult::Error("cos() requires a number argument".to_string())

@@ -129,7 +129,7 @@ impl MemoryProfiler {
                 tag, count, size, *size as f64 / 1024.0 / 1024.0));
         }
         
-        report.push_str("\n");
+        report.push('\n');
         
         let leaks = self.detect_leaks(60);
         if !leaks.is_empty() {

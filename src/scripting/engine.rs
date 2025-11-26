@@ -31,6 +31,7 @@ pub struct ScriptAsset {
 
 /// 脚本运行时状态
 #[derive(Component)]
+#[derive(Default)]
 pub struct ScriptState {
     /// 是否已初始化
     pub initialized: bool,
@@ -40,15 +41,6 @@ pub struct ScriptState {
     pub locals: HashMap<String, ScriptValue>,
 }
 
-impl Default for ScriptState {
-    fn default() -> Self {
-        Self {
-            initialized: false,
-            last_modified: 0,
-            locals: HashMap::new(),
-        }
-    }
-}
 
 /// 脚本值类型
 #[derive(Debug, Clone)]

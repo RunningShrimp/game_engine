@@ -14,17 +14,11 @@ use bevy_ecs::prelude::*;
 
 /// 脚本系统资源
 #[derive(Resource)]
+#[derive(Default)]
 pub struct ScriptingResource {
     pub system: ScriptSystem,
 }
 
-impl Default for ScriptingResource {
-    fn default() -> Self {
-        Self {
-            system: ScriptSystem::new(),
-        }
-    }
-}
 
 /// 脚本系统占位
 pub fn scripting_system() {
@@ -34,7 +28,7 @@ pub fn scripting_system() {
 /// 初始化脚本系统
 pub fn setup_scripting(world: &mut World) {
     // 创建脚本系统资源
-    let mut resource = ScriptingResource::default();
+    let resource = ScriptingResource::default();
     
     // 注册默认的JavaScript上下文
     resource.system.register_context(

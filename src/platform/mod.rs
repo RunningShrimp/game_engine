@@ -197,6 +197,12 @@ pub struct XrHandPose {
 pub struct NativeFilesystem;
 
 #[cfg(not(target_arch = "wasm32"))]
+impl Default for NativeFilesystem {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl NativeFilesystem {
     pub fn new() -> Self { Self }
 }

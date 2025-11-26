@@ -30,6 +30,12 @@ pub struct JsBindingAdapter {
     command_queue: Arc<Mutex<CommandQueue>>,
 }
 
+impl Default for JsBindingAdapter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl JsBindingAdapter {
     pub fn new() -> Self {
         let runtime = Runtime::new().expect("Failed to create JS runtime");

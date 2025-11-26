@@ -5,6 +5,12 @@ pub struct ScriptingService {
     context: Context,
 }
 
+impl Default for ScriptingService {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ScriptingService {
     pub fn new() -> Self {
         let runtime = Runtime::new().unwrap();

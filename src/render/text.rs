@@ -254,6 +254,12 @@ pub struct TextLayouter {
     fonts: HashMap<String, MsdfFont>,
 }
 
+impl Default for TextLayouter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TextLayouter {
     pub fn new() -> Self {
         Self {

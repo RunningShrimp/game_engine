@@ -79,6 +79,7 @@ pub enum RenderObject {
 }
 
 /// Cache for differential rendering
+#[derive(Default)]
 pub struct LayerCache {
     /// Cached offscreen textures by ID
     offscreen_cache: HashMap<u32, CachedTexture>,
@@ -91,14 +92,6 @@ struct CachedTexture {
     dirty: bool,
 }
 
-impl Default for LayerCache {
-    fn default() -> Self {
-        Self {
-            offscreen_cache: HashMap::new(),
-            frame_count: 0,
-        }
-    }
-}
 
 impl LayerCache {
     pub fn new_frame(&mut self) {
@@ -116,7 +109,7 @@ impl LayerCache {
     }
     
     pub fn is_dirty(&self, id: u32) -> bool {
-        self.offscreen_cache.get(&id).map_or(true, |c| c.dirty)
+        self.offscreen_cache.get(&id).is_none_or(|c| c.dirty)
     }
     
     pub fn mark_clean(&mut self, id: u32) {
@@ -136,6 +129,12 @@ pub struct RenderService {
     pub layer_cache: LayerCache,
     /// Scene tree from last frame
     pub last_frame_objects: Vec<RenderObject>,
+}
+
+impl Default for RenderService {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl RenderService {

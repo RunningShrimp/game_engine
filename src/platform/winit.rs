@@ -2,7 +2,7 @@ use std::sync::Arc;
 use winit::dpi::PhysicalSize;
 use winit::event_loop::EventLoop;
 use winit::window::Window as WinitWindowRaw;
-use raw_window_handle::{HasRawWindowHandle, HasRawDisplayHandle};
+use raw_window_handle::{HasWindowHandle, HasDisplayHandle};
 
 #[derive(Clone)]
 pub struct WinitWindow {
@@ -50,13 +50,13 @@ impl crate::platform::Window for WinitWindow {
     
     #[cfg(not(target_arch = "wasm32"))]
     fn raw_window_handle(&self) -> raw_window_handle::RawWindowHandle {
-        use raw_window_handle::HasRawWindowHandle;
-        self.window.raw_window_handle().unwrap()
+        use raw_window_handle::HasWindowHandle;
+        self.window.window_handle().unwrap().as_raw()
     }
     
     #[cfg(not(target_arch = "wasm32"))]
     fn raw_display_handle(&self) -> raw_window_handle::RawDisplayHandle {
-        use raw_window_handle::HasRawDisplayHandle;
-        self.window.raw_display_handle().unwrap()
+        use raw_window_handle::HasDisplayHandle;
+        self.window.display_handle().unwrap().as_raw()
     }
 }

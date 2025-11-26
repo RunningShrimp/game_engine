@@ -1,6 +1,6 @@
 use bevy_ecs::prelude::*;
 use crate::ecs::Transform;
-use glam::{Vec3, Vec2};
+use glam::Vec3;
 
 /// 场景编辑器的视图模式
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

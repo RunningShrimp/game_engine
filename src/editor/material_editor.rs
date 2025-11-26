@@ -1,5 +1,4 @@
-use crate::render::pbr::{PbrMaterial, PbrMaterialFull};
-use glam::{Vec3, Vec4};
+use crate::render::pbr::PbrMaterialFull;
 
 /// 材质编辑器
 pub struct MaterialEditor {

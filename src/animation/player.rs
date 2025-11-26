@@ -59,7 +59,7 @@ impl AnimationPlayer {
             
             if self.current_time >= clip.duration {
                 if clip.looping {
-                    self.current_time = self.current_time % clip.duration;
+                    self.current_time %= clip.duration;
                 } else {
                     self.current_time = clip.duration;
                     self.playing = false;

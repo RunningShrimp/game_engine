@@ -2,6 +2,12 @@ use std::path::Path;
 
 pub struct AssetLoader;
 
+impl Default for AssetLoader {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl AssetLoader {
     pub fn new() -> Self { Self }
     #[cfg(not(target_arch = "wasm32"))]

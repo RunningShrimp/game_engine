@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::fs;
-use super::build_tool::{BuildTarget, BuildProfile};
+use super::build_tool::BuildTarget;
 
 /// 打包配置
 #[derive(Debug, Clone)]

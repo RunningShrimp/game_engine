@@ -1,4 +1,3 @@
-use wgpu::util::DeviceExt;
 use super::pbr::{PbrMaterial, PointLight3D, DirectionalLight};
 use crate::render::mesh::Vertex3D;
 

@@ -1,4 +1,7 @@
 #![cfg(feature = "physics_2d")]
+
+pub mod physics3d;
+pub mod joints;
 use bevy_ecs::prelude::*;
 use rapier2d::prelude::*;
 use crate::ecs::Transform;

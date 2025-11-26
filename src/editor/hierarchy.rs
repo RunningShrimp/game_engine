@@ -1,5 +1,4 @@
 use bevy_ecs::prelude::*;
-use crate::ecs::Transform;
 
 /// 场景层级视图
 pub struct HierarchyView {

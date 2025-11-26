@@ -323,6 +323,12 @@ pub struct RenderCache {
     pub last_instances: Vec<Instance>,
 }
 
+impl Default for RenderCache {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl RenderCache {
     pub fn new() -> Self { Self { last_tree: None, last_instances: Vec::new() } }
     

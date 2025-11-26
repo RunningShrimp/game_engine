@@ -30,7 +30,7 @@ impl EcsScriptBindings {
         
         // 销毁实体
         api.register_function("destroy_entity", move |args| {
-            if let Some(ScriptValue::Int(entity_id)) = args.get(0) {
+            if let Some(ScriptValue::Int(entity_id)) = args.first() {
                 let mut world = world.lock().unwrap();
                 let entity = Entity::from_bits(*entity_id as u64);
                 if world.despawn(entity) {
@@ -47,7 +47,7 @@ impl EcsScriptBindings {
         
         // 获取Transform组件
         api.register_function("get_transform", move |args| {
-            if let Some(ScriptValue::Int(entity_id)) = args.get(0) {
+            if let Some(ScriptValue::Int(entity_id)) = args.first() {
                 let world = world.lock().unwrap();
                 let entity = Entity::from_bits(*entity_id as u64);
                 
@@ -73,7 +73,7 @@ impl EcsScriptBindings {
         // 设置Transform位置
         api.register_function("set_position", move |args| {
             if let (Some(ScriptValue::Int(entity_id)), Some(ScriptValue::Float(x)), Some(ScriptValue::Float(y)), Some(ScriptValue::Float(z))) = 
-                (args.get(0), args.get(1), args.get(2), args.get(3)) {
+                (args.first(), args.get(1), args.get(2), args.get(3)) {
                 let mut world = world.lock().unwrap();
                 let entity = Entity::from_bits(*entity_id as u64);
                 
@@ -93,7 +93,7 @@ impl EcsScriptBindings {
         // 设置Transform旋转 (欧拉角,度)
         api.register_function("set_rotation", move |args| {
             if let (Some(ScriptValue::Int(entity_id)), Some(ScriptValue::Float(x)), Some(ScriptValue::Float(y)), Some(ScriptValue::Float(z))) = 
-                (args.get(0), args.get(1), args.get(2), args.get(3)) {
+                (args.first(), args.get(1), args.get(2), args.get(3)) {
                 let mut world = world.lock().unwrap();
                 let entity = Entity::from_bits(*entity_id as u64);
                 
@@ -118,7 +118,7 @@ impl EcsScriptBindings {
         // 设置Transform缩放
         api.register_function("set_scale", move |args| {
             if let (Some(ScriptValue::Int(entity_id)), Some(ScriptValue::Float(x)), Some(ScriptValue::Float(y)), Some(ScriptValue::Float(z))) = 
-                (args.get(0), args.get(1), args.get(2), args.get(3)) {
+                (args.first(), args.get(1), args.get(2), args.get(3)) {
                 let mut world = world.lock().unwrap();
                 let entity = Entity::from_bits(*entity_id as u64);
                 
@@ -137,7 +137,7 @@ impl EcsScriptBindings {
         
         // 添加Transform组件
         api.register_function("add_transform", move |args| {
-            if let Some(ScriptValue::Int(entity_id)) = args.get(0) {
+            if let Some(ScriptValue::Int(entity_id)) = args.first() {
                 let mut world = world.lock().unwrap();
                 let entity = Entity::from_bits(*entity_id as u64);
                 

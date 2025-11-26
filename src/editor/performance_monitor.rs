@@ -321,11 +321,11 @@ impl PerformanceMonitor {
         
         // 添加内存分析器报告
         report.push_str(&self.memory_profiler.generate_report());
-        report.push_str("\n");
+        report.push('\n');
         
         // 添加GPU分析器报告
         report.push_str(&self.gpu_profiler.generate_report());
-        report.push_str("\n");
+        report.push('\n');
         
         // 添加高级分析器报告
         let metrics = self.advanced_profiler.get_latest_metrics().cloned().unwrap_or_default();

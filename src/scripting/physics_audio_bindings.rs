@@ -30,7 +30,7 @@ impl PhysicsAudioBindings {
         
         // 添加Velocity组件
         api.register_function("add_velocity", move |args| {
-            if let Some(ScriptValue::Int(entity_id)) = args.get(0) {
+            if let Some(ScriptValue::Int(entity_id)) = args.first() {
                 let mut world = world.lock().unwrap();
                 let entity = Entity::from_bits(*entity_id as u64);
                 
@@ -53,7 +53,7 @@ impl PhysicsAudioBindings {
         // 设置线性速度
         api.register_function("set_linear_velocity", move |args| {
             if let (Some(ScriptValue::Int(entity_id)), Some(ScriptValue::Float(x)), Some(ScriptValue::Float(y)), Some(ScriptValue::Float(z))) = 
-                (args.get(0), args.get(1), args.get(2), args.get(3)) {
+                (args.first(), args.get(1), args.get(2), args.get(3)) {
                 let mut world = world.lock().unwrap();
                 let entity = Entity::from_bits(*entity_id as u64);
                 
@@ -73,7 +73,7 @@ impl PhysicsAudioBindings {
         // 设置角速度
         api.register_function("set_angular_velocity", move |args| {
             if let (Some(ScriptValue::Int(entity_id)), Some(ScriptValue::Float(x)), Some(ScriptValue::Float(y)), Some(ScriptValue::Float(z))) = 
-                (args.get(0), args.get(1), args.get(2), args.get(3)) {
+                (args.first(), args.get(1), args.get(2), args.get(3)) {
                 let mut world = world.lock().unwrap();
                 let entity = Entity::from_bits(*entity_id as u64);
                 
@@ -92,8 +92,8 @@ impl PhysicsAudioBindings {
         
         // 获取速度信息
         api.register_function("get_velocity", move |args| {
-            if let Some(ScriptValue::Int(entity_id)) = args.get(0) {
-                let mut world = world.lock().unwrap();
+            if let Some(ScriptValue::Int(entity_id)) = args.first() {
+                let world = world.lock().unwrap();
                 let entity = Entity::from_bits(*entity_id as u64);
                 
                 if let Some(velocity) = world.get::<Velocity>(entity) {
@@ -116,7 +116,7 @@ impl PhysicsAudioBindings {
         // 应用力 (简化版,直接修改速度)
         api.register_function("apply_force", move |args| {
             if let (Some(ScriptValue::Int(entity_id)), Some(ScriptValue::Float(fx)), Some(ScriptValue::Float(fy)), Some(ScriptValue::Float(fz))) = 
-                (args.get(0), args.get(1), args.get(2), args.get(3)) {
+                (args.first(), args.get(1), args.get(2), args.get(3)) {
                 let mut world = world.lock().unwrap();
                 let entity = Entity::from_bits(*entity_id as u64);
                 
@@ -138,7 +138,7 @@ impl PhysicsAudioBindings {
         api.register_function("raycast", move |args| {
             if let (Some(ScriptValue::Float(ox)), Some(ScriptValue::Float(oy)), Some(ScriptValue::Float(oz)),
                     Some(ScriptValue::Float(dx)), Some(ScriptValue::Float(dy)), Some(ScriptValue::Float(dz))) = 
-                (args.get(0), args.get(1), args.get(2), args.get(3), args.get(4), args.get(5)) {
+                (args.first(), args.get(1), args.get(2), args.get(3), args.get(4), args.get(5)) {
                 let mut world = world.lock().unwrap();
                 
                 let origin = Vec3::new(*ox as f32, *oy as f32, *oz as f32);
@@ -177,7 +177,7 @@ impl PhysicsAudioBindings {
     fn register_audio_api(&self, api: &mut ScriptApi) {
         // 播放音效 (占位实现)
         api.register_function("play_sound", move |args| {
-            if let Some(ScriptValue::String(sound_name)) = args.get(0) {
+            if let Some(ScriptValue::String(sound_name)) = args.first() {
                 // 实际实现需要集成音频库
                 ScriptResult::Success(format!("Playing sound: {}", sound_name))
             } else {
@@ -187,7 +187,7 @@ impl PhysicsAudioBindings {
         
         // 播放音乐 (占位实现)
         api.register_function("play_music", move |args| {
-            if let Some(ScriptValue::String(music_name)) = args.get(0) {
+            if let Some(ScriptValue::String(music_name)) = args.first() {
                 ScriptResult::Success(format!("Playing music: {}", music_name))
             } else {
                 ScriptResult::Error("play_music() requires a music name".to_string())
@@ -201,7 +201,7 @@ impl PhysicsAudioBindings {
         
         // 设置音量 (占位实现)
         api.register_function("set_volume", move |args| {
-            if let Some(ScriptValue::Float(volume)) = args.get(0) {
+            if let Some(ScriptValue::Float(volume)) = args.first() {
                 let volume = (*volume as f32).clamp(0.0, 1.0);
                 ScriptResult::Success(format!("Volume set to {}", volume))
             } else {
@@ -215,7 +215,7 @@ impl PhysicsAudioBindings {
                     Some(ScriptValue::Float(x)), 
                     Some(ScriptValue::Float(y)), 
                     Some(ScriptValue::Float(z))) = 
-                (args.get(0), args.get(1), args.get(2), args.get(3)) {
+                (args.first(), args.get(1), args.get(2), args.get(3)) {
                 ScriptResult::Success(format!(
                     "Playing 3D sound '{}' at position ({}, {}, {})",
                     sound_name, x, y, z

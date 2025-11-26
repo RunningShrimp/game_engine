@@ -1,8 +1,7 @@
 use super::api::ScriptApi;
 use super::system::{ScriptValue, ScriptResult};
 use bevy_ecs::prelude::*;
-use crate::ecs::{Transform, Sprite};
-use glam::{Vec3, Vec4};
+use crate::ecs::Sprite;
 use std::sync::{Arc, Mutex};
 
 /// 图形和UI脚本绑定
@@ -35,7 +34,7 @@ impl GraphicsUiBindings {
                     Some(ScriptValue::Float(g)), 
                     Some(ScriptValue::Float(b)),
                     Some(ScriptValue::Float(a))) = 
-                (args.get(0), args.get(1), args.get(2), args.get(3), args.get(4)) {
+                (args.first(), args.get(1), args.get(2), args.get(3), args.get(4)) {
                 let mut world = world.lock().unwrap();
                 let entity = Entity::from_bits(*entity_id as u64);
                 
@@ -57,7 +56,7 @@ impl GraphicsUiBindings {
             if let (Some(ScriptValue::Int(entity_id)), 
                     Some(ScriptValue::Float(width)), 
                     Some(ScriptValue::Float(height))) = 
-                (args.get(0), args.get(1), args.get(2)) {
+                (args.first(), args.get(1), args.get(2)) {
                 let mut world = world.lock().unwrap();
                 let entity = Entity::from_bits(*entity_id as u64);
                 
@@ -80,7 +79,7 @@ impl GraphicsUiBindings {
                     Some(ScriptValue::Float(x2)), Some(ScriptValue::Float(y2)),
                     Some(ScriptValue::Float(r)), Some(ScriptValue::Float(g)),
                     Some(ScriptValue::Float(b))) = 
-                (args.get(0), args.get(1), args.get(2), args.get(3),
+                (args.first(), args.get(1), args.get(2), args.get(3),
                  args.get(4), args.get(5), args.get(6)) {
                 // 实际实现需要将线条添加到调试渲染队列
                 ScriptResult::Success(format!(
@@ -98,7 +97,7 @@ impl GraphicsUiBindings {
                     Some(ScriptValue::Float(radius)),
                     Some(ScriptValue::Float(r)), Some(ScriptValue::Float(g)),
                     Some(ScriptValue::Float(b))) = 
-                (args.get(0), args.get(1), args.get(2),
+                (args.first(), args.get(1), args.get(2),
                  args.get(3), args.get(4), args.get(5)) {
                 ScriptResult::Success(format!(
                     "Drawing circle at ({}, {}) with radius {} and color ({}, {}, {})",
@@ -115,7 +114,7 @@ impl GraphicsUiBindings {
                     Some(ScriptValue::Float(width)), Some(ScriptValue::Float(height)),
                     Some(ScriptValue::Float(r)), Some(ScriptValue::Float(g)),
                     Some(ScriptValue::Float(b))) = 
-                (args.get(0), args.get(1), args.get(2), args.get(3),
+                (args.first(), args.get(1), args.get(2), args.get(3),
                  args.get(4), args.get(5), args.get(6)) {
                 ScriptResult::Success(format!(
                     "Drawing rect at ({}, {}) with size {}x{} and color ({}, {}, {})",
@@ -131,7 +130,7 @@ impl GraphicsUiBindings {
         // 设置相机位置
         api.register_function("set_camera_position", move |args| {
             if let (Some(ScriptValue::Float(x)), Some(ScriptValue::Float(y)), Some(ScriptValue::Float(z))) = 
-                (args.get(0), args.get(1), args.get(2)) {
+                (args.first(), args.get(1), args.get(2)) {
                 // 实际实现需要找到Camera组件并更新其Transform
                 ScriptResult::Success(format!("Camera position set to ({}, {}, {})", x, y, z))
             } else {
@@ -147,7 +146,7 @@ impl GraphicsUiBindings {
             if let (Some(ScriptValue::String(text)), 
                     Some(ScriptValue::Float(x)), 
                     Some(ScriptValue::Float(y))) = 
-                (args.get(0), args.get(1), args.get(2)) {
+                (args.first(), args.get(1), args.get(2)) {
                 ScriptResult::Success(format!("Displaying text '{}' at ({}, {})", text, x, y))
             } else {
                 ScriptResult::Error("ui_text() requires text, x, y".to_string())
@@ -159,7 +158,7 @@ impl GraphicsUiBindings {
             if let (Some(ScriptValue::String(label)), 
                     Some(ScriptValue::Float(x)), 
                     Some(ScriptValue::Float(y))) = 
-                (args.get(0), args.get(1), args.get(2)) {
+                (args.first(), args.get(1), args.get(2)) {
                 // 实际实现需要集成UI系统
                 ScriptResult::Success(format!("Button '{}' at ({}, {})", label, x, y))
             } else {
@@ -173,7 +172,7 @@ impl GraphicsUiBindings {
                     Some(ScriptValue::Float(min)), 
                     Some(ScriptValue::Float(max)),
                     Some(ScriptValue::Float(value))) = 
-                (args.get(0), args.get(1), args.get(2), args.get(3)) {
+                (args.first(), args.get(1), args.get(2), args.get(3)) {
                 ScriptResult::Success(format!(
                     "Slider '{}' with range [{}, {}] and value {}",
                     label, min, max, value
@@ -190,7 +189,7 @@ impl GraphicsUiBindings {
                     Some(ScriptValue::Float(y)),
                     Some(ScriptValue::Float(width)),
                     Some(ScriptValue::Float(height))) = 
-                (args.get(0), args.get(1), args.get(2), args.get(3), args.get(4)) {
+                (args.first(), args.get(1), args.get(2), args.get(3), args.get(4)) {
                 ScriptResult::Success(format!(
                     "Image '{}' at ({}, {}) with size {}x{}",
                     image_path, x, y, width, height
@@ -207,7 +206,7 @@ impl GraphicsUiBindings {
                     Some(ScriptValue::Float(y)),
                     Some(ScriptValue::Float(width)),
                     Some(ScriptValue::Float(height))) = 
-                (args.get(0), args.get(1), args.get(2), args.get(3), args.get(4)) {
+                (args.first(), args.get(1), args.get(2), args.get(3), args.get(4)) {
                 ScriptResult::Success(format!(
                     "Panel '{}' at ({}, {}) with size {}x{}",
                     title, x, y, width, height
@@ -225,7 +224,7 @@ impl GraphicsUiBindings {
         
         // 检查按键状态 (占位实现)
         api.register_function("is_key_pressed", move |args| {
-            if let Some(ScriptValue::String(key)) = args.get(0) {
+            if let Some(ScriptValue::String(key)) = args.first() {
                 // 实际实现需要从输入系统查询按键状态
                 ScriptResult::Success(format!("Key '{}' is not pressed", key))
             } else {

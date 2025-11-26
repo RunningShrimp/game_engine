@@ -40,7 +40,7 @@ impl BatchRenderer {
         index_offset: u32,
         index_count: u32,
     ) {
-        let batches = self.batches.entry(key).or_insert_with(Vec::new);
+        let batches = self.batches.entry(key).or_default();
         
         // 尝试合并到现有批次
         if let Some(last_batch) = batches.last_mut() {

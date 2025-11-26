@@ -292,7 +292,7 @@ impl Engine {
 
 fn rotate_system(mut query: Query<&mut Transform>, time: Res<Time>) {
     for mut t in query.iter_mut() {
-        t.rot = t.rot * Quat::from_rotation_z(1.0 * time.delta_seconds);
+        t.rot *= Quat::from_rotation_z(1.0 * time.delta_seconds);
     }
 }
 

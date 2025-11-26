@@ -11,3 +11,6 @@ pub mod pbr;
 pub mod pbr_renderer;
 pub mod deferred;
 pub mod csm;
+pub mod clipping;
+pub mod offscreen;
+pub mod sprite_batch;

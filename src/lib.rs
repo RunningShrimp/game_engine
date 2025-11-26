@@ -1,17 +1,57 @@
+//! # Game Engine
+//!
+//! A high-performance cross-platform 2D/3D game engine built with Rust.
+//!
+//! ## Features
+//!
+//! - **ECS Architecture**: Entity Component System for efficient game object management
+//! - **Cross-Platform Rendering**: 2D/3D rendering with wgpu backend
+//! - **Physics**: Integrated Rapier physics engine for 2D and 3D
+//! - **Audio**: Audio system for sound effects and music
+//! - **Animation**: Keyframe-based animation system
+//! - **Editor**: Built-in editor tools for game development
+//! - **Performance**: Profiling and optimization tools
+//!
+//! ## Modules
+//!
+//! - [`core`]: Core engine functionality
+//! - [`ecs`]: Entity Component System
+//! - [`render`]: Rendering system
+//! - [`physics`]: Physics simulation
+//! - [`audio`]: Audio playback
+//! - [`animation`]: Animation system
+//! - [`editor`]: Editor tools
+//! - [`performance`]: Performance profiling
+
+/// Core engine functionality including the main engine loop and initialization
 pub mod core;
+/// Platform abstraction layer for cross-platform support
 pub mod platform;
+/// Rendering system with 2D/3D support
 pub mod render;
+/// Entity Component System for game object management
 pub mod ecs;
+/// Resource management for assets like textures and fonts
 pub mod resources;
+/// Physics simulation using Rapier
 pub mod physics;
+/// Built-in editor tools
 pub mod editor;
+/// Scripting system for game logic
 pub mod scripting;
+/// External services integration
 pub mod services;
+/// Audio playback system
 pub mod audio;
+/// Language bindings for scripting
 pub mod bindings;
+/// XR (VR/AR/MR) support
 pub mod xr;
+/// Performance profiling and optimization tools
 pub mod performance;
+/// Animation system with keyframes
 pub mod animation;
+/// Scene management and serialization
 pub mod scene;
 
 #[cfg(target_arch = "wasm32")]

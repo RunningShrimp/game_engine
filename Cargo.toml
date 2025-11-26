@@ -57,6 +57,7 @@ base64 = "0.22"
 use_bevy_ecs = []
 async_assets = []
 physics_2d = []
+xr = []
 default = ["physics_2d"]
 
 [dev-dependencies]

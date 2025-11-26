@@ -10,6 +10,7 @@ pub enum BuildTarget {
     MacOS,
     Web,
     Android,
+    #[allow(non_camel_case_types)]
     iOS,
 }
 

@@ -1,5 +1,4 @@
-use crate::animation::{AnimationClip, KeyframeTrack, InterpolationMode};
-use glam::Vec3;
+use crate::animation::AnimationClip;
 
 /// 动画编辑器
 pub struct AnimationEditor {
@@ -90,7 +89,7 @@ impl AnimationEditor {
                     self.playback_time += delta_time;
                     if self.playback_time >= clip.duration {
                         if clip.looping {
-                            self.playback_time = self.playback_time % clip.duration;
+                            self.playback_time %= clip.duration;
                         } else {
                             self.playback_time = clip.duration;
                             self.is_playing = false;

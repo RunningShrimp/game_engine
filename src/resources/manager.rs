@@ -65,6 +65,12 @@ pub enum AssetEvent {
     AtlasFailed(Handle<Atlas>, String),
 }
 
+impl Default for AssetServer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl AssetServer {
     pub fn new() -> Self {
         let (task_tx, task_rx) = unbounded::<AssetTask>();

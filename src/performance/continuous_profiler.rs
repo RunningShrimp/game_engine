@@ -1,5 +1,5 @@
 use std::collections::VecDeque;
-use std::time::{Duration, Instant};
+use std::time::{Instant, Duration};
 
 /// 性能样本
 #[derive(Debug, Clone)]
@@ -48,7 +48,7 @@ impl ContinuousProfiler {
         self.frame_count += 1;
         
         // 只在采样间隔时记录
-        if self.frame_count % self.sample_interval != 0 {
+        if !self.frame_count.is_multiple_of(self.sample_interval) {
             return;
         }
         

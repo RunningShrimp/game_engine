@@ -1,6 +1,7 @@
-use super::keyframe::{KeyframeTrack, InterpolationMode};
+use super::keyframe::*;
 use glam::{Vec3, Quat};
 use std::collections::HashMap;
+use crate::animation::keyframe::InterpolationMode;
 
 /// 动画片段
 #[derive(Debug, Clone)]
