@@ -11,6 +11,9 @@ pub mod asset_browser;
 pub mod curve_editor;
 pub mod entity_creator;
 pub mod scene_editor;
+pub mod transform_gizmo;
+pub mod project_settings;
+pub mod build_tool;
 
 pub use hierarchy::HierarchyView;
 pub use inspector::Inspector;
