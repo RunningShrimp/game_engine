@@ -1,5 +1,11 @@
 use bevy_ecs::prelude::*;
 use egui_wgpu::Renderer;
+
+pub mod hierarchy;
+pub mod inspector;
+
+pub use hierarchy::HierarchyView;
+pub use inspector::Inspector;
 use egui_winit::State;
 use winit::event::WindowEvent;
 use winit::window::Window;
