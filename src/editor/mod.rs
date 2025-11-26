@@ -8,6 +8,9 @@ pub mod animation_editor;
 pub mod performance_panel;
 pub mod keyframe_editor;
 pub mod asset_browser;
+pub mod curve_editor;
+pub mod entity_creator;
+pub mod scene_editor;
 
 pub use hierarchy::HierarchyView;
 pub use inspector::Inspector;
