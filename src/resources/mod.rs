@@ -155,3 +155,6 @@ pub mod manager;
 pub mod hot_reload;
 pub mod font;
 pub mod events;
+
+#[cfg(test)]
+mod tests;

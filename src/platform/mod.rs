@@ -1,5 +1,11 @@
 pub mod winit;
 
+#[cfg(target_arch = "wasm32")]
+pub mod web_fs;
+
+#[cfg(target_arch = "wasm32")]
+pub mod web_input;
+
 use std::path::Path;
 use std::sync::mpsc::Sender;
 
@@ -215,36 +221,10 @@ impl Filesystem for NativeFilesystem {
     }
 }
 
-// ============================================================================
-// Web Filesystem Implementation
-// ============================================================================
+// Web平台实现在 web_fs.rs 和 web_input.rs 模块中
+#[cfg(target_arch = "wasm32")]
+pub use web_fs::WebFilesystem;
 
 #[cfg(target_arch = "wasm32")]
-pub struct WebFilesystem;
-
-#[cfg(target_arch = "wasm32")]
-impl WebFilesystem {
-    pub fn new() -> Self { Self }
-}
-
-#[cfg(target_arch = "wasm32")]
-impl Filesystem for WebFilesystem {
-    fn read_async(&self, url: &str) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Vec<u8>, FsError>> + Send>> {
-        let url = url.to_string();
-        Box::pin(async move {
-            // 使用 web-sys fetch API
-            // 实际实现需要 wasm_bindgen_futures
-            Err(FsError::NetworkError("Not implemented".to_string()))
-        })
-    }
-    
-    fn cache_get(&self, _key: &str) -> Option<Vec<u8>> {
-        // TODO: 使用 localStorage 或 IndexedDB
-        None
-    }
-    
-    fn cache_set(&self, _key: &str, _data: &[u8]) {
-        // TODO: 使用 localStorage 或 IndexedDB
-    }
-}
+pub use web_input::WebInput;
 

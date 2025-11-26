@@ -6,8 +6,6 @@
 use std::sync::Arc;
 use glam::{Mat4, Vec3, Quat};
 
-#[cfg(not(target_arch = "wasm32"))]
-use openxr as xr;
 
 /// XR 会话状态
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -422,7 +420,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
 // ============================================================================
 
 pub mod foveated {
-    use super::*;
+    
     
     /// 注视点渲染配置
     #[derive(Debug, Clone)]

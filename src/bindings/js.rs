@@ -24,6 +24,7 @@ impl CommandQueue {
 }
 
 pub struct JsBindingAdapter {
+    #[allow(dead_code)]
     runtime: Runtime,
     context: Context,
     command_queue: Arc<Mutex<CommandQueue>>,

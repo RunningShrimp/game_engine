@@ -219,7 +219,7 @@ pub fn tilemap_chunk_system(
     let (vpw, vph) = viewport.map(|v| (v.width as f32, v.height as f32)).unwrap_or((800.0, 600.0));
     let mut cam_pos = glam::Vec3::new(vpw*0.5, vph*0.5, 0.0);
     for (t, c) in cam_q.iter() { if c.is_active { cam_pos = t.pos; break; } }
-    for (map_e, t_base, mut tm, opt_chunks) in maps.iter_mut() {
+    for (map_e, t_base, tm, opt_chunks) in maps.iter_mut() {
         let current_visible = if let Some(ch) = opt_chunks.as_ref() { ch.visible.clone() } else { std::collections::HashSet::new() };
         let cx_sz = tm.chunk_size[0] as f32 * tm.tile_size[0];
         let cy_sz = tm.chunk_size[1] as f32 * tm.tile_size[1];
@@ -324,3 +324,6 @@ pub fn flipbook_system(mut query: Query<(&mut Sprite, &mut Flipbook)>, time: Res
         sprite.uv_scale = fr.uv_scale;
     }
 }
+
+#[cfg(test)]
+mod tests;

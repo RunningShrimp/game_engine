@@ -4,7 +4,6 @@
 // ============================================================================
 
 use std::collections::HashMap;
-use std::path::Path;
 
 /// MSDF 字体资源
 #[derive(Debug)]

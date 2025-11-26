@@ -1,10 +1,24 @@
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
-pub struct Common { pub scaleW: u32, pub scaleH: u32 }
+pub struct Common { 
+    #[serde(rename = "scaleW")]
+    pub scale_w: u32, 
+    #[serde(rename = "scaleH")]
+    pub scale_h: u32 
+}
 
 #[derive(Debug, Deserialize)]
-pub struct Info { #[serde(default)] pub distanceRange: Option<f32>, #[serde(default)] pub ascent: Option<f32>, #[serde(default)] pub descent: Option<f32>, #[serde(default)] pub baseline: Option<f32> }
+pub struct Info { 
+    #[serde(default, rename = "distanceRange")]
+    pub distance_range: Option<f32>, 
+    #[serde(default)] 
+    pub ascent: Option<f32>, 
+    #[serde(default)] 
+    pub descent: Option<f32>, 
+    #[serde(default)] 
+    pub baseline: Option<f32> 
+}
 
 #[derive(Debug, Deserialize)]
 pub struct CharEntry {
@@ -43,10 +57,10 @@ pub struct MsdfFontAtlas {
 impl MsdfFontAtlas {
     pub fn from_json(data: &str) -> Option<Self> {
         if let Ok(doc) = serde_json::from_str::<MsdfDoc>(data) {
-            let w = doc.common.scaleW as f32;
-            let h = doc.common.scaleH as f32;
+            let w = doc.common.scale_w as f32;
+            let h = doc.common.scale_h as f32;
             let mut glyphs = std::collections::HashMap::new();
-            let pr = doc.info.as_ref().and_then(|i| i.distanceRange).unwrap_or(4.0);
+            let pr = doc.info.as_ref().and_then(|i| i.distance_range).unwrap_or(4.0);
             let asc = doc.info.as_ref().and_then(|i| i.ascent).unwrap_or(0.8 * h);
             let des = doc.info.as_ref().and_then(|i| i.descent).unwrap_or(0.2 * h);
             let base = doc.info.as_ref().and_then(|i| i.baseline).unwrap_or(0.85 * h);
@@ -62,7 +76,7 @@ impl MsdfFontAtlas {
                     px_range: pr,
                 });
             }
-            return Some(Self { size: [doc.common.scaleW, doc.common.scaleH], px_range: pr, ascent: asc, descent: des, baseline: base, glyphs });
+            return Some(Self { size: [doc.common.scale_w, doc.common.scale_h], px_range: pr, ascent: asc, descent: des, baseline: base, glyphs });
         }
         None
     }

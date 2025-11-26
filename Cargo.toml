@@ -58,3 +58,6 @@ use_bevy_ecs = []
 async_assets = []
 physics_2d = []
 default = ["physics_2d"]
+
+[dev-dependencies]
+anyhow = "1.0.100"
