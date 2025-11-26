@@ -1,6 +1,7 @@
 pub mod engine;
 pub mod system;
 pub mod api;
+pub mod ecs_bindings;
 
 pub use engine::*;
 pub use system::{ScriptSystem, ScriptLanguage, ScriptValue, ScriptResult, ScriptContext};

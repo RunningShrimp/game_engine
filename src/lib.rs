@@ -12,6 +12,7 @@ pub mod bindings;
 pub mod xr;
 pub mod performance;
 pub mod animation;
+pub mod scene;
 
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;

@@ -6,6 +6,8 @@ pub mod inspector;
 pub mod material_editor;
 pub mod animation_editor;
 pub mod performance_panel;
+pub mod keyframe_editor;
+pub mod asset_browser;
 
 pub use hierarchy::HierarchyView;
 pub use inspector::Inspector;
