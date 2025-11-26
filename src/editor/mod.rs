@@ -3,6 +3,9 @@ use egui_wgpu::Renderer;
 
 pub mod hierarchy;
 pub mod inspector;
+pub mod material_editor;
+pub mod animation_editor;
+pub mod performance_panel;
 
 pub use hierarchy::HierarchyView;
 pub use inspector::Inspector;

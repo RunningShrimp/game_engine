@@ -257,6 +257,8 @@ impl DeferredRenderer {
         });
         
         // 创建光照阶段管线 (读取G-Buffer,输出到屏幕)
+        // 注意: 这里假设CSM绑定组布局已经在其他地方定义
+        // 实际使用时需要传入CSM绑定组布局
         let lighting_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("Deferred Lighting Pipeline Layout"),
             bind_group_layouts: &[&gbuffer_bind_group_layout],

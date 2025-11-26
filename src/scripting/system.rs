@@ -37,7 +37,7 @@ pub trait ScriptContext: Send + Sync {
 }
 
 /// 脚本值 - 跨语言的通用数据类型
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ScriptValue {
     Null,
     Bool(bool),
