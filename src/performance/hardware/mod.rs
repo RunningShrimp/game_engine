@@ -7,12 +7,22 @@ pub mod npu_detect;
 pub mod soc_detect;
 pub mod capability;
 pub mod auto_config;
+pub mod gpu_optimization;
+pub mod npu_acceleration;
+pub mod soc_power;
+pub mod upscaling;
+pub mod adaptive_performance;
 
 pub use gpu_detect::{GpuInfo, GpuVendor, GpuTier, detect_gpu};
 pub use npu_detect::{NpuInfo, NpuVendor, detect_npu};
 pub use soc_detect::{SocInfo, SocVendor, detect_soc};
 pub use capability::{HardwareCapability, PerformanceTier};
 pub use auto_config::{AutoConfig, QualityPreset};
+pub use gpu_optimization::{GpuOptimization, PipelineMode};
+pub use npu_acceleration::{NpuAccelerator, PhysicsPrediction, BehaviorDecision};
+pub use soc_power::{PowerManager, PowerMode, ThermalState};
+pub use upscaling::{UpscalingManager, UpscalingTech, UpscalingQuality};
+pub use adaptive_performance::{AdaptivePerformance, AdaptiveStats};
 
 use std::sync::OnceLock;
 
