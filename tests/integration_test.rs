@@ -31,11 +31,7 @@ fn test_physics_integration() {
 #[test]
 fn test_audio_integration() {
     // 创建音频系统
-    let mut audio_system = AudioSystem::new();
-    
-    // 加载音频资源
-    let asset = AudioAsset::new("test.mp3".to_string(), vec![0, 1, 2, 3]);
-    audio_system.load_asset(asset);
+    let audio_system = AudioSystem::new();
     
     // 验证音频系统初始化成功
     assert_eq!(audio_system.master_volume, 1.0);

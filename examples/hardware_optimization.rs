@@ -13,14 +13,14 @@ fn main() {
     
     // 1. 检测硬件信息
     println!("步骤 1: 检测硬件信息");
-    println!("=".repeat(60));
+    println!("{}", "=".repeat(60));
     print_hardware_info();
     
     let hardware_info = get_hardware_info();
     
     // 2. 显示自动配置
     println!("\n步骤 2: 自动生成优化配置");
-    println!("=".repeat(60));
+    println!("{}", "=".repeat(60));
     let config = &hardware_info.recommended_config;
     
     println!("质量预设: {:?}", config.quality_preset);
@@ -60,7 +60,7 @@ fn main() {
     
     // 3. GPU特定优化建议
     println!("\n步骤 3: GPU特定优化建议");
-    println!("=".repeat(60));
+    println!("{}", "=".repeat(60));
     
     match hardware_info.gpu.vendor {
         GpuVendor::Nvidia => {
@@ -114,7 +114,7 @@ fn main() {
     // 4. NPU加速建议
     if hardware_info.npu.is_some() {
         println!("\n步骤 4: NPU加速建议");
-        println!("=".repeat(60));
+        println!("{}", "=".repeat(60));
         
         let npu = hardware_info.npu.as_ref().unwrap();
         println!("检测到NPU: {} ({:.2} TOPS)", npu.name, npu.tops);
@@ -130,7 +130,7 @@ fn main() {
     
     // 5. 保存配置
     println!("\n步骤 5: 保存配置");
-    println!("=".repeat(60));
+    println!("{}", "=".repeat(60));
     
     let config_path = "/tmp/game_config.json";
     match config.save_to_file(config_path) {
@@ -141,7 +141,7 @@ fn main() {
     
     // 6. 性能预测
     println!("\n步骤 6: 性能预测");
-    println!("=".repeat(60));
+    println!("{}", "=".repeat(60));
     
     let capability = &hardware_info.capability;
     

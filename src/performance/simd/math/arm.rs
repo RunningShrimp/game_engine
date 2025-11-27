@@ -10,8 +10,8 @@ use std::arch::aarch64::*;
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
 pub unsafe fn dot_product_neon(a: &[f32; 4], b: &[f32; 4]) -> f32 {
-    let va = vld1q_f32(a.as_ptr());
-    let vb = vld1q_f32(b.as_ptr());
+    let va = unsafe { vld1q_f32(a.as_ptr()) };
+    let vb = unsafe { vld1q_f32(b.as_ptr()) };
     let mul = vmulq_f32(va, vb);
     
     // 使用vaddvq_f32进行水平加法（ARMv8）
@@ -22,59 +22,59 @@ pub unsafe fn dot_product_neon(a: &[f32; 4], b: &[f32; 4]) -> f32 {
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
 pub unsafe fn add_vec4_neon(a: &[f32; 4], b: &[f32; 4], out: &mut [f32; 4]) {
-    let va = vld1q_f32(a.as_ptr());
-    let vb = vld1q_f32(b.as_ptr());
+    let va = unsafe { vld1q_f32(a.as_ptr()) };
+    let vb = unsafe { vld1q_f32(b.as_ptr()) };
     let result = vaddq_f32(va, vb);
-    vst1q_f32(out.as_mut_ptr(), result);
+    unsafe { vst1q_f32(out.as_mut_ptr(), result) };
 }
 
 /// 使用NEON的4维向量减法
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
 pub unsafe fn sub_vec4_neon(a: &[f32; 4], b: &[f32; 4], out: &mut [f32; 4]) {
-    let va = vld1q_f32(a.as_ptr());
-    let vb = vld1q_f32(b.as_ptr());
+    let va = unsafe { vld1q_f32(a.as_ptr()) };
+    let vb = unsafe { vld1q_f32(b.as_ptr()) };
     let result = vsubq_f32(va, vb);
-    vst1q_f32(out.as_mut_ptr(), result);
+    unsafe { vst1q_f32(out.as_mut_ptr(), result) };
 }
 
 /// 使用NEON的4维向量乘法
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
 pub unsafe fn mul_vec4_neon(a: &[f32; 4], b: &[f32; 4], out: &mut [f32; 4]) {
-    let va = vld1q_f32(a.as_ptr());
-    let vb = vld1q_f32(b.as_ptr());
+    let va = unsafe { vld1q_f32(a.as_ptr()) };
+    let vb = unsafe { vld1q_f32(b.as_ptr()) };
     let result = vmulq_f32(va, vb);
-    vst1q_f32(out.as_mut_ptr(), result);
+    unsafe { vst1q_f32(out.as_mut_ptr(), result) };
 }
 
 /// 使用NEON的向量乘加运算 (a * b + c)
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
 pub unsafe fn fma_vec4_neon(a: &[f32; 4], b: &[f32; 4], c: &[f32; 4], out: &mut [f32; 4]) {
-    let va = vld1q_f32(a.as_ptr());
-    let vb = vld1q_f32(b.as_ptr());
-    let vc = vld1q_f32(c.as_ptr());
+    let va = unsafe { vld1q_f32(a.as_ptr()) };
+    let vb = unsafe { vld1q_f32(b.as_ptr()) };
+    let vc = unsafe { vld1q_f32(c.as_ptr()) };
     // vfmaq_f32: fused multiply-add
     let result = vfmaq_f32(vc, va, vb);
-    vst1q_f32(out.as_mut_ptr(), result);
+    unsafe { vst1q_f32(out.as_mut_ptr(), result) };
 }
 
 /// 使用NEON的向量归一化
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
 pub unsafe fn normalize_vec4_neon(v: &[f32; 4], out: &mut [f32; 4]) {
-    let vec = vld1q_f32(v.as_ptr());
-    let dot = dot_product_neon(v, v);
+    let vec = unsafe { vld1q_f32(v.as_ptr()) };
+    let dot = unsafe { dot_product_neon(v, v) };
     let len = dot.sqrt();
     
     if len > 1e-6 {
         let inv_len = 1.0 / len;
         let scale = vdupq_n_f32(inv_len);
         let normalized = vmulq_f32(vec, scale);
-        vst1q_f32(out.as_mut_ptr(), normalized);
+        unsafe { vst1q_f32(out.as_mut_ptr(), normalized) };
     } else {
-        vst1q_f32(out.as_mut_ptr(), vec);
+        unsafe { vst1q_f32(out.as_mut_ptr(), vec) };
     }
 }
 
@@ -84,7 +84,7 @@ pub unsafe fn normalize_vec4_neon(v: &[f32; 4], out: &mut [f32; 4]) {
 pub unsafe fn normalize_batch_neon(vectors: &mut [[f32; 4]]) {
     for vec in vectors.iter_mut() {
         let temp = *vec;  // Create a temporary copy
-        normalize_vec4_neon(&temp, vec);
+        unsafe { normalize_vec4_neon(&temp, vec) };
     }
 }
 
@@ -96,8 +96,8 @@ pub unsafe fn cross_product_neon(a: &[f32; 3], b: &[f32; 3], out: &mut [f32; 3])
     let a4 = [a[0], a[1], a[2], 0.0];
     let b4 = [b[0], b[1], b[2], 0.0];
     
-    let va = vld1q_f32(a4.as_ptr());
-    let vb = vld1q_f32(b4.as_ptr());
+    let va = unsafe { vld1q_f32(a4.as_ptr()) };
+    let vb = unsafe { vld1q_f32(b4.as_ptr()) };
     
     // 叉积: (a.y*b.z - a.z*b.y, a.z*b.x - a.x*b.z, a.x*b.y - a.y*b.x)
     // 使用shuffle和multiply
@@ -120,7 +120,7 @@ pub unsafe fn cross_product_neon(a: &[f32; 3], b: &[f32; 3], out: &mut [f32; 3])
     
     // 提取前3个分量
     let mut temp = [0.0f32; 4];
-    vst1q_f32(temp.as_mut_ptr(), result);
+    unsafe { vst1q_f32(temp.as_mut_ptr(), result) };
     out[0] = temp[0];
     out[1] = temp[1];
     out[2] = temp[2];
@@ -131,10 +131,10 @@ pub unsafe fn cross_product_neon(a: &[f32; 3], b: &[f32; 3], out: &mut [f32; 3])
 #[target_feature(enable = "neon")]
 pub unsafe fn mat4_mul_neon(a: &[[f32; 4]; 4], b: &[[f32; 4]; 4], out: &mut [[f32; 4]; 4]) {
     // 加载矩阵B的列
-    let b0 = vld1q_f32(b[0].as_ptr());
-    let b1 = vld1q_f32(b[1].as_ptr());
-    let b2 = vld1q_f32(b[2].as_ptr());
-    let b3 = vld1q_f32(b[3].as_ptr());
+    let b0 = unsafe { vld1q_f32(b[0].as_ptr()) };
+    let b1 = unsafe { vld1q_f32(b[1].as_ptr()) };
+    let b2 = unsafe { vld1q_f32(b[2].as_ptr()) };
+    let b3 = unsafe { vld1q_f32(b[3].as_ptr()) };
     
     for i in 0..4 {
         let a_row = a[i];
@@ -151,26 +151,26 @@ pub unsafe fn mat4_mul_neon(a: &[[f32; 4]; 4], b: &[[f32; 4]; 4], out: &mut [[f3
         let r2 = vfmaq_f32(r1, a2, b2);
         let result = vfmaq_f32(r2, a3, b3);
         
-        vst1q_f32(out[i].as_mut_ptr(), result);
-    }
+        unsafe { vst1q_f32(out[i].as_mut_ptr(), result) };
+}
 }
 
 /// 4x4矩阵转置（NEON优化）
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
 pub unsafe fn mat4_transpose_neon(m: &[[f32; 4]; 4], out: &mut [[f32; 4]; 4]) {
-    let r0 = vld1q_f32(m[0].as_ptr());
-    let r1 = vld1q_f32(m[1].as_ptr());
-    let r2 = vld1q_f32(m[2].as_ptr());
-    let r3 = vld1q_f32(m[3].as_ptr());
+    let r0 = unsafe { vld1q_f32(m[0].as_ptr()) };
+    let r1 = unsafe { vld1q_f32(m[1].as_ptr()) };
+    let r2 = unsafe { vld1q_f32(m[2].as_ptr()) };
+    let r3 = unsafe { vld1q_f32(m[3].as_ptr()) };
     
     // 使用vtrn和vzip进行转置
     // 这是一个简化版本，实际可以更优化
     let mut temp = [[0.0f32; 4]; 4];
-    vst1q_f32(temp[0].as_mut_ptr(), r0);
-    vst1q_f32(temp[1].as_mut_ptr(), r1);
-    vst1q_f32(temp[2].as_mut_ptr(), r2);
-    vst1q_f32(temp[3].as_mut_ptr(), r3);
+    unsafe { vst1q_f32(temp[0].as_mut_ptr(), r0) };
+    unsafe { vst1q_f32(temp[1].as_mut_ptr(), r1) };
+    unsafe { vst1q_f32(temp[2].as_mut_ptr(), r2) };
+    unsafe { vst1q_f32(temp[3].as_mut_ptr(), r3) };
     
     for i in 0..4 {
         for j in 0..4 {
@@ -190,13 +190,13 @@ pub unsafe fn transform_vectors_neon(
     assert_eq!(vectors.len(), out.len());
     
     // 加载矩阵的行
-    let m0 = vld1q_f32(matrix[0].as_ptr());
-    let m1 = vld1q_f32(matrix[1].as_ptr());
-    let m2 = vld1q_f32(matrix[2].as_ptr());
-    let m3 = vld1q_f32(matrix[3].as_ptr());
+    let m0 = unsafe { vld1q_f32(matrix[0].as_ptr()) };
+    let m1 = unsafe { vld1q_f32(matrix[1].as_ptr()) };
+    let m2 = unsafe { vld1q_f32(matrix[2].as_ptr()) };
+    let m3 = unsafe { vld1q_f32(matrix[3].as_ptr()) };
     
     for (vec, out_vec) in vectors.iter().zip(out.iter_mut()) {
-        let v = vld1q_f32(vec.as_ptr());
+        let v = unsafe { vld1q_f32(vec.as_ptr()) };
         
         // 提取向量的每个分量
         let vx = vdupq_laneq_f32(v, 0);
@@ -210,8 +210,8 @@ pub unsafe fn transform_vectors_neon(
         let r2 = vfmaq_f32(r1, m2, vz);
         let result = vfmaq_f32(r2, m3, vw);
         
-        vst1q_f32(out_vec.as_mut_ptr(), result);
-    }
+        unsafe { vst1q_f32(out_vec.as_mut_ptr(), result) };
+}
 }
 
 /// 四元数乘法（NEON优化）
@@ -223,8 +223,8 @@ pub unsafe fn quat_mul_neon(a: &[f32; 4], b: &[f32; 4], out: &mut [f32; 4]) {
     //              w1*y2 - x1*z2 + y1*w2 + z1*x2,
     //              w1*z2 + x1*y2 - y1*x2 + z1*w2)
     
-    let qa = vld1q_f32(a.as_ptr());
-    let qb = vld1q_f32(b.as_ptr());
+    let qa = unsafe { vld1q_f32(a.as_ptr()) };
+    let qb = unsafe { vld1q_f32(b.as_ptr()) };
     
     // 这里使用简化实现，实际可以更优化
     let mut result = [0.0f32; 4];
@@ -235,8 +235,8 @@ pub unsafe fn quat_mul_neon(a: &[f32; 4], b: &[f32; 4], out: &mut [f32; 4]) {
     result[2] = a[0]*b[2] - a[1]*b[3] + a[2]*b[0] + a[3]*b[1];
     result[3] = a[0]*b[3] + a[1]*b[2] - a[2]*b[1] + a[3]*b[0];
     
-    let vresult = vld1q_f32(result.as_ptr());
-    vst1q_f32(out.as_mut_ptr(), vresult);
+    let vresult = unsafe { vld1q_f32(result.as_ptr()) };
+    unsafe { vst1q_f32(out.as_mut_ptr(), vresult) };
 }
 
 /// 批量线性插值（NEON）
@@ -250,15 +250,15 @@ pub unsafe fn lerp_batch_neon(a: &[[f32; 4]], b: &[[f32; 4]], t: f32, out: &mut 
     let v_one_minus_t = vdupq_n_f32(1.0 - t);
     
     for i in 0..a.len() {
-        let va = vld1q_f32(a[i].as_ptr());
-        let vb = vld1q_f32(b[i].as_ptr());
+        let va = unsafe { vld1q_f32(a[i].as_ptr()) };
+        let vb = unsafe { vld1q_f32(b[i].as_ptr()) };
         
         // lerp = a * (1 - t) + b * t
         let scaled_a = vmulq_f32(va, v_one_minus_t);
         let result = vfmaq_f32(scaled_a, vb, vt);
         
-        vst1q_f32(out[i].as_mut_ptr(), result);
-    }
+        unsafe { vst1q_f32(out[i].as_mut_ptr(), result) };
+}
 }
 
 #[cfg(test)]

@@ -295,6 +295,7 @@ impl CsmRenderer {
                     step_mode: wgpu::VertexStepMode::Vertex,
                     attributes: &wgpu::vertex_attr_array![0 => Float32x3],
                 }],
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
             },
             fragment: None, // 深度渲染不需要片段着色器
             primitive: wgpu::PrimitiveState {

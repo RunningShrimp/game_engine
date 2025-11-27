@@ -8,6 +8,7 @@ use game_engine::performance::hardware::{
     npu_upscaling::{NpuUpscalingManager, AiUpscalingModel, HybridUpscalingStrategy},
     upscaling_sdk::{UpscalingSdkManager, UpscalingQuality},
 };
+use game_engine::performance::hardware::upscaling_sdk::UpscalingEngine;
 
 fn main() {
     println!("=== NPU与AI超分辨率综合演示 ===\n");
@@ -41,7 +42,7 @@ fn demo_npu_detection() {
         println!("检测到NPU:");
         println!("  厂商: {:?}", npu.vendor);
         println!("  名称: {}", npu.name);
-        println!("  算力: {:.2} TOPS", npu.compute_units as f32 * 0.1);
+        println!("  算力: {:.2} TOPS", npu.tops);
     } else {
         println!("未检测到专用NPU");
     }

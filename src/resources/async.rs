@@ -22,7 +22,7 @@ impl AssetManagerAsync {
         let h = Handle::<()>::new();
         let task = tokio::spawn(async move {
             let _ = tokio::fs::read(&path).await.ok();
-            crate::resources::events::push_texture_ready(name, );
+            crate::resources::events::push_texture_ready(name);
         });
         (h, task)
     }

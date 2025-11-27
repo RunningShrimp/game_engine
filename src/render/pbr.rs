@@ -1,7 +1,7 @@
 use glam::{Vec3, Vec4};
 
 /// PBR材质参数
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct PbrMaterial {
     /// 基础颜色 (RGB + Alpha)
     pub base_color: Vec4,

@@ -50,10 +50,10 @@ impl MaterialEditor {
                 // 基础颜色
                 ui.label("Base Color:");
                 ui.horizontal(|ui| {
-                    ui.add(egui::DragValue::new(&mut material.base_color.x).prefix("R: ").speed(0.01).clamp_range(0.0..=1.0));
-                    ui.add(egui::DragValue::new(&mut material.base_color.y).prefix("G: ").speed(0.01).clamp_range(0.0..=1.0));
-                    ui.add(egui::DragValue::new(&mut material.base_color.z).prefix("B: ").speed(0.01).clamp_range(0.0..=1.0));
-                    ui.add(egui::DragValue::new(&mut material.base_color.w).prefix("A: ").speed(0.01).clamp_range(0.0..=1.0));
+                    ui.add(egui::DragValue::new(&mut material.base_color.x).prefix("R: ").speed(0.01).range(0.0..=1.0));
+                    ui.add(egui::DragValue::new(&mut material.base_color.y).prefix("G: ").speed(0.01).range(0.0..=1.0));
+                    ui.add(egui::DragValue::new(&mut material.base_color.z).prefix("B: ").speed(0.01).range(0.0..=1.0));
+                    ui.add(egui::DragValue::new(&mut material.base_color.w).prefix("A: ").speed(0.01).range(0.0..=1.0));
                 });
                 
                 // 颜色选择器
@@ -91,9 +91,9 @@ impl MaterialEditor {
                 // 自发光
                 ui.label("Emissive:");
                 ui.horizontal(|ui| {
-                    ui.add(egui::DragValue::new(&mut material.emissive.x).prefix("R: ").speed(0.01).clamp_range(0.0..=10.0));
-                    ui.add(egui::DragValue::new(&mut material.emissive.y).prefix("G: ").speed(0.01).clamp_range(0.0..=10.0));
-                    ui.add(egui::DragValue::new(&mut material.emissive.z).prefix("B: ").speed(0.01).clamp_range(0.0..=10.0));
+                    ui.add(egui::DragValue::new(&mut material.emissive.x).prefix("R: ").speed(0.01).range(0.0..=10.0));
+                    ui.add(egui::DragValue::new(&mut material.emissive.y).prefix("G: ").speed(0.01).range(0.0..=10.0));
+                    ui.add(egui::DragValue::new(&mut material.emissive.z).prefix("B: ").speed(0.01).range(0.0..=10.0));
                 });
                 
                 ui.separator();

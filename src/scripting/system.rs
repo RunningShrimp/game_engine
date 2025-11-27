@@ -1,5 +1,6 @@
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, mpsc};
 use std::collections::HashMap;
+use std::thread;
 
 /// 脚本语言类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -109,40 +110,231 @@ impl Default for ScriptSystem {
     }
 }
 
-/// JavaScript上下文的简单实现 (占位)
+/// JavaScript执行请求
+enum JsCommand {
+    Execute(String, mpsc::Sender<ScriptResult>),
+    CallFunction(String, Vec<ScriptValue>, mpsc::Sender<ScriptResult>),
+    SetGlobal(String, ScriptValue, mpsc::Sender<ScriptResult>),
+    GetGlobal(String, mpsc::Sender<Option<ScriptValue>>),
+    Reset(mpsc::Sender<()>),
+    Shutdown,
+}
+
+/// JavaScript上下文 - 基于rquickjs的线程安全实现
+/// 
+/// 使用QuickJS引擎在专用线程中执行JavaScript代码，
+/// 通过channel通信保证线程安全
 pub struct JavaScriptContext {
-    globals: HashMap<String, ScriptValue>,
+    sender: mpsc::Sender<JsCommand>,
+    globals_cache: Arc<Mutex<HashMap<String, ScriptValue>>>,
 }
 
 impl JavaScriptContext {
     pub fn new() -> Self {
+        let (tx, rx) = mpsc::channel::<JsCommand>();
+        let globals_cache = Arc::new(Mutex::new(HashMap::new()));
+        let globals_clone = Arc::clone(&globals_cache);
+        
+        // 在专用线程中运行QuickJS
+        thread::spawn(move || {
+            use rquickjs::{Context, Runtime, Function, Object};
+            
+            let runtime = match Runtime::new() {
+                Ok(r) => r,
+                Err(e) => {
+                    eprintln!("Failed to create QuickJS runtime: {:?}", e);
+                    return;
+                }
+            };
+            let context = match Context::full(&runtime) {
+                Ok(c) => c,
+                Err(e) => {
+                    eprintln!("Failed to create QuickJS context: {:?}", e);
+                    return;
+                }
+            };
+            
+            // 绑定基础API
+            context.with(|ctx| {
+                let global = ctx.globals();
+                
+                // 创建Engine命名空间
+                if let Ok(engine_obj) = Object::new(ctx.clone()) {
+                    let _ = engine_obj.set("log", Function::new(ctx.clone(), |msg: String| {
+                        println!("[JS]: {}", msg);
+                    }));
+                    let _ = engine_obj.set("time", Function::new(ctx.clone(), || -> f64 {
+                        std::time::SystemTime::now()
+                            .duration_since(std::time::UNIX_EPOCH)
+                            .unwrap_or_default()
+                            .as_secs_f64()
+                    }));
+                    let _ = global.set("Engine", engine_obj);
+                }
+                
+                // 全局print函数
+                let _ = global.set("print", Function::new(ctx.clone(), |msg: String| {
+                    println!("[JS]: {}", msg);
+                }));
+                
+                // console对象
+                if let Ok(console_obj) = Object::new(ctx.clone()) {
+                    let _ = console_obj.set("log", Function::new(ctx.clone(), |msg: String| {
+                        println!("[JS console]: {}", msg);
+                    }));
+                    let _ = console_obj.set("warn", Function::new(ctx.clone(), |msg: String| {
+                        eprintln!("[JS warn]: {}", msg);
+                    }));
+                    let _ = console_obj.set("error", Function::new(ctx.clone(), |msg: String| {
+                        eprintln!("[JS error]: {}", msg);
+                    }));
+                    let _ = global.set("console", console_obj);
+                }
+            });
+            
+            // 消息循环
+            while let Ok(cmd) = rx.recv() {
+                match cmd {
+                    JsCommand::Execute(code, response) => {
+                        let mut result = ScriptResult::Void;
+                        context.with(|ctx| {
+                            match ctx.eval::<rquickjs::Value, _>(code.as_str()) {
+                                Ok(value) => {
+                                    if value.is_undefined() || value.is_null() {
+                                        result = ScriptResult::Void;
+                                    } else if let Ok(s) = value.get::<String>() {
+                                        result = ScriptResult::Success(s);
+                                    } else if let Ok(n) = value.get::<f64>() {
+                                        result = ScriptResult::Success(n.to_string());
+                                    } else if let Ok(b) = value.get::<bool>() {
+                                        result = ScriptResult::Success(b.to_string());
+                                    } else {
+                                        result = ScriptResult::Success("[object]".to_string());
+                                    }
+                                }
+                                Err(e) => {
+                                    result = ScriptResult::Error(format!("{:?}", e));
+                                }
+                            }
+                        });
+                        let _ = response.send(result);
+                    }
+                    JsCommand::CallFunction(name, args, response) => {
+                        let args_json = args.iter()
+                            .map(|v| match v {
+                                ScriptValue::Null => "null".to_string(),
+                                ScriptValue::Bool(b) => b.to_string(),
+                                ScriptValue::Int(i) => i.to_string(),
+                                ScriptValue::Float(f) => f.to_string(),
+                                ScriptValue::String(s) => format!("\"{}\"", s.replace('\"', "\\\"")),
+                                ScriptValue::Array(_) => "[]".to_string(),
+                                ScriptValue::Object(_) => "{}".to_string(),
+                            })
+                            .collect::<Vec<_>>()
+                            .join(", ");
+                        
+                        let call_code = format!("{}({})", name, args_json);
+                        let mut result = ScriptResult::Void;
+                        context.with(|ctx| {
+                            match ctx.eval::<rquickjs::Value, _>(call_code.as_str()) {
+                                Ok(value) => {
+                                    if value.is_undefined() || value.is_null() {
+                                        result = ScriptResult::Void;
+                                    } else if let Ok(s) = value.get::<String>() {
+                                        result = ScriptResult::Success(s);
+                                    } else if let Ok(n) = value.get::<f64>() {
+                                        result = ScriptResult::Success(n.to_string());
+                                    } else {
+                                        result = ScriptResult::Success("[object]".to_string());
+                                    }
+                                }
+                                Err(e) => {
+                                    result = ScriptResult::Error(format!("{:?}", e));
+                                }
+                            }
+                        });
+                        let _ = response.send(result);
+                    }
+                    JsCommand::SetGlobal(name, value, response) => {
+                        let js_value = match &value {
+                            ScriptValue::Null => "null".to_string(),
+                            ScriptValue::Bool(b) => b.to_string(),
+                            ScriptValue::Int(i) => i.to_string(),
+                            ScriptValue::Float(f) => f.to_string(),
+                            ScriptValue::String(s) => format!("\"{}\"", s.replace('\"', "\\\"")),
+                            ScriptValue::Array(_) => "[]".to_string(),
+                            ScriptValue::Object(_) => "{}".to_string(),
+                        };
+                        let set_code = format!("globalThis.{} = {}", name, js_value);
+                        
+                        let mut result = ScriptResult::Void;
+                        context.with(|ctx| {
+                            if let Err(e) = ctx.eval::<(), _>(set_code.as_str()) {
+                                result = ScriptResult::Error(format!("{:?}", e));
+                            }
+                        });
+                        
+                        // 更新本地缓存
+                        globals_clone.lock().unwrap().insert(name, value);
+                        let _ = response.send(result);
+                    }
+                    JsCommand::GetGlobal(name, response) => {
+                        let value = globals_clone.lock().unwrap().get(&name).cloned();
+                        let _ = response.send(value);
+                    }
+                    JsCommand::Reset(response) => {
+                        globals_clone.lock().unwrap().clear();
+                        let _ = response.send(());
+                    }
+                    JsCommand::Shutdown => break,
+                }
+            }
+        });
+        
         Self {
-            globals: HashMap::new(),
+            sender: tx,
+            globals_cache,
         }
     }
 }
 
 impl ScriptContext for JavaScriptContext {
     fn execute(&mut self, code: &str) -> ScriptResult {
-        // 占位实现
-        ScriptResult::Success(format!("Executed: {}", code))
+        let (tx, rx) = mpsc::channel();
+        if self.sender.send(JsCommand::Execute(code.to_string(), tx)).is_ok() {
+            rx.recv().unwrap_or(ScriptResult::Error("Channel closed".to_string()))
+        } else {
+            ScriptResult::Error("Failed to send command".to_string())
+        }
     }
     
-    fn call_function(&mut self, name: &str, _args: &[ScriptValue]) -> ScriptResult {
-        ScriptResult::Success(format!("Called function: {}", name))
+    fn call_function(&mut self, name: &str, args: &[ScriptValue]) -> ScriptResult {
+        let (tx, rx) = mpsc::channel();
+        if self.sender.send(JsCommand::CallFunction(name.to_string(), args.to_vec(), tx)).is_ok() {
+            rx.recv().unwrap_or(ScriptResult::Error("Channel closed".to_string()))
+        } else {
+            ScriptResult::Error("Failed to send command".to_string())
+        }
     }
     
     fn set_global(&mut self, name: &str, value: ScriptValue) -> ScriptResult {
-        self.globals.insert(name.to_string(), value);
-        ScriptResult::Void
+        let (tx, rx) = mpsc::channel();
+        if self.sender.send(JsCommand::SetGlobal(name.to_string(), value, tx)).is_ok() {
+            rx.recv().unwrap_or(ScriptResult::Error("Channel closed".to_string()))
+        } else {
+            ScriptResult::Error("Failed to send command".to_string())
+        }
     }
     
     fn get_global(&self, name: &str) -> Option<ScriptValue> {
-        self.globals.get(name).cloned()
+        self.globals_cache.lock().unwrap().get(name).cloned()
     }
     
     fn reset(&mut self) {
-        self.globals.clear();
+        let (tx, rx) = mpsc::channel();
+        if self.sender.send(JsCommand::Reset(tx)).is_ok() {
+            let _ = rx.recv();
+        }
     }
 }
 
@@ -206,9 +398,17 @@ mod tests {
         // 注册JavaScript上下文
         system.register_context(ScriptLanguage::JavaScript, Box::new(JavaScriptContext::new()));
         
-        // 执行脚本
+        // 执行脚本 - console.log返回undefined, 所以结果是Void
         let result = system.execute(ScriptLanguage::JavaScript, "console.log('Hello')");
-        assert!(matches!(result, ScriptResult::Success(_)));
+        assert!(matches!(result, ScriptResult::Void), "Expected Void, got {:?}", result);
+        
+        // 执行有返回值的脚本
+        let result = system.execute(ScriptLanguage::JavaScript, "1 + 2");
+        assert!(matches!(result, ScriptResult::Success(ref s) if s == "3"), "Expected '3', got {:?}", result);
+        
+        // 执行字符串运算
+        let result = system.execute(ScriptLanguage::JavaScript, "'Hello' + ' World'");
+        assert!(matches!(result, ScriptResult::Success(ref s) if s == "Hello World"), "Expected 'Hello World', got {:?}", result);
         
         // 设置全局变量
         system.set_global(ScriptLanguage::JavaScript, "test", ScriptValue::Int(42));
@@ -216,5 +416,9 @@ mod tests {
         // 获取全局变量
         let value = system.get_global(ScriptLanguage::JavaScript, "test");
         assert!(matches!(value, Some(ScriptValue::Int(42))));
+        
+        // 使用引擎API
+        let result = system.execute(ScriptLanguage::JavaScript, "Engine.time()");
+        assert!(matches!(result, ScriptResult::Success(_)), "Engine.time() should return timestamp");
     }
 }

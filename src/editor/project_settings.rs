@@ -266,7 +266,7 @@ impl ProjectSettingsManager {
             
             ui.horizontal(|ui| {
                 ui.label("Max FPS:");
-                if ui.add(egui::DragValue::new(&mut self.settings.render_settings.max_fps).clamp_range(0..=300)).changed() {
+                if ui.add(egui::DragValue::new(&mut self.settings.render_settings.max_fps).range(0..=300)).changed() {
                     self.has_unsaved_changes = true;
                 }
                 ui.label("(0 = unlimited)");
@@ -274,7 +274,7 @@ impl ProjectSettingsManager {
             
             ui.horizontal(|ui| {
                 ui.label("MSAA Samples:");
-                if ui.add(egui::DragValue::new(&mut self.settings.render_settings.msaa_samples).clamp_range(1..=8)).changed() {
+                if ui.add(egui::DragValue::new(&mut self.settings.render_settings.msaa_samples).range(1..=8)).changed() {
                     self.has_unsaved_changes = true;
                 }
             });
@@ -299,7 +299,7 @@ impl ProjectSettingsManager {
             
             ui.horizontal(|ui| {
                 ui.label("Fixed Timestep:");
-                if ui.add(egui::DragValue::new(&mut self.settings.physics_settings.fixed_timestep).speed(0.001).clamp_range(0.001..=0.1)).changed() {
+                if ui.add(egui::DragValue::new(&mut self.settings.physics_settings.fixed_timestep).speed(0.001).range(0.001..=0.1)).changed() {
                     self.has_unsaved_changes = true;
                 }
                 ui.label("seconds");

@@ -3,6 +3,7 @@ use bevy_ecs::prelude::*;
 use crossbeam_channel::{unbounded, Receiver, Sender};
 use crate::render::wgpu::WgpuRenderer;
 use super::atlas::Atlas;
+use super::runtime::global_runtime;
 
 // --- Handle System ---
 
@@ -51,10 +52,15 @@ enum AssetTask {
     Atlas { path: PathBuf, handle: Handle<Atlas>, start: std::time::Instant },
 }
 
+pub enum AssetResult {
+    Bytes(Vec<u8>),
+    Image(image::RgbaImage),
+}
+
 #[derive(Resource)]
 pub struct AssetServer {
     tx: Sender<AssetTask>,
-    rx: Receiver<(AssetTask, Result<Vec<u8>, String>)>,
+    rx: Receiver<(AssetTask, Result<AssetResult, String>)>,
 }
 
 #[derive(Clone, Debug)]
@@ -76,26 +82,42 @@ impl AssetServer {
         let (task_tx, task_rx) = unbounded::<AssetTask>();
         let (done_tx, done_rx) = unbounded();
 
-        // Spawn the IO thread
+        // 使用全局运行时处理异步IO任务
         let tx_clone = done_tx.clone();
         std::thread::spawn(move || {
-            // Create a local runtime for IO tasks
-            let rt = tokio::runtime::Builder::new_current_thread()
-                .enable_all()
-                .build()
-                .unwrap();
+            let rt = global_runtime();
             
             rt.block_on(async move {
                 while let Ok(task) = task_rx.recv() {
                     let tx = tx_clone.clone();
                     tokio::spawn(async move {
-                        let (path, result) = match &task {
-                            AssetTask::Texture { path, .. } => (path.clone(), tokio::fs::read(path).await),
-                            AssetTask::Atlas { path, .. } => (path.clone(), tokio::fs::read(path).await),
+                        let result = match &task {
+                            AssetTask::Texture { path, .. } => {
+                                match tokio::fs::read(path).await {
+                                    Ok(bytes) => {
+                                        // Decode in blocking task
+                                        let decode_res = tokio::task::spawn_blocking(move || {
+                                            image::load_from_memory(&bytes)
+                                                .map(|img| AssetResult::Image(img.to_rgba8()))
+                                                .map_err(|e| e.to_string())
+                                        }).await;
+                                        
+                                        match decode_res {
+                                            Ok(res) => res,
+                                            Err(e) => Err(e.to_string()),
+                                        }
+                                    },
+                                    Err(e) => Err(e.to_string()),
+                                }
+                            },
+                            AssetTask::Atlas { path, .. } => {
+                                tokio::fs::read(path).await
+                                    .map(AssetResult::Bytes)
+                                    .map_err(|e| e.to_string())
+                            },
                         };
                         
-                        let res = result.map_err(|e| e.to_string());
-                        let _ = tx.send((task, res));
+                        let _ = tx.send((task, result));
                     });
                 }
             });
@@ -133,9 +155,9 @@ impl AssetServer {
         let mut events = Vec::new();
         while let Ok((task, result)) = self.rx.try_recv() {
             match (task, result) {
-                (AssetTask::Texture { handle, is_linear, start, .. }, Ok(bytes)) => {
+                (AssetTask::Texture { handle, is_linear, start, .. }, Ok(AssetResult::Image(img))) => {
                     let ms = std::time::Instant::now().duration_since(start).as_secs_f32() * 1000.0;
-                    if let Some(tex_id) = renderer.load_texture_from_bytes(&bytes, is_linear) {
+                    if let Some(tex_id) = renderer.load_texture_from_image(img, is_linear) {
                          *handle.container.state.write().unwrap() = LoadState::Loaded(tex_id);
                          events.push(AssetEvent::TextureLoaded(handle.clone(), ms));
                     } else {
@@ -143,7 +165,7 @@ impl AssetServer {
                          events.push(AssetEvent::TextureFailed(handle.clone(), "Failed to create texture".to_string()));
                     }
                 },
-                (AssetTask::Atlas { handle, start, .. }, Ok(bytes)) => {
+                (AssetTask::Atlas { handle, start, .. }, Ok(AssetResult::Bytes(bytes))) => {
                     let ms = std::time::Instant::now().duration_since(start).as_secs_f32() * 1000.0;
                     if let Ok(json_str) = String::from_utf8(bytes) {
                         if let Some(atlas) = Atlas::from_json(&json_str) {
@@ -166,6 +188,7 @@ impl AssetServer {
                     *handle.container.state.write().unwrap() = LoadState::Failed(e.clone());
                     events.push(AssetEvent::AtlasFailed(handle.clone(), e));
                 },
+                _ => {}
             }
         }
         events

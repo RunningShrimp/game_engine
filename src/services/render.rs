@@ -1,60 +1,12 @@
 use bevy_ecs::prelude::*;
 use crate::render::wgpu::{WgpuRenderer, Instance};
-use crate::ecs::{Transform, Mesh};
+use crate::ecs::{Transform, Mesh, PbrMaterialComp, PointLight3D as EcsPointLight3D, DirectionalLightComp};
 use crate::render::mesh::GpuMesh;
-use glam::Mat4;
+use crate::render::pbr::{PbrMaterial, PointLight3D, DirectionalLight};
+use glam::{Mat4, Vec3, Vec4};
 use std::collections::HashMap;
 
-/// Flutter-style Layer Types for compositing
-#[derive(Clone, Debug)]
-pub enum Layer {
-    /// Leaf layer: directly paints content
-    Picture {
-        commands: Vec<DrawCommand>,
-        transform: Mat4,
-    },
-    /// Container layer: composites children with transform
-    Transform {
-        matrix: Mat4,
-        children: Vec<Layer>,
-    },
-    /// Opacity layer: applies alpha to subtree
-    Opacity {
-        alpha: f32,
-        child: Box<Layer>,
-    },
-    /// Clip layer: clips content to rect
-    ClipRect {
-        rect: [f32; 4], // x, y, w, h
-        child: Box<Layer>,
-    },
-    /// Offscreen layer: renders to texture for caching
-    Offscreen {
-        id: u32,
-        size: [u32; 2],
-        child: Box<Layer>,
-    },
-}
 
-/// Low-level draw commands
-#[derive(Clone, Debug)]
-pub enum DrawCommand {
-    DrawMesh {
-        mesh: GpuMesh,
-        transform: Mat4,
-    },
-    DrawSprite {
-        texture_id: u32,
-        rect: [f32; 4],
-        uv_rect: [f32; 4],
-        color: [f32; 4],
-    },
-    DrawRect {
-        rect: [f32; 4],
-        color: [f32; 4],
-        radius: f32,
-    },
-}
 
 /// Represents a node in the visual tree (Flutter-style RenderObject)
 #[derive(Clone)]
@@ -163,46 +115,6 @@ impl RenderService {
         scene
     }
     
-    /// Convert RenderObject tree to Layer tree for compositing
-    pub fn build_layer_tree(&self, scene: &[RenderObject]) -> Layer {
-        let mut commands = Vec::new();
-        
-        for obj in scene {
-            self.collect_draw_commands(obj, Mat4::IDENTITY, &mut commands);
-        }
-        
-        Layer::Picture {
-            commands,
-            transform: Mat4::IDENTITY,
-        }
-    }
-    
-    fn collect_draw_commands(&self, obj: &RenderObject, parent: Mat4, out: &mut Vec<DrawCommand>) {
-        match obj {
-            RenderObject::Mesh { mesh, transform } => {
-                let local = Mat4::from_scale_rotation_translation(transform.scale, transform.rot, transform.pos);
-                let global = parent * local;
-                out.push(DrawCommand::DrawMesh {
-                    mesh: mesh.clone(),
-                    transform: global,
-                });
-            }
-            RenderObject::Container { transform, children } => {
-                let local = Mat4::from_scale_rotation_translation(transform.scale, transform.rot, transform.pos);
-                let global = parent * local;
-                for child in children {
-                    self.collect_draw_commands(child, global, out);
-                }
-            }
-            RenderObject::Opacity { opacity: _, child } => {
-                // TODO: Handle opacity in compositing pass
-                self.collect_draw_commands(child, parent, out);
-            }
-            RenderObject::Sprite { .. } => {
-                // TODO: Handle 2D sprites
-            }
-        }
-    }
 
     /// The "Paint" phase: Flatten the tree into draw calls
     pub fn paint(
@@ -252,4 +164,94 @@ impl RenderService {
             _ => {}
         }
     }
+    
+    // ========================================================================
+    // PBR Scene Building
+    // ========================================================================
+    
+    /// 构建PBR场景 - 提取网格、材质和光源
+    pub fn build_pbr_scene(&mut self, world: &mut World) -> PbrScene {
+        let mut meshes = Vec::new();
+        let mut point_lights = Vec::new();
+        let mut dir_lights = Vec::new();
+        
+        // 提取带有PBR材质的网格
+        let mut mesh_query = world.query::<(&Mesh, &Transform, Option<&PbrMaterialComp>)>();
+        for (mesh, transform, pbr_mat) in mesh_query.iter(world) {
+            if let Some(gpu_mesh) = mesh.handle.get() {
+                let material = if let Some(mat) = pbr_mat {
+                    PbrMaterial {
+                        base_color: Vec4::from_array(mat.base_color),
+                        metallic: mat.metallic,
+                        roughness: mat.roughness,
+                        ambient_occlusion: mat.ambient_occlusion,
+                        emissive: Vec3::from_array(mat.emissive),
+                        normal_scale: 1.0,
+                    }
+                } else {
+                    PbrMaterial::default()
+                };
+                meshes.push((gpu_mesh.clone(), *transform, material));
+            }
+        }
+        
+        // 提取3D点光源
+        let mut point_light_query = world.query::<(&Transform, &EcsPointLight3D)>();
+        for (transform, light) in point_light_query.iter(world) {
+            point_lights.push(PointLight3D {
+                position: transform.pos,
+                color: Vec3::from_array(light.color),
+                intensity: light.intensity,
+                radius: light.radius,
+            });
+        }
+        
+        // 提取方向光
+        let mut dir_light_query = world.query::<&DirectionalLightComp>();
+        for light in dir_light_query.iter(world) {
+            dir_lights.push(DirectionalLight {
+                direction: Vec3::from_array(light.direction),
+                color: Vec3::from_array(light.color),
+                intensity: light.intensity,
+            });
+        }
+        
+        PbrScene {
+            meshes,
+            point_lights,
+            dir_lights,
+        }
+    }
+    
+    /// 执行PBR渲染
+    pub fn paint_pbr(
+        &mut self,
+        renderer: &mut WgpuRenderer,
+        scene: &PbrScene,
+        view_proj: [[f32; 4]; 4],
+        camera_pos: [f32; 3],
+        egui_renderer: Option<&mut egui_wgpu::Renderer>,
+        egui_shapes: &[egui::ClippedPrimitive],
+        pixels_per_point: f32,
+    ) {
+        self.layer_cache.new_frame();
+        
+        renderer.render_pbr(
+            &scene.meshes,
+            &scene.point_lights,
+            &scene.dir_lights,
+            view_proj,
+            camera_pos,
+            egui_renderer,
+            egui_shapes,
+            pixels_per_point,
+        );
+    }
+}
+
+/// PBR场景数据
+pub struct PbrScene {
+    pub meshes: Vec<(GpuMesh, Transform, PbrMaterial)>,
+    pub point_lights: Vec<PointLight3D>,
+    pub dir_lights: Vec<DirectionalLight>,
 }

@@ -97,6 +97,15 @@ pub fn inspect_world_ui(ctx: &egui::Context, world: &mut World) {
                 ui.label(rt);
             }
             ui.label(format!("Draw calls: {} | Instances: {} | Passes: {}", stats.draw_calls, stats.instances, stats.passes));
+            
+            // 显示视锥剔除统计
+            if stats.total_objects > 0 {
+                let cull_pct = (stats.culled_objects as f32 / stats.total_objects as f32 * 100.0) as u32;
+                let cull_text = format!("Culled: {}/{} ({}%)", stats.culled_objects, stats.total_objects, cull_pct);
+                let cull_color = if cull_pct > 50 { egui::Color32::GREEN } else { egui::Color32::WHITE };
+                ui.label(egui::RichText::new(cull_text).color(cull_color));
+            }
+            
             if let Some(o) = stats.offscreen_ms {
                 let rt = egui::RichText::new(format!("Offscreen: {:.3}ms", o)).color(if o > 8.0 { egui::Color32::RED } else { egui::Color32::WHITE });
                 ui.label(rt);

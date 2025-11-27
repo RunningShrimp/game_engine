@@ -5,23 +5,43 @@
 //! ## Features
 //!
 //! - **ECS Architecture**: Entity Component System for efficient game object management
-//! - **Cross-Platform Rendering**: 2D/3D rendering with wgpu backend
+//! - **Cross-Platform Rendering**: 2D/3D rendering with wgpu backend, including post-processing effects
 //! - **Physics**: Integrated Rapier physics engine for 2D and 3D
 //! - **Audio**: Audio system for sound effects and music
 //! - **Animation**: Keyframe-based animation system
 //! - **Editor**: Built-in editor tools for game development
-//! - **Performance**: Profiling and optimization tools
+//! - **Performance**: Profiling and optimization tools (SIMD, dirty tracking)
+//!
+//! ## Architecture Design
+//!
+//! This engine follows the **Anemic Domain Model (贫血模型)** pattern:
+//! - **State (Resource)**: Pure data structures storing system state
+//! - **Service**: Business logic encapsulation with static methods
+//! - **System**: ECS systems for orchestration and scheduling
+//!
+//! ### Example
+//!
+//! ```ignore
+//! use game_engine::audio::{AudioState, AudioService};
+//!
+//! fn play_sound(mut state: ResMut<AudioState>, entity: Entity) {
+//!     AudioService::play_file(&state, entity, "sound.mp3", 1.0, false);
+//! }
+//! ```
 //!
 //! ## Modules
 //!
 //! - [`core`]: Core engine functionality
 //! - [`ecs`]: Entity Component System
-//! - [`render`]: Rendering system
+//! - [`render`]: Rendering system with post-processing
 //! - [`physics`]: Physics simulation
 //! - [`audio`]: Audio playback
 //! - [`animation`]: Animation system
 //! - [`editor`]: Editor tools
 //! - [`performance`]: Performance profiling
+
+// 启用文档缺失警告（逐步添加文档）
+// #![warn(missing_docs)]  // TODO: 启用后逐步修复所有警告
 
 /// Core engine functionality including the main engine loop and initialization
 pub mod core;
@@ -55,6 +75,8 @@ pub mod config;
 pub mod animation;
 /// Scene management and serialization
 pub mod scene;
+/// Network synchronization framework
+pub mod network;
 
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;

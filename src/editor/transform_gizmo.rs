@@ -197,17 +197,17 @@ impl TransformGizmo {
         
         ui.horizontal(|ui| {
             ui.label("X:");
-            changed |= ui.add(egui::DragValue::new(&mut transform.scale.x).speed(0.01).clamp_range(0.01..=10.0)).changed();
+            changed |= ui.add(egui::DragValue::new(&mut transform.scale.x).speed(0.01).range(0.01..=10.0)).changed();
         });
         
         ui.horizontal(|ui| {
             ui.label("Y:");
-            changed |= ui.add(egui::DragValue::new(&mut transform.scale.y).speed(0.01).clamp_range(0.01..=10.0)).changed();
+            changed |= ui.add(egui::DragValue::new(&mut transform.scale.y).speed(0.01).range(0.01..=10.0)).changed();
         });
         
         ui.horizontal(|ui| {
             ui.label("Z:");
-            changed |= ui.add(egui::DragValue::new(&mut transform.scale.z).speed(0.01).clamp_range(0.01..=10.0)).changed();
+            changed |= ui.add(egui::DragValue::new(&mut transform.scale.z).speed(0.01).range(0.01..=10.0)).changed();
         });
         
         ui.separator();
@@ -216,7 +216,7 @@ impl TransformGizmo {
         ui.horizontal(|ui| {
             ui.label("Uniform:");
             let mut uniform_scale = transform.scale.x;
-            if ui.add(egui::DragValue::new(&mut uniform_scale).speed(0.01).clamp_range(0.01..=10.0)).changed() {
+            if ui.add(egui::DragValue::new(&mut uniform_scale).speed(0.01).range(0.01..=10.0)).changed() {
                 transform.scale = Vec3::splat(uniform_scale);
                 changed = true;
             }

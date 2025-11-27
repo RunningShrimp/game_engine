@@ -32,15 +32,18 @@ struct DirectionalLight {
 };
 
 @group(0) @binding(0) var<uniform> uniforms: Uniforms3D;
-@group(1) @binding(0) var<uniform> model: ModelUniform;
-@group(2) @binding(0) var<uniform> material: MaterialUniform;
-@group(3) @binding(0) var<storage, read> point_lights: array<PointLight>;
-@group(3) @binding(1) var<storage, read> dir_lights: array<DirectionalLight>;
+@group(1) @binding(0) var<uniform> material: MaterialUniform;
+@group(2) @binding(0) var<storage, read> point_lights: array<PointLight>;
+@group(2) @binding(1) var<storage, read> dir_lights: array<DirectionalLight>;
 
 struct VertexInput {
     @location(0) position: vec3<f32>,
     @location(1) normal: vec3<f32>,
     @location(2) uv: vec2<f32>,
+    @location(5) model_matrix_0: vec4<f32>,
+    @location(6) model_matrix_1: vec4<f32>,
+    @location(7) model_matrix_2: vec4<f32>,
+    @location(8) model_matrix_3: vec4<f32>,
 };
 
 struct VertexOutput {
@@ -53,10 +56,16 @@ struct VertexOutput {
 @vertex
 fn vs_main(vertex: VertexInput) -> VertexOutput {
     var out: VertexOutput;
-    let world_pos = model.model * vec4<f32>(vertex.position, 1.0);
+    let model_matrix = mat4x4<f32>(
+        vertex.model_matrix_0,
+        vertex.model_matrix_1,
+        vertex.model_matrix_2,
+        vertex.model_matrix_3
+    );
+    let world_pos = model_matrix * vec4<f32>(vertex.position, 1.0);
     out.world_position = world_pos.xyz;
     out.clip_position = uniforms.view_proj * world_pos;
-    out.world_normal = normalize((model.model * vec4<f32>(vertex.normal, 0.0)).xyz);
+    out.world_normal = normalize((model_matrix * vec4<f32>(vertex.normal, 0.0)).xyz);
     out.uv = vertex.uv;
     return out;
 }

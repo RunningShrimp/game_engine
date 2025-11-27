@@ -3,6 +3,45 @@ use crate::render::mesh::Vertex3D;
 
 #[repr(C)]
 #[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
+pub struct Instance3D {
+    pub model: [[f32; 4]; 4],
+}
+
+impl Instance3D {
+    pub fn desc() -> wgpu::VertexBufferLayout<'static> {
+        use std::mem;
+        wgpu::VertexBufferLayout {
+            array_stride: mem::size_of::<Instance3D>() as wgpu::BufferAddress,
+            step_mode: wgpu::VertexStepMode::Instance,
+            attributes: &[
+                // Model Matrix (4x4) takes 4 slots
+                wgpu::VertexAttribute {
+                    offset: 0,
+                    shader_location: 5,
+                    format: wgpu::VertexFormat::Float32x4,
+                },
+                wgpu::VertexAttribute {
+                    offset: mem::size_of::<[f32; 4]>() as wgpu::BufferAddress,
+                    shader_location: 6,
+                    format: wgpu::VertexFormat::Float32x4,
+                },
+                wgpu::VertexAttribute {
+                    offset: mem::size_of::<[f32; 8]>() as wgpu::BufferAddress,
+                    shader_location: 7,
+                    format: wgpu::VertexFormat::Float32x4,
+                },
+                wgpu::VertexAttribute {
+                    offset: mem::size_of::<[f32; 12]>() as wgpu::BufferAddress,
+                    shader_location: 8,
+                    format: wgpu::VertexFormat::Float32x4,
+                },
+            ],
+        }
+    }
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
 struct Uniforms3DPBR {
     view_proj: [[f32; 4]; 4],
     camera_pos: [f32; 3],
@@ -11,13 +50,8 @@ struct Uniforms3DPBR {
 
 #[repr(C)]
 #[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
-struct ModelUniformPBR {
-    model: [[f32; 4]; 4],
-}
-
-#[repr(C)]
-#[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
 struct MaterialUniformPBR {
+
     base_color: [f32; 4],
     metallic: f32,
     roughness: f32,
@@ -51,8 +85,6 @@ pub struct PbrRenderer {
     pub pipeline: wgpu::RenderPipeline,
     pub uniform_buffer: wgpu::Buffer,
     pub uniform_bind_group: wgpu::BindGroup,
-    pub model_buffer: wgpu::Buffer,
-    pub model_bind_group: wgpu::BindGroup,
     pub material_buffer: wgpu::Buffer,
     pub material_bind_group: wgpu::BindGroup,
     pub lights_buffer: wgpu::Buffer,
@@ -76,7 +108,7 @@ impl PbrRenderer {
                 ty: wgpu::BindingType::Buffer {
                     ty: wgpu::BufferBindingType::Uniform,
                     has_dynamic_offset: false,
-                    min_binding_size: std::num::NonZeroU64::new(std::mem::size_of::<Uniforms3DPBR>() as u64),
+                    min_binding_size: std::num::NonZeroU64::new(std::mem::size_of::<Uniforms3DPBR>() as wgpu::BufferAddress as u64),
                 },
                 count: None,
             }],
@@ -84,7 +116,7 @@ impl PbrRenderer {
 
         let uniform_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("PBR Uniform Buffer"),
-            size: std::mem::size_of::<Uniforms3DPBR>() as u64,
+            size: std::mem::size_of::<Uniforms3DPBR>() as wgpu::BufferAddress,
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
@@ -98,37 +130,6 @@ impl PbrRenderer {
             }],
         });
 
-        // 模型矩阵
-        let model_bgl = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("PBR Model BGL"),
-            entries: &[wgpu::BindGroupLayoutEntry {
-                binding: 0,
-                visibility: wgpu::ShaderStages::VERTEX,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Uniform,
-                    has_dynamic_offset: false,
-                    min_binding_size: std::num::NonZeroU64::new(std::mem::size_of::<ModelUniformPBR>() as u64),
-                },
-                count: None,
-            }],
-        });
-
-        let model_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("PBR Model Buffer"),
-            size: std::mem::size_of::<ModelUniformPBR>() as u64,
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-
-        let model_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("PBR Model BG"),
-            layout: &model_bgl,
-            entries: &[wgpu::BindGroupEntry {
-                binding: 0,
-                resource: model_buffer.as_entire_binding(),
-            }],
-        });
-
         // 材质
         let material_bgl = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("PBR Material BGL"),
@@ -138,7 +139,7 @@ impl PbrRenderer {
                 ty: wgpu::BindingType::Buffer {
                     ty: wgpu::BufferBindingType::Uniform,
                     has_dynamic_offset: false,
-                    min_binding_size: std::num::NonZeroU64::new(std::mem::size_of::<MaterialUniformPBR>() as u64),
+                    min_binding_size: std::num::NonZeroU64::new(std::mem::size_of::<MaterialUniformPBR>() as wgpu::BufferAddress as u64),
                 },
                 count: None,
             }],
@@ -146,7 +147,7 @@ impl PbrRenderer {
 
         let material_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("PBR Material Buffer"),
-            size: std::mem::size_of::<MaterialUniformPBR>() as u64,
+            size: std::mem::size_of::<MaterialUniformPBR>() as wgpu::BufferAddress,
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
@@ -189,14 +190,14 @@ impl PbrRenderer {
 
         let lights_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("PBR Lights Buffer"),
-            size: 256 * std::mem::size_of::<GpuPointLight3D>() as u64,
+            size: 256 * std::mem::size_of::<GpuPointLight3D>() as wgpu::BufferAddress,
             usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
 
         let dir_lights_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("PBR Dir Lights Buffer"),
-            size: 16 * std::mem::size_of::<GpuDirectionalLight>() as u64,
+            size: 16 * std::mem::size_of::<GpuDirectionalLight>() as wgpu::BufferAddress,
             usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
@@ -219,7 +220,7 @@ impl PbrRenderer {
         // 创建管线
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("PBR Pipeline Layout"),
-            bind_group_layouts: &[&uniform_bgl, &model_bgl, &material_bgl, &lights_bgl],
+            bind_group_layouts: &[&uniform_bgl, &material_bgl, &lights_bgl],
             push_constant_ranges: &[],
         });
 
@@ -229,11 +230,15 @@ impl PbrRenderer {
             vertex: wgpu::VertexState {
                 module: &shader,
                 entry_point: "vs_main",
-                buffers: &[wgpu::VertexBufferLayout {
-                    array_stride: std::mem::size_of::<Vertex3D>() as u64,
-                    step_mode: wgpu::VertexStepMode::Vertex,
-                    attributes: &wgpu::vertex_attr_array![0 => Float32x3, 1 => Float32x3, 2 => Float32x2],
-                }],
+                buffers: &[
+                    wgpu::VertexBufferLayout {
+                        array_stride: std::mem::size_of::<Vertex3D>() as u64,
+                        step_mode: wgpu::VertexStepMode::Vertex,
+                        attributes: &wgpu::vertex_attr_array![0 => Float32x3, 1 => Float32x3, 2 => Float32x2],
+                    },
+                    Instance3D::desc(),
+                ],
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
             },
             fragment: Some(wgpu::FragmentState {
                 module: &shader,
@@ -243,6 +248,7 @@ impl PbrRenderer {
                     blend: Some(wgpu::BlendState::REPLACE),
                     write_mask: wgpu::ColorWrites::ALL,
                 })],
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
             }),
             primitive: wgpu::PrimitiveState {
                 topology: wgpu::PrimitiveTopology::TriangleList,
@@ -268,8 +274,6 @@ impl PbrRenderer {
             pipeline,
             uniform_buffer,
             uniform_bind_group,
-            model_buffer,
-            model_bind_group,
             material_buffer,
             material_bind_group,
             lights_buffer,
@@ -284,11 +288,6 @@ impl PbrRenderer {
             _pad: 0.0,
         };
         queue.write_buffer(&self.uniform_buffer, 0, bytemuck::bytes_of(&uniforms));
-    }
-
-    pub fn update_model(&self, queue: &wgpu::Queue, model: [[f32; 4]; 4]) {
-        let uniform = ModelUniformPBR { model };
-        queue.write_buffer(&self.model_buffer, 0, bytemuck::bytes_of(&uniform));
     }
 
     pub fn update_material(&self, queue: &wgpu::Queue, material: &PbrMaterial) {

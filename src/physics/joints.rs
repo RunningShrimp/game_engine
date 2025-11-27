@@ -71,7 +71,7 @@ impl JointDesc {
                     .local_axis2(Unit::new_normalize(vector![axis.x, axis.y, axis.z]));
                 
                 if let Some((min, max)) = limits {
-                    joint = joint.limits(JointAxis::X, [*min, *max]);
+                    joint = joint.limits(JointAxis::LinX, [*min, *max]);
                 }
                 
                 joint.build()

@@ -90,7 +90,7 @@ impl KeyframeEditor {
         
         ui.horizontal(|ui| {
             ui.label("Time:");
-            ui.add(egui::DragValue::new(&mut new_time).suffix(" s").speed(0.1).clamp_range(0.0..=clip.duration));
+            ui.add(egui::DragValue::new(&mut new_time).suffix(" s").speed(0.1).range(0.0..=clip.duration));
         });
         
         ui.horizontal(|ui| {
@@ -131,7 +131,7 @@ impl KeyframeEditor {
                 ui.indent(i, |ui| {
                     ui.horizontal(|ui| {
                         ui.label("Time:");
-                        ui.add(egui::DragValue::new(&mut keyframe.time).suffix(" s").speed(0.1).clamp_range(0.0..=clip.duration));
+                        ui.add(egui::DragValue::new(&mut keyframe.time).suffix(" s").speed(0.1).range(0.0..=clip.duration));
                     });
                     
                     ui.horizontal(|ui| {
@@ -178,14 +178,14 @@ impl KeyframeEditor {
         
         ui.horizontal(|ui| {
             ui.label("Time:");
-            ui.add(egui::DragValue::new(&mut new_time).suffix(" s").speed(0.1).clamp_range(0.0..=clip.duration));
+            ui.add(egui::DragValue::new(&mut new_time).suffix(" s").speed(0.1).range(0.0..=clip.duration));
         });
         
         ui.horizontal(|ui| {
             ui.label("Rotation (degrees):");
-            ui.add(egui::DragValue::new(&mut new_euler.x).prefix("X: ").speed(1.0).clamp_range(-180.0..=180.0));
-            ui.add(egui::DragValue::new(&mut new_euler.y).prefix("Y: ").speed(1.0).clamp_range(-180.0..=180.0));
-            ui.add(egui::DragValue::new(&mut new_euler.z).prefix("Z: ").speed(1.0).clamp_range(-180.0..=180.0));
+            ui.add(egui::DragValue::new(&mut new_euler.x).prefix("X: ").speed(1.0).range(-180.0..=180.0));
+            ui.add(egui::DragValue::new(&mut new_euler.y).prefix("Y: ").speed(1.0).range(-180.0..=180.0));
+            ui.add(egui::DragValue::new(&mut new_euler.z).prefix("Z: ").speed(1.0).range(-180.0..=180.0));
         });
         
         if ui.button("Add Keyframe").clicked() {
@@ -225,7 +225,7 @@ impl KeyframeEditor {
                 ui.indent(i, |ui| {
                     ui.horizontal(|ui| {
                         ui.label("Time:");
-                        ui.add(egui::DragValue::new(&mut keyframe.time).suffix(" s").speed(0.1).clamp_range(0.0..=clip.duration));
+                        ui.add(egui::DragValue::new(&mut keyframe.time).suffix(" s").speed(0.1).range(0.0..=clip.duration));
                     });
                     
                     // 转换为欧拉角进行编辑
@@ -236,9 +236,9 @@ impl KeyframeEditor {
                     
                     ui.horizontal(|ui| {
                         ui.label("Rotation (degrees):");
-                        if ui.add(egui::DragValue::new(&mut x).prefix("X: ").speed(1.0).clamp_range(-180.0..=180.0)).changed() ||
-                           ui.add(egui::DragValue::new(&mut y).prefix("Y: ").speed(1.0).clamp_range(-180.0..=180.0)).changed() ||
-                           ui.add(egui::DragValue::new(&mut z).prefix("Z: ").speed(1.0).clamp_range(-180.0..=180.0)).changed() {
+                        if ui.add(egui::DragValue::new(&mut x).prefix("X: ").speed(1.0).range(-180.0..=180.0)).changed() ||
+                           ui.add(egui::DragValue::new(&mut y).prefix("Y: ").speed(1.0).range(-180.0..=180.0)).changed() ||
+                           ui.add(egui::DragValue::new(&mut z).prefix("Z: ").speed(1.0).range(-180.0..=180.0)).changed() {
                             keyframe.value = Quat::from_euler(
                                 glam::EulerRot::XYZ,
                                 x.to_radians(),
@@ -286,14 +286,14 @@ impl KeyframeEditor {
         
         ui.horizontal(|ui| {
             ui.label("Time:");
-            ui.add(egui::DragValue::new(&mut new_time).suffix(" s").speed(0.1).clamp_range(0.0..=clip.duration));
+            ui.add(egui::DragValue::new(&mut new_time).suffix(" s").speed(0.1).range(0.0..=clip.duration));
         });
         
         ui.horizontal(|ui| {
             ui.label("Scale:");
-            ui.add(egui::DragValue::new(&mut new_value.x).prefix("X: ").speed(0.1).clamp_range(0.01..=10.0));
-            ui.add(egui::DragValue::new(&mut new_value.y).prefix("Y: ").speed(0.1).clamp_range(0.01..=10.0));
-            ui.add(egui::DragValue::new(&mut new_value.z).prefix("Z: ").speed(0.1).clamp_range(0.01..=10.0));
+            ui.add(egui::DragValue::new(&mut new_value.x).prefix("X: ").speed(0.1).range(0.01..=10.0));
+            ui.add(egui::DragValue::new(&mut new_value.y).prefix("Y: ").speed(0.1).range(0.01..=10.0));
+            ui.add(egui::DragValue::new(&mut new_value.z).prefix("Z: ").speed(0.1).range(0.01..=10.0));
         });
         
         if ui.button("Add Keyframe").clicked() {
@@ -327,14 +327,14 @@ impl KeyframeEditor {
                 ui.indent(i, |ui| {
                     ui.horizontal(|ui| {
                         ui.label("Time:");
-                        ui.add(egui::DragValue::new(&mut keyframe.time).suffix(" s").speed(0.1).clamp_range(0.0..=clip.duration));
+                        ui.add(egui::DragValue::new(&mut keyframe.time).suffix(" s").speed(0.1).range(0.0..=clip.duration));
                     });
                     
                     ui.horizontal(|ui| {
                         ui.label("Scale:");
-                        ui.add(egui::DragValue::new(&mut keyframe.value.x).prefix("X: ").speed(0.1).clamp_range(0.01..=10.0));
-                        ui.add(egui::DragValue::new(&mut keyframe.value.y).prefix("Y: ").speed(0.1).clamp_range(0.01..=10.0));
-                        ui.add(egui::DragValue::new(&mut keyframe.value.z).prefix("Z: ").speed(0.1).clamp_range(0.01..=10.0));
+                        ui.add(egui::DragValue::new(&mut keyframe.value.x).prefix("X: ").speed(0.1).range(0.01..=10.0));
+                        ui.add(egui::DragValue::new(&mut keyframe.value.y).prefix("Y: ").speed(0.1).range(0.01..=10.0));
+                        ui.add(egui::DragValue::new(&mut keyframe.value.z).prefix("Z: ").speed(0.1).range(0.01..=10.0));
                     });
                 });
             }

@@ -254,7 +254,7 @@ impl CurveEditor {
                 
                 ui.horizontal(|ui| {
                     ui.label("Time:");
-                    ui.add(egui::DragValue::new(&mut point.time).speed(0.01).clamp_range(0.0..=1.0));
+                    ui.add(egui::DragValue::new(&mut point.time).speed(0.01).range(0.0..=1.0));
                 });
                 
                 ui.horizontal(|ui| {

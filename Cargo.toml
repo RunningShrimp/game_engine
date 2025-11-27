@@ -1,11 +1,11 @@
 [package]
 name = "game_engine"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 winit = "0.29"
-wgpu = { version = "0.19", features = ["webgpu"] }
+wgpu = { version = "0.20.1", features = ["webgpu"] }
 pollster = "0.3"
 futures = "0.3"
 bytemuck = { version = "1", features = ["derive"] }
@@ -13,25 +13,26 @@ image = { version = "0.24", default-features = false, features = ["png", "jpeg"]
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 notify = "6"
+thiserror = "1.0"
 
 # Core Architecture
-bevy_ecs = "0.13"
+bevy_ecs = "0.14"
 glam = { version = "0.25", features = ["bytemuck", "serde"] }
 tokio = { version = "1", features = ["full"] }
 crossbeam-channel = "0.5"
 libloading = "0.8"
 
 # Physics
-rapier2d = "0.18"
-rapier3d = "0.18"
+rapier2d = "0.20"
+rapier3d = "0.20"
 
 # XR
 openxr = "0.18"
 
 # GUI & Tools
-egui = "0.27"
-egui-wgpu = "0.27"
-egui-winit = "0.27"
+egui = "0.28"
+egui-wgpu = "0.28"
+egui-winit = "0.28"
 
 # Scripting
 rquickjs = { version = "0.5", features = ["full"] }
@@ -63,6 +64,7 @@ async_assets = []
 physics_2d = []
 xr = []
 default = ["physics_2d"]
+wgpu_perf = []
 
 [dev-dependencies]
 anyhow = "1.0.100"

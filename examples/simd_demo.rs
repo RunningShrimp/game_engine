@@ -14,7 +14,7 @@ fn main() {
     
     // 1. 检测CPU特性
     println!("1. CPU特性检测");
-    println!("-".repeat(50));
+    println!("{}", "-".repeat(50));
     print_cpu_info();
     println!();
     
@@ -26,7 +26,7 @@ fn main() {
     
     // 2. 向量运算
     println!("2. 向量运算测试");
-    println!("-".repeat(50));
+    println!("{}", "-".repeat(50));
     
     let v1 = Vec4Simd::new(1.0, 2.0, 3.0, 4.0);
     let v2 = Vec4Simd::new(5.0, 6.0, 7.0, 8.0);
@@ -43,7 +43,7 @@ fn main() {
     
     // 3. 3D向量叉积
     println!("3. 3D向量叉积");
-    println!("-".repeat(50));
+    println!("{}", "-".repeat(50));
     
     let v3a = Vec3Simd::new(1.0, 0.0, 0.0);
     let v3b = Vec3Simd::new(0.0, 1.0, 0.0);
@@ -56,7 +56,7 @@ fn main() {
     
     // 4. 矩阵运算
     println!("4. 矩阵运算测试");
-    println!("-".repeat(50));
+    println!("{}", "-".repeat(50));
     
     let m1 = Mat4Simd::identity();
     let m2 = Mat4Simd::identity();
@@ -74,7 +74,7 @@ fn main() {
     
     // 5. 四元数运算
     println!("5. 四元数运算");
-    println!("-".repeat(50));
+    println!("{}", "-".repeat(50));
     
     let q1 = QuatSimd::identity();
     let q2 = QuatSimd::identity();
@@ -85,10 +85,10 @@ fn main() {
     
     // 6. 批量变换测试
     println!("6. 批量顶点变换");
-    println!("-".repeat(50));
+    println!("{}", "-".repeat(50));
     
     let config = BatchConfig::default();
-    let transformer = BatchTransform::new(config);
+    let transformer = BatchTransform::new(config.clone());
     
     let identity = [
         [1.0, 0.0, 0.0, 0.0],
@@ -109,7 +109,7 @@ fn main() {
     
     // 7. 批量插值测试
     println!("7. 批量线性插值");
-    println!("-".repeat(50));
+    println!("{}", "-".repeat(50));
     
     let interpolator = BatchInterpolation::new(config.clone());
     
@@ -126,7 +126,7 @@ fn main() {
     
     // 8. 骨骼蒙皮测试
     println!("8. 骨骼蒙皮（LBS）");
-    println!("-".repeat(50));
+    println!("{}", "-".repeat(50));
     
     let skinning = BatchSkinning::new(config.clone());
     
@@ -157,7 +157,7 @@ fn main() {
     
     // 9. 粒子系统测试
     println!("9. 粒子系统更新");
-    println!("-".repeat(50));
+    println!("{}", "-".repeat(50));
     
     let particle_processor = BatchParticle::new(config);
     
@@ -180,7 +180,7 @@ fn main() {
     
     // 10. 力场测试
     println!("10. 粒子力场");
-    println!("-".repeat(50));
+    println!("{}", "-".repeat(50));
     
     let stats = particle_processor.apply_force_field(
         &mut particles,

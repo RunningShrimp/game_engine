@@ -59,7 +59,7 @@ impl AnimationEditor {
                 
                 ui.horizontal(|ui| {
                     ui.label("Duration:");
-                    ui.add(egui::DragValue::new(&mut clip.duration).suffix(" s").speed(0.1).clamp_range(0.1..=60.0));
+                    ui.add(egui::DragValue::new(&mut clip.duration).suffix(" s").speed(0.1).range(0.1..=60.0));
                 });
                 
                 ui.horizontal(|ui| {

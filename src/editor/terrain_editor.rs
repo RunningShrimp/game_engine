@@ -76,7 +76,7 @@ impl TerrainData {
         let mut rng = rand::thread_rng();
         
         for height in &mut self.heightmap {
-            *height = rng.gen::<f32>() * amplitude;
+            *height = rng.r#gen::<f32>() * amplitude;
         }
     }
 }

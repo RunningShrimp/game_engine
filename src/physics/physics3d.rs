@@ -1,5 +1,6 @@
 use bevy_ecs::prelude::*;
 use rapier3d::prelude::*;
+use rapier3d::prelude::DefaultBroadPhase;
 use rapier3d::na::{UnitQuaternion, Quaternion, Unit};
 use crate::ecs::Transform;
 use glam::{Vec3, Quat};
@@ -24,7 +25,7 @@ pub struct PhysicsWorld3D {
     pub integration_parameters: IntegrationParameters,
     pub physics_pipeline: PhysicsPipeline,
     pub island_manager: IslandManager,
-    pub broad_phase: BroadPhase,
+    pub broad_phase: Box<dyn BroadPhase>,
     pub narrow_phase: NarrowPhase,
     pub impulse_joint_set: ImpulseJointSet,
     pub multibody_joint_set: MultibodyJointSet,
@@ -41,7 +42,7 @@ impl Default for PhysicsWorld3D {
             integration_parameters: IntegrationParameters::default(),
             physics_pipeline: PhysicsPipeline::new(),
             island_manager: IslandManager::new(),
-            broad_phase: BroadPhase::new(),
+            broad_phase: Box::new(DefaultBroadPhase::new()),
             narrow_phase: NarrowPhase::new(),
             impulse_joint_set: ImpulseJointSet::new(),
             multibody_joint_set: MultibodyJointSet::new(),
@@ -59,7 +60,7 @@ impl PhysicsWorld3D {
             &self.gravity,
             &self.integration_parameters,
             &mut self.island_manager,
-            &mut self.broad_phase,
+            &mut *self.broad_phase,
             &mut self.narrow_phase,
             &mut self.rigid_body_set,
             &mut self.collider_set,
@@ -125,18 +126,22 @@ impl PhysicsWorld3D {
         
         let dir = vector![direction.x, direction.y, direction.z];
         
-        if let Some((handle, toi)) = self.query_pipeline.cast_shape(
+        let options = rapier3d::parry::query::ShapeCastOptions {
+            max_time_of_impact: max_distance,
+            stop_at_penetration: true,
+            ..Default::default()
+        };
+        if let Some((handle, hit)) = self.query_pipeline.cast_shape(
             &self.rigid_body_set,
             &self.collider_set,
             &isometry,
             &dir,
             shape,
-            max_distance,
-            true,
+            options,
             QueryFilter::default(),
         ) {
             let entity = self.collider_set.get(handle)?.user_data;
-            Some((Entity::from_bits(entity as u64), toi.toi))
+            Some((Entity::from_bits(entity as u64), hit.time_of_impact))
         } else {
             None
         }

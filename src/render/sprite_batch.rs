@@ -91,7 +91,7 @@ impl SpriteBatch {
            self.instance_buffer.as_ref().unwrap().size() < (self.instances.len() * std::mem::size_of::<SpriteInstance>()) as u64 {
             self.instance_buffer = Some(device.create_buffer(&wgpu::BufferDescriptor {
                 label: Some("Sprite Instance Buffer"),
-                size: (self.max_batch_size * std::mem::size_of::<SpriteInstance>()) as u64,
+                size: (self.max_batch_size * std::mem::size_of::<SpriteInstance>()) as wgpu::BufferAddress,
                 usage: BufferUsages::VERTEX | BufferUsages::COPY_DST,
                 mapped_at_creation: false,
             }));

@@ -100,6 +100,11 @@ pub enum GamepadButton {
     DPadUp, DPadDown, DPadLeft, DPadRight,
 }
 
+#[derive(bevy_ecs::system::Resource, Default, Clone)]
+pub struct InputBuffer {
+    pub events: Vec<InputEvent>,
+}
+
 /// 输入系统抽象
 pub trait Input: Send + Sync {
     fn poll_events(&mut self) -> Vec<InputEvent>;
@@ -233,4 +238,3 @@ pub use web_fs::WebFilesystem;
 
 #[cfg(target_arch = "wasm32")]
 pub use web_input::WebInput;
-

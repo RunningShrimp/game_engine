@@ -115,6 +115,72 @@ impl Default for Material {
     }
 }
 
+/// PBR材质组件 - 支持完整的物理渲染参数
+#[derive(Component, Clone, Debug)]
+pub struct PbrMaterialComp {
+    /// 基础颜色 (RGBA)
+    pub base_color: [f32; 4],
+    /// 金属度 (0.0 = 非金属, 1.0 = 金属)
+    pub metallic: f32,
+    /// 粗糙度 (0.0 = 光滑镜面, 1.0 = 粗糙漫反射)
+    pub roughness: f32,
+    /// 环境光遮蔽
+    pub ambient_occlusion: f32,
+    /// 自发光颜色 (RGB)
+    pub emissive: [f32; 3],
+    /// 自发光强度
+    pub emissive_strength: f32,
+}
+
+impl Default for PbrMaterialComp {
+    fn default() -> Self {
+        Self {
+            base_color: [1.0, 1.0, 1.0, 1.0],
+            metallic: 0.0,
+            roughness: 0.5,
+            ambient_occlusion: 1.0,
+            emissive: [0.0, 0.0, 0.0],
+            emissive_strength: 0.0,
+        }
+    }
+}
+
+/// 3D点光源组件
+#[derive(Component, Clone, Debug)]
+pub struct PointLight3D {
+    pub color: [f32; 3],
+    pub intensity: f32,
+    pub radius: f32,
+}
+
+impl Default for PointLight3D {
+    fn default() -> Self {
+        Self {
+            color: [1.0, 1.0, 1.0],
+            intensity: 1.0,
+            radius: 10.0,
+        }
+    }
+}
+
+/// 方向光组件 (太阳光等)
+#[derive(Component, Clone, Debug)]
+pub struct DirectionalLightComp {
+    pub direction: [f32; 3],
+    pub color: [f32; 3],
+    pub intensity: f32,
+}
+
+impl Default for DirectionalLightComp {
+    fn default() -> Self {
+        Self {
+            direction: [0.0, -1.0, 0.0],
+            color: [1.0, 1.0, 1.0],
+            intensity: 1.0,
+        }
+    }
+}
+
 #[derive(Resource)]
 pub struct Time {
     pub delta_seconds: f32,
@@ -151,6 +217,9 @@ pub struct Viewport {
     pub width: u32,
     pub height: u32,
 }
+
+#[derive(Resource, Clone, Copy, Debug, Default)]
+pub struct TileChunkConfig { pub size: [u32;2] }
 
 #[derive(Component, Clone, Debug)]
 pub struct TileMap {
