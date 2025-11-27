@@ -60,7 +60,7 @@ impl NpuInferenceEngine for OpenVINOEngine {
     }
     
     fn infer(&self, input: &[f32]) -> HardwareResult<Vec<f32>> {
-        if input.len() != self.input_shape.iter().product() {
+        if input.len() != self.input_shape.iter().product::<usize>() {
             return Err(HardwareError::NpuAccelerationError {
                 operation: "推理".to_string(),
                 reason: format!("输入大小不匹配: 期望 {}, 实际 {}", 
@@ -163,7 +163,7 @@ impl NpuInferenceEngine for ROCmEngine {
     }
     
     fn infer(&self, input: &[f32]) -> HardwareResult<Vec<f32>> {
-        if input.len() != self.input_shape.iter().product() {
+        if input.len() != self.input_shape.iter().product::<usize>() {
             return Err(HardwareError::NpuAccelerationError {
                 operation: "推理".to_string(),
                 reason: "输入大小不匹配".to_string(),
@@ -256,7 +256,7 @@ impl NpuInferenceEngine for AscendEngine {
     }
     
     fn infer(&self, input: &[f32]) -> HardwareResult<Vec<f32>> {
-        if input.len() != self.input_shape.iter().product() {
+        if input.len() != self.input_shape.iter().product::<usize>() {
             return Err(HardwareError::NpuAccelerationError {
                 operation: "推理".to_string(),
                 reason: "输入大小不匹配".to_string(),
@@ -359,7 +359,7 @@ impl NpuInferenceEngine for SNPEEngine {
     }
     
     fn infer(&self, input: &[f32]) -> HardwareResult<Vec<f32>> {
-        if input.len() != self.input_shape.iter().product() {
+        if input.len() != self.input_shape.iter().product::<usize>() {
             return Err(HardwareError::NpuAccelerationError {
                 operation: "推理".to_string(),
                 reason: "输入大小不匹配".to_string(),
@@ -451,7 +451,7 @@ impl NpuInferenceEngine for NeuroPilotEngine {
     }
     
     fn infer(&self, input: &[f32]) -> HardwareResult<Vec<f32>> {
-        if input.len() != self.input_shape.iter().product() {
+        if input.len() != self.input_shape.iter().product::<usize>() {
             return Err(HardwareError::NpuAccelerationError {
                 operation: "推理".to_string(),
                 reason: "输入大小不匹配".to_string(),

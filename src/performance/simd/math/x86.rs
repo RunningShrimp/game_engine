@@ -158,21 +158,9 @@ pub unsafe fn mat4_mul_sse2(a: &[[f32; 4]; 4], b: &[[f32; 4]; 4], out: &mut [[f3
 #[cfg(target_arch = "x86_64")]
 #[target_feature(enable = "avx")]
 pub unsafe fn mat4_mul_avx(a: &[[f32; 4]; 4], b: &[[f32; 4]; 4], out: &mut [[f32; 4]; 4]) {
-    // AVX可以一次处理两行
-    for i in (0..4).step_by(2) {
-        if i + 1 < 4 {
-            // 加载两行a
-            let a_row0 = _mm256_loadu_ps(a[i].as_ptr());
-            let a_row1 = _mm256_loadu_ps(a[i + 1].as_ptr());
-            
-            // 这里简化处理，实际可以更优化
-            // 回退到SSE处理
-            mat4_mul_sse2(&[a[i]], &[b[0]], &mut [out[i]]);
-            mat4_mul_sse2(&[a[i + 1]], &[b[0]], &mut [out[i + 1]]);
-        } else {
-            mat4_mul_sse2(&[a[i]], &[b[0]], &mut [out[i]]);
-        }
-    }
+    // AVX可以一次处理两行，但这里简化为回退到SSE
+    // 实际应用中可以实现更高效的AVX版本
+    mat4_mul_sse2(a, b, out);
 }
 
 /// 批量向量变换（矩阵 * 向量）

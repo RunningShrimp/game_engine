@@ -85,7 +85,7 @@ impl ThreadSafeScriptSystem {
                         ScriptCommand::CallFunction { script_id, function_name, args } => {
                             // 调用函数 (简化版)
                             if let Some(_script) = scripts.get(&script_id) {
-                                let result = Self::call_function(&function_name, args);
+                                let result = Self::call_function_internal(&function_name, args);
                                 let _ = result_tx.send(ScriptResult::Success {
                                     script_id,
                                     value: result,
@@ -121,7 +121,7 @@ impl ThreadSafeScriptSystem {
     }
     
     /// 调用函数 (简化版)
-    fn call_function(_function_name: &str, _args: Vec<ScriptValue>) -> ScriptValue {
+    fn call_function_internal(_function_name: &str, _args: Vec<ScriptValue>) -> ScriptValue {
         // 实际实现需要集成脚本引擎
         // 这里返回一个模拟值
         ScriptValue::Null

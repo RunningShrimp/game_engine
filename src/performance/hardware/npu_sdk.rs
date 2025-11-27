@@ -75,7 +75,7 @@ pub trait NpuInferenceEngine: Send + Sync {
 
 /// 推理句柄（用于异步推理）
 pub struct InferenceHandle {
-    backend: NpuBackend,
+    pub backend: NpuBackend,
     // 实际的句柄会根据不同的SDK有不同的实现
 }
 
