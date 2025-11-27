@@ -5,6 +5,8 @@ import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { WebSocketProvider } from "./contexts/WebSocketContext";
+import { UndoRedoProvider } from "./contexts/UndoRedoContext";
+import { ProjectProvider } from "./contexts/ProjectContext";
 import EditorLayout from "./components/EditorLayout";
 import Welcome from "./pages/Welcome";
 import SceneEditor from "./pages/SceneEditor";
@@ -13,6 +15,7 @@ import EntityManager from "./pages/EntityManager";
 import DebugTools from "./pages/DebugTools";
 import Settings from "./pages/Settings";
 import Documentation from "./pages/Documentation";
+import CodeEditor from "./pages/CodeEditor";
 
 
 function Router() {
@@ -49,6 +52,11 @@ function Router() {
           <Documentation />
         </EditorLayout>
       </Route>
+      <Route path="/code">
+        <EditorLayout>
+          <CodeEditor />
+        </EditorLayout>
+      </Route>
       <Route path="/404" component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
@@ -69,10 +77,14 @@ function App() {
         // switchable
       >
         <WebSocketProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Router />
-          </TooltipProvider>
+          <UndoRedoProvider>
+            <ProjectProvider>
+              <TooltipProvider>
+                <Toaster />
+                <Router />
+              </TooltipProvider>
+            </ProjectProvider>
+          </UndoRedoProvider>
         </WebSocketProvider>
       </ThemeProvider>
     </ErrorBoundary>

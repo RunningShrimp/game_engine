@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import Renderer3D from "@/components/Renderer3D";
+import HistoryPanel from "@/components/HistoryPanel";
 import {
   Box,
   Grid3x3,
@@ -16,12 +17,15 @@ import { useState } from "react";
 import { useDragDrop } from "@/hooks/useDragDrop";
 import { useHotkeys, HOTKEYS } from "@/hooks/useHotkeys";
 import { usePerformance } from "@/hooks/usePerformance";
+import { useUndoRedo } from "@/contexts/UndoRedoContext";
+import { TransformCommand } from "@/lib/undoRedo";
 import { toast } from "sonner";
 
 export default function SceneEditor() {
   const [selectedTool, setSelectedTool] = useState<string>("move");
   const { handleDragOver, handleDrop } = useDragDrop();
   const perfStats = usePerformance();
+  const { execute, undo, redo, canUndo, canRedo, undoDescription, redoDescription } = useUndoRedo();
 
   // 快捷键配置
   useHotkeys([
@@ -31,11 +35,23 @@ export default function SceneEditor() {
     },
     {
       ...HOTKEYS.UNDO,
-      handler: () => toast.info('撤销操作'),
+      handler: () => {
+        if (undo()) {
+          toast.success(`撤销: ${undoDescription}`);
+        } else {
+          toast.error('没有可撤销的操作');
+        }
+      },
     },
     {
       ...HOTKEYS.REDO,
-      handler: () => toast.info('重做操作'),
+      handler: () => {
+        if (redo()) {
+          toast.success(`重做: ${redoDescription}`);
+        } else {
+          toast.error('没有可重做的操作');
+        }
+      },
     },
     {
       ...HOTKEYS.DELETE,
@@ -142,13 +158,13 @@ export default function SceneEditor() {
         </div>
       </div>
 
-      {/* 右侧属性面板 */}
-      <div className="w-80 border-l border-border bg-card">
-        <div className="h-10 border-b border-border flex items-center px-3">
-          <span className="text-sm font-medium">属性</span>
-        </div>
-        <ScrollArea className="h-[calc(100%-2.5rem)]">
-          <div className="p-4 space-y-4">
+      {/* 右侧面板 */}
+      <div className="w-80 border-l border-border bg-card flex flex-col">
+        <div className="flex-1 flex flex-col">
+          <div className="h-12 border-b border-border flex items-center px-3">
+            <span className="text-sm font-medium">属性</span>
+          </div>
+          <ScrollArea className="flex-1 p-4 space-y-4">
             <div>
               <label className="text-xs font-medium text-muted-foreground">
                 名称
@@ -234,8 +250,12 @@ export default function SceneEditor() {
                 </div>
               </div>
             </div>
-          </div>
-        </ScrollArea>
+          </ScrollArea>
+        </div>
+        <Separator />
+        <div className="h-64">
+          <HistoryPanel />
+        </div>
       </div>
     </div>
   );

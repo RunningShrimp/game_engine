@@ -29,6 +29,7 @@ export default function EditorLayout({ children }: EditorLayoutProps) {
     { icon: Layers, label: "场景", path: "/scene" },
     { icon: Folder, label: "资产", path: "/assets" },
     { icon: Box, label: "实体", path: "/entities" },
+    { icon: FileCode, label: "代码", path: "/code" },
     { icon: Gauge, label: "调试", path: "/debug" },
     { icon: Settings, label: "设置", path: "/settings" },
   ];

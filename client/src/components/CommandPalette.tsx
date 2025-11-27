@@ -111,6 +111,16 @@ export default function CommandPalette() {
       keywords: ['docs', 'documentation', '文档'],
     },
     {
+      id: 'code',
+      label: '打开代码编辑器',
+      icon: FileCode,
+      action: () => {
+        setLocation('/code');
+        setOpen(false);
+      },
+      keywords: ['code', 'editor', '代码', '编辑器'],
+    },
+    {
       id: 'save',
       label: '保存',
       icon: Save,

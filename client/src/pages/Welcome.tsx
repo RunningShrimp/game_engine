@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { useProject } from "@/contexts/ProjectContext";
 import {
   BookOpen,
   FileCode,
@@ -11,6 +12,7 @@ import { useLocation } from "wouter";
 
 export default function Welcome() {
   const [, setLocation] = useLocation();
+  const { recentProjects } = useProject();
 
   const features = [
     {
@@ -35,11 +37,9 @@ export default function Welcome() {
     },
   ];
 
-  const recentProjects = [
-    { name: "示例项目", lastOpened: "2024-01-15" },
-    { name: "RPG游戏", lastOpened: "2024-01-14" },
-    { name: "赛车游戏", lastOpened: "2024-01-10" },
-  ];
+  const formatDate = (timestamp: number) => {
+    return new Date(timestamp).toLocaleDateString('zh-CN');
+  };
 
   return (
     <div className="h-full overflow-auto">
@@ -96,22 +96,32 @@ export default function Welcome() {
         {/* Recent Projects */}
         <section>
           <h2 className="text-2xl font-bold mb-6">最近项目</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {recentProjects.map((project) => (
-              <Card
-                key={project.name}
-                className="p-4 hover:bg-accent/50 cursor-pointer transition-colors"
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <h3 className="font-semibold">{project.name}</h3>
-                  <FolderOpen className="w-5 h-5 text-muted-foreground" />
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  最后打开: {project.lastOpened}
-                </p>
-              </Card>
-            ))}
-          </div>
+          {recentProjects.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {recentProjects.map((project) => (
+                <Card
+                  key={project.id}
+                  className="p-4 hover:bg-accent/50 cursor-pointer transition-colors"
+                  onClick={() => setLocation('/scene')}
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <h3 className="font-semibold">{project.name}</h3>
+                    <FolderOpen className="w-5 h-5 text-muted-foreground" />
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    最后打开: {formatDate(project.lastOpened)}
+                  </p>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <Card className="p-8 text-center">
+              <p className="text-muted-foreground mb-4">还没有最近项目</p>
+              <Button onClick={() => setLocation('/scene')}>
+                创建新项目
+              </Button>
+            </Card>
+          )}
         </section>
 
         {/* Tech Stack */}
