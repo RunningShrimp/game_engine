@@ -24,6 +24,13 @@ pub mod upscaling_sdk;
 pub mod npu_upscaling;
 pub mod onnx_runtime;
 pub mod onnx_runtime_real;
+pub mod openvino_integration;
+pub mod rocm_integration;
+pub mod cann_integration;
+pub mod snpe_integration;
+pub mod neuropilot_integration;
+pub mod coreml_integration;
+pub mod sdk_manager;
 pub mod fsr_integration;
 
 pub use gpu_detect::{GpuInfo, GpuVendor, GpuTier, detect_gpu};
