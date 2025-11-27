@@ -164,6 +164,19 @@ pub mod manager;
 pub mod hot_reload;
 pub mod font;
 pub mod events;
+pub mod coroutine_loader;
+pub mod staging_buffer;
+pub mod upload_queue;
+
+// Re-export coroutine loader for convenience
+pub use coroutine_loader::{
+    CoroutineAssetLoader, CoroutineLoaderConfig,
+    LoadPriority, AssetType, LoadResult, LoadError, LoadComplete, LoadHandle, LoaderStats,
+};
+
+// Re-export staging buffer and upload queue
+pub use staging_buffer::{StagingBuffer, StagingBufferPool, PoolStats};
+pub use upload_queue::{UploadQueue, UploadStats, TextureUploadInfo, TextureUploadBuilder};
 
 #[cfg(test)]
 mod tests;

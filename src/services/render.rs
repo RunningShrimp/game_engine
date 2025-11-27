@@ -169,31 +169,10 @@ impl RenderService {
     // PBR Scene Building
     // ========================================================================
     
-    /// 构建PBR场景 - 提取网格、材质和光源
+    /// 构建PBR场景 - 提取光源 (网格由 BatchManager 管理)
     pub fn build_pbr_scene(&mut self, world: &mut World) -> PbrScene {
-        let mut meshes = Vec::new();
         let mut point_lights = Vec::new();
         let mut dir_lights = Vec::new();
-        
-        // 提取带有PBR材质的网格
-        let mut mesh_query = world.query::<(&Mesh, &Transform, Option<&PbrMaterialComp>)>();
-        for (mesh, transform, pbr_mat) in mesh_query.iter(world) {
-            if let Some(gpu_mesh) = mesh.handle.get() {
-                let material = if let Some(mat) = pbr_mat {
-                    PbrMaterial {
-                        base_color: Vec4::from_array(mat.base_color),
-                        metallic: mat.metallic,
-                        roughness: mat.roughness,
-                        ambient_occlusion: mat.ambient_occlusion,
-                        emissive: Vec3::from_array(mat.emissive),
-                        normal_scale: 1.0,
-                    }
-                } else {
-                    PbrMaterial::default()
-                };
-                meshes.push((gpu_mesh.clone(), *transform, material));
-            }
-        }
         
         // 提取3D点光源
         let mut point_light_query = world.query::<(&Transform, &EcsPointLight3D)>();
@@ -217,7 +196,6 @@ impl RenderService {
         }
         
         PbrScene {
-            meshes,
             point_lights,
             dir_lights,
         }
@@ -227,6 +205,7 @@ impl RenderService {
     pub fn paint_pbr(
         &mut self,
         renderer: &mut WgpuRenderer,
+        batch_manager: &mut crate::render::instance_batch::BatchManager,
         scene: &PbrScene,
         view_proj: [[f32; 4]; 4],
         camera_pos: [f32; 3],
@@ -236,8 +215,8 @@ impl RenderService {
     ) {
         self.layer_cache.new_frame();
         
-        renderer.render_pbr(
-            &scene.meshes,
+        renderer.render_pbr_batched(
+            batch_manager,
             &scene.point_lights,
             &scene.dir_lights,
             view_proj,
@@ -251,7 +230,6 @@ impl RenderService {
 
 /// PBR场景数据
 pub struct PbrScene {
-    pub meshes: Vec<(GpuMesh, Transform, PbrMaterial)>,
     pub point_lights: Vec<PointLight3D>,
     pub dir_lights: Vec<DirectionalLight>,
 }

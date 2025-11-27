@@ -16,6 +16,13 @@ struct MaterialUniform {
     ao: f32,
     normal_scale: f32,
     emissive: vec3<f32>,
+    uv_offset: vec2<f32>,
+    uv_scale: vec2<f32>,
+    uv_rotation: f32,
+    clearcoat: f32,
+    clearcoat_roughness: f32,
+    anisotropy: f32,
+    anisotropy_direction: vec2<f32>,
 };
 
 struct PointLight {
@@ -35,11 +42,18 @@ struct DirectionalLight {
 @group(1) @binding(0) var<uniform> material: MaterialUniform;
 @group(2) @binding(0) var<storage, read> point_lights: array<PointLight>;
 @group(2) @binding(1) var<storage, read> dir_lights: array<DirectionalLight>;
+@group(3) @binding(0) var base_color_texture: texture_2d<f32>;
+@group(3) @binding(1) var metallic_roughness_texture: texture_2d<f32>;
+@group(3) @binding(2) var normal_texture: texture_2d<f32>;
+@group(3) @binding(3) var ao_texture: texture_2d<f32>;
+@group(3) @binding(4) var emissive_texture: texture_2d<f32>;
+@group(3) @binding(5) var tex_sampler: sampler;
 
 struct VertexInput {
     @location(0) position: vec3<f32>,
     @location(1) normal: vec3<f32>,
     @location(2) uv: vec2<f32>,
+    @location(3) tangent: vec4<f32>,
     @location(5) model_matrix_0: vec4<f32>,
     @location(6) model_matrix_1: vec4<f32>,
     @location(7) model_matrix_2: vec4<f32>,
@@ -51,6 +65,8 @@ struct VertexOutput {
     @location(0) world_position: vec3<f32>,
     @location(1) world_normal: vec3<f32>,
     @location(2) uv: vec2<f32>,
+    @location(3) world_tangent: vec3<f32>,
+    @location(4) tangent_w: f32,
 };
 
 @vertex
@@ -67,6 +83,8 @@ fn vs_main(vertex: VertexInput) -> VertexOutput {
     out.clip_position = uniforms.view_proj * world_pos;
     out.world_normal = normalize((model_matrix * vec4<f32>(vertex.normal, 0.0)).xyz);
     out.uv = vertex.uv;
+    out.world_tangent = normalize((model_matrix * vec4<f32>(vertex.tangent.xyz, 0.0)).xyz);
+    out.tangent_w = vertex.tangent.w;
     return out;
 }
 
@@ -112,14 +130,27 @@ fn fresnel_schlick(cosTheta: f32, F0: vec3<f32>) -> vec3<f32> {
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    let N = normalize(in.world_normal);
+    var N = normalize(in.world_normal);
     let V = normalize(uniforms.camera_pos - in.world_position);
     
     // 基础颜色和材质参数
-    let albedo = material.base_color.rgb;
-    let metallic = material.metallic;
-    let roughness = material.roughness;
-    let ao = material.ao;
+    var albedo = material.base_color.rgb;
+    var metallic = material.metallic;
+    var roughness = material.roughness;
+    var ao = material.ao;
+    // UV 变换：平移-旋转-缩放（简化）
+    var uv = in.uv * material.uv_scale + material.uv_offset;
+    let c = cos(material.uv_rotation);
+    let s = sin(material.uv_rotation);
+    let rot = mat2x2<f32>(vec2<f32>(c, -s), vec2<f32>(s, c));
+    uv = rot * uv;
+    let bc = textureSample(base_color_texture, tex_sampler, uv);
+    albedo = albedo * bc.rgb;
+    let mr = textureSample(metallic_roughness_texture, tex_sampler, in.uv);
+    metallic = mr.r * metallic;
+    roughness = clamp(mr.g * roughness, 0.04, 1.0);
+    let ao_tex = textureSample(ao_texture, tex_sampler, in.uv);
+    ao = ao * ao_tex.r;
     
     // 计算F0 (表面反射率)
     var F0 = vec3<f32>(0.04); // 非金属的默认值
@@ -181,7 +212,17 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     
     // 环境光
     let ambient = vec3<f32>(0.03) * albedo * ao;
-    var color = ambient + Lo + material.emissive;
+    // 简化清漆层：提升镜面能量并根据粗糙度调节
+    let clearcoat_factor = clamp(material.clearcoat, 0.0, 1.0);
+    let clearcoat_rough = clamp(material.clearcoat_roughness, 0.04, 1.0);
+    let cc_spec = distribution_ggx(N, normalize(V + N), clearcoat_rough);
+    var Lo = Lo + cc_spec * clearcoat_factor;
+    // 简化各向异性：通过方向调制高光
+    let aniso = clamp(material.anisotropy, 0.0, 1.0);
+    let adir = normalize(vec3<f32>(material.anisotropy_direction, 0.0));
+    Lo = mix(Lo, Lo * (0.5 + 0.5 * abs(dot(N, adir))), aniso);
+    let emissive_tex = textureSample(emissive_texture, tex_sampler, in.uv).rgb;
+    var color = ambient + Lo + material.emissive + emissive_tex;
     
     // HDR色调映射
     color = color / (color + vec3<f32>(1.0));
@@ -190,3 +231,9 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     
     return vec4<f32>(color, material.base_color.a);
 }
+    // 法线扰动（TBN）
+    var nm = textureSample(normal_texture, tex_sampler, in.uv).xyz * 2.0 - vec3<f32>(1.0);
+    nm = vec3<f32>(nm.x * material.normal_scale, nm.y * material.normal_scale, nm.z);
+    let B = normalize(cross(N, in.world_tangent) * in.tangent_w);
+    let TBN = mat3x3<f32>(in.world_tangent, B, N);
+    N = normalize(TBN * nm);

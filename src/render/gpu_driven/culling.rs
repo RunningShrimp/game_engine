@@ -181,14 +181,15 @@ impl GpuCuller {
         &self,
         encoder: &mut wgpu::CommandEncoder,
         device: &wgpu::Device,
+        queue: &wgpu::Queue,
         input_buffer: &wgpu::Buffer,
         output_buffer: &wgpu::Buffer,
         counter_buffer: &wgpu::Buffer,
         view_proj: [[f32; 4]; 4],
         instance_count: u32,
     ) {
-        // 更新 Uniforms
         let uniforms = CullingUniforms::from_view_proj(view_proj, instance_count);
+        queue.write_buffer(&self.uniform_buffer, 0, bytemuck::bytes_of(&uniforms));
         
         // 创建绑定组
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
@@ -298,3 +299,12 @@ fn cull_main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     }
 }
 "#;
+#[repr(C)]
+#[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
+pub struct GpuInstance {
+    pub model: [[f32; 4]; 4],
+    pub aabb_min: [f32; 3],
+    pub instance_id: u32,
+    pub aabb_max: [f32; 3],
+    pub flags: u32,
+}

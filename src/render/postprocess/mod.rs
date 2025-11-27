@@ -1,6 +1,7 @@
 //! 后处理管线模块
 //!
 //! 提供完整的后处理效果管线，包括：
+//! - Antialiasing（抗锯齿：FXAA/TAA）
 //! - Bloom（辉光效果）
 //! - SSAO（屏幕空间环境光遮蔽）
 //! - Tonemap（HDR色调映射）
@@ -9,15 +10,18 @@
 //!
 //! ```ignore
 //! let mut postprocess = PostProcessPipeline::new(&device, &config);
+//! postprocess.set_antialiasing(AntialiasingMode::FXAA);
 //! postprocess.set_bloom_enabled(true);
 //! postprocess.set_bloom_intensity(0.8);
 //! postprocess.render(&mut encoder, &scene_texture, &output_view);
 //! ```
 
+pub mod antialiasing;
 pub mod bloom;
 pub mod ssao;
 pub mod tonemap;
 
+pub use antialiasing::{AntialiasingMode, FxaaQuality, FxaaPass, TaaPass};
 pub use bloom::BloomPass;
 pub use ssao::SsaoPass;
 pub use tonemap::{TonemapPass, TonemapOperator};
@@ -27,6 +31,11 @@ use wgpu::TextureFormat;
 /// 后处理配置
 #[derive(Debug, Clone)]
 pub struct PostProcessConfig {
+    /// 抗锯齿模式
+    pub antialiasing: AntialiasingMode,
+    /// FXAA 质量等级
+    pub fxaa_quality: FxaaQuality,
+    
     /// 是否启用 Bloom
     pub bloom_enabled: bool,
     /// Bloom 强度 (0.0 - 2.0)
@@ -58,6 +67,9 @@ pub struct PostProcessConfig {
 impl Default for PostProcessConfig {
     fn default() -> Self {
         Self {
+            antialiasing: AntialiasingMode::FXAA,
+            fxaa_quality: FxaaQuality::Medium,
+            
             bloom_enabled: true,
             bloom_intensity: 0.5,
             bloom_threshold: 1.0,

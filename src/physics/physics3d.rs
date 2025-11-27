@@ -363,7 +363,7 @@ mod tests {
         );
         
         // 更新查询管线
-        world.query_pipeline.update(&world.rigid_body_set, &world.collider_set);
+        world.query_pipeline.update(&world.collider_set);
         
         // 从上方向下投射射线
         let result = world.raycast(

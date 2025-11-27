@@ -93,8 +93,27 @@ impl Chunk {
         let aligned_addr = (current_addr + align - 1) & !(align - 1);
         let padding = aligned_addr - current_addr;
         
+        // 安全检查：验证对齐是否为2的幂
+        debug_assert!(align.is_power_of_two(), "对齐必须是2的幂");
+        // 安全检查：验证分配不会溢出
+        debug_assert!(
+            self.used + padding + size <= self.size,
+            "Arena 分配溢出：请求 {} 字节，剩余 {} 字节",
+            padding + size,
+            self.size - self.used
+        );
+        // 安全检查：验证对齐后的地址确实对齐
+        debug_assert!(
+            aligned_addr % align == 0,
+            "地址对齐失败：地址 {:#x} 未按 {} 字节对齐",
+            aligned_addr,
+            align
+        );
+        
         self.used += padding + size;
         
+        // SAFETY: aligned_addr 已通过 can_alloc 验证在有效范围内，
+        // 且通过上述 debug_assert 验证了对齐正确性
         unsafe { NonNull::new_unchecked(aligned_addr as *mut u8) }
     }
 }
@@ -107,15 +126,132 @@ impl Drop for Chunk {
 }
 
 /// 类型化Arena分配器
+///
+/// 提供类型安全的Arena分配，适用于需要大量分配同类型对象的场景。
+///
+/// # 注意
+///
+/// - `reset()` 不会调用已分配对象的析构函数
+/// - 对于实现了 `Drop` 的类型，请使用 `TypedArenaWithDrop`
+/// - 适用于 POD 类型或生命周期与 Arena 一致的类型
+///
+/// # 示例
+///
+/// ```
+/// use game_engine::performance::arena::TypedArena;
+///
+/// let arena = TypedArena::<i32>::new();
+/// let val = arena.alloc(42);
+/// assert_eq!(*val, 42);
+/// ```
 pub struct TypedArena<T> {
     arena: Arena,
+    /// 已分配对象计数（用于调试）
+    alloc_count: std::cell::Cell<usize>,
     _marker: std::marker::PhantomData<T>,
 }
 
 impl<T> TypedArena<T> {
+    /// 创建新的类型化Arena
+    ///
+    /// 默认块大小为4096字节
     pub fn new() -> Self {
         Self {
             arena: Arena::new(4096),
+            alloc_count: std::cell::Cell::new(0),
+            _marker: std::marker::PhantomData,
+        }
+    }
+    
+    /// 使用指定块大小创建Arena
+    pub fn with_chunk_size(chunk_size: usize) -> Self {
+        Self {
+            arena: Arena::new(chunk_size),
+            alloc_count: std::cell::Cell::new(0),
+            _marker: std::marker::PhantomData,
+        }
+    }
+    
+    /// 分配单个对象
+    ///
+    /// # 安全性
+    ///
+    /// 返回的引用生命周期与 Arena 绑定。
+    /// 调用 `reset()` 后，之前返回的引用将失效。
+    pub fn alloc(&self, value: T) -> &mut T {
+        let ptr = self.arena.alloc(
+            std::mem::size_of::<T>(),
+            std::mem::align_of::<T>(),
+        );
+        
+        self.alloc_count.set(self.alloc_count.get() + 1);
+        
+        // SAFETY: ptr 来自 arena.alloc，保证有效且对齐正确
+        unsafe {
+            let ptr = ptr.as_ptr() as *mut T;
+            std::ptr::write(ptr, value);
+            &mut *ptr
+        }
+    }
+    
+    /// 重置Arena
+    ///
+    /// # 警告
+    ///
+    /// 此方法不会调用已分配对象的析构函数。
+    /// 对于需要析构的类型，请确保在调用此方法前手动清理。
+    pub fn reset(&self) {
+        self.alloc_count.set(0);
+        self.arena.reset();
+    }
+    
+    /// 获取已分配对象数量
+    pub fn len(&self) -> usize {
+        self.alloc_count.get()
+    }
+    
+    /// 检查Arena是否为空
+    pub fn is_empty(&self) -> bool {
+        self.alloc_count.get() == 0
+    }
+}
+
+impl<T> Default for TypedArena<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+// ============================================================================
+// TypedArenaWithDrop - 支持析构的类型化Arena
+// ============================================================================
+
+/// 支持析构的类型化Arena分配器
+///
+/// 与 `TypedArena` 不同，此分配器会在 `Drop` 时调用所有已分配对象的析构函数。
+///
+/// # 示例
+///
+/// ```
+/// use game_engine::performance::arena::TypedArenaWithDrop;
+///
+/// let arena = TypedArenaWithDrop::<String>::new();
+/// let s = arena.alloc(String::from("Hello"));
+/// // 当 arena 被 drop 时，String 的析构函数会被调用
+/// ```
+pub struct TypedArenaWithDrop<T> {
+    arena: Arena,
+    /// 存储已分配对象的指针，用于析构
+    allocated: RefCell<Vec<NonNull<T>>>,
+    _marker: std::marker::PhantomData<T>,
+}
+
+impl<T> TypedArenaWithDrop<T> {
+    /// 创建新的支持析构的类型化Arena
+    pub fn new() -> Self {
+        Self {
+            arena: Arena::new(4096),
+            allocated: RefCell::new(Vec::new()),
             _marker: std::marker::PhantomData,
         }
     }
@@ -127,22 +263,45 @@ impl<T> TypedArena<T> {
             std::mem::align_of::<T>(),
         );
         
+        // SAFETY: ptr 来自 arena.alloc，保证有效且对齐正确
         unsafe {
-            let ptr = ptr.as_ptr() as *mut T;
-            std::ptr::write(ptr, value);
-            &mut *ptr
+            let typed_ptr = ptr.as_ptr() as *mut T;
+            std::ptr::write(typed_ptr, value);
+            
+            // 记录指针用于后续析构
+            self.allocated.borrow_mut().push(NonNull::new_unchecked(typed_ptr));
+            
+            &mut *typed_ptr
         }
     }
     
-    /// 重置Arena
-    pub fn reset(&self) {
-        self.arena.reset();
+    /// 获取已分配对象数量
+    pub fn len(&self) -> usize {
+        self.allocated.borrow().len()
+    }
+    
+    /// 检查Arena是否为空
+    pub fn is_empty(&self) -> bool {
+        self.allocated.borrow().is_empty()
     }
 }
 
-impl<T> Default for TypedArena<T> {
+impl<T> Default for TypedArenaWithDrop<T> {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl<T> Drop for TypedArenaWithDrop<T> {
+    fn drop(&mut self) {
+        // 按分配的逆序调用析构函数
+        let allocated = self.allocated.borrow();
+        for ptr in allocated.iter().rev() {
+            // SAFETY: 这些指针都是通过 alloc 分配的有效指针
+            unsafe {
+                std::ptr::drop_in_place(ptr.as_ptr());
+            }
+        }
     }
 }
 

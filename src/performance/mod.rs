@@ -11,7 +11,7 @@ pub mod simd;
 pub mod hardware;
 
 pub use batch_renderer::BatchRenderer;
-pub use object_pool::ObjectPool;
+pub use object_pool::{ObjectPool, SyncObjectPool, ResettablePool, Pooled, PoolStats, Resettable, SizedPool};
 pub use profiler::Profiler;
 pub use render_optimization::{FrustumCulling, OcclusionCulling, LodManager};
 pub use advanced_profiler::{AdvancedProfiler, PerformanceMetrics};

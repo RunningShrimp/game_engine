@@ -1,5 +1,45 @@
 use glam::{Mat4, Vec3, Vec4};
 
+/// 阴影质量等级
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum ShadowQuality {
+    /// 无阴影
+    None,
+    /// 低质量 - 硬阴影
+    Low,
+    /// 中等质量 - 3x3 PCF
+    #[default]
+    Medium,
+    /// 高质量 - 5x5 PCF
+    High,
+    /// 极致质量 - 16 采样 Poisson Disk
+    Ultra,
+}
+
+impl ShadowQuality {
+    /// 获取 PCF 采样数
+    pub fn sample_count(&self) -> u32 {
+        match self {
+            ShadowQuality::None => 0,
+            ShadowQuality::Low => 1,
+            ShadowQuality::Medium => 9,    // 3x3
+            ShadowQuality::High => 25,     // 5x5
+            ShadowQuality::Ultra => 16,    // Poisson disk
+        }
+    }
+    
+    /// 获取 PCF 半径
+    pub fn pcf_radius(&self) -> f32 {
+        match self {
+            ShadowQuality::None => 0.0,
+            ShadowQuality::Low => 0.0,
+            ShadowQuality::Medium => 1.0,
+            ShadowQuality::High => 1.5,
+            ShadowQuality::Ultra => 2.5,
+        }
+    }
+}
+
 /// 级联阴影贴图配置
 pub struct CsmConfig {
     /// 级联数量 (通常为3-4)
@@ -8,6 +48,20 @@ pub struct CsmConfig {
     pub shadow_map_size: u32,
     /// 级联分割距离 (相对于相机的远平面)
     pub cascade_splits: Vec<f32>,
+    /// 阴影质量
+    pub shadow_quality: ShadowQuality,
+    /// 阴影偏移 (减少 shadow acne)
+    pub shadow_bias: f32,
+    /// 法线偏移 (减少 peter panning)
+    pub normal_bias: f32,
+    /// PCF 半径
+    pub pcf_radius: f32,
+    /// 级联混合范围 (级联过渡平滑度)
+    pub cascade_blend_distance: f32,
+    /// 是否启用级联混合
+    pub enable_cascade_blending: bool,
+    /// 对数分割因子 (0.0 = 均匀, 1.0 = 完全对数)
+    pub split_lambda: f32,
 }
 
 impl Default for CsmConfig {
@@ -16,6 +70,153 @@ impl Default for CsmConfig {
             cascade_count: 4,
             shadow_map_size: 2048,
             cascade_splits: vec![0.05, 0.15, 0.4, 1.0],
+            shadow_quality: ShadowQuality::Medium,
+            shadow_bias: 0.005,
+            normal_bias: 0.02,
+            pcf_radius: 1.0,
+            cascade_blend_distance: 0.1,
+            enable_cascade_blending: true,
+            split_lambda: 0.75,
+        }
+    }
+}
+
+impl CsmConfig {
+    /// 创建低质量配置 (适合移动端)
+    pub fn low_quality() -> Self {
+        Self {
+            cascade_count: 2,
+            shadow_map_size: 1024,
+            cascade_splits: vec![0.2, 1.0],
+            shadow_quality: ShadowQuality::Low,
+            shadow_bias: 0.008,
+            normal_bias: 0.03,
+            pcf_radius: 0.0,
+            cascade_blend_distance: 0.0,
+            enable_cascade_blending: false,
+            split_lambda: 0.5,
+        }
+    }
+    
+    /// 创建高质量配置 (适合高端PC)
+    pub fn high_quality() -> Self {
+        Self {
+            cascade_count: 4,
+            shadow_map_size: 4096,
+            cascade_splits: vec![0.03, 0.1, 0.3, 1.0],
+            shadow_quality: ShadowQuality::High,
+            shadow_bias: 0.003,
+            normal_bias: 0.015,
+            pcf_radius: 1.5,
+            cascade_blend_distance: 0.15,
+            enable_cascade_blending: true,
+            split_lambda: 0.8,
+        }
+    }
+    
+    /// 创建极致质量配置 (用于截图/过场动画)
+    pub fn ultra_quality() -> Self {
+        Self {
+            cascade_count: 4,
+            shadow_map_size: 8192,
+            cascade_splits: vec![0.02, 0.08, 0.25, 1.0],
+            shadow_quality: ShadowQuality::Ultra,
+            shadow_bias: 0.002,
+            normal_bias: 0.01,
+            pcf_radius: 2.5,
+            cascade_blend_distance: 0.2,
+            enable_cascade_blending: true,
+            split_lambda: 0.85,
+        }
+    }
+    
+    /// 计算最优级联分割点 (使用对数-均匀混合)
+    pub fn calculate_optimal_splits(&self, near: f32, far: f32) -> Vec<f32> {
+        let mut splits = Vec::with_capacity(self.cascade_count as usize);
+        
+        for i in 1..=self.cascade_count {
+            let p = i as f32 / self.cascade_count as f32;
+            
+            // 对数分割 - 近处更多细节
+            let log_split = near * (far / near).powf(p);
+            
+            // 均匀分割
+            let uniform_split = near + (far - near) * p;
+            
+            // 混合
+            let split = log_split * self.split_lambda + uniform_split * (1.0 - self.split_lambda);
+            
+            // 归一化到 [0, 1]
+            splits.push((split - near) / (far - near));
+        }
+        
+        splits
+    }
+}
+
+/// CSM Uniform 数据 (传递到着色器)
+#[repr(C)]
+#[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
+pub struct CsmUniforms {
+    /// 级联视图投影矩阵 (最多4个)
+    pub cascade_view_proj: [[f32; 16]; 4],
+    /// 级联分割距离
+    pub cascade_splits: [f32; 4],
+    /// 光源方向
+    pub light_direction: [f32; 3],
+    /// 级联数量
+    pub cascade_count: u32,
+    /// 阴影偏移
+    pub shadow_bias: f32,
+    /// 法线偏移
+    pub normal_bias: f32,
+    /// PCF 半径
+    pub pcf_radius: f32,
+    /// 级联混合距离
+    pub cascade_blend_distance: f32,
+    /// 是否启用级联混合 (0 或 1)
+    pub enable_blending: u32,
+    /// 阴影质量等级 (0-4)
+    pub quality_level: u32,
+    /// 填充
+    pub _pad: [u32; 2],
+}
+
+impl CsmUniforms {
+    /// 从配置创建 Uniform 数据
+    pub fn from_config(config: &CsmConfig, light_direction: Vec3) -> Self {
+        let quality_level = match config.shadow_quality {
+            ShadowQuality::None => 0,
+            ShadowQuality::Low => 1,
+            ShadowQuality::Medium => 2,
+            ShadowQuality::High => 3,
+            ShadowQuality::Ultra => 4,
+        };
+        
+        let mut cascade_splits = [0.0f32; 4];
+        for (i, &split) in config.cascade_splits.iter().enumerate().take(4) {
+            cascade_splits[i] = split;
+        }
+        
+        Self {
+            cascade_view_proj: [[0.0; 16]; 4],
+            cascade_splits,
+            light_direction: [light_direction.x, light_direction.y, light_direction.z],
+            cascade_count: config.cascade_count,
+            shadow_bias: config.shadow_bias,
+            normal_bias: config.normal_bias,
+            pcf_radius: config.pcf_radius,
+            cascade_blend_distance: config.cascade_blend_distance,
+            enable_blending: if config.enable_cascade_blending { 1 } else { 0 },
+            quality_level,
+            _pad: [0; 2],
+        }
+    }
+    
+    /// 更新级联视图投影矩阵
+    pub fn update_cascade_matrices(&mut self, matrices: &[Mat4]) {
+        for (i, mat) in matrices.iter().enumerate().take(4) {
+            self.cascade_view_proj[i] = mat.to_cols_array();
         }
     }
 }

@@ -2,9 +2,11 @@
 name = "game_engine"
 version = "0.1.0"
 edition = "2024"
+edition = "2024"
 
 [dependencies]
 winit = "0.29"
+wgpu = { version = "0.20.1", features = ["webgpu"] }
 wgpu = { version = "0.20.1", features = ["webgpu"] }
 pollster = "0.3"
 futures = "0.3"
@@ -14,8 +16,10 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 notify = "6"
 thiserror = "1.0"
+thiserror = "1.0"
 
 # Core Architecture
+bevy_ecs = "0.14"
 bevy_ecs = "0.14"
 glam = { version = "0.25", features = ["bytemuck", "serde"] }
 tokio = { version = "1", features = ["full"] }
@@ -26,10 +30,16 @@ libloading = "0.8"
 rapier2d = "0.20"
 rapier3d = "0.20"
 
+# GLTF
+gltf = { version = "1.4", optional = true }
+
 # XR
 openxr = "0.18"
 
 # GUI & Tools
+egui = "0.28"
+egui-wgpu = "0.28"
+egui-winit = "0.28"
 egui = "0.28"
 egui-wgpu = "0.28"
 egui-winit = "0.28"
@@ -63,7 +73,8 @@ use_bevy_ecs = []
 async_assets = []
 physics_2d = []
 xr = []
-default = ["physics_2d"]
+gltf = ["dep:gltf"]
+default = ["physics_2d", "gltf"]
 wgpu_perf = []
 
 [dev-dependencies]

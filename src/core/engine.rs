@@ -121,6 +121,7 @@ impl Engine {
             capacity: 200 
         });
         world.insert_resource(RenderStats::default());
+        world.insert_resource(crate::render::instance_batch::BatchManager::default());
     }
     
     /// 创建固定时间步调度器
@@ -143,6 +144,8 @@ impl Engine {
     fn create_update_schedule() -> Schedule {
         let mut schedule = Schedule::default();
         schedule.add_systems((
+            crate::render::instance_batch::batch_collection_system,
+            crate::render::instance_batch::batch_visibility_culling_system,
             apply_texture_handles,
             crate::ecs::flipbook_system,
             crate::ecs::tilemap_chunk_system,
@@ -378,14 +381,16 @@ impl Engine {
         }
         renderer.set_lights(lights);
 
-        // Build Scene (3D)
-        let scene = render_service.build_scene(world);
+        // Build Scene (PBR)
+        let scene = render_service.build_pbr_scene(world);
 
         // Camera
         let mut view_proj = glam::Mat4::IDENTITY.to_cols_array_2d();
+        let mut camera_pos = [0.0; 3];
         let mut query_cam = world.query::<(&Transform, &crate::ecs::Camera)>();
         for (t, c) in query_cam.iter(world) {
             if c.is_active {
+                camera_pos = t.pos.to_array();
                 let view = glam::Mat4::from_rotation_translation(t.rot, t.pos).inverse();
                 let proj = match c.projection {
                     crate::ecs::Projection::Orthographic { scale, near, far } => {
@@ -405,7 +410,24 @@ impl Engine {
             }
         }
 
-        render_service.paint(renderer, &scene, instances, view_proj, Some(egui_renderer), &egui_shapes, pixels_per_point);
+        if let Some(mut bm) = world.get_resource_mut::<crate::render::instance_batch::BatchManager>() {
+            renderer.upload_batches(&mut bm);
+            render_service.paint_pbr(renderer, &mut bm, &scene, view_proj, camera_pos, Some(egui_renderer), &egui_shapes, pixels_per_point);
+        }
+
+        // Flush material pending updates
+        let updates = if let Some(mut pend) = world.get_resource_mut::<crate::resources::manager::MaterialPendingUpdates>() {
+            pend.take_all()
+        } else { Vec::new() };
+        if !updates.is_empty() {
+            if let Some(mut reg) = world.get_resource_mut::<crate::resources::manager::MaterialRegistry>() {
+                if let Some(ref pbr) = renderer.pbr_renderer {
+                    for (id, mat) in updates {
+                        reg.update_material_params(renderer.device(), renderer.queue(), pbr, id, &mat);
+                    }
+                }
+            }
+        }
         
         // Update stats
         Self::update_render_stats(world, renderer, culled, total, window);
@@ -425,12 +447,22 @@ impl Engine {
             }
         }
         let (dc, ic) = renderer.draw_stats();
+        let bm_stats = world
+            .get_resource::<crate::render::instance_batch::BatchManager>()
+            .map(|bm| bm.stats);
         if let Some(mut stats) = world.get_resource_mut::<RenderStats>() {
             stats.draw_calls = dc;
             stats.instances = ic;
             stats.passes = renderer.pass_count();
             stats.culled_objects = culled;
             stats.total_objects = total;
+            if let Some(bms) = bm_stats {
+                stats.batch_total = bms.total_batches;
+                stats.batch_instances = bms.total_instances;
+                stats.batch_saved_draw_calls = bms.saved_draw_calls;
+                stats.batch_small_draw_calls = bms.small_draw_calls;
+                stats.batch_visible_batches = bms.visible_batches;
+            }
             let (upload, main, ui) = renderer.stage_timings_ms();
             stats.upload_ms = upload;
             stats.main_ms = main;
@@ -451,13 +483,18 @@ impl Engine {
                     .append(true)
                     .open(&path).ok()?;
                 let line = format!(
-                    "{},{},{},{},{},{},{},{}\n",
+                    "{},{},{},{},{},{},{},{},{},{},{},{},{}\n",
                     dc, ic, stats.passes,
                     stats.upload_ms.unwrap_or(0.0),
                     stats.main_ms.unwrap_or(0.0),
                     stats.ui_ms.unwrap_or(0.0),
                     stats.offscreen_ms.unwrap_or(0.0),
-                    window.scale_factor()
+                    window.scale_factor(),
+                    stats.batch_total,
+                    stats.batch_instances,
+                    stats.batch_saved_draw_calls,
+                    stats.batch_small_draw_calls,
+                    stats.batch_visible_batches
                 );
                 use std::io::Write;
                 let _ = f.write_all(line.as_bytes());
@@ -556,13 +593,19 @@ impl Engine {
                     AssetEvent::AtlasLoaded(_, ms) => format!("AtlasLoaded {:.1}ms", ms),
                     AssetEvent::TextureFailed(_, e) => format!("TextureFailed {}", e),
                     AssetEvent::AtlasFailed(_, e) => format!("AtlasFailed {}", e),
+                    AssetEvent::GltfLoaded(_, ms) => format!("GltfLoaded {:.1}ms", ms),
+                    AssetEvent::GltfFailed(_, e) => format!("GltfFailed {}", e),
                 };
                 if logs.entries.len() >= logs.capacity { 
                     logs.entries.pop_front(); 
                 }
                 logs.entries.push_back(msg);
             }
+
+            // GLTF 导入：在同帧构建网格与纹理绑定并注入世界
+            if let AssetEvent::GltfLoaded(handle, _) = &event {
+                crate::resources::manager::import_gltf_to_world(world, renderer, handle);
+            }
         }
     }
 }
-

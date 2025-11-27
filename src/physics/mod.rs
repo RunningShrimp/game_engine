@@ -24,6 +24,13 @@
 pub mod physics3d;
 pub mod joints;
 pub mod parallel;
+pub mod dirty_tracker;
+
+pub use dirty_tracker::{
+    PhysicsDirty, CachedPhysicsState, PhysicsSyncConfig, PhysicsSyncStats,
+    BatchSyncData, optimized_physics_sync_system, transform_to_physics_sync_system,
+};
+
 use bevy_ecs::prelude::*;
 use rapier2d::prelude::*;
 use rapier2d::prelude::DefaultBroadPhase;
@@ -284,6 +291,22 @@ impl PhysicsService {
 /// 物理世界资源（兼容层）
 ///
 /// **注意**: 此类型为兼容层，推荐使用 `PhysicsState` + `PhysicsService` 模式。
+///
+/// # 迁移指南
+///
+/// ```rust
+/// // 旧代码
+/// let mut world = PhysicsWorld::default();
+/// world.step();
+///
+/// // 新代码
+/// let mut state = PhysicsState::default();
+/// PhysicsService::step(&mut state);
+/// ```
+#[deprecated(
+    since = "0.2.0",
+    note = "请使用 PhysicsState + PhysicsService 模式代替。此类型将在 0.3.0 版本移除。"
+)]
 #[derive(Resource)]
 pub struct PhysicsWorld {
     /// 重力向量
