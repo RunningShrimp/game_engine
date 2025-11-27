@@ -167,6 +167,46 @@ export default function CommandPalette() {
       keywords: ['physics', 'ragdoll', 'animation', '物理', '布娃娃', '动画'],
     },
     {
+      id: 'plugins',
+      label: '打开插件管理器',
+      icon: Box,
+      action: () => {
+        setLocation('/plugins');
+        setOpen(false);
+      },
+      keywords: ['plugin', 'extension', 'addon', '插件', '扩展'],
+    },
+    {
+      id: 'mocap',
+      label: '打开动作捕捉',
+      icon: FileCode,
+      action: () => {
+        setLocation('/mocap');
+        setOpen(false);
+      },
+      keywords: ['mocap', 'motion', 'capture', '动捕', '动作'],
+    },
+    {
+      id: 'facial',
+      label: '打开面部动画',
+      icon: FolderOpen,
+      action: () => {
+        setLocation('/facial');
+        setOpen(false);
+      },
+      keywords: ['facial', 'expression', 'face', '面部', '表情'],
+    },
+    {
+      id: 'retarget',
+      label: '打开动画重定向',
+      icon: Layers,
+      action: () => {
+        setLocation('/retarget');
+        setOpen(false);
+      },
+      keywords: ['retarget', 'remap', 'skeleton', '重定向', '骨骼'],
+    },
+    {
       id: 'save',
       label: '保存',
       icon: Save,

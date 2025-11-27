@@ -23,6 +23,10 @@ import BlueprintEditor from "./pages/BlueprintEditor";
 import AnimationBlueprint from "./pages/AnimationBlueprint";
 import AnimationStateMachine from "./pages/AnimationStateMachine";
 import PhysicsAnimation from "./pages/PhysicsAnimation";
+import PluginManager from "./pages/PluginManager";
+import MotionCapture from "./pages/MotionCapture";
+import FacialAnimation from "./pages/FacialAnimation";
+import AnimationRetargeting from "./pages/AnimationRetargeting";
 
 
 function Router() {
@@ -97,6 +101,26 @@ function Router() {
       <Route path="/physics">
         <EditorLayout>
           <PhysicsAnimation />
+        </EditorLayout>
+      </Route>
+      <Route path="/plugins">
+        <EditorLayout>
+          <PluginManager />
+        </EditorLayout>
+      </Route>
+      <Route path="/mocap">
+        <EditorLayout>
+          <MotionCapture />
+        </EditorLayout>
+      </Route>
+      <Route path="/facial">
+        <EditorLayout>
+          <FacialAnimation />
+        </EditorLayout>
+      </Route>
+      <Route path="/retarget">
+        <EditorLayout>
+          <AnimationRetargeting />
         </EditorLayout>
       </Route>
       <Route path="/404" component={NotFound} />

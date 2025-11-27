@@ -2,10 +2,14 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useProject } from "@/contexts/ProjectContext";
 import {
+  Activity,
   BookOpen,
+  Box,
   FileCode,
   FolderOpen,
   Github,
+  RefreshCw,
+  Smile,
   Sparkles,
 } from "lucide-react";
 import { useLocation } from "wouter";
@@ -61,6 +65,34 @@ export default function Welcome() {
       description: "布娃娃、碰撞响应、骨骼物理模拟和混合权重",
       icon: Sparkles,
       path: "/physics",
+      badge: "NEW",
+    },
+    {
+      title: "插件管理器",
+      description: "第三方插件安装、配置、启用/禁用，插件开发API",
+      icon: Box,
+      path: "/plugins",
+      badge: "NEW",
+    },
+    {
+      title: "动作捕捉集成",
+      description: "导入Mocap数据（BVH/FBX），实时预览和重定向",
+      icon: Activity,
+      path: "/mocap",
+      badge: "NEW",
+    },
+    {
+      title: "面部动画系统",
+      description: "混合形状、骨骼驱动和表情库管理",
+      icon: Smile,
+      path: "/facial",
+      badge: "NEW",
+    },
+    {
+      title: "动画重定向工具",
+      description: "不同骨骼结构间的动画迁移，自动骨骼映射",
+      icon: RefreshCw,
+      path: "/retarget",
       badge: "NEW",
     },
   ];
