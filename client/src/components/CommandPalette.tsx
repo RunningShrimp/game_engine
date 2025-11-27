@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useHotkeys } from "@/hooks/useHotkeys";
 import {
+  Activity,
   Bot,
   Box,
   FileCode,
@@ -154,6 +155,16 @@ export default function CommandPalette() {
         setOpen(false);
       },
       keywords: ['ai', 'assistant', 'copilot', '助手', '智能'],
+    },
+    {
+      id: 'physics',
+      label: '打开物理动画',
+      icon: Activity,
+      action: () => {
+        setLocation('/physics');
+        setOpen(false);
+      },
+      keywords: ['physics', 'ragdoll', 'animation', '物理', '布娃娃', '动画'],
     },
     {
       id: 'save',

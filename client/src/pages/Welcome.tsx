@@ -56,6 +56,13 @@ export default function Welcome() {
       path: "/animation",
       badge: "P1",
     },
+    {
+      title: "物理动画系统",
+      description: "布娃娃、碰撞响应、骨骼物理模拟和混合权重",
+      icon: Sparkles,
+      path: "/physics",
+      badge: "NEW",
+    },
   ];
 
   const formatDate = (timestamp: number) => {

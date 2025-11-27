@@ -22,6 +22,7 @@ import AIAssistant from "./pages/AIAssistant";
 import BlueprintEditor from "./pages/BlueprintEditor";
 import AnimationBlueprint from "./pages/AnimationBlueprint";
 import AnimationStateMachine from "./pages/AnimationStateMachine";
+import PhysicsAnimation from "./pages/PhysicsAnimation";
 
 
 function Router() {
@@ -91,6 +92,11 @@ function Router() {
       <Route path="/statemachine">
         <EditorLayout>
           <AnimationStateMachine />
+        </EditorLayout>
+      </Route>
+      <Route path="/physics">
+        <EditorLayout>
+          <PhysicsAnimation />
         </EditorLayout>
       </Route>
       <Route path="/404" component={NotFound} />

@@ -86,8 +86,16 @@ export default function AnimationBlueprint() {
     {
       category: "IK",
       items: [
-        { name: "双骨骼IK", icon: Box, color: "text-green-500" },
+        { name: "双骨骼 IK", icon: Box, color: "text-green-500" },
         { name: "FABRIK", icon: Box, color: "text-green-500" },
+      ],
+    },
+    {
+      category: "物理",
+      items: [
+        { name: "布娃娃", icon: Zap, color: "text-red-500" },
+        { name: "物理混合", icon: Activity, color: "text-orange-500" },
+        { name: "碰撞响应", icon: Layers, color: "text-yellow-500" },
       ],
     },
   ];
@@ -342,6 +350,42 @@ export default function AnimationBlueprint() {
                   max="1"
                   step="0.01"
                   defaultValue="1"
+                />
+              </div>
+            </div>
+          </Card>
+
+          <Card className="p-4">
+            <h3 className="text-sm font-semibold mb-3">物理动画</h3>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-medium">启用物理</label>
+                <input type="checkbox" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground block mb-1">
+                  物理混合权重
+                </label>
+                <input
+                  type="range"
+                  className="w-full"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  defaultValue="0"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground block mb-1">
+                  碰撞响应强度
+                </label>
+                <input
+                  type="range"
+                  className="w-full"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  defaultValue="0.5"
                 />
               </div>
             </div>
