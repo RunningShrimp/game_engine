@@ -27,8 +27,6 @@ pub enum FsrQualityMode {
     Balanced,
     /// 性能模式 (2.0x)
     Performance,
-    /// 超性能模式 (3.0x)
-    UltraPerformance,
 }
 
 impl FsrQualityMode {
@@ -39,7 +37,6 @@ impl FsrQualityMode {
             Self::Quality => 1.5,
             Self::Balanced => 1.7,
             Self::Performance => 2.0,
-            Self::UltraPerformance => 3.0,
         }
     }
     
@@ -50,7 +47,6 @@ impl FsrQualityMode {
             UpscalingQuality::Quality => Self::Quality,
             UpscalingQuality::Balanced => Self::Balanced,
             UpscalingQuality::Performance => Self::Performance,
-            UpscalingQuality::UltraPerformance => Self::UltraPerformance,
         }
     }
 }
@@ -93,9 +89,10 @@ impl Fsr1Easu {
         // 验证输入大小
         let expected_size = (self.input_width * self.input_height * 4) as usize; // RGBA
         if input.len() != expected_size {
-            return Err(HardwareError::UpscalingError(
-                format!("Invalid input size: expected {}, got {}", expected_size, input.len())
-            ));
+            return Err(HardwareError::UpscalingError {
+                technology: "FSR".to_string(),
+                reason: format!("Invalid input size: expected {}, got {}", expected_size, input.len()),
+            });
         }
         
         // 创建输出缓冲区
@@ -158,7 +155,6 @@ impl Fsr1Easu {
             FsrQualityMode::Quality => 0.3,
             FsrQualityMode::Balanced => 0.4,
             FsrQualityMode::Performance => 0.5,
-            FsrQualityMode::UltraPerformance => 0.6,
         };
         
         // 这里应该实现RCAS算法
@@ -251,24 +247,6 @@ impl UpscalingEngine for FsrEngine {
         (self.output_width, self.output_height)
     }
     
-    /// 内部使用的辅助方法（非CPU版本）
-    fn upscale_cpu(&mut self, input: &[u8], _motion_vectors: Option<&[f32]>, _depth: Option<&[f32]>) -> HardwareResult<Vec<u8>> {
-        match self.version {
-            FsrVersion::V1_0 => {
-                let easu = self.easu.as_ref()
-                    .ok_or_else(|| HardwareError::UpscalingError("FSR not initialized".to_string()))?;
-                easu.upscale(input)
-            }
-            FsrVersion::V2_0 | FsrVersion::V3_0 => {
-                // FSR 2.0和3.0需要运动矢量和深度信息
-                // 这里暂时回退到FSR 1.0
-                let easu = self.easu.as_ref()
-                    .ok_or_else(|| HardwareError::UpscalingError("FSR not initialized".to_string()))?;
-                easu.upscale(input)
-            }
-        }
-    }
-    
     fn set_quality(&mut self, quality: UpscalingQuality) -> HardwareResult<()> {
         self.quality_mode = FsrQualityMode::from_upscaling_quality(quality);
         
@@ -322,9 +300,10 @@ impl FsrManager {
         let version = version.unwrap_or(FsrVersion::V1_0);
         
         if !self.available_versions.contains(&version) {
-            return Err(HardwareError::UnsupportedHardware(
-                format!("FSR {:?} not available", version)
-            ));
+            return Err(HardwareError::UnsupportedHardware {
+                hardware: "FSR".to_string(),
+                feature: format!("FSR {:?} not available", version),
+            });
         }
         
         Ok(Box::new(FsrEngine::new(version)))
