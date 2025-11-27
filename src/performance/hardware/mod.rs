@@ -15,6 +15,11 @@ pub mod adaptive_performance;
 pub mod simulated_renderer;
 pub mod ring_buffer;
 pub mod cache;
+pub mod async_detect;
+pub mod error;
+pub mod metrics;
+pub mod npu_sdk;
+pub mod upscaling_sdk;
 
 pub use gpu_detect::{GpuInfo, GpuVendor, GpuTier, detect_gpu};
 pub use npu_detect::{NpuInfo, NpuVendor, detect_npu};
