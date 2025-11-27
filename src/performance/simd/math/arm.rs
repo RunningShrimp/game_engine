@@ -83,7 +83,8 @@ pub unsafe fn normalize_vec4_neon(v: &[f32; 4], out: &mut [f32; 4]) {
 #[target_feature(enable = "neon")]
 pub unsafe fn normalize_batch_neon(vectors: &mut [[f32; 4]]) {
     for vec in vectors.iter_mut() {
-        normalize_vec4_neon(vec, vec);
+        let temp = *vec;  // Create a temporary copy
+        normalize_vec4_neon(&temp, vec);
     }
 }
 

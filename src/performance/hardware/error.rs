@@ -154,13 +154,13 @@ pub trait ErrorContext<T> {
         F: FnOnce() -> String;
 }
 
-impl<T> ErrorContext<T> for HardwareResult<T> {
+impl<T, E: std::error::Error + 'static> ErrorContext<T> for Result<T, E> {
     fn context(self, context: &str) -> HardwareResult<T> {
         self.map_err(|e| {
             HardwareError::Other(format!("{}: {}", context, e))
         })
     }
-    
+
     fn with_context<F>(self, f: F) -> HardwareResult<T>
     where
         F: FnOnce() -> String,
