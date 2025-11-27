@@ -43,6 +43,7 @@ tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"] }
 rand = "0.8"
 rodio = "0.21.1"
 raw-window-handle = "0.6.2"
+num_cpus = "1.16"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -62,3 +63,4 @@ default = ["physics_2d"]
 
 [dev-dependencies]
 anyhow = "1.0.100"
+num_cpus = "1.16"

@@ -7,6 +7,8 @@ pub mod continuous_profiler;
 pub mod memory_profiler;
 pub mod lock_free;
 pub mod arena;
+pub mod simd;
+pub mod hardware;
 
 pub use batch_renderer::BatchRenderer;
 pub use object_pool::ObjectPool;
@@ -15,3 +17,5 @@ pub use render_optimization::{FrustumCulling, OcclusionCulling, LodManager};
 pub use advanced_profiler::{AdvancedProfiler, PerformanceMetrics};
 pub use continuous_profiler::ContinuousProfiler;
 pub use memory_profiler::{MemoryProfiler, GpuProfiler};
+pub use simd::{CpuFeatures, detect_cpu_features, print_cpu_info};
+pub use hardware::{get_hardware_info, print_hardware_info, HardwareInfo, AutoConfig};
