@@ -148,6 +148,7 @@ impl GpuDrivenRenderer {
         self.culler.cull(
             encoder,
             device,
+            queue,
             &self.instance_input_buffer,
             &self.visible_instance_buffer,
             &self.counter_buffer,
@@ -225,4 +226,3 @@ mod tests {
         assert_eq!(instance.aabb_max, [0.5, 0.5, 0.5]);
     }
 }
-

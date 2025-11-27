@@ -15,6 +15,12 @@ impl WinitWindow {
         let _ = win.request_inner_size(PhysicalSize::new(size.0, size.1));
         Self { window: Arc::new(win) }
     }
+
+    pub fn try_new(event_loop: &EventLoop<()>, size: (u32, u32)) -> Option<Self> {
+        let win = WinitWindowRaw::new(event_loop).ok()?;
+        let _ = win.request_inner_size(PhysicalSize::new(size.0, size.1));
+        Some(Self { window: Arc::new(win) })
+    }
     pub fn raw(&self) -> &WinitWindowRaw {
         &self.window
     }

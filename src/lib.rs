@@ -65,6 +65,8 @@ pub mod services;
 pub mod audio;
 /// Language bindings for scripting
 pub mod bindings;
+/// Migration utilities for transitioning from old APIs to new APIs
+pub mod migration;
 /// XR (VR/AR/MR) support
 pub mod xr;
 /// Performance profiling and optimization tools
@@ -77,6 +79,10 @@ pub mod animation;
 pub mod scene;
 /// Network synchronization framework
 pub mod network;
+/// AI system for intelligent agents
+pub mod ai;
+/// UI system for user interface management
+pub mod ui;
 
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;

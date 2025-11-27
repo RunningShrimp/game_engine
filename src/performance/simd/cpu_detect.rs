@@ -135,6 +135,38 @@ impl CpuFeatures {
         }
     }
     
+    /// 检测x86 CPU厂商信息
+    ///
+    /// # Safety
+    ///
+    /// 调用者必须确保：
+    /// 1. 当前CPU支持SSE2指令集（通过#[cfg(target_feature = "sse2")]保证）
+    /// 2. CPUID指令在当前平台上可用（x86/x64架构）
+    /// 3. CPUID调用不会导致异常（现代CPU都支持）
+    /// 4. 返回的寄存器数据包含有效的ASCII字符
+    ///
+    /// # Panics
+    ///
+    /// 当CPUID指令不可用或返回无效数据时可能panic
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use game_engine::performance::simd::cpu_detect::CpuVendor;
+    ///
+    /// #[cfg(target_arch = "x86_64")]
+    /// #[cfg(target_feature = "sse2")]
+    /// unsafe {
+    ///     // 注意：这个函数是内部函数，通常通过detect_cpu_features()调用
+    ///     // 直接调用需要确保SSE2支持
+    ///     let vendor = std::arch::is_x86_feature_detected!("sse2");
+    ///     if vendor {
+    ///         // 在实际代码中，应该通过公共API调用
+    ///         let features = game_engine::performance::simd::cpu_detect::detect_cpu_features();
+    ///         println!("Detected vendor: {:?}", features.vendor);
+    ///     }
+    /// }
+    /// ```
     #[cfg(target_arch = "x86_64")]
     fn detect_x86_vendor() -> CpuVendor {
         // 使用cpuid检测厂商

@@ -50,7 +50,7 @@ struct Uniforms3DPBR {
 
 #[repr(C)]
 #[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
-struct MaterialUniformPBR {
+pub struct MaterialUniformPBR {
 
     base_color: [f32; 4],
     metallic: f32,
@@ -58,7 +58,13 @@ struct MaterialUniformPBR {
     ao: f32,
     normal_scale: f32,
     emissive: [f32; 3],
-    _pad: f32,
+    uv_offset: [f32; 2],
+    uv_scale: [f32; 2],
+    uv_rotation: f32,
+    clearcoat: f32,
+    clearcoat_roughness: f32,
+    anisotropy: f32,
+    anisotropy_direction: [f32; 2],
 }
 
 #[repr(C)]
@@ -86,12 +92,88 @@ pub struct PbrRenderer {
     pub uniform_buffer: wgpu::Buffer,
     pub uniform_bind_group: wgpu::BindGroup,
     pub material_buffer: wgpu::Buffer,
-    pub material_bind_group: wgpu::BindGroup,
+    pub material_bind_group: std::sync::Arc<wgpu::BindGroup>,
+    pub material_bgl: wgpu::BindGroupLayout,
     pub lights_buffer: wgpu::Buffer,
     pub lights_bind_group: wgpu::BindGroup,
+    pub textures_bind_group: wgpu::BindGroup,
+    pub textures_bgl: wgpu::BindGroupLayout,
+}
+
+pub struct PbrTextureSet {
+    pub textures: [wgpu::Texture; 5],
+    pub views: [wgpu::TextureView; 5],
+    pub sampler: wgpu::Sampler,
+    pub bind_group: wgpu::BindGroup,
 }
 
 impl PbrRenderer {
+    pub fn create_textures_bind_group_from_views(
+        &self,
+        device: &wgpu::Device,
+        views: [&wgpu::TextureView; 5],
+        sampler: &wgpu::Sampler,
+    ) -> wgpu::BindGroup {
+        device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("PBR Textures BG (Custom)"),
+            layout: &self.textures_bgl,
+            entries: &[
+                wgpu::BindGroupEntry { binding: 0, resource: wgpu::BindingResource::TextureView(views[0]) },
+                wgpu::BindGroupEntry { binding: 1, resource: wgpu::BindingResource::TextureView(views[1]) },
+                wgpu::BindGroupEntry { binding: 2, resource: wgpu::BindingResource::TextureView(views[2]) },
+                wgpu::BindGroupEntry { binding: 3, resource: wgpu::BindingResource::TextureView(views[3]) },
+                wgpu::BindGroupEntry { binding: 4, resource: wgpu::BindingResource::TextureView(views[4]) },
+                wgpu::BindGroupEntry { binding: 5, resource: wgpu::BindingResource::Sampler(sampler) },
+            ],
+        })
+    }
+
+    pub fn create_texture_set_from_images(
+        &self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        images: [image::RgbaImage; 5],
+        srgb_flags: [bool; 5],
+    ) -> PbrTextureSet {
+        let mut textures: [wgpu::Texture;5] = [
+            device.create_texture(&wgpu::TextureDescriptor{label:None,size:wgpu::Extent3d{width:1,height:1,depth_or_array_layers:1},mip_level_count:1,sample_count:1,dimension:wgpu::TextureDimension::D2,format:wgpu::TextureFormat::Rgba8Unorm,usage:wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,view_formats:&[]}),
+            device.create_texture(&wgpu::TextureDescriptor{label:None,size:wgpu::Extent3d{width:1,height:1,depth_or_array_layers:1},mip_level_count:1,sample_count:1,dimension:wgpu::TextureDimension::D2,format:wgpu::TextureFormat::Rgba8Unorm,usage:wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,view_formats:&[]}),
+            device.create_texture(&wgpu::TextureDescriptor{label:None,size:wgpu::Extent3d{width:1,height:1,depth_or_array_layers:1},mip_level_count:1,sample_count:1,dimension:wgpu::TextureDimension::D2,format:wgpu::TextureFormat::Rgba8Unorm,usage:wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,view_formats:&[]}),
+            device.create_texture(&wgpu::TextureDescriptor{label:None,size:wgpu::Extent3d{width:1,height:1,depth_or_array_layers:1},mip_level_count:1,sample_count:1,dimension:wgpu::TextureDimension::D2,format:wgpu::TextureFormat::Rgba8Unorm,usage:wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,view_formats:&[]}),
+            device.create_texture(&wgpu::TextureDescriptor{label:None,size:wgpu::Extent3d{width:1,height:1,depth_or_array_layers:1},mip_level_count:1,sample_count:1,dimension:wgpu::TextureDimension::D2,format:wgpu::TextureFormat::Rgba8Unorm,usage:wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,view_formats:&[]}),
+        ];
+        let mut views: [wgpu::TextureView;5] = [
+            textures[0].create_view(&wgpu::TextureViewDescriptor::default()),
+            textures[1].create_view(&wgpu::TextureViewDescriptor::default()),
+            textures[2].create_view(&wgpu::TextureViewDescriptor::default()),
+            textures[3].create_view(&wgpu::TextureViewDescriptor::default()),
+            textures[4].create_view(&wgpu::TextureViewDescriptor::default()),
+        ];
+        for i in 0..5 {
+            let (w,h) = images[i].dimensions();
+            let format = if srgb_flags[i] { wgpu::TextureFormat::Rgba8UnormSrgb } else { wgpu::TextureFormat::Rgba8Unorm };
+            textures[i] = device.create_texture(&wgpu::TextureDescriptor {
+                label: Some("PBR Texture Imported"),
+                size: wgpu::Extent3d { width: w, height: h, depth_or_array_layers: 1 },
+                mip_level_count: 1,
+                sample_count: 1,
+                dimension: wgpu::TextureDimension::D2,
+                format,
+                usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+                view_formats: &[],
+            });
+            queue.write_texture(
+                wgpu::ImageCopyTexture { texture: &textures[i], mip_level: 0, origin: wgpu::Origin3d::ZERO, aspect: wgpu::TextureAspect::All },
+                images[i].as_raw(),
+                wgpu::ImageDataLayout { offset: 0, bytes_per_row: Some(4 * w), rows_per_image: Some(h) },
+                wgpu::Extent3d { width: w, height: h, depth_or_array_layers: 1 },
+            );
+            views[i] = textures[i].create_view(&wgpu::TextureViewDescriptor::default());
+        }
+        let sampler = device.create_sampler(&wgpu::SamplerDescriptor::default());
+        let bind_group = self.create_textures_bind_group_from_views(device, [&views[0], &views[1], &views[2], &views[3], &views[4]], &sampler);
+        PbrTextureSet { textures, views, sampler, bind_group }
+    }
     pub fn new(device: &wgpu::Device, format: wgpu::TextureFormat) -> Self {
         // 创建着色器
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
@@ -152,14 +234,14 @@ impl PbrRenderer {
             mapped_at_creation: false,
         });
 
-        let material_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+        let material_bind_group = std::sync::Arc::new(device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("PBR Material BG"),
             layout: &material_bgl,
             entries: &[wgpu::BindGroupEntry {
                 binding: 0,
                 resource: material_buffer.as_entire_binding(),
             }],
-        });
+        }));
 
         // 光源
         let lights_bgl = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -217,10 +299,46 @@ impl PbrRenderer {
             ],
         });
 
-        // 创建管线
+        let textures_bgl = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("PBR Textures BGL"),
+            entries: &[
+                wgpu::BindGroupLayoutEntry { binding: 0, visibility: wgpu::ShaderStages::FRAGMENT, ty: wgpu::BindingType::Texture { sample_type: wgpu::TextureSampleType::Float { filterable: true }, view_dimension: wgpu::TextureViewDimension::D2, multisampled: false }, count: None },
+                wgpu::BindGroupLayoutEntry { binding: 1, visibility: wgpu::ShaderStages::FRAGMENT, ty: wgpu::BindingType::Texture { sample_type: wgpu::TextureSampleType::Float { filterable: true }, view_dimension: wgpu::TextureViewDimension::D2, multisampled: false }, count: None },
+                wgpu::BindGroupLayoutEntry { binding: 2, visibility: wgpu::ShaderStages::FRAGMENT, ty: wgpu::BindingType::Texture { sample_type: wgpu::TextureSampleType::Float { filterable: true }, view_dimension: wgpu::TextureViewDimension::D2, multisampled: false }, count: None },
+                wgpu::BindGroupLayoutEntry { binding: 3, visibility: wgpu::ShaderStages::FRAGMENT, ty: wgpu::BindingType::Texture { sample_type: wgpu::TextureSampleType::Float { filterable: true }, view_dimension: wgpu::TextureViewDimension::D2, multisampled: false }, count: None },
+                wgpu::BindGroupLayoutEntry { binding: 4, visibility: wgpu::ShaderStages::FRAGMENT, ty: wgpu::BindingType::Texture { sample_type: wgpu::TextureSampleType::Float { filterable: true }, view_dimension: wgpu::TextureViewDimension::D2, multisampled: false }, count: None },
+                wgpu::BindGroupLayoutEntry { binding: 5, visibility: wgpu::ShaderStages::FRAGMENT, ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering), count: None },
+            ],
+        });
+
+        let dummy_tex = device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("PBR Dummy Tex"),
+            size: wgpu::Extent3d { width: 1, height: 1, depth_or_array_layers: 1 },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Rgba8UnormSrgb,
+            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+            view_formats: &[],
+        });
+        let dummy_view = dummy_tex.create_view(&wgpu::TextureViewDescriptor::default());
+        let sampler = device.create_sampler(&wgpu::SamplerDescriptor::default());
+        let textures_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("PBR Textures BG"),
+            layout: &textures_bgl,
+            entries: &[
+                wgpu::BindGroupEntry { binding: 0, resource: wgpu::BindingResource::TextureView(&dummy_view) },
+                wgpu::BindGroupEntry { binding: 1, resource: wgpu::BindingResource::TextureView(&dummy_view) },
+                wgpu::BindGroupEntry { binding: 2, resource: wgpu::BindingResource::TextureView(&dummy_view) },
+                wgpu::BindGroupEntry { binding: 3, resource: wgpu::BindingResource::TextureView(&dummy_view) },
+                wgpu::BindGroupEntry { binding: 4, resource: wgpu::BindingResource::TextureView(&dummy_view) },
+                wgpu::BindGroupEntry { binding: 5, resource: wgpu::BindingResource::Sampler(&sampler) },
+            ],
+        });
+
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("PBR Pipeline Layout"),
-            bind_group_layouts: &[&uniform_bgl, &material_bgl, &lights_bgl],
+            bind_group_layouts: &[&uniform_bgl, &material_bgl, &lights_bgl, &textures_bgl],
             push_constant_ranges: &[],
         });
 
@@ -234,7 +352,7 @@ impl PbrRenderer {
                     wgpu::VertexBufferLayout {
                         array_stride: std::mem::size_of::<Vertex3D>() as u64,
                         step_mode: wgpu::VertexStepMode::Vertex,
-                        attributes: &wgpu::vertex_attr_array![0 => Float32x3, 1 => Float32x3, 2 => Float32x2],
+                        attributes: &wgpu::vertex_attr_array![0 => Float32x3, 1 => Float32x3, 2 => Float32x2, 3 => Float32x4],
                     },
                     Instance3D::desc(),
                 ],
@@ -276,8 +394,68 @@ impl PbrRenderer {
             uniform_bind_group,
             material_buffer,
             material_bind_group,
+            material_bgl,
             lights_buffer,
             lights_bind_group,
+            textures_bind_group,
+            textures_bgl,
+        }
+    }
+
+    pub fn create_material_bind_group(
+        &self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        mat: &PbrMaterial,
+    ) -> (std::sync::Arc<wgpu::BindGroup>, std::sync::Arc<wgpu::Buffer>) {
+        let uniform = MaterialUniformPBR {
+            base_color: mat.base_color.to_array(),
+            metallic: mat.metallic,
+            roughness: mat.roughness,
+            ao: mat.ambient_occlusion,
+            normal_scale: mat.normal_scale,
+            emissive: mat.emissive.to_array(),
+            uv_offset: mat.uv_offset,
+            uv_scale: mat.uv_scale,
+            uv_rotation: mat.uv_rotation,
+            clearcoat: mat.clearcoat,
+            clearcoat_roughness: mat.clearcoat_roughness,
+            anisotropy: mat.anisotropy,
+            anisotropy_direction: mat.anisotropy_direction,
+        };
+        let buf = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("PBR Material Buffer (Per-Material)"),
+            size: std::mem::size_of::<MaterialUniformPBR>() as wgpu::BufferAddress,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        queue.write_buffer(&buf, 0, bytemuck::bytes_of(&uniform));
+        let bg = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("PBR Material BG (Per-Material)"),
+            layout: &self.material_bgl,
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: buf.as_entire_binding(),
+            }],
+        });
+        (std::sync::Arc::new(bg), std::sync::Arc::new(buf))
+    }
+
+    pub fn encode_material_uniform(mat: &PbrMaterial) -> MaterialUniformPBR {
+        MaterialUniformPBR {
+            base_color: mat.base_color.to_array(),
+            metallic: mat.metallic,
+            roughness: mat.roughness,
+            ao: mat.ambient_occlusion,
+            normal_scale: mat.normal_scale,
+            emissive: mat.emissive.to_array(),
+            uv_offset: mat.uv_offset,
+            uv_scale: mat.uv_scale,
+            uv_rotation: mat.uv_rotation,
+            clearcoat: mat.clearcoat,
+            clearcoat_roughness: mat.clearcoat_roughness,
+            anisotropy: mat.anisotropy,
+            anisotropy_direction: mat.anisotropy_direction,
         }
     }
 
@@ -298,7 +476,13 @@ impl PbrRenderer {
             ao: material.ambient_occlusion,
             normal_scale: material.normal_scale,
             emissive: material.emissive.to_array(),
-            _pad: 0.0,
+            uv_offset: [0.0, 0.0],
+            uv_scale: [1.0, 1.0],
+            uv_rotation: 0.0,
+            clearcoat: 0.0,
+            clearcoat_roughness: 0.5,
+            anisotropy: 0.0,
+            anisotropy_direction: [1.0, 0.0],
         };
         queue.write_buffer(&self.material_buffer, 0, bytemuck::bytes_of(&uniform));
     }
@@ -332,6 +516,90 @@ impl PbrRenderer {
         
         if !gpu_dir_lights.is_empty() {
             queue.write_buffer(&self.lights_buffer, std::mem::size_of::<GpuPointLight3D>() as u64 * 256, bytemuck::cast_slice(&gpu_dir_lights));
+        }
+    }
+
+    /// 渲染单个网格实例
+    pub fn render_mesh<'a>(
+        &'a self,
+        render_pass: &mut wgpu::RenderPass<'a>,
+        mesh: &'a super::mesh::GpuMesh,
+        instance_buffer: &'a wgpu::Buffer,
+        instance_count: u32,
+    ) {
+        render_pass.set_pipeline(&self.pipeline);
+        render_pass.set_bind_group(0, &self.uniform_bind_group, &[]);
+        render_pass.set_bind_group(1, &self.material_bind_group, &[]);
+        render_pass.set_bind_group(2, &self.lights_bind_group, &[]);
+        render_pass.set_bind_group(3, &self.textures_bind_group, &[]);
+        
+        render_pass.set_vertex_buffer(0, mesh.vertex_buffer.slice(..));
+        render_pass.set_vertex_buffer(1, instance_buffer.slice(..));
+        render_pass.set_index_buffer(mesh.index_buffer.slice(..), wgpu::IndexFormat::Uint32);
+        
+        render_pass.draw_indexed(0..mesh.index_count, 0, 0..instance_count);
+    }
+
+    /// 渲染实例化批次
+    pub fn render_batch<'a>(
+        &'a self,
+        render_pass: &mut wgpu::RenderPass<'a>,
+        batch: &'a super::instance_batch::InstanceBatch,
+    ) {
+        if batch.instances.is_empty() {
+            return;
+        }
+
+        render_pass.set_pipeline(&self.pipeline);
+        render_pass.set_bind_group(0, &self.uniform_bind_group, &[]);
+        render_pass.set_bind_group(1, &batch.material_bind_group, &[]);
+        render_pass.set_bind_group(2, &self.lights_bind_group, &[]);
+        if let Some(bg) = batch.extra_material_bind_groups.get(0) {
+            render_pass.set_bind_group(3, bg, &[]);
+        } else {
+            render_pass.set_bind_group(3, &self.textures_bind_group, &[]);
+        }
+        
+        render_pass.set_vertex_buffer(0, batch.mesh.vertex_buffer.slice(..));
+        if let Some(instance_buffer) = &batch.instance_buffer {
+            render_pass.set_vertex_buffer(1, instance_buffer.slice(..));
+        }
+        render_pass.set_index_buffer(batch.mesh.index_buffer.slice(..), wgpu::IndexFormat::Uint32);
+        
+        render_pass.draw_indexed(0..batch.mesh.index_count, 0, 0..batch.instance_count());
+    }
+
+    /// 渲染所有可见批次
+    pub fn render_all_batches<'a>(
+        &'a self,
+        render_pass: &mut wgpu::RenderPass<'a>,
+        batch_manager: &'a super::instance_batch::BatchManager,
+    ) {
+        render_pass.set_pipeline(&self.pipeline);
+        render_pass.set_bind_group(0, &self.uniform_bind_group, &[]);
+        render_pass.set_bind_group(2, &self.lights_bind_group, &[]);
+
+        for batch in batch_manager.visible_batches() {
+            if batch.instances.is_empty() {
+                continue;
+            }
+
+            render_pass.set_bind_group(1, &batch.material_bind_group, &[]);
+            if let Some(bg) = batch.extra_material_bind_groups.get(0) {
+                render_pass.set_bind_group(3, bg, &[]);
+            } else {
+                render_pass.set_bind_group(3, &self.textures_bind_group, &[]);
+            }
+            
+            // 绑定顶点缓冲区
+            render_pass.set_vertex_buffer(0, batch.mesh.vertex_buffer.slice(..));
+            if let Some(instance_buffer) = &batch.instance_buffer {
+                render_pass.set_vertex_buffer(1, instance_buffer.slice(..));
+            }
+            render_pass.set_index_buffer(batch.mesh.index_buffer.slice(..), wgpu::IndexFormat::Uint32);
+            
+            // 实例化绘制
+            render_pass.draw_indexed(0..batch.mesh.index_count, 0, 0..batch.instance_count());
         }
     }
 }

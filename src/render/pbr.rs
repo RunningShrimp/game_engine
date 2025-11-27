@@ -15,6 +15,20 @@ pub struct PbrMaterial {
     pub emissive: Vec3,
     /// 法线贴图强度
     pub normal_scale: f32,
+    /// UV 偏移 (KHR_texture_transform)
+    pub uv_offset: [f32; 2],
+    /// UV 缩放 (KHR_texture_transform)
+    pub uv_scale: [f32; 2],
+    /// UV 旋转 (弧度, KHR_texture_transform)
+    pub uv_rotation: f32,
+    /// 清漆强度
+    pub clearcoat: f32,
+    /// 清漆粗糙度
+    pub clearcoat_roughness: f32,
+    /// 各向异性强度
+    pub anisotropy: f32,
+    /// 各向异性方向
+    pub anisotropy_direction: [f32; 2],
 }
 
 impl Default for PbrMaterial {
@@ -26,6 +40,13 @@ impl Default for PbrMaterial {
             ambient_occlusion: 1.0,
             emissive: Vec3::ZERO,
             normal_scale: 1.0,
+            uv_offset: [0.0, 0.0],
+            uv_scale: [1.0, 1.0],
+            uv_rotation: 0.0,
+            clearcoat: 0.0,
+            clearcoat_roughness: 0.5,
+            anisotropy: 0.0,
+            anisotropy_direction: [1.0, 0.0],
         }
     }
 }

@@ -45,6 +45,14 @@ pub struct RenderStats {
     pub culled_objects: u32,
     /// 总对象数量
     pub total_objects: u32,
+    /// 批次总数
+    pub batch_total: u32,
+    /// 批次实例总数
+    pub batch_instances: u32,
+    /// 通过批处理节省的Draw Call数量
+    pub batch_saved_draw_calls: u32,
+    pub batch_small_draw_calls: u32,
+    pub batch_visible_batches: u32,
 }
 
 /// 资源加载指标
@@ -116,4 +124,3 @@ mod tests {
         assert!(stats.gpu_pass_ms.is_none());
     }
 }
-

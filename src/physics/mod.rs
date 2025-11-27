@@ -24,6 +24,13 @@
 pub mod physics3d;
 pub mod joints;
 pub mod parallel;
+pub mod dirty_tracker;
+
+pub use dirty_tracker::{
+    PhysicsDirty, CachedPhysicsState, PhysicsSyncConfig, PhysicsSyncStats,
+    BatchSyncData, optimized_physics_sync_system, transform_to_physics_sync_system,
+};
+
 use bevy_ecs::prelude::*;
 use rapier2d::prelude::*;
 use rapier2d::prelude::DefaultBroadPhase;
@@ -284,6 +291,23 @@ impl PhysicsService {
 /// 物理世界资源（兼容层）
 ///
 /// **注意**: 此类型为兼容层，推荐使用 `PhysicsState` + `PhysicsService` 模式。
+///
+/// # 迁移指南
+///
+/// ```rust
+/// // 旧代码
+/// let mut world = PhysicsWorld::default();
+/// world.step();
+///
+/// // 新代码
+/// let mut state = PhysicsState::default();
+/// PhysicsService::step(&mut state);
+/// ```
+#[cfg(feature = "deprecated-apis")]
+#[deprecated(
+    since = "0.2.0",
+    note = "请使用 PhysicsState + PhysicsService 模式代替。此类型将在 0.3.0 版本移除。"
+)]
 #[derive(Resource)]
 pub struct PhysicsWorld {
     /// 重力向量
@@ -314,6 +338,7 @@ pub struct PhysicsWorld {
     pub event_handler: (),
 }
 
+#[cfg(feature = "deprecated-apis")]
 impl Default for PhysicsWorld {
     fn default() -> Self {
         Self {
@@ -477,6 +502,7 @@ pub fn sync_physics_to_transform_system_v2(
 /// 初始化物理刚体系统（兼容层）
 ///
 /// **注意**: 推荐使用 `init_physics_bodies_v2` 配合 `PhysicsState`
+#[cfg(feature = "deprecated-apis")]
 pub fn init_physics_bodies(
     mut commands: Commands,
     mut physics: ResMut<PhysicsWorld>,
@@ -507,6 +533,7 @@ pub fn init_physics_bodies(
 /// 物理步进系统（兼容层）
 ///
 /// **注意**: 推荐使用 `physics_step_system_v2` 配合 `PhysicsState`
+#[cfg(feature = "deprecated-apis")]
 pub fn physics_step_system(mut physics: ResMut<PhysicsWorld>, time: Res<crate::ecs::Time>) {
     physics.integration_parameters.dt = time.delta_seconds.max(0.001); 
     physics.step();
@@ -515,6 +542,7 @@ pub fn physics_step_system(mut physics: ResMut<PhysicsWorld>, time: Res<crate::e
 /// 同步物理到 Transform 系统（兼容层）
 ///
 /// **注意**: 推荐使用 `sync_physics_to_transform_system_v2` 配合 `PhysicsState`
+#[cfg(feature = "deprecated-apis")]
 pub fn sync_physics_to_transform_system(
     physics: Res<PhysicsWorld>,
     mut query: Query<(&RigidBodyComp, &mut Transform)>

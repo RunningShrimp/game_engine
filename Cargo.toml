@@ -1,9 +1,19 @@
 [package]
 name = "game_engine"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
+authors = ["Your Name <your.email@example.com>"]
+description = "A high-performance cross-platform 2D/3D game engine built with Rust"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/username/game_engine"
+homepage = "https://github.com/username/game_engine"
+documentation = "https://docs.rs/game_engine"
+readme = "README.md"
+keywords = ["game-engine", "wgpu", "ecs", "rendering", "physics"]
+categories = ["game-engines", "graphics", "multimedia"]
 
 [dependencies]
+# Core dependencies
 winit = "0.29"
 wgpu = { version = "0.20.1", features = ["webgpu"] }
 pollster = "0.3"
@@ -26,6 +36,9 @@ libloading = "0.8"
 rapier2d = "0.20"
 rapier3d = "0.20"
 
+# GLTF
+gltf = { version = "1.4", optional = true }
+
 # XR
 openxr = "0.18"
 
@@ -37,6 +50,9 @@ egui-winit = "0.28"
 # Scripting
 rquickjs = { version = "0.5", features = ["full"] }
 pyo3 = { version = "0.21", features = ["auto-initialize"], optional = true }
+
+# Logging
+log = "0.4"
 
 webbrowser = "0.8"
 tracing = "0.1"
@@ -58,18 +74,21 @@ console_error_panic_hook = "0.1"
 wasm-bindgen-futures = "0.4"
 web-sys = { version = "0.3", features = ["Window", "Response", "Headers", "Storage", "CacheStorage", "IdbFactory", "IdbDatabase", "IdbTransaction", "IdbObjectStore", "IdbOpenDbRequest", "IdbRequest"] }
 base64 = "0.22"
+
 [features]
 use_bevy_ecs = []
 async_assets = []
 physics_2d = []
 xr = []
-default = ["physics_2d"]
+gltf = ["dep:gltf"]
+deprecated-apis = []  # 控制废弃API的可见性，默认隐藏。将在v0.3.0中移除
+default = ["physics_2d", "gltf", "deprecated-apis"]
 wgpu_perf = []
 
 [dev-dependencies]
 anyhow = "1.0.100"
 criterion = { version = "0.7.0", features = ["html_reports"] }
-num_cpus = "1.16"
+proptest = "1.0.0"
 
 [[bench]]
 name = "simd_bench"

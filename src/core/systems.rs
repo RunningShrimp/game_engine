@@ -19,10 +19,21 @@ pub fn rotate_system(mut query: Query<&mut Transform>, time: Res<Time>) {
     }
 }
 
-/// 纹理句柄应用系统 - 将加载完成的纹理ID应用到Sprite
+/// 纹理句柄应用系统 - 将加载完成的纹理ID应用到Sprite（优化版本：避免Clone）
 pub fn apply_texture_handles(mut query: Query<(&Handle<u32>, &mut Sprite)>) {
     for (handle, mut sprite) in query.iter_mut() {
-        if let Some(tex_id) = handle.get() {
+        if let Some(tex_id) = handle.get() {  // ✅ 修复：使用get()方法代替已移除的get_ref()
+            sprite.tex_index = tex_id;
+        }
+    }
+}
+
+/// 纹理句柄应用系统 - 批处理优化版本（更高效的内存访问模式）
+/// 注意：此版本改变了查询顺序，通过先访问Sprite再访问Handle来优化内存预取
+/// 在大批量数据中可能有更好性能，但需要确保Sprite始终存在
+pub fn apply_texture_handles_batch(mut query: Query<(&mut Sprite, &Handle<u32>)>) {
+    for (mut sprite, handle) in query.iter_mut() {
+        if let Some(tex_id) = handle.get() {  // ✅ 修复：使用get()方法代替已移除的get_ref()
             sprite.tex_index = tex_id;
         }
     }

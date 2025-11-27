@@ -9,25 +9,34 @@ use thiserror::Error;
 pub enum EngineError {
     #[error("Initialization error: {0}")]
     Init(String),
-    
+
     #[error("Render error: {0}")]
     Render(#[from] RenderError),
-    
+
     #[error("Asset error: {0}")]
     Asset(#[from] AssetError),
-    
+
     #[error("Physics error: {0}")]
     Physics(#[from] PhysicsError),
-    
+
     #[error("Audio error: {0}")]
     Audio(#[from] AudioError),
-    
+
     #[error("Script error: {0}")]
     Script(#[from] ScriptError),
-    
+
     #[error("Platform error: {0}")]
     Platform(#[from] PlatformError),
-    
+
+    #[error("Window creation failed: {0}")]
+    Window(String),
+
+    #[error("Renderer initialization failed: {0}")]
+    RenderInit(#[from] wgpu::Error),
+
+    #[error("Event loop error: {0}")]
+    EventLoop(String),
+
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
 }
@@ -37,28 +46,38 @@ pub enum EngineError {
 pub enum RenderError {
     #[error("Failed to create surface: {0}")]
     SurfaceCreation(String),
-    
+
     #[error("Failed to request adapter: no compatible GPU found")]
     NoAdapter,
-    
+
     #[error("Failed to request device: {0}")]
     DeviceRequest(String),
-    
+
     #[error("Failed to create shader: {0}")]
     ShaderCompilation(String),
-    
+
     #[error("Failed to create pipeline: {0}")]
     PipelineCreation(String),
-    
+
     #[error("Failed to create texture: {0}")]
     TextureCreation(String),
-    
+
     #[error("Surface error: {0}")]
     Surface(String),
-    
+
     #[error("Frame submission error: {0}")]
     FrameSubmission(String),
 }
+
+#[cfg(feature = "deprecated-apis")]
+impl From<wgpu::CreateSurfaceError> for RenderError {
+    fn from(error: wgpu::CreateSurfaceError) -> Self {
+        RenderError::SurfaceCreation(format!("{}", error))
+    }
+}
+
+// Note: wgpu::CreateSurfaceError may not exist in wgpu 0.20+
+// Surface creation errors are now handled through wgpu::Error
 
 /// 资源管理错误
 #[derive(Error, Debug)]

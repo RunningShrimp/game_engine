@@ -7,9 +7,39 @@
 use std::arch::aarch64::*;
 
 /// 使用NEON的4维向量点积
+///
+/// # Safety
+///
+/// 调用者必须确保：
+/// 1. `a` 和 `b` 数组长度至少为4
+/// 2. 当前CPU支持NEON指令集（在aarch64上是强制支持的）
+/// 3. 数组内存有效且已初始化
+/// 4. 内存对齐至少为4字节（使用vld1q_f32可处理未对齐内存）
+///
+/// # Panics
+///
+/// 当数组长度小于4时可能panic（debug_assert检查）
+///
+/// # Examples
+///
+/// ```rust
+/// use game_engine::performance::simd::math::arm::dot_product_neon;
+///
+/// // NEON在aarch64上是强制支持的
+/// let a = [1.0, 2.0, 3.0, 4.0];
+/// let b = [5.0, 6.0, 7.0, 8.0];
+///
+/// unsafe {
+///     let result = dot_product_neon(&a, &b);
+///     assert_eq!(result, 70.0);
+/// }
+/// ```
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
 pub unsafe fn dot_product_neon(a: &[f32; 4], b: &[f32; 4]) -> f32 {
+    debug_assert_eq!(a.len(), 4, "Input array 'a' must have length 4");
+    debug_assert_eq!(b.len(), 4, "Input array 'b' must have length 4");
+    
     let va = unsafe { vld1q_f32(a.as_ptr()) };
     let vb = unsafe { vld1q_f32(b.as_ptr()) };
     let mul = vmulq_f32(va, vb);
@@ -19,9 +49,42 @@ pub unsafe fn dot_product_neon(a: &[f32; 4], b: &[f32; 4]) -> f32 {
 }
 
 /// 使用NEON的4维向量加法
+///
+/// # Safety
+///
+/// 调用者必须确保：
+/// 1. `a`, `b`, `out` 数组长度至少为4
+/// 2. 当前CPU支持NEON指令集（在aarch64上是强制支持的）
+/// 3. 所有输入数组内存有效且已初始化
+/// 4. `out` 数组可写且内存有效
+/// 5. 内存对齐至少为4字节（使用vld1q_f32/vst1q_f32可处理未对齐内存）
+/// 6. `out` 不能与 `a`, `b` 重叠（避免数据竞争）
+///
+/// # Panics
+///
+/// 当数组长度小于4时可能panic（debug_assert检查）
+///
+/// # Examples
+///
+/// ```rust
+/// use game_engine::performance::simd::math::arm::add_vec4_neon;
+///
+/// let a = [1.0, 2.0, 3.0, 4.0];
+/// let b = [5.0, 6.0, 7.0, 8.0];
+/// let mut out = [0.0; 4];
+///
+/// unsafe {
+///     add_vec4_neon(&a, &b, &mut out);
+///     assert_eq!(out, [6.0, 8.0, 10.0, 12.0]);
+/// }
+/// ```
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
 pub unsafe fn add_vec4_neon(a: &[f32; 4], b: &[f32; 4], out: &mut [f32; 4]) {
+    debug_assert_eq!(a.len(), 4, "Input array 'a' must have length 4");
+    debug_assert_eq!(b.len(), 4, "Input array 'b' must have length 4");
+    debug_assert_eq!(out.len(), 4, "Output array 'out' must have length 4");
+    
     let va = unsafe { vld1q_f32(a.as_ptr()) };
     let vb = unsafe { vld1q_f32(b.as_ptr()) };
     let result = vaddq_f32(va, vb);
@@ -29,9 +92,42 @@ pub unsafe fn add_vec4_neon(a: &[f32; 4], b: &[f32; 4], out: &mut [f32; 4]) {
 }
 
 /// 使用NEON的4维向量减法
+///
+/// # Safety
+///
+/// 调用者必须确保：
+/// 1. `a`, `b`, `out` 数组长度至少为4
+/// 2. 当前CPU支持NEON指令集（在aarch64上是强制支持的）
+/// 3. 所有输入数组内存有效且已初始化
+/// 4. `out` 数组可写且内存有效
+/// 5. 内存对齐至少为4字节（使用vld1q_f32/vst1q_f32可处理未对齐内存）
+/// 6. `out` 不能与 `a`, `b` 重叠（避免数据竞争）
+///
+/// # Panics
+///
+/// 当数组长度小于4时可能panic（debug_assert检查）
+///
+/// # Examples
+///
+/// ```rust
+/// use game_engine::performance::simd::math::arm::sub_vec4_neon;
+///
+/// let a = [5.0, 6.0, 7.0, 8.0];
+/// let b = [1.0, 2.0, 3.0, 4.0];
+/// let mut out = [0.0; 4];
+///
+/// unsafe {
+///     sub_vec4_neon(&a, &b, &mut out);
+///     assert_eq!(out, [4.0, 4.0, 4.0, 4.0]);
+/// }
+/// ```
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
 pub unsafe fn sub_vec4_neon(a: &[f32; 4], b: &[f32; 4], out: &mut [f32; 4]) {
+    debug_assert_eq!(a.len(), 4, "Input array 'a' must have length 4");
+    debug_assert_eq!(b.len(), 4, "Input array 'b' must have length 4");
+    debug_assert_eq!(out.len(), 4, "Output array 'out' must have length 4");
+    
     let va = unsafe { vld1q_f32(a.as_ptr()) };
     let vb = unsafe { vld1q_f32(b.as_ptr()) };
     let result = vsubq_f32(va, vb);
@@ -39,9 +135,42 @@ pub unsafe fn sub_vec4_neon(a: &[f32; 4], b: &[f32; 4], out: &mut [f32; 4]) {
 }
 
 /// 使用NEON的4维向量乘法
+///
+/// # Safety
+///
+/// 调用者必须确保：
+/// 1. `a`, `b`, `out` 数组长度至少为4
+/// 2. 当前CPU支持NEON指令集（在aarch64上是强制支持的）
+/// 3. 所有输入数组内存有效且已初始化
+/// 4. `out` 数组可写且内存有效
+/// 5. 内存对齐至少为4字节（使用vld1q_f32/vst1q_f32可处理未对齐内存）
+/// 6. `out` 不能与 `a`, `b` 重叠（避免数据竞争）
+///
+/// # Panics
+///
+/// 当数组长度小于4时可能panic（debug_assert检查）
+///
+/// # Examples
+///
+/// ```rust
+/// use game_engine::performance::simd::math::arm::mul_vec4_neon;
+///
+/// let a = [1.0, 2.0, 3.0, 4.0];
+/// let b = [5.0, 6.0, 7.0, 8.0];
+/// let mut out = [0.0; 4];
+///
+/// unsafe {
+///     mul_vec4_neon(&a, &b, &mut out);
+///     assert_eq!(out, [5.0, 12.0, 21.0, 32.0]);
+/// }
+/// ```
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
 pub unsafe fn mul_vec4_neon(a: &[f32; 4], b: &[f32; 4], out: &mut [f32; 4]) {
+    debug_assert_eq!(a.len(), 4, "Input array 'a' must have length 4");
+    debug_assert_eq!(b.len(), 4, "Input array 'b' must have length 4");
+    debug_assert_eq!(out.len(), 4, "Output array 'out' must have length 4");
+    
     let va = unsafe { vld1q_f32(a.as_ptr()) };
     let vb = unsafe { vld1q_f32(b.as_ptr()) };
     let result = vmulq_f32(va, vb);
@@ -49,9 +178,46 @@ pub unsafe fn mul_vec4_neon(a: &[f32; 4], b: &[f32; 4], out: &mut [f32; 4]) {
 }
 
 /// 使用NEON的向量乘加运算 (a * b + c)
+///
+/// # Safety
+///
+/// 调用者必须确保：
+/// 1. `a`, `b`, `c`, `out` 数组长度至少为4
+/// 2. 当前CPU支持NEON指令集（在aarch64上是强制支持的）
+/// 3. 所有输入数组内存有效且已初始化
+/// 4. `out` 数组可写且内存有效
+/// 5. 内存对齐至少为4字节（使用vld1q_f32/vst1q_f32可处理未对齐内存）
+/// 6. `out` 不能与 `a`, `b`, `c` 重叠（避免数据竞争）
+///
+/// # Panics
+///
+/// 当数组长度小于4时可能panic（debug_assert检查）
+///
+/// # Examples
+///
+/// ```rust
+/// use game_engine::performance::simd::math::arm::fma_vec4_neon;
+///
+/// let a = [1.0, 2.0, 3.0, 4.0];
+/// let b = [5.0, 6.0, 7.0, 8.0];
+/// let c = [0.1, 0.2, 0.3, 0.4];
+/// let mut out = [0.0; 4];
+///
+/// unsafe {
+///     fma_vec4_neon(&a, &b, &c, &mut out);
+///     // out = a * b + c
+///     assert_eq!(out[0], 1.0 * 5.0 + 0.1);
+///     assert_eq!(out[1], 2.0 * 6.0 + 0.2);
+/// }
+/// ```
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
 pub unsafe fn fma_vec4_neon(a: &[f32; 4], b: &[f32; 4], c: &[f32; 4], out: &mut [f32; 4]) {
+    debug_assert_eq!(a.len(), 4, "Input array 'a' must have length 4");
+    debug_assert_eq!(b.len(), 4, "Input array 'b' must have length 4");
+    debug_assert_eq!(c.len(), 4, "Input array 'c' must have length 4");
+    debug_assert_eq!(out.len(), 4, "Output array 'out' must have length 4");
+    
     let va = unsafe { vld1q_f32(a.as_ptr()) };
     let vb = unsafe { vld1q_f32(b.as_ptr()) };
     let vc = unsafe { vld1q_f32(c.as_ptr()) };
@@ -61,9 +227,43 @@ pub unsafe fn fma_vec4_neon(a: &[f32; 4], b: &[f32; 4], c: &[f32; 4], out: &mut 
 }
 
 /// 使用NEON的向量归一化
+///
+/// # Safety
+///
+/// 调用者必须确保：
+/// 1. `v` 和 `out` 数组长度至少为4
+/// 2. 当前CPU支持NEON指令集（在aarch64上是强制支持的）
+/// 3. 输入数组内存有效且已初始化
+/// 4. `out` 数组可写且内存有效
+/// 5. 内存对齐至少为4字节（使用vld1q_f32/vst1q_f32可处理未对齐内存）
+/// 6. `out` 不能与 `v` 重叠（避免数据竞争）
+/// 7. 向量分量不包含NaN或无穷大值（可能导致未定义行为）
+///
+/// # Panics
+///
+/// 当数组长度小于4时可能panic（debug_assert检查）
+///
+/// # Examples
+///
+/// ```rust
+/// use game_engine::performance::simd::math::arm::normalize_vec4_neon;
+///
+/// let v = [3.0, 4.0, 0.0, 0.0]; // 长度为5.0
+/// let mut out = [0.0; 4];
+///
+/// unsafe {
+///     normalize_vec4_neon(&v, &mut out);
+///     // 输出应该为 [0.6, 0.8, 0.0, 0.0]
+///     assert!((out[0] - 0.6).abs() < 1e-5);
+///     assert!((out[1] - 0.8).abs() < 1e-5);
+/// }
+/// ```
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
 pub unsafe fn normalize_vec4_neon(v: &[f32; 4], out: &mut [f32; 4]) {
+    debug_assert_eq!(v.len(), 4, "Input array 'v' must have length 4");
+    debug_assert_eq!(out.len(), 4, "Output array 'out' must have length 4");
+    
     let vec = unsafe { vld1q_f32(v.as_ptr()) };
     let dot = unsafe { dot_product_neon(v, v) };
     let len = dot.sqrt();
@@ -79,6 +279,37 @@ pub unsafe fn normalize_vec4_neon(v: &[f32; 4], out: &mut [f32; 4]) {
 }
 
 /// 批量向量归一化（NEON）
+///
+/// # Safety
+///
+/// 调用者必须确保：
+/// 1. 当前CPU支持NEON指令集（在aarch64上是强制支持的）
+/// 2. `vectors` 切片有效且每个向量长度为4
+/// 3. 向量内存有效且已初始化
+/// 4. 内存对齐至少为4字节（使用vld1q_f32/vst1q_f32可处理未对齐内存）
+/// 5. 向量分量不包含NaN或无穷大值（可能导致未定义行为）
+///
+/// # Panics
+///
+/// 当向量长度不为4时可能panic（内部debug_assert检查）
+///
+/// # Examples
+///
+/// ```rust
+/// use game_engine::performance::simd::math::arm::normalize_batch_neon;
+///
+/// let mut vectors = vec![
+///     [3.0, 4.0, 0.0, 0.0], // 长度为5.0
+///     [0.0, 0.0, 5.0, 12.0], // 长度为13.0
+/// ];
+///
+/// unsafe {
+///     normalize_batch_neon(&mut vectors);
+///     // 第一个向量应该归一化为 [0.6, 0.8, 0.0, 0.0]
+///     assert!((vectors[0][0] - 0.6).abs() < 1e-5);
+///     assert!((vectors[0][1] - 0.8).abs() < 1e-5);
+/// }
+/// ```
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
 pub unsafe fn normalize_batch_neon(vectors: &mut [[f32; 4]]) {
@@ -89,9 +320,44 @@ pub unsafe fn normalize_batch_neon(vectors: &mut [[f32; 4]]) {
 }
 
 /// 3维向量叉积（NEON优化）
+///
+/// # Safety
+///
+/// 调用者必须确保：
+/// 1. `a`, `b`, `out` 数组长度至少为3
+/// 2. 当前CPU支持NEON指令集（在aarch64上是强制支持的）
+/// 3. 所有输入数组内存有效且已初始化
+/// 4. `out` 数组可写且内存有效
+/// 5. 内存对齐至少为4字节（使用vld1q_f32/vst1q_f32可处理未对齐内存）
+/// 6. `out` 不能与 `a`, `b` 重叠（避免数据竞争）
+/// 7. 向量分量不包含NaN或无穷大值（可能导致未定义行为）
+///
+/// # Panics
+///
+/// 当数组长度小于3时可能panic（debug_assert检查）
+///
+/// # Examples
+///
+/// ```rust
+/// use game_engine::performance::simd::math::arm::cross_product_neon;
+///
+/// let a = [1.0, 0.0, 0.0]; // X轴单位向量
+/// let b = [0.0, 1.0, 0.0]; // Y轴单位向量
+/// let mut out = [0.0; 3];
+///
+/// unsafe {
+///     cross_product_neon(&a, &b, &mut out);
+///     // X叉Y应该等于Z轴单位向量 [0.0, 0.0, 1.0]
+///     assert_eq!(out, [0.0, 0.0, 1.0]);
+/// }
+/// ```
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
 pub unsafe fn cross_product_neon(a: &[f32; 3], b: &[f32; 3], out: &mut [f32; 3]) {
+    debug_assert_eq!(a.len(), 3, "Input array 'a' must have length 3");
+    debug_assert_eq!(b.len(), 3, "Input array 'b' must have length 3");
+    debug_assert_eq!(out.len(), 3, "Output array 'out' must have length 3");
+    
     // 扩展到4维以使用NEON
     let a4 = [a[0], a[1], a[2], 0.0];
     let b4 = [b[0], b[1], b[2], 0.0];
@@ -127,6 +393,49 @@ pub unsafe fn cross_product_neon(a: &[f32; 3], b: &[f32; 3], out: &mut [f32; 3])
 }
 
 /// 4x4矩阵乘法（NEON优化）
+///
+/// # Safety
+///
+/// 调用者必须确保：
+/// 1. 当前CPU支持NEON指令集（在aarch64上是强制支持的）
+/// 2. `a`, `b`, `out` 矩阵有效且每个矩阵长度为4x4
+/// 3. 所有矩阵内存有效且已初始化
+/// 4. `out` 矩阵可写且内存有效
+/// 5. 内存对齐至少为4字节（使用vld1q_f32/vst1q_f32可处理未对齐内存）
+/// 6. `out` 不能与 `a`, `b` 重叠（避免数据竞争）
+/// 7. 矩阵元素不包含NaN或无穷大值（可能导致未定义行为）
+///
+/// # Panics
+///
+/// 当矩阵维度不为4x4时可能panic（内部debug_assert检查）
+///
+/// # Examples
+///
+/// ```rust
+/// use game_engine::performance::simd::math::arm::mat4_mul_neon;
+///
+/// let identity = [
+///     [1.0, 0.0, 0.0, 0.0],
+///     [0.0, 1.0, 0.0, 0.0],
+///     [0.0, 0.0, 1.0, 0.0],
+///     [0.0, 0.0, 0.0, 1.0],
+/// ];
+/// let scale = [
+///     [2.0, 0.0, 0.0, 0.0],
+///     [0.0, 2.0, 0.0, 0.0],
+///     [0.0, 0.0, 2.0, 0.0],
+///     [0.0, 0.0, 0.0, 1.0],
+/// ];
+/// let mut out = [[0.0; 4]; 4];
+///
+/// unsafe {
+///     mat4_mul_neon(&identity, &scale, &mut out);
+///     // 结果应该等于scale矩阵
+///     assert_eq!(out[0][0], 2.0);
+///     assert_eq!(out[1][1], 2.0);
+///     assert_eq!(out[2][2], 2.0);
+/// }
+/// ```
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
 pub unsafe fn mat4_mul_neon(a: &[[f32; 4]; 4], b: &[[f32; 4]; 4], out: &mut [[f32; 4]; 4]) {
@@ -152,10 +461,47 @@ pub unsafe fn mat4_mul_neon(a: &[[f32; 4]; 4], b: &[[f32; 4]; 4], out: &mut [[f3
         let result = vfmaq_f32(r2, a3, b3);
         
         unsafe { vst1q_f32(out[i].as_mut_ptr(), result) };
-}
+    }
 }
 
 /// 4x4矩阵转置（NEON优化）
+///
+/// # Safety
+///
+/// 调用者必须确保：
+/// 1. 当前CPU支持NEON指令集（在aarch64上是强制支持的）
+/// 2. `m` 和 `out` 矩阵有效且每个矩阵长度为4x4
+/// 3. 所有矩阵内存有效且已初始化
+/// 4. `out` 矩阵可写且内存有效
+/// 5. 内存对齐至少为4字节（使用vld1q_f32/vst1q_f32可处理未对齐内存）
+/// 6. `out` 不能与 `m` 重叠（避免数据竞争）
+/// 7. 矩阵元素不包含NaN或无穷大值（可能导致未定义行为）
+///
+/// # Panics
+///
+/// 当矩阵维度不为4x4时可能panic（内部debug_assert检查）
+///
+/// # Examples
+///
+/// ```rust
+/// use game_engine::performance::simd::math::arm::mat4_transpose_neon;
+///
+/// let matrix = [
+///     [1.0, 2.0, 3.0, 4.0],
+///     [5.0, 6.0, 7.0, 8.0],
+///     [9.0, 10.0, 11.0, 12.0],
+///     [13.0, 14.0, 15.0, 16.0],
+/// ];
+/// let mut out = [[0.0; 4]; 4];
+///
+/// unsafe {
+///     mat4_transpose_neon(&matrix, &mut out);
+///     // 第一个行应该变为[1.0, 5.0, 9.0, 13.0]
+///     assert_eq!(out[0], [1.0, 5.0, 9.0, 13.0]);
+///     // 第二个行应该变为[2.0, 6.0, 10.0, 14.0]
+///     assert_eq!(out[1], [2.0, 6.0, 10.0, 14.0]);
+/// }
+/// ```
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
 pub unsafe fn mat4_transpose_neon(m: &[[f32; 4]; 4], out: &mut [[f32; 4]; 4]) {
@@ -180,6 +526,47 @@ pub unsafe fn mat4_transpose_neon(m: &[[f32; 4]; 4], out: &mut [[f32; 4]; 4]) {
 }
 
 /// 批量向量变换（矩阵 * 向量）
+///
+/// # Safety
+///
+/// 调用者必须确保：
+/// 1. 当前CPU支持NEON指令集（在aarch64上是强制支持的）
+/// 2. `matrix` 是有效的4x4变换矩阵
+/// 3. `vectors` 和 `out` 切片长度相同且每个向量长度为4
+/// 4. 所有输入内存有效且已初始化
+/// 5. `out` 切片可写且内存有效
+/// 6. 内存对齐至少为4字节（使用vld1q_f32/vst1q_f32可处理未对齐内存）
+/// 7. `out` 不能与 `vectors` 重叠（避免数据竞争）
+/// 8. 向量和矩阵元素不包含NaN或无穷大值（可能导致未定义行为）
+///
+/// # Panics
+///
+/// 当vectors和out长度不同时可能panic（assert_eq!检查）
+///
+/// # Examples
+///
+/// ```rust
+/// use game_engine::performance::simd::math::arm::transform_vectors_neon;
+///
+/// let identity = [
+///     [1.0, 0.0, 0.0, 0.0],
+///     [0.0, 1.0, 0.0, 0.0],
+///     [0.0, 0.0, 1.0, 0.0],
+///     [0.0, 0.0, 0.0, 1.0],
+/// ];
+/// let vectors = vec![
+///     [1.0, 2.0, 3.0, 1.0],
+///     [4.0, 5.0, 6.0, 1.0],
+/// ];
+/// let mut out = vec![[0.0; 4]; 2];
+///
+/// unsafe {
+///     transform_vectors_neon(&identity, &vectors, &mut out);
+///     // 使用单位矩阵变换，输出应该等于输入
+///     assert_eq!(out[0], vectors[0]);
+///     assert_eq!(out[1], vectors[1]);
+/// }
+/// ```
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
 pub unsafe fn transform_vectors_neon(
@@ -211,13 +598,49 @@ pub unsafe fn transform_vectors_neon(
         let result = vfmaq_f32(r2, m3, vw);
         
         unsafe { vst1q_f32(out_vec.as_mut_ptr(), result) };
-}
+    }
 }
 
 /// 四元数乘法（NEON优化）
+///
+/// # Safety
+///
+/// 调用者必须确保：
+/// 1. `a`, `b`, `out` 数组长度至少为4
+/// 2. 当前CPU支持NEON指令集（在aarch64上是强制支持的）
+/// 3. 所有输入数组内存有效且已初始化
+/// 4. `out` 数组可写且内存有效
+/// 5. 内存对齐至少为4字节（使用vld1q_f32/vst1q_f32可处理未对齐内存）
+/// 6. `out` 不能与 `a`, `b` 重叠（避免数据竞争）
+/// 7. 四元数分量不包含NaN或无穷大值（可能导致未定义行为）
+///
+/// # Panics
+///
+/// 当数组长度小于4时可能panic（debug_assert检查）
+///
+/// # Examples
+///
+/// ```rust
+/// use game_engine::performance::simd::math::arm::quat_mul_neon;
+///
+/// let identity = [1.0, 0.0, 0.0, 0.0]; // 单位四元数
+/// let rotation_x_90 = [0.7071, 0.0, 0.0, 0.7071]; // 绕X轴90度
+/// let mut out = [0.0; 4];
+///
+/// unsafe {
+///     quat_mul_neon(&identity, &rotation_x_90, &mut out);
+///     // 结果应该等于rotation_x_90
+///     assert!((out[0] - rotation_x_90[0]).abs() < 1e-5);
+///     assert!((out[1] - rotation_x_90[1]).abs() < 1e-5);
+/// }
+/// ```
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
 pub unsafe fn quat_mul_neon(a: &[f32; 4], b: &[f32; 4], out: &mut [f32; 4]) {
+    debug_assert_eq!(a.len(), 4, "Input array 'a' must have length 4");
+    debug_assert_eq!(b.len(), 4, "Input array 'b' must have length 4");
+    debug_assert_eq!(out.len(), 4, "Output array 'out' must have length 4");
+    
     // 四元数乘法: (w1*w2 - x1*x2 - y1*y2 - z1*z2,
     //              w1*x2 + x1*w2 + y1*z2 - z1*y2,
     //              w1*y2 - x1*z2 + y1*w2 + z1*x2,
@@ -240,6 +663,38 @@ pub unsafe fn quat_mul_neon(a: &[f32; 4], b: &[f32; 4], out: &mut [f32; 4]) {
 }
 
 /// 批量线性插值（NEON）
+///
+/// # Safety
+///
+/// 调用者必须确保：
+/// 1. 当前CPU支持NEON指令集（在aarch64上是强制支持的）
+/// 2. `a`, `b`, `out` 数组长度相同且每个向量长度为4
+/// 3. 所有输入数组内存有效且已初始化
+/// 4. `out` 数组可写且内存有效
+/// 5. 内存对齐至少为4字节（使用vld1q_f32/vst1q_f32可处理未对齐内存）
+/// 6. `out` 不能与 `a`, `b` 重叠（避免数据竞争）
+/// 7. 插值参数t应该在[0.0, 1.0]范围内（超出可能导致未定义行为）
+/// 8. 向量元素不包含NaN或无穷大值（可能导致未定义行为）
+///
+/// # Panics
+///
+/// 当数组长度不同时可能panic（assert_eq!检查）
+///
+/// # Examples
+///
+/// ```rust
+/// use game_engine::performance::simd::math::arm::lerp_batch_neon;
+///
+/// let a = vec![[0.0, 0.0, 0.0, 1.0]]; // 起始向量
+/// let b = vec![[2.0, 2.0, 2.0, 3.0]]; // 结束向量
+/// let mut out = vec![[0.0; 4]; 1];
+///
+/// unsafe {
+///     lerp_batch_neon(&a, &b, 0.5, &mut out);
+///     // t=0.5时，结果应该是中点：[1.0, 1.0, 1.0, 2.0]
+///     assert_eq!(out[0], [1.0, 1.0, 1.0, 2.0]);
+/// }
+/// ```
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
 pub unsafe fn lerp_batch_neon(a: &[[f32; 4]], b: &[[f32; 4]], t: f32, out: &mut [[f32; 4]]) {
@@ -258,7 +713,7 @@ pub unsafe fn lerp_batch_neon(a: &[[f32; 4]], b: &[[f32; 4]], t: f32, out: &mut 
         let result = vfmaq_f32(scaled_a, vb, vt);
         
         unsafe { vst1q_f32(out[i].as_mut_ptr(), result) };
-}
+    }
 }
 
 #[cfg(test)]

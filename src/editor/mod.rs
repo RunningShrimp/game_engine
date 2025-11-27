@@ -20,9 +20,11 @@ pub mod particle_editor;
 pub mod package_deploy;
 pub mod performance_monitor;
 pub mod console;
+pub mod undo_redo;
 
 pub use hierarchy::HierarchyView;
 pub use inspector::Inspector;
+pub use undo_redo::{Command, CommandManager, CompositeCommand, CommandError, PropertyChangeCommand};
 use egui_winit::State;
 use winit::event::WindowEvent;
 use winit::window::Window;
@@ -97,6 +99,10 @@ pub fn inspect_world_ui(ctx: &egui::Context, world: &mut World) {
                 ui.label(rt);
             }
             ui.label(format!("Draw calls: {} | Instances: {} | Passes: {}", stats.draw_calls, stats.instances, stats.passes));
+            ui.label(format!("Batches: {} | Batch Instances: {}", stats.batch_total, stats.batch_instances));
+            ui.label(format!("Saved Draw Calls: {}", stats.batch_saved_draw_calls));
+            ui.label(format!("Small Batch Draw Calls: {}", stats.batch_small_draw_calls));
+            ui.label(format!("Visible Batches After Culling: {}", stats.batch_visible_batches));
             
             // 显示视锥剔除统计
             if stats.total_objects > 0 {
@@ -125,6 +131,45 @@ pub fn inspect_world_ui(ctx: &egui::Context, world: &mut World) {
             for s in le.entries.iter() {
                 ui.label(s);
             }
+        }
+    });
+
+    egui::Window::new("Material Editor").show(ctx, |ui| {
+        if let Some(reg) = world.get_resource::<crate::resources::manager::MaterialRegistry>() {
+            ui.label(format!("Materials: {}", reg.materials.len()));
+            ui.separator();
+            let mut updates: Vec<(u64, crate::render::pbr::PbrMaterial)> = Vec::new();
+            for (id, _entry) in reg.materials.iter() {
+                ui.collapsing(format!("Material {}", id), |ui| {
+                    let mut mat = crate::render::pbr::PbrMaterial::default();
+                    let mut base = [mat.base_color.x, mat.base_color.y, mat.base_color.z, mat.base_color.w];
+                    ui.color_edit_button_rgba_unmultiplied(&mut base);
+                    mat.base_color = glam::Vec4::new(base[0], base[1], base[2], base[3]);
+                    ui.add(egui::Slider::new(&mut mat.metallic, 0.0..=1.0).text("Metallic"));
+                    ui.add(egui::Slider::new(&mut mat.roughness, 0.04..=1.0).text("Roughness"));
+                    ui.add(egui::Slider::new(&mut mat.normal_scale, 0.0..=4.0).text("Normal Scale"));
+                    ui.add(egui::Slider::new(&mut mat.clearcoat, 0.0..=1.0).text("Clearcoat"));
+                    ui.add(egui::Slider::new(&mut mat.clearcoat_roughness, 0.04..=1.0).text("Clearcoat Roughness"));
+                    ui.add(egui::Slider::new(&mut mat.anisotropy, 0.0..=1.0).text("Anisotropy"));
+                    let mut adir = mat.anisotropy_direction;
+                    ui.horizontal(|ui| {
+                        ui.add(egui::Slider::new(&mut adir[0], -1.0..=1.0).text("Aniso Dir X"));
+                        ui.add(egui::Slider::new(&mut adir[1], -1.0..=1.0).text("Aniso Dir Y"));
+                    });
+                    mat.anisotropy_direction = adir;
+                    if ui.button("Apply").clicked() {
+                        updates.push((*id, mat));
+                    }
+                });
+            }
+            if !updates.is_empty() {
+                let mut pend = world.get_resource_or_insert_with::<crate::resources::manager::MaterialPendingUpdates>(Default::default);
+                for (id, m) in updates {
+                    pend.push(id, m);
+                }
+            }
+        } else {
+            ui.label("MaterialRegistry not found");
         }
     });
 }

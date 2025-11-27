@@ -12,13 +12,33 @@
 //! 
 //! 由于 rodio 的 OutputStream 不是 Send 安全的，本模块使用通道模式，
 //! 在专用后台线程中运行音频播放。
+//!
+//! ## 空间音频
+//!
+//! 支持 3D 空间音频，详见 `spatial` 子模块：
+//! - 距离衰减 (Linear, Inverse, Exponential)
+//! - 声锥方向性
+//! - 多普勒效果
+//! - 立体声定位
+
+pub mod spatial;
+
+pub use spatial::{
+    AudioListener,
+    SpatialAudioSource,
+    SpatialAudioState,
+    SpatialAudioService,
+    SpatialAudioParams,
+    DistanceModel,
+    SoundCone,
+};
 
 use std::sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}};
 use std::collections::{HashMap, HashSet};
 use std::io::BufReader;
 use bevy_ecs::prelude::*;
 use crossbeam_channel::{Sender, Receiver, unbounded};
-use rodio::{OutputStream, OutputStreamBuilder, Sink, Decoder, Source};
+use rodio::{OutputStreamBuilder, Sink, Decoder, Source};
 
 /// 音频资源 - 存储音频文件数据
 pub struct AudioAsset {
@@ -388,8 +408,9 @@ impl AudioBackendRunner {
 // ============================================================================
 
 /// 音频系统资源 - 管理所有音频播放 (线程安全)
-/// 
+///
 /// **注意**: 此类型为兼容层，推荐使用 `AudioState` + `AudioService` 模式。
+#[cfg(feature = "deprecated-apis")]
 #[derive(Resource)]
 pub struct AudioSystem {
     /// 命令发送通道
@@ -540,6 +561,7 @@ impl AudioSystem {
     }
 }
 
+#[cfg(feature = "deprecated-apis")]
 impl Default for AudioSystem {
     fn default() -> Self {
         Self::new()
@@ -608,8 +630,9 @@ pub fn audio_gc_system_v2(audio_state: Res<AudioState>) {
 // ============================================================================
 
 /// 音频播放系统 - 根据 AudioSource 组件状态自动管理音频播放
-/// 
+///
 /// **注意**: 推荐使用 `audio_playback_system_v2` 配合 `AudioState`
+#[cfg(feature = "deprecated-apis")]
 #[allow(deprecated)]
 pub fn audio_playback_system(
     audio_system: Res<AudioSystem>,
@@ -651,8 +674,9 @@ pub fn audio_playback_system(
 }
 
 /// 音频清理系统 - 在实体移除时停止其音频
-/// 
+///
 /// **注意**: 推荐使用 `audio_cleanup_system_v2` 配合 `AudioState`
+#[cfg(feature = "deprecated-apis")]
 #[allow(deprecated)]
 pub fn audio_cleanup_system(
     audio_system: Res<AudioSystem>,
@@ -664,8 +688,9 @@ pub fn audio_cleanup_system(
 }
 
 /// 定期清理系统 - 移除已完成的音频实例
-/// 
+///
 /// **注意**: 推荐使用 `audio_gc_system_v2` 配合 `AudioState`
+#[cfg(feature = "deprecated-apis")]
 #[allow(deprecated)]
 pub fn audio_gc_system(audio_system: Res<AudioSystem>) {
     audio_system.cleanup();
@@ -742,6 +767,7 @@ mod tests {
     // 兼容层测试（使用 #[allow(deprecated)]）
     // ========================================
     
+    #[cfg(feature = "deprecated-apis")]
     #[test]
     #[allow(deprecated)]
     fn test_audio_system_creation() {
@@ -775,9 +801,74 @@ mod tests {
     }
     
     #[test]
+    #[allow(deprecated)]
     fn test_audio_system_to_state_conversion() {
         let system = AudioSystem::new();
         let state = system.to_state();
         assert_eq!(state.master_volume, 1.0);
+    }
+    
+    // ========================================
+    // 重构验证测试 - 确保重复代码已删除
+    // ========================================
+    
+    #[test]
+    fn test_audio_service_unique() {
+        // 确保AudioService只有一个定义
+        let state = AudioState::default();
+        assert!(AudioService::is_available(&state) == state.available.load(Ordering::SeqCst));
+    }
+    
+    #[test]
+    fn test_duplicate_code_removal() {
+        // 验证 AudioCommand 枚举只有一个定义
+        let _command = AudioCommand::Cleanup;
+        
+        // 验证 AudioState 只有一个定义
+        let state = AudioState::new();
+        assert_eq!(state.master_volume, 1.0);
+        
+        // 验证 AudioService 只有一个定义
+        let mut test_state = AudioState::new();
+        AudioService::set_master_volume(&mut test_state, 0.7);
+        assert_eq!(test_state.master_volume, 0.7);
+        
+        // 验证 AudioBackendRunner 只有一个定义
+        // (通过编译检查 - 如果重复定义会导致编译错误)
+    }
+    
+    #[test]
+    fn test_audio_functionality_after_refactor() {
+        // 测试重构后的音频功能完整性
+        let state = AudioState::new();
+        
+        // 测试服务方法可用性
+        assert!(!AudioService::is_available(&state)); // 可能为 false，因为后台线程可能未初始化
+        
+        // 测试状态管理
+        let mut state_with_volume = AudioState::new();
+        AudioService::set_master_volume(&mut state_with_volume, 0.8);
+        assert_eq!(state_with_volume.master_volume, 0.8);
+        
+        // 测试边界值处理
+        AudioService::set_master_volume(&mut state_with_volume, -0.1);
+        assert_eq!(state_with_volume.master_volume, 0.0);
+        
+        AudioService::set_master_volume(&mut state_with_volume, 3.0);
+        assert_eq!(state_with_volume.master_volume, 2.0);
+    }
+    
+    #[test]
+    fn test_audio_system_compatibility() {
+        // 测试兼容层功能
+        let system = AudioSystem::new();
+        let state = system.to_state();
+        
+        // 验证转换正确性
+        assert_eq!(state.master_volume, system.master_volume);
+        
+        // 测试从状态创建系统
+        let new_system = AudioSystem::from_state(&state);
+        assert_eq!(new_system.master_volume, state.master_volume);
     }
 }

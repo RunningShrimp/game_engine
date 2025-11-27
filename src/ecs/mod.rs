@@ -273,11 +273,50 @@ pub fn tilemap_build_system(
 #[derive(Component, Clone, Debug, Default)]
 pub struct TileChunks { pub visible: std::collections::HashSet<(i32,i32)> }
 
+#[derive(Resource)]
+pub struct TileEntityPool {
+    unused: Vec<Entity>,
+    capacity: usize,
+}
+
+impl Default for TileEntityPool {
+    fn default() -> Self {
+        Self {
+            unused: Vec::with_capacity(1000),
+            capacity: 1000,
+        }
+    }
+}
+
+impl TileEntityPool {
+    pub fn get_or_spawn(&mut self, commands: &mut Commands) -> Entity {
+        if let Some(entity) = self.unused.pop() {
+            // 复用现有实体
+            entity
+        } else {
+            // 创建新实体
+            commands.spawn_empty().id()
+        }
+    }
+
+    pub fn recycle(&mut self, entity: Entity, commands: &mut Commands) {
+        // 先移除所有组件，准备复用
+        commands.entity(entity).remove::<(Transform, PreviousTransform, Sprite, ChunkTag)>();
+        if self.unused.len() < self.capacity {
+            self.unused.push(entity);
+        } else {
+            // 池已满，销毁实体
+            commands.entity(entity).despawn();
+        }
+    }
+}
+
 #[derive(Component, Clone, Debug)]
 pub struct ChunkTag { pub map: Entity, pub cx: i32, pub cy: i32 }
 
 pub fn tilemap_chunk_system(
     mut commands: Commands,
+    mut pool: ResMut<TileEntityPool>,
     mut maps: Query<(Entity, &Transform, &mut TileMap, Option<&mut TileChunks>)>,
     tileset: Option<Res<TileSet>>,
     viewport: Option<Res<Viewport>>,
@@ -301,13 +340,19 @@ pub fn tilemap_chunk_system(
         let end_cy = ((view_max_y - t_base.pos.y) / cy_sz).ceil() as i32;
         let mut new_vis: std::collections::HashSet<(i32,i32)> = std::collections::HashSet::new();
         for cy in start_cy..end_cy { for cx in start_cx..end_cx { new_vis.insert((cx, cy)); } }
+
+        // 回收不再可见的chunk中的tile实体
         for &(cx, cy) in current_visible.iter() {
             if !new_vis.contains(&(cx, cy)) {
                 for (ent, tag) in chunk_entities.iter() {
-                    if tag.map == map_e && tag.cx == cx && tag.cy == cy { commands.entity(ent).despawn(); }
+                    if tag.map == map_e && tag.cx == cx && tag.cy == cy {
+                        pool.recycle(ent, &mut commands);
+                    }
                 }
             }
         }
+
+        // 为新可见的chunk创建tile实体，使用实体池
         for (cx, cy) in new_vis.iter() {
             if !current_visible.contains(&(*cx, *cy)) {
                 let base_x = t_base.pos.x + *cx as f32 * cx_sz;
@@ -328,7 +373,8 @@ pub fn tilemap_chunk_system(
                                 base_y + (ty as f32 + 0.5) * tm.tile_size[1],
                                 t_base.pos.z,
                             );
-                            commands.spawn((
+                            let entity = pool.get_or_spawn(&mut commands);
+                            commands.entity(entity).insert((
                                 Transform { pos, rot: Quat::IDENTITY, scale: glam::Vec3::new(tm.tile_size[0], tm.tile_size[1], 1.0) },
                                 PreviousTransform::default(),
                                 Sprite { color: [1.0,1.0,1.0,1.0], tex_index: tm.atlas_tex_index, normal_tex_index: 0, uv_off, uv_scale, layer: tm.layer },

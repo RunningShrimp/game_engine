@@ -27,6 +27,21 @@ use crossbeam_channel::{Sender, Receiver, unbounded};
 use bevy_ecs::prelude::*;
 use serde::{Serialize, Deserialize};
 
+/// 网络错误类型
+#[derive(Debug, thiserror::Error)]
+pub enum NetworkError {
+    #[error("Connection failed: {0}")]
+    ConnectionError(String),
+    #[error("Send failed: {0}")]
+    SendError(String),
+    #[error("Receive failed: {0}")]
+    ReceiveError(String),
+    #[error("Serialization failed: {0}")]
+    SerializationError(String),
+    #[error("Invalid peer ID")]
+    InvalidPeerId,
+}
+
 /// 网络消息类型
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum NetworkMessage {
@@ -74,6 +89,75 @@ pub struct NetworkStats {
     pub messages_sent: u64,
     /// 接收消息数
     pub messages_received: u64,
+}
+
+/// 网络事件
+#[derive(Event)]
+pub enum NetworkEvent {
+    Connected { peer_id: u64 },
+    Disconnected { peer_id: u64 },
+    Message { peer_id: u64, data: Vec<u8> },
+}
+
+/// 网络配置
+#[derive(Resource)]
+pub struct NetworkConfig {
+    pub server_address: String,
+    pub port: u16,
+    pub max_connections: usize,
+}
+
+impl Default for NetworkConfig {
+    fn default() -> Self {
+        Self {
+            server_address: "127.0.0.1".to_string(),
+            port: 8080,
+            max_connections: 100,
+        }
+    }
+}
+
+/// 网络管理器
+pub struct NetworkManager {
+    config: NetworkConfig,
+    connections: HashMap<u64, Connection>,
+}
+
+struct Connection {
+    peer_id: u64,
+    address: SocketAddr,
+    state: ConnectionState,
+}
+
+impl NetworkManager {
+    pub fn new(config: NetworkConfig) -> Result<Self, NetworkError> {
+        // 创建 TCP 监听器
+        let address = format!("{}:{}", config.server_address, config.port);
+        match TcpStream::connect(&address) {
+            Ok(_) => Ok(Self {
+                config,
+                connections: HashMap::new(),
+            }),
+            Err(e) => Err(NetworkError::ConnectionError(e.to_string())),
+        }
+    }
+
+    pub fn connect_to_server(&mut self, address: &str) -> Result<u64, NetworkError> {
+        let socket_addr: SocketAddr = address.parse().map_err(|_| {
+            NetworkError::ConnectionError("Invalid address format".to_string())
+        })?;
+
+        // TODO: 实现客户端连接逻辑
+        let peer_id = rand::random();
+        let connection = Connection {
+            peer_id,
+            address: socket_addr,
+            state: ConnectionState::Connecting,
+        };
+
+        self.connections.insert(peer_id, connection);
+        Ok(peer_id)
+    }
 }
 
 /// 网络客户端状态 (Resource)

@@ -7,6 +7,7 @@ pub struct Vertex3D {
     pub pos: [f32; 3],
     pub normal: [f32; 3],
     pub uv: [f32; 2],
+    pub tangent: [f32; 4],
 }
 
 impl Vertex3D {
@@ -30,6 +31,11 @@ impl Vertex3D {
                     shader_location: 2,
                     format: wgpu::VertexFormat::Float32x2,
                 },
+                wgpu::VertexAttribute {
+                    offset: 32,
+                    shader_location: 3,
+                    format: wgpu::VertexFormat::Float32x4,
+                },
             ],
         }
     }
@@ -40,6 +46,8 @@ pub struct GpuMesh {
     pub vertex_buffer: Arc<wgpu::Buffer>,
     pub index_buffer: Arc<wgpu::Buffer>,
     pub index_count: u32,
+    pub aabb_min: [f32; 3],
+    pub aabb_max: [f32; 3],
 }
 
 impl GpuMesh {
@@ -56,10 +64,23 @@ impl GpuMesh {
             usage: wgpu::BufferUsages::INDEX,
         });
 
+        let mut min = [f32::INFINITY; 3];
+        let mut max = [f32::NEG_INFINITY; 3];
+        for v in vertices {
+            if v.pos[0] < min[0] { min[0] = v.pos[0]; }
+            if v.pos[1] < min[1] { min[1] = v.pos[1]; }
+            if v.pos[2] < min[2] { min[2] = v.pos[2]; }
+            if v.pos[0] > max[0] { max[0] = v.pos[0]; }
+            if v.pos[1] > max[1] { max[1] = v.pos[1]; }
+            if v.pos[2] > max[2] { max[2] = v.pos[2]; }
+        }
+
         Self {
             vertex_buffer: Arc::new(vertex_buffer),
             index_buffer: Arc::new(index_buffer),
             index_count: indices.len() as u32,
+            aabb_min: min,
+            aabb_max: max,
         }
     }
 }
