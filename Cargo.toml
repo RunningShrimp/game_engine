@@ -64,4 +64,13 @@ default = ["physics_2d"]
 
 [dev-dependencies]
 anyhow = "1.0.100"
+criterion = { version = "0.7.0", features = ["html_reports"] }
 num_cpus = "1.16"
+
+[[bench]]
+name = "simd_bench"
+harness = false
+
+[[bench]]
+name = "comprehensive_benchmark"
+harness = false
