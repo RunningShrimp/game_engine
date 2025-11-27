@@ -3,7 +3,7 @@
 /// 检测移动和嵌入式平台的SoC信息
 
 /// SoC厂商
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum SocVendor {
     Apple,
     Qualcomm,
@@ -15,7 +15,7 @@ pub enum SocVendor {
 }
 
 /// SoC信息
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct SocInfo {
     pub vendor: SocVendor,
     pub name: String,

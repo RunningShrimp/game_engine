@@ -5,7 +5,7 @@
 use std::collections::HashMap;
 
 /// GPU厂商
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub enum GpuVendor {
     Nvidia,
     Amd,
@@ -18,7 +18,7 @@ pub enum GpuVendor {
 }
 
 /// GPU性能等级
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
 pub enum GpuTier {
     /// 低端（入门级集显）
     Low,
@@ -35,7 +35,7 @@ pub enum GpuTier {
 }
 
 /// GPU信息
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct GpuInfo {
     pub vendor: GpuVendor,
     pub name: String,

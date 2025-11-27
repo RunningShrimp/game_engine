@@ -4,6 +4,7 @@
 
 use super::auto_config::{AutoConfig, QualityPreset};
 use super::soc_power::{PowerManager, ThermalState};
+use super::ring_buffer::RingBuffer;
 use std::time::{Instant, Duration};
 
 /// 自适应性能管理器
@@ -16,7 +17,7 @@ pub struct AdaptivePerformance {
     target_frame_time_ms: f32,
     
     // 性能监控
-    frame_times: Vec<f32>,
+    frame_times: RingBuffer<f32>,
     last_adjustment: Instant,
     adjustment_cooldown: Duration,
     
@@ -36,7 +37,7 @@ impl AdaptivePerformance {
             power_manager,
             target_fps,
             target_frame_time_ms,
-            frame_times: Vec::with_capacity(300),
+            frame_times: RingBuffer::new(300),
             last_adjustment: Instant::now(),
             adjustment_cooldown: Duration::from_secs(3),
             adjustment_count: 0,
@@ -49,10 +50,7 @@ impl AdaptivePerformance {
         // 更新功耗管理器
         self.power_manager.update(frame_time_ms);
         
-        // 记录帧时间
-        if self.frame_times.len() >= 300 {
-            self.frame_times.remove(0);
-        }
+        // 记录帧时间（O(1)操作）
         self.frame_times.push(frame_time_ms);
         
         // 检查是否需要调整
@@ -180,7 +178,7 @@ impl AdaptivePerformance {
         if self.frame_times.is_empty() {
             return self.target_frame_time_ms;
         }
-        self.frame_times.iter().sum::<f32>() / self.frame_times.len() as f32
+        self.frame_times.average()
     }
     
     /// 获取当前配置

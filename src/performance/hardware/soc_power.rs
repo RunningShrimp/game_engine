@@ -3,6 +3,7 @@
 /// 针对移动平台的功耗和热管理
 
 use super::soc_detect::{SocInfo, SocVendor};
+use super::ring_buffer::RingBuffer;
 use std::time::{Instant, Duration};
 
 /// 功耗管理器
@@ -15,7 +16,7 @@ pub struct PowerManager {
 }
 
 /// 热状态
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum ThermalState {
     /// 正常
     Normal,
@@ -42,31 +43,23 @@ pub enum PowerMode {
 
 /// 性能历史记录
 struct PerformanceHistory {
-    frame_times: Vec<f32>,
-    thermal_readings: Vec<f32>,
-    max_history_size: usize,
+    frame_times: RingBuffer<f32>,
+    thermal_readings: RingBuffer<f32>,
 }
 
 impl PerformanceHistory {
     fn new(max_size: usize) -> Self {
         Self {
-            frame_times: Vec::with_capacity(max_size),
-            thermal_readings: Vec::with_capacity(max_size),
-            max_history_size: max_size,
+            frame_times: RingBuffer::new(max_size),
+            thermal_readings: RingBuffer::new(max_size),
         }
     }
     
     fn add_frame_time(&mut self, time_ms: f32) {
-        if self.frame_times.len() >= self.max_history_size {
-            self.frame_times.remove(0);
-        }
         self.frame_times.push(time_ms);
     }
     
     fn add_thermal_reading(&mut self, temp: f32) {
-        if self.thermal_readings.len() >= self.max_history_size {
-            self.thermal_readings.remove(0);
-        }
         self.thermal_readings.push(temp);
     }
     
@@ -74,14 +67,14 @@ impl PerformanceHistory {
         if self.frame_times.is_empty() {
             return 16.67; // 默认60fps
         }
-        self.frame_times.iter().sum::<f32>() / self.frame_times.len() as f32
+        self.frame_times.average()
     }
     
     fn average_temperature(&self) -> f32 {
         if self.thermal_readings.is_empty() {
             return 35.0; // 默认温度
         }
-        self.thermal_readings.iter().sum::<f32>() / self.thermal_readings.len() as f32
+        self.thermal_readings.average()
     }
 }
 

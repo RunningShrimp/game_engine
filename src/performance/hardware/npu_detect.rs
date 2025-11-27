@@ -3,7 +3,7 @@
 /// 检测并识别主流NPU，用于AI加速
 
 /// NPU厂商
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum NpuVendor {
     /// 华为昇腾
     HuaweiAscend,
@@ -25,7 +25,7 @@ pub enum NpuVendor {
 }
 
 /// NPU信息
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct NpuInfo {
     pub vendor: NpuVendor,
     pub name: String,
