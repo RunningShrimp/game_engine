@@ -19,21 +19,28 @@ export default function Welcome() {
       title: "场景编辑器",
       description: "强大的3D场景编辑工具，支持实时预览和多种变换工具",
       icon: Sparkles,
+      path: "/scene",
     },
     {
-      title: "资产管理",
-      description: "高效的资产浏览器，支持多种格式的模型、纹理和音频",
+      title: "可视化着色器编辑器",
+      description: "节点式材质编辑器，赋能美术师创建复杂着色器",
+      icon: Sparkles,
+      path: "/shader",
+      badge: "P0",
+    },
+    {
+      title: "PCG工具",
+      description: "程序化生成地形、植被和水体，打造大规模开放世界",
       icon: FolderOpen,
+      path: "/pcg",
+      badge: "P0",
     },
     {
-      title: "实体系统",
-      description: "基于ECS架构的实体组件系统，灵活且高性能",
+      title: "AI辅助工具",
+      description: "基于NPU的AI代码助手、纹理生成和性能优化",
       icon: FileCode,
-    },
-    {
-      title: "调试工具",
-      description: "实时性能监控、日志查看和性能分析工具",
-      icon: BookOpen,
+      path: "/ai",
+      badge: "P0",
     },
   ];
 
@@ -81,7 +88,16 @@ export default function Welcome() {
             {features.map((feature) => {
               const Icon = feature.icon;
               return (
-                <Card key={feature.title} className="p-6 hover:bg-accent/50 transition-colors">
+                <Card
+                  key={feature.title}
+                  className="p-6 hover:bg-accent/50 transition-colors cursor-pointer relative"
+                  onClick={() => setLocation(feature.path)}
+                >
+                  {feature.badge && (
+                    <div className="absolute top-3 right-3 px-2 py-0.5 bg-primary text-primary-foreground text-[10px] font-bold rounded">
+                      {feature.badge}
+                    </div>
+                  )}
                   <Icon className="w-8 h-8 text-primary mb-4" />
                   <h3 className="text-lg font-semibold mb-2">{feature.title}</h3>
                   <p className="text-sm text-muted-foreground">

@@ -16,6 +16,9 @@ import DebugTools from "./pages/DebugTools";
 import Settings from "./pages/Settings";
 import Documentation from "./pages/Documentation";
 import CodeEditor from "./pages/CodeEditor";
+import ShaderEditor from "./pages/ShaderEditor";
+import PCGTools from "./pages/PCGTools";
+import AIAssistant from "./pages/AIAssistant";
 
 
 function Router() {
@@ -55,6 +58,21 @@ function Router() {
       <Route path="/code">
         <EditorLayout>
           <CodeEditor />
+        </EditorLayout>
+      </Route>
+      <Route path="/shader">
+        <EditorLayout>
+          <ShaderEditor />
+        </EditorLayout>
+      </Route>
+      <Route path="/pcg">
+        <EditorLayout>
+          <PCGTools />
+        </EditorLayout>
+      </Route>
+      <Route path="/ai">
+        <EditorLayout>
+          <AIAssistant />
         </EditorLayout>
       </Route>
       <Route path="/404" component={NotFound} />

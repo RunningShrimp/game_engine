@@ -9,15 +9,20 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useHotkeys } from "@/hooks/useHotkeys";
 import {
+  Bot,
   Box,
   FileCode,
   Folder,
+  FolderOpen,
   Gauge,
+  Home,
   Layers,
+  Mountain,
   Play,
   Save,
   Search,
   Settings,
+  Sparkles,
   Square,
 } from "lucide-react";
 import { useState } from "react";
@@ -119,6 +124,36 @@ export default function CommandPalette() {
         setOpen(false);
       },
       keywords: ['code', 'editor', '代码', '编辑器'],
+    },
+    {
+      id: 'shader',
+      label: '打开着色器编辑器',
+      icon: Sparkles,
+      action: () => {
+        setLocation('/shader');
+        setOpen(false);
+      },
+      keywords: ['shader', 'material', '着色器', '材质'],
+    },
+    {
+      id: 'pcg',
+      label: '打开PCG工具',
+      icon: Mountain,
+      action: () => {
+        setLocation('/pcg');
+        setOpen(false);
+      },
+      keywords: ['pcg', 'terrain', 'procedural', '程序化', '地形'],
+    },
+    {
+      id: 'ai',
+      label: '打开AI助手',
+      icon: Bot,
+      action: () => {
+        setLocation('/ai');
+        setOpen(false);
+      },
+      keywords: ['ai', 'assistant', 'copilot', '助手', '智能'],
     },
     {
       id: 'save',
