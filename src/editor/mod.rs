@@ -19,6 +19,7 @@ pub mod terrain_editor;
 pub mod particle_editor;
 pub mod package_deploy;
 pub mod performance_monitor;
+pub mod console;
 
 pub use hierarchy::HierarchyView;
 pub use inspector::Inspector;

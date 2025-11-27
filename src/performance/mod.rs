@@ -5,6 +5,8 @@ pub mod render_optimization;
 pub mod advanced_profiler;
 pub mod continuous_profiler;
 pub mod memory_profiler;
+pub mod lock_free;
+pub mod arena;
 
 pub use batch_renderer::BatchRenderer;
 pub use object_pool::ObjectPool;
