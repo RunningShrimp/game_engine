@@ -17,8 +17,16 @@ pub enum NpuBackend {
     TensorRT,
     /// ONNX Runtime
     OnnxRuntime,
-    /// 华为昇腾
+    /// 华为昇腾 CANN
     Ascend,
+    /// Intel OpenVINO
+    OpenVINO,
+    /// AMD ROCm
+    ROCm,
+    /// 高通 SNPE (Snapdragon Neural Processing Engine)
+    SNPE,
+    /// 联发科 NeuroPilot
+    NeuroPilot,
     /// 回退到CPU
     CpuFallback,
 }
@@ -122,17 +130,48 @@ impl NpuSdkManager {
         #[cfg(target_os = "android")]
         {
             self.available_backends.push(NpuBackend::NNAPI);
+            
+            // 检测高通和联发科NPU
+            if let Some(npu) = &self.npu_info {
+                match npu.vendor {
+                    NpuVendor::QualcommHexagon => {
+                        self.available_backends.push(NpuBackend::SNPE);
+                    }
+                    NpuVendor::MediaTekApu => {
+                        self.available_backends.push(NpuBackend::NeuroPilot);
+                    }
+                    _ => {}
+                }
+            }
+        }
+        
+        // 检测桌面端NPU
+        if let Some(npu) = &self.npu_info {
+            match npu.vendor {
+                NpuVendor::NvidiaTensorCore => {
+                    self.available_backends.push(NpuBackend::TensorRT);
+                }
+                NpuVendor::IntelMovidius => {
+                    self.available_backends.push(NpuBackend::OpenVINO);
+                }
+                NpuVendor::AmdMatrixCore => {
+                    self.available_backends.push(NpuBackend::ROCm);
+                }
+                NpuVendor::HuaweiAscend => {
+                    self.available_backends.push(NpuBackend::Ascend);
+                }
+                _ => {}
+            }
+        }
+        
+        // Intel OpenVINO 跨平台支持
+        #[cfg(any(target_os = "linux", target_os = "windows"))]
+        {
+            self.available_backends.push(NpuBackend::OpenVINO);
         }
         
         // ONNX Runtime 跨平台可用
         self.available_backends.push(NpuBackend::OnnxRuntime);
-        
-        // 检查NVIDIA GPU
-        if let Some(npu) = &self.npu_info {
-            if npu.vendor == NpuVendor::NvidiaTensorCore {
-                self.available_backends.push(NpuBackend::TensorRT);
-            }
-        }
         
         // CPU回退总是可用
         self.available_backends.push(NpuBackend::CpuFallback);
@@ -194,14 +233,28 @@ impl NpuSdkManager {
             NpuBackend::OnnxRuntime => {
                 Ok(Box::new(OnnxRuntimeEngine::new()?))
             }
+            NpuBackend::OpenVINO => {
+                use super::npu_sdk_extended::OpenVINOEngine;
+                Ok(Box::new(OpenVINOEngine::new()?))
+            }
+            NpuBackend::ROCm => {
+                use super::npu_sdk_extended::ROCmEngine;
+                Ok(Box::new(ROCmEngine::new()?))
+            }
+            NpuBackend::Ascend => {
+                use super::npu_sdk_extended::AscendEngine;
+                Ok(Box::new(AscendEngine::new()?))
+            }
+            NpuBackend::SNPE => {
+                use super::npu_sdk_extended::SNPEEngine;
+                Ok(Box::new(SNPEEngine::new()?))
+            }
+            NpuBackend::NeuroPilot => {
+                use super::npu_sdk_extended::NeuroPilotEngine;
+                Ok(Box::new(NeuroPilotEngine::new()?))
+            }
             NpuBackend::CpuFallback => {
                 Ok(Box::new(CpuFallbackEngine::new()))
-            }
-            _ => {
-                Err(HardwareError::UnsupportedHardware {
-                    hardware: format!("{:?}", backend),
-                    feature: "NPU推理".to_string(),
-                })
             }
         }
     }
