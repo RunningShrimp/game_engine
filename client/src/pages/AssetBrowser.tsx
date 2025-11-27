@@ -16,12 +16,15 @@ import {
   Upload,
 } from "lucide-react";
 import { useState } from "react";
+import { useDragDrop } from "@/hooks/useDragDrop";
+import { toast } from "sonner";
 
 type ViewMode = "grid" | "list";
 
 export default function AssetBrowser() {
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [searchQuery, setSearchQuery] = useState("");
+  const { handleDragStart, handleDragEnd } = useDragDrop();
 
   const folders = [
     { id: 1, name: "模型", icon: Grid3x3, count: 24 },
@@ -121,7 +124,13 @@ export default function AssetBrowser() {
                 {filteredAssets.map((asset) => (
                   <Card
                     key={asset.id}
-                    className="p-3 hover:bg-accent/50 cursor-pointer transition-colors"
+                    className="p-3 hover:bg-accent/50 cursor-move transition-colors"
+                    draggable
+                    onDragStart={(e) => {
+                      handleDragStart(e, 'asset', asset);
+                      toast.info(`拖动资产: ${asset.name}`);
+                    }}
+                    onDragEnd={handleDragEnd}
                   >
                     <div className="aspect-square bg-muted rounded mb-2 flex items-center justify-center">
                       {asset.type === "model" && (

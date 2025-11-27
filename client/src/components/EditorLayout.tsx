@@ -13,6 +13,8 @@ import {
   Settings,
   Square,
 } from "lucide-react";
+import ConnectionStatus from "./ConnectionStatus";
+import CommandPalette from "./CommandPalette";
 import { ReactNode } from "react";
 import { useLocation } from "wouter";
 
@@ -32,7 +34,9 @@ export default function EditorLayout({ children }: EditorLayoutProps) {
   ];
 
   return (
-    <div className="h-screen flex flex-col bg-background text-foreground">
+    <>
+      <CommandPalette />
+      <div className="h-screen flex flex-col bg-background text-foreground">
       {/* 顶部工具栏 */}
       <div className="h-12 border-b border-border bg-card flex items-center justify-between px-4">
         <div className="flex items-center gap-3">
@@ -57,6 +61,8 @@ export default function EditorLayout({ children }: EditorLayoutProps) {
             <FileCode className="w-4 h-4" />
             <span className="text-xs">代码</span>
           </Button>
+          <Separator orientation="vertical" className="h-6 mx-2" />
+          <ConnectionStatus />
         </div>
       </div>
 
@@ -92,5 +98,6 @@ export default function EditorLayout({ children }: EditorLayoutProps) {
         </div>
       </div>
     </div>
+    </>
   );
 }

@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import Renderer3D from "@/components/Renderer3D";
 import {
   Box,
   Grid3x3,
@@ -12,9 +13,47 @@ import {
   Video,
 } from "lucide-react";
 import { useState } from "react";
+import { useDragDrop } from "@/hooks/useDragDrop";
+import { useHotkeys, HOTKEYS } from "@/hooks/useHotkeys";
+import { usePerformance } from "@/hooks/usePerformance";
+import { toast } from "sonner";
 
 export default function SceneEditor() {
   const [selectedTool, setSelectedTool] = useState<string>("move");
+  const { handleDragOver, handleDrop } = useDragDrop();
+  const perfStats = usePerformance();
+
+  // 快捷键配置
+  useHotkeys([
+    {
+      ...HOTKEYS.SAVE,
+      handler: () => toast.success('场景已保存'),
+    },
+    {
+      ...HOTKEYS.UNDO,
+      handler: () => toast.info('撤销操作'),
+    },
+    {
+      ...HOTKEYS.REDO,
+      handler: () => toast.info('重做操作'),
+    },
+    {
+      ...HOTKEYS.DELETE,
+      handler: () => toast.info('删除选中对象'),
+    },
+    {
+      key: 'q',
+      handler: () => setSelectedTool('move'),
+    },
+    {
+      key: 'w',
+      handler: () => setSelectedTool('rotate'),
+    },
+    {
+      key: 'e',
+      handler: () => setSelectedTool('scale'),
+    },
+  ]);
 
   const tools = [
     { id: "move", icon: Move, label: "移动" },
@@ -81,33 +120,24 @@ export default function SceneEditor() {
         </div>
 
         {/* 3D视口 */}
-        <div className="flex-1 bg-background relative overflow-hidden">
-          <img 
-            src="/3d-scene-preview.png" 
-            alt="3D Scene Preview" 
-            className="absolute inset-0 w-full h-full object-cover opacity-60"
-          />
-          <div className="absolute inset-0 flex items-center justify-center">
-            <Card className="p-8 text-center bg-card/80 backdrop-blur-md">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-lg bg-primary/20 flex items-center justify-center">
-                <Box className="w-8 h-8 text-primary" />
-              </div>
-              <h3 className="text-lg font-semibold mb-2">3D视口</h3>
-              <p className="text-sm text-muted-foreground max-w-sm">
-                这里将显示3D场景。使用WebGL/WebGPU渲染引擎与Rust后端通信。
-              </p>
-              <div className="mt-4 text-xs text-muted-foreground">
-                <div>当前工具: {tools.find((t) => t.id === selectedTool)?.label}</div>
-                <div className="mt-1">场景对象: {sceneObjects.length}</div>
-              </div>
-            </Card>
-          </div>
+        <div 
+          className="flex-1 bg-background relative overflow-hidden"
+          onDragOver={handleDragOver}
+          onDrop={(e) => {
+            const data = handleDrop(e);
+            if (data?.type === 'asset') {
+              toast.success(`已添加资产到场景: ${data.data.name}`);
+              // 这里可以调用WebSocket发送消息到Rust引擎
+            }
+          }}
+        >
+          <Renderer3D className="absolute inset-0" />
 
           {/* 视口信息叠加层 */}
           <div className="absolute bottom-4 left-4 bg-card/90 backdrop-blur px-3 py-2 rounded text-xs space-y-1">
-            <div className="text-muted-foreground">FPS: 60</div>
-            <div className="text-muted-foreground">Draw Calls: 12</div>
-            <div className="text-muted-foreground">Triangles: 4,096</div>
+            <div className="text-muted-foreground">FPS: {perfStats.fps}</div>
+            <div className="text-muted-foreground">Frame Time: {perfStats.frameTime.toFixed(2)}ms</div>
+            <div className="text-muted-foreground">Memory: {perfStats.memory}MB</div>
           </div>
         </div>
       </div>
