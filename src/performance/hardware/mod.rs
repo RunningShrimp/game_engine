@@ -22,6 +22,8 @@ pub mod npu_sdk;
 pub mod npu_sdk_extended;
 pub mod upscaling_sdk;
 pub mod npu_upscaling;
+pub mod onnx_runtime;
+pub mod fsr_integration;
 
 pub use gpu_detect::{GpuInfo, GpuVendor, GpuTier, detect_gpu};
 pub use npu_detect::{NpuInfo, NpuVendor, detect_npu};

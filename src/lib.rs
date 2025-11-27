@@ -49,6 +49,8 @@ pub mod bindings;
 pub mod xr;
 /// Performance profiling and optimization tools
 pub mod performance;
+/// Configuration system
+pub mod config;
 /// Animation system with keyframes
 pub mod animation;
 /// Scene management and serialization

@@ -45,6 +45,8 @@ rodio = "0.21.1"
 raw-window-handle = "0.6.2"
 num_cpus = "1.16"
 dirs = "6.0.0"
+ort = { version = "2.0.0-rc.10", features = ["download-binaries"] }
+toml = "0.9.8"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
