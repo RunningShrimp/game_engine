@@ -42,6 +42,20 @@ export default function Welcome() {
       path: "/ai",
       badge: "P0",
     },
+    {
+      title: "可视化脚本系统",
+      description: "类似UE蓝图的节点式脚本编辑器，降低开发门槛",
+      icon: Sparkles,
+      path: "/blueprint",
+      badge: "P1",
+    },
+    {
+      title: "动画蓝图系统",
+      description: "高级动画系统，IK、根运动和状态机可视化编辑",
+      icon: FolderOpen,
+      path: "/animation",
+      badge: "P1",
+    },
   ];
 
   const formatDate = (timestamp: number) => {
@@ -84,7 +98,7 @@ export default function Welcome() {
         {/* Features Grid */}
         <section>
           <h2 className="text-2xl font-bold mb-6">核心功能</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {features.map((feature) => {
               const Icon = feature.icon;
               return (

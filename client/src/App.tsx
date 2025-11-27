@@ -19,6 +19,9 @@ import CodeEditor from "./pages/CodeEditor";
 import ShaderEditor from "./pages/ShaderEditor";
 import PCGTools from "./pages/PCGTools";
 import AIAssistant from "./pages/AIAssistant";
+import BlueprintEditor from "./pages/BlueprintEditor";
+import AnimationBlueprint from "./pages/AnimationBlueprint";
+import AnimationStateMachine from "./pages/AnimationStateMachine";
 
 
 function Router() {
@@ -73,6 +76,21 @@ function Router() {
       <Route path="/ai">
         <EditorLayout>
           <AIAssistant />
+        </EditorLayout>
+      </Route>
+      <Route path="/blueprint">
+        <EditorLayout>
+          <BlueprintEditor />
+        </EditorLayout>
+      </Route>
+      <Route path="/animation">
+        <EditorLayout>
+          <AnimationBlueprint />
+        </EditorLayout>
+      </Route>
+      <Route path="/statemachine">
+        <EditorLayout>
+          <AnimationStateMachine />
         </EditorLayout>
       </Route>
       <Route path="/404" component={NotFound} />
