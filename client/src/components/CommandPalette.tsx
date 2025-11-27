@@ -16,8 +16,10 @@ import {
   Folder,
   FolderOpen,
   Gauge,
+  GitBranch,
   Home,
   Layers,
+  MessageCircle,
   Mountain,
   Play,
   Save,
@@ -205,6 +207,26 @@ export default function CommandPalette() {
         setOpen(false);
       },
       keywords: ['retarget', 'remap', 'skeleton', '重定向', '骨骼'],
+    },
+    {
+      id: 'behavior',
+      label: '打开行为树',
+      icon: GitBranch,
+      action: () => {
+        setLocation('/behavior');
+        setOpen(false);
+      },
+      keywords: ['behavior', 'tree', 'ai', '行为树', 'AI'],
+    },
+    {
+      id: 'dialogue',
+      label: '打开对话系统',
+      icon: MessageCircle,
+      action: () => {
+        setLocation('/dialogue');
+        setOpen(false);
+      },
+      keywords: ['dialogue', 'npc', 'conversation', '对话', 'NPC'],
     },
     {
       id: 'save',

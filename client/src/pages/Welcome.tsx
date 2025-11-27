@@ -4,10 +4,13 @@ import { useProject } from "@/contexts/ProjectContext";
 import {
   Activity,
   BookOpen,
+  Bot,
   Box,
   FileCode,
   FolderOpen,
+  GitBranch,
   Github,
+  MessageCircle,
   RefreshCw,
   Smile,
   Sparkles,
@@ -94,6 +97,20 @@ export default function Welcome() {
       icon: RefreshCw,
       path: "/retarget",
       badge: "NEW",
+    },
+    {
+      title: "行为树编辑器",
+      description: "AI逻辑设计，复合/装饰/条件/动作节点，黑板变量",
+      icon: GitBranch,
+      path: "/behavior",
+      badge: "AI",
+    },
+    {
+      title: "NPC对话系统",
+      description: "智能NPC对话，表情动画，条件分支，AI生成",
+      icon: MessageCircle,
+      path: "/dialogue",
+      badge: "AI",
     },
   ];
 

@@ -27,6 +27,8 @@ import PluginManager from "./pages/PluginManager";
 import MotionCapture from "./pages/MotionCapture";
 import FacialAnimation from "./pages/FacialAnimation";
 import AnimationRetargeting from "./pages/AnimationRetargeting";
+import BehaviorTree from "./pages/BehaviorTree";
+import DialogueSystem from "./pages/DialogueSystem";
 
 
 function Router() {
@@ -121,6 +123,16 @@ function Router() {
       <Route path="/retarget">
         <EditorLayout>
           <AnimationRetargeting />
+        </EditorLayout>
+      </Route>
+      <Route path="/behavior">
+        <EditorLayout>
+          <BehaviorTree />
+        </EditorLayout>
+      </Route>
+      <Route path="/dialogue">
+        <EditorLayout>
+          <DialogueSystem />
         </EditorLayout>
       </Route>
       <Route path="/404" component={NotFound} />
