@@ -12,6 +12,7 @@ pub mod npu_acceleration;
 pub mod soc_power;
 pub mod upscaling;
 pub mod adaptive_performance;
+pub mod simulated_renderer;
 
 pub use gpu_detect::{GpuInfo, GpuVendor, GpuTier, detect_gpu};
 pub use npu_detect::{NpuInfo, NpuVendor, detect_npu};
