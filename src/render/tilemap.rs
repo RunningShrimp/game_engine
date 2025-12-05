@@ -1,3 +1,4 @@
+use crate::impl_default;
 use bevy_ecs::prelude::*;
 use glam::Vec2;
 
@@ -10,17 +11,13 @@ pub struct TileMap {
     pub atlas_handle: Option<crate::resources::manager::Handle<u32>>, // Or Atlas handle
 }
 
-impl Default for TileMap {
-    fn default() -> Self {
-        Self {
-            tiles: vec![],
-            width: 0,
-            height: 0,
-            tile_size: Vec2::new(32.0, 32.0),
-            atlas_handle: None,
-        }
-    }
-}
+impl_default!(TileMap {
+    tiles: vec![],
+    width: 0,
+    height: 0,
+    tile_size: Vec2::new(32.0, 32.0),
+    atlas_handle: None,
+});
 
 impl TileMap {
     pub fn new(width: u32, height: u32, tile_size: Vec2) -> Self {

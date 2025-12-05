@@ -1,0 +1,43 @@
+name: Test Coverage
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        override: true
+    
+    - name: Install cargo-tarpaulin
+      run: cargo install cargo-tarpaulin --locked
+    
+    - name: Run tests with coverage
+      run: |
+        cargo tarpaulin --out Xml --output-dir coverage --exclude-files '*/tests/*' --exclude-files '*/examples/*' --exclude-files '*/benches/*' || true
+    
+    - name: Check coverage targets
+      run: |
+        echo "Coverage targets:"
+        echo "- Domain layer (src/domain/): 90%+"
+        echo "- Service layer (src/services/): 80%+"
+        echo "- Infrastructure layer: 70%+"
+        echo "See docs/COVERAGE_TARGETS.md for details"
+    
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        files: ./coverage/cobertura.xml
+        fail_ci_if_error: false
+
+

@@ -1,0 +1,28 @@
+[package]
+name = "game_engine_simd"
+version = "0.1.0"
+edition = "2021"
+authors = ["Your Name <your.email@example.com>"]
+description = "SIMD optimizations for game_engine - CPU feature detection and vectorized math operations"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/username/game_engine"
+homepage = "https://github.com/username/game_engine"
+documentation = "https://docs.rs/game_engine_simd"
+readme = "README.md"
+keywords = ["simd", "optimization", "vectorization", "cpu-features"]
+categories = ["algorithms", "performance"]
+
+[dependencies]
+num_cpus = "1.16"
+glam = { version = "0.25", features = ["serde"] }
+
+[dev-dependencies]
+criterion = { version = "0.7.0", features = ["html_reports"] }
+
+[lib]
+name = "game_engine_simd"
+path = "src/lib.rs"
+
+[features]
+default = []
+

@@ -1,5 +1,5 @@
-use glam::{Vec2, Vec3, Vec4, Mat4};
-use wgpu::{Device, Queue, Buffer, BufferUsages};
+use glam::{Mat4, Vec2, Vec3, Vec4};
+use wgpu::{Buffer, BufferUsages, Device, Queue};
 
 /// 精灵实例数据
 #[repr(C)]
@@ -21,7 +21,7 @@ impl SpriteInstance {
             glam::Quat::IDENTITY,
             position,
         );
-        
+
         Self {
             transform: transform.to_cols_array_2d(),
             tex_coords: tex_coords.to_array(),
@@ -49,64 +49,63 @@ impl SpriteBatch {
             max_batch_size,
         }
     }
-    
+
     /// 添加精灵实例
     pub fn add(&mut self, instance: SpriteInstance) -> bool {
         if self.instances.len() >= self.max_batch_size {
             return false;
         }
-        
+
         self.instances.push(instance);
         true
     }
-    
+
     /// 清空批次
     pub fn clear(&mut self) {
         self.instances.clear();
     }
-    
+
     /// 获取实例数量
     pub fn len(&self) -> usize {
         self.instances.len()
     }
-    
+
     /// 检查批次是否为空
     pub fn is_empty(&self) -> bool {
         self.instances.is_empty()
     }
-    
+
     /// 检查批次是否已满
     pub fn is_full(&self) -> bool {
         self.instances.len() >= self.max_batch_size
     }
-    
+
     /// 更新实例缓冲区
     pub fn update_buffer(&mut self, device: &Device, queue: &Queue) {
         if self.instances.is_empty() {
             return;
         }
-        
+
         // 创建或更新缓冲区
-        if self.instance_buffer.is_none() || 
-           self.instance_buffer.as_ref().unwrap().size() < (self.instances.len() * std::mem::size_of::<SpriteInstance>()) as u64 {
+        if self.instance_buffer.is_none()
+            || self.instance_buffer.as_ref().unwrap().size()
+                < (self.instances.len() * std::mem::size_of::<SpriteInstance>()) as u64
+        {
             self.instance_buffer = Some(device.create_buffer(&wgpu::BufferDescriptor {
                 label: Some("Sprite Instance Buffer"),
-                size: (self.max_batch_size * std::mem::size_of::<SpriteInstance>()) as wgpu::BufferAddress,
+                size: (self.max_batch_size * std::mem::size_of::<SpriteInstance>())
+                    as wgpu::BufferAddress,
                 usage: BufferUsages::VERTEX | BufferUsages::COPY_DST,
                 mapped_at_creation: false,
             }));
         }
-        
+
         // 写入数据
         if let Some(buffer) = &self.instance_buffer {
-            queue.write_buffer(
-                buffer,
-                0,
-                bytemuck::cast_slice(&self.instances),
-            );
+            queue.write_buffer(buffer, 0, bytemuck::cast_slice(&self.instances));
         }
     }
-    
+
     /// 获取实例缓冲区
     pub fn buffer(&self) -> Option<&Buffer> {
         self.instance_buffer.as_ref()
@@ -132,19 +131,19 @@ impl SpriteBatchRenderer {
             max_batch_size,
         }
     }
-    
+
     /// 添加精灵
     pub fn add_sprite(&mut self, instance: SpriteInstance) {
         if !self.current_batch.add(instance) {
             // 当前批次已满,创建新批次
             let mut new_batch = SpriteBatch::new(self.max_batch_size);
             new_batch.add(instance);
-            
+
             let old_batch = std::mem::replace(&mut self.current_batch, new_batch);
             self.completed_batches.push(old_batch);
         }
     }
-    
+
     /// 完成批次
     pub fn finish(&mut self) {
         if !self.current_batch.is_empty() {
@@ -153,23 +152,25 @@ impl SpriteBatchRenderer {
             self.completed_batches.push(old_batch);
         }
     }
-    
+
     /// 更新所有缓冲区
     pub fn update_buffers(&mut self, device: &Device, queue: &Queue) {
         for batch in &mut self.completed_batches {
             batch.update_buffer(device, queue);
         }
-        
+
         if !self.current_batch.is_empty() {
             self.current_batch.update_buffer(device, queue);
         }
     }
-    
+
     /// 获取所有批次
     pub fn batches(&self) -> impl Iterator<Item = &SpriteBatch> {
-        self.completed_batches.iter().chain(std::iter::once(&self.current_batch))
+        self.completed_batches
+            .iter()
+            .chain(std::iter::once(&self.current_batch))
     }
-    
+
     /// 清空所有批次
     pub fn clear(&mut self) {
         self.current_batch.clear();
@@ -180,11 +181,11 @@ impl SpriteBatchRenderer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_sprite_batch() {
         let mut batch = SpriteBatch::new(10);
-        
+
         for i in 0..5 {
             let instance = SpriteInstance::new(
                 Vec3::new(i as f32, 0.0, 0.0),
@@ -194,15 +195,15 @@ mod tests {
             );
             assert!(batch.add(instance));
         }
-        
+
         assert_eq!(batch.len(), 5);
         assert!(!batch.is_full());
     }
-    
+
     #[test]
     fn test_sprite_batch_renderer() {
         let mut renderer = SpriteBatchRenderer::new(2);
-        
+
         // 添加3个精灵,应该创建2个批次
         for i in 0..3 {
             let instance = SpriteInstance::new(
@@ -213,7 +214,7 @@ mod tests {
             );
             renderer.add_sprite(instance);
         }
-        
+
         renderer.finish();
         assert_eq!(renderer.batches().count(), 2);
     }

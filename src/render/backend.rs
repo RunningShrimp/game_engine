@@ -32,7 +32,7 @@ impl BufferUsage {
     pub const STORAGE: Self = Self(8);
     pub const COPY_SRC: Self = Self(16);
     pub const COPY_DST: Self = Self(32);
-    
+
     pub fn contains(&self, other: Self) -> bool {
         (self.0 & other.0) != 0
     }
@@ -115,13 +115,31 @@ pub enum RenderCommand {
     /// 设置索引缓冲区
     SetIndexBuffer { buffer_id: u64, format: IndexFormat },
     /// 绘制
-    Draw { vertex_count: u32, instance_count: u32 },
+    Draw {
+        vertex_count: u32,
+        instance_count: u32,
+    },
     /// 索引绘制
-    DrawIndexed { index_count: u32, instance_count: u32 },
+    DrawIndexed {
+        index_count: u32,
+        instance_count: u32,
+    },
     /// 设置裁剪区域
-    SetScissorRect { x: u32, y: u32, width: u32, height: u32 },
+    SetScissorRect {
+        x: u32,
+        y: u32,
+        width: u32,
+        height: u32,
+    },
     /// 设置视口
-    SetViewport { x: f32, y: f32, width: f32, height: f32, min_depth: f32, max_depth: f32 },
+    SetViewport {
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        min_depth: f32,
+        max_depth: f32,
+    },
 }
 
 /// 颜色附件
@@ -174,7 +192,7 @@ pub struct TextureHandle(pub u64);
 /// 渲染后端 Trait
 ///
 /// 定义渲染后端需要实现的接口。
-/// 
+///
 /// # 示例
 ///
 /// ```ignore
@@ -189,31 +207,31 @@ pub struct TextureHandle(pub u64);
 pub trait RenderBackend: Send + Sync {
     /// 创建缓冲区
     fn create_buffer(&self, desc: &BufferDescriptor) -> BufferHandle;
-    
+
     /// 销毁缓冲区
     fn destroy_buffer(&self, buffer: BufferHandle);
-    
+
     /// 写入缓冲区数据
     fn write_buffer(&self, buffer: BufferHandle, offset: u64, data: &[u8]);
-    
+
     /// 创建纹理
     fn create_texture(&self, desc: &TextureDescriptor) -> TextureHandle;
-    
+
     /// 销毁纹理
     fn destroy_texture(&self, texture: TextureHandle);
-    
+
     /// 写入纹理数据
     fn write_texture(&self, texture: TextureHandle, data: &[u8], width: u32, height: u32);
-    
+
     /// 提交渲染命令
     fn submit(&mut self, commands: &[RenderCommand]);
-    
+
     /// 呈现帧
     fn present(&mut self);
-    
+
     /// 获取后端名称
     fn name(&self) -> &str;
-    
+
     /// 获取后端能力
     fn capabilities(&self) -> BackendCapabilities;
 }
@@ -254,8 +272,8 @@ pub struct NullBackend {
     next_texture_id: std::sync::atomic::AtomicU64,
 }
 
-impl NullBackend {
-    pub fn new() -> Self {
+impl Default for NullBackend {
+    fn default() -> Self {
         Self {
             next_buffer_id: std::sync::atomic::AtomicU64::new(1),
             next_texture_id: std::sync::atomic::AtomicU64::new(1),
@@ -263,37 +281,43 @@ impl NullBackend {
     }
 }
 
-impl Default for NullBackend {
-    fn default() -> Self {
-        Self::new()
+impl NullBackend {
+    pub fn new() -> Self {
+        Self::default()
     }
 }
 
 impl RenderBackend for NullBackend {
     fn create_buffer(&self, _desc: &BufferDescriptor) -> BufferHandle {
-        BufferHandle(self.next_buffer_id.fetch_add(1, std::sync::atomic::Ordering::SeqCst))
+        BufferHandle(
+            self.next_buffer_id
+                .fetch_add(1, std::sync::atomic::Ordering::SeqCst),
+        )
     }
-    
+
     fn destroy_buffer(&self, _buffer: BufferHandle) {}
-    
+
     fn write_buffer(&self, _buffer: BufferHandle, _offset: u64, _data: &[u8]) {}
-    
+
     fn create_texture(&self, _desc: &TextureDescriptor) -> TextureHandle {
-        TextureHandle(self.next_texture_id.fetch_add(1, std::sync::atomic::Ordering::SeqCst))
+        TextureHandle(
+            self.next_texture_id
+                .fetch_add(1, std::sync::atomic::Ordering::SeqCst),
+        )
     }
-    
+
     fn destroy_texture(&self, _texture: TextureHandle) {}
-    
+
     fn write_texture(&self, _texture: TextureHandle, _data: &[u8], _width: u32, _height: u32) {}
-    
+
     fn submit(&mut self, _commands: &[RenderCommand]) {}
-    
+
     fn present(&mut self) {}
-    
+
     fn name(&self) -> &str {
         "null"
     }
-    
+
     fn capabilities(&self) -> BackendCapabilities {
         BackendCapabilities::default()
     }
@@ -302,7 +326,7 @@ impl RenderBackend for NullBackend {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_buffer_usage_bitor() {
         let usage = BufferUsage::VERTEX | BufferUsage::COPY_DST;
@@ -310,11 +334,11 @@ mod tests {
         assert!(usage.contains(BufferUsage::COPY_DST));
         assert!(!usage.contains(BufferUsage::UNIFORM));
     }
-    
+
     #[test]
     fn test_null_backend() {
         let mut backend = NullBackend::new();
-        
+
         let buffer = backend.create_buffer(&BufferDescriptor {
             label: None,
             size: 1024,
@@ -322,7 +346,7 @@ mod tests {
             mapped_at_creation: false,
         });
         assert!(buffer.0 > 0);
-        
+
         let texture = backend.create_texture(&TextureDescriptor {
             label: None,
             width: 256,
@@ -334,11 +358,10 @@ mod tests {
             usage: TextureUsage::TEXTURE_BINDING,
         });
         assert!(texture.0 > 0);
-        
+
         backend.submit(&[]);
         backend.present();
-        
+
         assert_eq!(backend.name(), "null");
     }
 }
-

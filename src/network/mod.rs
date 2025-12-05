@@ -8,6 +8,7 @@
 //! - RPC 框架基础
 //! - 状态同步机制
 //! - 网络延迟补偿
+//! - 客户端预测和回滚
 //!
 //! ## 架构设计
 //!
@@ -20,15 +21,27 @@
 //! └─────────────────┘     └─────────────────┘
 //! ```
 
-use std::net::{TcpStream, UdpSocket, SocketAddr};
-use std::sync::{Arc, Mutex};
-use std::collections::HashMap;
-use crossbeam_channel::{Sender, Receiver, unbounded};
+pub mod authority;
+pub mod client;
+pub mod compression;
+pub mod delay_compensation;
+pub mod delta_serialization;
+pub mod interpolation;
+pub mod prediction;
+pub mod security;
+pub mod server;
+pub mod synchronization;
+
+use crate::impl_default;
 use bevy_ecs::prelude::*;
-use serde::{Serialize, Deserialize};
+use crossbeam_channel::{unbounded, Receiver, Sender};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::net::{SocketAddr, TcpStream};
+use thiserror::Error;
 
 /// 网络错误类型
-#[derive(Debug, thiserror::Error)]
+#[derive(Error, Debug)]
 pub enum NetworkError {
     #[error("Connection failed: {0}")]
     ConnectionError(String),
@@ -38,6 +51,10 @@ pub enum NetworkError {
     ReceiveError(String),
     #[error("Serialization failed: {0}")]
     SerializationError(String),
+    #[error("Delta serialization failed: {0}")]
+    DeltaSerializationError(String),
+    #[error("Compression failed: {0}")]
+    CompressionError(String),
     #[error("Invalid peer ID")]
     InvalidPeerId,
 }
@@ -52,13 +69,27 @@ pub enum NetworkMessage {
     /// 状态同步
     StateSync { tick: u64, data: Vec<u8> },
     /// RPC 调用
-    Rpc { id: u32, method: String, params: Vec<u8> },
+    Rpc {
+        id: u32,
+        method: String,
+        params: Vec<u8>,
+    },
     /// RPC 响应
     RpcResponse { id: u32, result: Vec<u8> },
     /// 心跳
     Heartbeat { timestamp: u64 },
     /// 输入同步
     Input { tick: u64, inputs: Vec<u8> },
+    /// 时间同步请求
+    TimeSyncRequest { client_send_time: u64 },
+    /// 时间同步响应
+    TimeSyncResponse {
+        sync: delay_compensation::TimeSyncMessage,
+    },
+    /// 事件同步
+    EventSync {
+        events: Vec<synchronization::NetworkEvent>,
+    },
 }
 
 /// 网络连接状态
@@ -72,6 +103,12 @@ pub enum ConnectionState {
     Connected,
     /// 重连中
     Reconnecting,
+}
+
+impl Default for ConnectionState {
+    fn default() -> Self {
+        ConnectionState::Disconnected
+    }
 }
 
 /// 网络统计信息
@@ -107,15 +144,11 @@ pub struct NetworkConfig {
     pub max_connections: usize,
 }
 
-impl Default for NetworkConfig {
-    fn default() -> Self {
-        Self {
-            server_address: "127.0.0.1".to_string(),
-            port: 8080,
-            max_connections: 100,
-        }
-    }
-}
+impl_default!(NetworkConfig {
+    server_address: "127.0.0.1".to_string(),
+    port: 8080,
+    max_connections: 100,
+});
 
 /// 网络管理器
 pub struct NetworkManager {
@@ -143,11 +176,11 @@ impl NetworkManager {
     }
 
     pub fn connect_to_server(&mut self, address: &str) -> Result<u64, NetworkError> {
-        let socket_addr: SocketAddr = address.parse().map_err(|_| {
-            NetworkError::ConnectionError("Invalid address format".to_string())
-        })?;
+        let socket_addr: SocketAddr = address
+            .parse()
+            .map_err(|_| NetworkError::ConnectionError("Invalid address format".to_string()))?;
 
-        // TODO: 实现客户端连接逻辑
+        // NOTE: 客户端连接逻辑待实现，当前使用简化实现
         let peer_id = rand::random();
         let connection = Connection {
             peer_id,
@@ -161,7 +194,7 @@ impl NetworkManager {
 }
 
 /// 网络客户端状态 (Resource)
-#[derive(Resource)]
+#[derive(Resource, Default)]
 pub struct NetworkState {
     /// 连接状态
     pub connection_state: ConnectionState,
@@ -177,19 +210,19 @@ pub struct NetworkState {
     pub(crate) send_tx: Option<Sender<NetworkMessage>>,
     /// 消息接收通道
     pub(crate) recv_rx: Option<Receiver<NetworkMessage>>,
+    /// 增量序列化器（用于增量序列化）
+    pub(crate) delta_serializer:
+        Option<std::sync::Arc<std::sync::Mutex<delta_serialization::DeltaSerializer>>>,
+    /// 压缩器（用于网络数据压缩）
+    pub(crate) compressor: Option<std::sync::Arc<compression::NetworkCompressor>>,
+    /// 延迟补偿管理器（客户端）
+    pub(crate) delay_compensation:
+        Option<std::sync::Arc<std::sync::Mutex<delay_compensation::ClientDelayCompensation>>>,
 }
 
-impl Default for NetworkState {
-    fn default() -> Self {
-        Self {
-            connection_state: ConnectionState::Disconnected,
-            client_id: None,
-            server_addr: None,
-            stats: NetworkStats::default(),
-            current_tick: 0,
-            send_tx: None,
-            recv_rx: None,
-        }
+impl NetworkState {
+    pub fn new() -> Self {
+        Self::default()
     }
 }
 
@@ -202,24 +235,86 @@ impl NetworkService {
         if state.connection_state != ConnectionState::Disconnected {
             return Err("Already connected or connecting".to_string());
         }
-        
+
         state.connection_state = ConnectionState::Connecting;
         state.server_addr = Some(addr);
-        
+
         // 创建通道
         let (send_tx, _send_rx) = unbounded::<NetworkMessage>();
         let (_recv_tx, recv_rx) = unbounded::<NetworkMessage>();
-        
+
         state.send_tx = Some(send_tx);
         state.recv_rx = Some(recv_rx);
-        
-        // TODO: 启动网络线程
+
+        // 初始化压缩器（如果尚未初始化）
+        if state.compressor.is_none() {
+            state.compressor = Some(std::sync::Arc::new(compression::NetworkCompressor::new()));
+        }
+
+        // 初始化延迟补偿管理器（如果尚未初始化）
+        if state.delay_compensation.is_none() {
+            state.delay_compensation = Some(std::sync::Arc::new(std::sync::Mutex::new(
+                delay_compensation::ClientDelayCompensation::new(),
+            )));
+        }
+
+        // NOTE: 网络线程启动逻辑待实现，当前仅设置连接状态
         state.connection_state = ConnectionState::Connected;
         state.client_id = Some(rand::random());
-        
+
         Ok(())
     }
-    
+
+    /// 启用压缩（可配置压缩级别）
+    pub fn enable_compression(state: &mut NetworkState, level: compression::CompressionLevel) {
+        state.compressor = Some(std::sync::Arc::new(
+            compression::NetworkCompressor::with_level(level),
+        ));
+    }
+
+    /// 禁用压缩
+    pub fn disable_compression(state: &mut NetworkState) {
+        state.compressor = None;
+    }
+
+    /// 检查是否启用压缩
+    pub fn is_compression_enabled(state: &NetworkState) -> bool {
+        state.compressor.is_some()
+    }
+
+    /// 发送时间同步请求
+    pub fn send_time_sync_request(state: &NetworkState) -> Result<(), String> {
+        if let Some(ref compensation) = state.delay_compensation {
+            let compensation_guard = compensation.lock().unwrap();
+            let sync_request = compensation_guard.create_sync_request();
+            Self::send(
+                state,
+                NetworkMessage::TimeSyncRequest {
+                    client_send_time: sync_request.client_send_time,
+                },
+            )
+        } else {
+            Err("Delay compensation not initialized".to_string())
+        }
+    }
+
+    /// 获取延迟补偿统计
+    pub fn get_delay_compensation_stats(
+        state: &NetworkState,
+    ) -> Option<delay_compensation::LatencyStats> {
+        state
+            .delay_compensation
+            .as_ref()
+            .and_then(|c| c.lock().ok().map(|guard| guard.latency_stats()))
+    }
+
+    /// 检查是否需要时间同步
+    pub fn should_sync_time(state: &NetworkState) -> bool {
+        state.delay_compensation.as_ref().map_or(false, |c| {
+            c.lock().ok().map_or(false, |guard| guard.should_sync())
+        })
+    }
+
     /// 断开连接
     pub fn disconnect(state: &mut NetworkState) {
         if let Some(tx) = &state.send_tx {
@@ -227,13 +322,13 @@ impl NetworkService {
                 let _ = tx.send(NetworkMessage::Disconnect { client_id });
             }
         }
-        
+
         state.connection_state = ConnectionState::Disconnected;
         state.client_id = None;
         state.send_tx = None;
         state.recv_rx = None;
     }
-    
+
     /// 发送消息
     pub fn send(state: &NetworkState, message: NetworkMessage) -> Result<(), String> {
         if let Some(tx) = &state.send_tx {
@@ -242,34 +337,68 @@ impl NetworkService {
             Err("Not connected".to_string())
         }
     }
-    
+
     /// 发送 RPC 调用
     pub fn rpc_call(state: &NetworkState, method: &str, params: &[u8]) -> Result<u32, String> {
         let id = rand::random();
-        Self::send(state, NetworkMessage::Rpc {
-            id,
-            method: method.to_string(),
-            params: params.to_vec(),
-        })?;
+        Self::send(
+            state,
+            NetworkMessage::Rpc {
+                id,
+                method: method.to_string(),
+                params: params.to_vec(),
+            },
+        )?;
         Ok(id)
     }
-    
-    /// 发送状态同步
+
+    /// 发送状态同步（可选压缩）
     pub fn sync_state(state: &NetworkState, data: &[u8]) -> Result<(), String> {
-        Self::send(state, NetworkMessage::StateSync {
-            tick: state.current_tick,
-            data: data.to_vec(),
-        })
+        // 如果启用了压缩，先压缩数据
+        let final_data = if let Some(ref compressor) = state.compressor {
+            compressor
+                .compress_with_flag(data)
+                .map_err(|e| format!("Compression failed: {}", e))?
+        } else {
+            data.to_vec()
+        };
+
+        Self::send(
+            state,
+            NetworkMessage::StateSync {
+                tick: state.current_tick,
+                data: final_data,
+            },
+        )
     }
-    
+
+    /// 发送状态同步（强制压缩）
+    pub fn sync_state_compressed(state: &NetworkState, data: &[u8]) -> Result<(), String> {
+        let compressor = compression::NetworkCompressor::new();
+        let compressed = compressor
+            .compress_with_flag(data)
+            .map_err(|e| format!("Compression failed: {}", e))?;
+
+        Self::send(
+            state,
+            NetworkMessage::StateSync {
+                tick: state.current_tick,
+                data: compressed,
+            },
+        )
+    }
+
     /// 发送输入
     pub fn send_input(state: &NetworkState, inputs: &[u8]) -> Result<(), String> {
-        Self::send(state, NetworkMessage::Input {
-            tick: state.current_tick,
-            inputs: inputs.to_vec(),
-        })
+        Self::send(
+            state,
+            NetworkMessage::Input {
+                tick: state.current_tick,
+                inputs: inputs.to_vec(),
+            },
+        )
     }
-    
+
     /// 接收消息
     pub fn receive(state: &NetworkState) -> Vec<NetworkMessage> {
         let mut messages = Vec::new();
@@ -280,12 +409,12 @@ impl NetworkService {
         }
         messages
     }
-    
+
     /// 获取连接状态
     pub fn is_connected(state: &NetworkState) -> bool {
         state.connection_state == ConnectionState::Connected
     }
-    
+
     /// 获取延迟
     pub fn get_latency(state: &NetworkState) -> f32 {
         state.stats.latency_ms
@@ -314,96 +443,159 @@ pub struct NetworkSync {
     pub priority: u8,
 }
 
-impl Default for NetworkSync {
-    fn default() -> Self {
-        Self {
-            last_sync_tick: 0,
-            sync_interval: 1,
-            priority: 128,
-        }
-    }
-}
+impl_default!(NetworkSync {
+    last_sync_tick: 0,
+    sync_interval: 1,
+    priority: 128,
+});
 
 // ============================================================================
 // ECS 系统
 // ============================================================================
 
 /// 网络更新系统
-pub fn network_update_system(
-    mut state: ResMut<NetworkState>,
-) {
+pub fn network_update_system(mut state: ResMut<NetworkState>) {
     // 增加 tick
     state.current_tick += 1;
-    
+
     // 处理接收到的消息
     let messages = NetworkService::receive(&state);
     for msg in messages {
         match msg {
             NetworkMessage::StateSync { tick, data } => {
-                // TODO: 应用状态同步
-                let _ = (tick, data);
+                // 如果数据被压缩，先解压缩
+                let decompressed_data = if let Some(ref compressor) = state.compressor {
+                    compressor
+                        .decompress_with_flag(&data)
+                        .unwrap_or_else(|_| data.clone())
+                } else {
+                    // 尝试自动检测压缩标志
+                    if !data.is_empty() && data[0] == 1 {
+                        // 数据被压缩，但没有压缩器，尝试创建临时压缩器
+                        let temp_compressor = compression::NetworkCompressor::new();
+                        temp_compressor
+                            .decompress_with_flag(&data)
+                            .unwrap_or_else(|_| data.clone())
+                    } else {
+                        data.clone()
+                    }
+                };
+
+                // 使用同步管理器处理状态同步
+                // NOTE: 实际实现中应该使用StateSyncManager处理
+                let _ = (tick, decompressed_data);
             }
             NetworkMessage::Heartbeat { timestamp } => {
                 // 计算延迟
-                let now = std::time::SystemTime::now()
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .unwrap()
-                    .as_millis() as u64;
+                let now = crate::core::utils::current_timestamp_ms();
                 state.stats.latency_ms = (now - timestamp) as f32;
+            }
+            NetworkMessage::TimeSyncRequest { client_send_time } => {
+                // 处理时间同步请求（服务器端）
+                // NOTE: 实际实现中应该在服务器端处理
+                let _ = client_send_time;
+            }
+            NetworkMessage::TimeSyncResponse { mut sync } => {
+                // 处理时间同步响应（客户端）
+                if let Some(ref compensation) = state.delay_compensation {
+                    if let Ok(mut guard) = compensation.lock() {
+                        guard.process_time_sync(&mut sync);
+                    }
+                }
+            }
+            NetworkMessage::EventSync { events } => {
+                // 处理事件同步
+                // NOTE: 事件同步逻辑在synchronization模块中实现
+                let _ = events;
             }
             _ => {}
         }
     }
 }
 
-/// 网络同步发送系统
+/// 网络同步发送系统（使用增量序列化）
 pub fn network_sync_send_system(
-    state: Res<NetworkState>,
-    query: Query<(&NetworkEntity, &NetworkSync, &crate::ecs::Transform)>,
+    mut state: ResMut<NetworkState>,
+    mut query: Query<(&NetworkEntity, &mut NetworkSync, &crate::ecs::Transform)>,
 ) {
     if !NetworkService::is_connected(&state) {
         return;
     }
-    
+
+    // 获取或创建增量序列化器
+    if state.delta_serializer.is_none() {
+        state.delta_serializer = Some(std::sync::Arc::new(std::sync::Mutex::new(
+            delta_serialization::DeltaSerializer::new(),
+        )));
+    }
+
+    let serializer = state.delta_serializer.as_ref().unwrap();
+    let mut serializer_guard = serializer.lock().unwrap();
+
+    // 收集需要同步的实体
+    let mut entities_to_sync = Vec::new();
+    let mut entities_to_update = Vec::new();
+
     for (net_entity, sync, transform) in query.iter() {
         if !net_entity.is_local {
             continue;
         }
-        
+
         if state.current_tick - sync.last_sync_tick < sync.sync_interval {
             continue;
         }
-        
-        // 序列化 transform
-        let data = serde_json::to_vec(&(
-            net_entity.net_id,
-            transform.pos.to_array(),
-            [transform.rot.x, transform.rot.y, transform.rot.z, transform.rot.w],
-            transform.scale.to_array(),
-        )).unwrap_or_default();
-        
-        let _ = NetworkService::sync_state(&state, &data);
+
+        // 创建实体增量数据
+        let mut delta = delta_serialization::EntityDelta::new(net_entity.net_id);
+        delta.position = Some(transform.pos.to_array());
+        delta.rotation = Some([
+            transform.rot.x,
+            transform.rot.y,
+            transform.rot.z,
+            transform.rot.w,
+        ]);
+        delta.scale = Some(transform.scale.to_array());
+
+        entities_to_sync.push(delta);
+        entities_to_update.push(net_entity.net_id);
+    }
+
+    // 计算增量并序列化
+    if !entities_to_sync.is_empty() {
+        let delta_packet = serializer_guard.compute_delta(&entities_to_sync);
+
+        // 序列化增量数据
+        if let Ok(data) = serializer_guard.serialize_delta(&delta_packet) {
+            let _ = NetworkService::sync_state(&state, &data);
+
+            // 更新同步tick
+            for (net_entity, mut sync, _) in query.iter_mut() {
+                if entities_to_update.contains(&net_entity.net_id) {
+                    sync.last_sync_tick = state.current_tick;
+                }
+            }
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_network_state_default() {
         let state = NetworkState::default();
         assert_eq!(state.connection_state, ConnectionState::Disconnected);
         assert!(state.client_id.is_none());
     }
-    
+
     #[test]
     fn test_network_stats_default() {
         let stats = NetworkStats::default();
         assert_eq!(stats.latency_ms, 0.0);
         assert_eq!(stats.bytes_sent, 0);
     }
-    
+
     #[test]
     fn test_network_sync_default() {
         let sync = NetworkSync::default();
@@ -411,4 +603,3 @@ mod tests {
         assert_eq!(sync.sync_interval, 1);
     }
 }
-

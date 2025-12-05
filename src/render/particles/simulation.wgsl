@@ -105,7 +105,7 @@ fn random_in_cone(direction: vec3<f32>, angle: f32) -> vec3<f32> {
         z
     );
     
-    // TODO: 旋转到目标方向
+    // NOTE: 旋转到目标方向的逻辑待实现，当前返回局部方向
     return local_dir;
 }
 

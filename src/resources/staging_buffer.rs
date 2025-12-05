@@ -23,7 +23,6 @@
 //! ```
 
 use std::collections::VecDeque;
-use wgpu::util::DeviceExt;
 
 // ============================================================================
 // 常量配置
@@ -76,7 +75,7 @@ impl StagingBuffer {
     }
 
     /// 分配空间并写入数据
-    /// 
+    ///
     /// 返回写入的偏移量
     pub fn write(&mut self, data: &[u8], alignment: u64) -> Option<u64> {
         let aligned_offset = align_to(self.offset, alignment);
@@ -117,18 +116,6 @@ impl StagingBuffer {
 // Staging Buffer 池
 // ============================================================================
 
-/// Staging Buffer 池 - 管理多个 Staging Buffer
-pub struct StagingBufferPool {
-    /// 共享 Staging Buffer（用于小数据）
-    shared_buffer: Option<StagingBuffer>,
-    /// 独立缓冲区（用于大数据）
-    dedicated_buffers: Vec<StagingBuffer>,
-    /// 空闲缓冲区池
-    free_buffers: VecDeque<StagingBuffer>,
-    /// 统计信息
-    stats: PoolStats,
-}
-
 /// 池统计信息
 #[derive(Default, Clone, Copy, Debug)]
 pub struct PoolStats {
@@ -142,20 +129,22 @@ pub struct PoolStats {
     pub reuse_count: u64,
 }
 
-impl Default for StagingBufferPool {
-    fn default() -> Self {
-        Self::new()
-    }
+/// Staging Buffer 池 - 管理多个 Staging Buffer
+#[derive(Default)]
+pub struct StagingBufferPool {
+    /// 共享 Staging Buffer（用于小数据）
+    pub(crate) shared_buffer: Option<StagingBuffer>,
+    /// 独立缓冲区（用于大数据）
+    pub(crate) dedicated_buffers: Vec<StagingBuffer>,
+    /// 空闲缓冲区池
+    pub(crate) free_buffers: VecDeque<StagingBuffer>,
+    /// 统计信息
+    pub(crate) stats: PoolStats,
 }
 
 impl StagingBufferPool {
     pub fn new() -> Self {
-        Self {
-            shared_buffer: None,
-            dedicated_buffers: Vec::new(),
-            free_buffers: VecDeque::new(),
-            stats: PoolStats::default(),
-        }
+        Self::default()
     }
 
     /// 初始化共享缓冲区
@@ -170,26 +159,21 @@ impl StagingBufferPool {
     }
 
     /// 分配空间用于数据上传
-    /// 
+    ///
     /// 返回 (buffer_index, offset)
     /// - buffer_index: 0 表示共享缓冲区，>0 表示独立缓冲区索引+1
-    pub fn allocate(
-        &mut self,
-        device: &wgpu::Device,
-        size: u64,
-        alignment: u64,
-    ) -> (usize, u64) {
+    pub fn allocate(&mut self, device: &wgpu::Device, size: u64, alignment: u64) -> (usize, u64) {
         self.stats.total_allocations += 1;
         self.stats.total_bytes_uploaded += size;
 
         // 小数据尝试使用共享缓冲区
         if size < SMALL_BUFFER_THRESHOLD {
             if let Some(ref mut shared) = self.shared_buffer {
-                if let Some(offset) = shared.write(&[], alignment) {
-                    // 检查是否能容纳（这里只是检查，实际写入在外部）
-                    if shared.can_fit(size, alignment) {
-                        return (0, align_to(shared.offset, alignment));
-                    }
+                // 检查是否能容纳（这里只是检查，实际写入在外部）
+                if shared.can_fit(size, alignment) {
+                    // offset用于返回缓冲区中的对齐偏移量
+                    let aligned_offset = align_to(shared.offset, alignment);
+                    return (0, aligned_offset);
                 }
             }
         }
@@ -213,13 +197,16 @@ impl StagingBufferPool {
         let buffer = StagingBuffer::new(
             device,
             buffer_size,
-            Some(&format!("Dedicated Staging Buffer {}", self.dedicated_buffers.len())),
+            Some(&format!(
+                "Dedicated Staging Buffer {}",
+                self.dedicated_buffers.len()
+            )),
         );
-        
+
         let index = self.dedicated_buffers.len() + 1;
         self.dedicated_buffers.push(buffer);
         self.stats.active_buffers += 1;
-        
+
         (index, 0)
     }
 
@@ -257,7 +244,8 @@ impl StagingBufferPool {
         if let Some(ref mut shared) = self.shared_buffer {
             shared.reset();
             // 重新创建以获得映射
-            *shared = StagingBuffer::new(device, SHARED_STAGING_SIZE, Some("Shared Staging Buffer"));
+            *shared =
+                StagingBuffer::new(device, SHARED_STAGING_SIZE, Some("Shared Staging Buffer"));
         }
 
         // 回收独立缓冲区

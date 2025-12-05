@@ -1,9 +1,8 @@
-use winit::window::Window;
 use wgpu::util::DeviceExt;
+use winit::window::Window;
 
-use crate::render::mesh::Vertex3D;
 use crate::core::error::RenderError;
-
+use crate::render::mesh::Vertex3D;
 
 #[repr(C)]
 #[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
@@ -44,10 +43,10 @@ impl Instance {
 }
 
 /// 实例脏标记系统
-/// 
+///
 /// 用于追踪哪些实例已更改，实现增量更新以减少 GPU 数据传输。
 /// 使用分块脏标记减少遍历开销，每个块包含多个实例。
-/// 
+///
 /// # 性能优势
 /// - 仅上传变化的实例数据，减少 CPU-GPU 带宽占用
 /// - 分块设计减少脏检查的遍历次数
@@ -71,7 +70,7 @@ pub struct InstanceDirtyTracker {
 
 impl InstanceDirtyTracker {
     /// 创建脏标记追踪器
-    /// 
+    ///
     /// # 参数
     /// - `initial_capacity`: 初始容量（实例数）
     /// - `chunk_size`: 每个块的大小，建议 64-256
@@ -87,15 +86,15 @@ impl InstanceDirtyTracker {
             needs_full_rebuild: true,
         }
     }
-    
+
     /// 默认块大小
     pub const DEFAULT_CHUNK_SIZE: usize = 128;
-    
+
     /// 使用默认配置创建
     pub fn with_capacity(capacity: usize) -> Self {
         Self::new(capacity, Self::DEFAULT_CHUNK_SIZE)
     }
-    
+
     /// 标记所有实例为脏
     pub fn mark_all_dirty(&mut self) {
         self.needs_full_rebuild = true;
@@ -106,7 +105,7 @@ impl InstanceDirtyTracker {
             *flag = true;
         }
     }
-    
+
     /// 标记特定实例为脏
     #[inline]
     pub fn mark_instance_dirty(&mut self, index: usize) {
@@ -118,7 +117,7 @@ impl InstanceDirtyTracker {
             }
         }
     }
-    
+
     /// 标记实例范围为脏
     pub fn mark_range_dirty(&mut self, start: usize, end: usize) {
         let end = end.min(self.instance_dirty.len());
@@ -131,35 +130,37 @@ impl InstanceDirtyTracker {
             self.chunk_dirty[i] = true;
         }
     }
-    
+
     /// 更新并检测变化
-    /// 
+    ///
     /// 比较新旧实例数据，返回脏范围列表
     pub fn update(&mut self, instances: &[Instance]) -> &[(u32, u32)] {
         self.dirty_ranges.clear();
-        
+
         let new_count = instances.len();
         let old_count = self.prev_instances.len();
-        
+
         // 如果数量变化，需要完整重建
         if new_count != old_count {
             self.needs_full_rebuild = true;
         }
-        
+
         // 调整容量
         if new_count > self.instance_dirty.len() {
             let additional = new_count - self.instance_dirty.len();
-            self.instance_dirty.extend(std::iter::repeat(true).take(additional));
-            
+            self.instance_dirty
+                .extend(std::iter::repeat(true).take(additional));
+
             let new_chunk_count = (new_count + self.chunk_size - 1) / self.chunk_size;
             if new_chunk_count > self.chunk_dirty.len() {
                 let chunk_additional = new_chunk_count - self.chunk_dirty.len();
-                self.chunk_dirty.extend(std::iter::repeat(true).take(chunk_additional));
+                self.chunk_dirty
+                    .extend(std::iter::repeat(true).take(chunk_additional));
             }
         }
-        
+
         self.instance_count = new_count;
-        
+
         // 完整重建模式
         if self.needs_full_rebuild {
             self.prev_instances.clear();
@@ -168,7 +169,7 @@ impl InstanceDirtyTracker {
                 self.dirty_ranges.push((0, new_count as u32));
             }
             self.needs_full_rebuild = false;
-            
+
             // 重置所有标记
             for flag in &mut self.chunk_dirty {
                 *flag = false;
@@ -176,13 +177,13 @@ impl InstanceDirtyTracker {
             for flag in &mut self.instance_dirty {
                 *flag = false;
             }
-            
+
             return &self.dirty_ranges;
         }
-        
+
         // 增量检测
         let mut range_start: Option<u32> = None;
-        
+
         for chunk_idx in 0..self.chunk_dirty.len() {
             if !self.chunk_dirty[chunk_idx] {
                 // 块未标记为脏，跳过
@@ -193,10 +194,10 @@ impl InstanceDirtyTracker {
                 }
                 continue;
             }
-            
+
             let start = chunk_idx * self.chunk_size;
             let end = ((chunk_idx + 1) * self.chunk_size).min(new_count);
-            
+
             // 检查块内每个实例
             let mut chunk_has_changes = false;
             for i in start..end {
@@ -205,53 +206,53 @@ impl InstanceDirtyTracker {
                 } else {
                     true // 新实例总是脏的
                 };
-                
+
                 if is_dirty {
                     chunk_has_changes = true;
                     self.instance_dirty[i] = true;
-                    
+
                     if range_start.is_none() {
                         range_start = Some(i as u32);
                     }
                 } else {
                     self.instance_dirty[i] = false;
-                    
+
                     if let Some(start) = range_start {
                         self.dirty_ranges.push((start, i as u32));
                         range_start = None;
                     }
                 }
             }
-            
+
             self.chunk_dirty[chunk_idx] = chunk_has_changes;
         }
-        
+
         // 关闭最后一个范围
         if let Some(start) = range_start {
             self.dirty_ranges.push((start, new_count as u32));
         }
-        
+
         // 更新缓存
         self.prev_instances.clear();
         self.prev_instances.extend_from_slice(instances);
-        
+
         // 合并相邻范围
         self.merge_ranges();
-        
+
         &self.dirty_ranges
     }
-    
+
     /// 合并相邻或重叠的脏范围
     fn merge_ranges(&mut self) {
         if self.dirty_ranges.len() <= 1 {
             return;
         }
-        
+
         self.dirty_ranges.sort_by_key(|r| r.0);
-        
+
         let mut merged = Vec::with_capacity(self.dirty_ranges.len());
         let mut current = self.dirty_ranges[0];
-        
+
         for &(start, end) in &self.dirty_ranges[1..] {
             // 如果范围相邻或重叠（允许小间隙合并以减少 draw call）
             if start <= current.1 + 16 {
@@ -262,25 +263,28 @@ impl InstanceDirtyTracker {
             }
         }
         merged.push(current);
-        
+
         self.dirty_ranges = merged;
     }
-    
+
     /// 获取脏范围数量
     pub fn dirty_range_count(&self) -> usize {
         self.dirty_ranges.len()
     }
-    
+
     /// 获取脏实例总数
     pub fn dirty_instance_count(&self) -> usize {
-        self.dirty_ranges.iter().map(|(s, e)| (e - s) as usize).sum()
+        self.dirty_ranges
+            .iter()
+            .map(|(s, e)| (e - s) as usize)
+            .sum()
     }
-    
+
     /// 检查是否有任何脏数据
     pub fn has_dirty(&self) -> bool {
         !self.dirty_ranges.is_empty()
     }
-    
+
     /// 重置追踪器
     pub fn reset(&mut self) {
         self.chunk_dirty.clear();
@@ -363,7 +367,7 @@ pub struct WgpuRenderer<'a> {
     layer_ranges: Vec<(u32, u32)>,
     draw_groups: Vec<DrawGroup>,
     scale_factor: f32,
-    scissor: Option<[u32;4]>,
+    scissor: Option<[u32; 4]>,
     group_cache: Vec<(f32, usize, u32)>,
     groups_dirty: bool,
     ui_pipeline: wgpu::RenderPipeline,
@@ -371,7 +375,7 @@ pub struct WgpuRenderer<'a> {
     ui_count: u32,
     commands: Vec<crate::render::graph::RenderCommand>,
     pub offscreen_views: std::collections::HashMap<u32, wgpu::TextureView>,
-    
+
     // Lighting
     lights_buffer: wgpu::Buffer,
     lights_bind_group: wgpu::BindGroup,
@@ -379,21 +383,34 @@ pub struct WgpuRenderer<'a> {
 
     // 3D
     pub depth_texture: wgpu::TextureView,
+    /// 深度纹理（用于遮挡剔除）
+    depth_texture_raw: Option<wgpu::Texture>,
     pub pipeline_3d: wgpu::RenderPipeline,
     pub uniform_buffer_3d: wgpu::Buffer,
     pub uniform_bind_group_3d: wgpu::BindGroup,
     pub model_uniform_buffer: wgpu::Buffer,
     pub model_bind_group: wgpu::BindGroup,
     chunk_hashes: std::collections::HashMap<u32, u64>,
-    
+
     // PBR 3D Rendering
     pub pbr_renderer: Option<crate::render::pbr_renderer::PbrRenderer>,
-    
+
     // 3D Instance Buffer for PBR instanced rendering
     pub instance_buffer_3d: wgpu::Buffer,
-    
+
     // 脏标记追踪器（增量更新优化）
     dirty_tracker: InstanceDirtyTracker,
+
+    // GPU剔除管理器（复用缓冲区，避免每帧分配）
+    // GPU驱动剔除现在是默认策略，提供高性能的视锥剔除
+    gpu_culling_manager: Option<crate::render::gpu_driven::GpuCullingManager>,
+    // GPU驱动渲染器（用于遮挡剔除等高级功能）
+    gpu_driven_renderer: Option<crate::render::gpu_driven::GpuDrivenRenderer>,
+    // 遮挡查询映射（双缓冲，用于延迟应用结果）
+    occlusion_mapping_buffer: [Option<Vec<(crate::render::instance_batch::BatchKey, u32)>>; 2],
+    occlusion_mapping_index: usize,
+    // 完全GPU端剔除标志（如果为true，使用间接绘制命令，避免CPU读取）
+    use_full_gpu_culling: bool,
 }
 
 pub struct DrawGroup {
@@ -401,7 +418,7 @@ pub struct DrawGroup {
     pub end: u32,
     pub tex_idx: usize,
     pub layer: f32,
-    pub scissor: Option<[u32;4]>,
+    pub scissor: Option<[u32; 4]>,
 }
 
 /// 双缓冲实例管理器 - 使用ping-pong缓冲实现无等待GPU上传
@@ -422,7 +439,7 @@ impl DoubleBufferedInstances {
     /// 创建双缓冲实例管理器
     pub fn new(device: &wgpu::Device, initial_capacity: u32) -> Self {
         let buffer_size = (initial_capacity as usize * std::mem::size_of::<Instance>()) as u64;
-        
+
         let buffers = [
             device.create_buffer(&wgpu::BufferDescriptor {
                 label: Some("Instance Buffer 0"),
@@ -437,14 +454,14 @@ impl DoubleBufferedInstances {
                 mapped_at_creation: false,
             }),
         ];
-        
+
         let staging_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("Instance Staging Buffer"),
             size: buffer_size,
             usage: wgpu::BufferUsages::MAP_WRITE | wgpu::BufferUsages::COPY_SRC,
             mapped_at_creation: false,
         });
-        
+
         Self {
             buffers,
             active_idx: 0,
@@ -453,22 +470,22 @@ impl DoubleBufferedInstances {
             staging_buffer,
         }
     }
-    
+
     /// 获取当前活动缓冲区 (用于渲染)
     pub fn active_buffer(&self) -> &wgpu::Buffer {
         &self.buffers[self.active_idx]
     }
-    
+
     /// 获取后台缓冲区 (用于写入)
     pub fn back_buffer(&self) -> &wgpu::Buffer {
         &self.buffers[1 - self.active_idx]
     }
-    
+
     /// 交换前后缓冲区
     pub fn swap(&mut self) {
         self.active_idx = 1 - self.active_idx;
     }
-    
+
     /// 同步更新实例数据到后台缓冲区并交换
     pub fn update_sync(&mut self, queue: &wgpu::Queue, instances: &[Instance]) {
         self.count = instances.len() as u32;
@@ -477,11 +494,11 @@ impl DoubleBufferedInstances {
         }
         self.swap();
     }
-    
+
     /// 异步更新实例数据 (使用staging buffer + copy命令)
     /// 返回需要提交的命令缓冲区
     pub fn update_with_staging(
-        &mut self, 
+        &mut self,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         instances: &[Instance],
@@ -490,45 +507,39 @@ impl DoubleBufferedInstances {
             self.count = 0;
             return None;
         }
-        
+
         self.count = instances.len() as u32;
         let byte_size = (instances.len() * std::mem::size_of::<Instance>()) as u64;
-        
+
         // 写入staging buffer
         queue.write_buffer(&self.staging_buffer, 0, bytemuck::cast_slice(instances));
-        
+
         // 创建拷贝命令从staging到后台buffer
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("Instance Copy Encoder"),
         });
-        
-        encoder.copy_buffer_to_buffer(
-            &self.staging_buffer,
-            0,
-            self.back_buffer(),
-            0,
-            byte_size,
-        );
-        
+
+        encoder.copy_buffer_to_buffer(&self.staging_buffer, 0, self.back_buffer(), 0, byte_size);
+
         self.swap();
         Some(encoder.finish())
     }
-    
+
     /// 获取当前实例数
     pub fn count(&self) -> u32 {
         self.count
     }
-    
+
     /// 扩展缓冲区容量 (如果需要)
     pub fn ensure_capacity(&mut self, device: &wgpu::Device, required: u32) {
         if required <= self.capacity {
             return;
         }
-        
+
         // 扩展到所需容量的1.5倍
         let new_capacity = (required as f32 * 1.5) as u32;
         let buffer_size = (new_capacity as usize * std::mem::size_of::<Instance>()) as u64;
-        
+
         self.buffers = [
             device.create_buffer(&wgpu::BufferDescriptor {
                 label: Some("Instance Buffer 0"),
@@ -543,14 +554,14 @@ impl DoubleBufferedInstances {
                 mapped_at_creation: false,
             }),
         ];
-        
+
         self.staging_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("Instance Staging Buffer"),
             size: buffer_size,
             usage: wgpu::BufferUsages::MAP_WRITE | wgpu::BufferUsages::COPY_SRC,
             mapped_at_creation: false,
         });
-        
+
         self.capacity = new_capacity;
         self.active_idx = 0;
     }
@@ -560,7 +571,9 @@ impl<'a> WgpuRenderer<'a> {
     pub async fn new(window: &'a Window) -> Result<Self, RenderError> {
         let size = window.inner_size();
         let instance = wgpu::Instance::default();
-        let surface = instance.create_surface(window)?;
+        let surface = instance
+            .create_surface(window)
+            .map_err(|e| RenderError::SurfaceCreation(format!("{}", e)))?;
         let adapter = instance
             .request_adapter(&wgpu::RequestAdapterOptions {
                 power_preference: wgpu::PowerPreference::HighPerformance,
@@ -571,6 +584,9 @@ impl<'a> WgpuRenderer<'a> {
             .ok_or(RenderError::NoAdapter)?;
         let supported = adapter.features();
         let mut desired = wgpu::Features::empty();
+
+        // GPU驱动剔除现在是默认功能，需要计算着色器支持（所有现代GPU都支持）
+        // 间接绘制相关特性（可选，用于T3.1.2优化）
         #[cfg(feature = "wgpu_perf")]
         {
             desired |= wgpu::Features::TIMESTAMP_QUERY
@@ -595,7 +611,11 @@ impl<'a> WgpuRenderer<'a> {
             .map_err(|e| RenderError::DeviceRequest(format!("Failed to request device: {}", e)))?;
         let caps = surface.get_capabilities(&adapter);
         let format = caps.formats[0];
-        let present_mode = if caps.present_modes.contains(&wgpu::PresentMode::Fifo) { wgpu::PresentMode::Fifo } else { caps.present_modes[0] };
+        let present_mode = if caps.present_modes.contains(&wgpu::PresentMode::Fifo) {
+            wgpu::PresentMode::Fifo
+        } else {
+            caps.present_modes[0]
+        };
         let alpha_mode = caps.alpha_modes[0];
         let config = wgpu::SurfaceConfiguration {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
@@ -768,7 +788,10 @@ struct UiOut {
     return vec4<f32>(out_color.rgb, out_color.a * inside);
 }
 "#;
-        let ui_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor { label: None, source: wgpu::ShaderSource::Wgsl(ui_wgsl.into()) });
+        let ui_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: None,
+            source: wgpu::ShaderSource::Wgsl(ui_wgsl.into()),
+        });
         let uniform_bgl = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: None,
             entries: &[wgpu::BindGroupLayoutEntry {
@@ -777,7 +800,9 @@ struct UiOut {
                 ty: wgpu::BindingType::Buffer {
                     ty: wgpu::BufferBindingType::Uniform,
                     has_dynamic_offset: false,
-                    min_binding_size: std::num::NonZeroU64::new(std::mem::size_of::<ScreenUniform>() as wgpu::BufferAddress as u64),
+                    min_binding_size: std::num::NonZeroU64::new(
+                        std::mem::size_of::<ScreenUniform>() as wgpu::BufferAddress as u64,
+                    ),
                 },
                 count: None,
             }],
@@ -848,31 +873,81 @@ struct UiOut {
                     wgpu::VertexBufferLayout {
                         array_stride: std::mem::size_of::<Vertex>() as u64,
                         step_mode: wgpu::VertexStepMode::Vertex,
-                        attributes: &[
-                            wgpu::VertexAttribute {
-                                offset: 0,
-                                shader_location: 0,
-                                format: wgpu::VertexFormat::Float32x2,
-                            },
-                        ],
+                        attributes: &[wgpu::VertexAttribute {
+                            offset: 0,
+                            shader_location: 0,
+                            format: wgpu::VertexFormat::Float32x2,
+                        }],
                     },
                     wgpu::VertexBufferLayout {
                         array_stride: std::mem::size_of::<Instance>() as u64,
                         step_mode: wgpu::VertexStepMode::Instance,
                         attributes: &[
-                            wgpu::VertexAttribute { offset: 0, shader_location: 1, format: wgpu::VertexFormat::Float32x2 },
-                            wgpu::VertexAttribute { offset: 8, shader_location: 2, format: wgpu::VertexFormat::Float32x2 },
-                            wgpu::VertexAttribute { offset: 16, shader_location: 3, format: wgpu::VertexFormat::Float32 },
-                            wgpu::VertexAttribute { offset: 20, shader_location: 4, format: wgpu::VertexFormat::Uint32 },
-                            wgpu::VertexAttribute { offset: 28, shader_location: 5, format: wgpu::VertexFormat::Float32x4 },
-                            wgpu::VertexAttribute { offset: 44, shader_location: 6, format: wgpu::VertexFormat::Float32x2 },
-                            wgpu::VertexAttribute { offset: 52, shader_location: 7, format: wgpu::VertexFormat::Float32x2 },
-                            wgpu::VertexAttribute { offset: 60, shader_location: 8, format: wgpu::VertexFormat::Float32 },
-                            wgpu::VertexAttribute { offset: 64, shader_location: 9, format: wgpu::VertexFormat::Uint32 },
-                            wgpu::VertexAttribute { offset: 68, shader_location: 10, format: wgpu::VertexFormat::Uint32 },
-                            wgpu::VertexAttribute { offset: 72, shader_location: 11, format: wgpu::VertexFormat::Float32 },
-                            wgpu::VertexAttribute { offset: 76, shader_location: 12, format: wgpu::VertexFormat::Float32 },
-                            wgpu::VertexAttribute { offset: 24, shader_location: 13, format: wgpu::VertexFormat::Uint32 },
+                            wgpu::VertexAttribute {
+                                offset: 0,
+                                shader_location: 1,
+                                format: wgpu::VertexFormat::Float32x2,
+                            },
+                            wgpu::VertexAttribute {
+                                offset: 8,
+                                shader_location: 2,
+                                format: wgpu::VertexFormat::Float32x2,
+                            },
+                            wgpu::VertexAttribute {
+                                offset: 16,
+                                shader_location: 3,
+                                format: wgpu::VertexFormat::Float32,
+                            },
+                            wgpu::VertexAttribute {
+                                offset: 20,
+                                shader_location: 4,
+                                format: wgpu::VertexFormat::Uint32,
+                            },
+                            wgpu::VertexAttribute {
+                                offset: 28,
+                                shader_location: 5,
+                                format: wgpu::VertexFormat::Float32x4,
+                            },
+                            wgpu::VertexAttribute {
+                                offset: 44,
+                                shader_location: 6,
+                                format: wgpu::VertexFormat::Float32x2,
+                            },
+                            wgpu::VertexAttribute {
+                                offset: 52,
+                                shader_location: 7,
+                                format: wgpu::VertexFormat::Float32x2,
+                            },
+                            wgpu::VertexAttribute {
+                                offset: 60,
+                                shader_location: 8,
+                                format: wgpu::VertexFormat::Float32,
+                            },
+                            wgpu::VertexAttribute {
+                                offset: 64,
+                                shader_location: 9,
+                                format: wgpu::VertexFormat::Uint32,
+                            },
+                            wgpu::VertexAttribute {
+                                offset: 68,
+                                shader_location: 10,
+                                format: wgpu::VertexFormat::Uint32,
+                            },
+                            wgpu::VertexAttribute {
+                                offset: 72,
+                                shader_location: 11,
+                                format: wgpu::VertexFormat::Float32,
+                            },
+                            wgpu::VertexAttribute {
+                                offset: 76,
+                                shader_location: 12,
+                                format: wgpu::VertexFormat::Float32,
+                            },
+                            wgpu::VertexAttribute {
+                                offset: 24,
+                                shader_location: 13,
+                                format: wgpu::VertexFormat::Uint32,
+                            },
                         ],
                     },
                 ],
@@ -903,25 +978,66 @@ struct UiOut {
                     wgpu::VertexBufferLayout {
                         array_stride: std::mem::size_of::<Vertex>() as u64,
                         step_mode: wgpu::VertexStepMode::Vertex,
-                        attributes: &[wgpu::VertexAttribute { offset: 0, shader_location: 0, format: wgpu::VertexFormat::Float32x2 }],
+                        attributes: &[wgpu::VertexAttribute {
+                            offset: 0,
+                            shader_location: 0,
+                            format: wgpu::VertexFormat::Float32x2,
+                        }],
                     },
                     wgpu::VertexBufferLayout {
                         array_stride: std::mem::size_of::<UiInstance>() as u64,
                         step_mode: wgpu::VertexStepMode::Instance,
                         attributes: &[
-                            wgpu::VertexAttribute { offset: 0, shader_location: 1, format: wgpu::VertexFormat::Float32x2 },
-                            wgpu::VertexAttribute { offset: 8, shader_location: 2, format: wgpu::VertexFormat::Float32x2 },
-                            wgpu::VertexAttribute { offset: 16, shader_location: 3, format: wgpu::VertexFormat::Float32 },
-                            wgpu::VertexAttribute { offset: 20, shader_location: 4, format: wgpu::VertexFormat::Float32 },
-                            wgpu::VertexAttribute { offset: 24, shader_location: 5, format: wgpu::VertexFormat::Float32x4 },
-                            wgpu::VertexAttribute { offset: 40, shader_location: 6, format: wgpu::VertexFormat::Float32x4 },
-                            wgpu::VertexAttribute { offset: 56, shader_location: 7, format: wgpu::VertexFormat::Float32 },
+                            wgpu::VertexAttribute {
+                                offset: 0,
+                                shader_location: 1,
+                                format: wgpu::VertexFormat::Float32x2,
+                            },
+                            wgpu::VertexAttribute {
+                                offset: 8,
+                                shader_location: 2,
+                                format: wgpu::VertexFormat::Float32x2,
+                            },
+                            wgpu::VertexAttribute {
+                                offset: 16,
+                                shader_location: 3,
+                                format: wgpu::VertexFormat::Float32,
+                            },
+                            wgpu::VertexAttribute {
+                                offset: 20,
+                                shader_location: 4,
+                                format: wgpu::VertexFormat::Float32,
+                            },
+                            wgpu::VertexAttribute {
+                                offset: 24,
+                                shader_location: 5,
+                                format: wgpu::VertexFormat::Float32x4,
+                            },
+                            wgpu::VertexAttribute {
+                                offset: 40,
+                                shader_location: 6,
+                                format: wgpu::VertexFormat::Float32x4,
+                            },
+                            wgpu::VertexAttribute {
+                                offset: 56,
+                                shader_location: 7,
+                                format: wgpu::VertexFormat::Float32,
+                            },
                         ],
                     },
                 ],
                 compilation_options: wgpu::PipelineCompilationOptions::default(),
             },
-            fragment: Some(wgpu::FragmentState { module: &ui_shader, entry_point: "ui_fs", targets: &[Some(wgpu::ColorTargetState { format, blend: Some(wgpu::BlendState::ALPHA_BLENDING), write_mask: wgpu::ColorWrites::ALL })], compilation_options: wgpu::PipelineCompilationOptions::default() }),
+            fragment: Some(wgpu::FragmentState {
+                module: &ui_shader,
+                entry_point: "ui_fs",
+                targets: &[Some(wgpu::ColorTargetState {
+                    format,
+                    blend: Some(wgpu::BlendState::ALPHA_BLENDING),
+                    write_mask: wgpu::ColorWrites::ALL,
+                })],
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+            }),
             primitive: wgpu::PrimitiveState::default(),
             depth_stencil: None,
             multisample: wgpu::MultisampleState::default(),
@@ -930,11 +1046,11 @@ struct UiOut {
 
         let quad: [Vertex; 6] = [
             Vertex { pos: [-0.5, -0.5] },
-            Vertex { pos: [ 0.5, -0.5] },
-            Vertex { pos: [ 0.5,  0.5] },
+            Vertex { pos: [0.5, -0.5] },
+            Vertex { pos: [0.5, 0.5] },
             Vertex { pos: [-0.5, -0.5] },
-            Vertex { pos: [ 0.5,  0.5] },
-            Vertex { pos: [-0.5,  0.5] },
+            Vertex { pos: [0.5, 0.5] },
+            Vertex { pos: [-0.5, 0.5] },
         ];
         let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: None,
@@ -953,18 +1069,34 @@ struct UiOut {
             usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
-        let ui_instance_buffer = device.create_buffer(&wgpu::BufferDescriptor { label: None, size: 1024 * std::mem::size_of::<UiInstance>() as wgpu::BufferAddress, usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST, mapped_at_creation: false });
+        let ui_instance_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: None,
+            size: 1024 * std::mem::size_of::<UiInstance>() as wgpu::BufferAddress,
+            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
 
         // screen uniform
         let uniform_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: None,
-            contents: bytemuck::bytes_of(&ScreenUniform { screen_size: [size.width as f32, size.height as f32], scale_factor: 1.0, _pad: 0.0 }),
+            contents: bytemuck::bytes_of(&ScreenUniform {
+                screen_size: [size.width as f32, size.height as f32],
+                scale_factor: 1.0,
+                _pad: 0.0,
+            }),
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         });
         let uniform_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: None,
             layout: &uniform_bgl,
-            entries: &[wgpu::BindGroupEntry { binding: 0, resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding { buffer: &uniform_buffer, offset: 0, size: None }) }],
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                    buffer: &uniform_buffer,
+                    offset: 0,
+                    size: None,
+                }),
+            }],
         });
 
         // checkerboard texture
@@ -973,7 +1105,11 @@ struct UiOut {
         for y in 0..tex_size {
             for x in 0..tex_size {
                 let idx = ((y * tex_size + x) * 4) as usize;
-                let c = if ((x / 32) % 2) ^ ((y / 32) % 2) == 0 { 220 } else { 60 };
+                let c = if ((x / 32) % 2) ^ ((y / 32) % 2) == 0 {
+                    220
+                } else {
+                    60
+                };
                 data[idx] = c; // r
                 data[idx + 1] = c; // g
                 data[idx + 2] = c; // b
@@ -982,7 +1118,11 @@ struct UiOut {
         }
         let texture = device.create_texture(&wgpu::TextureDescriptor {
             label: None,
-            size: wgpu::Extent3d { width: tex_size, height: tex_size, depth_or_array_layers: 1 },
+            size: wgpu::Extent3d {
+                width: tex_size,
+                height: tex_size,
+                depth_or_array_layers: 1,
+            },
             mip_level_count: 1,
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
@@ -991,10 +1131,23 @@ struct UiOut {
             view_formats: &[],
         });
         queue.write_texture(
-            wgpu::ImageCopyTexture { texture: &texture, mip_level: 0, origin: wgpu::Origin3d::ZERO, aspect: wgpu::TextureAspect::All },
+            wgpu::ImageCopyTexture {
+                texture: &texture,
+                mip_level: 0,
+                origin: wgpu::Origin3d::ZERO,
+                aspect: wgpu::TextureAspect::All,
+            },
             &data,
-            wgpu::ImageDataLayout { offset: 0, bytes_per_row: Some(4 * tex_size), rows_per_image: Some(tex_size) },
-            wgpu::Extent3d { width: tex_size, height: tex_size, depth_or_array_layers: 1 },
+            wgpu::ImageDataLayout {
+                offset: 0,
+                bytes_per_row: Some(4 * tex_size),
+                rows_per_image: Some(tex_size),
+            },
+            wgpu::Extent3d {
+                width: tex_size,
+                height: tex_size,
+                depth_or_array_layers: 1,
+            },
         );
         let texture_view = texture.create_view(&wgpu::TextureViewDescriptor::default());
         let sampler = device.create_sampler(&wgpu::SamplerDescriptor::default());
@@ -1002,13 +1155,19 @@ struct UiOut {
             label: None,
             layout: &texture_bgl,
             entries: &[
-                wgpu::BindGroupEntry { binding: 0, resource: wgpu::BindingResource::TextureView(&texture_view) },
-                wgpu::BindGroupEntry { binding: 1, resource: wgpu::BindingResource::Sampler(&sampler) },
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::TextureView(&texture_view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::Sampler(&sampler),
+                },
             ],
         });
 
         // --- 3D Setup ---
-        let depth_texture = device.create_texture(&wgpu::TextureDescriptor {
+        let depth_texture_raw = device.create_texture(&wgpu::TextureDescriptor {
             label: Some("Depth Texture"),
             size: wgpu::Extent3d {
                 width: config.width,
@@ -1022,11 +1181,12 @@ struct UiOut {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
             view_formats: &[],
         });
-        let depth_view = depth_texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let depth_view = depth_texture_raw.create_view(&wgpu::TextureViewDescriptor::default());
 
         let shader_3d = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("3D Shader"),
-            source: wgpu::ShaderSource::Wgsl(std::borrow::Cow::Borrowed(r#"
+            source: wgpu::ShaderSource::Wgsl(std::borrow::Cow::Borrowed(
+                r#"
 struct Uniforms {
     view_proj: mat4x4<f32>,
 };
@@ -1066,28 +1226,32 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let color = vec3<f32>(1.0, 1.0, 1.0) * (diffuse + 0.1);
     return vec4<f32>(color, 1.0);
 }
-"#)),
+"#,
+            )),
         });
 
         let uniform_buffer_3d = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("3D Uniform Buffer"),
-            contents: bytemuck::cast_slice(&[Uniforms3D { view_proj: [[0.0; 4]; 4] }]),
+            contents: bytemuck::cast_slice(&[Uniforms3D {
+                view_proj: [[0.0; 4]; 4],
+            }]),
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         });
 
-        let uniform_bind_group_layout_3d = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            entries: &[wgpu::BindGroupLayoutEntry {
-                binding: 0,
-                visibility: wgpu::ShaderStages::VERTEX,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Uniform,
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                },
-                count: None,
-            }],
-            label: Some("3D Uniform Bind Group Layout"),
-        });
+        let uniform_bind_group_layout_3d =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                entries: &[wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::VERTEX,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                }],
+                label: Some("3D Uniform Bind Group Layout"),
+            });
 
         let uniform_bind_group_3d = device.create_bind_group(&wgpu::BindGroupDescriptor {
             layout: &uniform_bind_group_layout_3d,
@@ -1105,19 +1269,20 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
             mapped_at_creation: false,
         });
 
-        let model_bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            entries: &[wgpu::BindGroupLayoutEntry {
-                binding: 0,
-                visibility: wgpu::ShaderStages::VERTEX,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Uniform,
-                    has_dynamic_offset: true,
-                    min_binding_size: wgpu::BufferSize::new(256),
-                },
-                count: None,
-            }],
-            label: Some("Model Bind Group Layout"),
-        });
+        let model_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                entries: &[wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::VERTEX,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: true,
+                        min_binding_size: wgpu::BufferSize::new(256),
+                    },
+                    count: None,
+                }],
+                label: Some("Model Bind Group Layout"),
+            });
 
         let model_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             layout: &model_bind_group_layout,
@@ -1179,7 +1344,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
 
         // Initialize PBR Renderer
         let pbr_renderer = crate::render::pbr_renderer::PbrRenderer::new(&device, format);
-        
+
         // Initialize 3D Instance Buffer for PBR instanced rendering
         let instance_buffer_3d = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("3D Instance Buffer"),
@@ -1187,9 +1352,35 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
             usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
-        
+
         // 初始化脏标记追踪器
         let dirty_tracker = InstanceDirtyTracker::with_capacity(1024);
+
+        // 创建GPU剔除管理器（在移动device之前）
+        use crate::render::gpu_driven::{GpuCullingManager, GpuDrivenRenderer, GpuDrivenConfig};
+        let gpu_culling_manager = Some(GpuCullingManager::new(&device, 65536, 64));
+
+        // 创建GPU驱动渲染器（用于遮挡剔除）
+        // 默认启用遮挡剔除（可选，可以通过配置控制）
+        let gpu_driven_config = GpuDrivenConfig {
+            frustum_culling: true,
+            occlusion_culling: true, // 启用遮挡剔除
+            lod_enabled: false,
+            max_instances: 65536,
+            workgroup_size: 64,
+        };
+        let mut gpu_driven_renderer = Some(GpuDrivenRenderer::new(&device, gpu_driven_config));
+        
+        // 初始化遮挡剔除（如果启用）
+        if let Some(ref mut gpu_driven) = gpu_driven_renderer {
+            if let Err(e) = gpu_driven.initialize_occlusion_culling(&device) {
+                tracing::warn!(target: "render", "Failed to initialize occlusion culling: {}", e);
+                // 如果初始化失败，禁用遮挡剔除
+                gpu_driven_renderer = None;
+            } else {
+                tracing::info!(target: "render", "Occlusion culling initialized");
+            }
+        }
 
         Ok(Self {
             surface,
@@ -1223,6 +1414,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
             lights_bind_group,
             lights: Vec::new(),
             depth_texture: depth_view,
+            depth_texture_raw: Some(depth_texture_raw),
             pipeline_3d,
             uniform_buffer_3d,
             uniform_bind_group_3d,
@@ -1232,13 +1424,22 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
             pbr_renderer: Some(pbr_renderer),
             instance_buffer_3d,
             dirty_tracker,
+            gpu_culling_manager,
+            gpu_driven_renderer,
+            occlusion_mapping_buffer: [None, None],
+            occlusion_mapping_index: 0,
+            use_full_gpu_culling: false,  // 默认使用传统路径，可以逐步迁移
         })
     }
 
     pub fn create_offscreen_target(&mut self, id: u32, width: u32, height: u32) {
         let texture = self.device.create_texture(&wgpu::TextureDescriptor {
             label: Some(&format!("Offscreen Target {}", id)),
-            size: wgpu::Extent3d { width, height, depth_or_array_layers: 1 },
+            size: wgpu::Extent3d {
+                width,
+                height,
+                depth_or_array_layers: 1,
+            },
             mip_level_count: 1,
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
@@ -1269,7 +1470,8 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                 sample_count: 1,
                 dimension: wgpu::TextureDimension::D2,
                 format: wgpu::TextureFormat::Depth32Float,
-                usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+                usage: wgpu::TextureUsages::RENDER_ATTACHMENT
+                    | wgpu::TextureUsages::TEXTURE_BINDING,
                 view_formats: &[],
             });
             self.depth_texture = depth_texture.create_view(&wgpu::TextureViewDescriptor::default());
@@ -1277,25 +1479,35 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     }
 
     pub fn render(
-        &mut self, 
-        instances: &[Instance], 
-        meshes: &[(crate::render::mesh::GpuMesh, crate::ecs::Transform)], 
+        &mut self,
+        instances: &[Instance],
+        meshes: &[(crate::render::mesh::GpuMesh, crate::ecs::Transform)],
         camera_view_proj: [[f32; 4]; 4],
-        mut egui_renderer: Option<&mut egui_wgpu::Renderer>, 
-        egui_shapes: &[egui::ClippedPrimitive], 
-        egui_pixels_per_point: f32
+        mut egui_renderer: Option<&mut egui_wgpu::Renderer>,
+        egui_shapes: &[egui::ClippedPrimitive],
+        egui_pixels_per_point: f32,
     ) {
         self.update_instances_grouped(&mut instances.to_vec());
 
         // Update 3D uniforms
-        self.queue.write_buffer(&self.uniform_buffer_3d, 0, bytemuck::cast_slice(&[Uniforms3D { view_proj: camera_view_proj }]));
-        
+        self.queue.write_buffer(
+            &self.uniform_buffer_3d,
+            0,
+            bytemuck::cast_slice(&[Uniforms3D {
+                view_proj: camera_view_proj,
+            }]),
+        );
+
         // Update Model Uniforms
         // Note: This is a simple implementation. For production, use a staging buffer or write_buffer_with.
         // Also, we assume meshes.len() < 1000.
         let mut model_data = Vec::with_capacity(meshes.len());
         for (_, transform) in meshes {
-            let mat = glam::Mat4::from_scale_rotation_translation(transform.scale, transform.rot, transform.pos);
+            let mat = glam::Mat4::from_scale_rotation_translation(
+                transform.scale,
+                transform.rot,
+                transform.pos,
+            );
             model_data.push(ModelUniform {
                 model: mat.to_cols_array_2d(),
                 color: [1.0, 1.0, 1.0, 1.0], // Placeholder color
@@ -1304,9 +1516,13 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
             });
         }
         if !model_data.is_empty() {
-             self.queue.write_buffer(&self.model_uniform_buffer, 0, bytemuck::cast_slice(&model_data));
+            self.queue.write_buffer(
+                &self.model_uniform_buffer,
+                0,
+                bytemuck::cast_slice(&model_data),
+            );
         }
-        
+
         let frame = match self.surface.get_current_texture() {
             Ok(frame) => frame,
             Err(_) => {
@@ -1314,34 +1530,53 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                 self.surface.get_current_texture().unwrap()
             }
         };
-        let view = frame.texture.create_view(&wgpu::TextureViewDescriptor::default());
-        let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
-        
+        let view = frame
+            .texture
+            .create_view(&wgpu::TextureViewDescriptor::default());
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
+
         if let Some(renderer) = egui_renderer.as_mut() {
-             let screen_desc = egui_wgpu::ScreenDescriptor {
+            let screen_desc = egui_wgpu::ScreenDescriptor {
                 size_in_pixels: [self.config.width, self.config.height],
                 pixels_per_point: egui_pixels_per_point,
             };
-            renderer.update_buffers(&self.device, &self.queue, &mut encoder, egui_shapes, &screen_desc);
+            renderer.update_buffers(
+                &self.device,
+                &self.queue,
+                &mut encoder,
+                egui_shapes,
+                &screen_desc,
+            );
         }
 
         let graph = crate::render::graph::build_commands(instances);
         self.commands = graph.commands.clone();
         let mut cleared_targets = std::collections::HashSet::new();
         let mut i = 0;
-        
+
         while i < graph.commands.len() {
             if let crate::render::graph::RenderCommand::SetTarget(t) = &graph.commands[i] {
                 let (target_view, target_id) = match t {
-                    crate::render::graph::Target::Main | crate::render::graph::Target::Ui => (&view, 0),
-                    crate::render::graph::Target::Offscreen(id) => (self.offscreen_views.get(id).unwrap_or(&view), *id + 1),
+                    crate::render::graph::Target::Main | crate::render::graph::Target::Ui => {
+                        (&view, 0)
+                    }
+                    crate::render::graph::Target::Offscreen(id) => {
+                        (self.offscreen_views.get(id).unwrap_or(&view), *id + 1)
+                    }
                 };
-                
+
                 let load_op = if cleared_targets.contains(&target_id) {
                     wgpu::LoadOp::Load
                 } else {
                     cleared_targets.insert(target_id);
-                    wgpu::LoadOp::Clear(wgpu::Color { r: 0.02, g: 0.04, b: 0.06, a: 1.0 })
+                    wgpu::LoadOp::Clear(wgpu::Color {
+                        r: 0.02,
+                        g: 0.04,
+                        b: 0.06,
+                        a: 1.0,
+                    })
                 };
 
                 {
@@ -1350,13 +1585,21 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                         color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                             view: target_view,
                             resolve_target: None,
-                            ops: wgpu::Operations { load: load_op, store: wgpu::StoreOp::Store },
+                            ops: wgpu::Operations {
+                                load: load_op,
+                                store: wgpu::StoreOp::Store,
+                            },
                         })],
-                        depth_stencil_attachment: if target_id == 0 { // Main target only
+                        depth_stencil_attachment: if target_id == 0 {
+                            // Main target only
                             Some(wgpu::RenderPassDepthStencilAttachment {
                                 view: &self.depth_texture,
                                 depth_ops: Some(wgpu::Operations {
-                                    load: if load_op == wgpu::LoadOp::Load { wgpu::LoadOp::Load } else { wgpu::LoadOp::Clear(1.0) },
+                                    load: if load_op == wgpu::LoadOp::Load {
+                                        wgpu::LoadOp::Load
+                                    } else {
+                                        wgpu::LoadOp::Clear(1.0)
+                                    },
                                     store: wgpu::StoreOp::Store,
                                 }),
                                 stencil_ops: None,
@@ -1377,19 +1620,27 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                                 let offset = (i * 256) as u32;
                                 rpass.set_bind_group(1, &self.model_bind_group, &[offset]);
                                 rpass.set_vertex_buffer(0, mesh.vertex_buffer.slice(..));
-                                rpass.set_index_buffer(mesh.index_buffer.slice(..), wgpu::IndexFormat::Uint32);
+                                rpass.set_index_buffer(
+                                    mesh.index_buffer.slice(..),
+                                    wgpu::IndexFormat::Uint32,
+                                );
                                 rpass.draw_indexed(0..mesh.index_count, 0, 0..1);
                             }
                         }
                     }
 
                     rpass.set_bind_group(0, &self.uniform_bind_group, &[]);
-                    
+
                     i += 1;
                     while i < graph.commands.len() {
                         match &graph.commands[i] {
                             crate::render::graph::RenderCommand::SetTarget(_) => break,
-                            crate::render::graph::RenderCommand::Draw { start, end, tex_idx, scissor } => {
+                            crate::render::graph::RenderCommand::Draw {
+                                start,
+                                end,
+                                tex_idx,
+                                scissor,
+                            } => {
                                 rpass.set_pipeline(&self.pipeline);
                                 rpass.set_bind_group(1, &self.texture_bind_groups[*tex_idx], &[]);
                                 rpass.set_bind_group(2, &self.lights_bind_group, &[]);
@@ -1397,25 +1648,42 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                                 rpass.set_vertex_buffer(1, self.instance_buffer.slice(..));
                                 let mut use_scissor = scissor.clone();
                                 if use_scissor.is_none() && target_id == 0 {
-                                    use_scissor = compute_scissor(instances, *start, *end, self.config.width, self.config.height);
+                                    use_scissor = compute_scissor(
+                                        instances,
+                                        *start,
+                                        *end,
+                                        self.config.width,
+                                        self.config.height,
+                                    );
                                 }
-                                if let Some([x,y,w,h]) = use_scissor { rpass.set_scissor_rect(x, y, w, h); }
-                                if end > start { rpass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16); rpass.draw_indexed(0..self.vertex_count, 0, *start..*end); }
+                                if let Some([x, y, w, h]) = use_scissor {
+                                    rpass.set_scissor_rect(x, y, w, h);
+                                }
+                                if end > start {
+                                    rpass.set_index_buffer(
+                                        self.index_buffer.slice(..),
+                                        wgpu::IndexFormat::Uint16,
+                                    );
+                                    rpass.draw_indexed(0..self.vertex_count, 0, *start..*end);
+                                }
                             }
                             crate::render::graph::RenderCommand::DrawUi { count: _ } => {
                                 rpass.set_pipeline(&self.ui_pipeline);
                                 rpass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
                                 rpass.set_vertex_buffer(1, self.ui_instance_buffer.slice(..));
-                                rpass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
+                                rpass.set_index_buffer(
+                                    self.index_buffer.slice(..),
+                                    wgpu::IndexFormat::Uint16,
+                                );
                                 rpass.draw_indexed(0..self.vertex_count, 0, 0..self.ui_count);
                             }
                         }
                         i += 1;
                     }
-                    
+
                     if target_id == 0 {
                         if let Some(renderer) = egui_renderer.as_mut() {
-                             let screen_desc = egui_wgpu::ScreenDescriptor {
+                            let screen_desc = egui_wgpu::ScreenDescriptor {
                                 size_in_pixels: [self.config.width, self.config.height],
                                 pixels_per_point: egui_pixels_per_point,
                             };
@@ -1427,52 +1695,71 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                 i += 1;
             }
         }
-        
+
         self.queue.submit(std::iter::once(encoder.finish()));
         frame.present();
     }
-    
 
     pub fn set_lights(&mut self, lights: Vec<GpuPointLight>) {
         self.update_lights(&lights);
     }
-    pub fn gpu_timings_ms(&self) -> Option<(f32, f32)> { None }
+    pub fn gpu_timings_ms(&self) -> Option<(f32, f32)> {
+        None
+    }
     pub fn draw_stats(&self) -> (u32, u32) {
         let mut draws = 0u32;
         let mut instances = 0u32;
         for cmd in &self.commands {
             if let crate::render::graph::RenderCommand::Draw { start, end, .. } = cmd {
-                if end > start { draws += 1; instances += end - start; }
+                if end > start {
+                    draws += 1;
+                    instances += end - start;
+                }
             }
         }
         (draws, instances)
     }
     pub fn pass_count(&self) -> u32 {
         let mut passes = 0u32;
-        for cmd in &self.commands { if matches!(cmd, crate::render::graph::RenderCommand::SetTarget(_)) { passes += 1; } }
+        for cmd in &self.commands {
+            if matches!(cmd, crate::render::graph::RenderCommand::SetTarget(_)) {
+                passes += 1;
+            }
+        }
         passes.max(1)
     }
-    pub fn stage_timings_ms(&self) -> (Option<f32>, Option<f32>, Option<f32>) { (None, None, None) }
-    pub fn offscreen_timing_ms(&self) -> Option<f32> { None }
+    pub fn stage_timings_ms(&self) -> (Option<f32>, Option<f32>, Option<f32>) {
+        (None, None, None)
+    }
+    pub fn offscreen_timing_ms(&self) -> Option<f32> {
+        None
+    }
 
     pub fn update_instances(&mut self, instances: &[Instance]) {
         self.instance_count = instances.len() as u32;
         self.layer_ranges.clear();
         self.layer_ranges.push((0, self.instance_count));
         self.draw_groups.clear();
-        self.draw_groups.push(DrawGroup { start: 0, end: self.instance_count, tex_idx: 0, layer: 0.0, scissor: None });
-        self.queue.write_buffer(&self.instance_buffer, 0, bytemuck::cast_slice(instances));
+        self.draw_groups.push(DrawGroup {
+            start: 0,
+            end: self.instance_count,
+            tex_idx: 0,
+            layer: 0.0,
+            scissor: None,
+        });
+        self.queue
+            .write_buffer(&self.instance_buffer, 0, bytemuck::cast_slice(instances));
         self.group_cache.clear();
         self.groups_dirty = false;
     }
-    
+
     /// 使用脏标记系统增量更新实例数据
-    /// 
+    ///
     /// 仅上传变化的实例，减少 CPU-GPU 数据传输，提升性能 20-40%。
-    /// 
+    ///
     /// # 参数
     /// - `instances`: 当前帧的所有实例数据
-    /// 
+    ///
     /// # 返回
     /// 返回更新的脏范围数量
     pub fn update_instances_incremental(&mut self, instances: &[Instance]) -> usize {
@@ -1480,54 +1767,67 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         self.layer_ranges.clear();
         self.layer_ranges.push((0, self.instance_count));
         self.draw_groups.clear();
-        self.draw_groups.push(DrawGroup { start: 0, end: self.instance_count, tex_idx: 0, layer: 0.0, scissor: None });
-        
+        self.draw_groups.push(DrawGroup {
+            start: 0,
+            end: self.instance_count,
+            tex_idx: 0,
+            layer: 0.0,
+            scissor: None,
+        });
+
         // 检测变化并获取脏范围
         let dirty_ranges = self.dirty_tracker.update(instances);
         let range_count = dirty_ranges.len();
-        
+
         // 仅上传脏范围内的数据
         let elem_size = std::mem::size_of::<Instance>() as u64;
         for &(start, end) in dirty_ranges {
             if end > start {
                 let byte_offset = start as u64 * elem_size;
                 let slice = &instances[start as usize..end as usize];
-                self.queue.write_buffer(&self.instance_buffer, byte_offset, bytemuck::cast_slice(slice));
+                self.queue.write_buffer(
+                    &self.instance_buffer,
+                    byte_offset,
+                    bytemuck::cast_slice(slice),
+                );
             }
         }
-        
+
         self.group_cache.clear();
         self.groups_dirty = false;
-        
+
         range_count
     }
-    
+
     /// 标记特定实例为脏（将在下次 update_instances_incremental 时更新）
     #[inline]
     pub fn mark_instance_dirty(&mut self, index: usize) {
         self.dirty_tracker.mark_instance_dirty(index);
     }
-    
+
     /// 标记实例范围为脏
     pub fn mark_instance_range_dirty(&mut self, start: usize, end: usize) {
         self.dirty_tracker.mark_range_dirty(start, end);
     }
-    
+
     /// 标记所有实例为脏（强制完整更新）
     pub fn mark_all_instances_dirty(&mut self) {
         self.dirty_tracker.mark_all_dirty();
     }
-    
+
     /// 获取增量更新统计信息
     pub fn dirty_update_stats(&self) -> (usize, usize) {
-        (self.dirty_tracker.dirty_range_count(), self.dirty_tracker.dirty_instance_count())
+        (
+            self.dirty_tracker.dirty_range_count(),
+            self.dirty_tracker.dirty_instance_count(),
+        )
     }
-    
+
     /// 创建双缓冲实例管理器
     pub fn create_double_buffered_instances(&self, capacity: u32) -> DoubleBufferedInstances {
         DoubleBufferedInstances::new(&self.device, capacity)
     }
-    
+
     /// 使用双缓冲系统更新实例 (异步方式,减少CPU-GPU同步等待)
     pub fn update_instances_double_buffered(
         &mut self,
@@ -1536,23 +1836,34 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     ) {
         // 确保容量足够
         double_buffer.ensure_capacity(&self.device, instances.len() as u32);
-        
+
         // 使用staging buffer进行异步更新
-        if let Some(cmd_buffer) = double_buffer.update_with_staging(&self.device, &self.queue, instances) {
+        if let Some(cmd_buffer) =
+            double_buffer.update_with_staging(&self.device, &self.queue, instances)
+        {
             self.queue.submit(std::iter::once(cmd_buffer));
         }
-        
+
         self.instance_count = double_buffer.count();
         self.layer_ranges.clear();
         self.layer_ranges.push((0, self.instance_count));
         self.draw_groups.clear();
-        self.draw_groups.push(DrawGroup { start: 0, end: self.instance_count, tex_idx: 0, layer: 0.0, scissor: None });
+        self.draw_groups.push(DrawGroup {
+            start: 0,
+            end: self.instance_count,
+            tex_idx: 0,
+            layer: 0.0,
+            scissor: None,
+        });
         self.group_cache.clear();
         self.groups_dirty = false;
     }
-    
+
     /// 获取双缓冲实例管理器的活动缓冲区 (用于渲染)
-    pub fn get_active_instance_buffer<'b>(&self, double_buffer: &'b DoubleBufferedInstances) -> &'b wgpu::Buffer {
+    pub fn get_active_instance_buffer<'b>(
+        &self,
+        double_buffer: &'b DoubleBufferedInstances,
+    ) -> &'b wgpu::Buffer {
         double_buffer.active_buffer()
     }
 
@@ -1587,7 +1898,8 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                 let cid = instances[s as usize].chunk;
                 let prev = self.chunk_hashes.get(&cid).copied();
                 if prev != Some(h) {
-                    self.queue.write_buffer(&self.instance_buffer, 0, bytemuck::cast_slice(slice));
+                    self.queue
+                        .write_buffer(&self.instance_buffer, 0, bytemuck::cast_slice(slice));
                     self.chunk_hashes.insert(cid, h);
                 }
             }
@@ -1595,28 +1907,42 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
             for &(cid, s, e) in &chunk_runs {
                 let byte_offset = (s as u64) * elem_size;
                 let slice = &instances[s as usize..e as usize];
-                if slice.is_empty() { continue; }
+                if slice.is_empty() {
+                    continue;
+                }
                 let h = hash_instances(slice);
                 let prev = self.chunk_hashes.get(&cid).copied();
                 if prev != Some(h) {
-                    self.queue.write_buffer(&self.instance_buffer, byte_offset, bytemuck::cast_slice(slice));
+                    self.queue.write_buffer(
+                        &self.instance_buffer,
+                        byte_offset,
+                        bytemuck::cast_slice(slice),
+                    );
                     self.chunk_hashes.insert(cid, h);
                 }
             }
         }
     }
 
-    pub fn set_scale_factor(&mut self, scale: f32) { self.scale_factor = scale; }
+    pub fn set_scale_factor(&mut self, scale: f32) {
+        self.scale_factor = scale;
+    }
 
-    pub fn set_scissor(&mut self, rect: Option<[u32;4]>) { self.scissor = rect; }
+    pub fn set_scissor(&mut self, rect: Option<[u32; 4]>) {
+        self.scissor = rect;
+    }
 
-    pub fn set_scissor_for_instances(&mut self, start: u32, end: u32, rect: Option<[u32;4]>) {
+    pub fn set_scissor_for_instances(&mut self, start: u32, end: u32, rect: Option<[u32; 4]>) {
         for g in &mut self.draw_groups {
-            if !(end <= g.start || start >= g.end) { g.scissor = rect; }
+            if !(end <= g.start || start >= g.end) {
+                g.scissor = rect;
+            }
         }
     }
 
-    pub fn mark_groups_dirty(&mut self) { self.groups_dirty = true; }
+    pub fn mark_groups_dirty(&mut self) {
+        self.groups_dirty = true;
+    }
 
     pub fn load_texture_file(&mut self, path: &std::path::Path) -> Option<u32> {
         if let Ok(img) = image::open(path) {
@@ -1624,7 +1950,11 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
             let (w, h) = rgba.dimensions();
             let texture = self.device.create_texture(&wgpu::TextureDescriptor {
                 label: None,
-                size: wgpu::Extent3d { width: w, height: h, depth_or_array_layers: 1 },
+                size: wgpu::Extent3d {
+                    width: w,
+                    height: h,
+                    depth_or_array_layers: 1,
+                },
                 mip_level_count: 1,
                 sample_count: 1,
                 dimension: wgpu::TextureDimension::D2,
@@ -1633,26 +1963,49 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                 view_formats: &[],
             });
             self.queue.write_texture(
-                wgpu::ImageCopyTexture { texture: &texture, mip_level: 0, origin: wgpu::Origin3d::ZERO, aspect: wgpu::TextureAspect::All },
+                wgpu::ImageCopyTexture {
+                    texture: &texture,
+                    mip_level: 0,
+                    origin: wgpu::Origin3d::ZERO,
+                    aspect: wgpu::TextureAspect::All,
+                },
                 rgba.as_raw(),
-                wgpu::ImageDataLayout { offset: 0, bytes_per_row: Some(4 * w), rows_per_image: Some(h) },
-                wgpu::Extent3d { width: w, height: h, depth_or_array_layers: 1 },
+                wgpu::ImageDataLayout {
+                    offset: 0,
+                    bytes_per_row: Some(4 * w),
+                    rows_per_image: Some(h),
+                },
+                wgpu::Extent3d {
+                    width: w,
+                    height: h,
+                    depth_or_array_layers: 1,
+                },
             );
             let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
-            let sampler = self.device.create_sampler(&wgpu::SamplerDescriptor::default());
+            let sampler = self
+                .device
+                .create_sampler(&wgpu::SamplerDescriptor::default());
             let bg = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
                 label: None,
                 layout: &self.texture_bgl,
                 entries: &[
-                    wgpu::BindGroupEntry { binding: 0, resource: wgpu::BindingResource::TextureView(&view) },
-                    wgpu::BindGroupEntry { binding: 1, resource: wgpu::BindingResource::Sampler(&sampler) },
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: wgpu::BindingResource::TextureView(&view),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: wgpu::BindingResource::Sampler(&sampler),
+                    },
                 ],
             });
             let idx = self.texture_bind_groups.len() as u32;
             self.texture_bind_groups.push(bg);
             self.textures_size.push([w, h]);
             Some(idx)
-        } else { None }
+        } else {
+            None
+        }
     }
 
     pub fn load_texture_file_linear(&mut self, path: &std::path::Path) -> Option<u32> {
@@ -1661,7 +2014,11 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
             let (w, h) = rgba.dimensions();
             let texture = self.device.create_texture(&wgpu::TextureDescriptor {
                 label: None,
-                size: wgpu::Extent3d { width: w, height: h, depth_or_array_layers: 1 },
+                size: wgpu::Extent3d {
+                    width: w,
+                    height: h,
+                    depth_or_array_layers: 1,
+                },
                 mip_level_count: 1,
                 sample_count: 1,
                 dimension: wgpu::TextureDimension::D2,
@@ -1670,36 +2027,72 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                 view_formats: &[],
             });
             self.queue.write_texture(
-                wgpu::ImageCopyTexture { texture: &texture, mip_level: 0, origin: wgpu::Origin3d::ZERO, aspect: wgpu::TextureAspect::All },
+                wgpu::ImageCopyTexture {
+                    texture: &texture,
+                    mip_level: 0,
+                    origin: wgpu::Origin3d::ZERO,
+                    aspect: wgpu::TextureAspect::All,
+                },
                 rgba.as_raw(),
-                wgpu::ImageDataLayout { offset: 0, bytes_per_row: Some(4 * w), rows_per_image: Some(h) },
-                wgpu::Extent3d { width: w, height: h, depth_or_array_layers: 1 },
+                wgpu::ImageDataLayout {
+                    offset: 0,
+                    bytes_per_row: Some(4 * w),
+                    rows_per_image: Some(h),
+                },
+                wgpu::Extent3d {
+                    width: w,
+                    height: h,
+                    depth_or_array_layers: 1,
+                },
             );
             let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
-            let sampler = self.device.create_sampler(&wgpu::SamplerDescriptor::default());
+            let sampler = self
+                .device
+                .create_sampler(&wgpu::SamplerDescriptor::default());
             let bg = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
                 label: None,
                 layout: &self.texture_bgl,
                 entries: &[
-                    wgpu::BindGroupEntry { binding: 0, resource: wgpu::BindingResource::TextureView(&view) },
-                    wgpu::BindGroupEntry { binding: 1, resource: wgpu::BindingResource::Sampler(&sampler) },
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: wgpu::BindingResource::TextureView(&view),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: wgpu::BindingResource::Sampler(&sampler),
+                    },
                 ],
             });
             let idx = self.texture_bind_groups.len() as u32;
             self.texture_bind_groups.push(bg);
             self.textures_size.push([w, h]);
             Some(idx)
-        } else { None }
+        } else {
+            None
+        }
     }
 
-    pub fn reload_texture_file_at(&mut self, index: u32, path: &std::path::Path, linear: bool) -> Option<()> {
+    pub fn reload_texture_file_at(
+        &mut self,
+        index: u32,
+        path: &std::path::Path,
+        linear: bool,
+    ) -> Option<()> {
         if let Ok(img) = image::open(path) {
             let rgba = img.to_rgba8();
             let (w, h) = rgba.dimensions();
-            let format = if linear { wgpu::TextureFormat::Rgba8Unorm } else { wgpu::TextureFormat::Rgba8UnormSrgb };
+            let format = if linear {
+                wgpu::TextureFormat::Rgba8Unorm
+            } else {
+                wgpu::TextureFormat::Rgba8UnormSrgb
+            };
             let texture = self.device.create_texture(&wgpu::TextureDescriptor {
                 label: None,
-                size: wgpu::Extent3d { width: w, height: h, depth_or_array_layers: 1 },
+                size: wgpu::Extent3d {
+                    width: w,
+                    height: h,
+                    depth_or_array_layers: 1,
+                },
                 mip_level_count: 1,
                 sample_count: 1,
                 dimension: wgpu::TextureDimension::D2,
@@ -1708,19 +2101,40 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                 view_formats: &[],
             });
             self.queue.write_texture(
-                wgpu::ImageCopyTexture { texture: &texture, mip_level: 0, origin: wgpu::Origin3d::ZERO, aspect: wgpu::TextureAspect::All },
+                wgpu::ImageCopyTexture {
+                    texture: &texture,
+                    mip_level: 0,
+                    origin: wgpu::Origin3d::ZERO,
+                    aspect: wgpu::TextureAspect::All,
+                },
                 rgba.as_raw(),
-                wgpu::ImageDataLayout { offset: 0, bytes_per_row: Some(4 * w), rows_per_image: Some(h) },
-                wgpu::Extent3d { width: w, height: h, depth_or_array_layers: 1 },
+                wgpu::ImageDataLayout {
+                    offset: 0,
+                    bytes_per_row: Some(4 * w),
+                    rows_per_image: Some(h),
+                },
+                wgpu::Extent3d {
+                    width: w,
+                    height: h,
+                    depth_or_array_layers: 1,
+                },
             );
             let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
-            let sampler = self.device.create_sampler(&wgpu::SamplerDescriptor::default());
+            let sampler = self
+                .device
+                .create_sampler(&wgpu::SamplerDescriptor::default());
             let bg = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
                 label: None,
                 layout: &self.texture_bgl,
                 entries: &[
-                    wgpu::BindGroupEntry { binding: 0, resource: wgpu::BindingResource::TextureView(&view) },
-                    wgpu::BindGroupEntry { binding: 1, resource: wgpu::BindingResource::Sampler(&sampler) },
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: wgpu::BindingResource::TextureView(&view),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: wgpu::BindingResource::Sampler(&sampler),
+                    },
                 ],
             });
             let idx = index as usize;
@@ -1737,10 +2151,18 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         if let Ok(img) = image::load_from_memory(bytes) {
             let rgba = img.to_rgba8();
             let (w, h) = rgba.dimensions();
-            let format = if is_linear { wgpu::TextureFormat::Rgba8Unorm } else { wgpu::TextureFormat::Rgba8UnormSrgb };
+            let format = if is_linear {
+                wgpu::TextureFormat::Rgba8Unorm
+            } else {
+                wgpu::TextureFormat::Rgba8UnormSrgb
+            };
             let texture = self.device.create_texture(&wgpu::TextureDescriptor {
                 label: None,
-                size: wgpu::Extent3d { width: w, height: h, depth_or_array_layers: 1 },
+                size: wgpu::Extent3d {
+                    width: w,
+                    height: h,
+                    depth_or_array_layers: 1,
+                },
                 mip_level_count: 1,
                 sample_count: 1,
                 dimension: wgpu::TextureDimension::D2,
@@ -1749,34 +2171,69 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                 view_formats: &[],
             });
             self.queue.write_texture(
-                wgpu::ImageCopyTexture { texture: &texture, mip_level: 0, origin: wgpu::Origin3d::ZERO, aspect: wgpu::TextureAspect::All },
+                wgpu::ImageCopyTexture {
+                    texture: &texture,
+                    mip_level: 0,
+                    origin: wgpu::Origin3d::ZERO,
+                    aspect: wgpu::TextureAspect::All,
+                },
                 rgba.as_raw(),
-                wgpu::ImageDataLayout { offset: 0, bytes_per_row: Some(4 * w), rows_per_image: Some(h) },
-                wgpu::Extent3d { width: w, height: h, depth_or_array_layers: 1 },
+                wgpu::ImageDataLayout {
+                    offset: 0,
+                    bytes_per_row: Some(4 * w),
+                    rows_per_image: Some(h),
+                },
+                wgpu::Extent3d {
+                    width: w,
+                    height: h,
+                    depth_or_array_layers: 1,
+                },
             );
             let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
-            let sampler = self.device.create_sampler(&wgpu::SamplerDescriptor::default());
+            let sampler = self
+                .device
+                .create_sampler(&wgpu::SamplerDescriptor::default());
             let bg = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
                 label: None,
                 layout: &self.texture_bgl,
                 entries: &[
-                    wgpu::BindGroupEntry { binding: 0, resource: wgpu::BindingResource::TextureView(&view) },
-                    wgpu::BindGroupEntry { binding: 1, resource: wgpu::BindingResource::Sampler(&sampler) },
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: wgpu::BindingResource::TextureView(&view),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: wgpu::BindingResource::Sampler(&sampler),
+                    },
                 ],
             });
             let idx = self.texture_bind_groups.len() as u32;
             self.texture_bind_groups.push(bg);
             self.textures_size.push([w, h]);
             Some(idx)
-        } else { None }
+        } else {
+            None
+        }
     }
 
-    pub fn load_texture_from_image(&mut self, img: image::RgbaImage, is_linear: bool) -> Option<u32> {
+    pub fn load_texture_from_image(
+        &mut self,
+        img: image::RgbaImage,
+        is_linear: bool,
+    ) -> Option<u32> {
         let (w, h) = img.dimensions();
-        let format = if is_linear { wgpu::TextureFormat::Rgba8Unorm } else { wgpu::TextureFormat::Rgba8UnormSrgb };
+        let format = if is_linear {
+            wgpu::TextureFormat::Rgba8Unorm
+        } else {
+            wgpu::TextureFormat::Rgba8UnormSrgb
+        };
         let texture = self.device.create_texture(&wgpu::TextureDescriptor {
             label: None,
-            size: wgpu::Extent3d { width: w, height: h, depth_or_array_layers: 1 },
+            size: wgpu::Extent3d {
+                width: w,
+                height: h,
+                depth_or_array_layers: 1,
+            },
             mip_level_count: 1,
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
@@ -1785,19 +2242,40 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
             view_formats: &[],
         });
         self.queue.write_texture(
-            wgpu::ImageCopyTexture { texture: &texture, mip_level: 0, origin: wgpu::Origin3d::ZERO, aspect: wgpu::TextureAspect::All },
+            wgpu::ImageCopyTexture {
+                texture: &texture,
+                mip_level: 0,
+                origin: wgpu::Origin3d::ZERO,
+                aspect: wgpu::TextureAspect::All,
+            },
             img.as_raw(),
-            wgpu::ImageDataLayout { offset: 0, bytes_per_row: Some(4 * w), rows_per_image: Some(h) },
-            wgpu::Extent3d { width: w, height: h, depth_or_array_layers: 1 },
+            wgpu::ImageDataLayout {
+                offset: 0,
+                bytes_per_row: Some(4 * w),
+                rows_per_image: Some(h),
+            },
+            wgpu::Extent3d {
+                width: w,
+                height: h,
+                depth_or_array_layers: 1,
+            },
         );
         let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
-        let sampler = self.device.create_sampler(&wgpu::SamplerDescriptor::default());
+        let sampler = self
+            .device
+            .create_sampler(&wgpu::SamplerDescriptor::default());
         let bg = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: None,
             layout: &self.texture_bgl,
             entries: &[
-                wgpu::BindGroupEntry { binding: 0, resource: wgpu::BindingResource::TextureView(&view) },
-                wgpu::BindGroupEntry { binding: 1, resource: wgpu::BindingResource::Sampler(&sampler) },
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::TextureView(&view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::Sampler(&sampler),
+                },
             ],
         });
         let idx = self.texture_bind_groups.len() as u32;
@@ -1807,37 +2285,50 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     }
 
     pub fn update_screen(&mut self) {
-        let u = ScreenUniform { screen_size: [self.size.width as f32, self.size.height as f32], scale_factor: self.scale_factor, _pad: 0.0 };
-        self.queue.write_buffer(&self.uniform_buffer, 0, bytemuck::bytes_of(&u));
+        let u = ScreenUniform {
+            screen_size: [self.size.width as f32, self.size.height as f32],
+            scale_factor: self.scale_factor,
+            _pad: 0.0,
+        };
+        self.queue
+            .write_buffer(&self.uniform_buffer, 0, bytemuck::bytes_of(&u));
     }
 
-    pub fn set_scissor_for_layer(&mut self, layer: f32, rect: Option<[u32;4]>) {
+    pub fn set_scissor_for_layer(&mut self, layer: f32, rect: Option<[u32; 4]>) {
         for g in &mut self.draw_groups {
-            if (g.layer - layer).abs() < f32::EPSILON { g.scissor = rect; }
+            if (g.layer - layer).abs() < f32::EPSILON {
+                g.scissor = rect;
+            }
         }
     }
 
     pub fn ui_set(&mut self, items: &[UiInstance]) {
         self.ui_count = items.len() as u32;
-        if self.ui_count > 0 { self.queue.write_buffer(&self.ui_instance_buffer, 0, bytemuck::cast_slice(items)); }
+        if self.ui_count > 0 {
+            self.queue
+                .write_buffer(&self.ui_instance_buffer, 0, bytemuck::cast_slice(items));
+        }
     }
 
     pub fn set_graph(&mut self, graph: crate::render::graph::RenderGraph, instances: &[Instance]) {
         self.commands = graph.commands;
         self.instance_count = instances.len() as u32;
-        self.queue.write_buffer(&self.instance_buffer, 0, bytemuck::cast_slice(instances));
+        self.queue
+            .write_buffer(&self.instance_buffer, 0, bytemuck::cast_slice(instances));
     }
 
-    pub fn config(&self) -> &wgpu::SurfaceConfiguration { &self.config }
-    
+    pub fn config(&self) -> &wgpu::SurfaceConfiguration {
+        &self.config
+    }
+
     // ========================================================================
     // Instance Batching Methods
     // ========================================================================
-    
+
     /// 上传批次管理器中的所有脏批次到 GPU
-    /// 
+    ///
     /// 在渲染前调用此方法以确保所有实例数据已同步到 GPU
-    /// 
+    ///
     /// # 示例
     /// ```ignore
     /// // 在渲染循环中
@@ -1847,9 +2338,9 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     pub fn upload_batches(&self, batch_manager: &mut crate::render::instance_batch::BatchManager) {
         batch_manager.update_buffers(&self.device, &self.queue);
     }
-    
+
     /// 使用 BatchManager 进行实例化 PBR 渲染
-    /// 
+    ///
     /// 相比 `render_pbr`，此方法利用 BatchManager 的实例批处理，
     /// 可以显著减少 Draw Call 数量（70-90% 优化）
     pub fn render_pbr_batched(
@@ -1859,77 +2350,394 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         dir_lights: &[crate::render::pbr::DirectionalLight],
         view_proj: [[f32; 4]; 4],
         camera_pos: [f32; 3],
-        egui_renderer: Option<&mut egui_wgpu::Renderer>,
+        mut egui_renderer: Option<&mut egui_wgpu::Renderer>,
         egui_shapes: &[egui::ClippedPrimitive],
         egui_pixels_per_point: f32,
     ) {
         // 更新相机
         self.update_pbr_camera(view_proj, camera_pos);
-        
+
         // 更新光源
         self.update_pbr_lights(point_lights, dir_lights);
 
-        // 实例级剔除（GPU路径，如不可用则CPU回退）
-        #[allow(unused_mut)]
+        // GPU驱动剔除（默认策略）
+        // 优先使用完全GPU端剔除（GpuDrivenRenderer + 间接绘制），避免CPU-GPU同步
+        // 如果不可用，回退到传统GPU剔除（GpuCullingManager + CPU读取结果）
         let mut used_gpu_cull = false;
-        #[cfg(feature = "wgpu_perf")]
-        {
-            use crate::render::gpu_driven::culling::{GpuCuller, GpuInstance};
-            let (instances, mapping) = batch_manager.collect_gpu_instances();
-            if !instances.is_empty() {
-                let input_size = (instances.len() * std::mem::size_of::<GpuInstance>()) as wgpu::BufferAddress;
-                let input_buffer = self.device.create_buffer(&wgpu::BufferDescriptor { label: Some("Culling Input"), size: input_size, usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::COPY_SRC, mapped_at_creation: false });
-                self.queue.write_buffer(&input_buffer, 0, bytemuck::cast_slice(&instances));
-                let output_buffer = self.device.create_buffer(&wgpu::BufferDescriptor { label: Some("Culling Output"), size: input_size, usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC, mapped_at_creation: false });
-                let counter_buffer = self.device.create_buffer(&wgpu::BufferDescriptor { label: Some("Culling Counter"), size: std::mem::size_of::<u32>() as wgpu::BufferAddress, usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC, mapped_at_creation: false });
+        let mut used_full_gpu_culling = false;  // 完全GPU端剔除标志
 
-                let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some("GPU Culling Encoder") });
-                let culler = GpuCuller::new(&self.device, instances.len() as u32, 64);
-                culler.cull(&mut encoder, &self.device, &self.queue, &input_buffer, &output_buffer, &counter_buffer, view_proj, instances.len() as u32);
+        // 遮挡剔除集成：收集遮挡查询数据
+        // 注意：遮挡查询在视锥剔除后执行，使用可见实例的AABB
+        let mut occlusion_queries: Vec<(glam::Vec3, glam::Vec3)> = Vec::new();
+        let mut occlusion_mapping: Vec<(crate::render::instance_batch::BatchKey, u32)> = Vec::new();
 
-                // 读取计数器与输出实例
-                let read_counter = self.device.create_buffer(&wgpu::BufferDescriptor { label: Some("Read Counter"), size: std::mem::size_of::<u32>() as wgpu::BufferAddress, usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST, mapped_at_creation: false });
-                encoder.copy_buffer_to_buffer(&counter_buffer, 0, &read_counter, 0, std::mem::size_of::<u32>() as wgpu::BufferAddress);
-                let read_output = self.device.create_buffer(&wgpu::BufferDescriptor { label: Some("Read Output"), size: input_size, usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST, mapped_at_creation: false });
-                encoder.copy_buffer_to_buffer(&output_buffer, 0, &read_output, 0, input_size);
-                self.queue.submit(std::iter::once(encoder.finish()));
-                self.device.poll(wgpu::Maintain::Wait);
+        // 优先尝试完全GPU端剔除（使用GpuDrivenRenderer + 间接绘制）
+        // 这样可以完全避免CPU读取结果，实现零延迟剔除
+        if let Some(ref mut gpu_driven_renderer) = self.gpu_driven_renderer {
+            if gpu_driven_renderer.config().frustum_culling && self.use_full_gpu_culling {
+                use crate::render::gpu_driven::culling::GpuInstance;
 
-                let count_slice = read_counter.slice(..);
-                count_slice.map_async(wgpu::MapMode::Read, |_| {});
-                self.device.poll(wgpu::Maintain::Wait);
-                let count_data = count_slice.get_mapped_range();
-                let visible_count = u32::from_le_bytes(count_data[..4].try_into().unwrap_or([0,0,0,0]));
-                drop(count_data);
-                read_counter.unmap();
+                // 收集GPU实例数据
+                let (instances, mapping) = batch_manager.collect_gpu_instances();
 
-                if visible_count > 0 {
-                    let out_slice = read_output.slice(..(visible_count as wgpu::BufferAddress * std::mem::size_of::<GpuInstance>() as wgpu::BufferAddress));
-                    out_slice.map_async(wgpu::MapMode::Read, |_| {});
-                    self.device.poll(wgpu::Maintain::Wait);
-                    let out_data = out_slice.get_mapped_range();
-                    let visible_instances: &[GpuInstance] = bytemuck::cast_slice(&out_data);
-                    let ids: Vec<u32> = visible_instances.iter().map(|gi| gi.instance_id).collect();
-                    drop(out_data);
-                    read_output.unmap();
-                    #[cfg(feature = "wgpu_perf")]
-                    {
-                        batch_manager.apply_visible_ids_segments(&self.device, &self.queue, &mapping, &ids);
+                if !instances.is_empty() {
+                    // 获取第一个batch的index_count（假设所有实例使用相同的mesh）
+                    // 注意：如果不同batch使用不同mesh，需要为每个batch单独处理
+                    let index_count = batch_manager
+                        .visible_batches()
+                        .next()
+                        .map(|batch| batch.mesh.index_count)
+                        .unwrap_or(36);  // 默认值
+
+                    // 更新实例数据到GPU
+                    gpu_driven_renderer.update_instances(&self.queue, &instances);
+
+                    // 创建剔除编码器
+                    let mut cull_encoder = self.device.create_command_encoder(
+                        &wgpu::CommandEncoderDescriptor {
+                            label: Some("Full GPU Culling Encoder"),
+                        },
+                    );
+
+                    // 执行剔除并生成间接绘制命令（完全GPU端，零CPU读取）
+                    if let Ok(_) = gpu_driven_renderer.cull_with_indirect(
+                        &mut cull_encoder,
+                        &self.device,
+                        &self.queue,
+                        view_proj,
+                        instances.len() as u32,
+                        0,  // vertex_count (not used for indexed drawing)
+                        index_count,
+                    ) {
+                        // 提交剔除命令到GPU（不等待结果）
+                        self.queue.submit(std::iter::once(cull_encoder.finish()));
+
+                        // 标记使用完全GPU端剔除
+                        used_full_gpu_culling = true;
+                        used_gpu_cull = true;
+
+                        // 存储mapping用于后续遮挡查询（如果需要）
+                        // 注意：在完全GPU端剔除模式下，遮挡查询也需要GPU端实现
+                        if let Some(ref gpu_driven_renderer) = self.gpu_driven_renderer {
+                            if let Some(ref occluder) = gpu_driven_renderer.occlusion_culler() {
+                                if occluder.is_initialized() {
+                                    // 收集遮挡查询数据（从所有实例，GPU端会过滤）
+                                    for (i, instance) in instances.iter().enumerate() {
+                                        occlusion_queries.push((
+                                            glam::Vec3::from_array(instance.aabb_min),
+                                            glam::Vec3::from_array(instance.aabb_max),
+                                        ));
+                                        if let Some(mapping_entry) = mapping.get(i) {
+                                            occlusion_mapping.push(*mapping_entry);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        tracing::debug!(
+                            target: "render",
+                            "Full GPU culling enabled: {} instances, index_count: {}",
+                            instances.len(),
+                            index_count
+                        );
+                    } else {
+                        tracing::warn!(
+                            target: "render",
+                            "Full GPU culling failed, falling back to traditional GPU culling"
+                        );
                     }
-                    #[cfg(not(feature = "wgpu_perf"))]
-                    {
-                        batch_manager.apply_visible_ids(&mapping, &ids);
-                    }
-                    used_gpu_cull = true;
                 }
             }
         }
 
+        // 如果完全GPU端剔除未使用，尝试传统GPU剔除（需要CPU读取结果）
+        if !used_full_gpu_culling {
+            if let Some(ref mut culling_manager) = self.gpu_culling_manager {
+                use crate::render::gpu_driven::culling::GpuInstance;
+
+                // 收集GPU实例数据
+                let (instances, mapping) = batch_manager.collect_gpu_instances();
+
+                if !instances.is_empty() && culling_manager.is_enabled() {
+                    // 创建专用的剔除命令编码器
+                    let mut encoder =
+                        self.device
+                            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                                label: Some("GPU Culling Encoder"),
+                            });
+
+                    // 执行GPU剔除
+                    if culling_manager
+                        .cull_instances(
+                            &self.device,
+                            &self.queue,
+                            &mut encoder,
+                            &instances,
+                            view_proj,
+                        )
+                        .is_some()
+                    {
+                        // 提交剔除命令到GPU
+                        self.queue.submit(std::iter::once(encoder.finish()));
+
+                        // 读取可见实例数量（同步读取，但这是必要的）
+                        // 注意：未来可以优化为异步读取，使用双缓冲或延迟应用结果
+                        if let Some(counter_buffer) = culling_manager.counter_buffer() {
+                            let read_counter = self.device.create_buffer(&wgpu::BufferDescriptor {
+                                label: Some("Read Counter"),
+                                size: std::mem::size_of::<u32>() as wgpu::BufferAddress,
+                                usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+                                mapped_at_creation: false,
+                            });
+
+                            let mut read_encoder =
+                                self.device
+                                    .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                                        label: Some("Read Counter Copy"),
+                                    });
+                            read_encoder.copy_buffer_to_buffer(
+                                counter_buffer,
+                                0,
+                                &read_counter,
+                                0,
+                                std::mem::size_of::<u32>() as wgpu::BufferAddress,
+                            );
+                            self.queue.submit(std::iter::once(read_encoder.finish()));
+                            self.device.poll(wgpu::Maintain::Wait);
+
+                            let count_slice = read_counter.slice(..);
+                            count_slice.map_async(wgpu::MapMode::Read, |_| {});
+                            self.device.poll(wgpu::Maintain::Wait);
+
+                            let count_data = count_slice.get_mapped_range();
+                            let visible_count =
+                                u32::from_le_bytes(count_data[..4].try_into().unwrap_or([0, 0, 0, 0]));
+                            drop(count_data);
+                            read_counter.unmap();
+
+                            if visible_count > 0 {
+                                // 读取可见实例数据
+                                if let Some(output_buffer) = culling_manager.output_buffer() {
+                                    let read_output =
+                                        self.device.create_buffer(&wgpu::BufferDescriptor {
+                                            label: Some("Read Output"),
+                                            size: (visible_count as usize
+                                                * std::mem::size_of::<GpuInstance>())
+                                                as wgpu::BufferAddress,
+                                            usage: wgpu::BufferUsages::MAP_READ
+                                                | wgpu::BufferUsages::COPY_DST,
+                                            mapped_at_creation: false,
+                                        });
+
+                                    let mut read_encoder = self.device.create_command_encoder(
+                                        &wgpu::CommandEncoderDescriptor {
+                                            label: Some("Read Output Copy"),
+                                        },
+                                    );
+                                    read_encoder.copy_buffer_to_buffer(
+                                        output_buffer,
+                                        0,
+                                        &read_output,
+                                        0,
+                                        (visible_count as usize * std::mem::size_of::<GpuInstance>())
+                                            as wgpu::BufferAddress,
+                                    );
+                                    self.queue.submit(std::iter::once(read_encoder.finish()));
+                                    self.device.poll(wgpu::Maintain::Wait);
+
+                                    let out_slice = read_output.slice(..);
+                                    out_slice.map_async(wgpu::MapMode::Read, |_| {});
+                                    self.device.poll(wgpu::Maintain::Wait);
+
+                                    let out_data = out_slice.get_mapped_range();
+                                    let visible_instances: &[GpuInstance] =
+                                        bytemuck::cast_slice(&out_data);
+                                    let ids: Vec<u32> =
+                                        visible_instances.iter().map(|gi| gi.instance_id).collect();
+                                    drop(out_data);
+                                    read_output.unmap();
+
+                                    // 收集遮挡查询数据（从可见实例）
+                                    // 如果启用遮挡剔除，收集AABB用于遮挡查询
+                                    if let Some(ref gpu_driven_renderer) = self.gpu_driven_renderer {
+                                        if let Some(ref occluder) = gpu_driven_renderer.occlusion_culler() {
+                                            if occluder.is_initialized() {
+                                                for &id in &ids {
+                                                    if let Some(instance) = instances.get(id as usize) {
+                                                        occlusion_queries.push((
+                                                            glam::Vec3::from_array(instance.aabb_min),
+                                                            glam::Vec3::from_array(instance.aabb_max),
+                                                        ));
+                                                        if let Some(mapping_entry) = mapping.get(id as usize) {
+                                                            occlusion_mapping.push(*mapping_entry);
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    // 应用可见实例ID到批次管理器
+                                    // 使用简单的apply_visible_ids方法，不依赖间接绘制特性
+                                    batch_manager.apply_visible_ids(&mapping, &ids);
+                                    used_gpu_cull = true;
+
+                                    tracing::debug!(
+                                        target: "render",
+                                        "GPU culling completed: {} visible out of {} instances",
+                                        visible_count,
+                                        instances.len()
+                                    );
+                                }
+                            } else {
+                                tracing::debug!(target: "render", "GPU culling: no visible instances");
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // CPU回退：仅在GPU剔除未使用或失败时使用
+        // 这提供了向后兼容性和容错性
         if !used_gpu_cull {
+            tracing::debug!(target: "render", "Using CPU culling fallback");
             batch_manager.cull_instances_cpu(view_proj);
         }
-        batch_manager.update_buffers(&self.device, &self.queue);
+
+        // 遮挡查询：如果启用遮挡剔除，执行遮挡查询
+        // 1. 在深度预渲染后构建Hi-Z（在渲染阶段之前）
+        // 2. 在视锥剔除后执行遮挡查询
+        // 3. 应用遮挡查询结果过滤不可见对象
         
+        // 步骤1: 构建Hi-Z（在深度预渲染后）
+        // 注意：这里简化处理，实际应该在深度预渲染阶段构建Hi-Z
+        // 当前实现假设深度缓冲已经渲染完成
+        if let Some(ref mut gpu_driven_renderer) = self.gpu_driven_renderer {
+            if let Some(ref occluder) = gpu_driven_renderer.occlusion_culler() {
+                if occluder.is_initialized() {
+                    // 创建Hi-Z构建编码器
+                    let mut hi_z_encoder = self.device.create_command_encoder(
+                        &wgpu::CommandEncoderDescriptor {
+                            label: Some("Hi-Z Build Encoder"),
+                        },
+                    );
+
+                    // 构建Hi-Z（使用当前深度缓冲）
+                    if let Some(ref depth_tex) = self.depth_texture_raw {
+                        if let Err(e) = gpu_driven_renderer.perform_occlusion_culling(
+                            &mut hi_z_encoder,
+                            &self.device,
+                            depth_tex,
+                        ) {
+                            tracing::warn!(target: "render", "Failed to build Hi-Z: {}", e);
+                        } else {
+                            // 提交Hi-Z构建命令
+                            self.queue.submit(std::iter::once(hi_z_encoder.finish()));
+                        }
+                    }
+                }
+            }
+        }
+
+        // 步骤2: 执行遮挡查询（对可见实例）
+        if !occlusion_queries.is_empty() {
+            if let Some(ref mut gpu_driven_renderer) = self.gpu_driven_renderer {
+                let view_proj_mat = glam::Mat4::from_cols_array_2d(&view_proj);
+                let screen_size = (self.config.width, self.config.height);
+                
+                // 创建遮挡查询编码器
+                let mut occlusion_encoder = self.device.create_command_encoder(
+                    &wgpu::CommandEncoderDescriptor {
+                        label: Some("Occlusion Query Encoder"),
+                    },
+                );
+
+                // 执行异步遮挡查询
+                if let Err(e) = gpu_driven_renderer.query_occlusion_async(
+                    &mut occlusion_encoder,
+                    &self.device,
+                    &occlusion_queries,
+                    view_proj_mat,
+                    screen_size,
+                ) {
+                    tracing::warn!(target: "render", "Occlusion query failed: {}", e);
+                } else {
+                    // 存储当前帧的mapping（用于下一帧应用结果）
+                    self.occlusion_mapping_buffer[self.occlusion_mapping_index] = Some(occlusion_mapping.clone());
+                    self.occlusion_mapping_index = (self.occlusion_mapping_index + 1) % 2;
+                    
+                    // 提交遮挡查询命令
+                    self.queue.submit(std::iter::once(occlusion_encoder.finish()));
+                    
+                    tracing::debug!(
+                        target: "render",
+                        "Occlusion query submitted: {} queries",
+                        occlusion_queries.len()
+                    );
+                }
+            }
+        }
+
+        // 步骤3: 读取上一帧的遮挡查询结果（如果有）
+        // 使用双缓冲延迟应用结果：当前帧的查询结果在下一帧应用
+        if let Some(ref mut gpu_driven_renderer) = self.gpu_driven_renderer {
+            if let Some(Ok(visibility)) = gpu_driven_renderer.read_occlusion_query_result(
+                &self.device,
+                &self.queue,
+            ) {
+                // 获取上一帧的mapping（与查询结果配对）
+                let prev_mapping_index = (self.occlusion_mapping_index + 1) % 2;
+                
+                if let Some(ref prev_mapping) = self.occlusion_mapping_buffer[prev_mapping_index] {
+                    // 应用遮挡查询结果
+                    // 将visibility结果映射回实例ID，然后过滤不可见实例
+                    if visibility.len() == prev_mapping.len() {
+                        let mut visible_ids = Vec::new();
+                        for (i, &visible) in visibility.iter().enumerate() {
+                            if visible {
+                                // 使用查询ID作为索引
+                                visible_ids.push(i as u32);
+                            }
+                        }
+                        
+                        // 应用可见实例ID到批次管理器
+                        if !visible_ids.is_empty() {
+                            batch_manager.apply_visible_ids(prev_mapping, &visible_ids);
+                            
+                            let visible_count = visible_ids.len();
+                            tracing::debug!(
+                                target: "render",
+                                "Occlusion query results applied: {} visible out of {}",
+                                visible_count,
+                                visibility.len()
+                            );
+                        } else {
+                            tracing::debug!(target: "render", "Occlusion query: no visible instances");
+                        }
+                        
+                        // 清理已使用的mapping
+                        self.occlusion_mapping_buffer[prev_mapping_index] = None;
+                    } else {
+                        tracing::warn!(
+                            target: "render",
+                            "Occlusion query result size mismatch: {} vs {}",
+                            visibility.len(),
+                            prev_mapping.len()
+                        );
+                    }
+                } else {
+                    tracing::debug!(
+                        target: "render",
+                        "Occlusion query result available but no mapping found (first frame?)"
+                    );
+                }
+            }
+        }
+
+        batch_manager.update_buffers(&self.device, &self.queue);
+
         let frame = match self.surface.get_current_texture() {
             Ok(frame) => frame,
             Err(_) => {
@@ -1937,20 +2745,31 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                 self.surface.get_current_texture().unwrap()
             }
         };
-        let view = frame.texture.create_view(&wgpu::TextureViewDescriptor::default());
-        let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor { 
-            label: Some("PBR Batched Encoder") 
-        });
-        
+        let view = frame
+            .texture
+            .create_view(&wgpu::TextureViewDescriptor::default());
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("PBR Batched Encoder"),
+            });
+
         // Update egui buffers if present
-        if let Some(renderer) = egui_renderer.as_ref() {
+        if let Some(renderer) = egui_renderer.as_mut() {
             let screen_desc = egui_wgpu::ScreenDescriptor {
                 size_in_pixels: [self.config.width, self.config.height],
                 pixels_per_point: egui_pixels_per_point,
             };
-            let _ = (renderer, screen_desc);
+            // 更新egui缓冲区
+            renderer.update_buffers(
+                &self.device,
+                &self.queue,
+                &mut encoder,
+                egui_shapes,
+                &screen_desc,
+            );
         }
-        
+
         {
             let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("PBR Batched Render Pass"),
@@ -1958,7 +2777,12 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                     view: &view,
                     resolve_target: None,
                     ops: wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(wgpu::Color { r: 0.02, g: 0.04, b: 0.06, a: 1.0 }),
+                        load: wgpu::LoadOp::Clear(wgpu::Color {
+                            r: 0.02,
+                            g: 0.04,
+                            b: 0.06,
+                            a: 1.0,
+                        }),
                         store: wgpu::StoreOp::Store,
                     },
                 })],
@@ -1973,91 +2797,132 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                 occlusion_query_set: None,
                 timestamp_writes: None,
             });
-            
+
             if let Some(ref pbr) = self.pbr_renderer {
                 rpass.set_pipeline(&pbr.pipeline);
                 rpass.set_bind_group(0, &pbr.uniform_bind_group, &[]);
                 rpass.set_bind_group(2, &pbr.lights_bind_group, &[]);
                 rpass.set_bind_group(3, &pbr.textures_bind_group, &[]);
-                
-                // 使用 render_batches 函数渲染所有可见批次
-                crate::render::instance_batch::render_batches(&mut rpass, batch_manager);
-                // 渲染小批次（阈值过滤后）
-                crate::render::instance_batch::render_small_batches(&mut rpass, batch_manager);
+
+                // 如果使用完全GPU端剔除，使用间接绘制命令直接绘制
+                if used_full_gpu_culling {
+                    if let Some(ref gpu_driven_renderer) = self.gpu_driven_renderer {
+                        let indirect_buffer = gpu_driven_renderer.indirect_buffer();
+                        
+                        // 绑定可见实例缓冲区作为顶点缓冲区
+                        // 注意：需要确保可见实例缓冲区包含正确的实例数据
+                        rpass.set_vertex_buffer(1, gpu_driven_renderer.visible_instance_buffer().slice(..));
+                        
+                        // 获取第一个batch的mesh信息（用于绑定顶点和索引缓冲区）
+                        if let Some(batch) = batch_manager.visible_batches().next() {
+                            rpass.set_vertex_buffer(0, batch.mesh.vertex_buffer.slice(..));
+                            rpass.set_index_buffer(batch.mesh.index_buffer.slice(..), wgpu::IndexFormat::Uint32);
+                            
+                            // 使用间接绘制命令直接绘制（完全GPU端，零CPU读取）
+                            // 注意：这里假设所有可见实例使用相同的mesh
+                            // 如果不同batch使用不同mesh，需要为每个batch单独处理
+                            rpass.draw_indexed_indirect(indirect_buffer.buffer(), 0);
+                            
+                            tracing::debug!(
+                                target: "render",
+                                "Rendering with indirect draw commands (full GPU culling)"
+                            );
+                        } else {
+                            tracing::warn!(
+                                target: "render",
+                                "Full GPU culling enabled but no batches to render"
+                            );
+                        }
+                    }
+                } else {
+                    // 使用传统渲染路径（CPU读取结果或CPU剔除）
+                    // 使用 render_batches 函数渲染所有可见批次
+                    crate::render::instance_batch::render_batches(&mut rpass, batch_manager);
+                    // 渲染小批次（阈值过滤后）
+                    crate::render::instance_batch::render_small_batches(&mut rpass, batch_manager);
+                }
             }
         }
-        
+
         self.queue.submit(std::iter::once(encoder.finish()));
         frame.present();
     }
-    
+
     pub fn update_lights(&mut self, lights: &[GpuPointLight]) {
         self.lights.clear();
         self.lights.extend_from_slice(lights);
-        
-        let mut data = vec![GpuPointLight {
-            pos: [0.0, 0.0],
-            color: [0.0, 0.0, 0.0],
-            radius: 0.0,
-            intensity: 0.0,
-            falloff: 0.0,
-            _pad: [0.0, 0.0],
-        }; 1024];
-        
+
+        let mut data = vec![
+            GpuPointLight {
+                pos: [0.0, 0.0],
+                color: [0.0, 0.0, 0.0],
+                radius: 0.0,
+                intensity: 0.0,
+                falloff: 0.0,
+                _pad: [0.0, 0.0],
+            };
+            1024
+        ];
+
         for (i, light) in lights.iter().enumerate().take(1024) {
             data[i] = *light;
         }
-        
-        self.queue.write_buffer(&self.lights_buffer, 0, bytemuck::cast_slice(&data));
+
+        self.queue
+            .write_buffer(&self.lights_buffer, 0, bytemuck::cast_slice(&data));
     }
-    
+
     // ========================================================================
     // PBR 3D Rendering Methods
     // ========================================================================
-    
+
     /// 更新PBR渲染器的相机参数
     pub fn update_pbr_camera(&self, view_proj: [[f32; 4]; 4], camera_pos: [f32; 3]) {
         if let Some(ref pbr) = self.pbr_renderer {
             pbr.update_camera(&self.queue, view_proj, camera_pos);
         }
     }
-    
+
     /// 更新PBR材质参数
     pub fn update_pbr_material(&self, material: &crate::render::pbr::PbrMaterial) {
         if let Some(ref pbr) = self.pbr_renderer {
             pbr.update_material(&self.queue, material);
         }
     }
-    
+
     /// 更新PBR 3D光源
     pub fn update_pbr_lights(
-        &self, 
-        point_lights: &[crate::render::pbr::PointLight3D], 
-        dir_lights: &[crate::render::pbr::DirectionalLight]
+        &self,
+        point_lights: &[crate::render::pbr::PointLight3D],
+        dir_lights: &[crate::render::pbr::DirectionalLight],
     ) {
         if let Some(ref pbr) = self.pbr_renderer {
             pbr.update_lights(&self.queue, point_lights, dir_lights);
         }
     }
-    
+
     /// 渲染PBR 3D网格
     pub fn render_pbr(
         &mut self,
-        meshes: &[(crate::render::mesh::GpuMesh, crate::ecs::Transform, crate::render::pbr::PbrMaterial)],
+        meshes: &[(
+            crate::render::mesh::GpuMesh,
+            crate::ecs::Transform,
+            crate::render::pbr::PbrMaterial,
+        )],
         point_lights: &[crate::render::pbr::PointLight3D],
         dir_lights: &[crate::render::pbr::DirectionalLight],
         view_proj: [[f32; 4]; 4],
         camera_pos: [f32; 3],
-        egui_renderer: Option<&mut egui_wgpu::Renderer>,
+        mut egui_renderer: Option<&mut egui_wgpu::Renderer>,
         egui_shapes: &[egui::ClippedPrimitive],
         egui_pixels_per_point: f32,
     ) {
         // 更新相机
         self.update_pbr_camera(view_proj, camera_pos);
-        
+
         // 更新光源
         self.update_pbr_lights(point_lights, dir_lights);
-        
+
         let frame = match self.surface.get_current_texture() {
             Ok(frame) => frame,
             Err(_) => {
@@ -2065,19 +2930,31 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                 self.surface.get_current_texture().unwrap()
             }
         };
-        let view = frame.texture.create_view(&wgpu::TextureViewDescriptor::default());
-        let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some("PBR Encoder") });
-        
+        let view = frame
+            .texture
+            .create_view(&wgpu::TextureViewDescriptor::default());
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("PBR Encoder"),
+            });
+
         // Update egui buffers if present
-        if let Some(renderer) = egui_renderer.as_ref() {
+        if let Some(renderer) = egui_renderer.as_mut() {
             let screen_desc = egui_wgpu::ScreenDescriptor {
                 size_in_pixels: [self.config.width, self.config.height],
                 pixels_per_point: egui_pixels_per_point,
             };
-            // Note: we can't borrow mutably here, so we skip the buffer update in this path
-            let _ = (renderer, screen_desc);
+            // 更新egui缓冲区
+            renderer.update_buffers(
+                &self.device,
+                &self.queue,
+                &mut encoder,
+                egui_shapes,
+                &screen_desc,
+            );
         }
-        
+
         {
             let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("PBR Render Pass"),
@@ -2085,7 +2962,12 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                     view: &view,
                     resolve_target: None,
                     ops: wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(wgpu::Color { r: 0.02, g: 0.04, b: 0.06, a: 1.0 }),
+                        load: wgpu::LoadOp::Clear(wgpu::Color {
+                            r: 0.02,
+                            g: 0.04,
+                            b: 0.06,
+                            a: 1.0,
+                        }),
                         store: wgpu::StoreOp::Store,
                     },
                 })],
@@ -2100,28 +2982,32 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                 occlusion_query_set: None,
                 timestamp_writes: None,
             });
-            
+
             if let Some(ref pbr) = self.pbr_renderer {
                 rpass.set_pipeline(&pbr.pipeline);
                 rpass.set_bind_group(0, &pbr.uniform_bind_group, &[]);
                 rpass.set_bind_group(2, &pbr.lights_bind_group, &[]);
-                
+
                 // 1. Sort meshes to batch them
                 let mut indices: Vec<usize> = (0..meshes.len()).collect();
                 indices.sort_by(|&a, &b| {
                     let (mesh_a, _, mat_a) = &meshes[a];
                     let (mesh_b, _, mat_b) = &meshes[b];
-                    
+
                     let vb_a = std::sync::Arc::as_ptr(&mesh_a.vertex_buffer);
                     let vb_b = std::sync::Arc::as_ptr(&mesh_b.vertex_buffer);
-                    
+
                     if vb_a != vb_b {
                         return vb_a.cmp(&vb_b);
                     }
-                    
-                    if mat_a.base_color.x < mat_b.base_color.x { std::cmp::Ordering::Less }
-                    else if mat_a.base_color.x > mat_b.base_color.x { std::cmp::Ordering::Greater }
-                    else { std::cmp::Ordering::Equal }
+
+                    if mat_a.base_color.x < mat_b.base_color.x {
+                        std::cmp::Ordering::Less
+                    } else if mat_a.base_color.x > mat_b.base_color.x {
+                        std::cmp::Ordering::Greater
+                    } else {
+                        std::cmp::Ordering::Equal
+                    }
                 });
 
                 // 2. Build Instance Buffer
@@ -2133,29 +3019,30 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                     count: u32,
                 }
                 let mut batches = Vec::new();
-                
+
                 if !indices.is_empty() {
                     let first_idx = indices[0];
                     let (first_mesh, _, first_mat) = &meshes[first_idx];
-                    
+
                     let mut current_batch = Batch {
                         mesh: first_mesh,
                         material: first_mat,
                         start_instance: 0,
                         count: 0,
                     };
-                    
+
                     for &i in &indices {
                         let (mesh, transform, material) = &meshes[i];
-                        
-                        let same_mesh = std::sync::Arc::as_ptr(&mesh.vertex_buffer) == std::sync::Arc::as_ptr(&current_batch.mesh.vertex_buffer);
+
+                        let same_mesh = std::sync::Arc::as_ptr(&mesh.vertex_buffer)
+                            == std::sync::Arc::as_ptr(&current_batch.mesh.vertex_buffer);
                         let same_mat = material == current_batch.material;
-                        
+
                         if same_mesh && same_mat {
                             let model_mat = glam::Mat4::from_scale_rotation_translation(
-                                transform.scale, 
-                                transform.rot, 
-                                transform.pos
+                                transform.scale,
+                                transform.rot,
+                                transform.pos,
                             );
                             instances.push(crate::render::pbr_renderer::Instance3D {
                                 model: model_mat.to_cols_array_2d(),
@@ -2163,18 +3050,18 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                             current_batch.count += 1;
                         } else {
                             batches.push(current_batch);
-                            
+
                             current_batch = Batch {
                                 mesh,
                                 material,
                                 start_instance: instances.len() as u32,
                                 count: 1,
                             };
-                            
+
                             let model_mat = glam::Mat4::from_scale_rotation_translation(
-                                transform.scale, 
-                                transform.rot, 
-                                transform.pos
+                                transform.scale,
+                                transform.rot,
+                                transform.pos,
                             );
                             instances.push(crate::render::pbr_renderer::Instance3D {
                                 model: model_mat.to_cols_array_2d(),
@@ -2183,9 +3070,11 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                     }
                     batches.push(current_batch);
                 }
-                
+
                 // 3. Upload Instance Buffer
-                let needed_size = (instances.len() * std::mem::size_of::<crate::render::pbr_renderer::Instance3D>()) as u64;
+                let needed_size = (instances.len()
+                    * std::mem::size_of::<crate::render::pbr_renderer::Instance3D>())
+                    as u64;
                 if self.instance_buffer_3d.size() < needed_size {
                     self.instance_buffer_3d = self.device.create_buffer(&wgpu::BufferDescriptor {
                         label: Some("3D Instance Buffer"),
@@ -2194,45 +3083,79 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                         mapped_at_creation: false,
                     });
                 }
-                
-                self.queue.write_buffer(&self.instance_buffer_3d, 0, bytemuck::cast_slice(&instances));
-                
+
+                self.queue.write_buffer(
+                    &self.instance_buffer_3d,
+                    0,
+                    bytemuck::cast_slice(&instances),
+                );
+
                 // 4. Draw Batches
                 for batch in batches {
                     pbr.update_material(&self.queue, batch.material);
-                    
+
                     rpass.set_bind_group(1, &pbr.material_bind_group, &[]);
-                    
+
                     rpass.set_vertex_buffer(0, batch.mesh.vertex_buffer.slice(..));
-                    rpass.set_vertex_buffer(1, self.instance_buffer_3d.slice(
-                        (batch.start_instance as u64 * std::mem::size_of::<crate::render::pbr_renderer::Instance3D>() as u64) .. 
-                        ((batch.start_instance + batch.count) as u64 * std::mem::size_of::<crate::render::pbr_renderer::Instance3D>() as u64)
-                    ));
-                    rpass.set_index_buffer(batch.mesh.index_buffer.slice(..), wgpu::IndexFormat::Uint32);
+                    rpass.set_vertex_buffer(
+                        1,
+                        self.instance_buffer_3d.slice(
+                            (batch.start_instance as u64
+                                * std::mem::size_of::<crate::render::pbr_renderer::Instance3D>()
+                                    as u64)
+                                ..((batch.start_instance + batch.count) as u64
+                                    * std::mem::size_of::<crate::render::pbr_renderer::Instance3D>()
+                                        as u64),
+                        ),
+                    );
+                    rpass.set_index_buffer(
+                        batch.mesh.index_buffer.slice(..),
+                        wgpu::IndexFormat::Uint32,
+                    );
                     rpass.draw_indexed(0..batch.mesh.index_count, 0, 0..batch.count);
                 }
             }
         }
-        
+
         self.queue.submit(std::iter::once(encoder.finish()));
         frame.present();
     }
-    
+
     /// 获取PBR渲染器引用
     pub fn pbr_renderer(&self) -> Option<&crate::render::pbr_renderer::PbrRenderer> {
         self.pbr_renderer.as_ref()
     }
 
-    pub fn create_gpu_mesh(&self, vertices: &[crate::render::mesh::Vertex3D], indices: &[u32]) -> std::sync::Arc<crate::render::mesh::GpuMesh> {
-        std::sync::Arc::new(crate::render::mesh::GpuMesh::new(&self.device, vertices, indices))
+    pub fn create_gpu_mesh(
+        &self,
+        vertices: &[crate::render::mesh::Vertex3D],
+        indices: &[u32],
+    ) -> std::sync::Arc<crate::render::mesh::GpuMesh> {
+        std::sync::Arc::new(crate::render::mesh::GpuMesh::new(
+            &self.device,
+            vertices,
+            indices,
+        ))
     }
 
-    pub fn create_texture_view_from_rgba(&self, img: &image::RgbaImage, srgb: bool) -> wgpu::TextureView {
+    pub fn create_texture_view_from_rgba(
+        &self,
+        img: &image::RgbaImage,
+        srgb: bool,
+    ) -> wgpu::TextureView {
         let (w, h) = img.dimensions();
-        let format = if srgb { wgpu::TextureFormat::Rgba8UnormSrgb } else { wgpu::TextureFormat::Rgba8Unorm };
+        let format = if srgb {
+            wgpu::TextureFormat::Rgba8UnormSrgb
+        } else {
+            wgpu::TextureFormat::Rgba8Unorm
+        };
         let texture = self.device.create_texture(&wgpu::TextureDescriptor {
             label: Some("PBR Imported Texture"),
-            size: wgpu::Extent3d { width: w, height: h, depth_or_array_layers: 1 },
+            size: wgpu::Extent3d {
+                width: w,
+                height: h,
+                depth_or_array_layers: 1,
+            },
             mip_level_count: 1,
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
@@ -2241,29 +3164,56 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
             view_formats: &[],
         });
         self.queue.write_texture(
-            wgpu::ImageCopyTexture { texture: &texture, mip_level: 0, origin: wgpu::Origin3d::ZERO, aspect: wgpu::TextureAspect::All },
+            wgpu::ImageCopyTexture {
+                texture: &texture,
+                mip_level: 0,
+                origin: wgpu::Origin3d::ZERO,
+                aspect: wgpu::TextureAspect::All,
+            },
             img.as_raw(),
-            wgpu::ImageDataLayout { offset: 0, bytes_per_row: Some(4 * w), rows_per_image: Some(h) },
-            wgpu::Extent3d { width: w, height: h, depth_or_array_layers: 1 },
+            wgpu::ImageDataLayout {
+                offset: 0,
+                bytes_per_row: Some(4 * w),
+                rows_per_image: Some(h),
+            },
+            wgpu::Extent3d {
+                width: w,
+                height: h,
+                depth_or_array_layers: 1,
+            },
         );
         texture.create_view(&wgpu::TextureViewDescriptor::default())
     }
 
     pub fn create_sampler(&self) -> wgpu::Sampler {
-        self.device.create_sampler(&wgpu::SamplerDescriptor::default())
+        self.device
+            .create_sampler(&wgpu::SamplerDescriptor::default())
     }
 
-    pub fn device(&self) -> &wgpu::Device { &self.device }
-    pub fn queue(&self) -> &wgpu::Queue { &self.queue }
+    pub fn device(&self) -> &wgpu::Device {
+        &self.device
+    }
+    pub fn queue(&self) -> &wgpu::Queue {
+        &self.queue
+    }
 }
 
-fn compute_scissor(insts: &[Instance], start: u32, end: u32, screen_w: u32, screen_h: u32) -> Option<[u32;4]> {
-    if end <= start { return None; }
+fn compute_scissor(
+    insts: &[Instance],
+    start: u32,
+    end: u32,
+    screen_w: u32,
+    screen_h: u32,
+) -> Option<[u32; 4]> {
+    if end <= start {
+        return None;
+    }
     let mut min_x = f32::INFINITY;
     let mut min_y = f32::INFINITY;
     let mut max_x = f32::NEG_INFINITY;
     let mut max_y = f32::NEG_INFINITY;
-    let s = start as usize; let e = end as usize;
+    let s = start as usize;
+    let e = end as usize;
     for inst in &insts[s..e] {
         let c = inst.rot.cos().abs();
         let s0 = inst.rot.sin().abs();
@@ -2275,25 +3225,47 @@ fn compute_scissor(insts: &[Instance], start: u32, end: u32, screen_w: u32, scre
         let y0 = inst.pos[1] - ey;
         let x1 = inst.pos[0] + ex;
         let y1 = inst.pos[1] + ey;
-        if x0 < min_x { min_x = x0; }
-        if y0 < min_y { min_y = y0; }
-        if x1 > max_x { max_x = x1; }
-        if y1 > max_y { max_y = y1; }
+        if x0 < min_x {
+            min_x = x0;
+        }
+        if y0 < min_y {
+            min_y = y0;
+        }
+        if x1 > max_x {
+            max_x = x1;
+        }
+        if y1 > max_y {
+            max_y = y1;
+        }
     }
-    if !(min_x.is_finite() && min_y.is_finite() && max_x.is_finite() && max_y.is_finite()) { return None; }
+    if !(min_x.is_finite() && min_y.is_finite() && max_x.is_finite() && max_y.is_finite()) {
+        return None;
+    }
     let mut x = min_x.max(0.0).floor() as u32;
     let mut y = min_y.max(0.0).floor() as u32;
     let mut w = (max_x.min(screen_w as f32).ceil() as i64 - x as i64).max(0) as u32;
     let mut h = (max_y.min(screen_h as f32).ceil() as i64 - y as i64).max(0) as u32;
-    if w == 0 || h == 0 { return None; }
-    if x >= screen_w { x = screen_w - 1; }
-    if y >= screen_h { y = screen_h - 1; }
-    if x + w > screen_w { w = screen_w - x; }
-    if y + h > screen_h { h = screen_h - y; }
+    if w == 0 || h == 0 {
+        return None;
+    }
+    if x >= screen_w {
+        x = screen_w - 1;
+    }
+    if y >= screen_h {
+        y = screen_h - 1;
+    }
+    if x + w > screen_w {
+        w = screen_w - x;
+    }
+    if y + h > screen_h {
+        h = screen_h - y;
+    }
     Some([x, y, w, h])
 }
 
-fn inst_tex_index(inst: &Instance) -> usize { inst.tex_index as usize }
+fn inst_tex_index(inst: &Instance) -> usize {
+    inst.tex_index as usize
+}
 
 fn hash_instances(slice: &[Instance]) -> u64 {
     let mut h: u64 = 1469598103934665603;

@@ -2,6 +2,7 @@
 //!
 //! 支持大规模粒子模拟，完全在 GPU 上执行。
 
+use crate::impl_default;
 use bevy_ecs::prelude::*;
 use glam::{Vec3, Vec4};
 use std::ops::Range;
@@ -27,23 +28,20 @@ pub struct ParticleEmitterConfig {
     pub shape: ParticleShape,
 }
 
-impl Default for ParticleEmitterConfig {
-    fn default() -> Self {
-        Self {
-            max_particles: 10000,
-            emission_rate: 100.0,
-            duration: None,
-            looping: true,
-            prewarm_time: 0.0,
-            shape: ParticleShape::Point,
-        }
-    }
-}
+impl_default!(ParticleEmitterConfig {
+    max_particles: 10000,
+    emission_rate: 100.0,
+    duration: None,
+    looping: true,
+    prewarm_time: 0.0,
+    shape: ParticleShape::Point,
+});
 
 /// 发射形状
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub enum ParticleShape {
     /// 点发射
+    #[default]
     Point,
     /// 球形发射
     Sphere { radius: f32 },
@@ -59,9 +57,9 @@ pub enum ParticleShape {
     Edge { length: f32 },
 }
 
-impl Default for ParticleShape {
-    fn default() -> Self {
-        Self::Point
+impl ParticleShape {
+    pub fn new() -> Self {
+        Self::default()
     }
 }
 
@@ -104,29 +102,25 @@ pub struct ParticleEmitter {
     pub elapsed_time: f32,
 }
 
-impl Default for ParticleEmitter {
-    fn default() -> Self {
-        Self {
-            config: ParticleEmitterConfig::default(),
-            lifetime: 1.0..3.0,
-            initial_velocity: Vec3::new(-1.0, 2.0, -1.0)..Vec3::new(1.0, 5.0, 1.0),
-            velocity_randomness: 0.2,
-            gravity: Vec3::new(0.0, -9.81, 0.0),
-            drag: 0.0,
-            start_color: Vec4::new(1.0, 1.0, 1.0, 1.0),
-            end_color: Vec4::new(1.0, 1.0, 1.0, 0.0),
-            color_gradient: None,
-            start_size: 0.1..0.3,
-            end_size: Some(0.05),
-            size_over_lifetime: None,
-            start_rotation: 0.0..std::f32::consts::TAU,
-            rotation_speed: 0.0,
-            enabled: true,
-            emission_accumulator: 0.0,
-            elapsed_time: 0.0,
-        }
-    }
-}
+impl_default!(ParticleEmitter {
+    config: ParticleEmitterConfig::default(),
+    lifetime: 1.0..3.0,
+    initial_velocity: Vec3::new(-1.0, 2.0, -1.0)..Vec3::new(1.0, 5.0, 1.0),
+    velocity_randomness: 0.2,
+    gravity: Vec3::new(0.0, -9.81, 0.0),
+    drag: 0.0,
+    start_color: Vec4::new(1.0, 1.0, 1.0, 1.0),
+    end_color: Vec4::new(1.0, 1.0, 1.0, 0.0),
+    color_gradient: None,
+    start_size: 0.1..0.3,
+    end_size: Some(0.05),
+    size_over_lifetime: None,
+    start_rotation: 0.0..std::f32::consts::TAU,
+    rotation_speed: 0.0,
+    enabled: true,
+    emission_accumulator: 0.0,
+    elapsed_time: 0.0,
+});
 
 impl ParticleEmitter {
     pub fn new(max_particles: u32) -> Self {
@@ -231,7 +225,8 @@ impl ColorGradient {
 
     pub fn add_stop(mut self, time: f32, color: Vec4) -> Self {
         self.stops.push(ColorStop { time, color });
-        self.stops.sort_by(|a, b| a.time.partial_cmp(&b.time).unwrap());
+        self.stops
+            .sort_by(|a, b| a.time.partial_cmp(&b.time).unwrap());
         self
     }
 
@@ -292,7 +287,10 @@ impl SizeOverLifetime {
         match self {
             Self::Linear { start, end } => start + (end - start) * t,
             Self::Curve { points } => sample_curve(points, t),
-            Self::RandomBetweenCurves { min_points, max_points } => {
+            Self::RandomBetweenCurves {
+                min_points,
+                max_points,
+            } => {
                 let min = sample_curve(min_points, t);
                 let max = sample_curve(max_points, t);
                 (min + max) * 0.5 // 简化处理
@@ -330,7 +328,7 @@ fn sample_curve(points: &[(f32, f32)], t: f32) -> f32 {
 
 /// GPU 粒子结构（对应 WGSL struct）
 #[repr(C)]
-#[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
+#[derive(Clone, Copy, Default, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct GpuParticle {
     /// 位置
     pub position: [f32; 3],
@@ -350,22 +348,6 @@ pub struct GpuParticle {
     pub rotation_speed: f32,
     /// 存活标记（1.0 = 存活，0.0 = 死亡）
     pub alive: f32,
-}
-
-impl Default for GpuParticle {
-    fn default() -> Self {
-        Self {
-            position: [0.0; 3],
-            lifetime: 0.0,
-            velocity: [0.0; 3],
-            age: 0.0,
-            color: [1.0, 1.0, 1.0, 1.0],
-            size: 1.0,
-            rotation: 0.0,
-            rotation_speed: 0.0,
-            alive: 0.0,
-        }
-    }
 }
 
 /// GPU 粒子系统 Uniform
@@ -447,7 +429,9 @@ impl GpuParticleSystem {
         let particle_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("Particle Buffer"),
             size: particle_buffer_size,
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::VERTEX,
+            usage: wgpu::BufferUsages::STORAGE
+                | wgpu::BufferUsages::COPY_DST
+                | wgpu::BufferUsages::VERTEX,
             mapped_at_creation: false,
         });
 
@@ -471,8 +455,8 @@ impl GpuParticleSystem {
         let counter_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("Counter Buffer"),
             size: 16,
-            usage: wgpu::BufferUsages::STORAGE 
-                | wgpu::BufferUsages::COPY_DST 
+            usage: wgpu::BufferUsages::STORAGE
+                | wgpu::BufferUsages::COPY_DST
                 | wgpu::BufferUsages::COPY_SRC
                 | wgpu::BufferUsages::INDIRECT,
             mapped_at_creation: false,
@@ -514,6 +498,16 @@ impl GpuParticleSystem {
     }
 
     /// 更新 Uniform
+    ///
+    /// # 参数
+    ///
+    /// * `queue` - WGPU命令队列
+    /// * `emitter_position` - 发射器位置
+    /// * `gravity` - 重力向量
+    /// * `drag` - 阻力系数
+    /// * `emit_count` - 本帧发射数量
+    /// * `delta_time` - 时间增量
+    /// * `time` - 当前时间
     pub fn update_uniforms(
         &mut self,
         queue: &wgpu::Queue,
@@ -531,7 +525,7 @@ impl GpuParticleSystem {
             drag,
             emit_count,
             time,
-            random_seed: rand::random::<f32>(),
+            random_seed: rand::random::<f32>(), // 使用rand替代fastrand
             _padding: 0.0,
         };
         queue.write_buffer(&self.uniform_buffer, 0, bytemuck::bytes_of(&uniforms));
@@ -591,21 +585,24 @@ mod tests {
     #[test]
     fn test_color_gradient_sample() {
         let gradient = ColorGradient::default();
-        
+
         let color_0 = gradient.sample(0.0);
         assert!((color_0.w - 1.0).abs() < 0.001); // Alpha = 1 at start
-        
+
         let color_1 = gradient.sample(1.0);
         assert!(color_1.w.abs() < 0.001); // Alpha = 0 at end
-        
+
         let color_half = gradient.sample(0.5);
         assert!((color_half.w - 0.5).abs() < 0.001); // Alpha = 0.5 at middle
     }
 
     #[test]
     fn test_size_over_lifetime() {
-        let size = SizeOverLifetime::Linear { start: 1.0, end: 0.0 };
-        
+        let size = SizeOverLifetime::Linear {
+            start: 1.0,
+            end: 0.0,
+        };
+
         assert!((size.sample(0.0) - 1.0).abs() < 0.001);
         assert!((size.sample(0.5) - 0.5).abs() < 0.001);
         assert!(size.sample(1.0).abs() < 0.001);
@@ -615,7 +612,7 @@ mod tests {
     fn test_particles_to_emit() {
         let mut emitter = ParticleEmitter::new(1000);
         emitter.config.emission_rate = 100.0;
-        
+
         // 0.01 秒应该发射 1 个粒子
         let count = emitter.particles_to_emit(0.01);
         assert_eq!(count, 1);

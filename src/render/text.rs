@@ -3,6 +3,7 @@
 // 支持高质量缩放、描边、阴影、轮廓等效果
 // ============================================================================
 
+use crate::impl_default;
 use std::collections::HashMap;
 
 /// MSDF 字体资源
@@ -53,7 +54,7 @@ impl GlyphBounds {
     pub fn width(&self) -> f32 {
         self.right - self.left
     }
-    
+
     pub fn height(&self) -> f32 {
         self.top - self.bottom
     }
@@ -86,23 +87,19 @@ pub struct TextStyle {
     pub soft_edges: bool,
 }
 
-impl Default for TextStyle {
-    fn default() -> Self {
-        Self {
-            font_size: 16.0,
-            color: [1.0, 1.0, 1.0, 1.0],
-            stroke_width: 0.0,
-            stroke_color: [0.0, 0.0, 0.0, 1.0],
-            shadow_offset: [0.0, 0.0],
-            shadow_blur: 0.0,
-            shadow_color: [0.0, 0.0, 0.0, 0.5],
-            letter_spacing: 0.0,
-            line_spacing: 1.0,
-            alignment: TextAlignment::Left,
-            soft_edges: true,
-        }
-    }
-}
+impl_default!(TextStyle {
+    font_size: 16.0,
+    color: [1.0, 1.0, 1.0, 1.0],
+    stroke_width: 0.0,
+    stroke_color: [0.0, 0.0, 0.0, 1.0],
+    shadow_offset: [0.0, 0.0],
+    shadow_blur: 0.0,
+    shadow_color: [0.0, 0.0, 0.0, 0.5],
+    letter_spacing: 0.0,
+    line_spacing: 1.0,
+    alignment: TextAlignment::Left,
+    soft_edges: true,
+});
 
 /// 文本对齐方式
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -163,67 +160,70 @@ impl MsdfFont {
     pub fn from_json(json_data: &str, atlas_texture: u32) -> Result<Self, String> {
         let data: serde_json::Value = serde_json::from_str(json_data)
             .map_err(|e| format!("Failed to parse font JSON: {}", e))?;
-        
+
         let atlas = &data["atlas"];
         let metrics = &data["metrics"];
-        
+
         let atlas_size = [
             atlas["width"].as_u64().unwrap_or(1024) as u32,
             atlas["height"].as_u64().unwrap_or(1024) as u32,
         ];
-        
+
         let distance_range = atlas["distanceRange"].as_f64().unwrap_or(4.0) as f32;
-        
+
         let line_height = metrics["lineHeight"].as_f64().unwrap_or(1.0) as f32;
         let ascender = metrics["ascender"].as_f64().unwrap_or(0.8) as f32;
         let descender = metrics["descender"].as_f64().unwrap_or(-0.2) as f32;
-        
+
         let mut glyphs = HashMap::new();
-        
+
         if let Some(glyph_array) = data["glyphs"].as_array() {
             for glyph in glyph_array {
                 let unicode = glyph["unicode"].as_u64().unwrap_or(0) as u32;
                 if let Some(ch) = char::from_u32(unicode) {
                     let advance = glyph["advance"].as_f64().unwrap_or(0.0) as f32;
-                    
+
                     let plane_bounds = glyph.get("planeBounds").map(|pb| GlyphBounds {
                         left: pb["left"].as_f64().unwrap_or(0.0) as f32,
                         bottom: pb["bottom"].as_f64().unwrap_or(0.0) as f32,
                         right: pb["right"].as_f64().unwrap_or(0.0) as f32,
                         top: pb["top"].as_f64().unwrap_or(0.0) as f32,
                     });
-                    
+
                     let atlas_bounds = glyph.get("atlasBounds").map(|ab| GlyphBounds {
                         left: ab["left"].as_f64().unwrap_or(0.0) as f32,
                         bottom: ab["bottom"].as_f64().unwrap_or(0.0) as f32,
                         right: ab["right"].as_f64().unwrap_or(0.0) as f32,
                         top: ab["top"].as_f64().unwrap_or(0.0) as f32,
                     });
-                    
-                    glyphs.insert(ch, GlyphData {
-                        unicode,
-                        advance,
-                        plane_bounds,
-                        atlas_bounds,
-                    });
+
+                    glyphs.insert(
+                        ch,
+                        GlyphData {
+                            unicode,
+                            advance,
+                            plane_bounds,
+                            atlas_bounds,
+                        },
+                    );
                 }
             }
         }
-        
+
         let mut kerning = HashMap::new();
-        
+
         if let Some(kerning_array) = data["kerning"].as_array() {
             for kern in kerning_array {
                 let first = kern["unicode1"].as_u64().unwrap_or(0) as u32;
                 let second = kern["unicode2"].as_u64().unwrap_or(0) as u32;
                 let advance = kern["advance"].as_f64().unwrap_or(0.0) as f32;
-                
+
                 if let (Some(c1), Some(c2)) = (char::from_u32(first), char::from_u32(second)) {
                     kerning.insert((c1, c2), advance);
                 }
             }
         }
-        
+
         Ok(Self {
             name: data["name"].as_str().unwrap_or("Unknown").to_string(),
             atlas_texture,
@@ -236,12 +236,12 @@ impl MsdfFont {
             descender,
         })
     }
-    
+
     /// 获取字形数据
     pub fn get_glyph(&self, ch: char) -> Option<&GlyphData> {
         self.glyphs.get(&ch)
     }
-    
+
     /// 获取字距调整
     pub fn get_kerning(&self, first: char, second: char) -> f32 {
         self.kerning.get(&(first, second)).copied().unwrap_or(0.0)
@@ -249,34 +249,27 @@ impl MsdfFont {
 }
 
 /// 文本排版器
+#[derive(Default)]
 pub struct TextLayouter {
     /// 缓存的字体
     fonts: HashMap<String, MsdfFont>,
 }
 
-impl Default for TextLayouter {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 impl TextLayouter {
     pub fn new() -> Self {
-        Self {
-            fonts: HashMap::new(),
-        }
+        Self::default()
     }
-    
+
     /// 注册字体
     pub fn register_font(&mut self, name: String, font: MsdfFont) {
         self.fonts.insert(name, font);
     }
-    
+
     /// 获取字体
     pub fn get_font(&self, name: &str) -> Option<&MsdfFont> {
         self.fonts.get(name)
     }
-    
+
     /// 布局文本
     pub fn layout_text(
         &self,
@@ -286,19 +279,19 @@ impl TextLayouter {
         max_width: Option<f32>,
     ) -> Option<TextLayout> {
         let font = self.fonts.get(font_name)?;
-        
+
         let scale = style.font_size / font.line_height;
         let line_height = font.line_height * scale * style.line_spacing;
-        
+
         let mut glyphs = Vec::new();
         let mut lines = Vec::new();
-        
+
         let mut cursor_x = 0.0f32;
         let mut cursor_y = -font.ascender * scale;
         let mut line_start = 0;
         let mut line_width = 0.0f32;
         let mut prev_char: Option<char> = None;
-        
+
         for ch in text.chars() {
             if ch == '\n' {
                 // 换行
@@ -308,7 +301,7 @@ impl TextLayouter {
                     width: line_width,
                     baseline_y: cursor_y,
                 });
-                
+
                 cursor_x = 0.0;
                 cursor_y -= line_height;
                 line_start = glyphs.len();
@@ -316,7 +309,7 @@ impl TextLayouter {
                 prev_char = None;
                 continue;
             }
-            
+
             let glyph_data = match font.get_glyph(ch) {
                 Some(g) => g,
                 None => font.get_glyph('?').unwrap_or_else(|| {
@@ -324,12 +317,12 @@ impl TextLayouter {
                     font.get_glyph(' ').unwrap()
                 }),
             };
-            
+
             // 应用字距调整
             if let Some(prev) = prev_char {
                 cursor_x += font.get_kerning(prev, ch) * scale;
             }
-            
+
             // 自动换行检查
             if let Some(max_w) = max_width {
                 let advance = glyph_data.advance * scale + style.letter_spacing;
@@ -340,21 +333,21 @@ impl TextLayouter {
                         width: line_width,
                         baseline_y: cursor_y,
                     });
-                    
+
                     cursor_x = 0.0;
                     cursor_y -= line_height;
                     line_start = glyphs.len();
                     line_width = 0.0;
                 }
             }
-            
+
             // 生成字形实例
             if let (Some(plane), Some(atlas)) = (glyph_data.plane_bounds, glyph_data.atlas_bounds) {
                 let x = cursor_x + plane.left * scale;
                 let y = cursor_y + plane.bottom * scale;
                 let w = plane.width() * scale;
                 let h = plane.height() * scale;
-                
+
                 let atlas_size = font.atlas_size;
                 let uv_min = [
                     atlas.left / atlas_size[0] as f32,
@@ -364,7 +357,7 @@ impl TextLayouter {
                     atlas.right / atlas_size[0] as f32,
                     1.0 - atlas.bottom / atlas_size[1] as f32,
                 ];
-                
+
                 // 阴影层
                 if style.shadow_blur > 0.0 || style.shadow_offset != [0.0, 0.0] {
                     glyphs.push(GlyphInstance {
@@ -376,7 +369,7 @@ impl TextLayouter {
                         layer: GlyphLayer::Shadow,
                     });
                 }
-                
+
                 // 描边层
                 if style.stroke_width > 0.0 {
                     glyphs.push(GlyphInstance {
@@ -388,7 +381,7 @@ impl TextLayouter {
                         layer: GlyphLayer::Stroke,
                     });
                 }
-                
+
                 // 填充层
                 glyphs.push(GlyphInstance {
                     position: [x, y],
@@ -399,12 +392,12 @@ impl TextLayouter {
                     layer: GlyphLayer::Fill,
                 });
             }
-            
+
             cursor_x += glyph_data.advance * scale + style.letter_spacing;
             line_width = cursor_x;
             prev_char = Some(ch);
         }
-        
+
         // 最后一行
         if line_start < glyphs.len() || lines.is_empty() {
             lines.push(LineInfo {
@@ -414,11 +407,11 @@ impl TextLayouter {
                 baseline_y: cursor_y,
             });
         }
-        
+
         // 计算边界框
         let total_height = lines.len() as f32 * line_height;
         let max_line_width = lines.iter().map(|l| l.width).fold(0.0f32, f32::max);
-        
+
         // 应用对齐
         if style.alignment != TextAlignment::Left {
             for line in &lines {
@@ -427,7 +420,7 @@ impl TextLayouter {
                     TextAlignment::Right => max_line_width - line.width,
                     _ => 0.0,
                 };
-                
+
                 if offset != 0.0 {
                     for glyph in &mut glyphs[line.start_glyph..line.end_glyph] {
                         glyph.position[0] += offset;
@@ -435,7 +428,7 @@ impl TextLayouter {
                 }
             }
         }
-        
+
         Some(TextLayout {
             glyphs,
             bounds: [0.0, cursor_y, max_line_width, total_height],
@@ -443,6 +436,7 @@ impl TextLayouter {
         })
     }
 }
+
 
 /// MSDF 着色器代码
 pub const MSDF_SHADER: &str = r#"
@@ -591,64 +585,110 @@ pub struct MsdfVertex {
 /// 将布局转换为顶点数据
 pub fn layout_to_vertices(layout: &TextLayout, style: &TextStyle) -> Vec<MsdfVertex> {
     let mut vertices = Vec::with_capacity(layout.glyphs.len() * 6);
-    
+
     for glyph in &layout.glyphs {
         let layer = match glyph.layer {
             GlyphLayer::Shadow => 0.0,
             GlyphLayer::Stroke => 1.0,
             GlyphLayer::Fill => 2.0,
         };
-        
+
         let softness = if style.soft_edges { 1.0 } else { 0.1 };
         let params = [layer, style.stroke_width, softness, 0.0];
-        
+
         let x0 = glyph.position[0];
         let y0 = glyph.position[1];
         let x1 = x0 + glyph.size[0];
         let y1 = y0 + glyph.size[1];
-        
+
         let u0 = glyph.uv_min[0];
         let v0 = glyph.uv_min[1];
         let u1 = glyph.uv_max[0];
         let v1 = glyph.uv_max[1];
-        
+
         // 两个三角形组成四边形
         // Triangle 1
-        vertices.push(MsdfVertex { position: [x0, y0], uv: [u0, v1], color: glyph.color, params });
-        vertices.push(MsdfVertex { position: [x1, y0], uv: [u1, v1], color: glyph.color, params });
-        vertices.push(MsdfVertex { position: [x1, y1], uv: [u1, v0], color: glyph.color, params });
+        vertices.push(MsdfVertex {
+            position: [x0, y0],
+            uv: [u0, v1],
+            color: glyph.color,
+            params,
+        });
+        vertices.push(MsdfVertex {
+            position: [x1, y0],
+            uv: [u1, v1],
+            color: glyph.color,
+            params,
+        });
+        vertices.push(MsdfVertex {
+            position: [x1, y1],
+            uv: [u1, v0],
+            color: glyph.color,
+            params,
+        });
         // Triangle 2
-        vertices.push(MsdfVertex { position: [x0, y0], uv: [u0, v1], color: glyph.color, params });
-        vertices.push(MsdfVertex { position: [x1, y1], uv: [u1, v0], color: glyph.color, params });
-        vertices.push(MsdfVertex { position: [x0, y1], uv: [u0, v0], color: glyph.color, params });
+        vertices.push(MsdfVertex {
+            position: [x0, y0],
+            uv: [u0, v1],
+            color: glyph.color,
+            params,
+        });
+        vertices.push(MsdfVertex {
+            position: [x1, y1],
+            uv: [u1, v0],
+            color: glyph.color,
+            params,
+        });
+        vertices.push(MsdfVertex {
+            position: [x0, y1],
+            uv: [u0, v0],
+            color: glyph.color,
+            params,
+        });
     }
-    
+
     vertices
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_text_layout() {
         let mut layouter = TextLayouter::new();
-        
+
         // 创建测试字体 (简化)
         let mut glyphs = HashMap::new();
-        glyphs.insert('A', GlyphData {
-            unicode: 65,
-            advance: 0.6,
-            plane_bounds: Some(GlyphBounds { left: 0.0, bottom: 0.0, right: 0.5, top: 0.7 }),
-            atlas_bounds: Some(GlyphBounds { left: 0.0, bottom: 0.0, right: 64.0, top: 64.0 }),
-        });
-        glyphs.insert(' ', GlyphData {
-            unicode: 32,
-            advance: 0.3,
-            plane_bounds: None,
-            atlas_bounds: None,
-        });
-        
+        glyphs.insert(
+            'A',
+            GlyphData {
+                unicode: 65,
+                advance: 0.6,
+                plane_bounds: Some(GlyphBounds {
+                    left: 0.0,
+                    bottom: 0.0,
+                    right: 0.5,
+                    top: 0.7,
+                }),
+                atlas_bounds: Some(GlyphBounds {
+                    left: 0.0,
+                    bottom: 0.0,
+                    right: 64.0,
+                    top: 64.0,
+                }),
+            },
+        );
+        glyphs.insert(
+            ' ',
+            GlyphData {
+                unicode: 32,
+                advance: 0.3,
+                plane_bounds: None,
+                atlas_bounds: None,
+            },
+        );
+
         let font = MsdfFont {
             name: "Test".to_string(),
             atlas_texture: 0,
@@ -660,12 +700,12 @@ mod tests {
             ascender: 0.8,
             descender: -0.2,
         };
-        
+
         layouter.register_font("test".to_string(), font);
-        
+
         let style = TextStyle::default();
         let layout = layouter.layout_text("A A", "test", &style, None);
-        
+
         assert!(layout.is_some());
         let layout = layout.unwrap();
         assert!(!layout.glyphs.is_empty());

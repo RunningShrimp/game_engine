@@ -1,22 +1,33 @@
-pub mod batch_renderer;
-pub mod object_pool;
-pub mod profiler;
-pub mod render_optimization;
-pub mod advanced_profiler;
-pub mod continuous_profiler;
-pub mod memory_profiler;
-pub mod synchronized;
-pub mod arena;
-pub mod simd;
-pub mod hardware;
+//! Performance模块
+//!
+//! 提供性能优化和集成功能。
+//!
+//! ## 模块结构
+//!
+//! - `memory/` - 内存优化（引擎核心依赖）
+//! - `rendering/` - 渲染优化（引擎核心依赖）
+//! - `gpu/` - GPU计算（引擎核心依赖）
+//! - `optimization/` - 特定领域优化（引擎核心依赖）
+//! - `sync/` - 同步工具（引擎核心依赖）
+//!
+//! ## Profiling工具
+//!
+//! 性能分析和基准测试工具已分离到`game_engine_profiling` crate。
+//! 为了向后兼容，这些工具仍然可以通过`game_engine::performance`访问。
 
-pub use batch_renderer::BatchRenderer;
-pub use object_pool::{ObjectPool, SyncObjectPool, ResettablePool, Pooled, PoolStats, Resettable, SizedPool};
-pub use profiler::Profiler;
-pub use render_optimization::{FrustumCulling, OcclusionCulling, LodManager};
-pub use advanced_profiler::{AdvancedProfiler, PerformanceMetrics};
-pub use continuous_profiler::ContinuousProfiler;
-pub use memory_profiler::{MemoryProfiler, GpuProfiler};
-pub use simd::{CpuFeatures, detect_cpu_features, print_cpu_info};
-pub use hardware::{get_hardware_info, print_hardware_info, HardwareInfo, AutoConfig};
-pub use arena::{Arena, TypedArena, TypedArenaWithDrop, ArenaError, MemoryPool};
+// 引擎核心依赖的模块
+pub mod memory;
+pub mod rendering;
+pub mod gpu;
+pub mod optimization;
+pub mod sync;
+
+// 重新导出profiling crate的公共API（向后兼容）
+pub use game_engine_profiling::*;
+
+// 重新导出引擎核心模块
+pub use memory::*;
+pub use rendering::*;
+pub use gpu::*;
+pub use optimization::*;
+pub use sync::*;

@@ -51,7 +51,7 @@ impl FxaaQuality {
             FxaaQuality::Ultra => 16,
         }
     }
-    
+
     /// 获取边缘检测阈值
     pub fn edge_threshold(&self) -> f32 {
         match self {
@@ -61,7 +61,7 @@ impl FxaaQuality {
             FxaaQuality::Ultra => 0.063,
         }
     }
-    
+
     /// 获取最小边缘阈值
     pub fn edge_threshold_min(&self) -> f32 {
         match self {
@@ -113,7 +113,7 @@ impl FxaaPass {
             label: Some("FXAA Shader"),
             source: wgpu::ShaderSource::Wgsl(include_str!("shader_fxaa.wgsl").into()),
         });
-        
+
         // 创建绑定组布局
         let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("FXAA Bind Group Layout"),
@@ -149,14 +149,14 @@ impl FxaaPass {
                 },
             ],
         });
-        
+
         // 创建管线布局
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("FXAA Pipeline Layout"),
             bind_group_layouts: &[&bind_group_layout],
             push_constant_ranges: &[],
         });
-        
+
         // 创建渲染管线
         let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: Some("FXAA Pipeline"),
@@ -185,7 +185,7 @@ impl FxaaPass {
             multisample: wgpu::MultisampleState::default(),
             multiview: None,
         });
-        
+
         // 创建 Uniform 缓冲区
         let uniform_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("FXAA Uniform Buffer"),
@@ -193,7 +193,7 @@ impl FxaaPass {
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
-        
+
         // 创建采样器
         let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
             label: Some("FXAA Sampler"),
@@ -205,7 +205,7 @@ impl FxaaPass {
             mipmap_filter: wgpu::FilterMode::Nearest,
             ..Default::default()
         });
-        
+
         Self {
             pipeline,
             bind_group_layout,
@@ -214,17 +214,17 @@ impl FxaaPass {
             quality: FxaaQuality::default(),
         }
     }
-    
+
     /// 设置 FXAA 质量
     pub fn set_quality(&mut self, quality: FxaaQuality) {
         self.quality = quality;
     }
-    
+
     /// 获取当前质量
     pub fn quality(&self) -> FxaaQuality {
         self.quality
     }
-    
+
     /// 执行 FXAA 渲染
     pub fn render(
         &self,
@@ -246,7 +246,7 @@ impl FxaaPass {
             _pad: 0.0,
         };
         queue.write_buffer(&self.uniform_buffer, 0, bytemuck::bytes_of(&uniforms));
-        
+
         // 创建绑定组
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("FXAA Bind Group"),
@@ -266,7 +266,7 @@ impl FxaaPass {
                 },
             ],
         });
-        
+
         // 渲染
         let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             label: Some("FXAA Render Pass"),
@@ -282,7 +282,7 @@ impl FxaaPass {
             timestamp_writes: None,
             occlusion_query_set: None,
         });
-        
+
         render_pass.set_pipeline(&self.pipeline);
         render_pass.set_bind_group(0, &bind_group, &[]);
         render_pass.draw(0..3, 0..1); // 全屏三角形
@@ -336,13 +336,13 @@ impl TaaPass {
     pub fn new(device: &wgpu::Device, output_format: wgpu::TextureFormat) -> Self {
         // Halton 序列生成抖动偏移
         let jitter_sequence = Self::generate_halton_sequence(16);
-        
+
         // 创建着色器
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("TAA Shader"),
             source: wgpu::ShaderSource::Wgsl(include_str!("shader_taa.wgsl").into()),
         });
-        
+
         // 创建绑定组布局
         let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("TAA Bind Group Layout"),
@@ -400,14 +400,14 @@ impl TaaPass {
                 },
             ],
         });
-        
+
         // 创建管线布局
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("TAA Pipeline Layout"),
             bind_group_layouts: &[&bind_group_layout],
             push_constant_ranges: &[],
         });
-        
+
         // 创建解析管线
         let resolve_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: Some("TAA Resolve Pipeline"),
@@ -436,7 +436,7 @@ impl TaaPass {
             multisample: wgpu::MultisampleState::default(),
             multiview: None,
         });
-        
+
         // 创建 Uniform 缓冲区
         let uniform_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("TAA Uniform Buffer"),
@@ -444,7 +444,7 @@ impl TaaPass {
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
-        
+
         // 创建采样器
         let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
             label: Some("TAA Sampler"),
@@ -456,7 +456,7 @@ impl TaaPass {
             mipmap_filter: wgpu::FilterMode::Nearest,
             ..Default::default()
         });
-        
+
         Self {
             resolve_pipeline,
             bind_group_layout,
@@ -469,7 +469,7 @@ impl TaaPass {
             jitter_sequence,
         }
     }
-    
+
     /// 生成 Halton 序列用于抖动
     fn generate_halton_sequence(count: usize) -> Vec<[f32; 2]> {
         let mut sequence = Vec::with_capacity(count);
@@ -480,7 +480,7 @@ impl TaaPass {
         }
         sequence
     }
-    
+
     /// Halton 序列计算
     fn halton(mut index: u32, base: u32) -> f32 {
         let mut result = 0.0;
@@ -492,38 +492,43 @@ impl TaaPass {
         }
         result
     }
-    
+
     /// 获取当前帧的抖动偏移
     pub fn get_jitter(&self) -> [f32; 2] {
         self.jitter_sequence[self.frame_index as usize % self.jitter_sequence.len()]
     }
-    
+
     /// 推进到下一帧
     pub fn advance_frame(&mut self) {
         self.frame_index = self.frame_index.wrapping_add(1);
         self.current_history = 1 - self.current_history;
     }
-    
+
     /// 确保历史纹理已创建
     pub fn ensure_history_textures(&mut self, device: &wgpu::Device, width: u32, height: u32) {
         let need_recreate = self.history_texture_a.as_ref().map_or(true, |t| {
             t.size().width != width || t.size().height != height
         });
-        
+
         if need_recreate {
             let create_texture = |label: &str| {
                 device.create_texture(&wgpu::TextureDescriptor {
                     label: Some(label),
-                    size: wgpu::Extent3d { width, height, depth_or_array_layers: 1 },
+                    size: wgpu::Extent3d {
+                        width,
+                        height,
+                        depth_or_array_layers: 1,
+                    },
                     mip_level_count: 1,
                     sample_count: 1,
                     dimension: wgpu::TextureDimension::D2,
                     format: wgpu::TextureFormat::Rgba16Float,
-                    usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+                    usage: wgpu::TextureUsages::RENDER_ATTACHMENT
+                        | wgpu::TextureUsages::TEXTURE_BINDING,
                     view_formats: &[],
                 })
             };
-            
+
             self.history_texture_a = Some(create_texture("TAA History A"));
             self.history_texture_b = Some(create_texture("TAA History B"));
         }
@@ -533,18 +538,18 @@ impl TaaPass {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_fxaa_quality_thresholds() {
         assert!(FxaaQuality::Low.edge_threshold() > FxaaQuality::High.edge_threshold());
         assert!(FxaaQuality::Low.iterations() < FxaaQuality::High.iterations());
     }
-    
+
     #[test]
     fn test_halton_sequence() {
         let sequence = TaaPass::generate_halton_sequence(8);
         assert_eq!(sequence.len(), 8);
-        
+
         // 验证值在 [-0.5, 0.5] 范围内
         for jitter in &sequence {
             assert!(jitter[0] >= -0.5 && jitter[0] <= 0.5);

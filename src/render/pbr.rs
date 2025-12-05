@@ -1,3 +1,4 @@
+use crate::impl_default;
 use glam::{Vec3, Vec4};
 
 /// PBR材质参数
@@ -31,25 +32,21 @@ pub struct PbrMaterial {
     pub anisotropy_direction: [f32; 2],
 }
 
-impl Default for PbrMaterial {
-    fn default() -> Self {
-        Self {
-            base_color: Vec4::ONE,
-            metallic: 0.0,
-            roughness: 0.5,
-            ambient_occlusion: 1.0,
-            emissive: Vec3::ZERO,
-            normal_scale: 1.0,
-            uv_offset: [0.0, 0.0],
-            uv_scale: [1.0, 1.0],
-            uv_rotation: 0.0,
-            clearcoat: 0.0,
-            clearcoat_roughness: 0.5,
-            anisotropy: 0.0,
-            anisotropy_direction: [1.0, 0.0],
-        }
-    }
-}
+impl_default!(PbrMaterial {
+    base_color: Vec4::ONE,
+    metallic: 0.0,
+    roughness: 0.5,
+    ambient_occlusion: 1.0,
+    emissive: Vec3::ZERO,
+    normal_scale: 1.0,
+    uv_offset: [0.0, 0.0],
+    uv_scale: [1.0, 1.0],
+    uv_rotation: 0.0,
+    clearcoat: 0.0,
+    clearcoat_roughness: 0.5,
+    anisotropy: 0.0,
+    anisotropy_direction: [1.0, 0.0],
+});
 
 /// PBR纹理集
 #[derive(Clone, Debug, Default)]
@@ -82,16 +79,12 @@ pub struct PointLight3D {
     pub radius: f32,
 }
 
-impl Default for PointLight3D {
-    fn default() -> Self {
-        Self {
-            position: Vec3::ZERO,
-            color: Vec3::ONE,
-            intensity: 1.0,
-            radius: 10.0,
-        }
-    }
-}
+impl_default!(PointLight3D {
+    position: Vec3::ZERO,
+    color: Vec3::ONE,
+    intensity: 1.0,
+    radius: 10.0,
+});
 
 /// 方向光
 #[derive(Clone, Debug)]
@@ -101,15 +94,11 @@ pub struct DirectionalLight {
     pub intensity: f32,
 }
 
-impl Default for DirectionalLight {
-    fn default() -> Self {
-        Self {
-            direction: Vec3::new(0.0, -1.0, 0.0),
-            color: Vec3::ONE,
-            intensity: 1.0,
-        }
-    }
-}
+impl_default!(DirectionalLight {
+    direction: Vec3::new(0.0, -1.0, 0.0),
+    color: Vec3::ONE,
+    intensity: 1.0,
+});
 
 /// 聚光灯
 #[derive(Clone, Debug)]
@@ -123,16 +112,12 @@ pub struct SpotLight {
     pub radius: f32,
 }
 
-impl Default for SpotLight {
-    fn default() -> Self {
-        Self {
-            position: Vec3::ZERO,
-            direction: Vec3::new(0.0, -1.0, 0.0),
-            color: Vec3::ONE,
-            intensity: 1.0,
-            inner_cutoff: 0.5,
-            outer_cutoff: 0.7,
-            radius: 10.0,
-        }
-    }
-}
+impl_default!(SpotLight {
+    position: Vec3::ZERO,
+    direction: Vec3::new(0.0, -1.0, 0.0),
+    color: Vec3::ONE,
+    intensity: 1.0,
+    inner_cutoff: 0.5,
+    outer_cutoff: 0.7,
+    radius: 10.0,
+});

@@ -1,10 +1,18 @@
 pub mod winit;
+pub mod power_aware;
+
+use thiserror::Error;
 
 #[cfg(target_arch = "wasm32")]
 pub mod web_fs;
 
 #[cfg(target_arch = "wasm32")]
 pub mod web_input;
+
+#[cfg(any(target_os = "android", target_os = "ios"))]
+pub mod mobile;
+
+pub mod console;
 
 use std::path::Path;
 use std::sync::mpsc::Sender;
@@ -21,10 +29,10 @@ pub trait Window: Send + Sync {
     fn set_title(&self, title: &str);
     fn set_fullscreen(&self, fullscreen: bool);
     fn set_cursor_visible(&self, visible: bool);
-    
+
     #[cfg(not(target_arch = "wasm32"))]
     fn raw_window_handle(&self) -> raw_window_handle::RawWindowHandle;
-    
+
     #[cfg(not(target_arch = "wasm32"))]
     fn raw_display_handle(&self) -> raw_window_handle::RawDisplayHandle;
 }
@@ -36,40 +44,145 @@ pub trait Window: Send + Sync {
 #[derive(Debug, Clone, PartialEq)]
 pub enum InputEvent {
     // Keyboard
-    KeyPressed { key: KeyCode, modifiers: Modifiers },
-    KeyReleased { key: KeyCode, modifiers: Modifiers },
+    KeyPressed {
+        key: KeyCode,
+        modifiers: Modifiers,
+    },
+    KeyReleased {
+        key: KeyCode,
+        modifiers: Modifiers,
+    },
     CharInput(char),
-    
+
     // Mouse
-    MouseMoved { x: f32, y: f32 },
-    MouseButtonPressed { button: MouseButton, x: f32, y: f32 },
-    MouseButtonReleased { button: MouseButton, x: f32, y: f32 },
-    MouseWheel { delta_x: f32, delta_y: f32 },
-    
+    MouseMoved {
+        x: f32,
+        y: f32,
+    },
+    MouseButtonPressed {
+        button: MouseButton,
+        x: f32,
+        y: f32,
+    },
+    MouseButtonReleased {
+        button: MouseButton,
+        x: f32,
+        y: f32,
+    },
+    MouseWheel {
+        delta_x: f32,
+        delta_y: f32,
+    },
+
     // Touch (mobile/tablet)
-    TouchStart { id: u64, x: f32, y: f32 },
-    TouchMove { id: u64, x: f32, y: f32 },
-    TouchEnd { id: u64, x: f32, y: f32 },
-    
+    TouchStart {
+        id: u64,
+        x: f32,
+        y: f32,
+    },
+    TouchMove {
+        id: u64,
+        x: f32,
+        y: f32,
+    },
+    TouchEnd {
+        id: u64,
+        x: f32,
+        y: f32,
+    },
+
     // Gamepad
     GamepadConnected(u32),
     GamepadDisconnected(u32),
-    GamepadAxis { id: u32, axis: GamepadAxis, value: f32 },
-    GamepadButton { id: u32, button: GamepadButton, pressed: bool },
-    
+    GamepadAxis {
+        id: u32,
+        axis: GamepadAxis,
+        value: f32,
+    },
+    GamepadButton {
+        id: u32,
+        button: GamepadButton,
+        pressed: bool,
+    },
+
     // Window
-    WindowResized { width: u32, height: u32 },
+    WindowResized {
+        width: u32,
+        height: u32,
+    },
     WindowFocused(bool),
     WindowCloseRequested,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum KeyCode {
-    A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z,
-    Num0, Num1, Num2, Num3, Num4, Num5, Num6, Num7, Num8, Num9,
-    F1, F2, F3, F4, F5, F6, F7, F8, F9, F10, F11, F12,
-    Escape, Tab, CapsLock, Shift, Control, Alt, Space, Enter, Backspace, Delete,
-    Left, Right, Up, Down, Home, End, PageUp, PageDown, Insert,
+    A,
+    B,
+    C,
+    D,
+    E,
+    F,
+    G,
+    H,
+    I,
+    J,
+    K,
+    L,
+    M,
+    N,
+    O,
+    P,
+    Q,
+    R,
+    S,
+    T,
+    U,
+    V,
+    W,
+    X,
+    Y,
+    Z,
+    Num0,
+    Num1,
+    Num2,
+    Num3,
+    Num4,
+    Num5,
+    Num6,
+    Num7,
+    Num8,
+    Num9,
+    F1,
+    F2,
+    F3,
+    F4,
+    F5,
+    F6,
+    F7,
+    F8,
+    F9,
+    F10,
+    F11,
+    F12,
+    Escape,
+    Tab,
+    CapsLock,
+    Shift,
+    Control,
+    Alt,
+    Space,
+    Enter,
+    Backspace,
+    Delete,
+    Left,
+    Right,
+    Up,
+    Down,
+    Home,
+    End,
+    PageUp,
+    PageDown,
+    Insert,
     Unknown(u32),
 }
 
@@ -83,21 +196,41 @@ pub struct Modifiers {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum MouseButton {
-    Left, Right, Middle, Other(u16),
+    Left,
+    Right,
+    Middle,
+    Other(u16),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum GamepadAxis {
-    LeftStickX, LeftStickY, RightStickX, RightStickY, LeftTrigger, RightTrigger,
+    LeftStickX,
+    LeftStickY,
+    RightStickX,
+    RightStickY,
+    LeftTrigger,
+    RightTrigger,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum GamepadButton {
-    South, East, North, West,
-    LeftBumper, RightBumper, LeftTrigger, RightTrigger,
-    Select, Start, Mode,
-    LeftThumb, RightThumb,
-    DPadUp, DPadDown, DPadLeft, DPadRight,
+    South,
+    East,
+    North,
+    West,
+    LeftBumper,
+    RightBumper,
+    LeftTrigger,
+    RightTrigger,
+    Select,
+    Start,
+    Mode,
+    LeftThumb,
+    RightThumb,
+    DPadUp,
+    DPadDown,
+    DPadLeft,
+    DPadRight,
 }
 
 #[derive(bevy_ecs::system::Resource, Default, Clone)]
@@ -113,7 +246,7 @@ pub trait Input: Send + Sync {
     fn mouse_position(&self) -> (f32, f32);
     fn set_cursor_grab(&mut self, grab: bool);
     fn set_cursor_visible(&mut self, visible: bool);
-    
+
     /// XR 输入 (可选)
     #[cfg(feature = "xr")]
     fn xr_actions(&self) -> Option<&XrActionSet>;
@@ -123,26 +256,17 @@ pub trait Input: Send + Sync {
 // Filesystem Abstraction
 // ============================================================================
 
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum FsError {
+    #[error("File not found")]
     NotFound,
+    #[error("Permission denied")]
     PermissionDenied,
+    #[error("IO error: {0}")]
     IoError(String),
+    #[error("Network error: {0}")]
     NetworkError(String),
 }
-
-impl std::fmt::Display for FsError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            FsError::NotFound => write!(f, "File not found"),
-            FsError::PermissionDenied => write!(f, "Permission denied"),
-            FsError::IoError(e) => write!(f, "IO error: {}", e),
-            FsError::NetworkError(e) => write!(f, "Network error: {}", e),
-        }
-    }
-}
-
-impl std::error::Error for FsError {}
 
 #[derive(Debug, Clone)]
 pub enum FsEvent {
@@ -167,7 +291,10 @@ pub trait Filesystem: Send + Sync {
 
 #[cfg(target_arch = "wasm32")]
 pub trait Filesystem: Send + Sync {
-    fn read_async(&self, url: &str) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Vec<u8>, FsError>> + Send>>;
+    fn read_async(
+        &self,
+        url: &str,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Vec<u8>, FsError>> + Send>>;
     fn cache_get(&self, key: &str) -> Option<Vec<u8>>;
     fn cache_set(&self, key: &str, data: &[u8]);
 }
@@ -199,17 +326,14 @@ pub struct XrHandPose {
 // ============================================================================
 
 #[cfg(not(target_arch = "wasm32"))]
+#[derive(Default)]
 pub struct NativeFilesystem;
 
 #[cfg(not(target_arch = "wasm32"))]
-impl Default for NativeFilesystem {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 impl NativeFilesystem {
-    pub fn new() -> Self { Self }
+    pub fn new() -> Self {
+        Self::default()
+    }
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -217,18 +341,20 @@ impl Filesystem for NativeFilesystem {
     fn read_sync(&self, path: &Path) -> Result<Vec<u8>, FsError> {
         std::fs::read(path).map_err(|e| FsError::IoError(e.to_string()))
     }
-    
+
     fn write_sync(&self, path: &Path, data: &[u8]) -> Result<(), FsError> {
         std::fs::write(path, data).map_err(|e| FsError::IoError(e.to_string()))
     }
-    
+
     fn exists(&self, path: &Path) -> bool {
         path.exists()
     }
-    
+
     fn watch(&self, _path: &Path, _tx: Sender<FsEvent>) -> Result<WatchHandle, FsError> {
-        // TODO: 使用 notify crate 实现文件监视
-        Ok(WatchHandle { inner: Box::new(()) })
+        // NOTE: 文件监视功能待实现，当前返回空句柄
+        Ok(WatchHandle {
+            inner: Box::new(()),
+        })
     }
 }
 
@@ -238,3 +364,16 @@ pub use web_fs::WebFilesystem;
 
 #[cfg(target_arch = "wasm32")]
 pub use web_input::WebInput;
+
+// 移动平台优化
+#[cfg(any(target_os = "android", target_os = "ios"))]
+pub use mobile::{
+    get_mobile_config, is_mobile_platform, GyroscopeData, MobileAdaptivePerformance, MobileConfig,
+    MobileInputHandler, MobilePerformanceMonitor, PerformanceIssue, TouchPoint,
+};
+
+// 控制台平台支持
+pub use console::{
+    get_console_config, is_console_platform, ButtonState, ConsoleConfig, ConsoleInputHandler,
+    ConsolePerformanceMonitor, ConsolePlatform, ControllerState,
+};

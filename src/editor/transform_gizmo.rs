@@ -1,6 +1,6 @@
-use bevy_ecs::prelude::*;
 use crate::ecs::Transform;
-use glam::{Vec3, Quat};
+use bevy_ecs::prelude::*;
+use glam::{Quat, Vec3};
 
 /// 变换工具模式
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -18,7 +18,7 @@ impl GizmoMode {
             GizmoMode::Scale => "Scale",
         }
     }
-    
+
     pub fn icon(&self) -> &'static str {
         match self {
             GizmoMode::Translate => "↔",
@@ -51,31 +51,43 @@ pub struct TransformGizmo {
 
 impl TransformGizmo {
     pub fn new() -> Self {
-        Self {
-            mode: GizmoMode::Translate,
-            selected_axis: None,
-            drag_start: None,
-            drag_start_value: None,
-        }
+        Self::default()
     }
-    
+
     /// 渲染变换工具UI
-    pub fn render(&mut self, ui: &mut egui::Ui, world: &mut World, selected_entity: Option<Entity>) -> bool {
+    pub fn render(
+        &mut self,
+        ui: &mut egui::Ui,
+        world: &mut World,
+        selected_entity: Option<Entity>,
+    ) -> bool {
         let mut transform_changed = false;
-        
+
         ui.heading("Transform Gizmo");
         ui.separator();
-        
+
         // 模式选择
         ui.horizontal(|ui| {
             ui.label("Mode:");
-            ui.selectable_value(&mut self.mode, GizmoMode::Translate, format!("{} Translate", GizmoMode::Translate.icon()));
-            ui.selectable_value(&mut self.mode, GizmoMode::Rotate, format!("{} Rotate", GizmoMode::Rotate.icon()));
-            ui.selectable_value(&mut self.mode, GizmoMode::Scale, format!("{} Scale", GizmoMode::Scale.icon()));
+            ui.selectable_value(
+                &mut self.mode,
+                GizmoMode::Translate,
+                format!("{} Translate", GizmoMode::Translate.icon()),
+            );
+            ui.selectable_value(
+                &mut self.mode,
+                GizmoMode::Rotate,
+                format!("{} Rotate", GizmoMode::Rotate.icon()),
+            );
+            ui.selectable_value(
+                &mut self.mode,
+                GizmoMode::Scale,
+                format!("{} Scale", GizmoMode::Scale.icon()),
+            );
         });
-        
+
         ui.separator();
-        
+
         // 如果有选中的实体,显示变换控制
         if let Some(entity) = selected_entity {
             if let Some(mut transform) = world.get_mut::<Transform>(entity) {
@@ -96,33 +108,39 @@ impl TransformGizmo {
         } else {
             ui.label("No entity selected");
         }
-        
+
         transform_changed
     }
-    
+
     /// 渲染移动控制
     fn render_translate_controls(&mut self, ui: &mut egui::Ui, transform: &mut Transform) -> bool {
         let mut changed = false;
-        
+
         ui.label("Position:");
-        
+
         ui.horizontal(|ui| {
             ui.label("X:");
-            changed |= ui.add(egui::DragValue::new(&mut transform.pos.x).speed(0.1)).changed();
+            changed |= ui
+                .add(egui::DragValue::new(&mut transform.pos.x).speed(0.1))
+                .changed();
         });
-        
+
         ui.horizontal(|ui| {
             ui.label("Y:");
-            changed |= ui.add(egui::DragValue::new(&mut transform.pos.y).speed(0.1)).changed();
+            changed |= ui
+                .add(egui::DragValue::new(&mut transform.pos.y).speed(0.1))
+                .changed();
         });
-        
+
         ui.horizontal(|ui| {
             ui.label("Z:");
-            changed |= ui.add(egui::DragValue::new(&mut transform.pos.z).speed(0.1)).changed();
+            changed |= ui
+                .add(egui::DragValue::new(&mut transform.pos.z).speed(0.1))
+                .changed();
         });
-        
+
         ui.separator();
-        
+
         // 快捷按钮
         ui.horizontal(|ui| {
             if ui.button("Reset Position").clicked() {
@@ -130,43 +148,52 @@ impl TransformGizmo {
                 changed = true;
             }
         });
-        
+
         changed
     }
-    
+
     /// 渲染旋转控制
     fn render_rotate_controls(&mut self, ui: &mut egui::Ui, transform: &mut Transform) -> bool {
         let mut changed = false;
-        
+
         ui.label("Rotation (Euler Angles):");
-        
+
         // 转换为欧拉角
         let (mut x, mut y, mut z) = transform.rot.to_euler(glam::EulerRot::XYZ);
         x = x.to_degrees();
         y = y.to_degrees();
         z = z.to_degrees();
-        
+
         ui.horizontal(|ui| {
             ui.label("X:");
-            if ui.add(egui::DragValue::new(&mut x).speed(1.0).suffix("°")).changed() {
+            if ui
+                .add(egui::DragValue::new(&mut x).speed(1.0).suffix("°"))
+                .changed()
+            {
                 changed = true;
             }
         });
-        
+
         ui.horizontal(|ui| {
             ui.label("Y:");
-            if ui.add(egui::DragValue::new(&mut y).speed(1.0).suffix("°")).changed() {
+            if ui
+                .add(egui::DragValue::new(&mut y).speed(1.0).suffix("°"))
+                .changed()
+            {
                 changed = true;
             }
         });
-        
+
         ui.horizontal(|ui| {
             ui.label("Z:");
-            if ui.add(egui::DragValue::new(&mut z).speed(1.0).suffix("°")).changed() {
+            if ui
+                .add(egui::DragValue::new(&mut z).speed(1.0).suffix("°"))
+                .changed()
+            {
                 changed = true;
             }
         });
-        
+
         if changed {
             transform.rot = Quat::from_euler(
                 glam::EulerRot::XYZ,
@@ -175,9 +202,9 @@ impl TransformGizmo {
                 z.to_radians(),
             );
         }
-        
+
         ui.separator();
-        
+
         // 快捷按钮
         ui.horizontal(|ui| {
             if ui.button("Reset Rotation").clicked() {
@@ -185,45 +212,70 @@ impl TransformGizmo {
                 changed = true;
             }
         });
-        
+
         changed
     }
-    
+
     /// 渲染缩放控制
     fn render_scale_controls(&mut self, ui: &mut egui::Ui, transform: &mut Transform) -> bool {
         let mut changed = false;
-        
+
         ui.label("Scale:");
-        
+
         ui.horizontal(|ui| {
             ui.label("X:");
-            changed |= ui.add(egui::DragValue::new(&mut transform.scale.x).speed(0.01).range(0.01..=10.0)).changed();
+            changed |= ui
+                .add(
+                    egui::DragValue::new(&mut transform.scale.x)
+                        .speed(0.01)
+                        .range(0.01..=10.0),
+                )
+                .changed();
         });
-        
+
         ui.horizontal(|ui| {
             ui.label("Y:");
-            changed |= ui.add(egui::DragValue::new(&mut transform.scale.y).speed(0.01).range(0.01..=10.0)).changed();
+            changed |= ui
+                .add(
+                    egui::DragValue::new(&mut transform.scale.y)
+                        .speed(0.01)
+                        .range(0.01..=10.0),
+                )
+                .changed();
         });
-        
+
         ui.horizontal(|ui| {
             ui.label("Z:");
-            changed |= ui.add(egui::DragValue::new(&mut transform.scale.z).speed(0.01).range(0.01..=10.0)).changed();
+            changed |= ui
+                .add(
+                    egui::DragValue::new(&mut transform.scale.z)
+                        .speed(0.01)
+                        .range(0.01..=10.0),
+                )
+                .changed();
         });
-        
+
         ui.separator();
-        
+
         // 统一缩放
         ui.horizontal(|ui| {
             ui.label("Uniform:");
             let mut uniform_scale = transform.scale.x;
-            if ui.add(egui::DragValue::new(&mut uniform_scale).speed(0.01).range(0.01..=10.0)).changed() {
+            if ui
+                .add(
+                    egui::DragValue::new(&mut uniform_scale)
+                        .speed(0.01)
+                        .range(0.01..=10.0),
+                )
+                .changed()
+            {
                 transform.scale = Vec3::splat(uniform_scale);
                 changed = true;
             }
         });
-        
+
         ui.separator();
-        
+
         // 快捷按钮
         ui.horizontal(|ui| {
             if ui.button("Reset Scale").clicked() {
@@ -231,14 +283,14 @@ impl TransformGizmo {
                 changed = true;
             }
         });
-        
+
         changed
     }
-    
+
     /// 绘制3D变换工具 (在场景视图中)
     pub fn draw_3d_gizmo(&self, painter: &egui::Painter, screen_pos: egui::Pos2, zoom: f32) {
         let size = 50.0 * zoom;
-        
+
         match self.mode {
             GizmoMode::Translate => {
                 self.draw_translate_gizmo(painter, screen_pos, size);
@@ -251,7 +303,7 @@ impl TransformGizmo {
             }
         }
     }
-    
+
     /// 绘制移动工具
     fn draw_translate_gizmo(&self, painter: &egui::Painter, pos: egui::Pos2, size: f32) {
         // X轴 (红色)
@@ -261,7 +313,7 @@ impl TransformGizmo {
             egui::Color32::from_rgb(255, 0, 0)
         };
         painter.arrow(pos, egui::vec2(size, 0.0), egui::Stroke::new(3.0, x_color));
-        
+
         // Y轴 (绿色)
         let y_color = if self.selected_axis == Some(TransformAxis::Y) {
             egui::Color32::from_rgb(100, 255, 100)
@@ -269,16 +321,20 @@ impl TransformGizmo {
             egui::Color32::from_rgb(0, 255, 0)
         };
         painter.arrow(pos, egui::vec2(0.0, -size), egui::Stroke::new(3.0, y_color));
-        
+
         // Z轴 (蓝色)
         let z_color = if self.selected_axis == Some(TransformAxis::Z) {
             egui::Color32::from_rgb(100, 100, 255)
         } else {
             egui::Color32::from_rgb(0, 0, 255)
         };
-        painter.arrow(pos, egui::vec2(size * 0.7, size * 0.7), egui::Stroke::new(3.0, z_color));
+        painter.arrow(
+            pos,
+            egui::vec2(size * 0.7, size * 0.7),
+            egui::Stroke::new(3.0, z_color),
+        );
     }
-    
+
     /// 绘制旋转工具
     fn draw_rotate_gizmo(&self, painter: &egui::Painter, pos: egui::Pos2, size: f32) {
         // X轴旋转圆环 (红色)
@@ -288,7 +344,7 @@ impl TransformGizmo {
             egui::Color32::from_rgb(255, 0, 0)
         };
         painter.circle_stroke(pos, size * 0.8, egui::Stroke::new(2.0, x_color));
-        
+
         // Y轴旋转圆环 (绿色)
         let y_color = if self.selected_axis == Some(TransformAxis::Y) {
             egui::Color32::from_rgb(100, 255, 100)
@@ -296,7 +352,7 @@ impl TransformGizmo {
             egui::Color32::from_rgb(0, 255, 0)
         };
         painter.circle_stroke(pos, size * 0.6, egui::Stroke::new(2.0, y_color));
-        
+
         // Z轴旋转圆环 (蓝色)
         let z_color = if self.selected_axis == Some(TransformAxis::Z) {
             egui::Color32::from_rgb(100, 100, 255)
@@ -305,7 +361,7 @@ impl TransformGizmo {
         };
         painter.circle_stroke(pos, size * 0.4, egui::Stroke::new(2.0, z_color));
     }
-    
+
     /// 绘制缩放工具
     fn draw_scale_gizmo(&self, painter: &egui::Painter, pos: egui::Pos2, size: f32) {
         // X轴 (红色)
@@ -319,7 +375,7 @@ impl TransformGizmo {
             egui::Stroke::new(3.0, x_color),
         );
         painter.circle_filled(egui::pos2(pos.x + size, pos.y), 5.0, x_color);
-        
+
         // Y轴 (绿色)
         let y_color = if self.selected_axis == Some(TransformAxis::Y) {
             egui::Color32::from_rgb(100, 255, 100)
@@ -331,7 +387,7 @@ impl TransformGizmo {
             egui::Stroke::new(3.0, y_color),
         );
         painter.circle_filled(egui::pos2(pos.x, pos.y - size), 5.0, y_color);
-        
+
         // Z轴 (蓝色)
         let z_color = if self.selected_axis == Some(TransformAxis::Z) {
             egui::Color32::from_rgb(100, 100, 255)
@@ -342,12 +398,21 @@ impl TransformGizmo {
             [pos, egui::pos2(pos.x + size * 0.7, pos.y + size * 0.7)],
             egui::Stroke::new(3.0, z_color),
         );
-        painter.circle_filled(egui::pos2(pos.x + size * 0.7, pos.y + size * 0.7), 5.0, z_color);
+        painter.circle_filled(
+            egui::pos2(pos.x + size * 0.7, pos.y + size * 0.7),
+            5.0,
+            z_color,
+        );
     }
 }
 
 impl Default for TransformGizmo {
     fn default() -> Self {
-        Self::new()
+        Self {
+            mode: GizmoMode::Translate,
+            selected_axis: None,
+            drag_start: None,
+            drag_start_value: None,
+        }
     }
 }

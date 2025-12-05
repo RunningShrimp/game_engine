@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::ecs::{Transform, Sprite, PointLight};
+    use crate::ecs::{PointLight, Sprite, Transform};
     use bevy_ecs::prelude::*;
 
     #[test]
@@ -14,11 +14,14 @@ mod tests {
     fn test_component_insertion() {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
-        
+
         world.entity_mut(entity).insert(Transform::default());
         assert!(world.get::<Transform>(entity).is_some());
 
-        world.entity_mut(entity).insert(Sprite { color: [1.0, 1.0, 1.0, 1.0], ..Default::default() });
+        world.entity_mut(entity).insert(Sprite {
+            color: [1.0, 1.0, 1.0, 1.0],
+            ..Default::default()
+        });
         assert!(world.get::<Sprite>(entity).is_some());
 
         world.entity_mut(entity).insert(PointLight::default());

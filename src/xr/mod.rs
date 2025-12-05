@@ -3,9 +3,11 @@
 // 支持立体渲染、空间追踪、控制器输入
 // ============================================================================
 
+use crate::impl_default;
+use glam::{Mat4, Quat, Vec3};
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use glam::{Mat4, Vec3, Quat};
-
+use thiserror::Error;
 
 /// XR 会话状态
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -20,26 +22,22 @@ pub enum XrSessionState {
 }
 
 /// 视图姿态
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct Pose {
     pub position: Vec3,
     pub orientation: Quat,
 }
 
-impl Default for Pose {
-    fn default() -> Self {
-        Self {
-            position: Vec3::ZERO,
-            orientation: Quat::IDENTITY,
-        }
-    }
-}
+impl_default!(Pose {
+    position: Vec3::ZERO,
+    orientation: Quat::IDENTITY,
+});
 
 impl Pose {
     pub fn to_matrix(&self) -> Mat4 {
         Mat4::from_rotation_translation(self.orientation, self.position)
     }
-    
+
     pub fn inverse(&self) -> Self {
         let inv_orientation = self.orientation.inverse();
         Self {
@@ -64,15 +62,27 @@ impl Fov {
         let tan_right = self.angle_right.tan();
         let tan_up = self.angle_up.tan();
         let tan_down = self.angle_down.tan();
-        
+
         let tan_width = tan_right - tan_left;
         let tan_height = tan_up - tan_down;
-        
+
         Mat4::from_cols_array(&[
-            2.0 / tan_width, 0.0, 0.0, 0.0,
-            0.0, 2.0 / tan_height, 0.0, 0.0,
-            (tan_right + tan_left) / tan_width, (tan_up + tan_down) / tan_height, -far / (far - near), -1.0,
-            0.0, 0.0, -(far * near) / (far - near), 0.0,
+            2.0 / tan_width,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            2.0 / tan_height,
+            0.0,
+            0.0,
+            (tan_right + tan_left) / tan_width,
+            (tan_up + tan_down) / tan_height,
+            -far / (far - near),
+            -1.0,
+            0.0,
+            0.0,
+            -(far * near) / (far - near),
+            0.0,
         ])
     }
 }
@@ -89,11 +99,11 @@ impl XrView {
     pub fn view_matrix(&self) -> Mat4 {
         self.pose.inverse().to_matrix()
     }
-    
+
     pub fn projection_matrix(&self, near: f32, far: f32) -> Mat4 {
         self.fov.to_projection_matrix(near, far)
     }
-    
+
     pub fn view_projection_matrix(&self, near: f32, far: f32) -> Mat4 {
         self.projection_matrix(near, far) * self.view_matrix()
     }
@@ -115,22 +125,18 @@ pub struct XrConfig {
     pub reference_space: ReferenceSpaceType,
 }
 
-impl Default for XrConfig {
-    fn default() -> Self {
-        Self {
-            application_name: "GameEngine XR".to_string(),
-            blend_mode: BlendMode::Opaque,
-            reference_space: ReferenceSpaceType::Stage,
-        }
-    }
-}
+impl_default!(XrConfig {
+    application_name: "GameEngine XR".to_string(),
+    blend_mode: BlendMode::Opaque,
+    reference_space: ReferenceSpaceType::Stage,
+});
 
 /// 混合模式
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BlendMode {
-    Opaque,        // VR
-    Additive,      // AR (光学透视)
-    AlphaBlend,    // AR (视频透视)
+    Opaque,     // VR
+    Additive,   // AR (光学透视)
+    AlphaBlend, // AR (视频透视)
 }
 
 /// 参考空间类型
@@ -182,26 +188,17 @@ pub struct XrProjectionView {
 }
 
 /// XR 错误
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum XrError {
+    #[error("XR not supported")]
     NotSupported,
+    #[error("XR session not ready")]
     SessionNotReady,
+    #[error("XR frame discarded")]
     FrameDiscarded,
+    #[error("XR runtime failure: {0}")]
     RuntimeFailure(String),
 }
-
-impl std::fmt::Display for XrError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            XrError::NotSupported => write!(f, "XR not supported"),
-            XrError::SessionNotReady => write!(f, "XR session not ready"),
-            XrError::FrameDiscarded => write!(f, "XR frame discarded"),
-            XrError::RuntimeFailure(msg) => write!(f, "XR runtime failure: {}", msg),
-        }
-    }
-}
-
-impl std::error::Error for XrError {}
 
 // ============================================================================
 // 交换链 (Swapchain)
@@ -263,92 +260,32 @@ pub trait XrInput: Send + Sync {
 // 平台特定实现 (OpenXR)
 // ============================================================================
 
+// OpenXR 实现
 #[cfg(not(target_arch = "wasm32"))]
-pub mod openxr_impl {
-    use super::*;
-    
-    /// OpenXR 后端
-    pub struct OpenXrBackend {
-        // OpenXR 实例和会话句柄
-        // instance: xr::Instance,
-        // session: xr::Session<xr::Vulkan>, // 或 xr::D3D12, xr::OpenGL
-        state: XrSessionState,
-        views: Vec<XrView>,
-        events: Vec<XrEvent>,
-    }
-    
-    impl OpenXrBackend {
-        pub fn new(_config: &XrConfig) -> Result<Self, XrError> {
-            // TODO: 实际的 OpenXR 初始化
-            // 1. 创建 xr::Instance
-            // 2. 获取系统 (HMD)
-            // 3. 创建会话
-            // 4. 创建参考空间
-            // 5. 创建交换链
-            
-            Ok(Self {
-                state: XrSessionState::Idle,
-                views: vec![
-                    XrView {
-                        pose: Pose::default(),
-                        fov: Fov {
-                            angle_left: -0.785,
-                            angle_right: 0.785,
-                            angle_up: 0.785,
-                            angle_down: -0.785,
-                        },
-                        view_index: 0,
-                    },
-                    XrView {
-                        pose: Pose {
-                            position: Vec3::new(0.063, 0.0, 0.0), // IPD
-                            orientation: Quat::IDENTITY,
-                        },
-                        fov: Fov {
-                            angle_left: -0.785,
-                            angle_right: 0.785,
-                            angle_up: 0.785,
-                            angle_down: -0.785,
-                        },
-                        view_index: 1,
-                    },
-                ],
-                events: Vec::new(),
-            })
-        }
-    }
-    
-    impl XrSession for OpenXrBackend {
-        fn state(&self) -> XrSessionState {
-            self.state
-        }
-        
-        fn begin_frame(&mut self) -> Result<XrFrameState, XrError> {
-            if self.state != XrSessionState::Focused && self.state != XrSessionState::Visible {
-                return Err(XrError::SessionNotReady);
-            }
-            
-            Ok(XrFrameState {
-                predicted_display_time: 0, // TODO: 实际时间戳
-                predicted_display_period: 11_111_111, // ~90Hz
-                should_render: true,
-            })
-        }
-        
-        fn end_frame(&mut self, _layers: &[XrCompositionLayer]) -> Result<(), XrError> {
-            // TODO: 提交合成层到 OpenXR
-            Ok(())
-        }
-        
-        fn locate_views(&self, _time: i64) -> Result<Vec<XrView>, XrError> {
-            Ok(self.views.clone())
-        }
-        
-        fn poll_events(&mut self) -> Vec<XrEvent> {
-            std::mem::take(&mut self.events)
-        }
-    }
-}
+pub mod openxr_impl;
+
+// 重新导出OpenXR实现
+#[cfg(not(target_arch = "wasm32"))]
+pub use openxr_impl::{OpenXrBackend, OpenXrError, OpenXrSwapchain};
+
+// XR 渲染器
+pub mod renderer;
+pub use renderer::XrRenderer;
+
+// XR 输入系统
+pub mod input;
+pub use input::{
+    ControllerButton, HandJoint, HandJointType, HandTrackingData, HapticFeedback, XrInputEvent,
+    XrInputEventHandler, XrInputEventQueue, XrInputManager,
+};
+
+// XR 手部追踪
+pub mod hand_tracking;
+pub use hand_tracking::{Finger, HandJoints, HandTracker, HandTrackingConfig, HandTrackingState};
+
+// XR 空间锚点
+pub mod spatial_anchors;
+pub use spatial_anchors::{AnchorId, SpatialAnchor, SpatialAnchorManager};
 
 // ============================================================================
 // 异步时间扭曲 (ATW - Asynchronous Time Warp)
@@ -356,7 +293,7 @@ pub mod openxr_impl {
 
 pub mod atw {
     use super::*;
-    
+
     /// ATW 重投影数据
     pub struct AtwReprojectionData {
         pub rendered_pose: Pose,
@@ -364,13 +301,13 @@ pub mod atw {
         pub rendered_frame: wgpu::TextureView,
         pub depth_buffer: Option<wgpu::TextureView>,
     }
-    
+
     /// 计算姿态差异矩阵
     pub fn compute_delta_rotation(rendered: &Pose, current: &Pose) -> Mat4 {
         let delta_orientation = current.orientation * rendered.orientation.inverse();
         Mat4::from_quat(delta_orientation)
     }
-    
+
     /// ATW Compute Shader (WGSL)
     pub const ATW_SHADER: &str = r#"
 @group(0) @binding(0) var input_texture: texture_2d<f32>;
@@ -408,7 +345,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     let new_uv = vec2<f32>(new_ndc.x * 0.5 + 0.5, 0.5 - new_ndc.y * 0.5);
     
     // 采样原始帧
-    let color = textureSampleLevel(input_texture, sampler, new_uv, 0.0);
+    let color = textureSampleLevel(input_texture, tex_sampler, new_uv, 0.0);
     
     textureStore(output_texture, pixel, color);
 }
@@ -420,8 +357,8 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
 // ============================================================================
 
 pub mod foveated {
-    
-    
+    use crate::impl_default;
+
     /// 注视点渲染配置
     #[derive(Debug, Clone)]
     pub struct FoveatedConfig {
@@ -442,43 +379,41 @@ pub mod foveated {
         /// 注视点 (归一化坐标, 默认中心)
         pub gaze_point: [f32; 2],
     }
-    
-    impl Default for FoveatedConfig {
-        fn default() -> Self {
-            Self {
-                enabled: true,
-                inner_radius: 0.2,
-                middle_radius: 0.4,
-                outer_radius: 1.0,
-                inner_scale: 1.0,
-                middle_scale: 0.5,
-                outer_scale: 0.25,
-                gaze_point: [0.5, 0.5],
-            }
-        }
-    }
-    
+
+    impl_default!(FoveatedConfig {
+        enabled: true,
+        inner_radius: 0.2,
+        middle_radius: 0.4,
+        outer_radius: 1.0,
+        inner_scale: 1.0,
+        middle_scale: 0.5,
+        outer_scale: 0.25,
+        gaze_point: [0.5, 0.5],
+    });
+
     /// 计算注视点渲染的分辨率缩放
     pub fn compute_resolution_scale(uv: [f32; 2], config: &FoveatedConfig) -> f32 {
         if !config.enabled {
             return 1.0;
         }
-        
+
         let dx = uv[0] - config.gaze_point[0];
         let dy = uv[1] - config.gaze_point[1];
         let distance = (dx * dx + dy * dy).sqrt();
-        
+
         if distance < config.inner_radius {
             config.inner_scale
         } else if distance < config.middle_radius {
             let t = (distance - config.inner_radius) / (config.middle_radius - config.inner_radius);
             config.inner_scale + t * (config.middle_scale - config.inner_scale)
         } else {
-            let t = ((distance - config.middle_radius) / (config.outer_radius - config.middle_radius)).min(1.0);
+            let t = ((distance - config.middle_radius)
+                / (config.outer_radius - config.middle_radius))
+                .min(1.0);
             config.middle_scale + t * (config.outer_scale - config.middle_scale)
         }
     }
-    
+
     /// Foveated Rendering Shader (用于多分辨率渲染)
     pub const FOVEATED_RECONSTRUCT_SHADER: &str = r#"
 @group(0) @binding(0) var inner_texture: texture_2d<f32>;
@@ -531,7 +466,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
 
 pub mod eye_tracking {
     use super::*;
-    
+
     /// 眼动追踪数据
     #[derive(Debug, Clone, Default)]
     pub struct EyeGazeData {
@@ -546,14 +481,14 @@ pub mod eye_tracking {
         /// 眨眼状态
         pub blink: bool,
     }
-    
+
     /// 眼动追踪 trait
     pub trait EyeTracker: Send + Sync {
         fn get_gaze(&self, eye: Eye) -> Option<EyeGazeData>;
         fn get_combined_gaze(&self) -> Option<EyeGazeData>;
         fn is_supported(&self) -> bool;
     }
-    
+
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     pub enum Eye {
         Left,
@@ -579,12 +514,12 @@ pub fn prepare_xr_render(
     frame_state: &XrFrameState,
 ) -> Result<Vec<XrRenderContext>, XrError> {
     let views = session.locate_views(frame_state.predicted_display_time)?;
-    
+
     let mut contexts = Vec::with_capacity(views.len());
-    
+
     for (i, view) in views.iter().enumerate() {
         if let Some(swapchain) = swapchains.get(i) {
-            // TODO: 创建深度目标
+            // NOTE: 深度目标创建逻辑待实现
             // Get texture views from swapchain (already wrapped in Arc)
             let render_view = swapchain.get_texture_view(0);
             contexts.push(XrRenderContext {
@@ -594,6 +529,6 @@ pub fn prepare_xr_render(
             });
         }
     }
-    
+
     Ok(contexts)
 }

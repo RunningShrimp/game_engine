@@ -16,15 +16,13 @@
 //! use crate::render::wgpu_modules::{WgpuRenderer, Instance, DoubleBufferedInstances};
 //! ```
 
-pub mod types;
 pub mod buffer;
 pub mod pipeline;
 pub mod texture;
+pub mod types;
 
 // 重导出主要类型
-pub use types::{
-    Instance, UiInstance, Vertex, DrawGroup,
-    ScreenUniform, Uniforms3D, ModelUniform, GpuPointLight,
-};
 pub use buffer::{DoubleBufferedInstances, InstanceDirtyTracker};
-
+pub use types::{
+    DrawGroup, GpuPointLight, Instance, ModelUniform, ScreenUniform, UiInstance, Uniforms3D, Vertex,
+};

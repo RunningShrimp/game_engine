@@ -1,12 +1,16 @@
 // ============================================================================
-// 脚本系统 - 简化版本
-// TODO: 重新设计线程安全的脚本引擎架构
+// 脚本系统 - 简化版本（向后兼容）
+// 注意：新的代码应使用 ScriptComponent 而不是 Script
 // ============================================================================
 
+use super::system::ScriptValue;
 use bevy_ecs::prelude::*;
 use std::collections::HashMap;
 
-/// 脚本组件
+/// 脚本组件（简化版本，向后兼容）
+///
+/// 注意：新代码应使用 `ScriptComponent` 而不是 `Script`
+/// 这个类型保留用于向后兼容
 #[derive(Component, Default)]
 pub struct Script {
     pub source: String,
@@ -30,8 +34,7 @@ pub struct ScriptAsset {
 }
 
 /// 脚本运行时状态
-#[derive(Component)]
-#[derive(Default)]
+#[derive(Component, Default)]
 pub struct ScriptState {
     /// 是否已初始化
     pub initialized: bool,
@@ -39,16 +42,4 @@ pub struct ScriptState {
     pub last_modified: u64,
     /// 本地变量存储
     pub locals: HashMap<String, ScriptValue>,
-}
-
-
-/// 脚本值类型
-#[derive(Debug, Clone)]
-pub enum ScriptValue {
-    Null,
-    Bool(bool),
-    Number(f64),
-    String(String),
-    Array(Vec<ScriptValue>),
-    Object(HashMap<String, ScriptValue>),
 }

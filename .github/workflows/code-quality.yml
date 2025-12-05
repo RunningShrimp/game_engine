@@ -1,0 +1,105 @@
+name: Code Quality
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # 每天 UTC 2:00 运行（北京时间 10:00）
+    - cron: '0 2 * * *'
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  # 代码质量检查（包含文档覆盖率）
+  quality:
+    name: Code Quality Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libasound2-dev libudev-dev
+      
+      # Clippy 检查（设置警告阈值）
+      - name: Run Clippy (warn threshold)
+        id: clippy
+        run: |
+          cargo clippy --all-targets --all-features -- -D warnings 2>&1 | tee clippy_output.txt || true
+          # 统计警告数量
+          WARNINGS=$(grep -c "warning:" clippy_output.txt || echo "0")
+          echo "warnings=$WARNINGS" >> $GITHUB_OUTPUT
+          # 如果警告超过100个，标记为失败（可根据需要调整）
+          if [ "$WARNINGS" -gt 100 ]; then
+            echo "❌ Clippy warnings exceed threshold (100)"
+            exit 1
+          fi
+        continue-on-error: true
+      
+      # 文档覆盖率检查
+      - name: Check documentation coverage
+        id: docs
+        run: |
+          # 构建文档并统计缺失文档的数量
+          cargo doc --no-deps --all-features --document-private-items 2>&1 | tee doc_output.txt || true
+          # 统计缺失文档警告（简化版本）
+          MISSING_DOCS=$(grep -c "missing_docs" doc_output.txt || echo "0")
+          echo "missing_docs=$MISSING_DOCS" >> $GITHUB_OUTPUT
+          # 如果缺失文档超过50个，标记为警告（可根据需要调整）
+          if [ "$MISSING_DOCS" -gt 50 ]; then
+            echo "⚠️ Missing documentation warnings exceed threshold (50)"
+            echo "::warning::Documentation coverage below threshold"
+          fi
+        continue-on-error: true
+      
+      # 测试覆盖率检查
+      - name: Install tarpaulin
+        run: cargo install cargo-tarpaulin
+      
+      - name: Run test coverage
+        id: coverage
+        run: |
+          cargo tarpaulin --out Xml --output-dir coverage/ --all-features --timeout 300 || true
+          # 解析覆盖率（简化版本）
+          if [ -f coverage/cobertura.xml ]; then
+            # 这里可以添加XML解析来获取实际覆盖率百分比
+            echo "Coverage report generated"
+            echo "coverage=ok" >> $GITHUB_OUTPUT
+          else
+            echo "coverage=failed" >> $GITHUB_OUTPUT
+          fi
+        continue-on-error: true
+      
+      # 生成质量报告
+      - name: Generate quality report
+        run: |
+          echo "## Code Quality Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Clippy Warnings" >> $GITHUB_STEP_SUMMARY
+          echo "- Count: ${{ steps.clippy.outputs.warnings }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Missing Documentation" >> $GITHUB_STEP_SUMMARY
+          echo "- Count: ${{ steps.docs.outputs.missing_docs }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Test Coverage" >> $GITHUB_STEP_SUMMARY
+          echo "- Status: ${{ steps.coverage.outputs.coverage }}" >> $GITHUB_STEP_SUMMARY
+      
+      # 上传覆盖率报告
+      - name: Upload coverage to Codecov
+        if: steps.coverage.outputs.coverage == 'ok'
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage/cobertura.xml
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+        continue-on-error: true
+
+

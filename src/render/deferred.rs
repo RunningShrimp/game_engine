@@ -5,29 +5,38 @@ pub struct GBuffer {
     /// 位置 + 深度 (RGB = 世界坐标, A = 深度)
     pub position_texture: wgpu::Texture,
     pub position_view: wgpu::TextureView,
-    
+
     /// 法线 + 粗糙度 (RGB = 法线, A = 粗糙度)
     pub normal_texture: wgpu::Texture,
     pub normal_view: wgpu::TextureView,
-    
+
     /// 反照率 + 金属度 (RGB = 反照率, A = 金属度)
     pub albedo_texture: wgpu::Texture,
     pub albedo_view: wgpu::TextureView,
-    
+
     /// 深度缓冲
     pub depth_texture: wgpu::Texture,
     pub depth_view: wgpu::TextureView,
-    
+
     /// G-Buffer绑定组
     pub bind_group: wgpu::BindGroup,
 }
 
 impl GBuffer {
-    pub fn new(device: &wgpu::Device, width: u32, height: u32, bind_group_layout: &wgpu::BindGroupLayout) -> Self {
+    pub fn new(
+        device: &wgpu::Device,
+        width: u32,
+        height: u32,
+        bind_group_layout: &wgpu::BindGroupLayout,
+    ) -> Self {
         // 位置纹理 (RGBA32Float)
         let position_texture = device.create_texture(&wgpu::TextureDescriptor {
             label: Some("G-Buffer Position"),
-            size: wgpu::Extent3d { width, height, depth_or_array_layers: 1 },
+            size: wgpu::Extent3d {
+                width,
+                height,
+                depth_or_array_layers: 1,
+            },
             mip_level_count: 1,
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
@@ -36,11 +45,15 @@ impl GBuffer {
             view_formats: &[],
         });
         let position_view = position_texture.create_view(&wgpu::TextureViewDescriptor::default());
-        
+
         // 法线纹理 (RGBA16Float)
         let normal_texture = device.create_texture(&wgpu::TextureDescriptor {
             label: Some("G-Buffer Normal"),
-            size: wgpu::Extent3d { width, height, depth_or_array_layers: 1 },
+            size: wgpu::Extent3d {
+                width,
+                height,
+                depth_or_array_layers: 1,
+            },
             mip_level_count: 1,
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
@@ -49,11 +62,15 @@ impl GBuffer {
             view_formats: &[],
         });
         let normal_view = normal_texture.create_view(&wgpu::TextureViewDescriptor::default());
-        
+
         // 反照率纹理 (RGBA8UnormSrgb)
         let albedo_texture = device.create_texture(&wgpu::TextureDescriptor {
             label: Some("G-Buffer Albedo"),
-            size: wgpu::Extent3d { width, height, depth_or_array_layers: 1 },
+            size: wgpu::Extent3d {
+                width,
+                height,
+                depth_or_array_layers: 1,
+            },
             mip_level_count: 1,
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
@@ -62,11 +79,15 @@ impl GBuffer {
             view_formats: &[],
         });
         let albedo_view = albedo_texture.create_view(&wgpu::TextureViewDescriptor::default());
-        
+
         // 深度纹理
         let depth_texture = device.create_texture(&wgpu::TextureDescriptor {
             label: Some("G-Buffer Depth"),
-            size: wgpu::Extent3d { width, height, depth_or_array_layers: 1 },
+            size: wgpu::Extent3d {
+                width,
+                height,
+                depth_or_array_layers: 1,
+            },
             mip_level_count: 1,
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
@@ -75,7 +96,7 @@ impl GBuffer {
             view_formats: &[],
         });
         let depth_view = depth_texture.create_view(&wgpu::TextureViewDescriptor::default());
-        
+
         // 创建采样器
         let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
             label: Some("G-Buffer Sampler"),
@@ -87,7 +108,7 @@ impl GBuffer {
             mipmap_filter: wgpu::FilterMode::Nearest,
             ..Default::default()
         });
-        
+
         // 创建绑定组
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("G-Buffer Bind Group"),
@@ -111,7 +132,7 @@ impl GBuffer {
                 },
             ],
         });
-        
+
         Self {
             position_texture,
             position_view,
@@ -124,8 +145,14 @@ impl GBuffer {
             bind_group,
         }
     }
-    
-    pub fn resize(&mut self, device: &wgpu::Device, width: u32, height: u32, bind_group_layout: &wgpu::BindGroupLayout) {
+
+    pub fn resize(
+        &mut self,
+        device: &wgpu::Device,
+        width: u32,
+        height: u32,
+        bind_group_layout: &wgpu::BindGroupLayout,
+    ) {
         *self = Self::new(device, width, height, bind_group_layout);
     }
 }
@@ -140,72 +167,79 @@ pub struct DeferredRenderer {
 }
 
 impl DeferredRenderer {
-    pub fn new(device: &wgpu::Device, width: u32, height: u32, surface_format: wgpu::TextureFormat) -> Self {
+    pub fn new(
+        device: &wgpu::Device,
+        width: u32,
+        height: u32,
+        surface_format: wgpu::TextureFormat,
+    ) -> Self {
         // 创建G-Buffer绑定组布局
-        let gbuffer_bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("G-Buffer BGL"),
-            entries: &[
-                wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Texture {
-                        sample_type: wgpu::TextureSampleType::Float { filterable: false },
-                        view_dimension: wgpu::TextureViewDimension::D2,
-                        multisampled: false,
+        let gbuffer_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("G-Buffer BGL"),
+                entries: &[
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Texture {
+                            sample_type: wgpu::TextureSampleType::Float { filterable: false },
+                            view_dimension: wgpu::TextureViewDimension::D2,
+                            multisampled: false,
+                        },
+                        count: None,
                     },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 1,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Texture {
-                        sample_type: wgpu::TextureSampleType::Float { filterable: false },
-                        view_dimension: wgpu::TextureViewDimension::D2,
-                        multisampled: false,
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Texture {
+                            sample_type: wgpu::TextureSampleType::Float { filterable: false },
+                            view_dimension: wgpu::TextureViewDimension::D2,
+                            multisampled: false,
+                        },
+                        count: None,
                     },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 2,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Texture {
-                        sample_type: wgpu::TextureSampleType::Float { filterable: false },
-                        view_dimension: wgpu::TextureViewDimension::D2,
-                        multisampled: false,
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 2,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Texture {
+                            sample_type: wgpu::TextureSampleType::Float { filterable: false },
+                            view_dimension: wgpu::TextureViewDimension::D2,
+                            multisampled: false,
+                        },
+                        count: None,
                     },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 3,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::NonFiltering),
-                    count: None,
-                },
-            ],
-        });
-        
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 3,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::NonFiltering),
+                        count: None,
+                    },
+                ],
+            });
+
         // 创建G-Buffer
         let gbuffer = GBuffer::new(device, width, height, &gbuffer_bind_group_layout);
-        
+
         // 创建几何阶段着色器
         let geometry_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Deferred Geometry Shader"),
             source: wgpu::ShaderSource::Wgsl(include_str!("shader_deferred_geometry.wgsl").into()),
         });
-        
+
         // 创建光照阶段着色器
         let lighting_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Deferred Lighting Shader"),
             source: wgpu::ShaderSource::Wgsl(include_str!("shader_deferred_lighting.wgsl").into()),
         });
-        
+
         // 创建几何阶段管线 (写入G-Buffer)
-        let geometry_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("Deferred Geometry Pipeline Layout"),
-            bind_group_layouts: &[],
-            push_constant_ranges: &[],
-        });
-        
+        let geometry_pipeline_layout =
+            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: Some("Deferred Geometry Pipeline Layout"),
+                bind_group_layouts: &[],
+                push_constant_ranges: &[],
+            });
+
         let geometry_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: Some("Deferred Geometry Pipeline"),
             layout: Some(&geometry_pipeline_layout),
@@ -257,16 +291,17 @@ impl DeferredRenderer {
             multisample: wgpu::MultisampleState::default(),
             multiview: None,
         });
-        
+
         // 创建光照阶段管线 (读取G-Buffer,输出到屏幕)
         // 注意: 这里假设CSM绑定组布局已经在其他地方定义
         // 实际使用时需要传入CSM绑定组布局
-        let lighting_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("Deferred Lighting Pipeline Layout"),
-            bind_group_layouts: &[&gbuffer_bind_group_layout],
-            push_constant_ranges: &[],
-        });
-        
+        let lighting_pipeline_layout =
+            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: Some("Deferred Lighting Pipeline Layout"),
+                bind_group_layouts: &[&gbuffer_bind_group_layout],
+                push_constant_ranges: &[],
+            });
+
         let lighting_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: Some("Deferred Lighting Pipeline"),
             layout: Some(&lighting_pipeline_layout),
@@ -298,7 +333,7 @@ impl DeferredRenderer {
             multisample: wgpu::MultisampleState::default(),
             multiview: None,
         });
-        
+
         // 创建全屏四边形顶点缓冲
         let fullscreen_vertices: &[[f32; 2]] = &[
             [-1.0, -1.0],
@@ -308,13 +343,14 @@ impl DeferredRenderer {
             [1.0, 1.0],
             [-1.0, 1.0],
         ];
-        
-        let fullscreen_vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Fullscreen Quad Vertex Buffer"),
-            contents: bytemuck::cast_slice(fullscreen_vertices),
-            usage: wgpu::BufferUsages::VERTEX,
-        });
-        
+
+        let fullscreen_vertex_buffer =
+            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("Fullscreen Quad Vertex Buffer"),
+                contents: bytemuck::cast_slice(fullscreen_vertices),
+                usage: wgpu::BufferUsages::VERTEX,
+            });
+
         Self {
             gbuffer,
             geometry_pipeline,
@@ -323,8 +359,9 @@ impl DeferredRenderer {
             fullscreen_vertex_buffer,
         }
     }
-    
+
     pub fn resize(&mut self, device: &wgpu::Device, width: u32, height: u32) {
-        self.gbuffer.resize(device, width, height, &self.gbuffer_bind_group_layout);
+        self.gbuffer
+            .resize(device, width, height, &self.gbuffer_bind_group_layout);
     }
 }

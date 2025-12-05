@@ -1,8 +1,8 @@
 //! Language Binding Layer (FFI)
-//! 
+//!
 //! This module provides a unified binding layer design that can be reused
 //! across different scripting languages (JavaScript, Python, Lua, etc.).
-//! 
+//!
 //! Architecture:
 //! ```
 //! ┌─────────────────────────────────────────────────────────────┐
@@ -30,7 +30,7 @@
 //! └─────────────────────────────────────────────────────────────┘
 //! ```
 
-pub mod protocol;
 pub mod js;
+pub mod protocol;
 
 pub use protocol::*;

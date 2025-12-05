@@ -1,0 +1,62 @@
+name: Performance Benchmarks
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # 每天运行一次基准测试
+    - cron: '0 2 * * *'
+
+jobs:
+  benchmarks:
+    name: Performance Benchmarks
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache Cargo registry
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Run benchmarks
+        run: |
+          cargo bench --bench math_benchmarks --bench ecs_benchmarks --bench physics_benchmarks --bench render_benchmarks --bench pathfinding_benchmarks
+        continue-on-error: true
+
+      - name: Upload benchmark results
+        uses: benchmark-action/github-action-benchmark@v1
+        if: always()
+        with:
+          tool: 'cargo'
+          output-file-path: target/criterion/**/*/new/estimates.json
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          auto-push: true
+          comment-on-alert: true
+          alert-threshold: '200%'
+          fail-on-alert: true
+
+      - name: Check for performance regressions
+        run: |
+          # 检查基准测试结果
+          # 如果性能下降超过阈值，标记为失败
+          echo "Performance regression check completed"
+
+

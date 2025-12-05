@@ -49,36 +49,36 @@ pub struct SsaoPass {
     blur_pipeline: wgpu::RenderPipeline,
     /// 合成管线
     composite_pipeline: wgpu::RenderPipeline,
-    
+
     /// 绑定组布局
     bind_group_layout: wgpu::BindGroupLayout,
-    
+
     /// SSAO 输出纹理
     ssao_texture: wgpu::Texture,
     ssao_view: wgpu::TextureView,
-    
+
     /// 模糊中间纹理
     blur_texture: wgpu::Texture,
     blur_view: wgpu::TextureView,
-    
+
     /// 最终输出纹理
     output_texture: wgpu::Texture,
     output_view: wgpu::TextureView,
-    
+
     /// 噪声纹理
     noise_texture: wgpu::Texture,
     noise_view: wgpu::TextureView,
-    
+
     /// 采样器
     sampler: wgpu::Sampler,
     noise_sampler: wgpu::Sampler,
-    
+
     /// Uniform 缓冲区
     uniform_buffer: wgpu::Buffer,
-    
+
     /// 采样核缓冲区
     kernel_buffer: wgpu::Buffer,
-    
+
     /// 屏幕尺寸
     width: u32,
     height: u32,
@@ -96,7 +96,7 @@ impl SsaoPass {
             address_mode_v: wgpu::AddressMode::ClampToEdge,
             ..Default::default()
         });
-        
+
         let noise_sampler = device.create_sampler(&wgpu::SamplerDescriptor {
             label: Some("SSAO Noise Sampler"),
             mag_filter: wgpu::FilterMode::Nearest,
@@ -105,7 +105,7 @@ impl SsaoPass {
             address_mode_v: wgpu::AddressMode::Repeat,
             ..Default::default()
         });
-        
+
         // 创建绑定组布局
         let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("SSAO BGL"),
@@ -181,7 +181,7 @@ impl SsaoPass {
                 },
             ],
         });
-        
+
         // 创建 Uniform 缓冲区
         let uniform_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("SSAO Uniform Buffer"),
@@ -189,7 +189,7 @@ impl SsaoPass {
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
-        
+
         // 生成采样核
         let kernel = Self::generate_kernel();
         let kernel_buffer = device.create_buffer(&wgpu::BufferDescriptor {
@@ -198,46 +198,60 @@ impl SsaoPass {
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
-        
+
+        // 将采样核数据写入缓冲区（需要在queue可用时写入）
+        // kernel用于SSAO采样，需要写入到kernel_buffer
+        let _kernel_data = bytemuck::bytes_of(&kernel);
+        // queue.write_buffer(&kernel_buffer, 0, _kernel_data);
+
         // 创建噪声纹理
         let (noise_texture, noise_view) = Self::create_noise_texture(device);
-        
+
         // 创建着色器
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("SSAO Shader"),
             source: wgpu::ShaderSource::Wgsl(SSAO_SHADER.into()),
         });
-        
+
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("SSAO Pipeline Layout"),
             bind_group_layouts: &[&bind_group_layout],
             push_constant_ranges: &[],
         });
-        
+
         // 创建管线
         let ssao_pipeline = Self::create_pipeline(
-            device, &pipeline_layout, &shader,
-            "vs_fullscreen", "fs_ssao",
+            device,
+            &pipeline_layout,
+            &shader,
+            "vs_fullscreen",
+            "fs_ssao",
             wgpu::TextureFormat::R8Unorm,
         );
-        
+
         let blur_pipeline = Self::create_pipeline(
-            device, &pipeline_layout, &shader,
-            "vs_fullscreen", "fs_blur",
+            device,
+            &pipeline_layout,
+            &shader,
+            "vs_fullscreen",
+            "fs_blur",
             wgpu::TextureFormat::R8Unorm,
         );
-        
+
         let composite_pipeline = Self::create_pipeline(
-            device, &pipeline_layout, &shader,
-            "vs_fullscreen", "fs_composite",
+            device,
+            &pipeline_layout,
+            &shader,
+            "vs_fullscreen",
+            "fs_composite",
             wgpu::TextureFormat::Rgba16Float,
         );
-        
+
         // 创建纹理
         let (ssao_texture, ssao_view) = Self::create_ao_texture(device, width, height, "SSAO");
         let (blur_texture, blur_view) = Self::create_ao_texture(device, width, height, "SSAO Blur");
         let (output_texture, output_view) = Self::create_output_texture(device, width, height);
-        
+
         Self {
             ssao_pipeline,
             blur_pipeline,
@@ -259,12 +273,12 @@ impl SsaoPass {
             height,
         }
     }
-    
+
     /// 生成采样核
     fn generate_kernel() -> SsaoKernel {
         let mut rng = rand::thread_rng();
         let mut samples = [[0.0f32; 4]; 64];
-        
+
         for i in 0..64 {
             // 在单位半球内生成随机点
             let mut sample = [
@@ -273,32 +287,33 @@ impl SsaoPass {
                 rng.r#gen::<f32>(),
                 0.0,
             ];
-            
+
             // 归一化
-            let len = (sample[0] * sample[0] + sample[1] * sample[1] + sample[2] * sample[2]).sqrt();
+            let len =
+                (sample[0] * sample[0] + sample[1] * sample[1] + sample[2] * sample[2]).sqrt();
             sample[0] /= len;
             sample[1] /= len;
             sample[2] /= len;
-            
+
             // 使采样点在核心附近更密集
             let scale = (i as f32) / 64.0;
             let scale = 0.1 + scale * scale * 0.9;
             sample[0] *= scale;
             sample[1] *= scale;
             sample[2] *= scale;
-            
+
             samples[i] = sample;
         }
-        
+
         SsaoKernel { samples }
     }
-    
+
     /// 创建噪声纹理
     fn create_noise_texture(device: &wgpu::Device) -> (wgpu::Texture, wgpu::TextureView) {
         let mut rng = rand::thread_rng();
         let size = 4u32;
         let mut noise_data = vec![0u8; (size * size * 4) as usize];
-        
+
         for i in 0..(size * size) as usize {
             let idx = i * 4;
             // 生成随机旋转向量 (在 tangent 空间)
@@ -307,7 +322,7 @@ impl SsaoPass {
             noise_data[idx + 2] = 0;
             noise_data[idx + 3] = 255;
         }
-        
+
         let texture = device.create_texture(&wgpu::TextureDescriptor {
             label: Some("SSAO Noise Texture"),
             size: wgpu::Extent3d {
@@ -322,12 +337,12 @@ impl SsaoPass {
             usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
             view_formats: &[],
         });
-        
+
         let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
-        
+
         (texture, view)
     }
-    
+
     /// 创建 AO 纹理
     fn create_ao_texture(
         device: &wgpu::Device,
@@ -337,7 +352,11 @@ impl SsaoPass {
     ) -> (wgpu::Texture, wgpu::TextureView) {
         let texture = device.create_texture(&wgpu::TextureDescriptor {
             label: Some(label),
-            size: wgpu::Extent3d { width, height, depth_or_array_layers: 1 },
+            size: wgpu::Extent3d {
+                width,
+                height,
+                depth_or_array_layers: 1,
+            },
             mip_level_count: 1,
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
@@ -348,7 +367,7 @@ impl SsaoPass {
         let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
         (texture, view)
     }
-    
+
     /// 创建输出纹理
     fn create_output_texture(
         device: &wgpu::Device,
@@ -357,7 +376,11 @@ impl SsaoPass {
     ) -> (wgpu::Texture, wgpu::TextureView) {
         let texture = device.create_texture(&wgpu::TextureDescriptor {
             label: Some("SSAO Output"),
-            size: wgpu::Extent3d { width, height, depth_or_array_layers: 1 },
+            size: wgpu::Extent3d {
+                width,
+                height,
+                depth_or_array_layers: 1,
+            },
             mip_level_count: 1,
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
@@ -368,7 +391,7 @@ impl SsaoPass {
         let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
         (texture, view)
     }
-    
+
     /// 创建渲染管线
     fn create_pipeline(
         device: &wgpu::Device,
@@ -406,20 +429,20 @@ impl SsaoPass {
             multiview: None,
         })
     }
-    
+
     /// 调整大小
     pub fn resize(&mut self, device: &wgpu::Device, width: u32, height: u32) {
         if width == self.width && height == self.height {
             return;
         }
-        
+
         self.width = width;
         self.height = height;
-        
+
         let (ssao_texture, ssao_view) = Self::create_ao_texture(device, width, height, "SSAO");
         let (blur_texture, blur_view) = Self::create_ao_texture(device, width, height, "SSAO Blur");
         let (output_texture, output_view) = Self::create_output_texture(device, width, height);
-        
+
         self.ssao_texture = ssao_texture;
         self.ssao_view = ssao_view;
         self.blur_texture = blur_texture;
@@ -427,7 +450,7 @@ impl SsaoPass {
         self.output_texture = output_texture;
         self.output_view = output_view;
     }
-    
+
     /// 执行 SSAO 渲染
     pub fn render(
         &self,
@@ -442,8 +465,18 @@ impl SsaoPass {
     ) {
         // 更新 uniforms
         let uniforms = SsaoUniforms {
-            projection: [[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]],
-            inv_projection: [[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]],
+            projection: [
+                [1.0, 0.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0, 0.0],
+                [0.0, 0.0, 1.0, 0.0],
+                [0.0, 0.0, 0.0, 1.0],
+            ],
+            inv_projection: [
+                [1.0, 0.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0, 0.0],
+                [0.0, 0.0, 1.0, 0.0],
+                [0.0, 0.0, 0.0, 1.0],
+            ],
             screen_size: [self.width as f32, self.height as f32],
             radius,
             intensity,
@@ -452,11 +485,11 @@ impl SsaoPass {
             _pad: [0.0, 0.0],
         };
         queue.write_buffer(&self.uniform_buffer, 0, bytemuck::bytes_of(&uniforms));
-        
+
         // 更新采样核
         let kernel = Self::generate_kernel();
         queue.write_buffer(&self.kernel_buffer, 0, bytemuck::bytes_of(&kernel));
-        
+
         // 创建绑定组
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("SSAO BG"),
@@ -492,7 +525,7 @@ impl SsaoPass {
                 },
             ],
         });
-        
+
         // 1. SSAO 计算
         {
             let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
@@ -509,15 +542,15 @@ impl SsaoPass {
                 occlusion_query_set: None,
                 timestamp_writes: None,
             });
-            
+
             rpass.set_pipeline(&self.ssao_pipeline);
             rpass.set_bind_group(0, &bind_group, &[]);
             rpass.draw(0..3, 0..1);
         }
-        
+
         // 2. 模糊
         // (简化：跳过模糊步骤，直接使用 SSAO 结果)
-        
+
         // 3. 合成
         {
             let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
@@ -534,13 +567,13 @@ impl SsaoPass {
                 occlusion_query_set: None,
                 timestamp_writes: None,
             });
-            
+
             rpass.set_pipeline(&self.composite_pipeline);
             rpass.set_bind_group(0, &bind_group, &[]);
             rpass.draw(0..3, 0..1);
         }
     }
-    
+
     /// 获取输出纹理视图
     pub fn output_view(&self) -> &wgpu::TextureView {
         &self.output_view

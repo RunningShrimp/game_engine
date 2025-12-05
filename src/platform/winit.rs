@@ -1,8 +1,8 @@
+use raw_window_handle;
 use std::sync::Arc;
 use winit::dpi::PhysicalSize;
 use winit::event_loop::EventLoop;
 use winit::window::Window as WinitWindowRaw;
-use raw_window_handle::{HasWindowHandle, HasDisplayHandle};
 
 #[derive(Clone)]
 pub struct WinitWindow {
@@ -13,13 +13,17 @@ impl WinitWindow {
     pub fn new(event_loop: &EventLoop<()>, size: (u32, u32)) -> Self {
         let win = WinitWindowRaw::new(event_loop).unwrap();
         let _ = win.request_inner_size(PhysicalSize::new(size.0, size.1));
-        Self { window: Arc::new(win) }
+        Self {
+            window: Arc::new(win),
+        }
     }
 
     pub fn try_new(event_loop: &EventLoop<()>, size: (u32, u32)) -> Option<Self> {
         let win = WinitWindowRaw::new(event_loop).ok()?;
         let _ = win.request_inner_size(PhysicalSize::new(size.0, size.1));
-        Some(Self { window: Arc::new(win) })
+        Some(Self {
+            window: Arc::new(win),
+        })
     }
     pub fn raw(&self) -> &WinitWindowRaw {
         &self.window
@@ -45,7 +49,8 @@ impl crate::platform::Window for WinitWindow {
     }
     fn set_fullscreen(&self, fullscreen: bool) {
         if fullscreen {
-            self.window.set_fullscreen(Some(winit::window::Fullscreen::Borderless(None)));
+            self.window
+                .set_fullscreen(Some(winit::window::Fullscreen::Borderless(None)));
         } else {
             self.window.set_fullscreen(None);
         }
@@ -53,13 +58,13 @@ impl crate::platform::Window for WinitWindow {
     fn set_cursor_visible(&self, visible: bool) {
         self.window.set_cursor_visible(visible);
     }
-    
+
     #[cfg(not(target_arch = "wasm32"))]
     fn raw_window_handle(&self) -> raw_window_handle::RawWindowHandle {
         use raw_window_handle::HasWindowHandle;
         self.window.window_handle().unwrap().as_raw()
     }
-    
+
     #[cfg(not(target_arch = "wasm32"))]
     fn raw_display_handle(&self) -> raw_window_handle::RawDisplayHandle {
         use raw_window_handle::HasDisplayHandle;

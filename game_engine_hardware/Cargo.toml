@@ -1,0 +1,36 @@
+[package]
+name = "game_engine_hardware"
+version = "0.1.0"
+edition = "2021"
+authors = ["Your Name <your.email@example.com>"]
+description = "Hardware detection and optimization for game_engine - GPU, NPU, SoC detection and optimization"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/username/game_engine"
+homepage = "https://github.com/username/game_engine"
+documentation = "https://docs.rs/game_engine_hardware"
+readme = "README.md"
+keywords = ["hardware", "gpu", "npu", "detection", "optimization"]
+categories = ["hardware-support", "performance"]
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "1.0"
+ort = { version = "2.0.0-rc.10", features = ["download-binaries"], optional = true }
+dirs = "5.0"
+tracing = "0.1"
+wgpu = { version = "0.20", optional = true }
+num_cpus = "1.16"
+
+[dev-dependencies]
+criterion = { version = "0.7.0", features = ["html_reports"] }
+
+[lib]
+name = "game_engine_hardware"
+path = "src/lib.rs"
+
+[features]
+default = []
+onnx = ["ort"]
+wgpu = ["dep:wgpu"]
+

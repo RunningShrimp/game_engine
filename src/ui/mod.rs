@@ -9,10 +9,11 @@
 //! - 主题支持
 //! - 事件处理
 
-pub mod widgets;
 pub mod layout;
 pub mod theme;
+pub mod widgets;
 
+use crate::impl_default;
 use bevy_ecs::prelude::*;
 use glam::Vec2;
 
@@ -38,16 +39,12 @@ pub struct UIRoot {
     pub visible: bool,
 }
 
-impl Default for UIRoot {
-    fn default() -> Self {
-        Self {
-            width: 800.0,
-            height: 600.0,
-            scale_factor: 1.0,
-            visible: true,
-        }
-    }
-}
+impl_default!(UIRoot {
+    width: 800.0,
+    height: 600.0,
+    scale_factor: 1.0,
+    visible: true,
+});
 
 /// UI 组件
 #[derive(Component)]
@@ -60,21 +57,17 @@ pub struct UIWidget {
     pub z_index: i32,
 }
 
-impl Default for UIWidget {
-    fn default() -> Self {
-        Self {
-            widget_type: WidgetType::Container {
-                layout: LayoutType::Vertical,
-                children: Vec::new(),
-            },
-            position: Vec2::ZERO,
-            size: Vec2::new(100.0, 50.0),
-            visible: true,
-            enabled: true,
-            z_index: 0,
-        }
-    }
-}
+impl_default!(UIWidget {
+    widget_type: WidgetType::Container {
+        layout: LayoutType::Vertical,
+        children: Vec::new(),
+    },
+    position: Vec2::ZERO,
+    size: Vec2::new(100.0, 50.0),
+    visible: true,
+    enabled: true,
+    z_index: 0,
+});
 
 /// 组件类型枚举
 pub enum WidgetType {
@@ -110,23 +103,12 @@ pub enum WidgetType {
 }
 
 /// UI 状态资源
-#[derive(Resource)]
+#[derive(Resource, Default)]
 pub struct UIState {
     pub focused_widget: Option<Entity>,
     pub hovered_widget: Option<Entity>,
     pub drag_target: Option<Entity>,
     pub cursor_position: Vec2,
-}
-
-impl Default for UIState {
-    fn default() -> Self {
-        Self {
-            focused_widget: None,
-            hovered_widget: None,
-            drag_target: None,
-            cursor_position: Vec2::ZERO,
-        }
-    }
 }
 
 /// UI 主题
@@ -140,18 +122,14 @@ pub struct UITheme {
     pub border_radius: f32,
 }
 
-impl Default for UITheme {
-    fn default() -> Self {
-        Self {
-            primary_color: [0.2, 0.6, 1.0, 1.0], // Blue
-            secondary_color: [0.8, 0.8, 0.8, 1.0], // Light gray
-            background_color: [0.1, 0.1, 0.1, 1.0], // Dark background
-            text_color: [1.0, 1.0, 1.0, 1.0], // White text
-            font_size: 16.0,
-            border_radius: 4.0,
-        }
-    }
-}
+impl_default!(UITheme {
+    primary_color: [0.2, 0.6, 1.0, 1.0],
+    secondary_color: [0.8, 0.8, 0.8, 1.0],
+    background_color: [0.1, 0.1, 0.1, 1.0],
+    text_color: [1.0, 1.0, 1.0, 1.0],
+    font_size: 16.0,
+    border_radius: 4.0,
+});
 
 /// UI 服务 - 封装 UI 业务逻辑
 pub struct UIService;
@@ -250,16 +228,19 @@ impl UIService {
         }
     }
 
-    fn layout_vertical(children: &mut [Entity]) {
-        // TODO: 实现垂直布局逻辑
+    fn layout_vertical(_children: &mut [Entity]) {
+        // NOTE: 垂直布局逻辑待实现，当前为占位符
+        // 计划实现：按垂直方向排列子元素，支持间距和对齐
     }
 
-    fn layout_horizontal(children: &mut [Entity]) {
-        // TODO: 实现水平布局逻辑
+    fn layout_horizontal(_children: &mut [Entity]) {
+        // NOTE: 水平布局逻辑待实现，当前为占位符
+        // 计划实现：按水平方向排列子元素，支持间距和对齐
     }
 
     fn layout_grid(children: &mut [Entity], rows: u32, cols: u32) {
-        // TODO: 实现网格布局逻辑
+        // NOTE: 网格布局逻辑待实现，当前为占位符
+        // 计划实现：按网格排列子元素，支持行列间距
         let _ = (rows, cols);
         let _ = children;
     }

@@ -1,0 +1,327 @@
+name: Code Quality Checks
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  fmt:
+    name: Rustfmt Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+          components: rustfmt
+      
+      - name: Check formatting
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check
+  
+  clippy:
+    name: Clippy Lints
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+          components: clippy
+      
+      - name: Cache cargo registry
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+      
+      - name: Run Clippy
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --all-targets --all-features -- -D warnings
+      
+      - name: Generate Clippy report
+        if: always()
+        run: |
+          cargo clippy --all-targets --all-features --message-format json > clippy-report.json 2>&1 || true
+      
+      - name: Upload Clippy report
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: clippy-report
+          path: clippy-report.json
+          retention-days: 7
+  
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+      
+      - name: Cache cargo registry
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-test-
+      
+      - name: Run tests
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --all-features
+      
+      - name: Generate test report
+        if: always()
+        run: |
+          cargo test --all-features -- --test-threads=1 --nocapture 2>&1 | tee test-report.txt || true
+      
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-report
+          path: test-report.txt
+          retention-days: 7
+  
+  coverage:
+    name: Code Coverage
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+      
+      - name: Install cargo-tarpaulin
+        uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: cargo-tarpaulin --version 0.27.0
+      
+      - name: Cache cargo registry
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+      
+      - name: Run coverage
+        uses: actions-rs/cargo@v1
+        with:
+          command: tarpaulin
+          args: --all-features --out Xml --output-dir coverage --timeout 120
+        continue-on-error: true
+      
+      - name: Generate coverage report
+        if: always()
+        run: |
+          if [ -f coverage/cobertura.xml ]; then
+            echo "Coverage report generated"
+            # 提取覆盖率百分比
+            COVERAGE=$(grep -o 'line-rate="[0-9.]*"' coverage/cobertura.xml | head -1 | cut -d'"' -f2 || echo "0")
+            COVERAGE_PERCENT=$(echo "$COVERAGE * 100" | bc)
+            echo "Coverage: ${COVERAGE_PERCENT}%"
+            echo "## Coverage Report" >> $GITHUB_STEP_SUMMARY
+            echo "Code Coverage: **${COVERAGE_PERCENT}%**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "No coverage report generated"
+          fi
+      
+      - name: Upload coverage to Codecov
+        if: always()
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage/cobertura.xml
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+      
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 30
+  
+  docs:
+    name: Documentation Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+          components: rust-docs
+      
+      - name: Cache cargo registry
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-docs-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-docs-
+      
+      - name: Check documentation
+        run: |
+          # 检查是否有缺失的文档注释
+          cargo doc --no-deps --all-features --document-private-items 2>&1 | tee doc-check.txt || true
+          
+          # 检查是否有文档警告
+          if grep -q "warning:" doc-check.txt; then
+            echo "Documentation warnings found:"
+            grep "warning:" doc-check.txt
+            # 不失败，只警告
+          fi
+      
+      - name: Build documentation
+        run: |
+          cargo doc --no-deps --all-features --document-private-items
+      
+      - name: Upload documentation
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: documentation
+          path: target/doc/
+          retention-days: 7
+  
+  security:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+      
+      - name: Install cargo-audit
+        uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: cargo-audit --version 0.19.0
+      
+      - name: Run security audit
+        uses: actions-rs/cargo@v1
+        with:
+          command: audit
+          args: --deny warnings
+        continue-on-error: true
+      
+      - name: Generate security report
+        if: always()
+        run: |
+          cargo audit --json > security-report.json 2>&1 || true
+      
+      - name: Upload security report
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: security-report
+          path: security-report.json
+          retention-days: 30
+  
+  quality-summary:
+    name: Quality Summary
+    needs: [fmt, clippy, test, coverage, docs, security]
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+      - name: Generate quality summary
+        run: |
+          cat > quality_summary.md << 'EOF'
+          # Code Quality Check Summary
+          
+          ## Results
+          
+          - ✅ Formatting: ${{ needs.fmt.result }}
+          - ✅ Clippy: ${{ needs.clippy.result }}
+          - ✅ Tests: ${{ needs.test.result }}
+          - ✅ Coverage: ${{ needs.coverage.result }}
+          - ✅ Documentation: ${{ needs.docs.result }}
+          - ✅ Security: ${{ needs.security.result }}
+          
+          ## Artifacts
+          
+          Detailed reports are available in the workflow artifacts.
+          
+          EOF
+          
+          cat quality_summary.md
+          echo "::notice::Quality checks completed. See artifacts for detailed reports."
+

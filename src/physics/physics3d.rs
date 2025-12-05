@@ -1,9 +1,10 @@
-use bevy_ecs::prelude::*;
-use rapier3d::prelude::*;
-use rapier3d::prelude::DefaultBroadPhase;
-use rapier3d::na::{UnitQuaternion, Quaternion, Unit};
 use crate::ecs::Transform;
-use glam::{Vec3, Quat};
+use crate::impl_default;
+use bevy_ecs::prelude::*;
+use glam::{Quat, Vec3};
+use rapier3d::na::{Quaternion, UnitQuaternion};
+use rapier3d::prelude::DefaultBroadPhase;
+use rapier3d::prelude::*;
 
 // --- Components ---
 
@@ -35,26 +36,25 @@ pub struct PhysicsWorld3D {
     pub query_pipeline: QueryPipeline,
 }
 
-impl Default for PhysicsWorld3D {
-    fn default() -> Self {
-        Self {
-            gravity: vector![0.0, -9.81, 0.0],
-            integration_parameters: IntegrationParameters::default(),
-            physics_pipeline: PhysicsPipeline::new(),
-            island_manager: IslandManager::new(),
-            broad_phase: Box::new(DefaultBroadPhase::new()),
-            narrow_phase: NarrowPhase::new(),
-            impulse_joint_set: ImpulseJointSet::new(),
-            multibody_joint_set: MultibodyJointSet::new(),
-            ccd_solver: CCDSolver::new(),
-            rigid_body_set: RigidBodySet::new(),
-            collider_set: ColliderSet::new(),
-            query_pipeline: QueryPipeline::new(),
-        }
-    }
-}
+impl_default!(PhysicsWorld3D {
+    gravity: vector![0.0, -9.81, 0.0],
+    integration_parameters: IntegrationParameters::default(),
+    physics_pipeline: PhysicsPipeline::new(),
+    island_manager: IslandManager::new(),
+    broad_phase: Box::new(DefaultBroadPhase::new()),
+    narrow_phase: NarrowPhase::new(),
+    impulse_joint_set: ImpulseJointSet::new(),
+    multibody_joint_set: MultibodyJointSet::new(),
+    ccd_solver: CCDSolver::new(),
+    rigid_body_set: RigidBodySet::new(),
+    collider_set: ColliderSet::new(),
+    query_pipeline: QueryPipeline::new(),
+});
 
 impl PhysicsWorld3D {
+    pub fn new() -> Self {
+        Self::default()
+    }
     pub fn step(&mut self) {
         self.physics_pipeline.step(
             &self.gravity,
@@ -72,7 +72,7 @@ impl PhysicsWorld3D {
             &(),
         );
     }
-    
+
     /// 射线投射
     pub fn raycast(
         &self,
@@ -84,7 +84,7 @@ impl PhysicsWorld3D {
             point![origin.x, origin.y, origin.z],
             vector![direction.x, direction.y, direction.z],
         );
-        
+
         if let Some((handle, toi)) = self.query_pipeline.cast_ray(
             &self.rigid_body_set,
             &self.collider_set,
@@ -104,7 +104,7 @@ impl PhysicsWorld3D {
             None
         }
     }
-    
+
     /// 形状投射
     pub fn shapecast(
         &self,
@@ -117,15 +117,12 @@ impl PhysicsWorld3D {
         let isometry = Isometry::from_parts(
             Translation::new(position.x, position.y, position.z),
             UnitQuaternion::new_normalize(Quaternion::new(
-                rotation.w,
-                rotation.x,
-                rotation.y,
-                rotation.z,
+                rotation.w, rotation.x, rotation.y, rotation.z,
             )),
         );
-        
+
         let dir = vector![direction.x, direction.y, direction.z];
-        
+
         let options = rapier3d::parry::query::ShapeCastOptions {
             max_time_of_impact: max_distance,
             stop_at_penetration: true,
@@ -146,22 +143,20 @@ impl PhysicsWorld3D {
             None
         }
     }
-    
+
     /// 查询与AABB相交的碰撞体
     pub fn query_aabb(&self, min: Vec3, max: Vec3) -> Vec<Entity> {
-        let aabb = Aabb::new(
-            point![min.x, min.y, min.z],
-            point![max.x, max.y, max.z],
-        );
-        
+        let aabb = Aabb::new(point![min.x, min.y, min.z], point![max.x, max.y, max.z]);
+
         let mut entities = Vec::new();
-        self.query_pipeline.colliders_with_aabb_intersecting_aabb(&aabb, |handle| {
-            if let Some(collider) = self.collider_set.get(*handle) {
-                entities.push(Entity::from_bits(collider.user_data as u64));
-            }
-            true
-        });
-        
+        self.query_pipeline
+            .colliders_with_aabb_intersecting_aabb(&aabb, |handle| {
+                if let Some(collider) = self.collider_set.get(*handle) {
+                    entities.push(Entity::from_bits(collider.user_data as u64));
+                }
+                true
+            });
+
         entities
     }
 }
@@ -177,17 +172,13 @@ pub struct RigidBodyDesc3D {
     pub angular_velocity: Vec3,
 }
 
-impl Default for RigidBodyDesc3D {
-    fn default() -> Self {
-        Self {
-            body_type: RigidBodyType::Dynamic,
-            position: Vec3::ZERO,
-            rotation: Quat::IDENTITY,
-            linear_velocity: Vec3::ZERO,
-            angular_velocity: Vec3::ZERO,
-        }
-    }
-}
+impl_default!(RigidBodyDesc3D {
+    body_type: RigidBodyType::Dynamic,
+    position: Vec3::ZERO,
+    rotation: Quat::IDENTITY,
+    linear_velocity: Vec3::ZERO,
+    angular_velocity: Vec3::ZERO,
+});
 
 #[derive(Component, Clone)]
 pub struct ColliderDesc3D {
@@ -197,16 +188,12 @@ pub struct ColliderDesc3D {
     pub restitution: f32,
 }
 
-impl Default for ColliderDesc3D {
-    fn default() -> Self {
-        Self {
-            shape: Shape3D::Cuboid(Vec3::ONE),
-            density: 1.0,
-            friction: 0.5,
-            restitution: 0.0,
-        }
-    }
-}
+impl_default!(ColliderDesc3D {
+    shape: Shape3D::Cuboid(Vec3::ONE),
+    density: 1.0,
+    friction: 0.5,
+    restitution: 0.0,
+});
 
 #[derive(Clone)]
 pub enum Shape3D {
@@ -224,15 +211,9 @@ impl Shape3D {
                 SharedShape::cuboid(half_extents.x, half_extents.y, half_extents.z)
             }
             Shape3D::Ball(radius) => SharedShape::ball(*radius),
-            Shape3D::Capsule(half_height, radius) => {
-                SharedShape::capsule_y(*half_height, *radius)
-            }
-            Shape3D::Cylinder(half_height, radius) => {
-                SharedShape::cylinder(*half_height, *radius)
-            }
-            Shape3D::Cone(half_height, radius) => {
-                SharedShape::cone(*half_height, *radius)
-            }
+            Shape3D::Capsule(half_height, radius) => SharedShape::capsule_y(*half_height, *radius),
+            Shape3D::Cylinder(half_height, radius) => SharedShape::cylinder(*half_height, *radius),
+            Shape3D::Cone(half_height, radius) => SharedShape::cone(*half_height, *radius),
         }
     }
 }
@@ -246,15 +227,15 @@ pub fn init_physics_bodies_3d(
 ) {
     for (entity, rb_desc, col_desc) in query.iter() {
         // Create RigidBody
-        let mut rb = RigidBodyBuilder::new(rb_desc.body_type)
-            .translation(vector![
-                rb_desc.position.x,
-                rb_desc.position.y,
-                rb_desc.position.z
-            ]);
-        
+        let mut rb = RigidBodyBuilder::new(rb_desc.body_type).translation(vector![
+            rb_desc.position.x,
+            rb_desc.position.y,
+            rb_desc.position.z
+        ]);
+
         // 设置旋转
-        rb = rb.rotation(vector![0.0, 0.0, 0.0]) // 使用欧拉角或轴角
+        rb = rb
+            .rotation(vector![0.0, 0.0, 0.0]) // 使用欧拉角或轴角
             .linvel(vector![
                 rb_desc.linear_velocity.x,
                 rb_desc.linear_velocity.y,
@@ -265,7 +246,7 @@ pub fn init_physics_bodies_3d(
                 rb_desc.angular_velocity.y,
                 rb_desc.angular_velocity.z
             ]);
-        
+
         let rb = rb.build();
         let rb_handle = physics.rigid_body_set.insert(rb);
 
@@ -278,18 +259,22 @@ pub fn init_physics_bodies_3d(
                 .restitution(cd.restitution)
                 .user_data(entity.to_bits() as u128)
                 .build();
-            
+
             // 分离借用
-            let PhysicsWorld3D { rigid_body_set, collider_set, .. } = &mut *physics;
-            let col_handle = collider_set.insert_with_parent(
-                collider,
-                rb_handle,
+            let PhysicsWorld3D {
                 rigid_body_set,
-            );
-            commands.entity(entity).insert(Collider3D { handle: col_handle });
+                collider_set,
+                ..
+            } = &mut *physics;
+            let col_handle = collider_set.insert_with_parent(collider, rb_handle, rigid_body_set);
+            commands
+                .entity(entity)
+                .insert(Collider3D { handle: col_handle });
         }
 
-        commands.entity(entity).insert(RigidBody3D { handle: rb_handle });
+        commands
+            .entity(entity)
+            .insert(RigidBody3D { handle: rb_handle });
     }
 }
 
@@ -320,58 +305,50 @@ mod tests {
     #[test]
     fn test_physics_world_3d() {
         let mut world = PhysicsWorld3D::default();
-        
+
         // 创建一个刚体
         let rb = RigidBodyBuilder::dynamic()
             .translation(vector![0.0, 10.0, 0.0])
             .build();
         let rb_handle = world.rigid_body_set.insert(rb);
-        
+
         // 创建一个碰撞体
         let collider = ColliderBuilder::ball(0.5).build();
-        world.collider_set.insert_with_parent(
-            collider,
-            rb_handle,
-            &mut world.rigid_body_set,
-        );
-        
+        world
+            .collider_set
+            .insert_with_parent(collider, rb_handle, &mut world.rigid_body_set);
+
         // 模拟几步
         for _ in 0..10 {
             world.step();
         }
-        
+
         // 检查刚体是否下落
         let rb = world.rigid_body_set.get(rb_handle).unwrap();
         assert!(rb.translation().y < 10.0);
     }
-    
+
     #[test]
     fn test_raycast() {
         let mut world = PhysicsWorld3D::default();
-        
+
         // 创建一个静态地面
         let rb = RigidBodyBuilder::fixed()
             .translation(vector![0.0, 0.0, 0.0])
             .build();
         let rb_handle = world.rigid_body_set.insert(rb);
-        
+
         let collider = ColliderBuilder::cuboid(10.0, 0.1, 10.0).build();
-        world.collider_set.insert_with_parent(
-            collider,
-            rb_handle,
-            &mut world.rigid_body_set,
-        );
-        
+        world
+            .collider_set
+            .insert_with_parent(collider, rb_handle, &mut world.rigid_body_set);
+
         // 更新查询管线
         world.query_pipeline.update(&world.collider_set);
-        
+
         // 从上方向下投射射线
-        let result = world.raycast(
-            Vec3::new(0.0, 10.0, 0.0),
-            Vec3::new(0.0, -1.0, 0.0),
-            20.0,
-        );
-        
+        let result = world.raycast(Vec3::new(0.0, 10.0, 0.0), Vec3::new(0.0, -1.0, 0.0), 20.0);
+
         assert!(result.is_some());
     }
 }

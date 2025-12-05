@@ -2,8 +2,10 @@
 //!
 //! 包含渲染所需的各种数据结构定义。
 
+use crate::impl_default;
+
 /// 渲染实例数据
-/// 
+///
 /// 用于实例化渲染的每个实例的数据。
 #[repr(C)]
 #[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
@@ -54,50 +56,98 @@ impl Instance {
             && self.msdf == other.msdf
             && self.px_range == other.px_range
     }
-    
+
     /// 获取实例的顶点缓冲区布局
     pub fn vertex_buffer_layout<'a>() -> wgpu::VertexBufferLayout<'a> {
         wgpu::VertexBufferLayout {
             array_stride: std::mem::size_of::<Instance>() as u64,
             step_mode: wgpu::VertexStepMode::Instance,
             attributes: &[
-                wgpu::VertexAttribute { offset: 0, shader_location: 1, format: wgpu::VertexFormat::Float32x2 },
-                wgpu::VertexAttribute { offset: 8, shader_location: 2, format: wgpu::VertexFormat::Float32x2 },
-                wgpu::VertexAttribute { offset: 16, shader_location: 3, format: wgpu::VertexFormat::Float32 },
-                wgpu::VertexAttribute { offset: 20, shader_location: 4, format: wgpu::VertexFormat::Uint32 },
-                wgpu::VertexAttribute { offset: 28, shader_location: 5, format: wgpu::VertexFormat::Float32x4 },
-                wgpu::VertexAttribute { offset: 44, shader_location: 6, format: wgpu::VertexFormat::Float32x2 },
-                wgpu::VertexAttribute { offset: 52, shader_location: 7, format: wgpu::VertexFormat::Float32x2 },
-                wgpu::VertexAttribute { offset: 60, shader_location: 8, format: wgpu::VertexFormat::Float32 },
-                wgpu::VertexAttribute { offset: 64, shader_location: 9, format: wgpu::VertexFormat::Uint32 },
-                wgpu::VertexAttribute { offset: 68, shader_location: 10, format: wgpu::VertexFormat::Uint32 },
-                wgpu::VertexAttribute { offset: 72, shader_location: 11, format: wgpu::VertexFormat::Float32 },
-                wgpu::VertexAttribute { offset: 76, shader_location: 12, format: wgpu::VertexFormat::Float32 },
-                wgpu::VertexAttribute { offset: 24, shader_location: 13, format: wgpu::VertexFormat::Uint32 },
+                wgpu::VertexAttribute {
+                    offset: 0,
+                    shader_location: 1,
+                    format: wgpu::VertexFormat::Float32x2,
+                },
+                wgpu::VertexAttribute {
+                    offset: 8,
+                    shader_location: 2,
+                    format: wgpu::VertexFormat::Float32x2,
+                },
+                wgpu::VertexAttribute {
+                    offset: 16,
+                    shader_location: 3,
+                    format: wgpu::VertexFormat::Float32,
+                },
+                wgpu::VertexAttribute {
+                    offset: 20,
+                    shader_location: 4,
+                    format: wgpu::VertexFormat::Uint32,
+                },
+                wgpu::VertexAttribute {
+                    offset: 28,
+                    shader_location: 5,
+                    format: wgpu::VertexFormat::Float32x4,
+                },
+                wgpu::VertexAttribute {
+                    offset: 44,
+                    shader_location: 6,
+                    format: wgpu::VertexFormat::Float32x2,
+                },
+                wgpu::VertexAttribute {
+                    offset: 52,
+                    shader_location: 7,
+                    format: wgpu::VertexFormat::Float32x2,
+                },
+                wgpu::VertexAttribute {
+                    offset: 60,
+                    shader_location: 8,
+                    format: wgpu::VertexFormat::Float32,
+                },
+                wgpu::VertexAttribute {
+                    offset: 64,
+                    shader_location: 9,
+                    format: wgpu::VertexFormat::Uint32,
+                },
+                wgpu::VertexAttribute {
+                    offset: 68,
+                    shader_location: 10,
+                    format: wgpu::VertexFormat::Uint32,
+                },
+                wgpu::VertexAttribute {
+                    offset: 72,
+                    shader_location: 11,
+                    format: wgpu::VertexFormat::Float32,
+                },
+                wgpu::VertexAttribute {
+                    offset: 76,
+                    shader_location: 12,
+                    format: wgpu::VertexFormat::Float32,
+                },
+                wgpu::VertexAttribute {
+                    offset: 24,
+                    shader_location: 13,
+                    format: wgpu::VertexFormat::Uint32,
+                },
             ],
         }
     }
 }
 
-impl Default for Instance {
-    fn default() -> Self {
-        Self {
-            pos: [0.0, 0.0],
-            scale: [1.0, 1.0],
-            rot: 0.0,
-            target: 0,
-            chunk: 0,
-            color: [1.0, 1.0, 1.0, 1.0],
-            uv_offset: [0.0, 0.0],
-            uv_scale: [1.0, 1.0],
-            layer: 0.0,
-            tex_index: 0,
-            normal_tex_index: 0,
-            msdf: 0.0,
-            px_range: 0.0,
-        }
-    }
-}
+impl_default!(Instance {
+    pos: [0.0, 0.0],
+    scale: [1.0, 1.0],
+    rot: 0.0,
+    target: 0,
+    chunk: 0,
+    color: [1.0, 1.0, 1.0, 1.0],
+    uv_offset: [0.0, 0.0],
+    uv_scale: [1.0, 1.0],
+    layer: 0.0,
+    tex_index: 0,
+    normal_tex_index: 0,
+    msdf: 0.0,
+    px_range: 0.0,
+});
 
 /// UI 实例数据
 #[repr(C)]
@@ -119,19 +169,15 @@ pub struct UiInstance {
     pub rotation: f32,
 }
 
-impl Default for UiInstance {
-    fn default() -> Self {
-        Self {
-            pos: [0.0, 0.0],
-            size: [100.0, 100.0],
-            radius: 0.0,
-            stroke_width: 0.0,
-            color: [1.0, 1.0, 1.0, 1.0],
-            stroke_color: [0.0, 0.0, 0.0, 1.0],
-            rotation: 0.0,
-        }
-    }
-}
+impl_default!(UiInstance {
+    pos: [0.0, 0.0],
+    size: [100.0, 100.0],
+    radius: 0.0,
+    stroke_width: 0.0,
+    color: [1.0, 1.0, 1.0, 1.0],
+    stroke_color: [0.0, 0.0, 0.0, 1.0],
+    rotation: 0.0,
+});
 
 /// 基础顶点数据
 #[repr(C)]
@@ -147,25 +193,23 @@ impl Vertex {
         wgpu::VertexBufferLayout {
             array_stride: std::mem::size_of::<Vertex>() as u64,
             step_mode: wgpu::VertexStepMode::Vertex,
-            attributes: &[
-                wgpu::VertexAttribute {
-                    offset: 0,
-                    shader_location: 0,
-                    format: wgpu::VertexFormat::Float32x2,
-                },
-            ],
+            attributes: &[wgpu::VertexAttribute {
+                offset: 0,
+                shader_location: 0,
+                format: wgpu::VertexFormat::Float32x2,
+            }],
         }
     }
-    
+
     /// 创建四边形顶点数据
     pub fn quad() -> [Vertex; 6] {
         [
             Vertex { pos: [-0.5, -0.5] },
-            Vertex { pos: [ 0.5, -0.5] },
-            Vertex { pos: [ 0.5,  0.5] },
+            Vertex { pos: [0.5, -0.5] },
+            Vertex { pos: [0.5, 0.5] },
             Vertex { pos: [-0.5, -0.5] },
-            Vertex { pos: [ 0.5,  0.5] },
-            Vertex { pos: [-0.5,  0.5] },
+            Vertex { pos: [0.5, 0.5] },
+            Vertex { pos: [-0.5, 0.5] },
         ]
     }
 }
@@ -222,18 +266,14 @@ pub struct GpuPointLight {
     pub _pad: [f32; 2],
 }
 
-impl Default for GpuPointLight {
-    fn default() -> Self {
-        Self {
-            pos: [0.0, 0.0],
-            color: [1.0, 1.0, 1.0],
-            radius: 100.0,
-            intensity: 1.0,
-            falloff: 1.0,
-            _pad: [0.0, 0.0],
-        }
-    }
-}
+impl_default!(GpuPointLight {
+    pos: [0.0, 0.0],
+    color: [1.0, 1.0, 1.0],
+    radius: 100.0,
+    intensity: 1.0,
+    falloff: 1.0,
+    _pad: [0.0, 0.0],
+});
 
 /// 绘制组
 pub struct DrawGroup {
@@ -260,11 +300,10 @@ impl DrawGroup {
             scissor: None,
         }
     }
-    
+
     /// 设置裁剪区域
     pub fn with_scissor(mut self, scissor: Option<[u32; 4]>) -> Self {
         self.scissor = scissor;
         self
     }
 }
-

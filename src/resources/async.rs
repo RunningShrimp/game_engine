@@ -1,4 +1,8 @@
-#![cfg(feature = "async_assets")]
+//! 异步资源加载器（旧版实现）
+//!
+//! 注意：此模块已被 `CoroutineAssetLoader` 取代。
+//! 保留此模块仅用于向后兼容。
+
 use std::{path::PathBuf, sync::{Arc, Mutex}};
 use tokio::task::JoinHandle;
 

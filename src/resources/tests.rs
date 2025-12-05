@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::resources::manager::{Handle, AssetEvent, LoadState};
+    use crate::resources::manager::{AssetEvent, Handle, LoadState};
     use std::sync::{Arc, RwLock};
 
     // Mock Handle for testing purposes
@@ -31,7 +31,8 @@ mod tests {
     #[test]
     fn test_asset_failed_simulation() {
         // Simulate the asset server sending a "Failed" event
-        let failed_handle: Handle<u32> = mock_handle(LoadState::Failed("File not found".to_string()));
+        let failed_handle: Handle<u32> =
+            mock_handle(LoadState::Failed("File not found".to_string()));
         let event = AssetEvent::TextureFailed(failed_handle.clone(), "File not found".to_string());
 
         // Verify the event and handle state

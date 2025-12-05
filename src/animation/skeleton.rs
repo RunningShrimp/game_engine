@@ -34,7 +34,11 @@ pub struct BoneTransform {
 
 impl BoneTransform {
     pub fn new(translation: Vec3, rotation: Quat, scale: Vec3) -> Self {
-        Self { translation, rotation, scale }
+        Self {
+            translation,
+            rotation,
+            scale,
+        }
     }
 
     pub fn identity() -> Self {
@@ -53,7 +57,11 @@ impl BoneTransform {
     /// 从 4x4 矩阵分解
     pub fn from_matrix(matrix: Mat4) -> Self {
         let (scale, rotation, translation) = matrix.to_scale_rotation_translation();
-        Self { translation, rotation, scale }
+        Self {
+            translation,
+            rotation,
+            scale,
+        }
     }
 
     /// 线性插值
@@ -152,7 +160,7 @@ impl Skeleton {
     pub fn compute_bone_matrices(&mut self) {
         for i in 0..self.bones.len() {
             let local_matrix = self.bones[i].local_transform.to_matrix();
-            
+
             self.bone_matrices[i] = if let Some(parent_idx) = self.bones[i].parent_index {
                 // 子骨骼：父骨骼矩阵 * 局部矩阵
                 self.bone_matrices[parent_idx] * local_matrix
@@ -182,7 +190,8 @@ impl Skeleton {
             return;
         }
 
-        let buffer_size = (self.skin_matrices.len() * std::mem::size_of::<Mat4>()) as wgpu::BufferAddress;
+        let buffer_size =
+            (self.skin_matrices.len() * std::mem::size_of::<Mat4>()) as wgpu::BufferAddress;
 
         // 创建或更新缓冲区
         if self.matrix_buffer.is_none() {
@@ -196,7 +205,8 @@ impl Skeleton {
 
         // 写入蒙皮矩阵
         if let Some(buffer) = &self.matrix_buffer {
-            let data: Vec<[[f32; 4]; 4]> = self.skin_matrices
+            let data: Vec<[[f32; 4]; 4]> = self
+                .skin_matrices
                 .iter()
                 .map(|m| m.to_cols_array_2d())
                 .collect();
@@ -236,9 +246,10 @@ impl SkeletonPose {
     /// 线性插值两个姿态
     pub fn lerp(&self, other: &Self, t: f32) -> Self {
         assert_eq!(self.bone_transforms.len(), other.bone_transforms.len());
-        
+
         Self {
-            bone_transforms: self.bone_transforms
+            bone_transforms: self
+                .bone_transforms
                 .iter()
                 .zip(other.bone_transforms.iter())
                 .map(|(a, b)| a.lerp(b, t))
@@ -262,11 +273,11 @@ impl SkeletonPose {
 // ============================================================================
 
 /// 从 GLTF Skin 构建骨骼
-/// 
+///
 /// # 参数
 /// - `gltf_skin`: GLTF skin 数据
 /// - `buffers`: GLTF 缓冲区数据
-/// 
+///
 /// # 示例
 /// ```ignore
 /// let (document, buffers, _) = gltf::import("model.gltf")?;
@@ -283,7 +294,8 @@ pub fn build_skeleton_from_gltf(
     let joints: Vec<_> = gltf_skin.joints().collect();
 
     // 读取逆绑定矩阵
-    let inverse_bind_matrices: Vec<Mat4> = if let Some(accessor) = gltf_skin.inverse_bind_matrices() {
+    let inverse_bind_matrices: Vec<Mat4> = if let Some(accessor) = gltf_skin.inverse_bind_matrices()
+    {
         read_inverse_bind_matrices(&accessor, buffers)
     } else {
         vec![Mat4::IDENTITY; joints.len()]
@@ -310,25 +322,29 @@ pub fn build_skeleton_from_gltf(
     // 创建骨骼
     for (i, joint) in joints.iter().enumerate() {
         let (translation, rotation, scale) = joint.transform().decomposed();
-        
+
         // 查找父骨骼索引
         let parent_index = parent_map
             .get(&joint.index())
             .and_then(|parent_node_idx| joint_to_index.get(parent_node_idx).copied());
 
-        let name = joint.name()
+        let name = joint
+            .name()
             .map(|s| s.to_string())
             .unwrap_or_else(|| format!("bone_{}", i));
-        
+
         let mut bone = Bone::new(name, parent_index);
-        
+
         bone.local_transform = BoneTransform::new(
             Vec3::from(translation),
             Quat::from_array(rotation),
             Vec3::from(scale),
         );
-        bone.inverse_bind_matrix = inverse_bind_matrices.get(i).copied().unwrap_or(Mat4::IDENTITY);
-        
+        bone.inverse_bind_matrix = inverse_bind_matrices
+            .get(i)
+            .copied()
+            .unwrap_or(Mat4::IDENTITY);
+
         bones.push(bone);
     }
 
@@ -347,32 +363,35 @@ pub fn build_skeleton_from_gltf(
 
 /// 读取逆绑定矩阵
 #[cfg(feature = "gltf")]
-fn read_inverse_bind_matrices(accessor: &gltf::Accessor, buffers: &[gltf::buffer::Data]) -> Vec<Mat4> {
+fn read_inverse_bind_matrices(
+    accessor: &gltf::Accessor,
+    buffers: &[gltf::buffer::Data],
+) -> Vec<Mat4> {
     let view = match accessor.view() {
         Some(v) => v,
         None => return vec![Mat4::IDENTITY; accessor.count()],
     };
-    
+
     let buffer_index = view.buffer().index();
     if buffer_index >= buffers.len() {
         return vec![Mat4::IDENTITY; accessor.count()];
     }
-    
+
     let buffer = &buffers[buffer_index];
     let offset = view.offset() + accessor.offset();
     let byte_size = accessor.size() * accessor.count();
-    
+
     if offset + byte_size > buffer.len() {
         return vec![Mat4::IDENTITY; accessor.count()];
     }
-    
+
     let data = &buffer[offset..offset + byte_size];
-    
+
     // 逆绑定矩阵是 MAT4 类型 (16 个 f32)
     if data.len() % 64 != 0 {
         return vec![Mat4::IDENTITY; accessor.count()];
     }
-    
+
     data.chunks_exact(64)
         .map(|chunk| {
             let arr: [[f32; 4]; 4] = [
@@ -424,11 +443,7 @@ mod tests {
 
     #[test]
     fn test_bone_transform_to_matrix() {
-        let t = BoneTransform::new(
-            Vec3::new(1.0, 2.0, 3.0),
-            Quat::IDENTITY,
-            Vec3::ONE,
-        );
+        let t = BoneTransform::new(Vec3::new(1.0, 2.0, 3.0), Quat::IDENTITY, Vec3::ONE);
         let m = t.to_matrix();
         assert_eq!(m.w_axis.truncate(), Vec3::new(1.0, 2.0, 3.0));
     }
@@ -440,9 +455,9 @@ mod tests {
             Bone::new("spine", Some(0)),
             Bone::new("head", Some(1)),
         ];
-        
+
         let skeleton = Skeleton::new(bones);
-        
+
         assert_eq!(skeleton.bone_count(), 3);
         assert_eq!(skeleton.get_bone_index("root"), Some(0));
         assert_eq!(skeleton.get_bone_index("spine"), Some(1));
@@ -452,17 +467,17 @@ mod tests {
     #[test]
     fn test_skeleton_pose_lerp() {
         let pose1 = SkeletonPose {
-            bone_transforms: vec![
-                BoneTransform::new(Vec3::ZERO, Quat::IDENTITY, Vec3::ONE),
-            ],
+            bone_transforms: vec![BoneTransform::new(Vec3::ZERO, Quat::IDENTITY, Vec3::ONE)],
         };
-        
+
         let pose2 = SkeletonPose {
-            bone_transforms: vec![
-                BoneTransform::new(Vec3::new(10.0, 0.0, 0.0), Quat::IDENTITY, Vec3::ONE),
-            ],
+            bone_transforms: vec![BoneTransform::new(
+                Vec3::new(10.0, 0.0, 0.0),
+                Quat::IDENTITY,
+                Vec3::ONE,
+            )],
         };
-        
+
         let lerped = pose1.lerp(&pose2, 0.5);
         assert!((lerped.bone_transforms[0].translation.x - 5.0).abs() < 0.001);
     }

@@ -1,4 +1,4 @@
-use glam::{Vec3, Quat};
+use glam::{Quat, Vec3};
 
 /// 插值模式
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -39,37 +39,40 @@ where
             interpolation,
         }
     }
-    
+
     /// 添加关键帧
     pub fn add_keyframe(&mut self, time: f32, value: T) {
         let keyframe = Keyframe { time, value };
-        
+
         // 按时间排序插入
-        let index = self.keyframes.binary_search_by(|k| k.time.partial_cmp(&time).unwrap()).unwrap_or_else(|i| i);
+        let index = self
+            .keyframes
+            .binary_search_by(|k| k.time.partial_cmp(&time).unwrap())
+            .unwrap_or_else(|i| i);
         self.keyframes.insert(index, keyframe);
     }
-    
+
     /// 获取指定时间的值
     pub fn sample(&self, time: f32) -> Option<T> {
         if self.keyframes.is_empty() {
             return None;
         }
-        
+
         // 如果时间在第一个关键帧之前
         if time <= self.keyframes[0].time {
             return Some(self.keyframes[0].value.clone());
         }
-        
+
         // 如果时间在最后一个关键帧之后
         if time >= self.keyframes.last().unwrap().time {
             return Some(self.keyframes.last().unwrap().value.clone());
         }
-        
+
         // 查找相邻的两个关键帧
         for i in 0..self.keyframes.len() - 1 {
             let k0 = &self.keyframes[i];
             let k1 = &self.keyframes[i + 1];
-            
+
             if time >= k0.time && time <= k1.time {
                 match self.interpolation {
                     InterpolationMode::Step => {
@@ -82,7 +85,7 @@ where
                 }
             }
         }
-        
+
         None
     }
 }
@@ -93,19 +96,19 @@ impl KeyframeTrack<Vec3> {
         if self.keyframes.is_empty() {
             return None;
         }
-        
+
         if time <= self.keyframes[0].time {
             return Some(self.keyframes[0].value);
         }
-        
+
         if time >= self.keyframes.last().unwrap().time {
             return Some(self.keyframes.last().unwrap().value);
         }
-        
+
         for i in 0..self.keyframes.len() - 1 {
             let k0 = &self.keyframes[i];
             let k1 = &self.keyframes[i + 1];
-            
+
             if time >= k0.time && time <= k1.time {
                 match self.interpolation {
                     InterpolationMode::Step => {
@@ -123,7 +126,7 @@ impl KeyframeTrack<Vec3> {
                 }
             }
         }
-        
+
         None
     }
 }
@@ -134,19 +137,19 @@ impl KeyframeTrack<Quat> {
         if self.keyframes.is_empty() {
             return None;
         }
-        
+
         if time <= self.keyframes[0].time {
             return Some(self.keyframes[0].value);
         }
-        
+
         if time >= self.keyframes.last().unwrap().time {
             return Some(self.keyframes.last().unwrap().value);
         }
-        
+
         for i in 0..self.keyframes.len() - 1 {
             let k0 = &self.keyframes[i];
             let k1 = &self.keyframes[i + 1];
-            
+
             if time >= k0.time && time <= k1.time {
                 match self.interpolation {
                     InterpolationMode::Step => {
@@ -164,7 +167,7 @@ impl KeyframeTrack<Quat> {
                 }
             }
         }
-        
+
         None
     }
 }
@@ -172,14 +175,14 @@ impl KeyframeTrack<Quat> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_keyframe_track() {
         let mut track = KeyframeTrack::<Vec3>::new(InterpolationMode::Linear);
-        
+
         track.add_keyframe(0.0, Vec3::new(0.0, 0.0, 0.0));
         track.add_keyframe(1.0, Vec3::new(1.0, 1.0, 1.0));
-        
+
         // 测试插值
         let value = track.sample_vec3(0.5).unwrap();
         assert!((value.x - 0.5).abs() < 0.001);

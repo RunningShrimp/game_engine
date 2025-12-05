@@ -30,11 +30,13 @@
 //! └─────────────────────────────────────────────────────────┘
 //! ```
 
+use crate::impl_default;
+use std::cmp::Ordering as CmpOrdering;
 use std::collections::BinaryHeap;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
-use std::cmp::Ordering as CmpOrdering;
+use thiserror::Error;
 
 use bevy_ecs::prelude::*;
 use tokio::sync::{mpsc, oneshot, Semaphore};
@@ -147,25 +149,15 @@ pub enum LoadResult {
         is_linear: bool,
     },
     /// 模型数据
-    Model {
-        data: Vec<u8>,
-    },
+    Model { data: Vec<u8> },
     /// 音频数据
-    Audio {
-        data: Vec<u8>,
-    },
+    Audio { data: Vec<u8> },
     /// 图集数据
-    Atlas {
-        json: String,
-    },
+    Atlas { json: String },
     /// 着色器源码
-    Shader {
-        source: String,
-    },
+    Shader { source: String },
     /// 自定义数据
-    Custom {
-        data: Vec<u8>,
-    },
+    Custom { data: Vec<u8> },
 }
 
 /// 加载完成事件
@@ -179,33 +171,24 @@ pub struct LoadComplete {
 }
 
 /// 加载错误
-#[derive(Debug, Clone)]
+#[derive(Error, Debug, Clone)]
 pub enum LoadError {
     /// 文件未找到
+    #[error("File not found: {0}")]
     NotFound(String),
     /// IO 错误
+    #[error("IO error: {0}")]
     IoError(String),
     /// 解码错误
+    #[error("Decode error: {0}")]
     DecodeError(String),
     /// 已取消
+    #[error("Load cancelled")]
     Cancelled,
     /// 超时
+    #[error("Load timeout")]
     Timeout,
 }
-
-impl std::fmt::Display for LoadError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            LoadError::NotFound(path) => write!(f, "File not found: {}", path),
-            LoadError::IoError(e) => write!(f, "IO error: {}", e),
-            LoadError::DecodeError(e) => write!(f, "Decode error: {}", e),
-            LoadError::Cancelled => write!(f, "Load cancelled"),
-            LoadError::Timeout => write!(f, "Load timeout"),
-        }
-    }
-}
-
-impl std::error::Error for LoadError {}
 
 // ============================================================================
 // 协程资源加载器
@@ -224,16 +207,12 @@ pub struct CoroutineLoaderConfig {
     pub retry_delay_ms: u64,
 }
 
-impl Default for CoroutineLoaderConfig {
-    fn default() -> Self {
-        Self {
-            max_concurrent_loads: 8,
-            load_timeout_ms: 30_000,
-            max_retries: 2,
-            retry_delay_ms: 100,
-        }
-    }
-}
+impl_default!(CoroutineLoaderConfig {
+    max_concurrent_loads: 8,
+    load_timeout_ms: 30_000,
+    max_retries: 2,
+    retry_delay_ms: 100,
+});
 
 /// 协程资源加载器
 #[derive(Resource)]
@@ -263,12 +242,12 @@ impl CoroutineAssetLoader {
     pub fn new(config: CoroutineLoaderConfig) -> Self {
         let (request_tx, request_rx) = mpsc::unbounded_channel::<LoadRequest>();
         let (complete_tx, complete_rx) = mpsc::unbounded_channel::<LoadComplete>();
-        
+
         let max_concurrent = config.max_concurrent_loads;
         let load_timeout = config.load_timeout_ms;
         let max_retries = config.max_retries;
         let retry_delay = config.retry_delay_ms;
-        
+
         // 启动后台加载协程
         global_runtime().spawn(Self::loader_task(
             request_rx,
@@ -278,7 +257,7 @@ impl CoroutineAssetLoader {
             max_retries,
             retry_delay,
         ));
-        
+
         Self {
             config,
             request_tx,
@@ -291,7 +270,7 @@ impl CoroutineAssetLoader {
             cancel_senders: Arc::new(Mutex::new(std::collections::HashMap::new())),
         }
     }
-    
+
     /// 后台加载任务
     async fn loader_task(
         mut request_rx: mpsc::UnboundedReceiver<LoadRequest>,
@@ -303,16 +282,16 @@ impl CoroutineAssetLoader {
     ) {
         // 使用 Semaphore 限制并发数
         let semaphore = Arc::new(Semaphore::new(max_concurrent));
-        
+
         // 优先级队列（使用 Mutex 包装）
-        let priority_queue: Arc<Mutex<BinaryHeap<LoadRequest>>> = 
+        let priority_queue: Arc<Mutex<BinaryHeap<LoadRequest>>> =
             Arc::new(Mutex::new(BinaryHeap::new()));
-        
+
         // 启动队列处理协程
         let queue_clone = priority_queue.clone();
         let sem_clone = semaphore.clone();
         let tx_clone = complete_tx.clone();
-        
+
         // 处理传入请求
         loop {
             tokio::select! {
@@ -322,7 +301,7 @@ impl CoroutineAssetLoader {
                         let mut queue = priority_queue.lock().unwrap();
                         queue.push(request);
                     } // MutexGuard 在这里释放
-                    
+
                     // 尝试处理队列中的请求
                     Self::process_queue(
                         queue_clone.clone(),
@@ -337,7 +316,7 @@ impl CoroutineAssetLoader {
             }
         }
     }
-    
+
     /// 处理优先级队列
     async fn process_queue(
         queue: Arc<Mutex<BinaryHeap<LoadRequest>>>,
@@ -354,27 +333,28 @@ impl CoroutineAssetLoader {
                 let mut q = queue.lock().unwrap();
                 q.pop()
             };
-            
+
             if let Some(request) = request {
                 let tx = complete_tx.clone();
-                
+
                 // 在新任务中执行加载
                 tokio::spawn(async move {
                     let start = std::time::Instant::now();
                     let request_id = request.id;
                     let path = request.path.clone();
                     let asset_type = request.asset_type;
-                    
+
                     // 执行加载（带超时和重试）
                     let result = Self::load_with_retry(
                         &request,
                         load_timeout_ms,
                         max_retries,
                         retry_delay_ms,
-                    ).await;
-                    
+                    )
+                    .await;
+
                     let load_time_ms = start.elapsed().as_secs_f32() * 1000.0;
-                    
+
                     // 发送完成事件
                     let _ = tx.send(LoadComplete {
                         request_id,
@@ -383,11 +363,11 @@ impl CoroutineAssetLoader {
                         result,
                         load_time_ms,
                     });
-                    
+
                     // 许可会在 drop 时自动释放
                     drop(permit);
                 });
-                
+
                 // 递归处理更多请求
                 Box::pin(Self::process_queue(
                     queue,
@@ -396,11 +376,12 @@ impl CoroutineAssetLoader {
                     load_timeout_ms,
                     max_retries,
                     retry_delay_ms,
-                )).await;
+                ))
+                .await;
             }
         }
     }
-    
+
     /// 带重试的加载
     async fn load_with_retry(
         request: &LoadRequest,
@@ -409,16 +390,16 @@ impl CoroutineAssetLoader {
         retry_delay_ms: u64,
     ) -> Result<LoadResult, LoadError> {
         let mut last_error = LoadError::IoError("Unknown error".to_string());
-        
+
         for attempt in 0..=max_retries {
             if attempt > 0 {
                 tokio::time::sleep(std::time::Duration::from_millis(retry_delay_ms)).await;
             }
-            
+
             // 带超时的加载
             let load_future = Self::load_asset(request);
             let timeout = std::time::Duration::from_millis(timeout_ms);
-            
+
             match tokio::time::timeout(timeout, load_future).await {
                 Ok(Ok(result)) => return Ok(result),
                 Ok(Err(e)) => {
@@ -433,14 +414,14 @@ impl CoroutineAssetLoader {
                 }
             }
         }
-        
+
         Err(last_error)
     }
-    
+
     /// 加载单个资源
     async fn load_asset(request: &LoadRequest) -> Result<LoadResult, LoadError> {
         let path = &request.path;
-        
+
         // 读取文件
         let bytes = tokio::fs::read(path).await.map_err(|e| {
             if e.kind() == std::io::ErrorKind::NotFound {
@@ -449,12 +430,12 @@ impl CoroutineAssetLoader {
                 LoadError::IoError(e.to_string())
             }
         })?;
-        
+
         // 根据资源类型处理
         match request.asset_type {
             AssetType::Texture | AssetType::TextureLinear => {
                 let is_linear = request.asset_type == AssetType::TextureLinear;
-                
+
                 // 在阻塞任务中解码图像
                 let image = tokio::task::spawn_blocking(move || {
                     image::load_from_memory(&bytes)
@@ -463,60 +444,54 @@ impl CoroutineAssetLoader {
                 })
                 .await
                 .map_err(|e| LoadError::IoError(e.to_string()))??;
-                
+
                 Ok(LoadResult::Texture { image, is_linear })
             }
-            
-            AssetType::Model => {
-                Ok(LoadResult::Model { data: bytes })
-            }
-            
-            AssetType::Audio => {
-                Ok(LoadResult::Audio { data: bytes })
-            }
-            
+
+            AssetType::Model => Ok(LoadResult::Model { data: bytes }),
+
+            AssetType::Audio => Ok(LoadResult::Audio { data: bytes }),
+
             AssetType::Atlas => {
-                let json = String::from_utf8(bytes)
-                    .map_err(|e| LoadError::DecodeError(e.to_string()))?;
+                let json =
+                    String::from_utf8(bytes).map_err(|e| LoadError::DecodeError(e.to_string()))?;
                 Ok(LoadResult::Atlas { json })
             }
-            
+
             AssetType::Shader => {
-                let source = String::from_utf8(bytes)
-                    .map_err(|e| LoadError::DecodeError(e.to_string()))?;
+                let source =
+                    String::from_utf8(bytes).map_err(|e| LoadError::DecodeError(e.to_string()))?;
                 Ok(LoadResult::Shader { source })
             }
-            
-            AssetType::Custom => {
-                Ok(LoadResult::Custom { data: bytes })
-            }
+
+            AssetType::Custom => Ok(LoadResult::Custom { data: bytes }),
         }
     }
-    
+
     // ========================================================================
     // 公共 API
     // ========================================================================
-    
+
     /// 加载纹理
     pub fn load_texture(&self, path: impl AsRef<Path>) -> LoadHandle {
         self.load_with_priority(path, AssetType::Texture, LoadPriority::Normal)
     }
-    
+
     /// 加载线性纹理
     pub fn load_texture_linear(&self, path: impl AsRef<Path>) -> LoadHandle {
         self.load_with_priority(path, AssetType::TextureLinear, LoadPriority::Normal)
     }
-    
+
     /// 加载模型
     pub fn load_model(&self, path: impl AsRef<Path>) -> LoadHandle {
         self.load_with_priority(path, AssetType::Model, LoadPriority::Normal)
     }
-    
+
     /// 加载图集
     pub fn load_atlas(&self, path: impl AsRef<Path>) -> LoadHandle {
         self.load_with_priority(path, AssetType::Atlas, LoadPriority::Normal)
     }
-    
+
     /// 带优先级加载资源
     pub fn load_with_priority(
         &self,
@@ -526,7 +501,7 @@ impl CoroutineAssetLoader {
     ) -> LoadHandle {
         let id = self.next_id.fetch_add(1, Ordering::SeqCst);
         let (cancel_tx, cancel_rx) = oneshot::channel();
-        
+
         let request = LoadRequest {
             id,
             path: path.as_ref().to_path_buf(),
@@ -535,20 +510,20 @@ impl CoroutineAssetLoader {
             created_at: std::time::Instant::now(),
             cancel_rx: Some(cancel_rx),
         };
-        
+
         // 保存取消发送器
         self.cancel_senders.lock().unwrap().insert(id, cancel_tx);
-        
+
         // 发送请求
         let _ = self.request_tx.send(request);
         self.total_requests.fetch_add(1, Ordering::Relaxed);
-        
+
         LoadHandle {
             id,
             cancel_senders: self.cancel_senders.clone(),
         }
     }
-    
+
     /// 批量加载资源
     pub fn load_batch(
         &self,
@@ -559,29 +534,32 @@ impl CoroutineAssetLoader {
             .map(|(path, asset_type, priority)| self.load_with_priority(path, asset_type, priority))
             .collect()
     }
-    
+
     /// 处理完成的加载请求（在主线程调用）
     pub fn poll_completed(&self) -> Vec<LoadComplete> {
         let mut completed = Vec::new();
         let mut rx = self.complete_rx.lock().unwrap();
-        
+
         while let Ok(complete) = rx.try_recv() {
             // 清理取消发送器
-            self.cancel_senders.lock().unwrap().remove(&complete.request_id);
-            
+            self.cancel_senders
+                .lock()
+                .unwrap()
+                .remove(&complete.request_id);
+
             // 更新统计
             if complete.result.is_ok() {
                 self.total_completed.fetch_add(1, Ordering::Relaxed);
             } else {
                 self.total_failed.fetch_add(1, Ordering::Relaxed);
             }
-            
+
             completed.push(complete);
         }
-        
+
         completed
     }
-    
+
     /// 获取加载统计
     pub fn stats(&self) -> LoaderStats {
         LoaderStats {

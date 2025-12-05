@@ -41,9 +41,10 @@
 //! ```
 
 pub mod emitter;
+pub mod system;
 
 pub use emitter::{
-    ParticleEmitter, ParticleEmitterConfig, ParticleShape,
-    ColorGradient, ColorStop, SizeOverLifetime,
-    GpuParticleSystem, ParticleSystemStats,
+    ColorGradient, ColorStop, GpuParticle, GpuParticleSystem, ParticleEmitter, ParticleEmitterConfig,
+    ParticleShape, ParticleSystemStats, SizeOverLifetime,
 };
+pub use system::ParticleSystemManager;

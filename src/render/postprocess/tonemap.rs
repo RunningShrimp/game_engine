@@ -41,16 +41,16 @@ pub struct TonemapUniforms {
 pub struct TonemapPass {
     /// 渲染管线
     pipeline: wgpu::RenderPipeline,
-    
+
     /// 绑定组布局
     bind_group_layout: wgpu::BindGroupLayout,
-    
+
     /// 采样器
     sampler: wgpu::Sampler,
-    
+
     /// Uniform 缓冲区
     uniform_buffer: wgpu::Buffer,
-    
+
     /// 输出格式
     output_format: wgpu::TextureFormat,
 }
@@ -67,7 +67,7 @@ impl TonemapPass {
             address_mode_v: wgpu::AddressMode::ClampToEdge,
             ..Default::default()
         });
-        
+
         // 创建绑定组布局
         let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("Tonemap BGL"),
@@ -103,7 +103,7 @@ impl TonemapPass {
                 },
             ],
         });
-        
+
         // 创建 Uniform 缓冲区
         let uniform_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("Tonemap Uniform Buffer"),
@@ -111,19 +111,19 @@ impl TonemapPass {
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
-        
+
         // 创建着色器
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Tonemap Shader"),
             source: wgpu::ShaderSource::Wgsl(TONEMAP_SHADER.into()),
         });
-        
+
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("Tonemap Pipeline Layout"),
             bind_group_layouts: &[&bind_group_layout],
             push_constant_ranges: &[],
         });
-        
+
         // 创建渲染管线
         let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: Some("Tonemap Pipeline"),
@@ -152,7 +152,7 @@ impl TonemapPass {
             multisample: wgpu::MultisampleState::default(),
             multiview: None,
         });
-        
+
         Self {
             pipeline,
             bind_group_layout,
@@ -161,7 +161,7 @@ impl TonemapPass {
             output_format,
         }
     }
-    
+
     /// 执行色调映射渲染
     pub fn render(
         &self,
@@ -182,7 +182,7 @@ impl TonemapPass {
             _pad: 0,
         };
         queue.write_buffer(&self.uniform_buffer, 0, bytemuck::bytes_of(&uniforms));
-        
+
         // 创建绑定组
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Tonemap BG"),
@@ -202,7 +202,7 @@ impl TonemapPass {
                 },
             ],
         });
-        
+
         // 渲染
         let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             label: Some("Tonemap Pass"),
@@ -218,7 +218,7 @@ impl TonemapPass {
             occlusion_query_set: None,
             timestamp_writes: None,
         });
-        
+
         rpass.set_pipeline(&self.pipeline);
         rpass.set_bind_group(0, &bind_group, &[]);
         rpass.draw(0..3, 0..1);

@@ -32,8 +32,9 @@
 //! ));
 //! ```
 
-use glam::{Vec3, Quat};
+use crate::impl_default;
 use bevy_ecs::prelude::*;
+use glam::{Quat, Vec3};
 use std::collections::HashMap;
 
 /// 距离衰减模型
@@ -80,8 +81,12 @@ impl DistanceModel {
     pub fn calculate_gain(&self, distance: f32) -> f32 {
         match *self {
             DistanceModel::None => 1.0,
-            
-            DistanceModel::Linear { ref_distance, max_distance, rolloff } => {
+
+            DistanceModel::Linear {
+                ref_distance,
+                max_distance,
+                rolloff,
+            } => {
                 if distance <= ref_distance {
                     1.0
                 } else if distance >= max_distance {
@@ -92,16 +97,22 @@ impl DistanceModel {
                     (1.0 - rolloff * (dist / range)).max(0.0)
                 }
             }
-            
-            DistanceModel::Inverse { ref_distance, rolloff } => {
+
+            DistanceModel::Inverse {
+                ref_distance,
+                rolloff,
+            } => {
                 if distance <= ref_distance {
                     1.0
                 } else {
                     ref_distance / (ref_distance + rolloff * (distance - ref_distance))
                 }
             }
-            
-            DistanceModel::Exponential { ref_distance, rolloff } => {
+
+            DistanceModel::Exponential {
+                ref_distance,
+                rolloff,
+            } => {
                 if distance <= ref_distance {
                     1.0
                 } else {
@@ -123,22 +134,18 @@ pub struct SoundCone {
     pub outer_gain: f32,
 }
 
-impl Default for SoundCone {
-    fn default() -> Self {
-        Self {
-            inner_angle: std::f32::consts::PI * 2.0, // 360度 (全向)
-            outer_angle: std::f32::consts::PI * 2.0,
-            outer_gain: 0.0,
-        }
-    }
-}
+impl_default!(SoundCone {
+    inner_angle: std::f32::consts::PI * 2.0,
+    outer_angle: std::f32::consts::PI * 2.0,
+    outer_gain: 0.0,
+});
 
 impl SoundCone {
     /// 创建全向声锥
     pub fn omnidirectional() -> Self {
         Self::default()
     }
-    
+
     /// 创建方向性声锥
     pub fn directional(inner_deg: f32, outer_deg: f32, outer_gain: f32) -> Self {
         Self {
@@ -147,7 +154,7 @@ impl SoundCone {
             outer_gain,
         }
     }
-    
+
     /// 计算给定角度的增益
     pub fn calculate_gain(&self, angle: f32) -> f32 {
         if angle <= self.inner_angle * 0.5 {
@@ -165,7 +172,7 @@ impl SoundCone {
 }
 
 /// 空间音频监听器组件
-/// 
+///
 /// 附加到代表"耳朵"的实体 (通常是相机或玩家)
 #[derive(Component, Clone)]
 pub struct AudioListener {
@@ -179,29 +186,25 @@ pub struct AudioListener {
     pub orientation_offset: Quat,
 }
 
-impl Default for AudioListener {
-    fn default() -> Self {
-        Self {
-            enabled: true,
-            gain: 1.0,
-            position_offset: Vec3::ZERO,
-            orientation_offset: Quat::IDENTITY,
-        }
-    }
-}
+impl_default!(AudioListener {
+    enabled: true,
+    gain: 1.0,
+    position_offset: Vec3::ZERO,
+    orientation_offset: Quat::IDENTITY,
+});
 
 impl AudioListener {
     /// 创建新的监听器
     pub fn new() -> Self {
         Self::default()
     }
-    
+
     /// 设置增益
     pub fn with_gain(mut self, gain: f32) -> Self {
         self.gain = gain;
         self
     }
-    
+
     /// 设置位置偏移
     pub fn with_position_offset(mut self, offset: Vec3) -> Self {
         self.position_offset = offset;
@@ -210,7 +213,7 @@ impl AudioListener {
 }
 
 /// 空间音频源组件
-/// 
+///
 /// 附加到需要 3D 定位的音频实体
 #[derive(Component, Clone)]
 pub struct SpatialAudioSource {
@@ -240,24 +243,20 @@ pub struct SpatialAudioSource {
     pub priority: i32,
 }
 
-impl Default for SpatialAudioSource {
-    fn default() -> Self {
-        Self {
-            name: "spatial_sound".to_string(),
-            path: String::new(),
-            volume: 1.0,
-            distance_model: DistanceModel::default(),
-            cone: SoundCone::default(),
-            max_distance: 100.0,
-            min_distance: 1.0,
-            doppler_factor: 1.0,
-            looping: false,
-            is_playing: false,
-            spatial_blend: 1.0,
-            priority: 0,
-        }
-    }
-}
+impl_default!(SpatialAudioSource {
+    name: "spatial_sound".to_string(),
+    path: String::new(),
+    volume: 1.0,
+    distance_model: DistanceModel::default(),
+    cone: SoundCone::default(),
+    max_distance: 100.0,
+    min_distance: 1.0,
+    doppler_factor: 1.0,
+    looping: false,
+    is_playing: false,
+    spatial_blend: 1.0,
+    priority: 0,
+});
 
 impl SpatialAudioSource {
     /// 创建新的空间音频源
@@ -267,56 +266,56 @@ impl SpatialAudioSource {
             ..Default::default()
         }
     }
-    
+
     /// 设置音频文件路径
     pub fn with_path(mut self, path: &str) -> Self {
         self.path = path.to_string();
         self
     }
-    
+
     /// 设置音量
     pub fn with_volume(mut self, volume: f32) -> Self {
         self.volume = volume.clamp(0.0, 1.0);
         self
     }
-    
+
     /// 设置距离模型
     pub fn with_distance_model(mut self, model: DistanceModel) -> Self {
         self.distance_model = model;
         self
     }
-    
+
     /// 设置声锥
     pub fn with_cone(mut self, cone: SoundCone) -> Self {
         self.cone = cone;
         self
     }
-    
+
     /// 设置距离范围
     pub fn with_distance_range(mut self, min: f32, max: f32) -> Self {
         self.min_distance = min;
         self.max_distance = max;
         self
     }
-    
+
     /// 设置多普勒因子
     pub fn with_doppler(mut self, factor: f32) -> Self {
         self.doppler_factor = factor;
         self
     }
-    
+
     /// 设置循环
     pub fn with_looping(mut self, looping: bool) -> Self {
         self.looping = looping;
         self
     }
-    
+
     /// 设置空间混合
     pub fn with_spatial_blend(mut self, blend: f32) -> Self {
         self.spatial_blend = blend.clamp(0.0, 1.0);
         self
     }
-    
+
     /// 设置优先级
     pub fn with_priority(mut self, priority: i32) -> Self {
         self.priority = priority;
@@ -397,7 +396,7 @@ impl SpatialAudioService {
         state.listener_up = up.normalize_or_zero();
         state.listener_velocity = velocity;
     }
-    
+
     /// 计算空间音频参数
     pub fn calculate_params(
         state: &SpatialAudioState,
@@ -409,54 +408,52 @@ impl SpatialAudioService {
         // 计算相对位置
         let relative_pos = source_position - state.listener_position;
         let distance = relative_pos.length();
-        
+
         // 如果超过最大距离，返回静音参数
         if distance > source.max_distance {
             return SpatialAudioParams::default();
         }
-        
+
         // 计算距离衰减
         let distance_gain = source.distance_model.calculate_gain(distance);
-        
+
         // 计算声锥衰减
         let to_listener = -relative_pos.normalize_or_zero();
         let cone_angle = source_forward.angle_between(to_listener);
         let cone_gain = source.cone.calculate_gain(cone_angle);
-        
+
         // 计算左右声道定位 (简化的HRTF)
-        let listener_right = state.listener_forward.cross(state.listener_up).normalize_or_zero();
+        let listener_right = state
+            .listener_forward
+            .cross(state.listener_up)
+            .normalize_or_zero();
         let direction_to_source = relative_pos.normalize_or_zero();
-        
+
         // 方位角 (水平面内与前方的夹角)
         let azimuth = listener_right.dot(direction_to_source).asin();
-        
+
         // 仰角
         let elevation = state.listener_up.dot(direction_to_source).asin();
-        
+
         // 计算左右声道增益 (简化的立体声平移)
         let pan = (azimuth / std::f32::consts::FRAC_PI_2).clamp(-1.0, 1.0);
         let left_gain = ((1.0 - pan) / 2.0).sqrt();
         let right_gain = ((1.0 + pan) / 2.0).sqrt();
-        
+
         // 计算多普勒效果
         let pitch = if source.doppler_factor > 0.0 {
-            Self::calculate_doppler(
-                state,
-                relative_pos,
-                source_velocity,
-                source.doppler_factor,
-            )
+            Self::calculate_doppler(state, relative_pos, source_velocity, source.doppler_factor)
         } else {
             1.0
         };
-        
+
         // 应用空间混合
         let final_left = lerp(0.5, left_gain, source.spatial_blend);
         let final_right = lerp(0.5, right_gain, source.spatial_blend);
-        
+
         // 计算最终音量
         let volume = source.volume * distance_gain * cone_gain * state.global_gain;
-        
+
         SpatialAudioParams {
             volume,
             left_gain: volume * final_left,
@@ -467,7 +464,7 @@ impl SpatialAudioService {
             elevation,
         }
     }
-    
+
     /// 计算多普勒效果
     fn calculate_doppler(
         state: &SpatialAudioState,
@@ -476,23 +473,23 @@ impl SpatialAudioService {
         doppler_factor: f32,
     ) -> f32 {
         let direction = relative_pos.normalize_or_zero();
-        
+
         // 计算朝向监听器的相对速度
         let listener_speed = state.listener_velocity.dot(direction);
         let source_speed = source_velocity.dot(direction);
-        
+
         // 多普勒公式: f' = f * (c + v_listener) / (c + v_source)
         let c = state.speed_of_sound;
         let numerator = c + listener_speed * doppler_factor;
         let denominator = c + source_speed * doppler_factor;
-        
+
         if denominator.abs() < 0.001 {
             1.0 // 避免除零
         } else {
             (numerator / denominator).clamp(0.5, 2.0) // 限制音高范围
         }
     }
-    
+
     /// 按距离和优先级排序音频源，选择要播放的
     pub fn select_active_sources<'a>(
         state: &SpatialAudioState,
@@ -506,16 +503,19 @@ impl SpatialAudioService {
             })
             .filter(|(_, distance, _)| *distance <= 200.0) // 预剔除远处声音
             .collect();
-        
+
         // 按分数排序 (高分在前)
         scored.sort_by(|a, b| {
             let score_a = a.2 as f32 * 1000.0 - a.1;
             let score_b = b.2 as f32 * 1000.0 - b.1;
-            score_b.partial_cmp(&score_a).unwrap_or(std::cmp::Ordering::Equal)
+            score_b
+                .partial_cmp(&score_a)
+                .unwrap_or(std::cmp::Ordering::Equal)
         });
-        
+
         // 返回前 N 个
-        scored.into_iter()
+        scored
+            .into_iter()
             .take(state.max_concurrent_sounds)
             .map(|(entity, distance, _)| (entity, distance))
             .collect()
@@ -542,10 +542,10 @@ pub fn update_listener_system(
             let rotation = transform.rotation * listener.orientation_offset;
             let forward = rotation * Vec3::NEG_Z;
             let up = rotation * Vec3::Y;
-            
-            // TODO: 计算速度 (需要存储上一帧位置)
+
+            // NOTE: 速度计算需要存储上一帧位置，当前使用零速度
             let velocity = Vec3::ZERO;
-            
+
             SpatialAudioService::update_listener(
                 &mut spatial_state,
                 position,
@@ -553,7 +553,7 @@ pub fn update_listener_system(
                 up,
                 velocity,
             );
-            
+
             break; // 只使用第一个启用的监听器
         }
     }
@@ -580,7 +580,7 @@ impl Transform {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_distance_model_linear() {
         let model = DistanceModel::Linear {
@@ -588,38 +588,38 @@ mod tests {
             max_distance: 10.0,
             rolloff: 1.0,
         };
-        
+
         assert!((model.calculate_gain(0.0) - 1.0).abs() < 0.001);
         assert!((model.calculate_gain(1.0) - 1.0).abs() < 0.001);
         assert!((model.calculate_gain(5.5) - 0.5).abs() < 0.001);
         assert!((model.calculate_gain(10.0) - 0.0).abs() < 0.001);
         assert!((model.calculate_gain(15.0) - 0.0).abs() < 0.001);
     }
-    
+
     #[test]
     fn test_distance_model_inverse() {
         let model = DistanceModel::Inverse {
             ref_distance: 1.0,
             rolloff: 1.0,
         };
-        
+
         assert!((model.calculate_gain(1.0) - 1.0).abs() < 0.001);
         assert!((model.calculate_gain(2.0) - 0.5).abs() < 0.001);
         assert!((model.calculate_gain(10.0) - 0.1).abs() < 0.001);
     }
-    
+
     #[test]
     fn test_sound_cone() {
         let cone = SoundCone::directional(60.0, 120.0, 0.2);
-        
+
         // 在内锥内
         assert!((cone.calculate_gain(0.0) - 1.0).abs() < 0.001);
         assert!((cone.calculate_gain(0.5_f32.to_radians()) - 1.0).abs() < 0.001);
-        
+
         // 在外锥外
         assert!((cone.calculate_gain(1.2_f32) - 0.2).abs() < 0.1);
     }
-    
+
     #[test]
     fn test_spatial_params_calculation() {
         let state = SpatialAudioState::new();
@@ -629,7 +629,7 @@ mod tests {
                 ref_distance: 1.0,
                 rolloff: 1.0,
             });
-        
+
         let params = SpatialAudioService::calculate_params(
             &state,
             &source,
@@ -637,7 +637,7 @@ mod tests {
             Vec3::NEG_Z,
             Vec3::ZERO,
         );
-        
+
         // 距离 5m 应该有 0.2 的衰减
         assert!((params.volume - 0.2).abs() < 0.01);
         // 在右侧，右声道应该比左声道大

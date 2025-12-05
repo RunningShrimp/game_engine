@@ -1,10 +1,13 @@
+use crate::domain::physics::{RigidBodyType, ShapeType};
+use crate::ecs::{
+    Camera, DirectionalLightComp, PbrMaterialComp, PointLight, PointLight3D, Projection, Sprite,
+    Transform,
+};
+use crate::physics::{ColliderDesc, RigidBodyDesc};
 use bevy_ecs::prelude::*;
-use crate::ecs::{Transform, Sprite, PointLight, Camera, Projection, PbrMaterialComp, PointLight3D, DirectionalLightComp};
-use crate::physics::{RigidBodyDesc, ColliderDesc, ShapeType};
-use serde::{Serialize, Deserialize};
-use glam::{Vec3, Quat};
+use glam::{Quat, Vec3};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use rapier2d::prelude::RigidBodyType;
 
 /// 序列化的场景数据
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -39,7 +42,7 @@ pub struct SceneMetadata {
 }
 
 /// 序列化的实体数据
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct SerializedEntity {
     /// 实体ID
     pub id: u64,
@@ -47,6 +50,7 @@ pub struct SerializedEntity {
     #[serde(default)]
     pub name: Option<String>,
     /// 组件列表
+    #[serde(default)]
     pub components: HashMap<String, SerializedComponent>,
 }
 
@@ -84,12 +88,13 @@ pub enum SerializedComponent {
     /// 刚体描述组件
     RigidBody {
         body_type: SerializedRigidBodyType,
-        position: [f32; 2],
+        position: [f32; 3],
+        rotation: [f32; 4], // Quaternion (x, y, z, w)
     },
     /// 碰撞体描述组件
     Collider {
         shape_type: SerializedShapeType,
-        half_extents: [f32; 2],
+        half_extents: [f32; 3],
         radius: f32,
     },
     /// PBR材质组件
@@ -150,7 +155,7 @@ pub enum SerializedShapeType {
 impl SerializedScene {
     /// 当前序列化版本
     pub const CURRENT_VERSION: u32 = 1;
-    
+
     pub fn new(name: impl Into<String>) -> Self {
         Self {
             name: name.into(),
@@ -159,7 +164,7 @@ impl SerializedScene {
             metadata: SceneMetadata::default(),
         }
     }
-    
+
     /// 从World序列化场景
     pub fn from_world(world: &World, name: impl Into<String>) -> Self {
         let mut scene = Self::new(name);
@@ -168,27 +173,31 @@ impl SerializedScene {
             .unwrap_or_default()
             .as_secs();
         scene.metadata.modified_at = scene.metadata.created_at;
-        
+
         // 遍历所有实体
         for entity in world.iter_entities() {
             let mut serialized_entity = SerializedEntity {
                 id: entity.id().to_bits(),
-                name: None,
-                components: HashMap::new(),
+                ..Default::default()
             };
-            
+
             // 序列化Transform组件
             if let Some(transform) = world.get::<Transform>(entity.id()) {
                 serialized_entity.components.insert(
                     "Transform".to_string(),
                     SerializedComponent::Transform {
                         position: transform.pos.to_array(),
-                        rotation: [transform.rot.x, transform.rot.y, transform.rot.z, transform.rot.w],
+                        rotation: [
+                            transform.rot.x,
+                            transform.rot.y,
+                            transform.rot.z,
+                            transform.rot.w,
+                        ],
                         scale: transform.scale.to_array(),
                     },
                 );
             }
-            
+
             // 序列化Sprite组件
             if let Some(sprite) = world.get::<Sprite>(entity.id()) {
                 serialized_entity.components.insert(
@@ -203,7 +212,7 @@ impl SerializedScene {
                     },
                 );
             }
-            
+
             // 序列化PointLight组件
             if let Some(light) = world.get::<PointLight>(entity.id()) {
                 serialized_entity.components.insert(
@@ -216,16 +225,24 @@ impl SerializedScene {
                     },
                 );
             }
-            
+
             // 序列化Camera组件
             if let Some(camera) = world.get::<Camera>(entity.id()) {
                 let projection = match camera.projection {
                     Projection::Orthographic { scale, near, far } => {
                         SerializedProjection::Orthographic { scale, near, far }
                     }
-                    Projection::Perspective { fov, aspect, near, far } => {
-                        SerializedProjection::Perspective { fov, aspect, near, far }
-                    }
+                    Projection::Perspective {
+                        fov,
+                        aspect,
+                        near,
+                        far,
+                    } => SerializedProjection::Perspective {
+                        fov,
+                        aspect,
+                        near,
+                        far,
+                    },
                 };
                 serialized_entity.components.insert(
                     "Camera".to_string(),
@@ -235,24 +252,29 @@ impl SerializedScene {
                     },
                 );
             }
-            
+
             // 序列化RigidBodyDesc组件
             if let Some(rb) = world.get::<RigidBodyDesc>(entity.id()) {
                 let body_type = match rb.body_type {
-                    RigidBodyType::Dynamic => SerializedRigidBodyType::Dynamic,
-                    RigidBodyType::Fixed => SerializedRigidBodyType::Fixed,
-                    RigidBodyType::KinematicPositionBased => SerializedRigidBodyType::KinematicPositionBased,
-                    RigidBodyType::KinematicVelocityBased => SerializedRigidBodyType::KinematicVelocityBased,
+                    crate::domain::physics::RigidBodyType::Dynamic => SerializedRigidBodyType::Dynamic,
+                    crate::domain::physics::RigidBodyType::Fixed => SerializedRigidBodyType::Fixed,
+                    crate::domain::physics::RigidBodyType::KinematicPositionBased => {
+                        SerializedRigidBodyType::KinematicPositionBased
+                    }
+                    crate::domain::physics::RigidBodyType::KinematicVelocityBased => {
+                        SerializedRigidBodyType::KinematicVelocityBased
+                    }
                 };
                 serialized_entity.components.insert(
                     "RigidBody".to_string(),
                     SerializedComponent::RigidBody {
                         body_type,
-                        position: rb.position,
+                        position: rb.position.to_array(),
+                        rotation: [rb.rotation.x, rb.rotation.y, rb.rotation.z, rb.rotation.w],
                     },
                 );
             }
-            
+
             // 序列化ColliderDesc组件
             if let Some(col) = world.get::<ColliderDesc>(entity.id()) {
                 let shape_type = match col.shape_type {
@@ -263,12 +285,12 @@ impl SerializedScene {
                     "Collider".to_string(),
                     SerializedComponent::Collider {
                         shape_type,
-                        half_extents: col.half_extents,
+                        half_extents: col.half_extents.to_array(),
                         radius: col.radius,
                     },
                 );
             }
-            
+
             // 序列化PbrMaterialComp组件
             if let Some(mat) = world.get::<PbrMaterialComp>(entity.id()) {
                 serialized_entity.components.insert(
@@ -283,7 +305,7 @@ impl SerializedScene {
                     },
                 );
             }
-            
+
             // 序列化PointLight3D组件
             if let Some(light) = world.get::<PointLight3D>(entity.id()) {
                 serialized_entity.components.insert(
@@ -295,7 +317,7 @@ impl SerializedScene {
                     },
                 );
             }
-            
+
             // 序列化DirectionalLightComp组件
             if let Some(light) = world.get::<DirectionalLightComp>(entity.id()) {
                 serialized_entity.components.insert(
@@ -307,36 +329,47 @@ impl SerializedScene {
                     },
                 );
             }
-            
+
             // 只添加有组件的实体
             if !serialized_entity.components.is_empty() {
                 scene.entities.push(serialized_entity);
             }
         }
-        
+
         scene
     }
-    
+
     /// 反序列化场景到World
     pub fn to_world(&self, world: &mut World) -> HashMap<u64, Entity> {
         let mut entity_map = HashMap::new();
-        
+
         for serialized_entity in &self.entities {
             let entity = world.spawn_empty().id();
             entity_map.insert(serialized_entity.id, entity);
-            
+
             // 反序列化组件
             for (_component_name, component_data) in &serialized_entity.components {
                 if let Some(mut entity_mut) = world.get_entity_mut(entity) {
                     match component_data {
-                        SerializedComponent::Transform { position, rotation, scale } => {
+                        SerializedComponent::Transform {
+                            position,
+                            rotation,
+                            scale,
+                        } => {
                             entity_mut.insert(Transform {
                                 pos: Vec3::from_array(*position),
                                 rot: Quat::from_array(*rotation),
                                 scale: Vec3::from_array(*scale),
                             });
                         }
-                        SerializedComponent::Sprite { color, tex_index, normal_tex_index, uv_off, uv_scale, layer } => {
+                        SerializedComponent::Sprite {
+                            color,
+                            tex_index,
+                            normal_tex_index,
+                            uv_off,
+                            uv_scale,
+                            layer,
+                        } => {
                             entity_mut.insert(Sprite {
                                 color: *color,
                                 tex_index: *tex_index,
@@ -346,7 +379,12 @@ impl SerializedScene {
                                 layer: *layer,
                             });
                         }
-                        SerializedComponent::PointLight { color, radius, intensity, falloff } => {
+                        SerializedComponent::PointLight {
+                            color,
+                            radius,
+                            intensity,
+                            falloff,
+                        } => {
                             entity_mut.insert(PointLight {
                                 color: *color,
                                 radius: *radius,
@@ -354,44 +392,87 @@ impl SerializedScene {
                                 falloff: *falloff,
                             });
                         }
-                        SerializedComponent::Camera { is_active, projection } => {
+                        SerializedComponent::Camera {
+                            is_active,
+                            projection,
+                        } => {
                             let proj = match projection {
                                 SerializedProjection::Orthographic { scale, near, far } => {
-                                    Projection::Orthographic { scale: *scale, near: *near, far: *far }
+                                    Projection::Orthographic {
+                                        scale: *scale,
+                                        near: *near,
+                                        far: *far,
+                                    }
                                 }
-                                SerializedProjection::Perspective { fov, aspect, near, far } => {
-                                    Projection::Perspective { fov: *fov, aspect: *aspect, near: *near, far: *far }
-                                }
+                                SerializedProjection::Perspective {
+                                    fov,
+                                    aspect,
+                                    near,
+                                    far,
+                                } => Projection::Perspective {
+                                    fov: *fov,
+                                    aspect: *aspect,
+                                    near: *near,
+                                    far: *far,
+                                },
                             };
                             entity_mut.insert(Camera {
                                 is_active: *is_active,
                                 projection: proj,
                             });
                         }
-                        SerializedComponent::RigidBody { body_type, position } => {
+                        SerializedComponent::RigidBody {
+                            body_type,
+                            position,
+                            rotation,
+                        } => {
                             let bt = match body_type {
-                                SerializedRigidBodyType::Dynamic => RigidBodyType::Dynamic,
-                                SerializedRigidBodyType::Fixed => RigidBodyType::Fixed,
-                                SerializedRigidBodyType::KinematicPositionBased => RigidBodyType::KinematicPositionBased,
-                                SerializedRigidBodyType::KinematicVelocityBased => RigidBodyType::KinematicVelocityBased,
+                                SerializedRigidBodyType::Dynamic => crate::domain::physics::RigidBodyType::Dynamic,
+                                SerializedRigidBodyType::Fixed => crate::domain::physics::RigidBodyType::Fixed,
+                                SerializedRigidBodyType::KinematicPositionBased => {
+                                    crate::domain::physics::RigidBodyType::KinematicPositionBased
+                                }
+                                SerializedRigidBodyType::KinematicVelocityBased => {
+                                    crate::domain::physics::RigidBodyType::KinematicVelocityBased
+                                }
                             };
                             entity_mut.insert(RigidBodyDesc {
                                 body_type: bt,
-                                position: *position,
+                                position: Vec3::new(
+                                    position[0],
+                                    position[1],
+                                    position.get(2).copied().unwrap_or(0.0),
+                                ),
+                                rotation: Quat::from_array(*rotation),
                             });
                         }
-                        SerializedComponent::Collider { shape_type, half_extents, radius } => {
+                        SerializedComponent::Collider {
+                            shape_type,
+                            half_extents,
+                            radius,
+                        } => {
                             let st = match shape_type {
                                 SerializedShapeType::Cuboid => ShapeType::Cuboid,
                                 SerializedShapeType::Ball => ShapeType::Ball,
                             };
                             entity_mut.insert(ColliderDesc {
                                 shape_type: st,
-                                half_extents: *half_extents,
+                                half_extents: Vec3::new(
+                                    half_extents[0],
+                                    half_extents[1],
+                                    half_extents.get(2).copied().unwrap_or(0.0),
+                                ),
                                 radius: *radius,
                             });
                         }
-                        SerializedComponent::PbrMaterial { base_color, metallic, roughness, ambient_occlusion, emissive, emissive_strength } => {
+                        SerializedComponent::PbrMaterial {
+                            base_color,
+                            metallic,
+                            roughness,
+                            ambient_occlusion,
+                            emissive,
+                            emissive_strength,
+                        } => {
                             entity_mut.insert(PbrMaterialComp {
                                 base_color: *base_color,
                                 metallic: *metallic,
@@ -401,14 +482,22 @@ impl SerializedScene {
                                 emissive_strength: *emissive_strength,
                             });
                         }
-                        SerializedComponent::PointLight3D { color, intensity, radius } => {
+                        SerializedComponent::PointLight3D {
+                            color,
+                            intensity,
+                            radius,
+                        } => {
                             entity_mut.insert(PointLight3D {
                                 color: *color,
                                 intensity: *intensity,
                                 radius: *radius,
                             });
                         }
-                        SerializedComponent::DirectionalLight { direction, color, intensity } => {
+                        SerializedComponent::DirectionalLight {
+                            direction,
+                            color,
+                            intensity,
+                        } => {
                             entity_mut.insert(DirectionalLightComp {
                                 direction: *direction,
                                 color: *color,
@@ -419,10 +508,10 @@ impl SerializedScene {
                 }
             }
         }
-        
+
         entity_map
     }
-    
+
     /// 清空场景中的所有实体
     pub fn clear_world(world: &mut World) {
         // 收集所有实体ID
@@ -432,14 +521,14 @@ impl SerializedScene {
             world.despawn(entity);
         }
     }
-    
+
     /// 保存场景到JSON文件
     pub fn save_to_file(&self, path: &str) -> Result<(), Box<dyn std::error::Error>> {
         let json = serde_json::to_string_pretty(self)?;
         std::fs::write(path, json)?;
         Ok(())
     }
-    
+
     /// 从JSON文件加载场景
     pub fn load_from_file(path: &str) -> Result<Self, Box<dyn std::error::Error>> {
         let json = std::fs::read_to_string(path)?;
@@ -451,60 +540,60 @@ impl SerializedScene {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_scene_serialization() {
         let mut world = World::new();
-        
+
         // 创建一些测试实体
         world.spawn(Transform {
             pos: Vec3::new(1.0, 2.0, 3.0),
             rot: Quat::IDENTITY,
             scale: Vec3::ONE,
         });
-        
+
         world.spawn(Transform {
             pos: Vec3::new(4.0, 5.0, 6.0),
             rot: Quat::IDENTITY,
             scale: Vec3::new(2.0, 2.0, 2.0),
         });
-        
+
         // 序列化场景
         let scene = SerializedScene::from_world(&world, "test_scene");
         assert_eq!(scene.entities.len(), 2);
-        
+
         // 反序列化场景
         let mut new_world = World::new();
         let entity_map = scene.to_world(&mut new_world);
         assert_eq!(entity_map.len(), 2);
-        
+
         // 验证反序列化的数据
         let mut query = new_world.query::<&Transform>();
         let transforms: Vec<_> = query.iter(&new_world).collect();
         assert_eq!(transforms.len(), 2);
     }
-    
+
     #[test]
     fn test_scene_file_io() {
         let mut world = World::new();
-        
+
         world.spawn(Transform {
             pos: Vec3::new(1.0, 2.0, 3.0),
             rot: Quat::IDENTITY,
             scale: Vec3::ONE,
         });
-        
+
         let scene = SerializedScene::from_world(&world, "test_scene");
-        
+
         // 保存到文件
         let path = "/tmp/test_scene.json";
         scene.save_to_file(path).unwrap();
-        
+
         // 从文件加载
         let loaded_scene = SerializedScene::load_from_file(path).unwrap();
         assert_eq!(loaded_scene.name, "test_scene");
         assert_eq!(loaded_scene.entities.len(), 1);
-        
+
         // 清理测试文件
         std::fs::remove_file(path).ok();
     }

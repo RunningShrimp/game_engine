@@ -1,6 +1,6 @@
+use super::build_tool::{BuildProfile, BuildResult, BuildTarget};
 use std::path::Path;
 use std::process::Command;
-use super::build_tool::{BuildTarget, BuildProfile, BuildResult};
 
 /// 平台特定构建器
 pub struct PlatformBuilder;
@@ -13,40 +13,40 @@ impl PlatformBuilder {
         output_dir: &Path,
     ) -> Result<BuildResult, String> {
         let start_time = std::time::Instant::now();
-        
+
         // 1. 检查wasm-pack是否安装
-        let wasm_pack_check = Command::new("wasm-pack")
-            .arg("--version")
-            .output();
-        
+        let wasm_pack_check = Command::new("wasm-pack").arg("--version").output();
+
         if wasm_pack_check.is_err() {
-            return Err("wasm-pack not found. Please install it with: cargo install wasm-pack".to_string());
+            return Err(
+                "wasm-pack not found. Please install it with: cargo install wasm-pack".to_string(),
+            );
         }
-        
+
         // 2. 使用wasm-pack构建
         let mut cmd = Command::new("wasm-pack");
         cmd.current_dir(project_path);
         cmd.arg("build");
         cmd.arg("--target");
         cmd.arg("web");
-        
+
         if matches!(profile, BuildProfile::Release) {
             cmd.arg("--release");
         } else {
             cmd.arg("--dev");
         }
-        
+
         cmd.arg("--out-dir");
         cmd.arg(output_dir);
-        
+
         match cmd.output() {
             Ok(output) => {
                 let duration = start_time.elapsed();
-                
+
                 if output.status.success() {
                     // 生成HTML模板
                     Self::generate_web_template(output_dir)?;
-                    
+
                     Ok(BuildResult::Success {
                         output_path: output_dir.to_path_buf(),
                         duration,
@@ -59,7 +59,7 @@ impl PlatformBuilder {
             Err(e) => Err(format!("Failed to execute wasm-pack: {}", e)),
         }
     }
-    
+
     /// 生成Web HTML模板
     fn generate_web_template(output_dir: &Path) -> Result<(), String> {
         let html_content = r#"<!DOCTYPE html>
@@ -96,14 +96,14 @@ impl PlatformBuilder {
     </script>
 </body>
 </html>"#;
-        
+
         let html_path = output_dir.join("index.html");
         std::fs::write(html_path, html_content)
             .map_err(|e| format!("Failed to write HTML template: {}", e))?;
-        
+
         Ok(())
     }
-    
+
     /// 为Android平台构建
     pub fn build_android(
         project_path: &Path,
@@ -111,17 +111,16 @@ impl PlatformBuilder {
         output_dir: &Path,
     ) -> Result<BuildResult, String> {
         let start_time = std::time::Instant::now();
-        
+
         // 1. 检查cargo-ndk是否安装
-        let cargo_ndk_check = Command::new("cargo")
-            .arg("ndk")
-            .arg("--version")
-            .output();
-        
+        let cargo_ndk_check = Command::new("cargo").arg("ndk").arg("--version").output();
+
         if cargo_ndk_check.is_err() {
-            return Err("cargo-ndk not found. Please install it with: cargo install cargo-ndk".to_string());
+            return Err(
+                "cargo-ndk not found. Please install it with: cargo install cargo-ndk".to_string(),
+            );
         }
-        
+
         // 2. 使用cargo-ndk构建
         let mut cmd = Command::new("cargo");
         cmd.current_dir(project_path);
@@ -131,15 +130,15 @@ impl PlatformBuilder {
         cmd.arg("--platform");
         cmd.arg("29"); // Android API level 29
         cmd.arg("build");
-        
+
         if matches!(profile, BuildProfile::Release) {
             cmd.arg("--release");
         }
-        
+
         match cmd.output() {
             Ok(output) => {
                 let duration = start_time.elapsed();
-                
+
                 if output.status.success() {
                     // 复制输出到指定目录
                     let target_dir = project_path.join("target/aarch64-linux-android");
@@ -147,7 +146,7 @@ impl PlatformBuilder {
                         BuildProfile::Debug => target_dir.join("debug"),
                         BuildProfile::Release => target_dir.join("release"),
                     };
-                    
+
                     Ok(BuildResult::Success {
                         output_path: profile_dir,
                         duration,
@@ -160,7 +159,7 @@ impl PlatformBuilder {
             Err(e) => Err(format!("Failed to execute cargo-ndk: {}", e)),
         }
     }
-    
+
     /// 为iOS平台构建
     pub fn build_ios(
         project_path: &Path,
@@ -168,29 +167,29 @@ impl PlatformBuilder {
         _output_dir: &Path,
     ) -> Result<BuildResult, String> {
         let start_time = std::time::Instant::now();
-        
+
         // 1. 使用cargo构建iOS目标
         let mut cmd = Command::new("cargo");
         cmd.current_dir(project_path);
         cmd.arg("build");
         cmd.arg("--target");
         cmd.arg("aarch64-apple-ios");
-        
+
         if matches!(profile, BuildProfile::Release) {
             cmd.arg("--release");
         }
-        
+
         match cmd.output() {
             Ok(output) => {
                 let duration = start_time.elapsed();
-                
+
                 if output.status.success() {
                     let target_dir = project_path.join("target/aarch64-apple-ios");
                     let profile_dir = match profile {
                         BuildProfile::Debug => target_dir.join("debug"),
                         BuildProfile::Release => target_dir.join("release"),
                     };
-                    
+
                     Ok(BuildResult::Success {
                         output_path: profile_dir,
                         duration,
@@ -203,7 +202,7 @@ impl PlatformBuilder {
             Err(e) => Err(format!("Failed to execute cargo: {}", e)),
         }
     }
-    
+
     /// 根据目标平台选择合适的构建方法
     pub fn build_for_target(
         target: BuildTarget,
@@ -221,7 +220,7 @@ impl PlatformBuilder {
             }
         }
     }
-    
+
     /// 标准构建流程
     fn build_standard(
         target: BuildTarget,
@@ -229,28 +228,28 @@ impl PlatformBuilder {
         profile: BuildProfile,
     ) -> Result<BuildResult, String> {
         let start_time = std::time::Instant::now();
-        
+
         let mut cmd = Command::new("cargo");
         cmd.current_dir(project_path);
         cmd.arg("build");
         cmd.arg("--target");
         cmd.arg(target.rust_target());
-        
+
         if matches!(profile, BuildProfile::Release) {
             cmd.arg("--release");
         }
-        
+
         match cmd.output() {
             Ok(output) => {
                 let duration = start_time.elapsed();
-                
+
                 if output.status.success() {
                     let target_dir = project_path.join(format!("target/{}", target.rust_target()));
                     let profile_dir = match profile {
                         BuildProfile::Debug => target_dir.join("debug"),
                         BuildProfile::Release => target_dir.join("release"),
                     };
-                    
+
                     Ok(BuildResult::Success {
                         output_path: profile_dir,
                         duration,
@@ -268,13 +267,13 @@ impl PlatformBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_platform_builder() {
         // 这个测试只验证API的存在性,不实际执行构建
         let target = BuildTarget::Web;
         let profile = BuildProfile::Debug;
-        
+
         assert_eq!(target.rust_target(), "wasm32-unknown-unknown");
         assert_eq!(profile.name(), "Debug");
     }

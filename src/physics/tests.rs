@@ -2,6 +2,8 @@
 mod property_tests {
     use proptest::prelude::*;
     use crate::physics::*;
+    use crate::domain::{PhysicsDomainService, RigidBody, RigidBodyId, RigidBodyType};
+    use glam::Vec3;
 
     proptest! {
         #[test]
@@ -9,14 +11,17 @@ mod property_tests {
             x in -1000.0f32..1000.0,
             y in -1000.0f32..1000.0
         ) {
-            let mut state = PhysicsState::default();
-            let handle = PhysicsService::create_rigid_body(
-                &mut state,
+            let mut service = PhysicsDomainService::new();
+            let body_id = RigidBodyId::new(1);
+            let body = RigidBody::new(
+                body_id,
                 RigidBodyType::Dynamic,
-                [x, y]
+                Vec3::new(x, y, 0.0),
+                glam::Quat::IDENTITY,
             );
-            let pos = PhysicsService::get_rigid_body_position(&state, handle);
-            prop_assert!(pos.is_some());
+            prop_assert!(service.create_body(body).is_ok());
+            let pos = service.get_body_position(body_id);
+            prop_assert!(pos.is_ok());
         }
     }
 }

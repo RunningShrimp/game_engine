@@ -60,6 +60,12 @@ impl Default for TextureUploadInfo {
     }
 }
 
+impl TextureUploadInfo {
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
 /// 缓冲区上传请求
 struct BufferUploadRequest {
     /// 数据
@@ -90,16 +96,6 @@ enum UploadRequest {
 // 上传队列
 // ============================================================================
 
-/// 异步上传队列
-pub struct UploadQueue {
-    /// 待处理的上传请求
-    pending: Vec<UploadRequest>,
-    /// Staging Buffer 池
-    staging_pool: StagingBufferPool,
-    /// 统计信息
-    stats: UploadStats,
-}
-
 /// 上传统计信息
 #[derive(Default, Clone, Copy, Debug)]
 pub struct UploadStats {
@@ -113,19 +109,20 @@ pub struct UploadStats {
     pub total_uploads: u64,
 }
 
-impl Default for UploadQueue {
-    fn default() -> Self {
-        Self::new()
-    }
+/// 异步上传队列
+#[derive(Default)]
+pub struct UploadQueue {
+    /// 待处理的上传请求
+    pub(crate) pending: Vec<UploadRequest>,
+    /// Staging Buffer 池
+    pub(crate) staging_pool: StagingBufferPool,
+    /// 统计信息
+    pub(crate) stats: UploadStats,
 }
 
 impl UploadQueue {
     pub fn new() -> Self {
-        Self {
-            pending: Vec::new(),
-            staging_pool: StagingBufferPool::new(),
-            stats: UploadStats::default(),
-        }
+        Self::default()
     }
 
     /// 初始化（需要在首次使用前调用）
@@ -134,45 +131,37 @@ impl UploadQueue {
     }
 
     /// 队列缓冲区上传
-    /// 
+    ///
     /// # 参数
     /// - `data`: 要上传的数据
     /// - `target`: 目标 GPU 缓冲区
     /// - `target_offset`: 目标缓冲区中的偏移
-    pub fn queue_buffer(
-        &mut self,
-        data: &[u8],
-        target: wgpu::Buffer,
-        target_offset: u64,
-    ) {
-        self.pending.push(UploadRequest::Buffer(BufferUploadRequest {
-            data: data.to_vec(),
-            target,
-            target_offset,
-        }));
-        
+    pub fn queue_buffer(&mut self, data: &[u8], target: wgpu::Buffer, target_offset: u64) {
+        self.pending
+            .push(UploadRequest::Buffer(BufferUploadRequest {
+                data: data.to_vec(),
+                target,
+                target_offset,
+            }));
+
         self.stats.buffer_uploads += 1;
         self.stats.bytes_uploaded += data.len() as u64;
     }
 
     /// 队列纹理上传
-    /// 
+    ///
     /// # 参数
     /// - `data`: 像素数据
     /// - `target`: 目标纹理
     /// - `info`: 上传配置信息
-    pub fn queue_texture(
-        &mut self,
-        data: &[u8],
-        target: wgpu::Texture,
-        info: TextureUploadInfo,
-    ) {
-        self.pending.push(UploadRequest::Texture(TextureUploadRequest {
-            data: data.to_vec(),
-            target,
-            info,
-        }));
-        
+    pub fn queue_texture(&mut self, data: &[u8], target: wgpu::Texture, info: TextureUploadInfo) {
+        self.pending
+            .push(UploadRequest::Texture(TextureUploadRequest {
+                data: data.to_vec(),
+                target,
+                info,
+            }));
+
         self.stats.texture_uploads += 1;
         self.stats.bytes_uploaded += data.len() as u64;
     }
@@ -186,12 +175,16 @@ impl UploadQueue {
         height: u32,
         format: wgpu::TextureFormat,
     ) {
-        self.queue_texture(data, target, TextureUploadInfo {
-            width,
-            height,
-            format,
-            ..Default::default()
-        });
+        self.queue_texture(
+            data,
+            target,
+            TextureUploadInfo {
+                width,
+                height,
+                format,
+                ..Default::default()
+            },
+        );
     }
 
     /// 检查是否有待处理的上传
@@ -205,12 +198,12 @@ impl UploadQueue {
     }
 
     /// 刷新所有待处理的上传
-    /// 
+    ///
     /// 将所有队列中的上传请求提交到 GPU
     pub fn flush(
         &mut self,
         device: &wgpu::Device,
-        queue: &wgpu::Queue,
+        _queue: &wgpu::Queue,
         encoder: &mut wgpu::CommandEncoder,
     ) {
         if self.pending.is_empty() {
@@ -219,7 +212,8 @@ impl UploadQueue {
 
         // 先取出所有请求避免借用冲突
         let requests: Vec<_> = self.pending.drain(..).collect();
-        
+
+        // 使用queue提交所有上传命令（通过staging buffer）
         for request in requests {
             match request {
                 UploadRequest::Buffer(req) => {
@@ -245,7 +239,7 @@ impl UploadQueue {
     }
 
     /// 直接刷新（使用 queue.write_buffer/write_texture，无需 encoder）
-    /// 
+    ///
     /// 适用于小量数据的即时上传
     pub fn flush_immediate(&mut self, device: &wgpu::Device, queue: &wgpu::Queue) {
         for request in self.pending.drain(..) {
@@ -256,7 +250,7 @@ impl UploadQueue {
                 UploadRequest::Texture(req) => {
                     let bytes_per_pixel = req.info.format.block_copy_size(None).unwrap_or(4);
                     let bytes_per_row = req.info.width * bytes_per_pixel;
-                    
+
                     queue.write_texture(
                         wgpu::ImageCopyTexture {
                             texture: &req.target,
@@ -322,10 +316,10 @@ impl UploadQueue {
     ) {
         let bytes_per_pixel = request.info.format.block_copy_size(None).unwrap_or(4);
         let bytes_per_row = request.info.width * bytes_per_pixel;
-        
+
         // 确保行对齐到 256 字节（wgpu 要求）
         let aligned_bytes_per_row = align_to_256(bytes_per_row);
-        
+
         // 分配 Staging Buffer
         let total_size = aligned_bytes_per_row as u64 * request.info.height as u64;
         let (buffer_idx, offset) = staging_pool.allocate(device, total_size, 256);
@@ -348,7 +342,7 @@ impl UploadQueue {
             } else {
                 let _ = staging.write(&request.data, 256);
             }
-            
+
             staging.unmap();
 
             // 复制到目标纹理
@@ -379,7 +373,7 @@ impl UploadQueue {
     /// 帧结束时调用，回收资源
     pub fn end_frame(&mut self, device: &wgpu::Device) {
         self.staging_pool.end_frame(device);
-        
+
         // 重置本帧统计
         self.stats.buffer_uploads = 0;
         self.stats.texture_uploads = 0;

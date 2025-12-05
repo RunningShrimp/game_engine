@@ -1,5 +1,5 @@
 //! 全局异步运行时
-//! 
+//!
 //! 提供统一的Tokio运行时，避免每个模块创建独立运行时
 
 use std::sync::OnceLock;
@@ -9,7 +9,7 @@ use tokio::runtime::Runtime;
 static GLOBAL_RUNTIME: OnceLock<Runtime> = OnceLock::new();
 
 /// 获取全局Tokio运行时
-/// 
+///
 /// 首次调用时会创建一个多线程运行时，后续调用返回同一实例
 pub fn global_runtime() -> &'static Runtime {
     GLOBAL_RUNTIME.get_or_init(|| {
@@ -54,7 +54,7 @@ mod tests {
             tokio::time::sleep(std::time::Duration::from_millis(10)).await;
             42
         });
-        
+
         let result = block_on(handle).unwrap();
         assert_eq!(result, 42);
     }

@@ -167,19 +167,20 @@ impl SkinnedMeshPipeline {
         material_bind_group_layout: &wgpu::BindGroupLayout,
     ) -> Self {
         // 蒙皮绑定组布局（骨骼矩阵）
-        let skin_bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("Skinning Bind Group Layout"),
-            entries: &[wgpu::BindGroupLayoutEntry {
-                binding: 0,
-                visibility: wgpu::ShaderStages::VERTEX,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Storage { read_only: true },
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                },
-                count: None,
-            }],
-        });
+        let skin_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("Skinning Bind Group Layout"),
+                entries: &[wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::VERTEX,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Storage { read_only: true },
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                }],
+            });
 
         // 着色器模块
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
@@ -191,9 +192,9 @@ impl SkinnedMeshPipeline {
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("Skinned Pipeline Layout"),
             bind_group_layouts: &[
-                camera_bind_group_layout,      // @group(0) 相机
-                material_bind_group_layout,    // @group(1) 材质
-                &skin_bind_group_layout,       // @group(2) 骨骼矩阵
+                camera_bind_group_layout,   // @group(0) 相机
+                material_bind_group_layout, // @group(1) 材质
+                &skin_bind_group_layout,    // @group(2) 骨骼矩阵
             ],
             push_constant_ranges: &[],
         });
@@ -287,9 +288,9 @@ mod tests {
             [0, 1, 0, 0],
             [0.5, 0.3, 0.0, 0.0],
         );
-        
+
         vertex.normalize_weights();
-        
+
         let sum: f32 = vertex.bone_weights.iter().sum();
         assert!((sum - 1.0).abs() < 0.001);
     }

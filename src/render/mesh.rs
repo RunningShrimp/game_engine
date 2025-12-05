@@ -1,5 +1,5 @@
-use wgpu::util::DeviceExt;
 use std::sync::Arc;
+use wgpu::util::DeviceExt;
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, bytemuck::Pod, bytemuck::Zeroable)]
@@ -67,12 +67,24 @@ impl GpuMesh {
         let mut min = [f32::INFINITY; 3];
         let mut max = [f32::NEG_INFINITY; 3];
         for v in vertices {
-            if v.pos[0] < min[0] { min[0] = v.pos[0]; }
-            if v.pos[1] < min[1] { min[1] = v.pos[1]; }
-            if v.pos[2] < min[2] { min[2] = v.pos[2]; }
-            if v.pos[0] > max[0] { max[0] = v.pos[0]; }
-            if v.pos[1] > max[1] { max[1] = v.pos[1]; }
-            if v.pos[2] > max[2] { max[2] = v.pos[2]; }
+            if v.pos[0] < min[0] {
+                min[0] = v.pos[0];
+            }
+            if v.pos[1] < min[1] {
+                min[1] = v.pos[1];
+            }
+            if v.pos[2] < min[2] {
+                min[2] = v.pos[2];
+            }
+            if v.pos[0] > max[0] {
+                max[0] = v.pos[0];
+            }
+            if v.pos[1] > max[1] {
+                max[1] = v.pos[1];
+            }
+            if v.pos[2] > max[2] {
+                max[2] = v.pos[2];
+            }
         }
 
         Self {

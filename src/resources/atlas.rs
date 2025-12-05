@@ -2,19 +2,34 @@ use serde::Deserialize;
 use serde_json::Value;
 
 #[derive(Debug, Deserialize)]
-pub struct AtlasMetaSize { pub w: u32, pub h: u32 }
+pub struct AtlasMetaSize {
+    pub w: u32,
+    pub h: u32,
+}
 
 #[derive(Debug, Deserialize)]
-pub struct AtlasMeta { pub size: AtlasMetaSize }
+pub struct AtlasMeta {
+    pub size: AtlasMetaSize,
+}
 
 #[derive(Debug, Deserialize)]
-pub struct FrameRect { pub x: u32, pub y: u32, pub w: u32, pub h: u32 }
+pub struct FrameRect {
+    pub x: u32,
+    pub y: u32,
+    pub w: u32,
+    pub h: u32,
+}
 
 #[derive(Debug, Deserialize)]
-pub struct FrameEntry { pub frame: FrameRect }
+pub struct FrameEntry {
+    pub frame: FrameRect,
+}
 
 #[derive(Debug, Deserialize)]
-pub struct ArrayFrameEntry { pub filename: String, pub frame: FrameRect }
+pub struct ArrayFrameEntry {
+    pub filename: String,
+    pub frame: FrameRect,
+}
 
 #[derive(Clone, Debug)]
 pub struct Atlas {
@@ -35,8 +50,16 @@ impl Atlas {
                     let h = ms.get("h").and_then(|x| x.as_u64()).unwrap_or(0) as u32;
                     (w, h)
                 } else {
-                    let w = v.get("meta").and_then(|m| m.get("textureWidth")).and_then(|x| x.as_u64()).unwrap_or(0) as u32;
-                    let h = v.get("meta").and_then(|m| m.get("textureHeight")).and_then(|x| x.as_u64()).unwrap_or(0) as u32;
+                    let w = v
+                        .get("meta")
+                        .and_then(|m| m.get("textureWidth"))
+                        .and_then(|x| x.as_u64())
+                        .unwrap_or(0) as u32;
+                    let h = v
+                        .get("meta")
+                        .and_then(|m| m.get("textureHeight"))
+                        .and_then(|x| x.as_u64())
+                        .unwrap_or(0) as u32;
                     (w, h)
                 }
             };
@@ -80,9 +103,14 @@ impl Atlas {
                     sprites.insert(name.clone(), (uv_off, uv_scale));
                 }
             }
-            return Some(Self { size: [tw, th], sprites });
+            return Some(Self {
+                size: [tw, th],
+                sprites,
+            });
         }
         None
     }
-    pub fn get(&self, name: &str) -> Option<([f32; 2], [f32; 2])> { self.sprites.get(name).copied() }
+    pub fn get(&self, name: &str) -> Option<([f32; 2], [f32; 2])> {
+        self.sprites.get(name).copied()
+    }
 }

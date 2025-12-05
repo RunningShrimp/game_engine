@@ -26,15 +26,16 @@
 //! }
 //! ```
 
+use crate::impl_default;
 use bevy_ecs::prelude::*;
-use glam::{Vec3, Quat};
+use glam::{Quat, Vec3};
 
 // ============================================================================
 // 脏标记组件
 // ============================================================================
 
 /// 物理脏标记组件
-/// 
+///
 /// 跟踪物理属性的变化状态，用于优化同步
 #[derive(Component, Default, Clone, Copy)]
 pub struct PhysicsDirty {
@@ -135,17 +136,13 @@ pub struct CachedPhysicsState {
     pub sleeping: bool,
 }
 
-impl Default for CachedPhysicsState {
-    fn default() -> Self {
-        Self {
-            position: Vec3::ZERO,
-            rotation: Quat::IDENTITY,
-            linear_velocity: Vec3::ZERO,
-            angular_velocity: 0.0,
-            sleeping: false,
-        }
-    }
-}
+impl_default!(CachedPhysicsState {
+    position: Vec3::ZERO,
+    rotation: Quat::IDENTITY,
+    linear_velocity: Vec3::ZERO,
+    angular_velocity: 0.0,
+    sleeping: false,
+});
 
 impl CachedPhysicsState {
     /// 检测位置是否改变（使用阈值）
@@ -159,7 +156,14 @@ impl CachedPhysicsState {
     }
 
     /// 更新缓存状态
-    pub fn update(&mut self, position: Vec3, rotation: Quat, linear_vel: Vec3, angular_vel: f32, sleeping: bool) {
+    pub fn update(
+        &mut self,
+        position: Vec3,
+        rotation: Quat,
+        linear_vel: Vec3,
+        angular_vel: f32,
+        sleeping: bool,
+    ) {
         self.position = position;
         self.rotation = rotation;
         self.linear_velocity = linear_vel;
@@ -187,28 +191,26 @@ pub struct PhysicsSyncConfig {
     pub dirty_tracking_enabled: bool,
 }
 
-impl Default for PhysicsSyncConfig {
-    fn default() -> Self {
-        Self {
-            position_threshold: 0.0001,
-            rotation_threshold: 0.0001,
-            skip_sleeping: true,
-            batch_size: 256,
-            dirty_tracking_enabled: true,
-        }
-    }
-}
+impl_default!(PhysicsSyncConfig {
+    position_threshold: 0.0001,
+    rotation_threshold: 0.0001,
+    skip_sleeping: true,
+    batch_size: 256,
+    dirty_tracking_enabled: true,
+});
 
 // ============================================================================
 // 优化的同步系统
 // ============================================================================
 
 /// 优化的物理到 Transform 同步系统
-/// 
+///
 /// 使用脏标记和休眠检测减少同步开销
+///
+/// **注意**: 此系统已更新为使用富领域对象架构
 #[cfg(feature = "physics_2d")]
 pub fn optimized_physics_sync_system(
-    physics_state: Res<super::PhysicsState>,
+    physics_service: Res<super::PhysicsDomainService>,
     config: Res<PhysicsSyncConfig>,
     mut query: Query<(
         &super::RigidBodyComp,
@@ -217,21 +219,20 @@ pub fn optimized_physics_sync_system(
         Option<&mut CachedPhysicsState>,
     )>,
 ) {
+    let world = physics_service.get_world();
     for (rb_comp, mut transform, dirty_opt, cached_opt) in query.iter_mut() {
-        // 获取刚体
-        let Some(body) = physics_state.rigid_body_set.get(rb_comp.handle) else {
+        // 获取刚体状态（从富领域对象）
+        let Some(body_state) = world.get_body_state(rb_comp.body_id) else {
             continue;
         };
 
         // 跳过休眠体（如果配置启用）
-        if config.skip_sleeping && body.is_sleeping() {
+        if config.skip_sleeping && body_state.sleeping {
             continue;
         }
 
-        let pos = body.translation();
-        let rot = body.rotation().angle();
-        let new_position = Vec3::new(pos.x, pos.y, 0.0);
-        let new_rotation = Quat::from_rotation_z(rot);
+        let new_position = body_state.position;
+        let new_rotation = body_state.rotation;
 
         // 使用脏检测
         if config.dirty_tracking_enabled {
@@ -249,14 +250,12 @@ pub fn optimized_physics_sync_system(
                 transform.rot = new_rotation;
 
                 // 更新缓存
-                let lin_vel = body.linvel();
-                let ang_vel = body.angvel();
                 cached.update(
                     new_position,
                     new_rotation,
-                    Vec3::new(lin_vel.x, lin_vel.y, 0.0),
-                    ang_vel,
-                    body.is_sleeping(),
+                    body_state.linear_velocity,
+                    body_state.angular_velocity,
+                    body_state.sleeping,
                 );
 
                 // 清除脏标记
@@ -275,16 +274,17 @@ pub fn optimized_physics_sync_system(
 }
 
 /// Transform 到物理的同步系统
-/// 
+///
 /// 当 Transform 被外部修改时，同步到物理世界
+///
+/// **注意**: 此系统已更新为使用富领域对象架构
 #[cfg(feature = "physics_2d")]
 pub fn transform_to_physics_sync_system(
-    mut physics_state: ResMut<super::PhysicsState>,
-    query: Query<(
-        &super::RigidBodyComp,
-        &crate::ecs::Transform,
-        &PhysicsDirty,
-    ), Changed<crate::ecs::Transform>>,
+    mut physics_service: ResMut<super::PhysicsDomainService>,
+    query: Query<
+        (&super::RigidBodyComp, &crate::ecs::Transform, &PhysicsDirty),
+        Changed<crate::ecs::Transform>,
+    >,
 ) {
     for (rb_comp, transform, dirty) in query.iter() {
         // 只同步被外部修改的 Transform
@@ -292,16 +292,9 @@ pub fn transform_to_physics_sync_system(
             continue;
         }
 
-        if let Some(body) = physics_state.rigid_body_set.get_mut(rb_comp.handle) {
-            // 更新位置
-            body.set_translation(
-                rapier2d::na::Vector2::new(transform.pos.x, transform.pos.y),
-                true,
-            );
-
-            // 更新旋转（从四元数提取 Z 轴旋转）
-            let (_, _, z) = transform.rot.to_euler(glam::EulerRot::XYZ);
-            body.set_rotation(rapier2d::na::UnitComplex::new(z), true);
+        // 使用富领域对象API更新位置
+        if let Err(e) = physics_service.set_body_position(rb_comp.body_id, transform.pos) {
+            tracing::warn!(target: "physics", "Failed to sync transform to physics for body {}: {:?}", rb_comp.body_id.as_u64(), e);
         }
     }
 }
@@ -405,16 +398,16 @@ mod tests {
     #[test]
     fn test_physics_dirty_mark_and_clear() {
         let mut dirty = PhysicsDirty::new();
-        
+
         dirty.mark_transform_changed();
         assert!(dirty.needs_physics_update());
-        
+
         dirty.clear_transform();
         assert!(!dirty.needs_physics_update());
-        
+
         dirty.mark_physics_changed();
         assert!(dirty.needs_transform_update());
-        
+
         dirty.clear();
         assert!(!dirty.needs_transform_update());
     }
@@ -428,7 +421,7 @@ mod tests {
 
         // 小变化不应触发
         assert!(!cached.position_changed(Vec3::new(0.00001, 0.0, 0.0), 0.0001));
-        
+
         // 大变化应触发
         assert!(cached.position_changed(Vec3::new(1.0, 0.0, 0.0), 0.0001));
     }

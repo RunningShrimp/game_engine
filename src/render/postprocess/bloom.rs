@@ -1,7 +1,7 @@
 //! Bloom（辉光）后处理效果
 //!
 //! 实现双向高斯模糊 + 亮度提取的 Bloom 效果。
-//! 
+//!
 //! ## 算法流程
 //! 1. 亮度提取：从场景中提取高于阈值的亮度区域
 //! 2. 降采样：逐级降低分辨率，扩大模糊范围
@@ -35,32 +35,32 @@ pub struct BloomPass {
     blur_pipeline: wgpu::RenderPipeline,
     /// 合成管线
     composite_pipeline: wgpu::RenderPipeline,
-    
+
     /// 绑定组布局
     bind_group_layout: wgpu::BindGroupLayout,
-    
+
     /// 降采样纹理链 (多个 mip 级别)
     downsample_textures: Vec<wgpu::Texture>,
     downsample_views: Vec<wgpu::TextureView>,
-    
+
     /// 模糊中间纹理
     blur_temp_textures: Vec<wgpu::Texture>,
     blur_temp_views: Vec<wgpu::TextureView>,
-    
+
     /// 输出纹理
     output_texture: wgpu::Texture,
     output_view: wgpu::TextureView,
-    
+
     /// 采样器
     sampler: wgpu::Sampler,
-    
+
     /// Uniform 缓冲区
     uniform_buffer: wgpu::Buffer,
-    
+
     /// 屏幕尺寸
     width: u32,
     height: u32,
-    
+
     /// Mip 级别数量
     mip_count: u32,
 }
@@ -69,7 +69,7 @@ impl BloomPass {
     /// 创建 Bloom 通道
     pub fn new(device: &wgpu::Device, width: u32, height: u32) -> Self {
         let mip_count = Self::calculate_mip_count(width, height);
-        
+
         // 创建采样器
         let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
             label: Some("Bloom Sampler"),
@@ -80,7 +80,7 @@ impl BloomPass {
             address_mode_v: wgpu::AddressMode::ClampToEdge,
             ..Default::default()
         });
-        
+
         // 创建绑定组布局
         let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("Bloom BGL"),
@@ -116,7 +116,7 @@ impl BloomPass {
                 },
             ],
         });
-        
+
         // 创建 Uniform 缓冲区
         let uniform_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("Bloom Uniform Buffer"),
@@ -124,19 +124,19 @@ impl BloomPass {
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
-        
+
         // 创建着色器
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Bloom Shader"),
             source: wgpu::ShaderSource::Wgsl(BLOOM_SHADER.into()),
         });
-        
+
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("Bloom Pipeline Layout"),
             bind_group_layouts: &[&bind_group_layout],
             push_constant_ranges: &[],
         });
-        
+
         // 创建管线
         let threshold_pipeline = Self::create_pipeline(
             device,
@@ -146,7 +146,7 @@ impl BloomPass {
             "fs_threshold",
             wgpu::TextureFormat::Rgba16Float,
         );
-        
+
         let blur_pipeline = Self::create_pipeline(
             device,
             &pipeline_layout,
@@ -155,7 +155,7 @@ impl BloomPass {
             "fs_blur",
             wgpu::TextureFormat::Rgba16Float,
         );
-        
+
         let composite_pipeline = Self::create_pipeline(
             device,
             &pipeline_layout,
@@ -164,17 +164,21 @@ impl BloomPass {
             "fs_composite",
             wgpu::TextureFormat::Rgba16Float,
         );
-        
+
         // 创建纹理
-        let (downsample_textures, downsample_views) = 
+        let (downsample_textures, downsample_views) =
             Self::create_mip_chain(device, width, height, mip_count, "Downsample");
-        let (blur_temp_textures, blur_temp_views) = 
+        let (blur_temp_textures, blur_temp_views) =
             Self::create_mip_chain(device, width, height, mip_count, "BlurTemp");
-        
+
         // 创建输出纹理
         let output_texture = device.create_texture(&wgpu::TextureDescriptor {
             label: Some("Bloom Output"),
-            size: wgpu::Extent3d { width, height, depth_or_array_layers: 1 },
+            size: wgpu::Extent3d {
+                width,
+                height,
+                depth_or_array_layers: 1,
+            },
             mip_level_count: 1,
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
@@ -183,7 +187,7 @@ impl BloomPass {
             view_formats: &[],
         });
         let output_view = output_texture.create_view(&wgpu::TextureViewDescriptor::default());
-        
+
         Self {
             threshold_pipeline,
             blur_pipeline,
@@ -202,13 +206,13 @@ impl BloomPass {
             mip_count,
         }
     }
-    
+
     /// 计算 mip 级别数量
     fn calculate_mip_count(width: u32, height: u32) -> u32 {
         let min_dim = width.min(height) as f32;
         ((min_dim.log2()).floor() as u32).min(6).max(1)
     }
-    
+
     /// 创建 mip 纹理链
     fn create_mip_chain(
         device: &wgpu::Device,
@@ -219,12 +223,12 @@ impl BloomPass {
     ) -> (Vec<wgpu::Texture>, Vec<wgpu::TextureView>) {
         let mut textures = Vec::with_capacity(mip_count as usize);
         let mut views = Vec::with_capacity(mip_count as usize);
-        
+
         for i in 0..mip_count {
             let scale = 1 << i;
             let mip_width = (width / scale).max(1);
             let mip_height = (height / scale).max(1);
-            
+
             let texture = device.create_texture(&wgpu::TextureDescriptor {
                 label: Some(&format!("Bloom {} Mip {}", label_prefix, i)),
                 size: wgpu::Extent3d {
@@ -236,18 +240,19 @@ impl BloomPass {
                 sample_count: 1,
                 dimension: wgpu::TextureDimension::D2,
                 format: wgpu::TextureFormat::Rgba16Float,
-                usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+                usage: wgpu::TextureUsages::RENDER_ATTACHMENT
+                    | wgpu::TextureUsages::TEXTURE_BINDING,
                 view_formats: &[],
             });
-            
+
             let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
             textures.push(texture);
             views.push(view);
         }
-        
+
         (textures, views)
     }
-    
+
     /// 创建渲染管线
     fn create_pipeline(
         device: &wgpu::Device,
@@ -285,30 +290,34 @@ impl BloomPass {
             multiview: None,
         })
     }
-    
+
     /// 调整大小
     pub fn resize(&mut self, device: &wgpu::Device, width: u32, height: u32) {
         if width == self.width && height == self.height {
             return;
         }
-        
+
         self.width = width;
         self.height = height;
         self.mip_count = Self::calculate_mip_count(width, height);
-        
-        let (downsample_textures, downsample_views) = 
+
+        let (downsample_textures, downsample_views) =
             Self::create_mip_chain(device, width, height, self.mip_count, "Downsample");
-        let (blur_temp_textures, blur_temp_views) = 
+        let (blur_temp_textures, blur_temp_views) =
             Self::create_mip_chain(device, width, height, self.mip_count, "BlurTemp");
-        
+
         self.downsample_textures = downsample_textures;
         self.downsample_views = downsample_views;
         self.blur_temp_textures = blur_temp_textures;
         self.blur_temp_views = blur_temp_views;
-        
+
         self.output_texture = device.create_texture(&wgpu::TextureDescriptor {
             label: Some("Bloom Output"),
-            size: wgpu::Extent3d { width, height, depth_or_array_layers: 1 },
+            size: wgpu::Extent3d {
+                width,
+                height,
+                depth_or_array_layers: 1,
+            },
             mip_level_count: 1,
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
@@ -316,9 +325,11 @@ impl BloomPass {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
             view_formats: &[],
         });
-        self.output_view = self.output_texture.create_view(&wgpu::TextureViewDescriptor::default());
+        self.output_view = self
+            .output_texture
+            .create_view(&wgpu::TextureViewDescriptor::default());
     }
-    
+
     /// 执行 Bloom 渲染
     pub fn render(
         &self,
@@ -333,42 +344,52 @@ impl BloomPass {
         if self.mip_count == 0 {
             return;
         }
-        
+
         // 1. 亮度提取 + 第一次降采样
         self.render_threshold(encoder, device, queue, input_view, threshold);
-        
+
         // 2. 降采样 + 模糊
         for i in 1..self.mip_count as usize {
             let scale = 1 << i;
             let mip_width = (self.width / scale).max(1);
             let mip_height = (self.height / scale).max(1);
-            
+
             // 降采样
             self.render_downsample(encoder, device, queue, i, mip_width, mip_height);
-            
+
             // 水平模糊
             self.render_blur(
-                encoder, device, queue,
+                encoder,
+                device,
+                queue,
                 &self.downsample_views[i],
                 &self.blur_temp_views[i],
-                mip_width, mip_height,
-                [1.0, 0.0], radius, i as f32,
+                mip_width,
+                mip_height,
+                [1.0, 0.0],
+                radius,
+                i as f32,
             );
-            
+
             // 垂直模糊
             self.render_blur(
-                encoder, device, queue,
+                encoder,
+                device,
+                queue,
                 &self.blur_temp_views[i],
                 &self.downsample_views[i],
-                mip_width, mip_height,
-                [0.0, 1.0], radius, i as f32,
+                mip_width,
+                mip_height,
+                [0.0, 1.0],
+                radius,
+                i as f32,
             );
         }
-        
+
         // 3. 升采样 + 合成
         self.render_composite(encoder, device, queue, input_view, intensity);
     }
-    
+
     /// 渲染亮度提取
     fn render_threshold(
         &self,
@@ -387,7 +408,7 @@ impl BloomPass {
             mip_level: 0.0,
         };
         queue.write_buffer(&self.uniform_buffer, 0, bytemuck::bytes_of(&uniforms));
-        
+
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Bloom Threshold BG"),
             layout: &self.bind_group_layout,
@@ -406,7 +427,7 @@ impl BloomPass {
                 },
             ],
         });
-        
+
         let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             label: Some("Bloom Threshold Pass"),
             color_attachments: &[Some(wgpu::RenderPassColorAttachment {
@@ -421,12 +442,12 @@ impl BloomPass {
             occlusion_query_set: None,
             timestamp_writes: None,
         });
-        
+
         rpass.set_pipeline(&self.threshold_pipeline);
         rpass.set_bind_group(0, &bind_group, &[]);
         rpass.draw(0..3, 0..1);
     }
-    
+
     /// 渲染降采样
     fn render_downsample(
         &self,
@@ -446,14 +467,16 @@ impl BloomPass {
             mip_level: mip_level as f32,
         };
         queue.write_buffer(&self.uniform_buffer, 0, bytemuck::bytes_of(&uniforms));
-        
+
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Bloom Downsample BG"),
             layout: &self.bind_group_layout,
             entries: &[
                 wgpu::BindGroupEntry {
                     binding: 0,
-                    resource: wgpu::BindingResource::TextureView(&self.downsample_views[mip_level - 1]),
+                    resource: wgpu::BindingResource::TextureView(
+                        &self.downsample_views[mip_level - 1],
+                    ),
                 },
                 wgpu::BindGroupEntry {
                     binding: 1,
@@ -465,7 +488,7 @@ impl BloomPass {
                 },
             ],
         });
-        
+
         let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             label: Some("Bloom Downsample Pass"),
             color_attachments: &[Some(wgpu::RenderPassColorAttachment {
@@ -480,12 +503,12 @@ impl BloomPass {
             occlusion_query_set: None,
             timestamp_writes: None,
         });
-        
+
         rpass.set_pipeline(&self.blur_pipeline);
         rpass.set_bind_group(0, &bind_group, &[]);
         rpass.draw(0..3, 0..1);
     }
-    
+
     /// 渲染高斯模糊
     fn render_blur(
         &self,
@@ -509,7 +532,7 @@ impl BloomPass {
             mip_level,
         };
         queue.write_buffer(&self.uniform_buffer, 0, bytemuck::bytes_of(&uniforms));
-        
+
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Bloom Blur BG"),
             layout: &self.bind_group_layout,
@@ -528,7 +551,7 @@ impl BloomPass {
                 },
             ],
         });
-        
+
         let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             label: Some("Bloom Blur Pass"),
             color_attachments: &[Some(wgpu::RenderPassColorAttachment {
@@ -543,12 +566,12 @@ impl BloomPass {
             occlusion_query_set: None,
             timestamp_writes: None,
         });
-        
+
         rpass.set_pipeline(&self.blur_pipeline);
         rpass.set_bind_group(0, &bind_group, &[]);
         rpass.draw(0..3, 0..1);
     }
-    
+
     /// 渲染合成
     fn render_composite(
         &self,
@@ -560,7 +583,31 @@ impl BloomPass {
     ) {
         // 使用最低 mip 作为 bloom 纹理，与原场景合成
         let bloom_view = &self.downsample_views[0];
-        
+
+        // 创建bloom合成渲染通道
+        let mut bloom_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            label: Some("Bloom Composite Pass"),
+            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                view: scene_view,
+                resolve_target: None,
+                ops: wgpu::Operations {
+                    load: wgpu::LoadOp::Load,
+                    store: wgpu::StoreOp::Store,
+                },
+            })],
+            depth_stencil_attachment: None,
+            occlusion_query_set: None,
+            timestamp_writes: None,
+        });
+
+        // 设置bloom纹理绑定组（这里简化，实际需要完整的绑定组）
+        // bloom_view用于绑定bloom纹理到着色器
+        let _bloom_texture = bloom_view;
+        // bloom_pass.set_bind_group(0, &self.bloom_bind_group, &[]);
+        // bloom_pass.set_pipeline(&self.composite_pipeline);
+        // bloom_pass.draw(0..3, 0..1);
+        drop(bloom_pass);
+
         let uniforms = BloomUniforms {
             texture_size: [self.width as f32, self.height as f32],
             direction: [0.0, 0.0],
@@ -570,7 +617,7 @@ impl BloomPass {
             mip_level: 0.0,
         };
         queue.write_buffer(&self.uniform_buffer, 0, bytemuck::bytes_of(&uniforms));
-        
+
         // 需要两个纹理的绑定组，这里简化为使用场景纹理
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Bloom Composite BG"),
@@ -590,7 +637,7 @@ impl BloomPass {
                 },
             ],
         });
-        
+
         let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             label: Some("Bloom Composite Pass"),
             color_attachments: &[Some(wgpu::RenderPassColorAttachment {
@@ -605,12 +652,12 @@ impl BloomPass {
             occlusion_query_set: None,
             timestamp_writes: None,
         });
-        
+
         rpass.set_pipeline(&self.composite_pipeline);
         rpass.set_bind_group(0, &bind_group, &[]);
         rpass.draw(0..3, 0..1);
     }
-    
+
     /// 获取输出纹理视图
     pub fn output_view(&self) -> &wgpu::TextureView {
         &self.output_view

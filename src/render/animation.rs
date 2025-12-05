@@ -1,5 +1,6 @@
-use bevy_ecs::prelude::*;
 use crate::ecs::{Sprite, Time};
+use crate::impl_default;
+use bevy_ecs::prelude::*;
 
 #[derive(Component, Clone, Debug)]
 pub struct Flipbook {
@@ -11,18 +12,14 @@ pub struct Flipbook {
     pub loop_anim: bool,
 }
 
-impl Default for Flipbook {
-    fn default() -> Self {
-        Self {
-            frames: vec![],
-            speed: 10.0,
-            current_frame: 0,
-            timer: 0.0,
-            playing: true,
-            loop_anim: true,
-        }
-    }
-}
+impl_default!(Flipbook {
+    frames: vec![],
+    speed: 10.0,
+    current_frame: 0,
+    timer: 0.0,
+    playing: true,
+    loop_anim: true,
+});
 
 pub fn animation_system(mut query: Query<(&mut Flipbook, &mut Sprite)>, time: Res<Time>) {
     for (mut anim, mut sprite) in query.iter_mut() {

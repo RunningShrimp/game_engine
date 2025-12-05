@@ -53,6 +53,14 @@ pub struct RenderStats {
     pub batch_saved_draw_calls: u32,
     pub batch_small_draw_calls: u32,
     pub batch_visible_batches: u32,
+    /// 主循环更新总耗时 (毫秒)
+    pub update_time_ms: f32,
+    /// 资源处理耗时 (毫秒)
+    pub asset_processing_time_ms: f32,
+    /// 固定时间步更新耗时 (毫秒)
+    pub fixed_update_time_ms: f32,
+    /// 可变时间步更新耗时 (毫秒)
+    pub variable_update_time_ms: f32,
 }
 
 /// 资源加载指标
@@ -86,7 +94,7 @@ impl LogEvents {
             capacity,
         }
     }
-    
+
     /// 添加日志条目
     pub fn push(&mut self, message: String) {
         if self.entries.len() >= self.capacity {
@@ -94,7 +102,7 @@ impl LogEvents {
         }
         self.entries.push_back(message);
     }
-    
+
     /// 清空日志
     pub fn clear(&mut self) {
         self.entries.clear();
@@ -104,7 +112,7 @@ impl LogEvents {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_log_events_capacity() {
         let mut logs = LogEvents::with_capacity(3);
@@ -112,11 +120,11 @@ mod tests {
         logs.push("msg2".to_string());
         logs.push("msg3".to_string());
         logs.push("msg4".to_string());
-        
+
         assert_eq!(logs.entries.len(), 3);
         assert_eq!(logs.entries[0], "msg2");
     }
-    
+
     #[test]
     fn test_render_stats_default() {
         let stats = RenderStats::default();

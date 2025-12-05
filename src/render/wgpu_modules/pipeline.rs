@@ -2,10 +2,10 @@
 //!
 //! 包含渲染管线的创建和管理。
 
-use super::types::{Vertex, Instance, UiInstance};
+use super::types::{Instance, UiInstance, Vertex};
 
 /// 管线构建器
-/// 
+///
 /// 用于创建各种渲染管线。
 pub struct PipelineBuilder;
 
@@ -22,13 +22,13 @@ impl PipelineBuilder {
             label: Some("Sprite Shader"),
             source: wgpu::ShaderSource::Wgsl(SPRITE_SHADER.into()),
         });
-        
+
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("Sprite Pipeline Layout"),
             bind_group_layouts: &[uniform_bgl, texture_bgl, lights_bgl],
             push_constant_ranges: &[],
         });
-        
+
         device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: Some("Sprite Pipeline"),
             layout: Some(&pipeline_layout),
@@ -57,7 +57,7 @@ impl PipelineBuilder {
             multiview: None,
         })
     }
-    
+
     /// 创建 UI 渲染管线
     pub fn create_ui_pipeline(
         device: &wgpu::Device,
@@ -70,13 +70,13 @@ impl PipelineBuilder {
             label: Some("UI Shader"),
             source: wgpu::ShaderSource::Wgsl(UI_SHADER.into()),
         });
-        
+
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("UI Pipeline Layout"),
             bind_group_layouts: &[uniform_bgl, texture_bgl, lights_bgl],
             push_constant_ranges: &[],
         });
-        
+
         device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: Some("UI Pipeline"),
             layout: Some(&pipeline_layout),
@@ -89,13 +89,41 @@ impl PipelineBuilder {
                         array_stride: std::mem::size_of::<UiInstance>() as u64,
                         step_mode: wgpu::VertexStepMode::Instance,
                         attributes: &[
-                            wgpu::VertexAttribute { offset: 0, shader_location: 1, format: wgpu::VertexFormat::Float32x2 },
-                            wgpu::VertexAttribute { offset: 8, shader_location: 2, format: wgpu::VertexFormat::Float32x2 },
-                            wgpu::VertexAttribute { offset: 16, shader_location: 3, format: wgpu::VertexFormat::Float32 },
-                            wgpu::VertexAttribute { offset: 20, shader_location: 4, format: wgpu::VertexFormat::Float32 },
-                            wgpu::VertexAttribute { offset: 24, shader_location: 5, format: wgpu::VertexFormat::Float32x4 },
-                            wgpu::VertexAttribute { offset: 40, shader_location: 6, format: wgpu::VertexFormat::Float32x4 },
-                            wgpu::VertexAttribute { offset: 56, shader_location: 7, format: wgpu::VertexFormat::Float32 },
+                            wgpu::VertexAttribute {
+                                offset: 0,
+                                shader_location: 1,
+                                format: wgpu::VertexFormat::Float32x2,
+                            },
+                            wgpu::VertexAttribute {
+                                offset: 8,
+                                shader_location: 2,
+                                format: wgpu::VertexFormat::Float32x2,
+                            },
+                            wgpu::VertexAttribute {
+                                offset: 16,
+                                shader_location: 3,
+                                format: wgpu::VertexFormat::Float32,
+                            },
+                            wgpu::VertexAttribute {
+                                offset: 20,
+                                shader_location: 4,
+                                format: wgpu::VertexFormat::Float32,
+                            },
+                            wgpu::VertexAttribute {
+                                offset: 24,
+                                shader_location: 5,
+                                format: wgpu::VertexFormat::Float32x4,
+                            },
+                            wgpu::VertexAttribute {
+                                offset: 40,
+                                shader_location: 6,
+                                format: wgpu::VertexFormat::Float32x4,
+                            },
+                            wgpu::VertexAttribute {
+                                offset: 56,
+                                shader_location: 7,
+                                format: wgpu::VertexFormat::Float32,
+                            },
                         ],
                     },
                 ],
@@ -117,7 +145,7 @@ impl PipelineBuilder {
             multiview: None,
         })
     }
-    
+
     /// 创建 Uniform 绑定组布局
     pub fn create_uniform_bind_group_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
         device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -134,7 +162,7 @@ impl PipelineBuilder {
             }],
         })
     }
-    
+
     /// 创建纹理绑定组布局
     pub fn create_texture_bind_group_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
         device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -159,7 +187,7 @@ impl PipelineBuilder {
             ],
         })
     }
-    
+
     /// 创建光源绑定组布局
     pub fn create_lights_bind_group_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
         device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {

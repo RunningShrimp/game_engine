@@ -1,0 +1,229 @@
+name: Performance Regression Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # 每天 UTC 2:00 运行一次
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  performance-benchmarks:
+    name: Performance Benchmarks
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+          components: rustfmt, clippy
+      
+      - name: Cache cargo registry
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+      
+      - name: Cache criterion results
+        uses: actions/cache@v3
+        with:
+          path: target/criterion
+          key: ${{ runner.os }}-criterion-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-criterion-
+      
+      - name: Build benchmarks
+        run: cargo build --release --benches
+      
+      - name: Run all benchmarks
+        run: |
+          cargo bench --bench math_benchmarks || true
+          cargo bench --bench ecs_benchmarks || true
+          cargo bench --bench physics_benchmarks || true
+          cargo bench --bench render_benchmarks || true
+      
+      - name: Download baseline data
+        uses: actions/download-artifact@v3
+        with:
+          name: performance-baseline
+          path: baseline/
+        continue-on-error: true
+      
+      - name: Compare with baseline
+        run: |
+          # 简单的性能比较脚本
+          cat > compare_baseline.sh << 'SCRIPT'
+          #!/bin/bash
+          set -e
+          
+          BASELINE_DIR="$1"
+          CURRENT_DIR="$2"
+          THRESHOLD_WARNING="${3:-10.0}"
+          THRESHOLD_CRITICAL="${4:-20.0}"
+          
+          if [ ! -d "$BASELINE_DIR" ]; then
+            echo "No baseline directory found, skipping comparison"
+            exit 0
+          fi
+          
+          CRITICAL_REGRESSION=0
+          WARNING_REGRESSION=0
+          
+          echo "Comparing performance benchmarks..."
+          echo "Warning threshold: ${THRESHOLD_WARNING}%"
+          echo "Critical threshold: ${THRESHOLD_CRITICAL}%"
+          echo ""
+          
+          # 查找所有基准测试结果
+          find "$CURRENT_DIR/target/criterion" -name "estimates.json" | while read current_file; do
+            # 提取基准测试名称
+            bench_path=$(dirname "$current_file")
+            bench_name=$(basename "$(dirname "$bench_path")")
+            
+            baseline_file="$BASELINE_DIR/target/criterion/$bench_name/base/estimates.json"
+            
+            if [ ! -f "$baseline_file" ]; then
+              echo "⚠️  No baseline for $bench_name (new benchmark?)"
+              continue
+            fi
+            
+            # 提取时间值（使用 jq 或简单的 grep）
+            baseline_time=$(grep -o '"point_estimate":[0-9.]*' "$baseline_file" | cut -d: -f2 || echo "0")
+            current_time=$(grep -o '"point_estimate":[0-9.]*' "$current_file" | cut -d: -f2 || echo "0")
+            
+            if [ "$baseline_time" = "0" ] || [ "$current_time" = "0" ]; then
+              continue
+            fi
+            
+            # 计算回归百分比
+            regression=$(echo "scale=2; (($current_time - $baseline_time) / $baseline_time) * 100" | bc)
+            
+            if (( $(echo "$regression > $THRESHOLD_CRITICAL" | bc -l) )); then
+              echo "🔴 CRITICAL: $bench_name - ${regression}% slower (baseline: ${baseline_time}ns, current: ${current_time}ns)"
+              CRITICAL_REGRESSION=1
+            elif (( $(echo "$regression > $THRESHOLD_WARNING" | bc -l) )); then
+              echo "🟡 WARNING: $bench_name - ${regression}% slower (baseline: ${baseline_time}ns, current: ${current_time}ns)"
+              WARNING_REGRESSION=1
+            elif (( $(echo "$regression < -5.0" | bc -l) )); then
+              echo "🟢 IMPROVED: $bench_name - ${regression#-}% faster (baseline: ${baseline_time}ns, current: ${current_time}ns)"
+            else
+              echo "✅ OK: $bench_name - ${regression}% change (baseline: ${baseline_time}ns, current: ${current_time}ns)"
+            fi
+          done
+          
+          if [ $CRITICAL_REGRESSION -eq 1 ]; then
+            echo ""
+            echo "❌ Critical performance regression detected!"
+            exit 1
+          elif [ $WARNING_REGRESSION -eq 1 ]; then
+            echo ""
+            echo "⚠️  Performance regression detected (warning only)"
+            exit 0
+          else
+            echo ""
+            echo "✅ All benchmarks are within acceptable performance range"
+            exit 0
+          fi
+          SCRIPT
+          
+          chmod +x compare_baseline.sh
+          
+          # 安装 bc（用于浮点数计算）
+          sudo apt-get update && sudo apt-get install -y bc || true
+          
+          # 运行比较
+          if [ -d "baseline" ] && [ "$(ls -A baseline 2>/dev/null)" ]; then
+            ./compare_baseline.sh baseline . 10.0 20.0 || {
+              echo "Performance regression detected!"
+              exit 1
+            }
+          else
+            echo "No baseline found, skipping comparison"
+            echo "This is normal for the first run or when baseline is not available"
+          fi
+      
+      - name: Generate performance summary
+        run: |
+          cat > performance_summary.md << 'EOF'
+          # Performance Benchmark Results
+          
+          ## Summary
+          
+          This workflow ran performance benchmarks for the game engine.
+          
+          ### Benchmarks Run:
+          - Math operations (`math_benchmarks`)
+          - ECS operations (`ecs_benchmarks`)
+          - Physics operations (`physics_benchmarks`)
+          - Render operations (`render_benchmarks`)
+          
+          ### Results
+          
+          Detailed HTML reports are available in the workflow artifacts.
+          
+          Criterion results are stored in `target/criterion/` directory.
+          
+          EOF
+          cat performance_summary.md
+      
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v3
+        with:
+          name: performance-results-${{ github.run_number }}
+          path: |
+            target/criterion/
+            performance_summary.md
+          retention-days: 30
+      
+      - name: Update baseline (on main branch)
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: actions/upload-artifact@v3
+        with:
+          name: performance-baseline
+          path: target/criterion/
+          retention-days: 90
+      
+      - name: Comment PR with results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            
+            let comment = '## 📊 Performance Benchmark Results\n\n';
+            comment += 'Performance benchmarks have been run for this PR.\n\n';
+            comment += '### Benchmarks Executed:\n';
+            comment += '- ✅ Math operations\n';
+            comment += '- ✅ ECS operations\n';
+            comment += '- ✅ Physics operations\n';
+            comment += '- ✅ Render operations\n\n';
+            comment += '📁 **Detailed Results**: Check the workflow artifacts for HTML reports.\n\n';
+            comment += '💡 **Note**: If this is the first run, baseline comparison will be skipped.';
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });

@@ -19,11 +19,20 @@ wgpu = { version = "0.20.1", features = ["webgpu"] }
 pollster = "0.3"
 futures = "0.3"
 bytemuck = { version = "1", features = ["derive"] }
+bincode = "1.3"
 image = { version = "0.24", default-features = false, features = ["png", "jpeg"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+# Network compression
+flate2 = { version = "1.0", default-features = false, features = ["rust_backend"] }
+# Texture compression (optional - will implement basic BC decoding without external library for now)
+# dxt-compressor = "0.1"  # Commented out - library not available, using basic implementation
 notify = "6"
 thiserror = "1.0"
+sha2 = "0.10"
+hex = "0.4"
+hmac = "0.12"
+tempfile = "3.10"
 
 # Core Architecture
 bevy_ecs = "0.14"
@@ -31,6 +40,15 @@ glam = { version = "0.25", features = ["bytemuck", "serde"] }
 tokio = { version = "1", features = ["full"] }
 crossbeam-channel = "0.5"
 libloading = "0.8"
+
+# SIMD Optimizations (separated crate)
+game_engine_simd = { path = "game_engine_simd", version = "0.1.0" }
+
+# Hardware detection and optimization (separated crate)
+game_engine_hardware = { path = "game_engine_hardware", version = "0.1.0" }
+
+# Performance profiling and benchmarking (separated crate)
+game_engine_profiling = { path = "game_engine_profiling", version = "0.1.0" }
 
 # Physics
 rapier2d = "0.20"
@@ -77,12 +95,11 @@ base64 = "0.22"
 
 [features]
 use_bevy_ecs = []
-async_assets = []
+async_assets = []  # 已弃用：异步资源加载现在是默认行为
 physics_2d = []
 xr = []
 gltf = ["dep:gltf"]
-deprecated-apis = []  # 控制废弃API的可见性，默认隐藏。将在v0.3.0中移除
-default = ["physics_2d", "gltf", "deprecated-apis"]
+default = ["physics_2d", "gltf", "async_assets"]  # 异步资源加载设为默认
 wgpu_perf = []
 
 [dev-dependencies]
@@ -91,9 +108,46 @@ criterion = { version = "0.7.0", features = ["html_reports"] }
 proptest = "1.0.0"
 
 [[bench]]
-name = "simd_bench"
+name = "math_benchmarks"
 harness = false
 
 [[bench]]
-name = "comprehensive_benchmark"
+name = "ecs_benchmarks"
 harness = false
+
+[[bench]]
+name = "physics_benchmarks"
+harness = false
+
+[[bench]]
+name = "render_benchmarks"
+harness = false
+
+[[bench]]
+name = "pathfinding_benchmarks"
+harness = false
+
+[[example]]
+name = "hello_world"
+path = "examples/hello_world.rs"
+
+[[example]]
+name = "rendering"
+path = "examples/rendering.rs"
+
+[[example]]
+name = "physics"
+path = "examples/physics.rs"
+
+[[example]]
+name = "animation"
+path = "examples/animation.rs"
+
+[[example]]
+name = "multiplayer"
+path = "examples/multiplayer.rs"
+
+[[example]]
+name = "game"
+path = "examples/game.rs"
+

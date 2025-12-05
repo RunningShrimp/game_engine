@@ -1,4 +1,4 @@
-use wgpu::{Device, Queue, TextureView, Texture, TextureFormat, TextureUsages};
+use wgpu::{Device, Queue, Texture, TextureFormat, TextureUsages, TextureView};
 
 /// 离屏渲染目标
 pub struct OffscreenTarget {
@@ -31,9 +31,9 @@ impl OffscreenTarget {
             usage: TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING,
             view_formats: &[],
         });
-        
+
         let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
-        
+
         Self {
             texture,
             view,
@@ -42,16 +42,16 @@ impl OffscreenTarget {
             format,
         }
     }
-    
+
     /// 调整大小
     pub fn resize(&mut self, device: &Device, width: u32, height: u32) {
         if self.width == width && self.height == height {
             return;
         }
-        
+
         self.width = width;
         self.height = height;
-        
+
         self.texture = device.create_texture(&wgpu::TextureDescriptor {
             label: Some("Offscreen Render Target"),
             size: wgpu::Extent3d {
@@ -66,8 +66,10 @@ impl OffscreenTarget {
             usage: TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING,
             view_formats: &[],
         });
-        
-        self.view = self.texture.create_view(&wgpu::TextureViewDescriptor::default());
+
+        self.view = self
+            .texture
+            .create_view(&wgpu::TextureViewDescriptor::default());
     }
 }
 
@@ -104,7 +106,7 @@ impl EffectParams {
             custom_params: vec![radius],
         }
     }
-    
+
     /// 创建发光特效
     pub fn bloom(threshold: f32, intensity: f32) -> Self {
         Self {
@@ -113,7 +115,7 @@ impl EffectParams {
             custom_params: vec![threshold],
         }
     }
-    
+
     /// 创建色彩调整特效
     pub fn color_adjust(brightness: f32, contrast: f32, saturation: f32) -> Self {
         Self {
@@ -140,45 +142,42 @@ impl EffectRenderer {
             OffscreenTarget::new(device, width, height, format),
             OffscreenTarget::new(device, width, height, format),
         ];
-        
+
         Self {
             targets,
             current_target: 0,
         }
     }
-    
+
     /// 获取当前渲染目标
     pub fn current_target(&self) -> &OffscreenTarget {
         &self.targets[self.current_target]
     }
-    
+
     /// 获取下一个渲染目标
     pub fn next_target(&self) -> &OffscreenTarget {
         &self.targets[1 - self.current_target]
     }
-    
+
     /// 交换渲染目标
     pub fn swap_targets(&mut self) {
         self.current_target = 1 - self.current_target;
     }
-    
+
     /// 调整大小
     pub fn resize(&mut self, device: &Device, width: u32, height: u32) {
         for target in &mut self.targets {
             target.resize(device, width, height);
         }
     }
-    
+
     /// 应用特效
-    pub fn apply_effect(
-        &mut self,
-        _device: &Device,
-        _queue: &Queue,
-        _effect: &EffectParams,
-    ) {
-        // TODO: 实现特效渲染
-        // 1. 从当前目标读取
+    pub fn apply_effect(&mut self, _device: &Device, _queue: &Queue, _effect: &EffectParams) {
+        // NOTE: 特效渲染逻辑待实现
+        // 计划步骤：
+        // 1. 从当前目标读取纹理
         // 2. 应用特效着色器
+        // 3. 写入输出目标
         // 3. 渲染到下一个目标
         // 4. 交换目标
     }
@@ -187,13 +186,13 @@ impl EffectRenderer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_effect_params() {
         let blur = EffectParams::blur(5.0);
         assert_eq!(blur.effect_type, EffectType::Blur);
         assert_eq!(blur.custom_params[0], 5.0);
-        
+
         let bloom = EffectParams::bloom(0.8, 1.5);
         assert_eq!(bloom.effect_type, EffectType::Bloom);
         assert_eq!(bloom.intensity, 1.5);
