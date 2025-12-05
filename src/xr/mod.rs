@@ -313,7 +313,8 @@ pub mod atw {
 @group(0) @binding(0) var input_texture: texture_2d<f32>;
 @group(0) @binding(1) var output_texture: texture_storage_2d<rgba8unorm, write>;
 @group(0) @binding(2) var depth_texture: texture_2d<f32>;
-@group(0) @binding(3) var<uniform> params: AtwParams;
+@group(0) @binding(3) var tex_sampler: sampler;
+@group(0) @binding(4) var<uniform> params: AtwParams;
 
 struct AtwParams {
     delta_rotation: mat4x4<f32>,

@@ -168,14 +168,22 @@ impl HandJoints {
 
         // 计算关节角度来估算弯曲度
         // 简化实现：基于关节位置计算
+<<<<<<< HEAD
         let mut total_angle = 0.0;
+=======
+        let total_angle = 0.0;
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
         let mut count = 0;
 
         for i in 0..joints.len().saturating_sub(1) {
             if let (Some(joint1), Some(joint2)) =
                 (self.get_joint(joints[i]), self.get_joint(joints[i + 1]))
             {
+<<<<<<< HEAD
                 let dir = (joint2.pose.position - joint1.pose.position).normalize();
+=======
+                let _dir = (joint2.pose.position - joint1.pose.position).normalize();
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
                 // 简化：假设手指应该沿着某个方向延伸
                 // 实际应该计算相对于手掌的角度
                 count += 1;
@@ -233,6 +241,7 @@ impl HandTracker {
 
     /// 初始化手部追踪（需要OpenXR会话）
     pub fn initialize(&mut self) -> Result<(), XrError> {
+<<<<<<< HEAD
         // NOTE: 实际实现中需要：
         // 1. 检查OpenXR扩展是否支持手部追踪 (XR_EXT_hand_tracking)
         // 2. 创建手部追踪空间
@@ -248,6 +257,26 @@ impl HandTracker {
         if self.supported {
             self.tracking_state = HandTrackingState::Ready;
             self.initialized = true;
+=======
+        self.tracking_state = HandTrackingState::Initializing;
+
+        // 检查手部追踪扩展支持
+        // 注意：实际实现中需要从OpenXR实例检查扩展支持
+        // 这里假设支持手部追踪扩展
+        self.supported = true;
+
+        if self.supported {
+            // 创建手部追踪器（占位实现）
+            // 实际实现中需要：
+            // 1. 获取OpenXR实例和会话
+            // 2. 创建手部追踪器: xr::HandTrackerEXT::create(...)
+            // 3. 设置追踪参数
+
+            self.tracking_state = HandTrackingState::Ready;
+            self.initialized = true;
+            
+            tracing::info!("Hand tracking initialized successfully");
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
             Ok(())
         } else {
             self.tracking_state =
@@ -271,14 +300,28 @@ impl HandTracker {
             }
         }
 
+<<<<<<< HEAD
         // NOTE: 实际实现中需要：
         // 1. 调用 xr::HandTrackerEXT::locate_hand_joints()
         // 2. 获取左右手关节数据
         // 3. 更新 HandJoints
+=======
+        // 实际实现中需要：
+        // 1. 获取当前时间
+        // 2. 调用 xr::HandTrackerEXT::locate_hand_joints()
+        // 3. 获取左右手关节数据
+        // 4. 更新 HandJoints
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
 
         // 占位实现：模拟更新
         self.last_update_time = current_timestamp_ms();
 
+<<<<<<< HEAD
+=======
+        // 模拟手部关节数据更新
+        self.update_mock_hand_data();
+
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
         // 检查是否有有效的手部数据
         let left_valid = self.left_hand_joints.is_valid();
         let right_valid = self.right_hand_joints.is_valid();
@@ -292,6 +335,98 @@ impl HandTracker {
         Ok(())
     }
 
+<<<<<<< HEAD
+=======
+    /// 更新模拟手部数据（用于测试和演示）
+    fn update_mock_hand_data(&mut self) {
+        use crate::xr::{Vec3, Quat, Pose};
+        
+        // 模拟左手关节
+        let mut left_joints = std::collections::HashMap::new();
+        
+        // 手掌
+        left_joints.insert(HandJointType::Palm, HandJoint {
+            joint_type: HandJointType::Palm,
+            pose: Pose {
+                position: Vec3::new(-0.15, 0.0, -0.3),
+                orientation: Quat::from_xyzw(0.0, 0.0, 0.0, 1.0),
+            },
+            radius: 0.05,
+            is_valid: true,
+        });
+
+        // 手指尖端
+        left_joints.insert(HandJointType::ThumbTip, HandJoint {
+            joint_type: HandJointType::ThumbTip,
+            pose: Pose {
+                position: Vec3::new(-0.12, 0.05, -0.25),
+                orientation: Quat::from_xyzw(0.0, 0.0, 0.0, 1.0),
+            },
+            radius: 0.01,
+            is_valid: true,
+        });
+
+        left_joints.insert(HandJointType::IndexTip, HandJoint {
+            joint_type: HandJointType::IndexTip,
+            pose: Pose {
+                position: Vec3::new(-0.18, 0.08, -0.28),
+                orientation: Quat::from_xyzw(0.0, 0.0, 0.0, 1.0),
+            },
+            radius: 0.01,
+            is_valid: true,
+        });
+
+        // 更新左手关节数据
+        for (joint_type, joint) in left_joints {
+            self.left_hand_joints.update_joint(joint_type, joint);
+        }
+        self.left_hand_joints.set_valid(true);
+        self.left_hand_joints.set_confidence(0.9);
+
+        // 模拟右手关节
+        let mut right_joints = std::collections::HashMap::new();
+        
+        // 手掌
+        right_joints.insert(HandJointType::Palm, HandJoint {
+            joint_type: HandJointType::Palm,
+            pose: Pose {
+                position: Vec3::new(0.15, 0.0, -0.3),
+                orientation: Quat::from_xyzw(0.0, 0.0, 0.0, 1.0),
+            },
+            radius: 0.05,
+            is_valid: true,
+        });
+
+        // 手指尖端
+        right_joints.insert(HandJointType::ThumbTip, HandJoint {
+            joint_type: HandJointType::ThumbTip,
+            pose: Pose {
+                position: Vec3::new(0.12, 0.05, -0.25),
+                orientation: Quat::from_xyzw(0.0, 0.0, 0.0, 1.0),
+            },
+            radius: 0.01,
+            is_valid: true,
+        });
+
+        right_joints.insert(HandJointType::IndexTip, HandJoint {
+            joint_type: HandJointType::IndexTip,
+            pose: Pose {
+                position: Vec3::new(0.18, 0.08, -0.28),
+                orientation: Quat::from_xyzw(0.0, 0.0, 0.0, 1.0),
+            },
+            radius: 0.01,
+            is_valid: true,
+        });
+
+        // 更新右手关节数据
+        for (joint_type, joint) in right_joints {
+            self.right_hand_joints.update_joint(joint_type, joint);
+        }
+        self.right_hand_joints.set_valid(true);
+        self.right_hand_joints.set_confidence(0.9);
+    }
+
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
     /// 获取手部关节数据
     pub fn get_hand_joints(&self, hand: Hand) -> Option<&HandJoints> {
         match hand {
@@ -351,6 +486,7 @@ impl HandTracker {
     #[allow(dead_code)]
     fn update_from_openxr(
         &mut self,
+<<<<<<< HEAD
         hand: Hand,
         openxr_joints: &[openxr::HandJointEXT],
     ) -> Result<(), XrError> {
@@ -370,6 +506,22 @@ impl HandTracker {
 
         Ok(())
     }
+=======
+        _hand: Hand,
+        _openxr_joints: &[openxr::HandJointEXT],
+    ) -> Result<(), XrError> {
+        // 占位实现：实际需要根据OpenXR API实现
+        // 这里暂时不进行任何操作
+        Ok(())
+    }
+
+    /// 映射OpenXR关节类型到内部关节类型（占位实现）
+    #[allow(dead_code)]
+    fn map_openxr_joint_type(&self, _openxr_type: openxr::HandJointEXT) -> Result<HandJointType, XrError> {
+        // 占位实现：返回第一个关节类型
+        Ok(HandJointType::Palm)
+    }
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
 }
 
 impl Default for HandTracker {

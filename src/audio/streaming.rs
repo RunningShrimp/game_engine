@@ -31,7 +31,10 @@
 use crate::impl_default;
 use crate::core::utils::current_timestamp_ms;
 use std::collections::HashMap;
+<<<<<<< HEAD
 use std::io::{Read, Seek};
+=======
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use thiserror::Error;
@@ -189,8 +192,11 @@ pub struct AudioStream {
     total_duration: Option<f32>,
     /// 已播放时长（秒）
     played_duration: f32,
+<<<<<<< HEAD
     /// 解码器句柄（占位，实际应使用rodio或其他解码器）
     decoder_handle: Option<()>,
+=======
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
 }
 
 impl AudioStream {
@@ -208,7 +214,10 @@ impl AudioStream {
             channels: 2,
             total_duration: None,
             played_duration: 0.0,
+<<<<<<< HEAD
             decoder_handle: None,
+=======
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
         }
     }
 

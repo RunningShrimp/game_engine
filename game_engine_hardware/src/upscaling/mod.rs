@@ -33,6 +33,7 @@ pub struct UpscalingManager {
     available_techs: Vec<UpscalingTech>,
     active_tech: UpscalingTech,
     quality_mode: UpscalingQuality,
+    #[allow(dead_code)]
     gpu_info: GpuInfo,
 }
 

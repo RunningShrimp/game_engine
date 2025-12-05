@@ -2,7 +2,11 @@
 //!
 //! 实现基于层次Z缓冲（Hi-Z）的GPU端遮挡剔除，提供高性能的遮挡检测。
 
+<<<<<<< HEAD
 use glam::{Vec3, Mat4};
+=======
+use glam::Vec3;
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
 use wgpu;
 use wgpu::util::DeviceExt;
 use thiserror::Error;
@@ -840,7 +844,11 @@ impl HierarchicalZCulling {
     pub fn read_async_query_result(
         &mut self,
         device: &wgpu::Device,
+<<<<<<< HEAD
         queue: &wgpu::Queue,
+=======
+        _queue: &wgpu::Queue,
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
     ) -> Option<Result<Vec<bool>, OcclusionError>> {
         if !self.async_query_pending {
             return None;
@@ -917,7 +925,11 @@ impl Drop for HierarchicalZCulling {
 /// - 减少内存带宽使用，预期性能提升20-30%
 const HI_Z_BUILD_SHADER: &str = r#"
 @group(0) @binding(0) var input_depth: texture_2d<f32>;
+<<<<<<< HEAD
 @group(0) @binding(1) var output_hi_z: texture_storage_2d<f32, write>;
+=======
+@group(0) @binding(1) var output_hi_z: texture_storage_2d<r32float, write>;
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
 
 // Workgroup共享内存（用于缓存深度值）
 // 16x16 workgroup = 256个线程，需要256个元素的数组
@@ -1063,6 +1075,7 @@ fn query_hi_z(screen_aabb: vec4<f32>, depth_min: f32) -> bool {
     var mip_level = uniforms.mip_levels - 1u;
     
     // 计算当前mip级别的分辨率
+<<<<<<< HEAD
     var mip_width = uniforms.screen_size.x / (1u << mip_level);
     var mip_height = uniforms.screen_size.y / (1u << mip_level);
     
@@ -1071,6 +1084,16 @@ fn query_hi_z(screen_aabb: vec4<f32>, depth_min: f32) -> bool {
     var pixel_max_x = u32(min(mip_width - 1.0, ceil(aabb_max.x / (1u << mip_level))));
     var pixel_min_y = u32(max(0.0, floor(aabb_min.y / (1u << mip_level))));
     var pixel_max_y = u32(min(mip_height - 1.0, ceil(aabb_max.y / (1u << mip_level))));
+=======
+    var mip_width = uniforms.screen_size.x / f32(1u << mip_level);
+    var mip_height = uniforms.screen_size.y / f32(1u << mip_level);
+    
+    // 计算AABB在当前mip级别覆盖的像素范围
+    var pixel_min_x = u32(max(0.0, floor(aabb_min.x / f32(1u << mip_level))));
+    var pixel_max_x = u32(min(mip_width - 1.0, ceil(aabb_max.x / f32(1u << mip_level))));
+    var pixel_min_y = u32(max(0.0, floor(aabb_min.y / f32(1u << mip_level))));
+    var pixel_max_y = u32(min(mip_height - 1.0, ceil(aabb_max.y / f32(1u << mip_level))));
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
     
     // 优化：如果覆盖区域很小，直接采样
     let pixel_count = (pixel_max_x - pixel_min_x + 1u) * (pixel_max_y - pixel_min_y + 1u);
@@ -1098,10 +1121,18 @@ fn query_hi_z(screen_aabb: vec4<f32>, depth_min: f32) -> bool {
         );
         
         var max_depth = 0.0;
+<<<<<<< HEAD
         for (var i = 0u; i < 4u; i++) {
             let depth = textureLoad(hi_z_texture, vec2<i32>(i32(corners[i].x), i32(corners[i].y)), i32(mip_level)).r;
             max_depth = max(max_depth, depth);
         }
+=======
+        let depth0 = textureLoad(hi_z_texture, vec2<i32>(i32(corners[0].x), i32(corners[0].y)), i32(mip_level)).r;
+        let depth1 = textureLoad(hi_z_texture, vec2<i32>(i32(corners[1].x), i32(corners[1].y)), i32(mip_level)).r;
+        let depth2 = textureLoad(hi_z_texture, vec2<i32>(i32(corners[2].x), i32(corners[2].y)), i32(mip_level)).r;
+        let depth3 = textureLoad(hi_z_texture, vec2<i32>(i32(corners[3].x), i32(corners[3].y)), i32(mip_level)).r;
+        max_depth = max(max(depth0, depth1), max(depth2, depth3));
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
         
         // 如果AABB的最小深度值大于Hi-Z中的最大深度值，则对象被遮挡
         if (depth_min > max_depth + 0.001) {
@@ -1176,7 +1207,11 @@ fn query_occlusion(
     let visible = query_hi_z(screen_aabb, depth_min);
     
     // 写入查询结果
+<<<<<<< HEAD
     query.visible = if (visible) { 1u } else { 0u };
+=======
+    query.visible = select(0u, 1u, visible);
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
     queries[idx] = query;
 }
 "#;

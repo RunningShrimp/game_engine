@@ -8,10 +8,10 @@
 
 use crate::core::error::RenderError;
 use crate::impl_default;
-use glam::{Mat4, Vec3, Vec4};
+use glam::{Mat4, Vec3};
 use wgpu::util::DeviceExt;
 use wgpu::{
-    BindGroup, BindGroupLayout, Buffer, CommandEncoder, Device, Queue, RenderPass, RenderPipeline,
+    BindGroup, BindGroupLayout, Buffer, Device, Queue, RenderPass, RenderPipeline,
     Sampler, Texture, TextureView,
 };
 

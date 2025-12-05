@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 //! 网络同步算法模块
 //!
 //! 实现状态同步和事件同步，包括冲突解决机制。
@@ -523,6 +524,386 @@ impl EventSyncManager {
                 .iter()
                 .any(|e| e.event_id == id && now - e.timestamp < self.confirmation_timeout_ms)
         });
+=======
+//! 网络同步模块
+//!
+//! 实现高并发游戏环境下的网络同步机制，包括：
+//! - 状态同步
+//! - 增量同步
+//! - 兴趣管理
+//! - 权威状态验证
+//!
+//! 基于客户端预测和服务器补偿的同步模型。
+
+use crate::core::utils::current_timestamp_ms;
+use crate::impl_default;
+use crate::network::{NetworkError, NetworkMessage};
+use glam::{ Vec3, Vec3A };
+use serde::{Deserialize, Serialize};
+use std::collections::{HashMap, HashSet};
+use std::sync::{Arc, RwLock, Mutex};
+
+/// 兴趣区域类型
+#[derive(Debug, Clone, Copy)]
+pub enum InterestArea {
+    /// 球形兴趣区域
+    Sphere { center: Vec3, radius: f32 },
+    /// 立方体兴趣区域
+    Cube { center: Vec3, half_extent: Vec3 },
+}
+
+/// 客户端兴趣
+#[derive(Debug, Clone)]
+pub struct ClientInterest {
+    /// 客户端ID
+    pub client_id: u64,
+    /// 兴趣区域
+    pub area: InterestArea,
+    /// 兴趣对象类型
+    pub object_types: HashSet<String>,
+    /// 更新时间
+    pub last_updated: u64,
+}
+
+/// 兴趣管理器
+pub struct InterestManager {
+    /// 客户端兴趣映射
+    interests: RwLock<HashMap<u64, ClientInterest>>,
+}
+
+impl InterestManager {
+    pub fn new() -> Self {
+        Self {
+            interests: RwLock::new(HashMap::new()),
+        }
+    }
+
+    /// 更新客户端兴趣
+    pub fn update_client_interest(&self, client_id: u64, interest: ClientInterest) {
+        let mut interests = self.interests.write().unwrap();
+        interests.insert(client_id, interest);
+    }
+
+    /// 获取客户端兴趣
+    pub fn get_client_interest(&self, client_id: u64) -> Option<ClientInterest> {
+        self.interests.read().unwrap().get(&client_id).cloned()
+    }
+
+    /// 删除客户端兴趣
+    pub fn remove_client_interest(&self, client_id: u64) {
+        let mut interests = self.interests.write().unwrap();
+        interests.remove(&client_id);
+    }
+
+    /// 检查对象是否在客户端兴趣范围内
+    pub fn is_object_in_interest(
+        &self,
+        client_id: u64,
+        object_pos: Vec3,
+        object_type: &str,
+    ) -> bool {
+        if let Some(interest) = self.interests.read().unwrap().get(&client_id) {
+            // 检查对象类型是否在兴趣列表中
+            if !interest.object_types.contains(object_type) {
+                return false;
+            }
+
+            // 检查位置是否在兴趣区域内
+            match interest.area {
+                InterestArea::Sphere { center, radius } => {
+                    let distance = (object_pos - center).length();
+                    distance <= radius
+                }
+                InterestArea::Cube { center, half_extent } => {
+                    let delta = object_pos - center;
+                    delta.x.abs() <= half_extent.x
+                        && delta.y.abs() <= half_extent.y
+                        && delta.z.abs() <= half_extent.z
+                }
+            }
+        } else {
+            false
+        }
+    }
+
+    /// 获取对对象感兴趣的客户端列表
+    pub fn get_interested_clients(
+        &self,
+        object_pos: Vec3,
+        object_type: &str,
+    ) -> Vec<u64> {
+        self.interests
+            .read()
+            .unwrap()
+            .iter()
+            .filter(|(_, interest)| {
+                // 检查对象类型是否在兴趣列表中
+                if !interest.object_types.contains(object_type) {
+                    return false;
+                }
+
+                // 检查位置是否在兴趣区域内
+                match interest.area {
+                    InterestArea::Sphere { center, radius } => {
+                        (object_pos - center).length() <= radius
+                    }
+                    InterestArea::Cube { center, half_extent } => {
+                        let delta = object_pos - center;
+                        delta.x.abs() <= half_extent.x
+                            && delta.y.abs() <= half_extent.y
+                            && delta.z.abs() <= half_extent.z
+                    }
+                }
+            })
+            .map(|(client_id, _)| *client_id)
+            .collect()
+    }
+}
+
+/// 同步对象类型
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum SyncObjectType {
+    Player,
+    NPC,
+    Item,
+    World,
+}
+
+/// 同步对象状态
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SyncObjectState {
+    /// 对象ID
+    pub object_id: u64,
+    /// 对象类型
+    pub object_type: SyncObjectType,
+    /// 位置
+    pub position: Vec3,
+    /// 旋转
+    pub rotation: Vec3,
+    /// 速度
+    pub velocity: Vec3,
+    /// 加速度
+    pub acceleration: Vec3,
+    /// 缩放
+    pub scale: Vec3,
+    /// 状态数据
+    pub state_data: HashMap<String, serde_json::Value>,
+    /// 更新时间戳
+    pub timestamp: u64,
+    /// 服务器tick
+    pub tick: u64,
+}
+
+impl_default!(SyncObjectState {
+    object_id: 0,
+    object_type: SyncObjectType::World,
+    position: Vec3::ZERO,
+    rotation: Vec3::ZERO,
+    velocity: Vec3::ZERO,
+    acceleration: Vec3::ZERO,
+    scale: Vec3::ONE,
+    state_data: HashMap::new(),
+    timestamp: 0,
+    tick: 0,
+});
+
+/// 同步配置
+#[derive(Debug, Clone)]
+pub struct SyncConfig {
+    /// 同步帧率
+    pub sync_fps: u32,
+    /// 增量同步阈值
+    pub delta_sync_threshold: f32,
+    /// 兴趣管理更新间隔
+    pub interest_update_interval_ms: u64,
+    /// 最大同步延迟（毫秒）
+    pub max_sync_delay_ms: u64,
+    /// 是否启用兴趣管理
+    pub enable_interest_management: bool,
+}
+
+impl_default!(SyncConfig {
+    sync_fps: 30,
+    delta_sync_threshold: 0.1,
+    interest_update_interval_ms: 1000,
+    max_sync_delay_ms: 200,
+    enable_interest_management: true,
+});
+
+/// 网络同步管理器
+pub struct NetworkSynchronizationManager {
+    /// 配置
+    config: SyncConfig,
+    /// 当前服务器tick
+    current_tick: Arc<Mutex<u64>>,
+    /// 兴趣管理器
+    interest_manager: Arc<InterestManager>,
+    /// 对象状态历史
+    object_state_history: Arc<Mutex<HashMap<u64, Vec<SyncObjectState>>>>,
+    /// 同步数据缓冲区
+    sync_buffer: Arc<Mutex<HashMap<u64, Vec<SyncObjectState>>>>,
+    /// 客户端状态映射
+    client_states: Arc<Mutex<HashMap<u64, Vec<SyncObjectState>>>>,
+}
+
+impl NetworkSynchronizationManager {
+    pub fn new(config: SyncConfig) -> Self {
+        Self {
+            config,
+            current_tick: Arc::new(Mutex::new(0)),
+            interest_manager: Arc::new(InterestManager::new()),
+            object_state_history: Arc::new(Mutex::new(HashMap::new())),
+            sync_buffer: Arc::new(Mutex::new(HashMap::new())),
+            client_states: Arc::new(Mutex::new(HashMap::new())),
+        }
+    }
+
+    /// 更新服务器tick
+    pub fn update_tick(&self) {
+        let mut current_tick = self.current_tick.lock().unwrap();
+        *current_tick += 1;
+    }
+
+    /// 获取当前tick
+    pub fn current_tick(&self) -> u64 {
+        *self.current_tick.lock().unwrap()
+    }
+
+    /// 更新对象状态并准备同步
+    pub fn update_object_state(&self, state: SyncObjectState) {
+        let tick = self.current_tick();
+        let mut state = state;
+        state.tick = tick;
+
+        // 更新对象状态历史
+        let mut object_history = self.object_state_history.lock().unwrap();
+        let history = object_history.entry(state.object_id).or_insert(Vec::new());
+        history.push(state.clone());
+        // 只保留最近的100个状态
+        if history.len() > 100 {
+            history.drain(0..history.len() - 100);
+        }
+        drop(object_history);
+
+        // 准备同步数据
+        if self.config.enable_interest_management {
+            // 获取感兴趣的客户端
+            let interested_clients = self.interest_manager.get_interested_clients(
+                state.position,
+                match state.object_type {
+                    SyncObjectType::Player => "player",
+                    SyncObjectType::NPC => "npc",
+                    SyncObjectType::Item => "item",
+                    SyncObjectType::World => "world",
+                },
+            );
+
+            // 将数据添加到对应客户端的同步缓冲区
+            let mut sync_buffer = self.sync_buffer.lock().unwrap();
+            for client_id in interested_clients {
+                let buffer = sync_buffer.entry(client_id).or_insert(Vec::new());
+                buffer.push(state.clone());
+            }
+        } else {
+            // 广播给所有客户端
+            let mut sync_buffer = self.sync_buffer.lock().unwrap();
+            let all_clients_buffer = sync_buffer.entry(0).or_insert(Vec::new());
+            all_clients_buffer.push(state);
+        }
+    }
+
+    /// 获取要同步给客户端的数据
+    pub fn get_sync_data(&self, client_id: u64) -> Vec<SyncObjectState> {
+        let mut sync_buffer = self.sync_buffer.lock().unwrap();
+        if let Some(buffer) = sync_buffer.remove(&client_id) {
+            buffer
+        } else if let Some(buffer) = sync_buffer.remove(&0) {
+            // 广播数据
+            buffer
+        } else {
+            Vec::new()
+        }
+    }
+
+    /// 更新客户端兴趣
+    pub fn update_client_interest(&self, client_id: u64, interest: ClientInterest) {
+        self.interest_manager.update_client_interest(client_id, interest);
+    }
+
+    /// 获取兴趣管理器
+    pub fn interest_manager(&self) -> Arc<InterestManager> {
+        Arc::clone(&self.interest_manager)
+    }
+
+    /// 获取对象状态历史
+    pub fn get_object_state_history(&self, object_id: u64) -> Vec<SyncObjectState> {
+        let object_history = self.object_state_history.lock().unwrap();
+        if let Some(history) = object_history.get(&object_id) {
+            history.clone()
+        } else {
+            Vec::new()
+        }
+    }
+
+    /// 清除旧的状态历史
+    pub fn clean_state_history(&self) {
+        let mut object_history = self.object_state_history.lock().unwrap();
+        for (_, history) in object_history.iter_mut() {
+            // 只保留最近1秒的数据（假设帧率为100Hz）
+            let one_second_ago = current_timestamp_ms() - 1000;
+            history.retain(|state| state.timestamp >= one_second_ago);
+        }
+    }
+
+    /// 预测对象的未来状态
+    pub fn predict_future_state(
+        &self,
+        object_id: u64,
+        future_tick: u64,
+    ) -> Option<SyncObjectState> {
+        let object_history = self.object_state_history.lock().unwrap();
+        if let Some(history) = object_history.get(&object_id) {
+            // 检查是否有足够的数据
+            if history.len() < 2 {
+                return None;
+            }
+
+            // 使用最新的两个状态来预测未来状态
+            let latest = history.last()?;
+            let previous = history.get(history.len() - 2)?;
+
+            // 计算时间差（以tick为单位）
+            let time_delta = latest.tick - previous.tick;
+            if time_delta == 0 {
+                return None;
+            }
+
+            // 计算状态变化率
+            let pos_delta = (latest.position - previous.position) / time_delta as f32;
+            let rot_delta = (latest.rotation - previous.rotation) / time_delta as f32;
+            let vel_delta = (latest.velocity - previous.velocity) / time_delta as f32;
+            let acc_delta = (latest.acceleration - previous.acceleration) / time_delta as f32;
+
+            // 计算到未来tick的时间差
+            let future_delta = future_tick - latest.tick;
+
+            // 预测未来状态
+            Some(SyncObjectState {
+                object_id: latest.object_id,
+                object_type: latest.object_type,
+                position: latest.position + pos_delta * future_delta as f32,
+                rotation: latest.rotation + rot_delta * future_delta as f32,
+                velocity: latest.velocity + vel_delta * future_delta as f32,
+                acceleration: latest.acceleration + acc_delta * future_delta as f32,
+                scale: latest.scale,
+                state_data: latest.state_data.clone(),
+                timestamp: latest.timestamp + future_delta * (1000 / self.config.sync_fps as u64),
+                tick: future_tick,
+            })
+        } else {
+            None
+        }
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
     }
 }
 
@@ -531,6 +912,7 @@ mod tests {
     use super::*;
 
     #[test]
+<<<<<<< HEAD
     fn test_state_sync_manager() {
         let mut manager = StateSyncManager::new(10, 0.1);
 
@@ -597,5 +979,70 @@ mod tests {
 
         manager.confirm_event(1);
         assert_eq!(manager.get_unconfirmed_events().len(), 0);
+=======
+    fn test_sync_config() {
+        let config = SyncConfig::default();
+        assert_eq!(config.sync_fps, 30);
+        assert!(config.enable_interest_management);
+    }
+
+    #[test]
+    fn test_sync_object_state() {
+        let state = SyncObjectState::default();
+        assert_eq!(state.position, Vec3::ZERO);
+        assert_eq!(state.scale, Vec3::ONE);
+    }
+
+    #[test]
+    fn test_interest_manager() {
+        let interest_manager = InterestManager::new();
+        let client_id = 1;
+        let interest = ClientInterest {
+            client_id,
+            area: InterestArea::Sphere { center: Vec3::ZERO, radius: 100.0 },
+            object_types: vec!["player".to_string(), "item".to_string()].into_iter().collect(),
+            last_updated: current_timestamp_ms(),
+        };
+        interest_manager.update_client_interest(client_id, interest);
+        
+        // 检查玩家位置在范围内
+        assert!(interest_manager.is_object_in_interest(1, Vec3::ZERO, "player"));
+        
+        // 检查NPC位置不在范围内（NPC不在兴趣类型中）
+        assert!(!interest_manager.is_object_in_interest(1, Vec3::ZERO, "npc"));
+        
+        // 检查位置超出范围
+        assert!(!interest_manager.is_object_in_interest(1, Vec3::new(200.0, 0.0, 0.0), "player"));
+    }
+
+    #[test]
+    fn test_network_synchronization_manager() {
+        let config = SyncConfig::default();
+        let sync_manager = NetworkSynchronizationManager::new(config);
+        
+        // 更新对象状态
+        let state = SyncObjectState {
+            object_id: 1,
+            object_type: SyncObjectType::Player,
+            position: Vec3::ZERO,
+            rotation: Vec3::ZERO,
+            velocity: Vec3::ZERO,
+            acceleration: Vec3::ZERO,
+            scale: Vec3::ONE,
+            state_data: HashMap::new(),
+            timestamp: current_timestamp_ms(),
+            tick: 0,
+        };
+        sync_manager.update_object_state(state.clone());
+        
+        // 检查对象状态历史
+        let history = sync_manager.get_object_state_history(1);
+        assert_eq!(history.len(), 1);
+        
+        // 测试预测功能
+        sync_manager.update_tick();
+        let future_state = sync_manager.predict_future_state(1, 1);
+        assert!(future_state.is_some());
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
     }
 }

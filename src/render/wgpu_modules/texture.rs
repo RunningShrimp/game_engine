@@ -4,7 +4,7 @@
 //! 支持压缩纹理格式（ASTC、BC等）的加载和解码。
 
 use crate::render::texture_compression::{
-    CompressedTextureFormat, CompressedTextureInfo, TextureFormatDetector,
+    CompressedTextureFormat, TextureFormatDetector,
 };
 
 /// 纹理管理器

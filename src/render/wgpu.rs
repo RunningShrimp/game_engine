@@ -1373,7 +1373,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         
         // 初始化遮挡剔除（如果启用）
         if let Some(ref mut gpu_driven) = gpu_driven_renderer {
-            if let Err(e) = gpu_driven.initialize_occlusion_culling(&device) {
+            if let Err(e) = gpu_driven.initialize_occlusion_culling(&device, config.width, config.height) {
                 tracing::warn!(target: "render", "Failed to initialize occlusion culling: {}", e);
                 // 如果初始化失败，禁用遮挡剔除
                 gpu_driven_renderer = None;
@@ -3263,6 +3263,7 @@ fn compute_scissor(
     Some([x, y, w, h])
 }
 
+#[allow(dead_code)]
 fn inst_tex_index(inst: &Instance) -> usize {
     inst.tex_index as usize
 }

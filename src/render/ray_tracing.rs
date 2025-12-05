@@ -10,7 +10,11 @@
 
 use crate::core::error::RenderError;
 use crate::impl_default;
+<<<<<<< HEAD
 use glam::{Mat4, Vec3, Vec4};
+=======
+use glam::{Mat4, Vec3};
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
 use wgpu::util::DeviceExt;
 use wgpu::{
     BindGroup, BindGroupLayout, Buffer, CommandEncoder, ComputePipeline, Device, Queue, Texture,
@@ -277,7 +281,11 @@ impl RayTracingRenderer {
     pub fn update_scene(
         &mut self,
         device: &Device,
+<<<<<<< HEAD
         queue: &Queue,
+=======
+        _queue: &Queue,
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
         scene: &RayTracingScene,
     ) -> Result<(), RenderError> {
         if !self.config.enabled {
@@ -405,7 +413,11 @@ impl RayTracingRenderer {
             ));
         };
 
+<<<<<<< HEAD
         let Some(config_buffer) = &self.config_buffer else {
+=======
+        let Some(_config_buffer) = &self.config_buffer else {
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
             return Err(RenderError::InvalidState(
                 "Config buffer not initialized".into(),
             ));

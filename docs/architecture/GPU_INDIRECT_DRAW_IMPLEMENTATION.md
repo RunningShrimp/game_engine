@@ -359,3 +359,7 @@ command_generator.generate_commands(
 该实现为大规模场景渲染提供了显著的性能提升，预计可以减少50-70%的CPU-GPU数据传输，减少30-40%的CPU开销，提升20-30%的渲染性能。
 
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)

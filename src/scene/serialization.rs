@@ -488,6 +488,7 @@ impl SerializedScene {
                             radius,
                         } => {
                             entity_mut.insert(PointLight3D {
+                                position: Vec3::ZERO,
                                 color: *color,
                                 intensity: *intensity,
                                 radius: *radius,

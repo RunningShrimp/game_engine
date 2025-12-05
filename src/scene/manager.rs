@@ -4,7 +4,6 @@
 
 use bevy_ecs::prelude::*;
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
 
 /// 场景ID
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -53,6 +52,7 @@ pub struct SceneManager {
 
 #[derive(Debug)]
 struct SceneTransitionState {
+    #[allow(dead_code)]
     from_scene: Option<SceneId>,
     to_scene: SceneId,
     transition: SceneTransition,
@@ -220,7 +220,7 @@ pub fn scene_update_system(mut scene_manager: ResMut<SceneManager>, time: Res<cr
 }
 
 /// 场景加载系统
-pub fn scene_load_system(scene_manager: Res<SceneManager>, mut commands: Commands) {
+pub fn scene_load_system(scene_manager: Res<SceneManager>, _commands: Commands) {
     // 加载当前场景的实体
     if let Some(current_scene) = scene_manager.current_scene() {
         // 这里可以实现场景实体的实际加载逻辑
@@ -229,7 +229,7 @@ pub fn scene_load_system(scene_manager: Res<SceneManager>, mut commands: Command
 }
 
 /// 场景清理系统
-pub fn scene_cleanup_system(scene_manager: Res<SceneManager>, mut commands: Commands) {
+pub fn scene_cleanup_system(_scene_manager: Res<SceneManager>, _commands: Commands) {
     // 清理前一个场景的实体
     // 实际实现需要跟踪哪些实体属于哪个场景
 }

@@ -283,11 +283,19 @@ impl AudioSpatialOps {
     ) -> Vec<(f32, f32)> {
         let mut hrtf_pairs = Vec::with_capacity(elevations.len());
         
+<<<<<<< HEAD
         for (&elev, &azim) in elevations.iter().zip(azimuths.iter()) {
             // 简化的 HRTF: 根据方向应用 ITD (Interaural Time Difference) 和 ILD (Interaural Level Difference)
             
             // 计算左右声道的 ITD 延迟
             let itd = (azim.sin() * 0.0003) as f32; // 最大 0.3ms
+=======
+        for (&_elev, &azim) in elevations.iter().zip(azimuths.iter()) {
+            // 简化的 HRTF: 根据方向应用 ITD (Interaural Time Difference) 和 ILD (Interaural Level Difference)
+            
+            // 计算左右声道的 ITD 延迟
+            let itd = azim.sin() * 0.0003; // 最大 0.3ms
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
             
             // 计算左右声道的 ILD 增益差异
             let ild = azim.sin() * 0.2; // ±20% 增益差异

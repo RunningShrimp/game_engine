@@ -184,7 +184,11 @@ impl GpuIndirectDrawManager {
     /// # 参数
     ///
     /// * `instance_ids` - 需要标记为脏的实例ID列表
+<<<<<<< HEAD
     pub fn mark_dirty(&mut self, instance_ids: &[u32]) {
+=======
+    pub fn mark_dirty(&mut self, _instance_ids: &[u32]) {
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
         // 通过内部方法标记脏实例
         // 注意：需要访问instance_pool的内部字段，这里暂时无法实现
         // 实际使用中应该通过update_instances触发更新

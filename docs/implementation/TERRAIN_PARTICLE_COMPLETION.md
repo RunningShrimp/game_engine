@@ -185,3 +185,7 @@ manager.update_all(&mut encoder, device, queue, delta_time);
 两个系统都已具备基本功能，可以开始使用。后续可以根据需求逐步完善高级特性。
 
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)

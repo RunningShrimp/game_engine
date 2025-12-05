@@ -3,7 +3,10 @@
 //! 提供多选、复制粘贴等高级编辑功能
 
 use crate::ecs::Transform;
+<<<<<<< HEAD
 use crate::impl_default;
+=======
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
 use bevy_ecs::prelude::*;
 use glam::Vec3;
 use serde::{Deserialize, Serialize};
@@ -114,7 +117,11 @@ impl SceneEditorEnhanced {
     /// 删除选中的实体
     pub fn delete_selected(&mut self, world: &mut World) {
         for entity in &self.selected_entities {
+<<<<<<< HEAD
             if let Some(mut entity_mut) = world.get_entity_mut(*entity) {
+=======
+            if let Some(entity_mut) = world.get_entity_mut(*entity) {
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
                 entity_mut.despawn();
             }
         }
@@ -199,7 +206,11 @@ impl SceneEditorEnhanced {
     }
 
     /// 绘制框选矩形
+<<<<<<< HEAD
     pub fn draw_selection_box(&self, painter: &egui::Painter, rect: egui::Rect) {
+=======
+    pub fn draw_selection_box(&self, painter: &egui::Painter, _rect: egui::Rect) {
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
         if let (Some(start), Some(end)) = (self.selection_box_start, self.selection_box_end) {
             let selection_rect = egui::Rect::from_two_pos(start, end);
             painter.rect_stroke(

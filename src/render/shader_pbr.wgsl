@@ -130,9 +130,15 @@ fn fresnel_schlick(cosTheta: f32, F0: vec3<f32>) -> vec3<f32> {
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    var N = normalize(in.world_normal);
+    // 法线扰动（TBN）
+    var nm: vec3<f32> = textureSample(normal_texture, tex_sampler, in.uv).xyz * 2.0 - vec3<f32>(1.0);
+    nm = vec3<f32>(nm.x * material.normal_scale, nm.y * material.normal_scale, nm.z);
+    let B = normalize(cross(in.world_normal, in.world_tangent) * in.tangent_w);
+    let TBN = mat3x3<f32>(in.world_tangent, B, in.world_normal);
+    var N = normalize(TBN * nm);
+
     let V = normalize(uniforms.camera_pos - in.world_position);
-    
+
     // 基础颜色和材质参数
     var albedo = material.base_color.rgb;
     var metallic = material.metallic;
@@ -151,11 +157,11 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     roughness = clamp(mr.g * roughness, 0.04, 1.0);
     let ao_tex = textureSample(ao_texture, tex_sampler, in.uv);
     ao = ao * ao_tex.r;
-    
+
     // 计算F0 (表面反射率)
     var F0 = vec3<f32>(0.04); // 非金属的默认值
     F0 = mix(F0, albedo, metallic);
-    
+
     // 反射率方程
     var Lo = vec3<f32>(0.0);
     
@@ -216,7 +222,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let clearcoat_factor = clamp(material.clearcoat, 0.0, 1.0);
     let clearcoat_rough = clamp(material.clearcoat_roughness, 0.04, 1.0);
     let cc_spec = distribution_ggx(N, normalize(V + N), clearcoat_rough);
-    var Lo = Lo + cc_spec * clearcoat_factor;
+    Lo = Lo + cc_spec * clearcoat_factor;
     // 简化各向异性：通过方向调制高光
     let aniso = clamp(material.anisotropy, 0.0, 1.0);
     let adir = normalize(vec3<f32>(material.anisotropy_direction, 0.0));
@@ -231,9 +237,3 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     
     return vec4<f32>(color, material.base_color.a);
 }
-    // 法线扰动（TBN）
-    var nm = textureSample(normal_texture, tex_sampler, in.uv).xyz * 2.0 - vec3<f32>(1.0);
-    nm = vec3<f32>(nm.x * material.normal_scale, nm.y * material.normal_scale, nm.z);
-    let B = normalize(cross(N, in.world_tangent) * in.tangent_w);
-    let TBN = mat3x3<f32>(in.world_tangent, B, N);
-    N = normalize(TBN * nm);

@@ -33,8 +33,12 @@
 //! - 延迟抖动平滑
 
 use crate::impl_default;
+<<<<<<< HEAD
 use crate::core::utils::{current_timestamp, current_timestamp_ms};
 use crate::network::NetworkError;
+=======
+use crate::core::utils::current_timestamp_ms;
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
 use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 
@@ -140,6 +144,10 @@ impl TimeSyncMessage {
 }
 
 /// 延迟补偿管理器（客户端）
+<<<<<<< HEAD
+=======
+#[derive(Clone)]
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
 pub struct ClientDelayCompensation {
     /// 配置
     config: DelayCompensationConfig,

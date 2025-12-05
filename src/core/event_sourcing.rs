@@ -318,7 +318,11 @@ impl EventSourcingManager {
     /// 重放事件到世界
     pub fn replay_events(
         &self,
+<<<<<<< HEAD
         world: &mut World,
+=======
+        _world: &mut World,
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
         from: Option<EventId>,
         to: Option<EventId>,
     ) -> Result<(), EventError> {
@@ -331,7 +335,11 @@ impl EventSourcingManager {
             self.event_store.lock().unwrap().get_all_events()
         };
 
+<<<<<<< HEAD
         for stored_event in events {
+=======
+        for _stored_event in events {
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
             // 反序列化事件（简化处理，实际需要根据event_type反序列化）
             // 这里只是占位，实际实现需要类型注册系统
             // let event: Box<dyn DomainEvent> = bincode::deserialize(&stored_event.data)?;
@@ -344,11 +352,19 @@ impl EventSourcingManager {
     /// 重放聚合事件
     pub fn replay_aggregate_events(
         &self,
+<<<<<<< HEAD
         world: &mut World,
         aggregate_id: u32,
     ) -> Result<(), EventError> {
         // 尝试从快照恢复
         if let Ok(snapshot) = self
+=======
+        _world: &mut World,
+        aggregate_id: u32,
+    ) -> Result<(), EventError> {
+        // 尝试从快照恢复
+        if let Ok(_snapshot) = self
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
             .snapshot_store
             .lock()
             .unwrap()
@@ -359,7 +375,11 @@ impl EventSourcingManager {
         }
 
         // 重放快照之后的事件
+<<<<<<< HEAD
         let events = self
+=======
+        let _events = self
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
             .event_store
             .lock()
             .unwrap()
@@ -372,7 +392,11 @@ impl EventSourcingManager {
     }
 
     /// 撤销最后一个事件
+<<<<<<< HEAD
     pub fn undo_last_event(&self, world: &mut World) -> Result<Option<EventId>, EventError> {
+=======
+    pub fn undo_last_event(&self, _world: &mut World) -> Result<Option<EventId>, EventError> {
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
         let events = self.event_store.lock().unwrap().get_all_events();
 
         if let Some(last_event) = events.last() {
@@ -389,7 +413,11 @@ impl EventSourcingManager {
 
     /// 清理旧事件
     fn cleanup_old_events(&self) -> Result<(), EventError> {
+<<<<<<< HEAD
         let mut store = self.event_store.lock().unwrap();
+=======
+        let store = self.event_store.lock().unwrap();
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
         let events = store.get_all_events();
 
         if events.len() > self.max_history_length {
@@ -515,13 +543,21 @@ impl DomainEvent for EntityCreatedEvent {
         "EntityCreated"
     }
 
+<<<<<<< HEAD
     fn apply(&self, world: &mut World) -> Result<(), EventError> {
+=======
+    fn apply(&self, _world: &mut World) -> Result<(), EventError> {
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
         // 创建实体（简化处理）
         // 实际实现需要根据entity_type创建相应的组件
         Ok(())
     }
 
+<<<<<<< HEAD
     fn revert(&self, world: &mut World) -> Result<(), EventError> {
+=======
+    fn revert(&self, _world: &mut World) -> Result<(), EventError> {
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
         // 删除实体
         // 实际实现需要能够通过entity_id删除实体
         Ok(())
@@ -541,13 +577,21 @@ impl DomainEvent for EntityTransformChangedEvent {
         "EntityTransformChanged"
     }
 
+<<<<<<< HEAD
     fn apply(&self, world: &mut World) -> Result<(), EventError> {
+=======
+    fn apply(&self, _world: &mut World) -> Result<(), EventError> {
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
         // 应用新变换
         // 实际实现需要反序列化并更新实体
         Ok(())
     }
 
+<<<<<<< HEAD
     fn revert(&self, world: &mut World) -> Result<(), EventError> {
+=======
+    fn revert(&self, _world: &mut World) -> Result<(), EventError> {
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
         // 恢复旧变换
         // 实际实现需要反序列化并恢复
         Ok(())

@@ -69,6 +69,12 @@ pub use pathfinding::{
 use bevy_ecs::prelude::*;
 use glam::Vec3;
 
+/// 类型别名，用于简化复杂类型
+type BehaviorAction = Box<dyn Fn(&mut World, Entity) -> BehaviorStatus + Send + Sync>;
+type BehaviorCondition = Box<dyn Fn(&World, Entity) -> bool + Send + Sync>;
+type StateCallback = Box<dyn Fn(&mut World, Entity) + Send + Sync>;
+type StateUpdateCallback = Box<dyn Fn(&mut World, Entity) -> StateTransition + Send + Sync>;
+
 /// AI状态类型
 pub enum AIStatus {
     /// 空闲状态
@@ -92,12 +98,20 @@ pub enum BehaviorStatus {
 }
 
 /// AI组件
+///
+/// 附加到实体的AI组件，提供智能行为控制。
+/// 可以包含行为树、状态机或两者组合来实现复杂的AI逻辑。
 #[derive(Component)]
 pub struct AI {
+    /// 可选的行为树，用于实现基于行为的AI
     pub behavior_tree: Option<BehaviorTree>,
+    /// 可选的状态机，用于实现状态驱动的AI
     pub state_machine: Option<StateMachine>,
+    /// AI当前的目标实体（如果有）
     pub target: Option<Entity>,
+    /// AI当前的状态
     pub status: AIStatus,
+    /// AI移动速度（单位/秒）
     pub speed: f32,
 }
 
@@ -114,38 +128,69 @@ impl Default for AI {
 }
 
 /// 行为树
+///
+/// 用于实现复杂AI决策逻辑的树形结构。
+/// 包含根节点和执行逻辑。
 pub struct BehaviorTree {
+    /// 行为树的根节点
     pub root: BehaviorNode,
 }
 
 /// 行为树节点
+///
+/// 定义行为树中的不同节点类型。
+/// 每种节点类型都有不同的执行逻辑和用途。
 pub enum BehaviorNode {
+    /// 序列节点：按顺序执行所有子节点，全部成功才算成功
     Sequence(Vec<BehaviorNode>),
+    /// 选择节点：按顺序尝试执行子节点，任一成功就算成功
     Selector(Vec<BehaviorNode>),
-    Action(Box<dyn Fn(&mut World, Entity) -> BehaviorStatus + Send + Sync>),
-    Condition(Box<dyn Fn(&World, Entity) -> bool + Send + Sync>),
+    /// 动作节点：执行具体动作，返回执行状态
+    Action(BehaviorAction),
+    /// 条件节点：检查条件，返回布尔值
+    Condition(BehaviorCondition),
 }
 
 /// 状态机
+///
+/// 实现有限状态机（FSM）模式的AI控制结构。
+/// 管理状态集合和状态之间的转换逻辑。
 pub struct StateMachine {
+    /// 当前活动状态的ID
     pub current_state: u32,
+    /// 所有可能状态的集合，键为状态ID
     pub states: std::collections::HashMap<u32, State>,
+    /// 状态转换映射，键为(当前状态ID, 事件名)，值为目标状态ID
     pub transitions: std::collections::HashMap<(u32, String), u32>,
 }
 
 /// 状态
+///
+/// 定义状态机中的单个状态。
+/// 包含状态标识、名称和生命周期回调函数。
 pub struct State {
+    /// 状态的唯一标识符
     pub id: u32,
+    /// 状态的可读名称
     pub name: String,
-    pub on_enter: Option<Box<dyn Fn(&mut World, Entity) + Send + Sync>>,
-    pub on_update: Option<Box<dyn Fn(&mut World, Entity) -> StateTransition + Send + Sync>>,
-    pub on_exit: Option<Box<dyn Fn(&mut World, Entity) + Send + Sync>>,
+    /// 进入状态时执行的回调函数
+    pub on_enter: Option<StateCallback>,
+    /// 状态更新时执行的回调函数，返回状态转换指令
+    pub on_update: Option<StateUpdateCallback>,
+    /// 退出状态时执行的回调函数
+    pub on_exit: Option<StateCallback>,
 }
 
 /// 状态转换
+///
+/// 定义状态机中的状态转换指令。
+/// 由状态的更新回调返回，控制状态机的流程。
 pub enum StateTransition {
+    /// 保持当前状态
     None,
+    /// 转换到指定ID的状态
     To(u32),
+    /// 弹出状态栈（用于嵌套状态机）
     Pop,
 }
 

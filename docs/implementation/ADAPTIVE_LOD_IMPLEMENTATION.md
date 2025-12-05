@@ -123,3 +123,7 @@ let selection = selector.select(entity_id, distance, delta_time);
 - **视觉质量平衡**: 在性能和视觉质量之间取得平衡
 
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)

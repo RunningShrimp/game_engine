@@ -338,7 +338,11 @@ impl AudioDomainService {
         value: f32,
     ) -> Result<(), DomainError> {
         let volume = Volume::new(value)
+<<<<<<< HEAD
             .ok_or_else(|| DomainError::Audio(AudioError::InvalidVolume(value)))?;
+=======
+            .ok_or(DomainError::Audio(AudioError::InvalidVolume(value)))?;
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
         self.set_source_volume(id, volume)
     }
 
@@ -352,7 +356,11 @@ impl AudioDomainService {
     /// 设置主音量（从f32值）
     pub fn set_master_volume_f32(&mut self, value: f32) -> Result<(), DomainError> {
         let volume = Volume::new(value)
+<<<<<<< HEAD
             .ok_or_else(|| DomainError::Audio(AudioError::InvalidVolume(value)))?;
+=======
+            .ok_or(DomainError::Audio(AudioError::InvalidVolume(value)))?;
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
         self.set_master_volume(volume)
     }
 
@@ -823,9 +831,16 @@ mod tests {
 
         // 切换场景
         service.switch_to_scene(SceneId(1)).unwrap();
+<<<<<<< HEAD
         assert_eq!(service.get_active_scene().unwrap().id, SceneId(1));
 
         service.switch_to_scene(SceneId(2)).unwrap();
         assert_eq!(service.get_active_scene().unwrap().id, SceneId(2));
+=======
+        assert_eq!(service.get_active_scene().unwrap().id(), SceneId(1));
+
+        service.switch_to_scene(SceneId(2)).unwrap();
+        assert_eq!(service.get_active_scene().unwrap().id(), SceneId(2));
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
     }
 }

@@ -78,6 +78,7 @@ impl VectorOps for Vec4Simd {
         dot_product_scalar(&self.data, &other.data)
     }
     
+    #[allow(unreachable_code)]
     fn add(&self, other: &Self) -> Self {
         let mut result = Self::zero();
         
@@ -103,10 +104,12 @@ impl VectorOps for Vec4Simd {
             }
         }
         
+        #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
         add_vec4_scalar(&self.data, &other.data, &mut result.data);
         result
     }
     
+    #[allow(unreachable_code)]
     fn sub(&self, other: &Self) -> Self {
         let mut result = Self::zero();
         
@@ -132,10 +135,12 @@ impl VectorOps for Vec4Simd {
             }
         }
         
+        #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
         sub_vec4_scalar(&self.data, &other.data, &mut result.data);
         result
     }
     
+    #[allow(unreachable_code)]
     fn mul(&self, scalar: f32) -> Self {
         let mut result = Self::zero();
         
@@ -165,6 +170,7 @@ impl VectorOps for Vec4Simd {
             }
         }
         
+        #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
         mul_vec4_scalar(&self.data, scalar, &mut result.data);
         result
     }
@@ -198,9 +204,9 @@ impl Vec3Simd {
         Self { data: [0.0; 3] }
     }
     
+    #[allow(unreachable_code)]
     pub fn cross(&self, other: &Self) -> Self {
         let mut result = Self::zero();
-        
         #[cfg(target_arch = "aarch64")]
         {
             unsafe {
@@ -210,10 +216,14 @@ impl Vec3Simd {
         }
         
         // 标量实现
-        result.data[0] = self.data[1] * other.data[2] - self.data[2] * other.data[1];
-        result.data[1] = self.data[2] * other.data[0] - self.data[0] * other.data[2];
-        result.data[2] = self.data[0] * other.data[1] - self.data[1] * other.data[0];
+        #[cfg(not(target_arch = "aarch64"))]
+        {
+            result.data[0] = self.data[1] * other.data[2] - self.data[2] * other.data[1];
+            result.data[1] = self.data[2] * other.data[0] - self.data[0] * other.data[2];
+            result.data[2] = self.data[0] * other.data[1] - self.data[1] * other.data[0];
+        }
         result
+
     }
     
     pub fn x(&self) -> f32 { self.data[0] }
@@ -245,6 +255,7 @@ impl Mat4Simd {
         }
     }
     
+    #[allow(unreachable_code)]
     pub fn mul(&self, other: &Self) -> Self {
         let mut result = Self::zero();
         
@@ -272,12 +283,14 @@ impl Mat4Simd {
             }
         }
         
+        #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
         mat4_mul_scalar(&self.data, &other.data, &mut result.data);
         result
     }
     
+    #[allow(unreachable_code)]
     pub fn transform(&self, vec: &Vec4Simd) -> Vec4Simd {
-        let mut result = Vec4Simd::zero();
+        let result = Vec4Simd::zero();
         
         #[cfg(target_arch = "x86_64")]
         {
@@ -298,6 +311,7 @@ impl Mat4Simd {
         }
         
         // 标量实现
+        #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
         for i in 0..4 {
             result.data[i] = self.data[i][0] * vec.data[0]
                            + self.data[i][1] * vec.data[1]
@@ -323,6 +337,7 @@ impl QuatSimd {
         Self { data: [w, x, y, z] }
     }
     
+    #[allow(unreachable_code)]
     pub fn mul(&self, other: &Self) -> Self {
         let mut result = Self::identity();
         
@@ -333,16 +348,19 @@ impl QuatSimd {
                 return result;
             }
         }
-        
         // 标量实现
-        result.data[0] = self.data[0]*other.data[0] - self.data[1]*other.data[1] 
-                       - self.data[2]*other.data[2] - self.data[3]*other.data[3];
-        result.data[1] = self.data[0]*other.data[1] + self.data[1]*other.data[0] 
-                       + self.data[2]*other.data[3] - self.data[3]*other.data[2];
-        result.data[2] = self.data[0]*other.data[2] - self.data[1]*other.data[3] 
-                       + self.data[2]*other.data[0] + self.data[3]*other.data[1];
-        result.data[3] = self.data[0]*other.data[3] + self.data[1]*other.data[2] 
-                       - self.data[2]*other.data[1] + self.data[3]*other.data[0];
+        #[cfg(not(target_arch = "aarch64"))]
+        {
+            result.data[0] = self.data[0]*other.data[0] - self.data[1]*other.data[1]
+                           - self.data[2]*other.data[2] - self.data[3]*other.data[3];
+            result.data[1] = self.data[0]*other.data[1] + self.data[1]*other.data[0]
+                           + self.data[2]*other.data[3] - self.data[3]*other.data[2];
+            result.data[2] = self.data[0]*other.data[2] - self.data[1]*other.data[3]
+                           + self.data[2]*other.data[0] + self.data[3]*other.data[1];
+            result.data[3] = self.data[0]*other.data[3] + self.data[1]*other.data[2]
+                           - self.data[2]*other.data[1] + self.data[3]*other.data[0];
+        }
+
         result
     }
 }

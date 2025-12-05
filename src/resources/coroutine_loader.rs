@@ -218,6 +218,7 @@ impl_default!(CoroutineLoaderConfig {
 #[derive(Resource)]
 pub struct CoroutineAssetLoader {
     /// 配置
+    #[allow(dead_code)]
     config: CoroutineLoaderConfig,
     /// 请求发送器
     request_tx: mpsc::UnboundedSender<LoadRequest>,

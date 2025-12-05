@@ -85,7 +85,7 @@ impl EditorContext {
     }
 }
 
-pub fn editor_ui_system(world: &mut World) {
+pub fn editor_ui_system(_world: &mut World) {
     // This system will be responsible for drawing the editor UI
     // We need to access the EditorContext resource
     // But since we need mutable access to World to inspect entities, we can't just use a System param for World

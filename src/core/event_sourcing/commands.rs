@@ -29,7 +29,11 @@ impl Command for CreateEntityCommand {
 
         // 创建事件
         let event = EntityCreatedEvent {
+<<<<<<< HEAD
             entity_id: entity_id as u32,
+=======
+            entity_id,
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
             entity_type: self.entity_type.clone(),
         };
 

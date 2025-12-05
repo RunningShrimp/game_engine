@@ -284,7 +284,14 @@ impl RigidBody {
                 max_attempts,
                 delay_ms,
             } => {
+<<<<<<< HEAD
                 for attempt in 1..=*max_attempts {
+=======
+                let mut success = false;
+                
+                // Since we always break after the first iteration, use an if let instead of a loop
+                if let Some(attempt) = (1..=*max_attempts).next() {
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
                     tracing::warn!(target: "physics", "Retry attempt {} for rigid body {}", attempt, self.id.as_u64());
                     std::thread::sleep(std::time::Duration::from_millis(*delay_ms));
 
@@ -295,12 +302,29 @@ impl RigidBody {
                             self.position = Vec3::ZERO;
                             self.linear_velocity = Vec3::ZERO;
                             self.angular_velocity = 0.0;
+<<<<<<< HEAD
                             return Ok(());
                         }
                         _ => break,
                     }
                 }
                 Err(DomainError::Physics(error.clone()))
+=======
+                            
+                            // 重置成功
+                            success = true;
+                        }
+                        _ => {
+                            // 其他错误类型，无法恢复
+                        }
+                    }
+                }
+                if success {
+                    Ok(())
+                } else {
+                    Err(DomainError::Physics(error.clone()))
+                }
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
             }
             RecoveryStrategy::UseDefault => {
                 self.mass = 1.0;
@@ -664,7 +688,11 @@ impl PhysicsWorld {
         let angvel = rb.angvel();
 
         Some(RigidBody {
+<<<<<<< HEAD
             id: id.clone(),
+=======
+            id,
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
             body_type: match rb.body_type() {
                 rapier3d::dynamics::RigidBodyType::Dynamic => RigidBodyType::Dynamic,
                 rapier3d::dynamics::RigidBodyType::Fixed => RigidBodyType::Fixed,
@@ -1313,6 +1341,7 @@ mod tests {
     fn test_rigid_body_recover_from_error_fail() {
         let mut body = RigidBody::dynamic(RigidBodyId(1), Vec3::ZERO);
         body.recovery_strategy = RecoveryStrategy::Fail;
+<<<<<<< HEAD
         
         let error = PhysicsError::InvalidParameter("test".to_string());
         let result = body.recover_from_error(&error);
@@ -1323,6 +1352,14 @@ mod tests {
         } else {
             panic!("Expected Physics error");
         }
+=======
+
+        let error = PhysicsError::InvalidParameter("test".to_string());
+        let result = body.recover_from_error(&error);
+
+        assert!(result.is_err());
+        assert!(matches!(result, Err(DomainError::Physics(PhysicsError::InvalidParameter(_)))));
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
     }
 
     #[test]

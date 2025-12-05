@@ -1830,6 +1830,10 @@ impl_default!(RenderScene {
 /// // 验证场景
 /// assert!(scene.validate().is_ok());
 /// ```
+<<<<<<< HEAD
+=======
+#[derive(Default)]
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
 pub struct PbrScene {
     /// 点光源列表
     point_lights: Vec<crate::render::pbr::PointLight3D>,
@@ -2072,7 +2076,11 @@ impl PbrScene {
         // 提取点光源 - 业务规则：只提取有效的光源
         let mut point_light_query = world.query::<(&Transform, &crate::ecs::PointLight3D)>();
         for (transform, light) in point_light_query.iter(world) {
+<<<<<<< HEAD
             if let Some(light_source) =
+=======
+            if let Some(_light_source) =
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
                 LightSource::from_ecs_point_light(transform, light)
             {
                 // 转换为渲染层的光源类型
@@ -2088,7 +2096,11 @@ impl PbrScene {
         // 提取方向光 - 业务规则：只提取有效的光源
         let mut dir_light_query = world.query::<&crate::ecs::DirectionalLightComp>();
         for light in dir_light_query.iter(world) {
+<<<<<<< HEAD
             if let Some(light_source) = LightSource::from_ecs_directional_light(light) {
+=======
+            if let Some(_light_source) = LightSource::from_ecs_directional_light(light) {
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
                 // 转换为渲染层的光源类型
                 scene.dir_lights.push(crate::render::pbr::DirectionalLight {
                     direction: Vec3::from_array(light.direction),
@@ -2223,6 +2235,7 @@ impl PbrScene {
     }
 }
 
+<<<<<<< HEAD
 impl Default for PbrScene {
     fn default() -> Self {
         Self {
@@ -2232,6 +2245,8 @@ impl Default for PbrScene {
     }
 }
 
+=======
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
 /// 光源 - 富领域对象
 ///
 /// 封装光源的业务逻辑，包括：
@@ -2843,7 +2858,13 @@ mod tests {
                 assert_eq!(position, Vec3::ZERO);
                 assert_eq!(radius, 10.0);
             }
+<<<<<<< HEAD
             _ => panic!("Expected Point light"),
+=======
+            _ => {
+                panic!("Expected Point light, got {:?}", light);
+            }
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
         }
     }
 
@@ -2901,7 +2922,13 @@ mod tests {
                 // 方向应该被归一化
                 assert!((direction.length() - 1.0).abs() < 0.001);
             }
+<<<<<<< HEAD
             _ => panic!("Expected Directional light"),
+=======
+            _ => {
+                panic!("Expected Directional light, got {:?}", light);
+            }
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
         }
     }
 
@@ -2974,6 +3001,10 @@ mod tests {
             ..Default::default()
         };
         let light_comp = PointLight3D {
+<<<<<<< HEAD
+=======
+            position: Vec3::ZERO,
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
             color: [1.0, 1.0, 1.0],
             intensity: 1.0,
             radius: 10.0,
@@ -3163,6 +3194,10 @@ mod tests {
                 ..Default::default()
             },
             PointLight3D {
+<<<<<<< HEAD
+=======
+                position: Vec3::ZERO,
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
                 color: [1.0, 1.0, 1.0],
                 intensity: 1.0,
                 radius: 10.0,

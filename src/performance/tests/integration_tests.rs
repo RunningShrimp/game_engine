@@ -25,7 +25,11 @@ mod integration_tests {
         // Physics
         GPUPhysicsSimulator,
         MetricType,
+<<<<<<< HEAD
         PerformanceMonitor,
+=======
+        PerformanceMonitor as SystemPerformanceMonitor, // 使用合并后的性能监控器
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
         SIMDHeuristics,
     };
     use game_engine_simd::{AudioDSPOps, AudioSpatialOps, DistanceModel};
@@ -212,6 +216,7 @@ mod integration_tests {
     /// 集成测试: 性能监控集成
     #[test]
     fn test_performance_monitoring_integration() {
+<<<<<<< HEAD
         let mut monitor = PerformanceMonitor::new(3600);
 
         // 记录各种指标
@@ -224,6 +229,20 @@ mod integration_tests {
         let report = monitor.generate_report();
 
         assert!(!report.stats.is_empty());
+=======
+        let mut monitor = SystemPerformanceMonitor::with_history_size(3600);
+
+        // 记录各种指标
+        monitor.record_metric(MetricType::FrameTime, 16.67, "ms");
+        monitor.record_metric(MetricType::RenderTime, 10.5, "ms");
+        monitor.record_metric(MetricType::UpdateTime, 6.17, "ms");
+        monitor.record_metric(MetricType::DrawCalls, 1024.0, "");
+
+        // 生成报告
+        let report = monitor.get_report();
+
+        assert!(!report.extended_stats.is_empty());
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
     }
 
     /// 集成测试: 完整系统协同

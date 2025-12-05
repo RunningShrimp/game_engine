@@ -2,9 +2,13 @@
 //!
 //! 最简单的引擎使用示例，展示如何初始化和运行引擎
 
+<<<<<<< HEAD
 use bevy_ecs::prelude::*;
 use game_engine::core::Engine;
 use game_engine::ecs::{Sprite, Transform};
+=======
+use game_engine::core::Engine;
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
 
 fn main() {
     // 初始化日志
@@ -12,6 +16,7 @@ fn main() {
 
     println!("=== Game Engine Hello World Example ===");
 
+<<<<<<< HEAD
     // 创建引擎实例
     let mut engine = Engine::new();
 
@@ -47,5 +52,13 @@ fn main() {
         println!("Frame {} completed", i + 1);
     }
 
+=======
+    // 运行引擎主循环
+    if let Err(e) = Engine::run() {
+        eprintln!("Engine failed to run: {}", e);
+        return;
+    }
+
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
     println!("Example completed successfully!");
 }

@@ -155,7 +155,7 @@ impl BatchSkinning {
                 if weight > 0.0001 {
                     let bone_idx = inf.bone_indices[j] as usize;
                     if bone_idx < bone_dual_quats.len() {
-                        let (mut real, dual) = bone_dual_quats[bone_idx];
+                        let (real, dual) = bone_dual_quats[bone_idx];
                         
                         // 检查点积，确保朝向一致
                         let dot = real[0] * reference_quat[0] + real[1] * reference_quat[1]

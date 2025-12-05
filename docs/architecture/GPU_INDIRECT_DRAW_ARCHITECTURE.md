@@ -477,3 +477,7 @@ pub struct GpuIndirectDrawConfig {
 - **2025-12-03**: 初始架构设计文档创建
 
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)

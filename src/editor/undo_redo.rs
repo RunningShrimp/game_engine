@@ -484,19 +484,13 @@ impl<T: Clone + Send + fmt::Debug + 'static> Command for PropertyChangeCommand<T
 /// 实体创建命令
 #[derive(Debug)]
 pub struct CreateEntityCommand {
-    /// 创建的实体 ID
-    entity_id: Option<u64>,
-    /// 实体数据
-    entity_data: Vec<u8>,
     /// 描述
     description: String,
 }
 
 impl CreateEntityCommand {
-    pub fn new(entity_data: Vec<u8>, description: &str) -> Self {
+    pub fn new(_entity_data: Vec<u8>, description: &str) -> Self {
         Self {
-            entity_id: None,
-            entity_data,
             description: description.to_string(),
         }
     }
@@ -525,19 +519,13 @@ impl Command for CreateEntityCommand {
 /// 实体删除命令
 #[derive(Debug)]
 pub struct DeleteEntityCommand {
-    /// 删除的实体 ID
-    entity_id: u64,
-    /// 备份的实体数据 (用于撤销时恢复)
-    backup_data: Option<Vec<u8>>,
     /// 描述
     description: String,
 }
 
 impl DeleteEntityCommand {
-    pub fn new(entity_id: u64, description: &str) -> Self {
+    pub fn new(_entity_id: u64, description: &str) -> Self {
         Self {
-            entity_id,
-            backup_data: None,
             description: description.to_string(),
         }
     }

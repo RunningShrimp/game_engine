@@ -15,6 +15,12 @@ pub mod system;
 pub mod thread_safe;
 pub mod wasm_support;
 
+#[cfg(test)]
+mod lua_tests;
+
+#[cfg(test)]
+mod compatibility_tests;
+
 pub use engine::*;
 pub use lua_support::{LuaContext, LuaEngine, LuaValue};
 pub use rust_scripting::{RustScriptContext, RustScriptContextAdapter, RustScriptEngine};
@@ -149,12 +155,10 @@ fn execute_script(
     match script.language {
         ScriptLanguage::Lua => {
             if let Some(ref mut lua_engine) = scripting.lua_engine {
-                // 设置实体上下文
-                lua_engine
-                    .context
-                    .set_global("current_entity", LuaValue::Number(entity.to_bits() as f64));
-
-                // 执行脚本
+                  // 设置实体上下文
+                  lua_engine
+                      .context
+                      .set_global("current_entity", ScriptValue::Int(entity.to_bits() as i64));                // 执行脚本
                 lua_engine.execute(&script.script_name, &script.script_source)?;
             } else {
                 return Err("Lua engine not available".to_string());
@@ -230,6 +234,14 @@ pub fn setup_scripting(world: &mut World, config: ScriptingConfig) {
             Box::new(RustScriptContextAdapter::new(adapter_engine)),
         );
         resource.rust_engine = Some(rust_engine);
+    }
+
+    // 注册Lua上下文到通用脚本系统
+    if config.enable_lua {
+        resource.system.register_context(
+            ScriptLanguage::Lua,
+            Box::new(LuaContext::new()),
+        );
     }
 
     // 注册其他脚本上下文

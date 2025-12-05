@@ -82,7 +82,7 @@ impl GraphicsUiBindings {
             }
         });
 
-        let world = self.world.clone();
+        let _world = self.world.clone();
 
         // 绘制线条 (简化版,实际需要添加到渲染队列)
         api.register_function("draw_line", move |args| {
@@ -167,7 +167,7 @@ impl GraphicsUiBindings {
             }
         });
 
-        let world = self.world.clone();
+        let _world = self.world.clone();
 
         // 设置相机位置
         api.register_function("set_camera_position", move |args| {

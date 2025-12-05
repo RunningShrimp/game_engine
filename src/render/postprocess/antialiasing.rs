@@ -312,10 +312,13 @@ pub struct TaaUniforms {
 /// TAA 渲染通道
 pub struct TaaPass {
     /// 解析管线
+    #[allow(dead_code)]
     resolve_pipeline: wgpu::RenderPipeline,
     /// 绑定组布局
+    #[allow(dead_code)]
     bind_group_layout: wgpu::BindGroupLayout,
     /// Uniform 缓冲区
+    #[allow(dead_code)]
     uniform_buffer: wgpu::Buffer,
     /// 历史纹理 A
     history_texture_a: Option<wgpu::Texture>,
@@ -324,6 +327,7 @@ pub struct TaaPass {
     /// 当前使用的历史纹理索引
     current_history: usize,
     /// 采样器
+    #[allow(dead_code)]
     sampler: wgpu::Sampler,
     /// 当前帧索引 (用于抖动序列)
     frame_index: u32,

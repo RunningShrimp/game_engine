@@ -46,6 +46,7 @@ pub struct SsaoPass {
     /// SSAO 计算管线
     ssao_pipeline: wgpu::RenderPipeline,
     /// 模糊管线
+    #[allow(dead_code)]
     blur_pipeline: wgpu::RenderPipeline,
     /// 合成管线
     composite_pipeline: wgpu::RenderPipeline,
@@ -66,6 +67,7 @@ pub struct SsaoPass {
     output_view: wgpu::TextureView,
 
     /// 噪声纹理
+    #[allow(dead_code)]
     noise_texture: wgpu::Texture,
     noise_view: wgpu::TextureView,
 

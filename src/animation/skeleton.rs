@@ -388,7 +388,7 @@ fn read_inverse_bind_matrices(
     let data = &buffer[offset..offset + byte_size];
 
     // 逆绑定矩阵是 MAT4 类型 (16 个 f32)
-    if data.len() % 64 != 0 {
+    if !data.len().is_multiple_of(64) {
         return vec![Mat4::IDENTITY; accessor.count()];
     }
 

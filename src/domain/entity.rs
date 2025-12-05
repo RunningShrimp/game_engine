@@ -2,7 +2,10 @@
 
 use crate::domain::errors::{DomainError, SceneError};
 use crate::ecs::{Camera, PointLight, Sprite, Transform};
+<<<<<<< HEAD
 use crate::impl_default;
+=======
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -60,7 +63,11 @@ impl std::fmt::Display for EntityId {
 /// - `state`：只能通过聚合根方法修改（`activate`, `deactivate`, `mark_for_deletion`）
 ///
 /// **注意**：虽然字段是`pub`的（用于序列化），但应该通过聚合根方法访问和修改。
+<<<<<<< HEAD
 #[derive(Debug, Clone)]
+=======
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
 pub struct GameEntity {
     /// 实体ID
     pub id: EntityId,
@@ -82,7 +89,11 @@ pub struct GameEntity {
     pub last_modified: u64,
 }
 
+<<<<<<< HEAD
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+=======
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
 pub enum EntityState {
     /// 活跃状态
     Active,

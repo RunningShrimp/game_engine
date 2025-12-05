@@ -166,6 +166,10 @@ impl_default!(AsyncShaderCompilerConfig {
 /// 异步着色器编译器
 pub struct AsyncShaderCompiler {
     /// 配置
+<<<<<<< HEAD
+=======
+    #[allow(dead_code)]
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
     config: AsyncShaderCompilerConfig,
     /// 请求发送器
     request_tx: mpsc::UnboundedSender<ShaderCompileRequest>,
@@ -306,7 +310,11 @@ impl AsyncShaderCompiler {
 
                 let cache_clone = cache.clone();
                 let response_tx = request.response_tx;
+<<<<<<< HEAD
                 let label = request.label.clone();
+=======
+                let _label = request.label.clone();
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
                 let source = request.source.clone();
                 let compile_options = request.compile_options.clone();
 

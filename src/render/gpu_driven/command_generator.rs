@@ -9,9 +9,14 @@
 //! - **自动分组**: 自动合并相同网格的实例（实例化）
 //! - **内存优化**: 优化的内存访问模式
 
+<<<<<<< HEAD
 use crate::render::gpu_driven::culling::GpuInstance;
 use crate::render::gpu_driven::indirect::{DrawIndexedIndirectArgs, IndirectDrawBuffer, IndirectDrawError};
 use wgpu::{BindGroup, BindGroupLayout, Buffer, ComputePipeline, Device, PipelineLayout, ShaderModule};
+=======
+use crate::render::gpu_driven::indirect::IndirectDrawError;
+use wgpu::{BindGroupLayout, Buffer, ComputePipeline, Device};
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
 
 /// GPU命令生成器
 ///
@@ -173,7 +178,11 @@ impl GpuCommandGenerator {
         visible_instance_buffer: &Buffer,
         counter_buffer: &Buffer,
         indirect_buffer: &Buffer,
+<<<<<<< HEAD
         index_count: u32,
+=======
+        _index_count: u32,
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
     ) -> Result<(), IndirectDrawError> {
         // 创建绑定组
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {

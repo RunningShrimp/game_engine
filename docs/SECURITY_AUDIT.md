@@ -66,3 +66,7 @@ cargo audit --deny warnings
 - 2025-01-XX: 创建安全审计流程文档
 
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)

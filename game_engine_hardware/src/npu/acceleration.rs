@@ -9,12 +9,15 @@ use std::sync::{Arc, Mutex};
 pub struct NpuAccelerator {
     npu_info: Option<NpuInfo>,
     enabled: bool,
+    #[allow(dead_code)]
     inference_cache: Arc<Mutex<InferenceCache>>,
 }
 
 /// 推理缓存
 struct InferenceCache {
+    #[allow(dead_code)]
     physics_predictions: Vec<PhysicsPrediction>,
+    #[allow(dead_code)]
     behavior_decisions: Vec<BehaviorDecision>,
 }
 
@@ -272,7 +275,7 @@ impl NpuAccelerator {
     }
     
     fn simple_noise(x: f32, y: f32, seed: u64) -> f32 {
-        let n = (x * 12.9898 + y * 78.233 + seed as f32 * 43758.5453).sin() * 43758.5453;
+        let n = (x * 12.9898 + y * 78.233 + seed as f32 * 43_758.547).sin() * 43_758.547;
         (n - n.floor()) * 2.0 - 1.0
     }
 }

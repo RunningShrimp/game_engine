@@ -36,7 +36,6 @@
 //! ```
 
 use crate::core::error::RenderError;
-use crate::impl_default;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::fs;

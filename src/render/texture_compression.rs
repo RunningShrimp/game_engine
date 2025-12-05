@@ -256,7 +256,7 @@ impl BcDecoder {
         for y in 0..block_count_y {
             for x in 0..block_count_x {
                 let block_offset = ((y * block_count_x + x) * 8) as usize;
-                let block_data = &data[block_offset..block_offset + 8];
+                let _block_data = &data[block_offset..block_offset + 8];
 
                 // 解码4x4块
                 for py in 0..4 {

@@ -24,7 +24,7 @@ mod tests {
             assert_eq!(h.get().unwrap(), 123);
             assert_eq!(ms, 50.0);
         } else {
-            panic!("Expected TextureLoaded event");
+            panic!("Expected TextureLoaded event, got {:?}", event);
         }
     }
 
@@ -41,7 +41,9 @@ mod tests {
             assert_eq!(reason, "File not found");
             match &*h.container.state.read().unwrap() {
                 LoadState::Failed(r) => assert_eq!(r, "File not found"),
-                _ => panic!("Expected Failed state"),
+                _ => {
+                    panic!("Expected Failed state, got {:?}", h.container.state.read().unwrap());
+                }
             }
         } else {
             panic!("Expected TextureFailed event");

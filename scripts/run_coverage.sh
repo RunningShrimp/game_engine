@@ -16,3 +16,7 @@ echo "Open coverage/tarpaulin-report.html to view the report"
 
 
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)

@@ -108,7 +108,7 @@ impl PlatformBuilder {
     pub fn build_android(
         project_path: &Path,
         profile: BuildProfile,
-        output_dir: &Path,
+        _output_dir: &Path,
     ) -> Result<BuildResult, String> {
         let start_time = std::time::Instant::now();
 

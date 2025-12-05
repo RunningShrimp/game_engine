@@ -12,11 +12,19 @@ use tokio::sync::mpsc;
 use crate::resources::runtime::global_runtime;
 
 /// 消息优先级
+<<<<<<< HEAD
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+=======
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default)]
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
 pub enum MessagePriority {
     /// 低优先级（默认）
     Low = 0,
     /// 正常优先级
+<<<<<<< HEAD
+=======
+    #[default]
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
     Normal = 1,
     /// 高优先级
     High = 2,
@@ -24,12 +32,15 @@ pub enum MessagePriority {
     Urgent = 3,
 }
 
+<<<<<<< HEAD
 impl Default for MessagePriority {
     fn default() -> Self {
         MessagePriority::Normal
     }
 }
 
+=======
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
 impl MessagePriority {
     /// 创建新的消息优先级
     pub fn new() -> Self {
@@ -163,6 +174,10 @@ pub trait Actor: Send + 'static {
 ///
 /// 管理所有Actor的注册、调度和生命周期。
 /// 支持优先级队列和批量处理优化。
+<<<<<<< HEAD
+=======
+#[derive(Default)]
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
 pub struct ActorSystem {
     actors: HashMap<String, Box<dyn std::any::Any + Send + Sync>>,
     /// Actor优先级配置
@@ -194,10 +209,14 @@ impl<T> PartialEq for PrioritizedMessage<T> {
 
 impl ActorSystem {
     pub fn new() -> Self {
+<<<<<<< HEAD
         Self {
             actors: HashMap::new(),
             actor_priorities: HashMap::new(),
         }
+=======
+        Self::default()
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
     }
 
     /// 设置Actor的默认优先级
@@ -360,14 +379,24 @@ pub enum AudioActorMessage {
 }
 
 /// 音频Actor
+<<<<<<< HEAD
 pub struct AudioActor {
     // 这里可以包含音频后端状态
+=======
+#[derive(Default)]
+pub struct AudioActor {
+    /// 这里可以包含音频后端状态
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
     ai: Option<AiComponent>,
 }
 
 impl AudioActor {
     pub fn new() -> Self {
+<<<<<<< HEAD
         Self { ai: None }
+=======
+        Self::default()
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
     }
 
     /// 在创建 actor 时设置 AI 组件
@@ -432,14 +461,24 @@ pub enum PhysicsActorMessage {
 }
 
 /// 物理Actor
+<<<<<<< HEAD
 pub struct PhysicsActor {
     // 这里可以包含物理世界状态
+=======
+#[derive(Default)]
+pub struct PhysicsActor {
+    /// 这里可以包含物理世界状态
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
     ai: Option<AiComponent>,
 }
 
 impl PhysicsActor {
     pub fn new() -> Self {
+<<<<<<< HEAD
         Self { ai: None }
+=======
+        Self::default()
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
     }
 
     /// 在创建 actor 时设置 AI 组件
@@ -502,14 +541,24 @@ pub enum RenderActorMessage {
 }
 
 /// 渲染Actor
+<<<<<<< HEAD
 pub struct RenderActor {
     // 这里可以包含渲染状态
+=======
+#[derive(Default)]
+pub struct RenderActor {
+    /// 这里可以包含渲染状态
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
     ai: Option<AiComponent>,
 }
 
 impl RenderActor {
     pub fn new() -> Self {
+<<<<<<< HEAD
         Self { ai: None }
+=======
+        Self::default()
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
     }
 
     /// 在创建 actor 时设置 AI 组件

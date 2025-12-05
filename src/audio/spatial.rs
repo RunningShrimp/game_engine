@@ -498,7 +498,7 @@ impl SpatialAudioService {
         let mut scored: Vec<(Entity, f32, i32)> = sources
             .map(|(entity, source, position)| {
                 let distance = (position - state.listener_position).length();
-                let score = source.priority as f32 * 1000.0 - distance; // 优先级优先，距离次之
+                let _score = source.priority as f32 * 1000.0 - distance; // 优先级优先，距离次之
                 (entity, distance, source.priority)
             })
             .filter(|(_, distance, _)| *distance <= 200.0) // 预剔除远处声音

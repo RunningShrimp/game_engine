@@ -337,7 +337,6 @@ impl TextLayouter {
                     cursor_x = 0.0;
                     cursor_y -= line_height;
                     line_start = glyphs.len();
-                    line_width = 0.0;
                 }
             }
 

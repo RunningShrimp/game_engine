@@ -89,3 +89,7 @@ cargo tarpaulin --out Html --output-dir coverage \
 - 2025-01-XX: 创建覆盖率目标文档
 
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)

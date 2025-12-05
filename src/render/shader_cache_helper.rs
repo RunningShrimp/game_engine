@@ -90,7 +90,7 @@ pub async fn create_shader_module_async(
     // 注意：实际的wgpu编译仍然需要在主线程进行
     // 这里只是预处理和缓存
     Ok(device.create_shader_module(wgpu::ShaderModuleDescriptor {
-        label: label,
+        label,
         source: wgpu::ShaderSource::Wgsl(compiled.source.into()),
     }))
 }
@@ -113,9 +113,9 @@ pub async fn compile_shaders_async(
 
     // 等待所有编译完成
     let mut results = Vec::new();
-    for (label, source, rx) in receivers {
+    for (_label, _source, rx) in receivers {
         match wait_for_compile(rx).await {
-            Ok(compiled) => {
+            Ok(_compiled) => {
                 // 注意：实际的wgpu::ShaderModule创建需要在主线程
                 // 这里返回错误提示需要在主线程创建
                 results.push(Err(RenderError::InvalidState(

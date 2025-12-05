@@ -292,7 +292,11 @@ impl SoALayoutManager {
     }
 
     /// 同步SoA布局回ECS
+<<<<<<< HEAD
     pub fn sync_to_ecs(&self, mut commands: Commands) {
+=======
+    pub fn sync_to_ecs(&self, commands: Commands) {
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
         if !self.enabled {
             return;
         }

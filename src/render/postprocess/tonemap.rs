@@ -52,6 +52,7 @@ pub struct TonemapPass {
     uniform_buffer: wgpu::Buffer,
 
     /// 输出格式
+    #[allow(dead_code)]
     output_format: wgpu::TextureFormat,
 }
 

@@ -24,6 +24,7 @@ impl BatchTransform {
     }
     
     /// 批量变换顶点（矩阵 * 向量）
+    #[allow(unreachable_code)]
     pub fn transform_vertices(
         &self,
         matrix: &[[f32; 4]; 4],
@@ -62,6 +63,7 @@ impl BatchTransform {
         }
         
         // 标量回退
+        #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
         self.transform_vertices_scalar(matrix, vertices, output);
         
         BatchStats {
@@ -71,6 +73,7 @@ impl BatchTransform {
         }
     }
     
+    #[allow(dead_code)]
     fn transform_vertices_scalar(
         &self,
         matrix: &[[f32; 4]; 4],
@@ -158,6 +161,7 @@ impl BatchInterpolation {
     }
     
     /// 批量线性插值
+    #[allow(unreachable_code)]
     pub fn lerp(
         &self,
         a: &[[f32; 4]],
@@ -182,13 +186,16 @@ impl BatchInterpolation {
                 backend_used: Some(self.config.backend),
             };
         }
-        
         // 标量实现
-        for i in 0..count {
-            for j in 0..4 {
-                output[i][j] = a[i][j] * (1.0 - t) + b[i][j] * t;
+        #[cfg(not(target_arch = "aarch64"))]
+        {
+            for i in 0..count {
+                for j in 0..4 {
+                    output[i][j] = a[i][j] * (1.0 - t) + b[i][j] * t;
+                }
             }
         }
+        
         
         BatchStats {
             elements_processed: count,

@@ -85,3 +85,7 @@ let results = service.collect_results();
 ```
 
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)

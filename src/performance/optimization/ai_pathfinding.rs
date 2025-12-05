@@ -222,6 +222,10 @@ impl AgentPathfinder {
     }
 
     /// 计算启发式值
+<<<<<<< HEAD
+=======
+    #[allow(dead_code)]
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
     fn compute_heuristic(&self, from: Vec3, to: Vec3) -> f32 {
         match self.heuristic {
             HeuristicType::Euclidean => (from - to).length(),

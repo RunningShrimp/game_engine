@@ -123,6 +123,7 @@ pub struct PostProcessPipeline {
     uniform_buffer: wgpu::Buffer,
 
     /// Uniform 绑定组
+    #[allow(dead_code)]
     uniform_bind_group: wgpu::BindGroup,
 
     /// 中间纹理（HDR场景）
@@ -134,6 +135,7 @@ pub struct PostProcessPipeline {
     height: u32,
 
     /// 输出格式
+    #[allow(dead_code)]
     output_format: TextureFormat,
 }
 

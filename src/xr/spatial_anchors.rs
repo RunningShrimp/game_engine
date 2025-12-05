@@ -298,8 +298,15 @@ impl SpatialAnchorManager {
         let id = AnchorId::new();
         let anchor = SpatialAnchor::new(id, name.into(), pose);
 
+<<<<<<< HEAD
         // NOTE: 实际实现中需要调用OpenXR API创建锚点
         // xr::SpatialAnchorMSFT::create(...)
+=======
+        // 实际实现中需要调用OpenXR API创建锚点
+        // xr::SpatialAnchorMSFT::create(...)
+        // 占位实现：直接添加到内存中
+        tracing::info!("Creating spatial anchor '{}' at position {:?}", anchor.name, anchor.pose.position);
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
 
         self.anchors.insert(id, anchor);
         Ok(id)
@@ -330,10 +337,14 @@ impl SpatialAnchorManager {
         &mut self,
         persistence_key: &str,
     ) -> Result<AnchorId, XrError> {
+<<<<<<< HEAD
         // NOTE: 实际实现中需要：
         // 1. 从持久化存储加载数据
         // 2. 调用OpenXR API恢复锚点
         // 3. 创建SpatialAnchor对象
+=======
+        tracing::info!("Loading spatial anchor from persistence: {}", persistence_key);
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
 
         let store = self
             .persistence_store
@@ -342,6 +353,10 @@ impl SpatialAnchorManager {
 
         if let Some(data) = store.get(persistence_key) {
             let id = data.anchor_id;
+<<<<<<< HEAD
+=======
+            let anchor_name = data.name.clone();
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
             let anchor = SpatialAnchor {
                 id,
                 name: data.name.clone(),
@@ -355,6 +370,11 @@ impl SpatialAnchorManager {
 
             drop(store);
             self.anchors.insert(id, anchor);
+<<<<<<< HEAD
+=======
+            
+            tracing::info!("Successfully loaded anchor '{}' from persistence", anchor_name);
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
             Ok(id)
         } else {
             Err(XrError::RuntimeFailure(
@@ -386,9 +406,22 @@ impl SpatialAnchorManager {
     /// ```
     pub fn destroy_anchor(&mut self, id: AnchorId) -> Result<(), XrError> {
         if let Some(mut anchor) = self.anchors.remove(&id) {
+<<<<<<< HEAD
             // NOTE: 实际实现中需要调用OpenXR API销毁锚点
             // xr::SpatialAnchorMSFT::destroy(...)
 
+=======
+            tracing::info!("Destroying spatial anchor '{}'", anchor.name);
+            
+            // 实际实现中需要调用OpenXR API销毁锚点
+            // xr::SpatialAnchorMSFT::destroy(...)
+            
+            // 如果锚点已持久化，取消持久化
+            if let Some(ref _persistence_key) = anchor.persistence_key {
+                let _ = self.unpersist_anchor(id);
+            }
+            
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
             anchor.invalidate();
             Ok(())
         } else {
@@ -466,9 +499,17 @@ impl SpatialAnchorManager {
     /// ```
     pub fn update_anchor_pose(&mut self, id: AnchorId, pose: Pose) -> Result<(), XrError> {
         if let Some(anchor) = self.anchors.get_mut(&id) {
+<<<<<<< HEAD
             // NOTE: 实际实现中需要调用OpenXR API更新锚点
             // xr::SpatialAnchorMSFT::locate(...)
 
+=======
+            tracing::debug!("Updating anchor '{}' pose to {:?}", anchor.name, pose.position);
+            
+            // 实际实现中需要调用OpenXR API更新锚点
+            // xr::SpatialAnchorMSFT::locate(...)
+            
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
             anchor.update_pose(pose);
             Ok(())
         } else {
@@ -588,12 +629,24 @@ impl SpatialAnchorManager {
             return Err(XrError::NotSupported);
         }
 
+<<<<<<< HEAD
         if let Some(anchor) = self.anchors.get(&id) {
             let key = persistence_key.into();
 
             // NOTE: 实际实现中需要调用OpenXR API持久化锚点
             // xr::SpatialAnchorStoreMSFT::persist_anchor(...)
 
+=======
+        let key = persistence_key.into();
+        
+        // 获取锚点信息
+        let anchor_info = if let Some(anchor) = self.anchors.get(&id) {
+            tracing::info!("Persisting anchor '{}' with key '{}'", anchor.name, key);
+
+            // 实际实现中需要调用OpenXR API持久化锚点
+            // xr::SpatialAnchorStoreMSFT::persist_anchor(...)
+            
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
             let persistence_data = AnchorPersistenceData {
                 anchor_id: anchor.id,
                 pose: anchor.pose,
@@ -602,10 +655,21 @@ impl SpatialAnchorManager {
                 created_at: anchor.created_at,
             };
 
+<<<<<<< HEAD
+=======
+            Some((anchor.name.clone(), persistence_data))
+        } else {
+            return Err(XrError::RuntimeFailure("Anchor not found".to_string()));
+        };
+
+        // 存储到持久化存储
+        {
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
             let mut store = self
                 .persistence_store
                 .lock()
                 .map_err(|e| XrError::RuntimeFailure(format!("Lock error: {}", e)))?;
+<<<<<<< HEAD
             store.insert(key.clone(), persistence_data);
 
             // 更新锚点的持久化键
@@ -617,6 +681,22 @@ impl SpatialAnchorManager {
         } else {
             Err(XrError::RuntimeFailure("Anchor not found".to_string()))
         }
+=======
+            if let Some(ref info) = anchor_info {
+                store.insert(key.clone(), info.1.clone());
+            }
+        }
+
+        // 更新锚点的持久化键
+        if let Some(anchor_mut) = self.anchors.get_mut(&id) {
+            anchor_mut.persistence_key = Some(key);
+        }
+
+        if let Some(ref info) = anchor_info {
+            tracing::info!("Successfully persisted anchor '{}'", info.0);
+        }
+        Ok(())
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
     }
 
     /// 取消持久化锚点
@@ -644,9 +724,17 @@ impl SpatialAnchorManager {
     pub fn unpersist_anchor(&mut self, id: AnchorId) -> Result<(), XrError> {
         if let Some(anchor) = self.anchors.get_mut(&id) {
             if let Some(ref key) = anchor.persistence_key {
+<<<<<<< HEAD
                 // NOTE: 实际实现中需要调用OpenXR API取消持久化
                 // xr::SpatialAnchorStoreMSFT::unpersist_anchor(...)
 
+=======
+                tracing::info!("Unpersisting anchor '{}' with key '{}'", anchor.name, key);
+                
+                // 实际实现中需要调用OpenXR API取消持久化
+                // xr::SpatialAnchorStoreMSFT::unpersist_anchor(...)
+                
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
                 let mut store = self
                     .persistence_store
                     .lock()
@@ -654,6 +742,11 @@ impl SpatialAnchorManager {
                 store.remove(key);
 
                 anchor.persistence_key = None;
+<<<<<<< HEAD
+=======
+                
+                tracing::info!("Successfully unpersisted anchor '{}'", anchor.name);
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
             }
             Ok(())
         } else {

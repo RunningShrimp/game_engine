@@ -154,7 +154,7 @@ impl ExtendedEcsBindings {
 
         // 设置Camera FOV
         api.register_function("set_camera_fov", move |args| {
-            if let (Some(ScriptValue::Int(entity_id)), Some(ScriptValue::Float(fov))) =
+            if let (Some(ScriptValue::Int(entity_id)), Some(ScriptValue::Float(_fov))) =
                 (args.first(), args.get(1))
             {
                 let mut world = world.lock().unwrap();

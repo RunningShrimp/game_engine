@@ -8,6 +8,7 @@ pub fn dot_product_scalar(a: &[f32; 4], b: &[f32; 4]) -> f32 {
 }
 
 /// 4维向量加法（标量）
+#[allow(dead_code)]
 pub fn add_vec4_scalar(a: &[f32; 4], b: &[f32; 4], out: &mut [f32; 4]) {
     out[0] = a[0] + b[0];
     out[1] = a[1] + b[1];
@@ -16,6 +17,7 @@ pub fn add_vec4_scalar(a: &[f32; 4], b: &[f32; 4], out: &mut [f32; 4]) {
 }
 
 /// 4维向量减法（标量）
+#[allow(dead_code)]
 pub fn sub_vec4_scalar(a: &[f32; 4], b: &[f32; 4], out: &mut [f32; 4]) {
     out[0] = a[0] - b[0];
     out[1] = a[1] - b[1];
@@ -24,6 +26,7 @@ pub fn sub_vec4_scalar(a: &[f32; 4], b: &[f32; 4], out: &mut [f32; 4]) {
 }
 
 /// 4维向量标量乘法
+#[allow(dead_code)]
 pub fn mul_vec4_scalar(a: &[f32; 4], scalar: f32, out: &mut [f32; 4]) {
     out[0] = a[0] * scalar;
     out[1] = a[1] * scalar;
@@ -32,6 +35,7 @@ pub fn mul_vec4_scalar(a: &[f32; 4], scalar: f32, out: &mut [f32; 4]) {
 }
 
 /// 4x4矩阵乘法（标量）
+#[allow(dead_code)]
 pub fn mat4_mul_scalar(a: &[[f32; 4]; 4], b: &[[f32; 4]; 4], out: &mut [[f32; 4]; 4]) {
     for i in 0..4 {
         for j in 0..4 {

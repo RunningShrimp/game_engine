@@ -27,6 +27,7 @@ struct GpuInstance {
     flags: u32,
 }
 
+<<<<<<< HEAD
 // 绑定组
 @group(0) @binding(0) var<uniform> uniforms: CullingUniforms;
 @group(0) @binding(1) var<storage, read> input_instances: array<GpuInstance>;
@@ -35,13 +36,27 @@ struct GpuInstance {
 @group(0) @binding(4) var<storage, read_write> indirect_commands: array<DrawIndexedIndirectArgs>;  // 可选的间接绘制命令缓冲区
 
 // 间接绘制参数结构
+=======
+// 间接绘制参数结构 - 必须定义在绑定组使用之前
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
 struct DrawIndexedIndirectArgs {
     index_count: u32,
     instance_count: u32,
     first_index: u32,
     base_vertex: i32,
     first_instance: u32,
+<<<<<<< HEAD
 };
+=======
+}
+
+// 绑定组
+@group(0) @binding(0) var<uniform> uniforms: CullingUniforms;
+@group(0) @binding(1) var<storage, read> input_instances: array<GpuInstance>;
+@group(0) @binding(2) var<storage, read_write> output_instances: array<GpuInstance>;
+@group(0) @binding(3) var<storage, read_write> counter: atomic<u32>;
+@group(0) @binding(4) var<storage, read_write> indirect_commands: array<DrawIndexedIndirectArgs>;  // 可选的间接绘制命令缓冲区
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
 
 /// 检测 AABB 是否与视锥平面相交
 /// 
@@ -135,6 +150,7 @@ fn cull_main(@builtin(global_invocation_id) global_id: vec3<u32>) {
         // 如果提供了间接绘制命令缓冲区且index_count > 0，同时生成间接绘制命令
         // 这样可以完全避免CPU读取结果，实现完全GPU端剔除流程
         if (uniforms.index_count > 0u) {
+<<<<<<< HEAD
             indirect_commands[output_idx] = DrawIndexedIndirectArgs {
                 index_count: uniforms.index_count,
                 instance_count: 1u,              // 每个命令的实例数（单个实例）
@@ -142,8 +158,24 @@ fn cull_main(@builtin(global_invocation_id) global_id: vec3<u32>) {
                 base_vertex: 0i,                 // 基础顶点
                 first_instance: output_idx,      // 第一个实例（使用输出索引）
             };
+=======
+            // 构造间接绘制命令
+            let command = DrawIndexedIndirectArgs(
+                uniforms.index_count,     // index_count
+                1u,                       // instance_count
+                0u,                       // first_index
+                0i,                       // base_vertex
+                output_idx                 // first_instance
+            );
+            
+            // 写入命令
+            indirect_commands[output_idx] = command;
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
         }
     }
 }
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)

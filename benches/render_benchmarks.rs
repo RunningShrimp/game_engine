@@ -130,8 +130,13 @@ fn bench_gpu_indirect_draw(c: &mut Criterion) {
         .request_device(
             &wgpu::DeviceDescriptor {
                 label: None,
+<<<<<<< HEAD
                 features: wgpu::Features::empty(),
                 limits: wgpu::Limits::default(),
+=======
+                required_features: wgpu::Features::empty(),
+                required_limits: wgpu::Limits::default(),
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
             },
             None,
         )
@@ -269,8 +274,13 @@ fn bench_gpu_culling(c: &mut Criterion) {
         .request_device(
             &wgpu::DeviceDescriptor {
                 label: None,
+<<<<<<< HEAD
                 features: wgpu::Features::empty(),
                 limits: wgpu::Limits::default(),
+=======
+                required_features: wgpu::Features::empty(),
+                required_limits: wgpu::Limits::default(),
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
             },
             None,
         )

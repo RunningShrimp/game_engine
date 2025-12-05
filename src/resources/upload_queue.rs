@@ -67,7 +67,7 @@ impl TextureUploadInfo {
 }
 
 /// 缓冲区上传请求
-struct BufferUploadRequest {
+pub(crate) struct BufferUploadRequest {
     /// 数据
     data: Vec<u8>,
     /// 目标缓冲区
@@ -77,7 +77,7 @@ struct BufferUploadRequest {
 }
 
 /// 纹理上传请求
-struct TextureUploadRequest {
+pub(crate) struct TextureUploadRequest {
     /// 数据
     data: Vec<u8>,
     /// 目标纹理
@@ -87,7 +87,7 @@ struct TextureUploadRequest {
 }
 
 /// 上传请求类型
-enum UploadRequest {
+pub(crate) enum UploadRequest {
     Buffer(BufferUploadRequest),
     Texture(TextureUploadRequest),
 }
@@ -241,7 +241,7 @@ impl UploadQueue {
     /// 直接刷新（使用 queue.write_buffer/write_texture，无需 encoder）
     ///
     /// 适用于小量数据的即时上传
-    pub fn flush_immediate(&mut self, device: &wgpu::Device, queue: &wgpu::Queue) {
+    pub fn flush_immediate(&mut self, _device: &wgpu::Device, queue: &wgpu::Queue) {
         for request in self.pending.drain(..) {
             match request {
                 UploadRequest::Buffer(req) => {

@@ -1,6 +1,10 @@
 //! 领域特定错误类型
 
 use thiserror::Error;
+<<<<<<< HEAD
+=======
+use serde::{Serialize, Deserialize};
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
 
 /// 领域层错误枚举
 #[derive(Error, Debug, Clone)]
@@ -62,6 +66,13 @@ pub enum PhysicsError {
 /// 场景领域错误
 #[derive(Error, Debug, Clone)]
 pub enum SceneError {
+<<<<<<< HEAD
+=======
+    /// 无效场景名称
+    #[error("Invalid scene name: {0}")]
+    InvalidName(String),
+    
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
     /// 实体未找到
     #[error("Entity not found: {0}")]
     EntityNotFound(String),
@@ -80,7 +91,11 @@ pub enum SceneError {
 }
 
 /// 错误恢复策略
+<<<<<<< HEAD
 #[derive(Debug, Clone)]
+=======
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
 pub enum RecoveryStrategy {
     /// 重试操作
     Retry { max_attempts: u32, delay_ms: u64 },
@@ -89,13 +104,31 @@ pub enum RecoveryStrategy {
     /// 跳过操作
     Skip,
     /// 记录错误并继续
+<<<<<<< HEAD
+=======
+    #[default]
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
     LogAndContinue,
     /// 抛出错误
     Fail,
 }
 
+<<<<<<< HEAD
 /// 补偿操作
 #[derive(Debug, Clone)]
+=======
+// 已经通过derive(Default)实现了Default trait，所以注释掉手动实现
+/*
+impl Default for RecoveryStrategy {
+    fn default() -> Self {
+        Self::LogAndContinue
+    }
+}
+*/
+
+/// 补偿操作
+#[derive(Debug, Clone, Serialize, Deserialize)]
+>>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
 pub struct CompensationAction {
     /// 操作ID
     pub id: String,
