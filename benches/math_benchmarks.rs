@@ -1,11 +1,15 @@
 //! 数学运算性能基准测试
 //!
 //! 测试向量、矩阵、四元数等数学运算的性能
+//! 包含SIMD优化版本的性能对比
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use glam::{Mat4, Quat, Vec3, Vec4};
-// SIMD数学模块已分离到game_engine_simd crate
-// use game_engine::performance::simd_math;
+use game_engine_simd::{
+    Vec3Simd, Vec4Simd, Mat4Simd, QuatSimd,
+    MatrixBatchOps, VectorBatchOps, GeometryOps, BoundingVolumeOps,
+    SimdBackend, detect_cpu_features
+};
 
 fn bench_vec3_operations(c: &mut Criterion) {
     let mut group = c.benchmark_group("vec3_operations");
@@ -100,8 +104,9 @@ fn bench_simd_math(c: &mut Criterion) {
         .map(|i| Vec3::new(i as f32, i as f32 * 2.0, i as f32 * 3.0))
         .collect();
 
+    // 标准批量归一化
     group.bench_with_input(
-        BenchmarkId::new("batch_normalize", count),
+        BenchmarkId::new("standard_batch_normalize", count),
         &vectors,
         |b, vecs| {
             b.iter(|| {
@@ -114,6 +119,98 @@ fn bench_simd_math(c: &mut Criterion) {
         },
     );
 
+    // SIMD批量归一化
+    group.bench_with_input(
+        BenchmarkId::new("simd_batch_normalize", count),
+        &vectors,
+        |b, vecs| {
+            b.iter(|| {
+                let mut result = Vec::with_capacity(vecs.len());
+                for v in vecs {
+                    let simd_v = Vec3Simd::new(v.x, v.y, v.z);
+                    result.push(black_box(simd_v.normalize()));
+                }
+                result
+            });
+        },
+    );
+
+    // SIMD批量点积
+    group.bench_with_input(
+        BenchmarkId::new("simd_batch_dot", count),
+        &vectors,
+        |b, vecs| {
+            b.iter(|| {
+                let mut v1 = Vec::new();
+                let mut v2 = Vec::new();
+                for i in 0..vecs.len() - 1 {
+                    v1.push(vecs[i]);
+                    v2.push(vecs[i + 1]);
+                }
+                black_box(VectorBatchOps::batch_dot_simd(&v1, &v2))
+            });
+        },
+    );
+
+    // SIMD批量矩阵变换
+    let matrix = Mat4::from_translation(Vec3::new(1.0, 2.0, 3.0));
+    group.bench_with_input(
+        BenchmarkId::new("simd_batch_transform", count),
+        &vectors,
+        |b, vecs| {
+            b.iter(|| {
+                black_box(MatrixBatchOps::batch_transform_vec3_optimized(&matrix, vecs))
+            });
+        },
+    );
+
+    // SIMD包围体计算
+    group.bench_with_input(
+        BenchmarkId::new("simd_bounding_volume", count),
+        &vectors,
+        |b, vecs| {
+            b.iter(|| {
+                black_box(BoundingVolumeOps::batch_compute_aabb(vecs))
+            });
+        },
+    );
+
+    // SIMD后端性能对比
+    let backend = SimdBackend::best_available();
+    println!("SIMD Backend: {:?}", backend);
+    
+    group.finish();
+}
+
+/// 测试不同SIMD后端的性能差异
+fn bench_simd_backends(c: &mut Criterion) {
+    let mut group = c.benchmark_group("simd_backends");
+    
+    let vectors: Vec<Vec3> = (0..1000)
+        .map(|i| Vec3::new(i as f32, i as f32 * 2.0, i as f32 * 3.0))
+        .collect();
+    
+    // 测试不同后端的向量操作
+    for &backend in &[SimdBackend::Scalar, SimdBackend::Sse2, SimdBackend::Avx2, SimdBackend::Neon] {
+        if cfg!(target_arch = "x86_64") || matches!(backend, SimdBackend::Scalar) {
+            group.bench_with_input(
+                BenchmarkId::new(format!("{:?}_vector_ops", backend), vectors.len()),
+                &vectors,
+                |b, vecs| {
+                    b.iter(|| {
+                        let mut sum = 0.0f32;
+                        for i in 0..vecs.len() - 1 {
+                            let a = Vec3Simd::new(vecs[i].x, vecs[i].y, vecs[i].z);
+                            let b = Vec3Simd::new(vecs[i + 1].x, vecs[i + 1].y, vecs[i + 1].z);
+                            sum += black_box(a.dot(&b));
+                        }
+                        black_box(sum)
+                    });
+                },
+            );
+        }
+    }
+    
     group.finish();
 }
 
@@ -122,6 +219,7 @@ criterion_group!(
     bench_vec3_operations,
     bench_matrix_operations,
     bench_quaternion_operations,
-    bench_simd_math
+    bench_simd_math,
+    bench_simd_backends
 );
 criterion_main!(benches);

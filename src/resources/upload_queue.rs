@@ -23,6 +23,15 @@
 
 use super::staging_buffer::StagingBufferPool;
 
+// 性能监控集成
+#[cfg(feature = "profiling")]
+use crate::profiling::{
+    ScopedTimer,
+    record_counter,
+    record_timing,
+    prelude::*,
+};
+
 // ============================================================================
 // 上传请求
 // ============================================================================
@@ -155,6 +164,13 @@ impl UploadQueue {
     /// - `target`: 目标纹理
     /// - `info`: 上传配置信息
     pub fn queue_texture(&mut self, data: &[u8], target: wgpu::Texture, info: TextureUploadInfo) {
+        #[cfg(feature = "profiling")]
+        let _timer = ScopedTimer::new("upload_queue_texture");
+        
+        #[cfg(feature = "profiling")]
+        record_counter!(upload.queue_texture_requests, 1);
+        #[cfg(feature = "profiling")]
+        record_counter!(upload.bytes_queued, data.len() as u64);
         self.pending
             .push(UploadRequest::Texture(TextureUploadRequest {
                 data: data.to_vec(),
@@ -206,6 +222,11 @@ impl UploadQueue {
         _queue: &wgpu::Queue,
         encoder: &mut wgpu::CommandEncoder,
     ) {
+        #[cfg(feature = "profiling")]
+        let _timer = ScopedTimer::new("upload_flush");
+        
+        #[cfg(feature = "profiling")]
+        record_counter!(upload.flush_operations, 1);
         if self.pending.is_empty() {
             return;
         }
@@ -372,6 +393,11 @@ impl UploadQueue {
 
     /// 帧结束时调用，回收资源
     pub fn end_frame(&mut self, device: &wgpu::Device) {
+        #[cfg(feature = "profiling")]
+        let _timer = ScopedTimer::new("upload_end_frame");
+        
+        #[cfg(feature = "profiling")]
+        record_counter!(upload.frame_ends, 1);
         self.staging_pool.end_frame(device);
 
         // 重置本帧统计

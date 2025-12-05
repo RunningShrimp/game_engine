@@ -53,8 +53,8 @@ impl WebInput {
             let closure = Closure::wrap(Box::new(move |event: KeyboardEvent| {
                 if let Some(key_code) = map_key_code(&event.code()) {
                     let modifiers = get_modifiers(&event);
-                    keys.lock().unwrap().insert(key_code);
-                    events.lock().unwrap().push(InputEvent::KeyPressed {
+                    crate::error::safe_lock(&keys, "WebInput.keys_pressed").unwrap().insert(key_code);
+                    crate::error::safe_lock(&events, "WebInput.events").unwrap().push(InputEvent::KeyPressed {
                         key: key_code,
                         modifiers,
                     });
@@ -71,8 +71,8 @@ impl WebInput {
             let closure = Closure::wrap(Box::new(move |event: KeyboardEvent| {
                 if let Some(key_code) = map_key_code(&event.code()) {
                     let modifiers = get_modifiers(&event);
-                    keys.lock().unwrap().remove(&key_code);
-                    events.lock().unwrap().push(InputEvent::KeyReleased {
+                    crate::error::safe_lock(&keys, "WebInput.keys_pressed").unwrap().remove(&key_code);
+                    crate::error::safe_lock(&events, "WebInput.events").unwrap().push(InputEvent::KeyReleased {
                         key: key_code,
                         modifiers,
                     });
@@ -90,8 +90,8 @@ impl WebInput {
             let closure = Closure::wrap(Box::new(move |event: MouseEvent| {
                 let x = event.offset_x() as f32;
                 let y = event.offset_y() as f32;
-                *pos.lock().unwrap() = (x, y);
-                events.lock().unwrap().push(InputEvent::MouseMoved { x, y });
+                *crate::error::safe_lock(&pos, "WebInput.mouse_pos").unwrap() = (x, y);
+                crate::error::safe_lock(&events, "WebInput.events").unwrap().push(InputEvent::MouseMoved { x, y });
             }) as Box<dyn FnMut(_)>);
             self.canvas
                 .add_event_listener_with_callback("mousemove", closure.as_ref().unchecked_ref())?;
@@ -105,9 +105,8 @@ impl WebInput {
                 let button = map_mouse_button(event.button());
                 let x = event.offset_x() as f32;
                 let y = event.offset_y() as f32;
-                buttons.lock().unwrap().insert(button);
-                events
-                    .lock()
+                crate::error::safe_lock(&buttons, "WebInput.mouse_buttons").unwrap().insert(button);
+                crate::error::safe_lock(&events, "WebInput.events")
                     .unwrap()
                     .push(InputEvent::MouseButtonPressed { button, x, y });
             }) as Box<dyn FnMut(_)>);
@@ -123,9 +122,8 @@ impl WebInput {
                 let button = map_mouse_button(event.button());
                 let x = event.offset_x() as f32;
                 let y = event.offset_y() as f32;
-                buttons.lock().unwrap().remove(&button);
-                events
-                    .lock()
+                crate::error::safe_lock(&buttons, "WebInput.mouse_buttons").unwrap().remove(&button);
+                crate::error::safe_lock(&events, "WebInput.events")
                     .unwrap()
                     .push(InputEvent::MouseButtonReleased { button, x, y });
             }) as Box<dyn FnMut(_)>);
@@ -140,8 +138,7 @@ impl WebInput {
             let closure = Closure::wrap(Box::new(move |event: WheelEvent| {
                 let delta_x = event.delta_x() as f32;
                 let delta_y = event.delta_y() as f32;
-                events
-                    .lock()
+                crate::error::safe_lock(&events, "WebInput.events")
                     .unwrap()
                     .push(InputEvent::MouseWheel { delta_x, delta_y });
             }) as Box<dyn FnMut(_)>);
@@ -156,19 +153,19 @@ impl WebInput {
 
 impl Input for WebInput {
     fn poll_events(&mut self) -> Vec<InputEvent> {
-        self.events.lock().unwrap().drain(..).collect()
+        crate::error::safe_lock(&self.events, "WebInput.events").unwrap().drain(..).collect()
     }
 
     fn is_key_pressed(&self, key: KeyCode) -> bool {
-        self.keys_pressed.lock().unwrap().contains(&key)
+        crate::error::safe_lock(&self.keys_pressed, "WebInput.keys_pressed").unwrap().contains(&key)
     }
 
     fn is_mouse_button_pressed(&self, button: MouseButton) -> bool {
-        self.mouse_buttons.lock().unwrap().contains(&button)
+        crate::error::safe_lock(&self.mouse_buttons, "WebInput.mouse_buttons").unwrap().contains(&button)
     }
 
     fn mouse_position(&self) -> (f32, f32) {
-        *self.mouse_pos.lock().unwrap()
+        *crate::error::safe_lock(&self.mouse_pos, "WebInput.mouse_pos").unwrap()
     }
 
     fn set_cursor_grab(&mut self, _grab: bool) {

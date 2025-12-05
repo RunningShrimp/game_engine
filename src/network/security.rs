@@ -25,6 +25,10 @@
 
 use crate::core::utils::current_timestamp_ms;
 use crate::network::NetworkError;
+use aes_gcm::{
+    aead::{Aead, KeyInit},
+    Aes256Gcm, Nonce,
+};
 use hmac::{Hmac, Mac};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -53,7 +57,7 @@ impl AuthToken {
 
         // 生成签名
         let mut mac =
-            HmacSha256::new_from_slice(secret_key).expect("HMAC can take key of any size");
+            <HmacSha256 as Mac>::new_from_slice(secret_key).expect("HMAC can take key of any size");
         mac.update(format!("{}_{}_{}", token_id, client_id, expires_at).as_bytes());
         let signature = mac.finalize().into_bytes().to_vec();
 
@@ -74,7 +78,7 @@ impl AuthToken {
 
         // 验证签名
         let mut mac =
-            HmacSha256::new_from_slice(secret_key).expect("HMAC can take key of any size");
+            <HmacSha256 as Mac>::new_from_slice(secret_key).expect("HMAC can take key of any size");
         mac.update(format!("{}_{}_{}", self.token_id, self.client_id, self.expires_at).as_bytes());
         let expected_signature = mac.finalize().into_bytes();
 
@@ -90,16 +94,20 @@ impl AuthToken {
 
 /// 消息加密器
 pub struct MessageEncryptor {
-    /// 加密密钥（32字节，AES-256）
-    key: [u8; 32],
+    /// AES-256-GCM 加密器
+    cipher: Aes256Gcm,
     /// 消息计数器（用于生成nonce）
     counter: u64,
+    /// 加密密钥（保留用于 HMAC 等其他用途）
+    key: [u8; 32],
 }
 
 impl MessageEncryptor {
     /// 创建新的消息加密器
     pub fn new(key: [u8; 32]) -> Self {
-        Self { key, counter: 0 }
+        let cipher = Aes256Gcm::new_from_slice(&key)
+            .expect("AES-256-GCM key should be 32 bytes");
+        Self { cipher, counter: 0, key }
     }
 
     /// 从密钥派生加密器
@@ -114,41 +122,52 @@ impl MessageEncryptor {
         Self::new(key_array)
     }
 
-    /// 加密消息
+    /// 加密消息 - 使用 AES-256-GCM 认证加密
     pub fn encrypt(&mut self, plaintext: &[u8]) -> Result<EncryptedMessage, NetworkError> {
-        // 生成nonce（使用计数器）
-        let nonce = self.generate_nonce();
+        // 生成nonce（12字节）
+        let nonce_bytes = self.generate_nonce();
         self.counter += 1;
 
-        // 使用AES-256-GCM加密（简化实现，实际应使用专业加密库）
-        // NOTE: 这里使用XOR作为简化示例，实际应使用aes-gcm或类似库
-        let ciphertext = self.xor_encrypt(plaintext, &nonce);
+        let nonce = Nonce::from_slice(&nonce_bytes);
+        
+        // 使用 AES-256-GCM 进行认证加密
+        let ciphertext = self.cipher
+            .encrypt(nonce, plaintext)
+            .map_err(|e| NetworkError::CompressionError(format!("Encryption error: {}", e)))?;
 
-        // 生成认证标签（HMAC）
-        let tag = self.generate_auth_tag(&ciphertext, &nonce)?;
+        // AES-GCM 已经包含认证标签（附加在密文末尾），但我们分开存储以保持 API 兼容性
+        // 密文长度 = 原始长度 + 16字节标签
+        let tag_start = ciphertext.len() - 16;
+        let (actual_ciphertext, tag) = ciphertext.split_at(tag_start);
 
         Ok(EncryptedMessage {
-            nonce: nonce.to_vec(),
-            ciphertext,
-            tag,
+            nonce: nonce_bytes.to_vec(),
+            ciphertext: actual_ciphertext.to_vec(),
+            tag: tag.to_vec(),
         })
     }
 
-    /// 解密消息
+    /// 解密消息 - 使用 AES-256-GCM 认证解密
     pub fn decrypt(&mut self, encrypted: &EncryptedMessage) -> Result<Vec<u8>, NetworkError> {
-        // 验证认证标签
-        let expected_tag = self.generate_auth_tag(&encrypted.ciphertext, &encrypted.nonce)?;
-        if !constant_time_eq(&encrypted.tag, &expected_tag) {
+        // 验证 nonce 长度
+        if encrypted.nonce.len() != 12 {
             return Err(NetworkError::CompressionError(
-                "Authentication tag mismatch".to_string(),
+                "Invalid nonce length: expected 12 bytes".to_string(),
             ));
         }
 
-        // 解密
-        let nonce_array: [u8; 12] = encrypted.nonce[..12]
-            .try_into()
-            .map_err(|_| NetworkError::CompressionError("Invalid nonce length".to_string()))?;
-        let plaintext = self.xor_decrypt(&encrypted.ciphertext, &nonce_array);
+        let nonce = Nonce::from_slice(&encrypted.nonce);
+
+        // 重新组合密文和标签（AES-GCM 期望标签附加在密文末尾）
+        let mut ciphertext_with_tag = encrypted.ciphertext.clone();
+        ciphertext_with_tag.extend_from_slice(&encrypted.tag);
+
+        // 使用 AES-256-GCM 进行认证解密
+        let plaintext = self.cipher
+            .decrypt(nonce, ciphertext_with_tag.as_ref())
+            .map_err(|_| NetworkError::CompressionError(
+                "Decryption failed: authentication tag mismatch or corrupted data".to_string(),
+            ))?;
 
         Ok(plaintext)
     }
@@ -158,32 +177,16 @@ impl MessageEncryptor {
         let mut nonce = [0u8; 12];
         let counter_bytes = self.counter.to_le_bytes();
         nonce[..8].copy_from_slice(&counter_bytes);
-        // 剩余4字节可以添加随机数或时间戳
+        // 剩余4字节添加时间戳以增加随机性
         let timestamp = current_timestamp_ms();
         nonce[8..12].copy_from_slice(&timestamp.to_le_bytes()[..4]);
         nonce
     }
 
-    /// XOR加密（简化实现）
-    fn xor_encrypt(&self, plaintext: &[u8], nonce: &[u8]) -> Vec<u8> {
-        let mut ciphertext = Vec::with_capacity(plaintext.len());
-        for (i, byte) in plaintext.iter().enumerate() {
-            let key_byte = self.key[i % self.key.len()];
-            let nonce_byte = nonce[i % nonce.len()];
-            ciphertext.push(byte ^ key_byte ^ nonce_byte);
-        }
-        ciphertext
-    }
-
-    /// XOR解密（简化实现）
-    fn xor_decrypt(&self, ciphertext: &[u8], nonce: &[u8]) -> Vec<u8> {
-        // XOR是对称的
-        self.xor_encrypt(ciphertext, nonce)
-    }
-
-    /// 生成认证标签
+    /// 生成认证标签（用于兼容性，AES-GCM 已内置认证）
+    #[allow(dead_code)]
     fn generate_auth_tag(&self, ciphertext: &[u8], nonce: &[u8]) -> Result<Vec<u8>, NetworkError> {
-        let mut mac = HmacSha256::new_from_slice(&self.key)
+        let mut mac = <HmacSha256 as Mac>::new_from_slice(&self.key)
             .map_err(|e| NetworkError::CompressionError(format!("HMAC error: {}", e)))?;
         mac.update(ciphertext);
         mac.update(nonce);
@@ -279,7 +282,7 @@ impl MessageSigner {
     /// 签名消息
     pub fn sign(&self, message: &[u8]) -> Vec<u8> {
         let mut mac =
-            HmacSha256::new_from_slice(&self.signing_key).expect("HMAC can take key of any size");
+            <HmacSha256 as Mac>::new_from_slice(&self.signing_key).expect("HMAC can take key of any size");
         mac.update(message);
         mac.finalize().into_bytes().to_vec()
     }

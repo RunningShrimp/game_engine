@@ -7,6 +7,8 @@ use std::{
 // use crossbeam_channel:: {unbounded, Receiver, Sender};
 use tokio::sync::mpsc;
 use tokio::sync::oneshot;
+use tokio::fs;
+use tokio::io::AsyncReadExt;
 // use futures::future::FutureExt;
 use super::atlas::Atlas;
 use crate::render::wgpu::WgpuRenderer;
@@ -310,6 +312,152 @@ impl AssetServer {
             worker_handle: Some(worker_handle),
             shutdown_tx: Some(shutdown_tx),
         }
+    }
+
+    /// 异步加载纹理
+    pub async fn load_texture_async(&self, path: &Path) -> Result<Handle<u32>, String> {
+        let handle = Handle::new_loading();
+        let task = AssetTask::Texture {
+            path: path.to_path_buf(),
+            handle: handle.clone(),
+            is_linear: false,
+            start: std::time::Instant::now(),
+        };
+        
+        // 发送任务并等待结果
+        let (result_tx, result_rx) = tokio::sync::oneshot::channel();
+        let _ = self.tx.send(task);
+        
+        // 等待加载完成
+        let mut timeout_counter = 0;
+        const MAX_TIMEOUT: u32 = 1000; // 最多等待1000次检查
+        
+        while timeout_counter < MAX_TIMEOUT {
+            // 检查是否已完成
+            if let Some(result) = handle.get_non_blocking() {
+                return match result {
+                    LoadState::Loaded(_) => Ok(handle),
+                    LoadState::Failed(e) => Err(e),
+                    LoadState::Loading => {
+                        // 继续等待
+                        timeout_counter += 1;
+                        tokio::time::sleep(Duration::from_millis(1)).await;
+                        continue;
+                    }
+                };
+            }
+            timeout_counter += 1;
+            tokio::time::sleep(Duration::from_millis(1)).await;
+        }
+        
+        Err("Timeout waiting for texture to load".to_string())
+    }
+
+    /// 异步加载线性纹理
+    pub async fn load_texture_linear_async(&self, path: &Path) -> Result<Handle<u32>, String> {
+        let handle = Handle::new_loading();
+        let task = AssetTask::Texture {
+            path: path.to_path_buf(),
+            handle: handle.clone(),
+            is_linear: true,
+            start: std::time::Instant::now(),
+        };
+        
+        // 发送任务并等待结果
+        let _ = self.tx.send(task);
+        
+        // 等待加载完成
+        let mut timeout_counter = 0;
+        const MAX_TIMEOUT: u32 = 1000;
+        
+        while timeout_counter < MAX_TIMEOUT {
+            if let Some(result) = handle.get_non_blocking() {
+                return match result {
+                    LoadState::Loaded(_) => Ok(handle),
+                    LoadState::Failed(e) => Err(e),
+                    LoadState::Loading => {
+                        timeout_counter += 1;
+                        tokio::time::sleep(Duration::from_millis(1)).await;
+                        continue;
+                    }
+                };
+            }
+            timeout_counter += 1;
+            tokio::time::sleep(Duration::from_millis(1)).await;
+        }
+        
+        Err("Timeout waiting for texture to load".to_string())
+    }
+
+    /// 异步加载图集
+    pub async fn load_atlas_async(&self, path: &Path) -> Result<Handle<Atlas>, String> {
+        let handle = Handle::new_loading();
+        let task = AssetTask::Atlas {
+            path: path.to_path_buf(),
+            handle: handle.clone(),
+            start: std::time::Instant::now(),
+        };
+        
+        // 发送任务并等待结果
+        let _ = self.tx.send(task);
+        
+        // 等待加载完成
+        let mut timeout_counter = 0;
+        const MAX_TIMEOUT: u32 = 1000;
+        
+        while timeout_counter < MAX_TIMEOUT {
+            if let Some(result) = handle.get_non_blocking() {
+                return match result {
+                    LoadState::Loaded(_) => Ok(handle),
+                    LoadState::Failed(e) => Err(e),
+                    LoadState::Loading => {
+                        timeout_counter += 1;
+                        tokio::time::sleep(Duration::from_millis(1)).await;
+                        continue;
+                    }
+                };
+            }
+            timeout_counter += 1;
+            tokio::time::sleep(Duration::from_millis(1)).await;
+        }
+        
+        Err("Timeout waiting for atlas to load".to_string())
+    }
+
+    #[cfg(feature = "gltf")]
+    /// 异步加载GLTF场景
+    pub async fn load_gltf_async(&self, path: &Path) -> Result<Handle<GltfScene>, String> {
+        let handle = Handle::new_loading();
+        let task = AssetTask::Gltf {
+            path: path.to_path_buf(),
+            handle: handle.clone(),
+            start: std::time::Instant::now(),
+        };
+        
+        // 发送任务并等待结果
+        let _ = self.tx.send(task);
+        
+        // 等待加载完成
+        let mut timeout_counter = 0;
+        const MAX_TIMEOUT: u32 = 1000;
+        
+        while timeout_counter < MAX_TIMEOUT {
+            if let Some(result) = handle.get_non_blocking() {
+                return match result {
+                    LoadState::Loaded(_) => Ok(handle),
+                    LoadState::Failed(e) => Err(e),
+                    LoadState::Loading => {
+                        timeout_counter += 1;
+                        tokio::time::sleep(Duration::from_millis(1)).await;
+                        continue;
+                    }
+                };
+            }
+            timeout_counter += 1;
+            tokio::time::sleep(Duration::from_millis(1)).await;
+        }
+        
+        Err("Timeout waiting for gltf to load".to_string())
     }
 
     pub fn load_texture(&self, path: &Path) -> Handle<u32> {

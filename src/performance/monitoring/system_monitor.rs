@@ -6,117 +6,9 @@
 //! - CPU 使用率
 //! - 性能统计
 
-<<<<<<< HEAD
 use std::collections::VecDeque;
 use std::time::{Duration, Instant};
 
-=======
-use std::collections::{HashMap, VecDeque};
-use std::time::{Duration, Instant};
-
-/// 性能指标类型
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum MetricType {
-    // CPU 指标
-    FrameTime,
-    CpuTime,
-    UpdateTime,
-    RenderTime,
-
-    // GPU 指标
-    GpuTime,
-    DrawCalls,
-    TriangleCount,
-    VertexCount,
-
-    // 内存指标
-    RamUsage,
-    VramUsage,
-    AllocCount,
-
-    // 物理指标
-    PhysicsTime,
-    CollisionChecks,
-
-    // AI 指标
-    AiTime,
-    PathfindingTime,
-}
-
-/// 单个性能指标
-#[derive(Debug, Clone)]
-pub struct Metric {
-    pub metric_type: MetricType,
-    pub value: f64,
-    pub unit: String,
-    pub timestamp: Instant,
-}
-
-impl Metric {
-    pub fn new(metric_type: MetricType, value: f64, unit: String) -> Self {
-        Self {
-            metric_type,
-            value,
-            unit,
-            timestamp: Instant::now(),
-        }
-    }
-}
-
-/// 性能统计（一段时间内的聚合统计）
-#[derive(Debug, Clone)]
-pub struct MetricStats {
-    pub metric_type: MetricType,
-    pub min: f64,
-    pub max: f64,
-    pub avg: f64,
-    pub median: f64,
-    pub stddev: f64,
-    pub samples: usize,
-}
-
-impl MetricStats {
-    pub fn compute(metric_type: MetricType, values: &[f64]) -> Self {
-        if values.is_empty() {
-            return Self {
-                metric_type,
-                min: 0.0,
-                max: 0.0,
-                avg: 0.0,
-                median: 0.0,
-                stddev: 0.0,
-                samples: 0,
-            };
-        }
-
-        let min = values.iter().cloned().fold(f64::INFINITY, f64::min);
-        let max = values.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
-        let sum: f64 = values.iter().sum();
-        let avg = sum / values.len() as f64;
-
-        // 计算中位数
-        let mut sorted = values.to_vec();
-        sorted.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
-        let median = sorted[sorted.len() / 2];
-
-        // 计算标准差
-        let variance: f64 =
-            values.iter().map(|v| (v - avg).powi(2)).sum::<f64>() / values.len() as f64;
-        let stddev = variance.sqrt();
-
-        Self {
-            metric_type,
-            min,
-            max,
-            avg,
-            median,
-            stddev,
-            samples: values.len(),
-        }
-    }
-}
-
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
 /// 性能指标
 #[derive(Debug, Clone, Copy)]
 pub struct PerformanceMetrics {
@@ -320,15 +212,6 @@ pub struct SystemPerformanceMonitor {
     pub cpu_monitor: CPUMonitor,
     /// 当前指标
     pub metrics: PerformanceMetrics,
-<<<<<<< HEAD
-=======
-    /// 扩展指标收集器
-    extended_metrics: HashMap<MetricType, Vec<f64>>,
-    /// 指标历史记录
-    metric_history: Vec<Metric>,
-    /// 最大历史记录大小
-    max_history_size: usize,
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
 }
 
 impl SystemPerformanceMonitor {
@@ -345,31 +228,6 @@ impl SystemPerformanceMonitor {
                 cpu_usage_percent: 0.0,
                 gpu_usage_percent: 0.0,
             },
-<<<<<<< HEAD
-=======
-            extended_metrics: HashMap::new(),
-            metric_history: Vec::new(),
-            max_history_size: 60 * 60, // 1小时 (60fps)
-        }
-    }
-
-    /// 创建带有自定义历史大小的系统性能监控器
-    pub fn with_history_size(max_history_size: usize) -> Self {
-        Self {
-            frame_sampler: FrameTimeSampler::new(300),
-            memory_monitor: MemoryMonitor::new(300),
-            cpu_monitor: CPUMonitor::new(300),
-            metrics: PerformanceMetrics {
-                fps: 0.0,
-                frame_time_ms: 0.0,
-                memory_usage_mb: 0.0,
-                cpu_usage_percent: 0.0,
-                gpu_usage_percent: 0.0,
-            },
-            extended_metrics: HashMap::new(),
-            metric_history: Vec::new(),
-            max_history_size,
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
         }
     }
 
@@ -392,46 +250,8 @@ impl SystemPerformanceMonitor {
         self.metrics.cpu_usage_percent = self.cpu_monitor.average_cpu_usage();
     }
 
-<<<<<<< HEAD
     /// 获取性能报告
     pub fn get_report(&self) -> PerformanceReport {
-=======
-    /// 记录扩展指标
-    pub fn record_metric(&mut self, metric_type: MetricType, value: f64, unit: &str) {
-        self.extended_metrics
-            .entry(metric_type)
-            .or_insert_with(Vec::new)
-            .push(value);
-
-        let metric = Metric::new(metric_type, value, unit.to_string());
-        self.metric_history.push(metric);
-
-        // 限制历史记录大小
-        if self.metric_history.len() > self.max_history_size {
-            self.metric_history.remove(0);
-        }
-    }
-
-    /// 获取指标统计信息
-    pub fn get_metric_stats(&self, metric_type: MetricType) -> Option<MetricStats> {
-        self.extended_metrics
-            .get(&metric_type)
-            .map(|values| MetricStats::compute(metric_type, values))
-    }
-
-    /// 清空指定类型的指标数据
-    pub fn clear_metric(&mut self, metric_type: MetricType) {
-        self.extended_metrics.remove(&metric_type);
-    }
-
-    /// 获取性能报告
-    pub fn get_report(&self) -> PerformanceReport {
-        let mut extended_stats = HashMap::new();
-        for (&metric_type, values) in &self.extended_metrics {
-            extended_stats.insert(metric_type, MetricStats::compute(metric_type, values));
-        }
-
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
         PerformanceReport {
             current_fps: self.metrics.fps,
             average_frame_time_ms: self.frame_sampler.average_frame_time().as_secs_f32() * 1000.0,
@@ -452,10 +272,6 @@ impl SystemPerformanceMonitor {
             peak_memory_mb: self.memory_monitor.peak_memory_mb(),
             average_cpu_usage: self.cpu_monitor.average_cpu_usage(),
             peak_cpu_usage: self.cpu_monitor.peak_cpu_usage(),
-<<<<<<< HEAD
-=======
-            extended_stats,
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
         }
     }
 
@@ -464,43 +280,7 @@ impl SystemPerformanceMonitor {
         self.frame_sampler.clear();
         self.memory_monitor = MemoryMonitor::new(300);
         self.cpu_monitor = CPUMonitor::new(300);
-<<<<<<< HEAD
     }
-=======
-        self.extended_metrics.clear();
-        self.metric_history.clear();
-    }
-
-    /// 清空所有数据
-    pub fn clear_all(&mut self) {
-        self.reset();
-    }
-}
-
-/// 性能问题严重级别
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub enum IssueSeverity {
-    Low,
-    Medium,
-    High,
-    Critical,
-}
-
-/// 性能问题
-#[derive(Debug, Clone)]
-pub struct PerformanceIssue {
-    pub severity: IssueSeverity,
-    pub message: String,
-}
-
-/// 性能优化建议
-#[derive(Debug, Clone)]
-pub struct OptimizationRecommendation {
-    pub area: String,
-    pub issue: String,
-    pub recommendation: String,
-    pub expected_improvement: String,
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
 }
 
 /// 性能报告
@@ -526,170 +306,6 @@ pub struct PerformanceReport {
     pub average_cpu_usage: f32,
     /// 峰值 CPU 使用率 (%)
     pub peak_cpu_usage: f32,
-<<<<<<< HEAD
-=======
-    /// 扩展指标统计
-    pub extended_stats: HashMap<MetricType, MetricStats>,
-}
-
-impl PerformanceReport {
-    /// 打印性能摘要
-    pub fn print_summary(&self) {
-        tracing::info!(target: "performance", "\n=== Performance Report ===\n");
-
-        // CPU 指标
-        tracing::info!(target: "performance", "--- CPU Metrics ---");
-        tracing::info!(
-            target: "performance",
-            "Frame Time: {:.2}ms (avg)",
-            self.average_frame_time_ms
-        );
-        if let (Some(min), Some(max)) = (self.min_frame_time_ms, self.max_frame_time_ms) {
-            tracing::info!(
-                target: "performance",
-                "Frame Time Range: {:.2}ms (min) {:.2}ms (max)",
-                min, max
-            );
-        }
-        tracing::info!(target: "performance", "FPS: {:.1}", self.current_fps);
-
-        // 内存指标
-        tracing::info!(target: "performance", "\n--- Memory Metrics ---");
-        tracing::info!(
-            target: "performance",
-            "Memory Usage: {:.0}MB (avg) {:.0}MB (peak)",
-            self.average_memory_mb, self.peak_memory_mb
-        );
-
-        // CPU 使用率
-        tracing::info!(target: "performance", "\n--- CPU Usage ---");
-        tracing::info!(
-            target: "performance",
-            "CPU Usage: {:.1}% (avg) {:.1}% (peak)",
-            self.average_cpu_usage, self.peak_cpu_usage
-        );
-
-        // 扩展指标
-        if !self.extended_stats.is_empty() {
-            tracing::info!(target: "performance", "\n--- Extended Metrics ---");
-            for (metric_type, stats) in &self.extended_stats {
-                match metric_type {
-                    MetricType::DrawCalls => {
-                        tracing::info!(
-                            target: "performance",
-                            "Draw Calls: {:.0} (avg)",
-                            stats.avg
-                        );
-                    }
-                    MetricType::TriangleCount => {
-                        tracing::info!(
-                            target: "performance",
-                            "Triangles: {:.0} (avg)",
-                            stats.avg
-                        );
-                    }
-                    MetricType::PhysicsTime => {
-                        tracing::info!(
-                            target: "performance",
-                            "Physics Time: {:.2}ms (avg)",
-                            stats.avg
-                        );
-                    }
-                    MetricType::AiTime => {
-                        tracing::info!(
-                            target: "performance",
-                            "AI Time: {:.2}ms (avg)",
-                            stats.avg
-                        );
-                    }
-                    _ => {}
-                }
-            }
-        }
-    }
-
-    /// 检测性能问题
-    pub fn detect_issues(&self) -> Vec<PerformanceIssue> {
-        let mut issues = Vec::new();
-
-        // 检测帧时间问题
-        if self.average_frame_time_ms > 33.0 {
-            // 低于 30fps
-            issues.push(PerformanceIssue {
-                severity: IssueSeverity::High,
-                message: format!(
-                    "Low frame rate: {:.1}ms ({:.1}fps)",
-                    self.average_frame_time_ms,
-                    1000.0 / self.average_frame_time_ms
-                ),
-            });
-        }
-
-        // 检测 Draw Call 问题
-        if let Some(stats) = self.extended_stats.get(&MetricType::DrawCalls) {
-            if stats.avg > 1000.0 {
-                issues.push(PerformanceIssue {
-                    severity: IssueSeverity::Medium,
-                    message: format!("High draw call count: {:.0}", stats.avg),
-                });
-            }
-        }
-
-        // 检测内存问题
-        if self.peak_memory_mb > 2048.0 {
-            // 超过 2GB
-            issues.push(PerformanceIssue {
-                severity: IssueSeverity::High,
-                message: format!("High RAM usage: {:.0}MB", self.peak_memory_mb),
-            });
-        }
-
-        issues
-    }
-}
-
-impl OptimizationRecommendation {
-    /// 生成优化建议
-    pub fn generate_recommendations(report: &PerformanceReport) -> Vec<Self> {
-        let mut recommendations = Vec::new();
-
-        // 检测 Draw Call 过多
-        if let Some(stats) = report.extended_stats.get(&MetricType::DrawCalls) {
-            if stats.avg > 500.0 {
-                recommendations.push(Self {
-                    area: "Rendering".to_string(),
-                    issue: "Too many draw calls".to_string(),
-                    recommendation: "Enable draw call batching and implement LOD system"
-                        .to_string(),
-                    expected_improvement: "30-50% reduction in draw calls".to_string(),
-                });
-            }
-        }
-
-        // 检测 CPU 时间过长
-        if report.average_frame_time_ms > 10.0 {
-            recommendations.push(Self {
-                area: "CPU".to_string(),
-                issue: "High frame time".to_string(),
-                recommendation: "Profile and optimize hot paths, consider using SIMD"
-                    .to_string(),
-                expected_improvement: "20-40% improvement in frame performance".to_string(),
-            });
-        }
-
-        // 检测内存使用
-        if report.average_memory_mb > 1024.0 {
-            recommendations.push(Self {
-                area: "Memory".to_string(),
-                issue: "High RAM usage".to_string(),
-                recommendation: "Use Arena allocator and object pooling".to_string(),
-                expected_improvement: "20-30% reduction in memory usage".to_string(),
-            });
-        }
-
-        recommendations
-    }
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
 }
 
 #[cfg(test)]
@@ -764,60 +380,4 @@ mod tests {
         assert!(p50.is_some());
         assert_eq!(p50.unwrap(), Duration::from_millis(16));
     }
-<<<<<<< HEAD
 }
-=======
-
-    #[test]
-    fn test_extended_metrics() {
-        let mut monitor = SystemPerformanceMonitor::new();
-
-        // 记录一些扩展指标
-        for i in 0..10 {
-            monitor.record_metric(MetricType::DrawCalls, 500.0 + i as f64 * 10.0, "calls");
-            monitor.record_metric(MetricType::FrameTime, 16.0 + i as f64, "ms");
-        }
-
-        let draw_calls_stats = monitor.get_metric_stats(MetricType::DrawCalls);
-        assert!(draw_calls_stats.is_some());
-        assert_eq!(draw_calls_stats.unwrap().samples, 10);
-
-        let report = monitor.get_report();
-        assert!(!report.extended_stats.is_empty());
-        assert!(report.extended_stats.contains_key(&MetricType::DrawCalls));
-    }
-
-    #[test]
-    fn test_issue_detection() {
-        let mut monitor = SystemPerformanceMonitor::new();
-
-        // 模拟低帧率
-        for _ in 0..10 {
-            monitor.record_metric(MetricType::FrameTime, 50.0, "ms"); // 20fps
-        }
-
-        let report = monitor.get_report();
-        let issues = report.detect_issues();
-
-        assert!(!issues.is_empty());
-        assert!(issues[0].message.contains("Low frame rate"));
-    }
-
-    #[test]
-    fn test_recommendations() {
-        let mut monitor = SystemPerformanceMonitor::new();
-
-        for _ in 0..10 {
-            monitor.record_metric(MetricType::DrawCalls, 1000.0, "calls");
-        }
-
-        let report = monitor.get_report();
-        let recommendations = OptimizationRecommendation::generate_recommendations(&report);
-
-        assert!(!recommendations.is_empty());
-    }
-}
-
-/// 向后兼容的性能监控器类型别名
-pub type PerformanceMonitor = SystemPerformanceMonitor;
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)

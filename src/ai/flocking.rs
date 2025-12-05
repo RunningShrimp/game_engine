@@ -29,11 +29,7 @@
 //! ```
 
 use crate::impl_default;
-<<<<<<< HEAD
 use glam::{Vec2, Vec3};
-=======
-use glam::Vec3;
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
 use std::collections::HashMap;
 use thiserror::Error;
 

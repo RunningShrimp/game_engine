@@ -24,6 +24,15 @@
 
 use std::collections::VecDeque;
 
+// 性能监控集成
+#[cfg(feature = "profiling")]
+use crate::profiling::{
+    ScopedTimer,
+    record_counter,
+    record_timing,
+    prelude::*,
+};
+
 // ============================================================================
 // 常量配置
 // ============================================================================
@@ -54,6 +63,14 @@ pub struct StagingBuffer {
 impl StagingBuffer {
     /// 创建新的 Staging Buffer
     pub fn new(device: &wgpu::Device, size: u64, label: Option<&str>) -> Self {
+        #[cfg(feature = "profiling")]
+        let _timer = ScopedTimer::new("staging_buffer_create");
+        
+        #[cfg(feature = "profiling")]
+        record_counter!(memory.staging_buffer_creations, 1);
+        
+        #[cfg(feature = "profiling")]
+        record_counter!(memory.staging_buffer_memory_allocated, size);
         let buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label,
             size,
@@ -70,6 +87,9 @@ impl StagingBuffer {
 
     /// 检查是否有足够空间
     pub fn can_fit(&self, size: u64, alignment: u64) -> bool {
+        #[cfg(feature = "profiling")]
+        record_counter!(memory.staging_buffer_space_checks, 1);
+        
         let aligned_offset = align_to(self.offset, alignment);
         aligned_offset + size <= self.size
     }
@@ -78,6 +98,13 @@ impl StagingBuffer {
     ///
     /// 返回写入的偏移量
     pub fn write(&mut self, data: &[u8], alignment: u64) -> Option<u64> {
+        #[cfg(feature = "profiling")]
+        let _timer = ScopedTimer::new("staging_buffer_write");
+        
+        #[cfg(feature = "profiling")]
+        record_counter!(memory.staging_buffer_writes, 1);
+        #[cfg(feature = "profiling")]
+        record_counter!(memory.staging_buffer_bytes_written, data.len() as u64);
         let aligned_offset = align_to(self.offset, alignment);
         let end = aligned_offset + data.len() as u64;
 
@@ -163,6 +190,12 @@ impl StagingBufferPool {
     /// 返回 (buffer_index, offset)
     /// - buffer_index: 0 表示共享缓冲区，>0 表示独立缓冲区索引+1
     pub fn allocate(&mut self, device: &wgpu::Device, size: u64, alignment: u64) -> (usize, u64) {
+        #[cfg(feature = "profiling")]
+        let _timer = ScopedTimer::new("staging_pool_allocate");
+        
+        #[cfg(feature = "profiling")]
+        record_counter!(memory.staging_pool_allocations, 1);
+        
         self.stats.total_allocations += 1;
         self.stats.total_bytes_uploaded += size;
 
@@ -240,6 +273,12 @@ impl StagingBufferPool {
 
     /// 帧结束时回收缓冲区
     pub fn end_frame(&mut self, device: &wgpu::Device) {
+        #[cfg(feature = "profiling")]
+        let _timer = ScopedTimer::new("staging_pool_end_frame");
+        
+        #[cfg(feature = "profiling")]
+        record_counter!(memory.staging_pool_frame_ends, 1);
+        
         // 重映射共享缓冲区
         if let Some(ref mut shared) = self.shared_buffer {
             shared.reset();

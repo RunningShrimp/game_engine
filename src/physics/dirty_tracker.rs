@@ -30,6 +30,15 @@ use crate::impl_default;
 use bevy_ecs::prelude::*;
 use glam::{Quat, Vec3};
 
+// 性能监控集成
+#[cfg(feature = "profiling")]
+use crate::profiling::{
+    ScopedTimer,
+    record_counter,
+    record_timing,
+    prelude::*,
+};
+
 // ============================================================================
 // 脏标记组件
 // ============================================================================
@@ -219,6 +228,11 @@ pub fn optimized_physics_sync_system(
         Option<&mut CachedPhysicsState>,
     )>,
 ) {
+    #[cfg(feature = "profiling")]
+    let _timer = ScopedTimer::new("physics_sync_system");
+    
+    #[cfg(feature = "profiling")]
+    record_counter!(physics.sync_system_calls, 1);
     let world = physics_service.get_world();
     for (rb_comp, mut transform, dirty_opt, cached_opt) in query.iter_mut() {
         // 获取刚体状态（从富领域对象）
@@ -228,6 +242,8 @@ pub fn optimized_physics_sync_system(
 
         // 跳过休眠体（如果配置启用）
         if config.skip_sleeping && body_state.sleeping {
+            #[cfg(feature = "profiling")]
+            record_counter!(physics.sleeping_objects_skipped, 1);
             continue;
         }
 
@@ -236,12 +252,26 @@ pub fn optimized_physics_sync_system(
 
         // 使用脏检测
         if config.dirty_tracking_enabled {
+            #[cfg(feature = "profiling")]
+            record_counter!(physics.dirty_tracking_enabled_checks, 1);
             if let (Some(mut cached), Some(mut dirty)) = (cached_opt, dirty_opt) {
                 // 检查是否真的改变了
                 let pos_changed = cached.position_changed(new_position, config.position_threshold);
                 let rot_changed = cached.rotation_changed(new_rotation, config.rotation_threshold);
 
+                #[cfg(feature = "profiling")]
+                {
+                    if pos_changed {
+                        record_counter!(physics.position_changes_detected, 1);
+                    }
+                    if rot_changed {
+                        record_counter!(physics.rotation_changes_detected, 1);
+                    }
+                }
+
                 if !pos_changed && !rot_changed {
+                    #[cfg(feature = "profiling")]
+                    record_counter!(physics.unchanged_objects_skipped, 1);
                     continue;
                 }
 
@@ -286,9 +316,16 @@ pub fn transform_to_physics_sync_system(
         Changed<crate::ecs::Transform>,
     >,
 ) {
+    #[cfg(feature = "profiling")]
+    let _timer = ScopedTimer::new("transform_to_physics_sync_system");
+    
+    #[cfg(feature = "profiling")]
+    record_counter!(physics.transform_sync_system_calls, 1);
     for (rb_comp, transform, dirty) in query.iter() {
         // 只同步被外部修改的 Transform
         if !dirty.transform_changed {
+            #[cfg(feature = "profiling")]
+            record_counter!(physics.transform_not_dirty_skipped, 1);
             continue;
         }
 
@@ -366,15 +403,21 @@ impl PhysicsSyncStats {
     }
 
     pub fn record_sync(&mut self) {
+        #[cfg(feature = "profiling")]
+        record_counter!(physics.sync_operations, 1);
         self.total_syncs += 1;
         self.frame_syncs += 1;
     }
 
     pub fn record_skip_sleeping(&mut self) {
+        #[cfg(feature = "profiling")]
+        record_counter!(physics.sleeping_skips, 1);
         self.skipped_sleeping += 1;
     }
 
     pub fn record_skip_unchanged(&mut self) {
+        #[cfg(feature = "profiling")]
+        record_counter!(physics.unchanged_skips, 1);
         self.skipped_unchanged += 1;
     }
 }

@@ -2,12 +2,8 @@
 //!
 //! 管理多个粒子系统，提供统一的更新和渲染接口。
 
-<<<<<<< HEAD
 use crate::render::particles::emitter::{GpuParticleSystem, ParticleEmitter};
 use crate::render::particles::GpuParticle;
-=======
-use crate::render::particles::emitter::GpuParticleSystem;
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
 use wgpu::{CommandEncoder, Device, Queue};
 
 /// 粒子系统管理器
@@ -85,21 +81,12 @@ impl ParticleSystemManager {
     /// * `delta_time` - 时间增量
     pub fn update_all(
         &mut self,
-<<<<<<< HEAD
         encoder: &mut CommandEncoder,
         device: &Device,
         queue: &Queue,
         delta_time: f32,
     ) {
         for system in &mut self.systems {
-=======
-        _encoder: &mut CommandEncoder,
-        _device: &Device,
-        _queue: &Queue,
-        _delta_time: f32,
-    ) {
-        for _system in &mut self.systems {
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
             // 更新Uniform（需要从ParticleEmitter获取参数）
             // 这里简化处理，实际应该从ECS组件获取
         }

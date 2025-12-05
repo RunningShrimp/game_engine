@@ -4,6 +4,16 @@ use winit::window::Window;
 use crate::core::error::RenderError;
 use crate::render::mesh::Vertex3D;
 
+// 性能监控集成
+#[cfg(feature = "profiling")]
+use crate::profiling::{
+    ProfilingService,
+    ScopedTimer,
+    record_counter,
+    record_timing,
+    prelude::*,
+};
+
 #[repr(C)]
 #[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct Instance {
@@ -569,6 +579,8 @@ impl DoubleBufferedInstances {
 
 impl<'a> WgpuRenderer<'a> {
     pub async fn new(window: &'a Window) -> Result<Self, RenderError> {
+        #[cfg(feature = "profiling")]
+        let _timer = ScopedTimer::new("wgpu_renderer_init");
         let size = window.inner_size();
         let instance = wgpu::Instance::default();
         let surface = instance
@@ -1373,7 +1385,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         
         // 初始化遮挡剔除（如果启用）
         if let Some(ref mut gpu_driven) = gpu_driven_renderer {
-            if let Err(e) = gpu_driven.initialize_occlusion_culling(&device, config.width, config.height) {
+            if let Err(e) = gpu_driven.initialize_occlusion_culling(&device) {
                 tracing::warn!(target: "render", "Failed to initialize occlusion culling: {}", e);
                 // 如果初始化失败，禁用遮挡剔除
                 gpu_driven_renderer = None;
@@ -1487,6 +1499,17 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         egui_shapes: &[egui::ClippedPrimitive],
         egui_pixels_per_point: f32,
     ) {
+        #[cfg(feature = "profiling")]
+        let frame_timer = ScopedTimer::new("frame_render");
+        
+        #[cfg(feature = "profiling")]
+        record_counter!(render.frame_count, 1);
+        
+        #[cfg(feature = "profiling")]
+        record_counter!(render.instance_count, instances.len() as u64);
+        
+        #[cfg(feature = "profiling")]
+        record_counter!(render.mesh_count, meshes.len() as u64);
         self.update_instances_grouped(&mut instances.to_vec());
 
         // Update 3D uniforms
@@ -1523,19 +1546,34 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
             );
         }
 
+        #[cfg(feature = "profiling")]
+        let _acquire_timer = ScopedTimer::new("acquire_frame_texture");
+        
         let frame = match self.surface.get_current_texture() {
             Ok(frame) => frame,
-            Err(_) => {
+            Err(e) => {
+                #[cfg(feature = "profiling")]
+                record_counter!(render.texture_acquire_errors, 1);
+                
                 self.surface.configure(&self.device, &self.config);
-                self.surface.get_current_texture().unwrap()
+                match self.surface.get_current_texture() {
+                    Ok(frame) => frame,
+                    Err(e2) => {
+                        tracing::error!("Failed to get texture after reconfigure. Original: {}, Retry: {}", e, e2);
+                        return;
+                    }
+                }
             }
         };
         let view = frame
             .texture
             .create_view(&wgpu::TextureViewDescriptor::default());
+        #[cfg(feature = "profiling")]
+        let _encoder_timer = ScopedTimer::new("create_command_encoder");
+        
         let mut encoder = self
             .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some("Main Render Encoder") });
 
         if let Some(renderer) = egui_renderer.as_mut() {
             let screen_desc = egui_wgpu::ScreenDescriptor {
@@ -1696,8 +1734,27 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
             }
         }
 
+        #[cfg(feature = "profiling")]
+        let _submit_timer = ScopedTimer::new("submit_commands");
+        
         self.queue.submit(std::iter::once(encoder.finish()));
+        
+        #[cfg(feature = "profiling")]
+        let _present_timer = ScopedTimer::new("present_frame");
+        
         frame.present();
+        
+        #[cfg(feature = "profiling")]
+        {
+            // 记录帧渲染时间
+            if let Ok(duration) = frame_timer.elapsed() {
+                record_timing!(render.frame_time_ms, duration.as_millis() as f64);
+            }
+            
+            // 记录Draw Call数量
+            let (draws, _) = self.draw_stats();
+            record_counter!(render.draw_calls, draws as u64);
+        }
     }
 
     pub fn set_lights(&mut self, lights: Vec<GpuPointLight>) {
@@ -1736,6 +1793,12 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     }
 
     pub fn update_instances(&mut self, instances: &[Instance]) {
+        #[cfg(feature = "profiling")]
+        let _timer = ScopedTimer::new("update_instances");
+        
+        #[cfg(feature = "profiling")]
+        record_counter!(render.instance_updates, 1);
+        
         self.instance_count = instances.len() as u32;
         self.layer_ranges.clear();
         self.layer_ranges.push((0, self.instance_count));
@@ -1763,6 +1826,12 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     /// # 返回
     /// 返回更新的脏范围数量
     pub fn update_instances_incremental(&mut self, instances: &[Instance]) -> usize {
+        #[cfg(feature = "profiling")]
+        let _timer = ScopedTimer::new("update_instances_incremental");
+        
+        #[cfg(feature = "profiling")]
+        record_counter!(render.incremental_updates, 1);
+        
         self.instance_count = instances.len() as u32;
         self.layer_ranges.clear();
         self.layer_ranges.push((0, self.instance_count));
@@ -1796,6 +1865,12 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         self.group_cache.clear();
         self.groups_dirty = false;
 
+        #[cfg(feature = "profiling")]
+        {
+            record_counter!(render.dirty_ranges, range_count as u64);
+            record_counter!(render.dirty_instances, self.dirty_tracker.dirty_instance_count() as u64);
+        }
+        
         range_count
     }
 
@@ -1945,7 +2020,15 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     }
 
     pub fn load_texture_file(&mut self, path: &std::path::Path) -> Option<u32> {
+        #[cfg(feature = "profiling")]
+        let _timer = ScopedTimer::new("load_texture_file");
+        
+        #[cfg(feature = "profiling")]
+        let start_time = std::time::Instant::now();
+        
         if let Ok(img) = image::open(path) {
+            #[cfg(feature = "profiling")]
+            record_counter!(render.texture_load_attempts, 1);
             let rgba = img.to_rgba8();
             let (w, h) = rgba.dimensions();
             let texture = self.device.create_texture(&wgpu::TextureDescriptor {
@@ -2002,8 +2085,23 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
             let idx = self.texture_bind_groups.len() as u32;
             self.texture_bind_groups.push(bg);
             self.textures_size.push([w, h]);
+            
+            #[cfg(feature = "profiling")]
+            {
+                record_counter!(render.texture_load_success, 1);
+                record_counter!(render.loaded_textures, 1);
+                record_counter!(render.total_texture_memory, (w * h * 4) as u64);
+                
+                if let Ok(duration) = start_time.elapsed() {
+                    record_timing!(render.texture_load_time_ms, duration.as_millis() as f64);
+                }
+            }
+            
             Some(idx)
         } else {
+            #[cfg(feature = "profiling")]
+            record_counter!(render.texture_load_failures, 1);
+            
             None
         }
     }
@@ -2740,9 +2838,15 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
 
         let frame = match self.surface.get_current_texture() {
             Ok(frame) => frame,
-            Err(_) => {
+            Err(e) => {
                 self.surface.configure(&self.device, &self.config);
-                self.surface.get_current_texture().unwrap()
+                match self.surface.get_current_texture() {
+                    Ok(frame) => frame,
+                    Err(e2) => {
+                        tracing::error!("Failed to get texture after reconfigure. Original: {}, Retry: {}", e, e2);
+                        return;
+                    }
+                }
             }
         };
         let view = frame
@@ -2925,9 +3029,15 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
 
         let frame = match self.surface.get_current_texture() {
             Ok(frame) => frame,
-            Err(_) => {
+            Err(e) => {
                 self.surface.configure(&self.device, &self.config);
-                self.surface.get_current_texture().unwrap()
+                match self.surface.get_current_texture() {
+                    Ok(frame) => frame,
+                    Err(e2) => {
+                        tracing::error!("Failed to get texture after reconfigure. Original: {}, Retry: {}", e, e2);
+                        return;
+                    }
+                }
             }
         };
         let view = frame

@@ -4,11 +4,7 @@
 
 #[cfg(test)]
 mod audio_service_tests {
-<<<<<<< HEAD
     use super::super::audio::*;
-=======
-    use crate::services::audio::*;
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
     use std::fs;
     use std::io::Write;
 
@@ -144,21 +140,13 @@ mod audio_service_tests {
 
 #[cfg(test)]
 mod render_service_tests {
-<<<<<<< HEAD
     use super::super::render::*;
-=======
-    use crate::services::render::*;
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
     use crate::domain::render::{RenderObject, RenderObjectId};
     use crate::ecs::Transform;
     use crate::render::frustum::Frustum;
     use crate::render::lod::{LodConfig, LodQuality};
     use crate::render::mesh::GpuMesh;
-<<<<<<< HEAD
     use crate::render::pbr::PointLight3D;
-=======
-    use crate::render::pbr::{PointLight3D, DirectionalLight};
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
     use bevy_ecs::prelude::*;
     use glam::{Mat4, Quat, Vec3};
     use std::sync::Arc;
@@ -304,13 +292,7 @@ mod render_service_tests {
         let scene = service.build_pbr_scene(&mut world);
 
         // 验证返回了PBR场景（即使是空的）
-<<<<<<< HEAD
         assert!(scene.is_some());
-=======
-        // PbrScene是一个结构体，不是Option，所以直接验证其字段
-        assert_eq!(scene.point_lights.len(), 0);
-        assert_eq!(scene.dir_lights.len(), 0);
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
     }
 
     #[test]
@@ -338,41 +320,18 @@ mod render_service_tests {
 
     #[test]
     fn test_render_service_strategy_selection() {
-        use crate::domain::render::{RenderObject, RenderObjectId};
-        use crate::render::mesh::GpuMesh;
-        use std::sync::Arc;
-
         let service = RenderService::new();
 
-        // NOTE: GpuMesh doesn't have Default, so we skip this test for now
-        // TODO: Create a mock GpuMesh or use a different approach
-        // This test requires GpuMesh which needs a wgpu Device
-        // Skipping for now - will be tested in integration tests
-        /*
-        // 创建静态对象
-        let mesh = Arc::new(GpuMesh::default());
-        let mut static_obj = RenderObject::new(
-            RenderObjectId::new(1),
-            mesh.clone(),
-            Transform::default(),
-        );
-        static_obj.mark_static();
-
-        // 创建动态对象
-        let mut dynamic_obj = RenderObject::new(
-            RenderObjectId::new(2),
-            mesh.clone(),
-            Transform::default(),
-        );
-        dynamic_obj.mark_dynamic();
-
-        // 测试策略选择
-        let static_strategy = service.select_render_strategy(&static_obj);
-        assert!(matches!(static_strategy, crate::domain::render::RenderStrategy::StaticBatch));
-
-        let dynamic_strategy = service.select_render_strategy(&dynamic_obj);
-        assert!(matches!(dynamic_strategy, crate::domain::render::RenderStrategy::DynamicBatch));
-        */
+        // 由于 GpuMesh 需要真实的 wgpu Device，此测试验证服务的其他方面
+        // GpuMesh 相关的渲染策略选择在集成测试中完整测试
+        
+        // 验证服务已正确初始化
+        assert!(service.instancing_threshold() > 0);
+        
+        // 测试没有实际 mesh 的策略选择方法
+        // select_strategy_for_instances 不需要 GpuMesh
+        let strategy = service.select_strategy_for_instances(15, true);
+        assert!(matches!(strategy, crate::domain::render::RenderStrategy::Instanced));
     }
 
     #[test]
@@ -465,10 +424,6 @@ mod render_service_tests {
                 scale: Vec3::ONE,
             },
             PointLight3D {
-<<<<<<< HEAD
-=======
-                position: Vec3::new(1.0, 2.0, 3.0),
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
                 color: [1.0, 1.0, 1.0],
                 intensity: 1.0,
                 radius: 10.0,
@@ -483,10 +438,6 @@ mod render_service_tests {
                 scale: Vec3::ONE,
             },
             PointLight3D {
-<<<<<<< HEAD
-=======
-                position: Vec3::ZERO,
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
                 color: [1.0, 1.0, 1.0],
                 intensity: 0.0, // 无效
                 radius: 10.0,
@@ -769,23 +720,16 @@ mod render_service_tests {
 mod domain_service_tests {
     use crate::domain::audio::{AudioSource, AudioSourceId};
     use crate::domain::physics::{RigidBody, RigidBodyId, RigidBodyType};
-<<<<<<< HEAD
-    use crate::domain::scene::{Scene, SceneId};
-    use crate::domain::services::*;
-=======
     use crate::domain::scene::{Scene, SceneId, SceneManager};
-    use crate::domain::services::{AudioDomainService, DIContainer, PhysicsDomainService};
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
+    use crate::domain::services::*;
+    use crate::domain::services::*;
     use crate::domain::value_objects::Volume;
     use glam::{Quat, Vec3};
 
     #[test]
     fn test_audio_domain_service_create_source() {
-<<<<<<< HEAD
-        let mut service = crate::domain::audio::AudioSourceManager::new();
-=======
-        let mut service = crate::domain::services::AudioDomainService::new();
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
+        use crate::domain::services::AudioDomainService;
+        let mut service = AudioDomainService::new();
 
         // 创建音频源
         let result = service.create_source(AudioSourceId(1), "test.wav");
@@ -799,11 +743,8 @@ mod domain_service_tests {
 
     #[test]
     fn test_audio_domain_service_play_stop() {
-<<<<<<< HEAD
-        let mut service = crate::domain::audio::AudioSourceManager::new();
-=======
-        let mut service = crate::domain::services::AudioDomainService::new();
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
+        use crate::domain::services::AudioDomainService;
+        let mut service = AudioDomainService::new();
 
         service.create_source(AudioSourceId(1), "test.wav").unwrap();
 
@@ -820,11 +761,8 @@ mod domain_service_tests {
 
     #[test]
     fn test_audio_domain_service_set_volume() {
-<<<<<<< HEAD
-        let mut service = crate::domain::audio::AudioSourceManager::new();
-=======
-        let mut service = crate::domain::services::AudioDomainService::new();
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
+        use crate::domain::services::AudioDomainService;
+        let mut service = AudioDomainService::new();
 
         service.create_source(AudioSourceId(1), "test.wav").unwrap();
 
@@ -838,9 +776,9 @@ mod domain_service_tests {
     }
 
     #[test]
-<<<<<<< HEAD
     fn test_audio_domain_service_listener() {
-        let mut service = crate::domain::audio::AudioSourceManager::new();
+        use crate::domain::services::AudioDomainService;
+        let mut service = AudioDomainService::new();
 
         let listener = crate::domain::audio::AudioListener::default();
         service.update_listener(listener.clone());
@@ -851,7 +789,8 @@ mod domain_service_tests {
 
     #[test]
     fn test_audio_domain_service_stop_all() {
-        let mut service = crate::domain::audio::AudioSourceManager::new();
+        use crate::domain::services::AudioDomainService;
+        let mut service = AudioDomainService::new();
 
         service
             .create_source(AudioSourceId(1), "test1.wav")
@@ -871,7 +810,8 @@ mod domain_service_tests {
 
     #[test]
     fn test_audio_domain_service_set_master_volume() {
-        let mut service = crate::domain::audio::AudioSourceManager::new();
+        use crate::domain::services::AudioDomainService;
+        let mut service = AudioDomainService::new();
 
         service.set_master_volume(0.8);
         // 验证主音量设置（通过行为验证）
@@ -880,7 +820,8 @@ mod domain_service_tests {
 
     #[test]
     fn test_audio_domain_service_get_source() {
-        let mut service = crate::domain::audio::AudioSourceManager::new();
+        use crate::domain::services::AudioDomainService;
+        let mut service = AudioDomainService::new();
 
         service.create_source(AudioSourceId(1), "test.wav").unwrap();
 
@@ -895,7 +836,8 @@ mod domain_service_tests {
 
     #[test]
     fn test_audio_domain_service_pause_resume() {
-        let mut service = crate::domain::audio::AudioSourceManager::new();
+        use crate::domain::services::AudioDomainService;
+        let mut service = AudioDomainService::new();
 
         service.create_source(AudioSourceId(1), "test.wav").unwrap();
         service.play_source(AudioSourceId(1)).unwrap();
@@ -911,7 +853,8 @@ mod domain_service_tests {
 
     #[test]
     fn test_audio_domain_service_error_handling() {
-        let mut service = crate::domain::audio::AudioSourceManager::new();
+        use crate::domain::services::AudioDomainService;
+        let mut service = AudioDomainService::new();
 
         // 测试不存在的音频源操作
         assert!(service.play_source(AudioSourceId(999)).is_err());
@@ -926,7 +869,8 @@ mod domain_service_tests {
 
     #[test]
     fn test_audio_domain_service_boundary_conditions() {
-        let mut service = crate::domain::audio::AudioSourceManager::new();
+        use crate::domain::services::AudioDomainService;
+        let mut service = AudioDomainService::new();
 
         // 测试边界条件：创建多个音频源
         for i in 0..10 {
@@ -938,7 +882,8 @@ mod domain_service_tests {
 
     #[test]
     fn test_audio_domain_service_invalid_volume() {
-        let mut service = crate::domain::audio::AudioSourceManager::new();
+        use crate::domain::services::AudioDomainService;
+        let mut service = AudioDomainService::new();
 
         service.create_source(AudioSourceId(1), "test.wav").unwrap();
 
@@ -949,7 +894,8 @@ mod domain_service_tests {
 
     #[test]
     fn test_audio_domain_service_duplicate_source_id() {
-        let mut service = crate::domain::audio::AudioSourceManager::new();
+        use crate::domain::services::AudioDomainService;
+        let mut service = AudioDomainService::new();
 
         service.create_source(AudioSourceId(1), "test1.wav").unwrap();
 
@@ -960,7 +906,8 @@ mod domain_service_tests {
 
     #[test]
     fn test_audio_domain_service_get_source_mut() {
-        let mut service = crate::domain::audio::AudioSourceManager::new();
+        use crate::domain::services::AudioDomainService;
+        let mut service = AudioDomainService::new();
 
         service.create_source(AudioSourceId(1), "test.wav").unwrap();
 
@@ -970,159 +917,6 @@ mod domain_service_tests {
         // 测试不存在的音频源
         let nonexistent = service.get_source_mut(AudioSourceId(999));
         assert!(nonexistent.is_none());
-    }
-
-    #[test]
-    fn test_audio_domain_service_set_volume() {
-        let mut service = crate::domain::audio::AudioSourceManager::new();
-
-        service.create_source(AudioSourceId(1), "test.wav").unwrap();
-
-        // 设置音量（使用f32）
-        use crate::domain::value_objects::Volume;
-        let volume = Volume::new(0.7).unwrap();
-        assert!(service.set_source_volume(AudioSourceId(1), volume).is_ok());
-
-        let source = service.get_source(AudioSourceId(1)).unwrap();
-        assert_eq!(source.volume.value(), 0.7);
-    }
-
-    #[test]
-    fn test_audio_domain_service_listener() {
-        let mut service = crate::domain::audio::AudioSourceManager::new();
-
-        let listener = crate::domain::audio::AudioListener::default();
-        service.update_listener(listener.clone());
-
-        let retrieved = service.get_listener();
-        assert_eq!(retrieved.position, listener.position);
-    }
-
-    #[test]
-    fn test_audio_domain_service_stop_all() {
-        let mut service = crate::domain::audio::AudioSourceManager::new();
-
-        service
-            .create_source(AudioSourceId(1), "test1.wav")
-            .unwrap();
-        service
-            .create_source(AudioSourceId(2), "test2.wav")
-            .unwrap();
-
-        service.play_source(AudioSourceId(1)).unwrap();
-        service.play_source(AudioSourceId(2)).unwrap();
-
-        assert_eq!(service.playing_sources_count(), 2);
-
-        service.stop_all_sources().unwrap();
-        assert_eq!(service.playing_sources_count(), 0);
-    }
-
-    #[test]
-    fn test_audio_domain_service_set_master_volume() {
-        use crate::domain::value_objects::Volume;
-        let mut service = crate::domain::audio::AudioSourceManager::new();
-
-        // 设置有效音量
-        let volume = Volume::new(0.5).unwrap();
-        assert!(service.set_master_volume(volume).is_ok());
-
-        // 设置无效音量（超出范围，通过f32方法测试）
-        assert!(service.set_master_volume_f32(1.5).is_err());
-        assert!(service.set_master_volume_f32(-0.1).is_err());
-    }
-
-    #[test]
-    fn test_audio_domain_service_get_source() {
-        let mut service = crate::domain::audio::AudioSourceManager::new();
-
-        service.create_source(AudioSourceId(1), "test.wav").unwrap();
-
-        // 获取存在的音频源
-        assert!(service.get_source(AudioSourceId(1)).is_some());
-
-        // 获取不存在的音频源
-        assert!(service.get_source(AudioSourceId(999)).is_none());
-    }
-
-    #[test]
-    fn test_audio_domain_service_pause_resume() {
-        let mut service = crate::domain::audio::AudioSourceManager::new();
-
-        service.create_source(AudioSourceId(1), "test.wav").unwrap();
-        service.play_source(AudioSourceId(1)).unwrap();
-
-        // 暂停
-        assert!(service.pause_source(AudioSourceId(1)).is_ok());
-
-        // 恢复
-        assert!(service.resume_source(AudioSourceId(1)).is_ok());
-    }
-
-    #[test]
-    fn test_audio_domain_service_error_handling() {
-        let mut service = crate::domain::audio::AudioSourceManager::new();
-
-        // 测试操作不存在的音频源
-        assert!(service.play_source(AudioSourceId(999)).is_err());
-        assert!(service.stop_source(AudioSourceId(999)).is_err());
-        assert!(service.pause_source(AudioSourceId(999)).is_err());
-        assert!(service.resume_source(AudioSourceId(999)).is_err());
-        
-        let volume = Volume::new(0.5).unwrap();
-        assert!(service.set_source_volume(AudioSourceId(999), volume).is_err());
-    }
-
-    #[test]
-    fn test_audio_domain_service_boundary_conditions() {
-        let mut service = crate::domain::audio::AudioSourceManager::new();
-
-        // 测试边界音量值
-        let min_volume = Volume::new(0.0).unwrap();
-        let max_volume = Volume::new(1.0).unwrap();
-
-        service.create_source(AudioSourceId(1), "test.wav").unwrap();
-        
-        assert!(service.set_source_volume(AudioSourceId(1), min_volume).is_ok());
-        assert!(service.set_source_volume(AudioSourceId(1), max_volume).is_ok());
-        assert!(service.set_master_volume(min_volume).is_ok());
-        assert!(service.set_master_volume(max_volume).is_ok());
-    }
-
-    #[test]
-    fn test_audio_domain_service_invalid_volume() {
-        let mut service = crate::domain::audio::AudioSourceManager::new();
-
-        // 测试无效音量值
-        assert!(service.set_source_volume_f32(AudioSourceId(1), -0.1).is_err());
-        assert!(service.set_source_volume_f32(AudioSourceId(1), 1.1).is_err());
-        assert!(service.set_master_volume_f32(-0.1).is_err());
-        assert!(service.set_master_volume_f32(1.1).is_err());
-    }
-
-    #[test]
-    fn test_audio_domain_service_duplicate_source_id() {
-        let mut service = crate::domain::audio::AudioSourceManager::new();
-
-        // 创建第一个音频源
-        assert!(service.create_source(AudioSourceId(1), "test1.wav").is_ok());
-
-        // 尝试创建相同ID的音频源应该失败
-        assert!(service.create_source(AudioSourceId(1), "test2.wav").is_err());
-    }
-
-    #[test]
-    fn test_audio_domain_service_get_source_mut() {
-        let mut service = crate::domain::audio::AudioSourceManager::new();
-
-        service.create_source(AudioSourceId(1), "test.wav").unwrap();
-
-        // 获取可变引用
-        let source = service.get_source_mut(AudioSourceId(1));
-        assert!(source.is_some());
-
-        // 获取不存在的音频源
-        assert!(service.get_source_mut(AudioSourceId(999)).is_none());
     }
 
     #[test]
@@ -1250,29 +1044,12 @@ mod domain_service_tests {
         // 应用冲量
         let impulse = Vec3::new(10.0, 0.0, 0.0);
         assert!(service.apply_impulse(RigidBodyId(1), impulse).is_ok());
-=======
-    fn test_physics_domain_service_apply_impulse() {
-        let mut service = crate::domain::physics::PhysicsWorld::new();
-
-        let mut body = RigidBody::new(RigidBodyId(1), RigidBodyType::Dynamic, Vec3::ZERO);
-        service.update_body(&body).unwrap();
-
-        // 应用冲量（使用RigidBody的业务方法）
-        let impulse = Vec3::new(10.0, 0.0, 0.0);
-        body.apply_impulse(impulse).unwrap();
-        service.update_body(&body).unwrap();
-
-        // 验证冲量已应用（速度应非零）
-        let updated_body = service.get_body_state(RigidBodyId(1)).unwrap();
-        assert!(updated_body.linear_velocity.x > 0.0);
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
     }
 
     #[test]
     fn test_physics_domain_service_set_body_position() {
         let mut service = crate::domain::physics::PhysicsWorld::new();
 
-<<<<<<< HEAD
         let body = RigidBody::new(RigidBodyId(1), RigidBodyType::Dynamic, Vec3::ZERO);
         service.create_body(body).unwrap();
 
@@ -1283,49 +1060,24 @@ mod domain_service_tests {
         // 验证位置已更新
         let position = service.get_body_position(RigidBodyId(1));
         assert!(position.is_ok());
-=======
-        let mut body = RigidBody::new(RigidBodyId(1), RigidBodyType::Dynamic, Vec3::ZERO);
-        service.update_body(&body).unwrap();
-
-        // 设置刚体位置（使用RigidBody的业务方法）
-        let new_pos = Vec3::new(10.0, 20.0, 30.0);
-        body.set_position(new_pos).unwrap();
-        service.update_body(&body).unwrap();
-
-        // 验证位置已更新
-        let updated_body = service.get_body_state(RigidBodyId(1)).unwrap();
-        assert_eq!(updated_body.position, new_pos);
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
     }
 
     #[test]
     fn test_physics_domain_service_get_world() {
         let service = crate::domain::physics::PhysicsWorld::new();
 
-<<<<<<< HEAD
         // 获取物理世界
         let world = service.get_world();
         // 验证获取成功（没有panic）
-=======
-        // 验证服务创建成功（没有panic）
-        // PhysicsWorld没有单独的get_world方法，直接验证创建成功
-        assert!(true);
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
     }
 
     #[test]
     fn test_physics_domain_service_get_world_mut() {
         let mut service = crate::domain::physics::PhysicsWorld::new();
 
-<<<<<<< HEAD
         // 获取物理世界可变引用
         let _world = service.get_world_mut();
         // 验证获取成功（没有panic）
-=======
-        // 验证服务创建成功（没有panic）
-        // PhysicsWorld没有单独的get_world_mut方法，直接验证创建成功
-        assert!(true);
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
     }
 
     #[test]
@@ -1333,7 +1085,6 @@ mod domain_service_tests {
         let mut service = crate::domain::physics::PhysicsWorld::new();
 
         // 测试操作不存在的刚体
-<<<<<<< HEAD
         assert!(service.destroy_body(RigidBodyId(999)).is_err());
         assert!(service.get_body_position(RigidBodyId(999)).is_err());
         assert!(service.set_body_position(RigidBodyId(999), Vec3::ZERO).is_err());
@@ -1341,15 +1092,6 @@ mod domain_service_tests {
         let force = Vec3::new(10.0, 0.0, 0.0);
         // apply_force不会失败，只是不执行
         assert!(service.apply_force(RigidBodyId(999), force).is_ok());
-=======
-        assert!(service.remove_body(RigidBodyId(999)).is_err());
-        assert!(service.get_body_state(RigidBodyId(999)).is_none());
-        
-        // 测试对不存在的刚体应用操作
-        let mut body = RigidBody::new(RigidBodyId(999), RigidBodyType::Dynamic, Vec3::ZERO);
-        let force = Vec3::new(10.0, 0.0, 0.0);
-        assert!(body.apply_force(force).is_ok()); // 业务方法本身不会失败，只是在更新时无效
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
     }
 
     #[test]
@@ -1362,7 +1104,6 @@ mod domain_service_tests {
             RigidBodyType::Dynamic,
             Vec3::new(0.0, 0.0, 0.0),
         );
-<<<<<<< HEAD
         service.create_body(body).unwrap();
 
         // 设置极端位置值
@@ -1372,27 +1113,6 @@ mod domain_service_tests {
         // 应用极端力值
         let extreme_force = Vec3::new(1e10, -1e10, 1e10);
         assert!(service.apply_force(RigidBodyId(1), extreme_force).is_ok());
-=======
-        service.update_body(&body).unwrap();
-
-        // 设置极端位置值
-        let extreme_pos = Vec3::new(1e6, -1e6, 1e6);
-        // PhysicsWorld没有直接的update_body_position方法，需要先获取body，更新位置，然后重新插入
-        if let Some(mut body) = service.get_body_state(RigidBodyId(1)) {
-            body.set_position(extreme_pos).unwrap();
-            assert!(service.update_body(&body).is_ok());
-        } else {
-            // 如果刚体不存在，测试失败
-            panic!("Body not found");
-        }
-
-        // 应用极端力值
-        let extreme_force = Vec3::new(1e10, -1e10, 1e10);
-        // PhysicsWorld没有直接的apply_force方法，而是通过RigidBody的业务方法和update_body来实现
-        let mut body = service.get_body_state(RigidBodyId(1)).unwrap();
-        body.apply_force(extreme_force).unwrap();
-        assert!(service.update_body(&body).is_ok());
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
     }
 
     #[test]
@@ -1400,17 +1120,10 @@ mod domain_service_tests {
         let mut service = crate::domain::physics::PhysicsWorld::new();
 
         // 测试边界时间步长
-<<<<<<< HEAD
         assert!(service.step_simulation(0.0).is_ok()); // 零时间步长
         assert!(service.step_simulation(0.001).is_ok()); // 最小时间步长
         assert!(service.step_simulation(1.0).is_ok()); // 大时间步长
         assert!(service.step_simulation(-0.016).is_ok()); // 负时间步长（应该被处理）
-=======
-        assert!(service.step(0.0).is_ok()); // 零时间步长
-        assert!(service.step(0.001).is_ok()); // 最小时间步长
-        assert!(service.step(1.0).is_ok()); // 大时间步长
-        assert!(service.step(-0.016).is_ok()); // 负时间步长（应该被处理）
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
     }
 
     #[test]
@@ -1426,17 +1139,10 @@ mod domain_service_tests {
         );
         // 注意：create_collider可能不会验证刚体是否存在
         // 这取决于实现，这里只测试API调用
-<<<<<<< HEAD
         let _ = service.create_collider(collider, RigidBodyId(999));
 
         // 销毁不存在的碰撞体应该失败
         assert!(service.destroy_collider(crate::domain::physics::ColliderId(999)).is_err());
-=======
-        let _ = service.add_collider_to_body(collider, RigidBodyId(999));
-
-        // 销毁不存在的碰撞体应该失败
-        assert!(service.remove_collider(crate::domain::physics::ColliderId(999)).is_err());
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
     }
 
     #[test]
@@ -1463,21 +1169,16 @@ mod domain_service_tests {
 
     #[test]
     fn test_scene_domain_service_unload_scene() {
-        let mut service = crate::domain::scene::SceneManager::new();
+        use crate::domain::scene::{SceneManager, SceneId};
+        let mut service = SceneManager::new();
 
         service.create_scene(SceneId(1), "TestScene").unwrap();
         service.switch_to_scene(SceneId(1)).unwrap();
 
         // 切换到其他场景（如果有）或验证场景已加载
-<<<<<<< HEAD
-        let active_scene = service.get_active_scene();
-        assert!(active_scene.is_some());
-        assert_eq!(active_scene.unwrap().id, SceneId(1));
-=======
         let active_scene = service.active_scene();
         assert!(active_scene.is_some());
-        assert_eq!(active_scene.unwrap().id(), SceneId(1));
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
+        assert_eq!(active_scene.unwrap().id, SceneId(1));
     }
 
     #[test]
@@ -1489,11 +1190,7 @@ mod domain_service_tests {
         // 获取场景
         let retrieved = service.get_scene(SceneId(1));
         assert!(retrieved.is_some());
-<<<<<<< HEAD
         assert_eq!(retrieved.unwrap().name, "TestScene");
-=======
-        assert_eq!(retrieved.unwrap().name(), "TestScene");
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
 
         // 获取不存在的场景
         assert!(service.get_scene(SceneId(999)).is_none());
@@ -1515,17 +1212,14 @@ mod domain_service_tests {
 
     #[test]
     fn test_scene_domain_service_get_active_scene_mut() {
-        let mut service = crate::domain::scene::SceneManager::new();
+        use crate::domain::scene::{SceneManager, SceneId};
+        let mut service = SceneManager::new();
 
         service.create_scene(SceneId(1), "TestScene").unwrap();
         service.switch_to_scene(SceneId(1)).unwrap();
 
         // 获取活跃场景可变引用
-<<<<<<< HEAD
-        let active = service.get_active_scene_mut();
-=======
         let active = service.active_scene_mut();
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
         assert!(active.is_some());
     }
 
@@ -1551,11 +1245,7 @@ mod domain_service_tests {
 
     #[test]
     fn test_scene_domain_service_scene_ids() {
-<<<<<<< HEAD
         let mut service = SceneManager::new();
-=======
-        let mut service = crate::domain::scene::SceneManager::new();
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
 
         service.create_scene(SceneId(1), "Scene1").unwrap();
         service.create_scene(SceneId(2), "Scene2").unwrap();
@@ -1589,28 +1279,21 @@ mod domain_service_tests {
 
     #[test]
     fn test_scene_domain_service_update_scenes_empty() {
-        let mut service = crate::domain::scene::SceneManager::new();
+        use crate::domain::scene::SceneManager;
+        let mut service = SceneManager::new();
 
         // 更新空场景管理器应该成功
-<<<<<<< HEAD
-        assert!(service.update_scenes(0.016).is_ok());
-=======
         assert!(service.update(0.016).is_ok());
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
     }
 
     #[test]
     fn test_scene_domain_service_get_active_scene_when_none() {
-        let mut service = crate::domain::scene::SceneManager::new();
+        use crate::domain::scene::SceneManager;
+        let mut service = SceneManager::new();
 
         // 没有活跃场景时应该返回None
-<<<<<<< HEAD
-        assert!(service.get_active_scene().is_none());
-        assert!(service.get_active_scene_mut().is_none());
-=======
         assert!(service.active_scene().is_none());
         assert!(service.active_scene_mut().is_none());
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
     }
 
     #[test]
@@ -1625,16 +1308,11 @@ mod domain_service_tests {
         assert!(deleted.is_ok());
 
         // 验证活跃场景已清除
-<<<<<<< HEAD
-        assert!(service.get_active_scene().is_none());
-=======
         assert!(service.active_scene().is_none());
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
     }
 
     #[test]
     fn test_di_container_register_and_resolve() {
-<<<<<<< HEAD
         let mut container = DIContainer::new();
 
         // 注册服务
@@ -1655,34 +1333,11 @@ mod domain_service_tests {
         // 解析未注册的服务
         assert!(!container.is_registered::<SceneManager>());
         let scene_service = container.resolve::<SceneManager>();
-=======
-        let mut container = crate::domain::services::DIContainer::new();
-
-        // 注册服务
-        container.register_singleton(crate::domain::services::AudioDomainService::new());
-        container.register_singleton(crate::domain::services::PhysicsDomainService::new());
-
-        // 验证注册
-        assert!(container.is_registered::<crate::domain::services::AudioDomainService>());
-        assert!(container.is_registered::<crate::domain::services::PhysicsDomainService>());
-
-        // 解析服务
-        let audio_service = container.resolve::<crate::domain::services::AudioDomainService>();
-        assert!(audio_service.is_some());
-
-        let physics_service = container.resolve::<crate::domain::services::PhysicsDomainService>();
-        assert!(physics_service.is_some());
-
-        // 解析未注册的服务
-        assert!(!container.is_registered::<crate::domain::scene::SceneManager>());
-        let scene_service = container.resolve::<crate::domain::scene::SceneManager>();
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
         assert!(scene_service.is_none());
     }
 
     #[test]
     fn test_di_container_remove_service() {
-<<<<<<< HEAD
         let mut container = DIContainer::new();
 
         container.register_singleton(AudioDomainService::new());
@@ -1694,32 +1349,14 @@ mod domain_service_tests {
 
         // 移除不存在的服务
         assert!(!container.remove::<PhysicsDomainService>());
-=======
-        let mut container = crate::domain::services::DIContainer::new();
-
-        container.register_singleton(crate::domain::services::AudioDomainService::new());
-        assert!(container.is_registered::<crate::domain::services::AudioDomainService>());
-
-        // 移除服务
-        assert!(container.remove::<crate::domain::services::AudioDomainService>());
-        assert!(!container.is_registered::<crate::domain::services::AudioDomainService>());
-
-        // 移除不存在的服务
-        assert!(!container.remove::<crate::domain::services::PhysicsDomainService>());
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
     }
 
     #[test]
     fn test_di_container_clear() {
         let mut container = DIContainer::new();
 
-<<<<<<< HEAD
         container.register_singleton(AudioDomainService::new());
         container.register_singleton(PhysicsDomainService::new());
-=======
-        container.register_singleton(crate::domain::services::AudioDomainService::new());
-        container.register_singleton(crate::domain::services::PhysicsDomainService::new());
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
         assert_eq!(container.service_count(), 2);
 
         // 清空所有服务
@@ -1741,11 +1378,7 @@ mod domain_service_tests {
         container.register_singleton(PhysicsDomainService::new());
         assert_eq!(container.service_count(), 2);
 
-<<<<<<< HEAD
         container.remove::<AudioDomainService>();
-=======
-        container.remove::<crate::domain::services::AudioDomainService>();
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
         assert_eq!(container.service_count(), 1);
     }
 
@@ -1755,19 +1388,11 @@ mod domain_service_tests {
 
         let mut container = DIContainer::new();
 
-<<<<<<< HEAD
         let service = Arc::new(AudioDomainService::new());
         container.register_instance(service.clone());
 
         // 验证可以解析
         let resolved = container.resolve::<AudioDomainService>();
-=======
-        let service = Arc::new(crate::domain::services::AudioDomainService::new());
-        container.register_instance(service.clone());
-
-        // 验证可以解析
-        let resolved = container.resolve::<crate::domain::services::AudioDomainService>();
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
         assert!(resolved.is_some());
 
         // 验证是同一个实例（Arc指针比较）
@@ -1779,7 +1404,6 @@ mod domain_service_tests {
     #[test]
     fn test_domain_service_factory() {
         // 测试工厂方法
-<<<<<<< HEAD
         let audio_service = DomainServiceFactory::create_audio_service();
         assert_eq!(audio_service.source_ids().len(), 0);
 
@@ -1794,32 +1418,12 @@ mod domain_service_tests {
         assert!(container.is_registered::<AudioDomainService>());
         assert!(container.is_registered::<PhysicsDomainService>());
         assert!(container.is_registered::<SceneManager>());
-=======
-        let audio_service = crate::domain::services::DomainServiceFactory::create_audio_service();
-        assert_eq!(audio_service.source_ids().len(), 0);
-
-        let physics_service = crate::domain::services::DomainServiceFactory::create_physics_service();
-        // 验证创建成功（没有panic）
-
-        let scene_service = crate::domain::services::DomainServiceFactory::create_scene_service();
-        assert_eq!(scene_service.scene_ids().len(), 0);
-
-        // 测试DI容器创建
-        let container = crate::domain::services::DomainServiceFactory::create_di_container();
-        assert!(container.is_registered::<crate::domain::services::AudioDomainService>());
-        assert!(container.is_registered::<crate::domain::services::PhysicsDomainService>());
-        assert!(container.is_registered::<crate::domain::scene::SceneManager>());
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
     }
 }
 
 #[cfg(test)]
 mod scripting_service_tests {
-<<<<<<< HEAD
     use super::super::scripting::*;
-=======
-    use crate::services::scripting::*;
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
 
     #[test]
     fn test_scripting_service_new() {

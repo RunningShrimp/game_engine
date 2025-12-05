@@ -8,10 +8,7 @@
 
 use crate::impl_default;
 use std::collections::HashMap;
-<<<<<<< HEAD
 use std::sync::Arc;
-=======
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
 
 /// GPU 计算设备
 pub struct GPUComputeDevice {
@@ -371,11 +368,7 @@ impl ComputePipelineWGPU {
         }
 
         // 验证绑定
-<<<<<<< HEAD
         for (binding, buffer) in &self.buffers {
-=======
-        for (_binding, buffer) in &self.buffers {
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
             if buffer.size > device.get_max_buffer_size() {
                 return Err(format!("缓冲区 {} 大小超过最大值", buffer.name));
             }

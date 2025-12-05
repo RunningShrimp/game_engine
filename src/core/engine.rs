@@ -835,11 +835,15 @@ impl Engine {
             // 写入CSV日志
             let path = std::env::temp_dir().join("render_stats.csv");
             let _ = (|| {
-                let mut f = std::fs::OpenOptions::new()
-                    .create(true)
-                    .append(true)
-                    .open(&path)
-                    .ok()?;
+                let mut f = tokio::task::block_in_place(|| {
+                    tokio::runtime::Handle::current().block_on(async {
+                        tokio::fs::OpenOptions::new()
+                            .create(true)
+                            .append(true)
+                            .open(&path).await
+                            .ok()
+                    })
+                })?;
                 let line = format!(
                     "{},{},{},{},{},{},{},{},{},{},{},{},{}\n",
                     dc,
@@ -856,8 +860,12 @@ impl Engine {
                     stats.batch_small_draw_calls,
                     stats.batch_visible_batches
                 );
-                use std::io::Write;
-                let _ = f.write_all(line.as_bytes());
+                use tokio::io::AsyncWriteExt;
+                let _ = tokio::task::block_in_place(|| {
+                    tokio::runtime::Handle::current().block_on(async {
+                        f.write_all(line.as_bytes()).await
+                    })
+                });
                 Some(())
             })();
         }

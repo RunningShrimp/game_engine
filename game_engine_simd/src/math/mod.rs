@@ -11,7 +11,7 @@ mod dispatch;
 pub mod ops;
 
 pub use dispatch::{Vec3Simd, Vec4Simd, Mat4Simd, QuatSimd};
-pub use ops::{MatrixBatchOps, VectorBatchOps, GeometryOps, TransformOps, PerformanceTest, VectorBatchResult};
+pub use ops::{MatrixBatchOps, VectorBatchOps, GeometryOps, TransformOps, PerformanceTest, VectorBatchResult, BoundingVolumeOps};
 
 /// 向量运算trait
 pub trait VectorOps {

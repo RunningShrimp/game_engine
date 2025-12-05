@@ -124,15 +124,6 @@ impl XrRenderer {
                     BindGroupLayoutEntry {
                         binding: 3,
                         visibility: ShaderStages::COMPUTE,
-<<<<<<< HEAD
-=======
-                        ty: BindingType::Sampler(SamplerBindingType::Filtering),
-                        count: None,
-                    },
-                    BindGroupLayoutEntry {
-                        binding: 4,
-                        visibility: ShaderStages::COMPUTE,
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
                         ty: BindingType::Buffer {
                             ty: BufferBindingType::Uniform,
                             has_dynamic_offset: false,
@@ -241,11 +232,7 @@ impl XrRenderer {
     /// 渲染立体视图
     pub fn render_stereo(
         &mut self,
-<<<<<<< HEAD
         encoder: &mut CommandEncoder,
-=======
-        _encoder: &mut CommandEncoder,
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
         views: &[XrView],
         render_targets: &[Arc<TextureView>],
         depth_targets: &[Arc<TextureView>],

@@ -27,6 +27,7 @@ pub mod compression;
 pub mod delay_compensation;
 pub mod delta_serialization;
 pub mod interpolation;
+pub mod key_exchange;
 pub mod prediction;
 pub mod security;
 pub mod server;
@@ -37,8 +38,12 @@ use bevy_ecs::prelude::*;
 use crossbeam_channel::{unbounded, Receiver, Sender};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use crate::error::safe_lock;
 use std::net::{SocketAddr, TcpStream};
 use thiserror::Error;
+use tokio::net::{TcpStream as TokioTcpStream};
+use tokio::sync::Mutex as TokioMutex;
+use std::sync::Arc;
 
 /// 网络错误类型
 #[derive(Error, Debug)]
@@ -230,7 +235,42 @@ impl NetworkState {
 pub struct NetworkService;
 
 impl NetworkService {
-    /// 连接到服务器
+    /// 异步连接到服务器
+    pub async fn connect_async(state: &mut NetworkState, addr: SocketAddr) -> Result<(), String> {
+        if state.connection_state != ConnectionState::Disconnected {
+            return Err("Already connected or connecting".to_string());
+        }
+
+        state.connection_state = ConnectionState::Connecting;
+        state.server_addr = Some(addr);
+
+        // 创建通道
+        let (send_tx, _send_rx) = unbounded::<NetworkMessage>();
+        let (_recv_tx, recv_rx) = unbounded::<NetworkMessage>();
+
+        state.send_tx = Some(send_tx);
+        state.recv_rx = Some(recv_rx);
+
+        // 初始化压缩器（如果尚未初始化）
+        if state.compressor.is_none() {
+            state.compressor = Some(std::sync::Arc::new(compression::NetworkCompressor::new()));
+        }
+
+        // 初始化延迟补偿管理器（如果尚未初始化）
+        if state.delay_compensation.is_none() {
+            state.delay_compensation = Some(std::sync::Arc::new(std::sync::Mutex::new(
+                delay_compensation::ClientDelayCompensation::new(),
+            )));
+        }
+
+        // NOTE: 网络线程启动逻辑待实现，当前仅设置连接状态
+        state.connection_state = ConnectionState::Connected;
+        state.client_id = Some(rand::random());
+
+        Ok(())
+    }
+
+    /// 连接到服务器（同步版本，向后兼容）
     pub fn connect(state: &mut NetworkState, addr: SocketAddr) -> Result<(), String> {
         if state.connection_state != ConnectionState::Disconnected {
             return Err("Already connected or connecting".to_string());
@@ -285,7 +325,7 @@ impl NetworkService {
     /// 发送时间同步请求
     pub fn send_time_sync_request(state: &NetworkState) -> Result<(), String> {
         if let Some(ref compensation) = state.delay_compensation {
-            let compensation_guard = compensation.lock().unwrap();
+            let compensation_guard = safe_lock(compensation, "delay_compensation").unwrap_or_default();
             let sync_request = compensation_guard.create_sync_request();
             Self::send(
                 state,
@@ -530,7 +570,7 @@ pub fn network_sync_send_system(
     }
 
     let serializer = state.delta_serializer.as_ref().unwrap();
-    let mut serializer_guard = serializer.lock().unwrap();
+    let mut serializer_guard = safe_lock(serializer, "delta_serializer").unwrap_or_default();
 
     // 收集需要同步的实体
     let mut entities_to_sync = Vec::new();

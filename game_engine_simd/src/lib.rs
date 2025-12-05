@@ -99,7 +99,7 @@ pub mod audio;
 
 // 重新导出主要类型
 pub use cpu_detect::{CpuFeatures, CpuVendor, detect_cpu_features, print_cpu_info};
-pub use math::{Vec3Simd, Vec4Simd, Mat4Simd, QuatSimd, MatrixBatchOps, VectorBatchOps, GeometryOps, TransformOps, PerformanceTest, VectorBatchResult};
+pub use math::{Vec3Simd, Vec4Simd, Mat4Simd, QuatSimd, MatrixBatchOps, VectorBatchOps, GeometryOps, TransformOps, PerformanceTest, VectorBatchResult, BoundingVolumeOps};
 pub use batch::{BatchConfig, BatchStats};
 pub use audio::{AudioSpatialOps, AudioDSPOps, AudioSpatialResult, AudioDSPResult, DistanceModel};
 

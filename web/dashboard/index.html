@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>游戏引擎性能监控仪表板</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎮 游戏引擎性能监控</h1>
+            <div class="status-indicator">
+                <span id="connection-status" class="status-dot disconnected"></span>
+                <span id="connection-text">连接中...</span>
+            </div>
+        </header>
+
+        <main>
+            <!-- 实时指标面板 -->
+            <section class="metrics-panel">
+                <h2>📊 实时性能指标</h2>
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <h3>渲染性能</h3>
+                        <div class="metric-value">
+                            <span id="fps-value">--</span>
+                            <small>FPS</small>
+                        </div>
+                        <div class="metric-value">
+                            <span id="frame-time-value">--</span>
+                            <small>帧时间 (ms)</small>
+                        </div>
+                        <div class="metric-value">
+                            <span id="draw-calls-value">--</span>
+                            <small>Draw Calls</small>
+                        </div>
+                    </div>
+                    
+                    <div class="metric-card">
+                        <h3>系统性能</h3>
+                        <div class="metric-value">
+                            <span id="cpu-usage-value">--</span>
+                            <small>CPU %</small>
+                        </div>
+                        <div class="metric-value">
+                            <span id="memory-usage-value">--</span>
+                            <small>内存 (MB)</small>
+                        </div>
+                        <div class="metric-value">
+                            <span id="gpu-usage-value">--</span>
+                            <small>GPU %</small>
+                        </div>
+                    </div>
+                    
+                    <div class="metric-card">
+                        <h3>物理性能</h3>
+                        <div class="metric-value">
+                            <span id="physics-time-value">--</span>
+                            <small>物理时间 (ms)</small>
+                        </div>
+                    </div>
+                    
+                    <div class="metric-card">
+                        <h3>音频性能</h3>
+                        <div class="metric-value">
+                            <span id="audio-latency-value">--</span>
+                            <small>音频延迟 (ms)</small>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 图表面板 -->
+            <section class="charts-panel">
+                <h2>📈 性能趋势图表</h2>
+                <div class="chart-controls">
+                    <label for="metric-select">选择指标:</label>
+                    <select id="metric-select">
+                        <option value="fps">帧率 (FPS)</option>
+                        <option value="frame_time">帧时间 (ms)</option>
+                        <option value="cpu_usage">CPU使用率 (%)</option>
+                        <option value="memory_usage">内存使用量 (MB)</option>
+                        <option value="gpu_usage">GPU使用率 (%)</option>
+                        <option value="physics_time">物理计算时间 (ms)</option>
+                        <option value="audio_latency">音频延迟 (ms)</option>
+                    </select>
+                    
+                    <label for="time-range">时间范围:</label>
+                    <select id="time-range">
+                        <option value="60">最近1分钟</option>
+                        <option value="300">最近5分钟</option>
+                        <option value="900">最近15分钟</option>
+                        <option value="1800">最近30分钟</option>
+                        <option value="3600">最近1小时</option>
+                    </select>
+                    
+                    <button id="refresh-chart">刷新图表</button>
+                </div>
+                
+                <div class="chart-container">
+                    <canvas id="performance-chart"></canvas>
+                </div>
+            </section>
+
+            <!-- 告警面板 -->
+            <section class="alerts-panel">
+                <h2>🚨 性能告警</h2>
+                <div class="alert-controls">
+                    <button id="clear-alerts">清除已确认告警</button>
+                    <label for="auto-refresh">自动刷新:</label>
+                    <input type="checkbox" id="auto-refresh" checked>
+                </div>
+                
+                <div id="alerts-container" class="alerts-container">
+                    <div class="no-alerts">暂无告警</div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

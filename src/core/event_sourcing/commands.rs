@@ -4,6 +4,7 @@
 
 use super::*;
 use bevy_ecs::prelude::*;
+use crate::error::safe_lock;
 
 /// 命令trait
 pub trait Command: Send + Sync + 'static {
@@ -29,11 +30,7 @@ impl Command for CreateEntityCommand {
 
         // 创建事件
         let event = EntityCreatedEvent {
-<<<<<<< HEAD
             entity_id: entity_id as u32,
-=======
-            entity_id,
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
             entity_type: self.entity_type.clone(),
         };
 
@@ -103,7 +100,7 @@ impl CommandHandler {
         let (event_type, event_data) = command.execute(world)?;
 
         // 创建存储事件
-        let mut sequence = self.manager.sequence_generator.lock().unwrap();
+        let mut sequence = safe_lock(&self.manager.sequence_generator, "sequence_generator").unwrap_or_default();
         *sequence += 1;
         let event_id = EventId::now(*sequence);
         drop(sequence);
@@ -118,8 +115,8 @@ impl CommandHandler {
         // 保存事件
         self.manager
             .event_store
-            .lock()
-            .unwrap()
+            .safe_lock("event_store")
+            .unwrap_or_default()
             .save_event(stored_event)?;
 
         Ok(event_id)

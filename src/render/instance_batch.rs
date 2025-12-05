@@ -3,6 +3,13 @@
 //! 通过将相同 Mesh + Material 的对象合并为单次 Draw Call，
 //! 减少 70-90% 的渲染开销。
 //!
+//! ## SIMD 优化
+//!
+//! 本模块使用 game_engine_simd 库进行 SIMD 优化：
+//! - 批量矩阵变换使用 AVX2/NEON 指令集
+//! - 包围体计算使用向量化算法
+//! - 实例数据更新使用批量内存操作
+//!
 //! ## 架构设计
 //!
 //! ```text
@@ -359,12 +366,23 @@ impl InstanceBatch {
     }
 
     /// 重新计算批次包围体（AABB及包围球）
+    ///
+    /// 使用SIMD优化版本，大幅提升大量实例的性能
     pub fn recompute_bounds(&mut self) {
         if self.instances.is_empty() {
             self.bounding_center = [0.0; 3];
             self.bounding_radius = 0.0;
             return;
         }
+        
+        // 使用SIMD优化版本
+        self.recompute_bounds_simd()
+    }
+    
+    /// SIMD优化的包围体计算
+    fn recompute_bounds_simd(&mut self) {
+        use game_engine_simd::{BoundingVolumeOps, MatrixBatchOps};
+        
         let base_min = glam::Vec3::from_array(self.mesh.aabb_min);
         let base_max = glam::Vec3::from_array(self.mesh.aabb_max);
         let corners = [
@@ -377,18 +395,26 @@ impl InstanceBatch {
             glam::Vec3::new(base_max.x, base_max.y, base_min.z),
             glam::Vec3::new(base_max.x, base_max.y, base_max.z),
         ];
-        let mut world_min = glam::Vec3::splat(f32::INFINITY);
-        let mut world_max = glam::Vec3::splat(f32::NEG_INFINITY);
+        
+        // 收集所有变换后的点
+        let mut transformed_points = Vec::with_capacity(self.instances.len() * 8);
+        
+        // 批量变换所有实例的所有角点
         for inst in &self.instances {
-            let m = glam::Mat4::from_cols_array_2d(&inst.model);
-            for c in &corners {
-                let wp = m.transform_point3(*c);
-                world_min = world_min.min(wp);
-                world_max = world_max.max(wp);
-            }
+            let matrix = glam::Mat4::from_cols_array_2d(&inst.model);
+            
+            // 使用SIMD批量变换角点
+            let result = MatrixBatchOps::batch_transform_vec3_optimized(&matrix, &corners);
+            transformed_points.extend_from_slice(&result.results);
         }
+        
+        // 使用SIMD计算AABB
+        let (world_min, world_max) = BoundingVolumeOps::batch_compute_aabb(&transformed_points);
+        
+        // 计算包围球
         let center = (world_min + world_max) * 0.5;
         let radius = (world_max - center).length();
+        
         self.bounding_center = center.to_array();
         self.bounding_radius = radius;
     }

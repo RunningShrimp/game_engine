@@ -7,7 +7,14 @@ use std::{path::PathBuf, sync::{Arc, Mutex}};
 use tokio::task::JoinHandle;
 
 pub struct Handle<T> { inner: Arc<Mutex<Option<T>>> }
-impl<T> Handle<T> { pub fn new() -> Self { Self { inner: Arc::new(Mutex::new(None)) } } pub fn get(&self) -> Option<T> where T: Clone { self.inner.lock().unwrap().clone() } }
+impl<T> Handle<T> {
+    pub fn new() -> Self {
+        Self { inner: Arc::new(Mutex::new(None)) }
+    }
+    pub fn get(&self) -> Option<T> where T: Clone {
+        crate::error::safe_lock(&self.inner, "AsyncHandle.inner").unwrap().clone()
+    }
+}
 
 pub struct AssetManagerAsync;
 impl AssetManagerAsync {
@@ -17,7 +24,9 @@ impl AssetManagerAsync {
         let task = tokio::spawn(async move {
             let p = path;
             let data = tokio::fs::read(p).await.ok();
-            if let Some(d) = data { *inner.lock().unwrap() = Some(d); }
+            if let Some(d) = data {
+                *crate::error::safe_lock(&inner, "AsyncAssetLoader.inner").unwrap() = Some(d);
+            }
         });
         (handle, task)
     }

@@ -17,11 +17,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 thiserror = "1.0"
 ort = { version = "2.0.0-rc.10", features = ["download-binaries"], optional = true }
-<<<<<<< HEAD
 dirs = "5.0"
-=======
-dirs = "6.0"
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
 tracing = "0.1"
 wgpu = { version = "0.20", optional = true }
 num_cpus = "1.16"
@@ -37,9 +33,4 @@ path = "src/lib.rs"
 default = []
 onnx = ["ort"]
 wgpu = ["dep:wgpu"]
-<<<<<<< HEAD
-=======
-cuda = ["ort/cuda"]
-tensorrt = ["ort/tensorrt"]
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
 

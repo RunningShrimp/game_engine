@@ -9,21 +9,21 @@ pub enum AssetEvent {
 static QUEUE: Mutex<Vec<AssetEvent>> = Mutex::new(Vec::new());
 
 pub fn push_font_json_ready(name: String, data: String) {
-    let mut q = QUEUE.lock().unwrap();
+    let mut q = crate::error::safe_lock(&QUEUE, "AssetEventQueue").unwrap();
     q.push(AssetEvent::FontJsonReady { name, data });
 }
 
 pub fn push_texture_ready(name: String) {
-    let mut q = QUEUE.lock().unwrap();
+    let mut q = crate::error::safe_lock(&QUEUE, "AssetEventQueue").unwrap();
     q.push(AssetEvent::TextureReady { name });
 }
 pub fn push_atlas_ready(name: String) {
-    let mut q = QUEUE.lock().unwrap();
+    let mut q = crate::error::safe_lock(&QUEUE, "AssetEventQueue").unwrap();
     q.push(AssetEvent::AtlasReady { name });
 }
 
 pub fn drain_events() -> Vec<AssetEvent> {
-    let mut q = QUEUE.lock().unwrap();
+    let mut q = crate::error::safe_lock(&QUEUE, "AssetEventQueue").unwrap();
     let mut out = Vec::new();
     std::mem::swap(&mut *q, &mut out);
     out

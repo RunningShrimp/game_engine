@@ -282,11 +282,39 @@ pub struct WatchHandle {
 
 /// 文件系统抽象 - 支持 Native IO 和 Web fetch
 #[cfg(not(target_arch = "wasm32"))]
+#[async_trait::async_trait]
 pub trait Filesystem: Send + Sync {
-    fn read_sync(&self, path: &Path) -> Result<Vec<u8>, FsError>;
-    fn write_sync(&self, path: &Path, data: &[u8]) -> Result<(), FsError>;
+    /// 异步读取文件
+    async fn read(&self, path: &Path) -> Result<Vec<u8>, FsError>;
+    /// 异步写入文件
+    async fn write(&self, path: &Path, data: &[u8]) -> Result<(), FsError>;
+    /// 同步检查文件是否存在（保持同步以兼容现有代码）
     fn exists(&self, path: &Path) -> bool;
+    /// 异步检查文件是否存在
+    async fn exists_async(&self, path: &Path) -> bool;
+    /// 异步创建目录
+    async fn create_dir_all(&self, path: &Path) -> Result<(), FsError>;
+    /// 异步删除文件
+    async fn remove_file(&self, path: &Path) -> Result<(), FsError>;
+    /// 异步读取目录
+    async fn read_dir(&self, path: &Path) -> Result<Vec<std::path::PathBuf>, FsError>;
+    /// 文件监视（保持同步）
     fn watch(&self, path: &Path, tx: Sender<FsEvent>) -> Result<WatchHandle, FsError>;
+    
+    /// 向后兼容的同步方法
+    fn read_sync(&self, path: &Path) -> Result<Vec<u8>, FsError> {
+        // 使用tokio的block_on来同步调用异步方法
+        tokio::task::block_in_place(|| {
+            tokio::runtime::Handle::current().block_on(self.read(path))
+        })
+    }
+    
+    fn write_sync(&self, path: &Path, data: &[u8]) -> Result<(), FsError> {
+        // 使用tokio的block_on来同步调用异步方法
+        tokio::task::block_in_place(|| {
+            tokio::runtime::Handle::current().block_on(self.write(path, data))
+        })
+    }
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -337,17 +365,41 @@ impl NativeFilesystem {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+#[async_trait::async_trait]
 impl Filesystem for NativeFilesystem {
-    fn read_sync(&self, path: &Path) -> Result<Vec<u8>, FsError> {
-        std::fs::read(path).map_err(|e| FsError::IoError(e.to_string()))
+    async fn read(&self, path: &Path) -> Result<Vec<u8>, FsError> {
+        tokio::fs::read(path).await.map_err(|e| FsError::IoError(e.to_string()))
     }
 
-    fn write_sync(&self, path: &Path, data: &[u8]) -> Result<(), FsError> {
-        std::fs::write(path, data).map_err(|e| FsError::IoError(e.to_string()))
+    async fn write(&self, path: &Path, data: &[u8]) -> Result<(), FsError> {
+        tokio::fs::write(path, data).await.map_err(|e| FsError::IoError(e.to_string()))
     }
 
     fn exists(&self, path: &Path) -> bool {
         path.exists()
+    }
+
+    async fn exists_async(&self, path: &Path) -> bool {
+        tokio::fs::metadata(path).await.is_ok()
+    }
+
+    async fn create_dir_all(&self, path: &Path) -> Result<(), FsError> {
+        tokio::fs::create_dir_all(path).await.map_err(|e| FsError::IoError(e.to_string()))
+    }
+
+    async fn remove_file(&self, path: &Path) -> Result<(), FsError> {
+        tokio::fs::remove_file(path).await.map_err(|e| FsError::IoError(e.to_string()))
+    }
+
+    async fn read_dir(&self, path: &Path) -> Result<Vec<std::path::PathBuf>, FsError> {
+        let mut entries = Vec::new();
+        let mut dir = tokio::fs::read_dir(path).await.map_err(|e| FsError::IoError(e.to_string()))?;
+        
+        while let Some(entry) = dir.next_entry().await.map_err(|e| FsError::IoError(e.to_string()))? {
+            entries.push(entry.path());
+        }
+        
+        Ok(entries)
     }
 
     fn watch(&self, _path: &Path, _tx: Sender<FsEvent>) -> Result<WatchHandle, FsError> {

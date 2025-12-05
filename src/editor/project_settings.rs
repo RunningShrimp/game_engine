@@ -151,13 +151,13 @@ impl ProjectSettingsManager {
         }
     }
 
-    /// 加载设置
-    pub fn load(&mut self) -> Result<(), String> {
+    /// 加载设置（异步版本）
+    pub async fn load_async(&mut self) -> Result<(), String> {
         if !self.settings_path.exists() {
             return Ok(());
         }
 
-        let content = std::fs::read_to_string(&self.settings_path)
+        let content = tokio::fs::read_to_string(&self.settings_path).await
             .map_err(|e| format!("Failed to read settings file: {}", e))?;
 
         self.settings = serde_json::from_str(&content)
@@ -168,23 +168,37 @@ impl ProjectSettingsManager {
         Ok(())
     }
 
-    /// 保存设置
-    pub fn save(&mut self) -> Result<(), String> {
+    /// 保存设置（异步版本）
+    pub async fn save_async(&mut self) -> Result<(), String> {
         let content = serde_json::to_string_pretty(&self.settings)
             .map_err(|e| format!("Failed to serialize settings: {}", e))?;
 
         // 确保目录存在
         if let Some(parent) = self.settings_path.parent() {
-            std::fs::create_dir_all(parent)
+            tokio::fs::create_dir_all(parent).await
                 .map_err(|e| format!("Failed to create settings directory: {}", e))?;
         }
 
-        std::fs::write(&self.settings_path, content)
+        tokio::fs::write(&self.settings_path, content).await
             .map_err(|e| format!("Failed to write settings file: {}", e))?;
 
         self.has_unsaved_changes = false;
 
         Ok(())
+    }
+
+    /// 加载设置（同步版本，用于向后兼容）
+    pub fn load(&mut self) -> Result<(), String> {
+        tokio::task::block_in_place(|| {
+            tokio::runtime::Handle::current().block_on(self.load_async())
+        })
+    }
+
+    /// 保存设置（同步版本，用于向后兼容）
+    pub fn save(&mut self) -> Result<(), String> {
+        tokio::task::block_in_place(|| {
+            tokio::runtime::Handle::current().block_on(self.save_async())
+        })
     }
 
     /// 渲染设置UI

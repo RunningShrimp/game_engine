@@ -8,6 +8,8 @@ use bevy_ecs::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
+
+use crate::error::safe_lock;
 use thiserror::Error;
 
 /// 事件ID（时间戳 + 序列号）
@@ -48,6 +50,86 @@ pub trait DomainEvent: Send + Sync + 'static {
 
     /// 撤销事件（反向操作）
     fn revert(&self, world: &mut World) -> Result<(), EventError>;
+}
+
+/// 订阅者回调类型
+pub type SubscriberCallback<E> = Box<dyn FnMut(&E) + Send + Sync + 'static>;
+
+/// 类型擦除的订阅者包装器
+struct BoxedCallback {
+    /// 事件处理函数
+    handler: Box<dyn FnMut(&dyn DomainEvent) + Send + Sync + 'static>,
+}
+
+impl BoxedCallback {
+    /// 创建新的类型擦除订阅者
+    pub fn new<E: DomainEvent>(callback: SubscriberCallback<E>) -> Self {
+        Self {
+            handler: Box::new(move |event| {
+                if let Some(typed_event) = event.downcast_ref::<E>() {
+                    callback(typed_event);
+                }
+            }),
+        }
+    }
+
+    /// 处理事件
+    pub fn handle(&mut self, event: &dyn DomainEvent) {
+        (self.handler)(event);
+    }
+}
+
+/// 事件总线
+#[derive(Default)]
+pub struct EventBus {
+    /// 订阅者映射：事件类型ID -> 订阅者回调列表
+    subscribers: std::sync::RwLock<
+        std::collections::HashMap<
+            std::any::TypeId,
+            Vec<Box<BoxedCallback>>
+        >
+    >,
+}
+
+impl EventBus {
+    /// 创建新的事件总线
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// 订阅特定类型的事件
+    pub fn subscribe<E: DomainEvent + 'static>(
+        &self,
+        callback: impl FnMut(&E) + Send + Sync + 'static,
+    ) {
+        let callback = Box::new(callback) as SubscriberCallback<E>;
+        let boxed_callback = BoxedCallback::new(callback);
+        let event_type_id = std::any::TypeId::of::<E>();
+
+        let mut subscribers = self.subscribers.write().unwrap();
+        subscribers
+            .entry(event_type_id)
+            .or_insert_with(Vec::new)
+            .push(Box::new(boxed_callback));
+    }
+
+    /// 发布事件
+    pub fn publish<E: DomainEvent>(&self, event: &E) {
+        let event_type_id = std::any::TypeId::of::<E>();
+        
+        // 获取事件类型的订阅者列表的克隆
+        let subscribers = {
+            let guard = self.subscribers.read().unwrap();
+            guard.get(&event_type_id).cloned()
+        };
+        
+        // 处理事件
+        if let Some(mut callbacks) = subscribers {
+            for callback in callbacks.iter_mut() {
+                callback.handle(event);
+            }
+        }
+    }
 }
 
 /// 事件存储
@@ -235,6 +317,8 @@ impl SnapshotStore for MemorySnapshotStore {
 
 /// 事件溯源管理器
 pub struct EventSourcingManager {
+    /// 事件总线
+    pub event_bus: Arc<EventBus>,
     event_store: Arc<Mutex<dyn EventStore>>,
     snapshot_store: Arc<Mutex<dyn SnapshotStore>>,
     /// 事件序列号生成器
@@ -251,6 +335,7 @@ impl EventSourcingManager {
         snapshot_store: Arc<Mutex<dyn SnapshotStore>>,
     ) -> Self {
         Self {
+            event_bus: Arc::new(EventBus::new()),
             event_store,
             snapshot_store,
             sequence_generator: Arc::new(Mutex::new(0)),
@@ -275,7 +360,7 @@ impl EventSourcingManager {
         event: E,
         aggregate_id: Option<u32>,
     ) -> Result<EventId, EventError> {
-        let mut sequence = self.sequence_generator.lock().unwrap();
+        let mut sequence = safe_lock(&self.sequence_generator, "sequence_generator").unwrap_or_default();
         *sequence += 1;
         let event_id = EventId::now(*sequence);
 
@@ -292,14 +377,17 @@ impl EventSourcingManager {
         };
 
         // 保存事件
-        self.event_store.lock().unwrap().save_event(stored_event)?;
+        safe_lock(&self.event_store, "event_store").unwrap_or_default().save_event(stored_event)?;
+        
+        // 发布事件到事件总线
+        self.event_bus.publish(event);
 
         // 检查是否需要创建快照
         if let Some(agg_id) = aggregate_id {
             let event_count = self
                 .event_store
-                .lock()
-                .unwrap()
+                .safe_lock("event_store")
+                .unwrap_or_default()
                 .get_aggregate_events(agg_id)
                 .len();
 
@@ -318,28 +406,20 @@ impl EventSourcingManager {
     /// 重放事件到世界
     pub fn replay_events(
         &self,
-<<<<<<< HEAD
         world: &mut World,
-=======
-        _world: &mut World,
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
         from: Option<EventId>,
         to: Option<EventId>,
     ) -> Result<(), EventError> {
         let events = if let (Some(from_id), Some(to_id)) = (from, to) {
             self.event_store
-                .lock()
-                .unwrap()
+                .safe_lock("event_store")
+                .unwrap_or_default()
                 .get_events_range(from_id, to_id)
         } else {
-            self.event_store.lock().unwrap().get_all_events()
+            self.event_store.safe_lock("event_store").unwrap_or_default().get_all_events()
         };
 
-<<<<<<< HEAD
         for stored_event in events {
-=======
-        for _stored_event in events {
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
             // 反序列化事件（简化处理，实际需要根据event_type反序列化）
             // 这里只是占位，实际实现需要类型注册系统
             // let event: Box<dyn DomainEvent> = bincode::deserialize(&stored_event.data)?;
@@ -352,22 +432,14 @@ impl EventSourcingManager {
     /// 重放聚合事件
     pub fn replay_aggregate_events(
         &self,
-<<<<<<< HEAD
         world: &mut World,
         aggregate_id: u32,
     ) -> Result<(), EventError> {
         // 尝试从快照恢复
         if let Ok(snapshot) = self
-=======
-        _world: &mut World,
-        aggregate_id: u32,
-    ) -> Result<(), EventError> {
-        // 尝试从快照恢复
-        if let Ok(_snapshot) = self
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
             .snapshot_store
-            .lock()
-            .unwrap()
+            .safe_lock("snapshot_store")
+            .unwrap_or_default()
             .get_latest_snapshot(aggregate_id)
         {
             // 从快照恢复状态（简化处理）
@@ -375,14 +447,10 @@ impl EventSourcingManager {
         }
 
         // 重放快照之后的事件
-<<<<<<< HEAD
         let events = self
-=======
-        let _events = self
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
             .event_store
-            .lock()
-            .unwrap()
+            .safe_lock("event_store")
+            .unwrap_or_default()
             .get_aggregate_events(aggregate_id);
 
         // 过滤快照之后的事件
@@ -392,12 +460,8 @@ impl EventSourcingManager {
     }
 
     /// 撤销最后一个事件
-<<<<<<< HEAD
     pub fn undo_last_event(&self, world: &mut World) -> Result<Option<EventId>, EventError> {
-=======
-    pub fn undo_last_event(&self, _world: &mut World) -> Result<Option<EventId>, EventError> {
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
-        let events = self.event_store.lock().unwrap().get_all_events();
+        let events = self.event_store.safe_lock("event_store").unwrap_or_default().get_all_events();
 
         if let Some(last_event) = events.last() {
             // 反序列化并撤销
@@ -413,11 +477,7 @@ impl EventSourcingManager {
 
     /// 清理旧事件
     fn cleanup_old_events(&self) -> Result<(), EventError> {
-<<<<<<< HEAD
-        let mut store = self.event_store.lock().unwrap();
-=======
-        let store = self.event_store.lock().unwrap();
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
+        let mut store = self.event_store.safe_lock("event_store").unwrap_or_default();
         let events = store.get_all_events();
 
         if events.len() > self.max_history_length {
@@ -430,14 +490,14 @@ impl EventSourcingManager {
 
     /// 获取事件历史
     pub fn get_event_history(&self) -> Vec<StoredEvent> {
-        self.event_store.lock().unwrap().get_all_events()
+        self.event_store.safe_lock("event_store").unwrap_or_default().get_all_events()
     }
 
     /// 获取聚合事件历史
     pub fn get_aggregate_history(&self, aggregate_id: u32) -> Vec<StoredEvent> {
         self.event_store
-            .lock()
-            .unwrap()
+            .safe_lock("event_store")
+            .unwrap_or_default()
             .get_aggregate_events(aggregate_id)
     }
 }
@@ -543,21 +603,13 @@ impl DomainEvent for EntityCreatedEvent {
         "EntityCreated"
     }
 
-<<<<<<< HEAD
     fn apply(&self, world: &mut World) -> Result<(), EventError> {
-=======
-    fn apply(&self, _world: &mut World) -> Result<(), EventError> {
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
         // 创建实体（简化处理）
         // 实际实现需要根据entity_type创建相应的组件
         Ok(())
     }
 
-<<<<<<< HEAD
     fn revert(&self, world: &mut World) -> Result<(), EventError> {
-=======
-    fn revert(&self, _world: &mut World) -> Result<(), EventError> {
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
         // 删除实体
         // 实际实现需要能够通过entity_id删除实体
         Ok(())
@@ -577,21 +629,13 @@ impl DomainEvent for EntityTransformChangedEvent {
         "EntityTransformChanged"
     }
 
-<<<<<<< HEAD
     fn apply(&self, world: &mut World) -> Result<(), EventError> {
-=======
-    fn apply(&self, _world: &mut World) -> Result<(), EventError> {
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
         // 应用新变换
         // 实际实现需要反序列化并更新实体
         Ok(())
     }
 
-<<<<<<< HEAD
     fn revert(&self, world: &mut World) -> Result<(), EventError> {
-=======
-    fn revert(&self, _world: &mut World) -> Result<(), EventError> {
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
         // 恢复旧变换
         // 实际实现需要反序列化并恢复
         Ok(())

@@ -61,7 +61,7 @@ impl CacheMetadata {
     fn new(source_hash: String, compile_options_hash: String) -> Self {
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
+            .unwrap_or_default()
             .as_secs();
 
         Self {
@@ -77,7 +77,7 @@ impl CacheMetadata {
     fn update_access_time(&mut self) {
         self.last_accessed = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
+            .unwrap_or_default()
             .as_secs();
     }
 }
@@ -511,9 +511,10 @@ impl ShaderCache {
                 if fs::remove_file(&cache_path).is_ok() {
                     // 删除对应的元数据文件
                     if let Some(meta_path) = cache_path.parent() {
-                        let meta_filename =
-                            format!("{}.meta", cache_path.file_stem().unwrap().to_string_lossy());
-                        let _ = fs::remove_file(meta_path.join(meta_filename));
+                        if let Some(stem) = cache_path.file_stem() {
+                            let meta_filename = format!("{}.meta", stem.to_string_lossy());
+                            let _ = fs::remove_file(meta_path.join(meta_filename));
+                        }
                     }
                     current_size -= file_size;
                 }
@@ -562,9 +563,10 @@ impl ShaderCache {
                 let file_size = metadata.len();
                 if fs::remove_file(&cache_path).is_ok() {
                     if let Some(meta_path) = cache_path.parent() {
-                        let meta_filename =
-                            format!("{}.meta", cache_path.file_stem().unwrap().to_string_lossy());
-                        let _ = fs::remove_file(meta_path.join(meta_filename));
+                        if let Some(stem) = cache_path.file_stem() {
+                            let meta_filename = format!("{}.meta", stem.to_string_lossy());
+                            let _ = fs::remove_file(meta_path.join(meta_filename));
+                        }
                     }
                     current_size -= file_size;
                 }
@@ -603,9 +605,10 @@ impl ShaderCache {
 
             if fs::remove_file(&cache_path).is_ok() {
                 if let Some(meta_path) = cache_path.parent() {
-                    let meta_filename =
-                        format!("{}.meta", cache_path.file_stem().unwrap().to_string_lossy());
-                    let _ = fs::remove_file(meta_path.join(meta_filename));
+                    if let Some(stem) = cache_path.file_stem() {
+                        let meta_filename = format!("{}.meta", stem.to_string_lossy());
+                        let _ = fs::remove_file(meta_path.join(meta_filename));
+                    }
                 }
                 current_size -= file_size;
             }
@@ -679,7 +682,7 @@ mod tests {
 
     #[test]
     fn test_shader_cache_basic() {
-        let temp_dir = TempDir::new().unwrap();
+        let temp_dir = TempDir::new().expect("Failed to create temporary directory");
         let cache_dir = temp_dir.path().to_path_buf();
 
         let config = ShaderCacheConfig {
@@ -689,22 +692,22 @@ mod tests {
             cleanup_strategy: CleanupStrategy::LRU,
         };
 
-        let mut cache = ShaderCache::new(config).unwrap();
+        let mut cache = ShaderCache::new(config).expect("Failed to create shader cache");
 
         // 创建缓存键
         let key = ShaderCacheKey::from_source("fn main() {}", "");
 
         // 首次获取应该未命中
-        let result = cache.get(&key).unwrap();
+        let result = cache.get(&key).expect("Failed to get shader from cache");
         assert!(result.is_none());
         assert_eq!(cache.stats().misses, 1);
 
         // 存储缓存
         let source_code = "fn main() {}";
-        cache.put_source(&key, source_code).unwrap();
+        cache.put_source(&key, source_code).expect("Failed to put source to cache");
 
         // 再次获取应该命中
-        let result = cache.get(&key).unwrap();
+        let result = cache.get(&key).expect("Failed to get shader from cache");
         assert!(result.is_some());
         assert_eq!(result.unwrap(), source_code.as_bytes());
         assert_eq!(cache.stats().hits, 1);
@@ -712,7 +715,7 @@ mod tests {
 
     #[test]
     fn test_cache_invalidation() {
-        let temp_dir = TempDir::new().unwrap();
+        let temp_dir = TempDir::new().expect("Failed to create temporary directory");
         let cache_dir = temp_dir.path().to_path_buf();
 
         let config = ShaderCacheConfig {
@@ -722,25 +725,25 @@ mod tests {
             cleanup_strategy: CleanupStrategy::LRU,
         };
 
-        let mut cache = ShaderCache::new(config).unwrap();
+        let mut cache = ShaderCache::new(config).expect("Failed to create shader cache");
 
         let key1 = ShaderCacheKey::from_source("fn main() {}", "");
         let source_code = "fn main() {}";
 
         // 存储缓存
-        cache.put_source(&key1, source_code).unwrap();
+        cache.put_source(&key1, source_code).expect("Failed to put source to cache");
 
         // 使用不同的源码创建新键（应该失效）
         let key2 = ShaderCacheKey::from_source("fn main() { }", "");
 
         // 使用key2获取应该未命中（因为hash不同）
-        let result = cache.get(&key2).unwrap();
+        let result = cache.get(&key2).expect("Failed to get shader from cache");
         assert!(result.is_none());
     }
 
     #[test]
     fn test_cache_stats() {
-        let temp_dir = TempDir::new().unwrap();
+        let temp_dir = TempDir::new().expect("Failed to create temporary directory");
         let cache_dir = temp_dir.path().to_path_buf();
 
         let config = ShaderCacheConfig {
@@ -750,12 +753,12 @@ mod tests {
             cleanup_strategy: CleanupStrategy::LRU,
         };
 
-        let mut cache = ShaderCache::new(config).unwrap();
+        let mut cache = ShaderCache::new(config).expect("Failed to create shader cache");
 
         let key = ShaderCacheKey::from_source("test", "");
 
         // 存储一些数据
-        cache.put_source(&key, "test").unwrap();
+        cache.put_source(&key, "test").expect("Failed to put source to cache");
 
         let stats = cache.stats();
         assert!(stats.cache_size_bytes > 0);

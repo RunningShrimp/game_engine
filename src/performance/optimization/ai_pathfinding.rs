@@ -8,7 +8,8 @@
 
 use glam::Vec3;
 use std::cmp::Ordering;
-use std::collections::HashMap;
+use std::collections::{HashMap, BinaryHeap, HashSet};
+use rayon::prelude::*;
 
 /// 启发式函数类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -87,7 +88,7 @@ impl SIMDHeuristics {
     pub fn batch_euclidean_distance(positions: &[Vec3], target: Vec3) -> Vec<f32> {
         let mut distances = Vec::with_capacity(positions.len());
 
-        // SIMD 优化: AVX2 一次处理 4 个 Vec3
+        // SIMD 优化: AVX2 一次处理 8 个 Vec3
         #[cfg(target_arch = "x86_64")]
         if is_x86_feature_detected!("avx2") {
             return Self::batch_euclidean_distance_avx2(positions, target);
@@ -113,45 +114,48 @@ impl SIMDHeuristics {
             let target_y = _mm256_set1_ps(target.y);
             let target_z = _mm256_set1_ps(target.z);
 
-            // 因为 Vec3 不是 4 个浮点数，我们需要手动处理
-            let chunks = positions.chunks_exact(4);
-            let remainder = positions.len() % 4;
+            // 一次处理 8 个 Vec3 - AVX2 可以处理 8 个浮点数
+            let chunks = positions.chunks_exact(8);
+            let remainder = positions.len() % 8;
 
             for chunk in chunks {
-                // 提取 x, y, z 坐标
-                let mut xs = [0.0f32; 4];
-                let mut ys = [0.0f32; 4];
-                let mut zs = [0.0f32; 4];
-
-                for (i, pos) in chunk.iter().enumerate() {
-                    xs[i] = pos.x;
-                    ys[i] = pos.y;
-                    zs[i] = pos.z;
+                // 提取 8 个 Vec3 的 x, y, z 坐标
+                // 每个 Vec3 是 3 个浮点数, 8 个 Vec3 是 24 个浮点数
+                // 将它们排列为 x0, y0, z0, x1, y1, z1, ..., x7, y7, z7
+                
+                // 先加载 8 个 Vec3 到 24 个浮点数的数组
+                let mut data = [0.0f32; 24];
+                for i in 0..8 {
+                    data[i * 3 + 0] = chunk[i].x;
+                    data[i * 3 + 1] = chunk[i].y;
+                    data[i * 3 + 2] = chunk[i].z;
                 }
-
-                let xs_v = _mm256_loadu_ps(xs.as_ptr());
-                let ys_v = _mm256_loadu_ps(ys.as_ptr());
-                let zs_v = _mm256_loadu_ps(zs.as_ptr());
-
-                // 计算差值
-                let dx = _mm256_sub_ps(xs_v, target_x);
-                let dy = _mm256_sub_ps(ys_v, target_y);
-                let dz = _mm256_sub_ps(zs_v, target_z);
-
-                // 平方
+                
+                // 计算 x 坐标的差异
+                let xs = _mm256_loadu_ps(&data[0] as *const f32); // x0-x7
+                let dx = _mm256_sub_ps(xs, target_x);
                 let dx2 = _mm256_mul_ps(dx, dx);
+                
+                // 计算 y 坐标的差异
+                let ys = _mm256_loadu_ps(&data[8] as *const f32); // y0-y7
+                let dy = _mm256_sub_ps(ys, target_y);
                 let dy2 = _mm256_mul_ps(dy, dy);
+                
+                // 计算 z 坐标的差异
+                let zs = _mm256_loadu_ps(&data[16] as *const f32); // z0-z7
+                let dz = _mm256_sub_ps(zs, target_z);
                 let dz2 = _mm256_mul_ps(dz, dz);
-
+                
                 // 求和并开方
                 let sum = _mm256_add_ps(_mm256_add_ps(dx2, dy2), dz2);
                 let dist = _mm256_sqrt_ps(sum);
-
-                // 存储结果
+                
+                // 存储结果 (8 个距离值)
                 let mut tmp = [0.0f32; 8];
                 _mm256_storeu_ps(tmp.as_mut_ptr(), dist);
-                for i in 0..4 {
-                    distances.push(tmp[i]);
+                
+                for &d in &tmp {
+                    distances.push(d);
                 }
             }
 
@@ -186,9 +190,11 @@ impl SIMDHeuristics {
             .collect()
     }
 }
-
 /// 单个智能体的寻路器
+/// 支持多种启发式函数和可扩展的寻路算法
+#[derive(Clone)]
 pub struct AgentPathfinder {
+
     /// 智能体标识
     pub agent_id: u32,
     /// 当前位置
@@ -222,10 +228,6 @@ impl AgentPathfinder {
     }
 
     /// 计算启发式值
-<<<<<<< HEAD
-=======
-    #[allow(dead_code)]
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
     fn compute_heuristic(&self, from: Vec3, to: Vec3) -> f32 {
         match self.heuristic {
             HeuristicType::Euclidean => (from - to).length(),
@@ -238,43 +240,162 @@ impl AgentPathfinder {
         }
     }
 
-    /// 简化的 A* 寻路 (网格基础)
+    /// 计算两个网格点之间的移动成本
+    fn compute_move_cost(&self, from: Vec3, to: Vec3) -> f32 {
+        (from - to).length()
+    }
+
+    /// 获取相邻节点
+    fn get_neighbors(&self, position: Vec3, grid_size: f32) -> Vec<Vec3> {
+        let mut neighbors = Vec::with_capacity(8);
+        
+        // 8个方向的移动 (包括对角线)
+        let offsets = [
+            ( 1.0,  0.0,  0.0), ( 0.0,  1.0,  0.0), ( 0.0,  0.0,  1.0),
+            (-1.0,  0.0,  0.0), ( 0.0, -1.0,  0.0), ( 0.0,  0.0, -1.0),
+            ( 1.0,  1.0,  0.0), (-1.0, -1.0,  0.0), ( 1.0,  0.0,  1.0),
+            (-1.0,  0.0, -1.0), ( 0.0,  1.0,  1.0), ( 0.0, -1.0, -1.0),
+        ];
+        
+        for offset in offsets {
+            let neighbor = Vec3::new(
+                position.x + offset.0 * grid_size,
+                position.y + offset.1 * grid_size,
+                position.z + offset.2 * grid_size,
+            );
+            neighbors.push(neighbor);
+        }
+        
+        neighbors
+    }
+
+    /// 真正的 A* 寻路算法实现
     pub fn find_path(&mut self, target: Vec3, grid_size: f32) -> PathfindingResult {
         let start = std::time::Instant::now();
 
         self.target_position = target;
-        let mut path = Vec::new();
-        let mut nodes_expanded = 0u32;
-
-        // 简化实现: 直接线性插值到目标
-        let direction = (target - self.current_position).normalize();
-        let distance = (target - self.current_position).length();
-        let steps = (distance / grid_size).ceil() as usize;
-
-        if steps > 0 {
-            for i in 0..=steps {
-                let t = i as f32 / steps as f32;
-                let pos = self.current_position + direction * distance * t;
-                path.push(pos);
-                nodes_expanded += 1;
-            }
-        } else {
-            path.push(target);
+        
+        // 如果已经在目标位置
+        if (self.current_position - target).length_squared() < 0.001 {
+            return PathfindingResult {
+                path: vec![target],
+                path_length: 0.0,
+                nodes_expanded: 0,
+                found: true,
+                compute_time_ms: start.elapsed().as_secs_f32() * 1000.0,
+            };
         }
 
-        self.current_path = path.clone();
+        // 开放列表 (优先级队列)
+        let mut open_list = BinaryHeap::new();
+        // 关闭列表
+        let mut closed_list = HashSet::new();
+        // 所有节点的列表
+        let mut all_nodes = Vec::new();
+
+        // 创建起始节点
+        let start_node = PathNode {
+            position: self.current_position,
+            g_cost: 0.0,
+            h_cost: self.compute_heuristic(self.current_position, target),
+            f_cost: 0.0, // g + h
+            parent_idx: None,
+        };
+        
+        open_list.push(start_node);
+        all_nodes.push(start_node);
+        closed_list.insert(self.current_position);
+
+        let mut nodes_expanded = 0u32;
+
+        while let Some(current_node) = open_list.pop() {
+            nodes_expanded += 1;
+
+            // 检查是否到达目标
+            if (current_node.position - target).length() < grid_size * 0.5 {
+                // 构建路径
+                let mut path = Vec::new();
+                let mut current_idx = all_nodes.len() - 1;
+                
+                loop {
+                    path.push(all_nodes[current_idx].position);
+                    
+                    if let Some(parent_idx) = all_nodes[current_idx].parent_idx {
+                        current_idx = parent_idx;
+                    } else {
+                        break;
+                    }
+                }
+                
+                path.reverse();
+                
+                // 存储当前路径
+                self.current_path = path.clone();
+                self.path_index = 0;
+
+                let path_length = path.windows(2).map(|w| (w[1] - w[0]).length()).sum();
+                
+                return PathfindingResult {
+                    path,
+                    path_length,
+                    nodes_expanded,
+                    found: true,
+                    compute_time_ms: start.elapsed().as_secs_f32() * 1000.0,
+                };
+            }
+
+            // 获取相邻节点
+            let neighbors = self.get_neighbors(current_node.position, grid_size);
+            
+            for neighbor_pos in neighbors {
+                if closed_list.contains(&neighbor_pos) {
+                    continue;
+                }
+                
+                // 计算 g_cost
+                let tentative_g_cost = current_node.g_cost + self.compute_move_cost(current_node.position, neighbor_pos);
+                
+                // 检查是否已经在开放列表中
+                let mut found_in_open = false;
+                for node in &open_list {
+                    if node.position == neighbor_pos {
+                        found_in_open = true;
+                        if node.g_cost <= tentative_g_cost {
+                            // 已经有更好的路径
+                            break;
+                        }
+                        // 需要更新路径
+                        break;
+                    }
+                }
+                
+                if !found_in_open {
+                    // 创建新节点并加入开放列表
+                    let neighbor_node = PathNode {
+                        position: neighbor_pos,
+                        g_cost: tentative_g_cost,
+                        h_cost: self.compute_heuristic(neighbor_pos, target),
+                        f_cost: tentative_g_cost + self.compute_heuristic(neighbor_pos, target),
+                        parent_idx: Some(all_nodes.len() - 1), // 当前节点是最后一个加入的
+                    };
+                    
+                    open_list.push(neighbor_node);
+                    all_nodes.push(neighbor_node);
+                    closed_list.insert(neighbor_pos);
+                }
+            }
+        }
+
+        // 未找到路径
+        self.current_path.clear();
         self.path_index = 0;
 
-        let path_length = path.windows(2).map(|w| (w[1] - w[0]).length()).sum();
-
-        let compute_time = start.elapsed().as_secs_f32() * 1000.0;
-
         PathfindingResult {
-            path,
-            path_length,
+            path: Vec::new(),
+            path_length: 0.0,
             nodes_expanded,
-            found: true,
-            compute_time_ms: compute_time,
+            found: false,
+            compute_time_ms: start.elapsed().as_secs_f32() * 1000.0,
         }
     }
 }
@@ -283,8 +404,8 @@ impl AgentPathfinder {
 pub struct BatchPathfinder {
     /// 所有智能体
     agents: HashMap<u32, AgentPathfinder>,
-    /// 路径缓存 (使用字符串键代替 Vec3)
-    path_cache: HashMap<String, Vec<Vec3>>,
+    /// 路径缓存 (使用 Vec3 元组键)
+    path_cache: HashMap<(Vec3, Vec3), Vec<Vec3>>,
     /// 网格大小
     grid_size: f32,
 }
@@ -300,11 +421,8 @@ impl BatchPathfinder {
     }
 
     /// 为路径对生成缓存键
-    fn path_key(from: Vec3, to: Vec3) -> String {
-        format!(
-            "{:.2}_{:.2}_{:.2}_to_{:.2}_{:.2}_{:.2}",
-            from.x, from.y, from.z, to.x, to.y, to.z
-        )
+    fn path_key(from: Vec3, to: Vec3) -> (Vec3, Vec3) {
+        (from, to)
     }
 
     /// 添加智能体
@@ -336,15 +454,30 @@ impl BatchPathfinder {
 
     /// 批量为所有智能体寻找路径
     pub fn find_paths_batch(&mut self, targets: &[(u32, Vec3)]) -> Vec<PathfindingResult> {
-        let mut results = Vec::new();
-
-        for (agent_id, target) in targets {
-            if let Some(result) = self.find_path_for_agent(*agent_id, *target) {
-                results.push(result);
-            }
-        }
-
-        results
+        targets
+            .par_iter()
+            .map(|(agent_id, target)| {
+                // 为每个查询创建独立的 AgentPathfinder
+                // 注意: 这里不使用内部的 agents HashMap，因为 HashMap 不是线程安全的
+                if let Some(agent) = self.agents.get(&agent_id) {
+                    let mut temp_agent = agent.clone();
+                    let result = temp_agent.find_path(*target, self.grid_size);
+                    
+                    // 如果在主线程中需要缓存路径，可以在这里处理
+                    // 但需要注意线程安全
+                    result
+                } else {
+                    // 智能体不存在，返回空结果
+                    PathfindingResult {
+                        path: Vec::new(),
+                        path_length: 0.0,
+                        nodes_expanded: 0,
+                        found: false,
+                        compute_time_ms: 0.0,
+                    }
+                }
+            })
+            .collect()
     }
 
     /// 更新智能体位置
@@ -443,5 +576,20 @@ mod tests {
 
         assert_eq!(batch.cache_size(), 1);
         assert!(batch.get_cached_path(Vec3::ZERO, target).is_some());
+    }
+    
+    #[test]
+    fn test_astar_implementation() {
+        let mut agent = AgentPathfinder::new(1, Vec3::new(0.0, 0.0, 0.0));
+        let target = Vec3::new(3.0, 3.0, 0.0);
+        
+        let result = agent.find_path(target, 1.0);
+        assert!(result.found);
+        assert!(result.path.len() > 0);
+        assert!(result.path_length > 0.0);
+        
+        // 验证路径包含目标点
+        assert!(result.path.contains(&target) || 
+                result.path.last().unwrap().distance(target) < 1.0);
     }
 }

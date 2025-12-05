@@ -18,6 +18,7 @@ use std::collections::BinaryHeap;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use thiserror::Error;
+use crate::error::safe_lock;
 use tokio::sync::{mpsc, oneshot};
 use tokio::time::timeout;
 
@@ -166,10 +167,6 @@ impl_default!(AsyncShaderCompilerConfig {
 /// 异步着色器编译器
 pub struct AsyncShaderCompiler {
     /// 配置
-<<<<<<< HEAD
-=======
-    #[allow(dead_code)]
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
     config: AsyncShaderCompilerConfig,
     /// 请求发送器
     request_tx: mpsc::UnboundedSender<ShaderCompileRequest>,
@@ -263,7 +260,7 @@ impl AsyncShaderCompiler {
                 Some(request) = request_rx.recv() => {
                     // 添加到优先级队列
                     {
-                        let mut queue = priority_queue.lock().unwrap();
+                        let mut queue = safe_lock(&priority_queue, "priority_queue").unwrap_or_default();
                         queue.push(request);
                         stats.total_requests += 1;
                         stats.pending += 1;
@@ -299,7 +296,7 @@ impl AsyncShaderCompiler {
         if let Ok(permit) = semaphore.clone().try_acquire_owned() {
             // 从队列取出最高优先级的请求
             let request = {
-                let mut q = queue.lock().unwrap();
+                let mut q = safe_lock(&queue, "priority_queue").unwrap_or_default();
                 q.pop()
             };
 
@@ -310,11 +307,7 @@ impl AsyncShaderCompiler {
 
                 let cache_clone = cache.clone();
                 let response_tx = request.response_tx;
-<<<<<<< HEAD
                 let label = request.label.clone();
-=======
-                let _label = request.label.clone();
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
                 let source = request.source.clone();
                 let compile_options = request.compile_options.clone();
 
@@ -328,7 +321,7 @@ impl AsyncShaderCompiler {
                     // 检查缓存
                     let cached_result = if enable_cache {
                         if let Some(cache) = &cache_clone {
-                            let mut cache_guard = cache.lock().unwrap();
+                            let mut cache_guard = safe_lock(&cache, "shader_cache").unwrap_or_default();
                             cache_guard.get(&cache_key).ok().flatten()
                         } else {
                             None
@@ -370,7 +363,7 @@ impl AsyncShaderCompiler {
                     if let Ok(ref compiled) = result {
                         if enable_cache {
                             if let Some(cache) = &cache_clone {
-                                let mut cache_guard = cache.lock().unwrap();
+                                let mut cache_guard = safe_lock(&cache, "shader_cache").unwrap_or_default();
                                 let _ =
                                     cache_guard.put_source(&compiled.cache_key, &compiled.source);
                             }
@@ -396,7 +389,7 @@ impl AsyncShaderCompiler {
         priority: ShaderCompilePriority,
     ) -> Result<oneshot::Receiver<Result<CompiledShader, CompileError>>, RenderError> {
         let id = {
-            let mut next_id = self.next_id.lock().unwrap();
+            let mut next_id = safe_lock(&self.next_id, "next_id").unwrap_or_default();
             let id = *next_id;
             *next_id += 1;
             id
@@ -432,7 +425,7 @@ impl AsyncShaderCompiler {
 
     /// 获取编译进度
     pub fn get_progress(&self) -> Option<CompileProgress> {
-        let mut rx = self.progress_rx.lock().unwrap();
+        let mut rx = safe_lock(&self.progress_rx, "progress_rx").unwrap_or_default();
         rx.try_recv().ok()
     }
 

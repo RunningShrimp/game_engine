@@ -201,11 +201,7 @@ mod tests {
 
     #[test]
     fn test_scene_compensation_roundtrip() {
-<<<<<<< HEAD
         let mut scene = Scene::new(SceneId(1), "Test Scene");
-=======
-        let scene = Scene::new(SceneId(1), "Test Scene");
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
 
         // 创建补偿操作（快照）
         let snapshot = scene.create_snapshot();
@@ -213,15 +209,10 @@ mod tests {
         assert_eq!(snapshot.name, "Test Scene");
         assert_eq!(snapshot.entity_count, 0);
 
-<<<<<<< HEAD
         // 修改场景
         scene.name = "Modified Scene".to_string();
 
         // 验证快照未改变
-=======
-        // 场景名称是不可变的，所以我们不能修改它
-        // 验证快照包含正确的名称
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
         assert_eq!(snapshot.name, "Test Scene");
     }
 
@@ -575,17 +566,10 @@ mod tests {
     #[test]
     fn test_scene_recover_from_error_component_not_found() {
         let mut scene = Scene::new(SceneId(1), "Test Scene");
-<<<<<<< HEAD
         scene.recovery_strategy = RecoveryStrategy::Retry {
             max_attempts: 1,
             delay_ms: 1,
         };
-=======
-        scene.set_recovery_strategy(RecoveryStrategy::Retry {
-            max_attempts: 1,
-            delay_ms: 1,
-        });
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
         
         let error = SceneError::ComponentNotFound("test".to_string());
         let result = scene.recover_from_error(&error);

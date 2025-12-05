@@ -2,10 +2,7 @@
 //!
 //! 实现控制器输入、手部追踪和触觉反馈
 
-<<<<<<< HEAD
 use crate::impl_default;
-=======
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
 use super::*;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -30,20 +27,10 @@ pub struct XrInputManager {
 #[derive(Debug, Clone)]
 pub struct HandTrackingData {
     /// 左手关节姿态
-<<<<<<< HEAD
     left_hand_joints: Vec<HandJoint>,
     /// 右手关节姿态
     right_hand_joints: Vec<HandJoint>,
     /// 是否有效
-=======
-    #[allow(dead_code)]
-    left_hand_joints: Vec<HandJoint>,
-    /// 右手关节姿态
-    #[allow(dead_code)]
-    right_hand_joints: Vec<HandJoint>,
-    /// 是否有效
-    #[allow(dead_code)]
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
     is_valid: bool,
 }
 

@@ -33,11 +33,7 @@
 //! ```
 
 use crate::impl_default;
-<<<<<<< HEAD
 use glam::{Vec2, Vec3};
-=======
-use glam::Vec3;
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
 use std::collections::{HashMap, HashSet};
 use thiserror::Error;
 
@@ -173,17 +169,13 @@ pub struct NavMesh {
     pub vertices: Vec<Vec3>,
     /// 多边形列表
     pub polygons: Vec<NavPolygon>,
-<<<<<<< HEAD
     /// 区域映射（区域ID -> 多边形索引列表）
     regions: HashMap<u32, Vec<usize>>,
-=======
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
 }
 
 impl NavMesh {
     /// 创建新的导航网格
     pub fn new(vertices: Vec<Vec3>, polygons: Vec<NavPolygon>) -> Self {
-<<<<<<< HEAD
         let mut regions = HashMap::new();
 
         for (idx, poly) in polygons.iter().enumerate() {
@@ -197,11 +189,6 @@ impl NavMesh {
             vertices,
             polygons,
             regions,
-=======
-        Self {
-            vertices,
-            polygons,
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
         }
     }
 
@@ -476,15 +463,9 @@ impl NavMeshGenerator {
         for (v0, v1, v2) in &filtered_faces {
             for v in [v0, v1, v2] {
                 let key = vec3_to_key(*v);
-<<<<<<< HEAD
                 if !vertex_map.contains_key(&key) {
                     let idx = vertices.len();
                     vertex_map.insert(key, idx);
-=======
-                if let std::collections::hash_map::Entry::Vacant(e) = vertex_map.entry(key) {
-                    let idx = vertices.len();
-                    e.insert(idx);
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
                     vertices.push(*v);
                 }
             }

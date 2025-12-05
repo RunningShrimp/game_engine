@@ -29,11 +29,34 @@ pub use config::{EditorConfig, EditorConfigManager, EditorTheme};
 use egui_winit::State;
 pub use hierarchy::HierarchyView;
 pub use inspector::Inspector;
+pub use scene_editor_enhanced::SceneEditorEnhanced;
 pub use shortcuts::{Modifiers, ShortcutAction, ShortcutManager};
+pub use transform_gizmo::TransformGizmo;
 pub use undo_redo::{
     Command, CommandError, CommandManager, CompositeCommand, PropertyChangeCommand,
 };
 use winit::event::WindowEvent;
+
+/// 全局编辑器状态
+#[derive(Default, Debug)]
+pub struct EditorState {
+    /// 增强场景编辑器
+    pub scene_editor: SceneEditorEnhanced,
+    /// 属性检查器
+    pub inspector: Inspector,
+    /// 变换工具
+    pub transform_gizmo: TransformGizmo,
+    /// 层级视图
+    pub hierarchy_view: HierarchyView,
+    /// 命令管理器（撤销/重做）
+    pub command_manager: CommandManager,
+}
+
+impl EditorState {
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
 use winit::window::Window;
 
 pub struct EditorPlugin;
@@ -98,6 +121,41 @@ pub fn editor_ui_system(_world: &mut World) {
 }
 
 pub fn inspect_world_ui(ctx: &egui::Context, world: &mut World) {
+    // 获取或插入编辑器状态资源
+    let mut editor_state = world.get_resource_or_insert_with::<EditorState>(EditorState::new);
+    
+    egui::SidePanel::left("hierarchy_panel", 250.0).show(ctx, |ui| {
+        editor_state.hierarchy_view.render(ui, world, &mut editor_state.scene_editor.selected_entities);
+    });
+    
+    egui::CentralPanel::default().show(ctx, |ui| {
+        editor_state.scene_editor.base.render(ui, world);
+        
+        // 绘制变换工具
+        if let Some(selected_entity) = editor_state.scene_editor.base.selected_entity {
+            let mut query = world.query::<&crate::ecs::Transform>();
+            if let Ok(transform) = query.get(world, selected_entity) {
+                // 简化处理，直接使用当前视图范围
+                let viewport_rect = ui.ctx().input(|i| i.screen_rect);
+                
+                if let Some(screen_pos) = editor_state.scene_editor.base.world_to_screen(transform.pos, viewport_rect) {
+                    let painter = ui.painter();
+                    let zoom = editor_state.scene_editor.base.zoom;
+                    editor_state.transform_gizmo.draw_3d_gizmo(painter, screen_pos, zoom);
+                }
+            }
+        }
+    });
+    
+    egui::SidePanel::right("inspector_panel", 300.0).show(ctx, |ui| {
+        editor_state.inspector.render(ui, world, editor_state.scene_editor.base.selected_entity);
+    });
+    
+    egui::Window::new("Transform Gizmo").show(ctx, |ui| {
+        editor_state.transform_gizmo.render(ui, world, editor_state.scene_editor.base.selected_entity);
+    });
+    
+    // 保留原来的世界检查器功能
     egui::Window::new("World Inspector").show(ctx, |ui| {
         ui.label(format!("Entities: {}", world.entities().len()));
         if let Some(time) = world.get_resource::<crate::ecs::Time>() {

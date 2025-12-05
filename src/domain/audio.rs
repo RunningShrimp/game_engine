@@ -207,11 +207,7 @@ impl AudioSource {
     /// 设置音量（从f32值）
     pub fn set_volume_f32(&mut self, value: f32) -> Result<(), DomainError> {
         let volume = Volume::new(value)
-<<<<<<< HEAD
             .ok_or_else(|| DomainError::Audio(AudioError::InvalidVolume(value)))?;
-=======
-            .ok_or(DomainError::Audio(AudioError::InvalidVolume(value)))?;
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
         self.set_volume(volume)
     }
 
@@ -276,11 +272,7 @@ impl AudioSource {
                     // 尝试重新加载或播放
                     match error {
                         AudioError::PlaybackFailed(_) => {
-<<<<<<< HEAD
                             if let Err(_) = self.play() {
-=======
-                            if self.play().is_err() {
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
                                 continue;
                             } else {
                                 return Ok(());
@@ -288,11 +280,7 @@ impl AudioSource {
                         }
                         AudioError::SourceNotFound(_) => {
                             if let Some(path) = &self.path.clone() {
-<<<<<<< HEAD
                                 if let Err(_) = self.load_file(path) {
-=======
-                                if self.load_file(path).is_err() {
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
                                     continue;
                                 } else {
                                     return Ok(());
@@ -780,7 +768,6 @@ mod tests {
     fn test_audio_source_recover_from_error_fail() {
         let mut source = AudioSource::new(AudioSourceId(1));
         source.recovery_strategy = RecoveryStrategy::Fail;
-<<<<<<< HEAD
         
         let error = AudioError::PlaybackFailed("test".to_string());
         let result = source.recover_from_error(&error);
@@ -791,14 +778,6 @@ mod tests {
         } else {
             panic!("Expected Audio error");
         }
-=======
-
-        let error = AudioError::PlaybackFailed("test".to_string());
-        let result = source.recover_from_error(&error);
-
-        assert!(result.is_err());
-        assert!(matches!(result, Err(DomainError::Audio(AudioError::PlaybackFailed(_)))));
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
     }
 
     #[test]

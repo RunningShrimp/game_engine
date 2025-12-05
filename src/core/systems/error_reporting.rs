@@ -40,11 +40,7 @@ pub fn error_reporting_system(time: Res<Time>, error_aggregator: Option<Res<Erro
 /// 将错误统计信息写入ECS资源，供UI系统显示。
 pub fn error_visualization_system(
     error_aggregator: Option<Res<ErrorAggregator>>,
-<<<<<<< HEAD
     mut log_events: Option<ResMut<LogEvents>>,
-=======
-    log_events: Option<ResMut<LogEvents>>,
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
 ) {
     if let Some(aggregator) = error_aggregator {
         let summary = aggregator.get_summary();

@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use super::system::{ScriptContext, ScriptResult, ScriptValue};
 
 /// Lua脚本上下文 (简化版)
 pub struct LuaContext {
@@ -142,6 +143,93 @@ impl LuaEngine {
             // 实际实现需要访问音频系统
             Ok(LuaValue::Nil)
         });
+    }
+}
+
+// ============================================================================
+// ScriptContext trait 实现
+// ============================================================================
+
+impl ScriptContext for LuaContext {
+    fn execute(&mut self, code: &str) -> ScriptResult {
+        match self.execute("script", code) {
+            Ok(value) => ScriptResult::Success(script_value_to_string(&lua_value_to_script_value(&value))),
+            Err(e) => ScriptResult::Error(e),
+        }
+    }
+
+    fn call_function(&mut self, name: &str, args: &[ScriptValue]) -> ScriptResult {
+        let lua_args: Vec<LuaValue> = args.iter().map(script_value_to_lua_value).collect();
+        match LuaContext::call_function(self, name, lua_args) {
+            Ok(value) => ScriptResult::Success(script_value_to_string(&lua_value_to_script_value(&value))),
+            Err(e) => ScriptResult::Error(e),
+        }
+    }
+
+    fn set_global(&mut self, name: &str, value: ScriptValue) -> ScriptResult {
+        LuaContext::set_global(self, name, script_value_to_lua_value(&value));
+        ScriptResult::Void
+    }
+
+    fn get_global(&self, name: &str) -> Option<ScriptValue> {
+        LuaContext::get_global(self, name).map(lua_value_to_script_value)
+    }
+
+    fn reset(&mut self) {
+        self.scripts.clear();
+        self.variables.clear();
+    }
+}
+
+/// 将 LuaValue 转换为 ScriptValue
+pub fn lua_value_to_script_value(value: &LuaValue) -> ScriptValue {
+    match value {
+        LuaValue::Nil => ScriptValue::Null,
+        LuaValue::Boolean(b) => ScriptValue::Bool(*b),
+        LuaValue::Number(n) => ScriptValue::Float(*n),
+        LuaValue::String(s) => ScriptValue::String(s.clone()),
+        LuaValue::Table(t) => {
+            let obj: HashMap<String, ScriptValue> = t.iter()
+                .map(|(k, v)| (k.clone(), lua_value_to_script_value(v)))
+                .collect();
+            ScriptValue::Object(obj)
+        }
+    }
+}
+
+/// 将 ScriptValue 转换为 LuaValue
+fn script_value_to_lua_value(value: &ScriptValue) -> LuaValue {
+    match value {
+        ScriptValue::Null => LuaValue::Nil,
+        ScriptValue::Bool(b) => LuaValue::Boolean(*b),
+        ScriptValue::Int(i) => LuaValue::Number(*i as f64),
+        ScriptValue::Float(f) => LuaValue::Number(*f),
+        ScriptValue::String(s) => LuaValue::String(s.clone()),
+        ScriptValue::Array(arr) => {
+            let table: HashMap<String, LuaValue> = arr.iter()
+                .enumerate()
+                .map(|(i, v)| (i.to_string(), script_value_to_lua_value(v)))
+                .collect();
+            LuaValue::Table(table)
+        }
+        ScriptValue::Object(obj) => {
+            let table: HashMap<String, LuaValue> = obj.iter()
+                .map(|(k, v)| (k.clone(), script_value_to_lua_value(v)))
+                .collect();
+            LuaValue::Table(table)
+        }
+    }
+}
+
+/// 将 ScriptValue 转换为 String 用于 ScriptResult::Success
+fn script_value_to_string(value: &ScriptValue) -> String {
+    match value {
+        ScriptValue::Null => "null".to_string(),
+        ScriptValue::Bool(b) => b.to_string(),
+        ScriptValue::Int(i) => i.to_string(),
+        ScriptValue::Float(f) => f.to_string(),
+        ScriptValue::String(s) => s.clone(),
+        ScriptValue::Array(_) | ScriptValue::Object(_) => format!("{:?}", value),
     }
 }
 

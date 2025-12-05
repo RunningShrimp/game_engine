@@ -3,11 +3,7 @@
 //! 提供游戏主机平台的抽象和优化
 
 use crate::config::graphics::{GraphicsConfig, QualityLevel};
-<<<<<<< HEAD
 use game_engine_hardware::{AutoConfig, HardwareInfo};
-=======
-use game_engine_hardware::HardwareInfo;
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
 
 /// 控制台平台类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -47,11 +43,7 @@ pub struct ConsoleConfig {
 
 impl ConsoleConfig {
     /// 从硬件信息创建控制台配置
-<<<<<<< HEAD
     pub fn from_hardware(hardware: &HardwareInfo) -> Self {
-=======
-    pub fn from_hardware(_hardware: &HardwareInfo) -> Self {
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
         let platform = Self::detect_platform();
 
         // 根据平台设置默认配置
@@ -80,7 +72,6 @@ impl ConsoleConfig {
         // 注意：实际检测需要平台特定的SDK
         // 这里提供占位实现
 
-<<<<<<< HEAD
         #[cfg(target_os = "ps5")]
         return ConsolePlatform::PlayStation5;
 
@@ -94,10 +85,6 @@ impl ConsoleConfig {
             return ConsolePlatform::XboxSeries;
         }
 
-=======
-        // PS5、PS4和Xbox目前没有官方的target_os值，这里使用占位符
-        // 实际实现需要使用平台特定的检测方法
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
         #[cfg(target_os = "horizon")]
         return ConsolePlatform::NintendoSwitch;
 

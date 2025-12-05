@@ -30,7 +30,10 @@
 //! └─────────────────────────────────────────────────────────┘
 //! ```
 
-use crate::impl_default;
+use crate::{
+    impl_default,
+    error::safe_lock,
+};
 use std::cmp::Ordering as CmpOrdering;
 use std::collections::BinaryHeap;
 use std::path::{Path, PathBuf};
@@ -299,7 +302,7 @@ impl CoroutineAssetLoader {
                 Some(request) = request_rx.recv() => {
                     // 添加到优先级队列（在独立作用域中持有锁）
                     {
-                        let mut queue = priority_queue.lock().unwrap();
+                        let mut queue = safe_lock(&priority_queue, "priority_queue").unwrap_or_default();
                         queue.push(request);
                     } // MutexGuard 在这里释放
 
@@ -331,7 +334,7 @@ impl CoroutineAssetLoader {
         if let Ok(permit) = semaphore.clone().try_acquire_owned() {
             // 从队列取出最高优先级的请求
             let request = {
-                let mut q = queue.lock().unwrap();
+                let mut q = safe_lock(&queue, "priority_queue").unwrap_or_default();
                 q.pop()
             };
 
@@ -513,7 +516,7 @@ impl CoroutineAssetLoader {
         };
 
         // 保存取消发送器
-        self.cancel_senders.lock().unwrap().insert(id, cancel_tx);
+        safe_lock(&self.cancel_senders, "cancel_senders").unwrap_or_default().insert(id, cancel_tx);
 
         // 发送请求
         let _ = self.request_tx.send(request);
@@ -539,13 +542,13 @@ impl CoroutineAssetLoader {
     /// 处理完成的加载请求（在主线程调用）
     pub fn poll_completed(&self) -> Vec<LoadComplete> {
         let mut completed = Vec::new();
-        let mut rx = self.complete_rx.lock().unwrap();
+        let mut rx = safe_lock(&self.complete_rx, "complete_rx").unwrap_or_default();
 
         while let Ok(complete) = rx.try_recv() {
             // 清理取消发送器
             self.cancel_senders
-                .lock()
-                .unwrap()
+                .safe_lock("cancel_senders")
+                .unwrap_or_default()
                 .remove(&complete.request_id);
 
             // 更新统计
@@ -594,7 +597,7 @@ pub struct LoadHandle {
 impl LoadHandle {
     /// 取消加载请求
     pub fn cancel(&self) {
-        if let Some(tx) = self.cancel_senders.lock().unwrap().remove(&self.id) {
+        if let Some(tx) = safe_lock(&self.cancel_senders, "cancel_senders").unwrap_or_default().remove(&self.id) {
             let _ = tx.send(());
         }
     }

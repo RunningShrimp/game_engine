@@ -158,7 +158,7 @@ fn execute_script(
                   // 设置实体上下文
                   lua_engine
                       .context
-                      .set_global("current_entity", ScriptValue::Int(entity.to_bits() as i64));                // 执行脚本
+                      .set_global("current_entity", lua_support::LuaValue::Number(entity.to_bits() as f64));                // 执行脚本
                 lua_engine.execute(&script.script_name, &script.script_source)?;
             } else {
                 return Err("Lua engine not available".to_string());

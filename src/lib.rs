@@ -117,6 +117,12 @@ pub mod ui;
 /// XR (VR/AR/MR) support
 pub mod xr;
 
+/// Unified error handling module
+pub mod error;
+
+// Re-export error types for convenience
+pub use error::*;
+
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 

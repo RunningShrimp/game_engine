@@ -2,10 +2,7 @@
 //!
 //! 提供统一的快捷键管理，支持快捷键绑定、冲突检测和配置持久化
 
-<<<<<<< HEAD
 use crate::impl_default;
-=======
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 

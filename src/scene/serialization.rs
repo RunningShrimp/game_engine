@@ -488,7 +488,6 @@ impl SerializedScene {
                             radius,
                         } => {
                             entity_mut.insert(PointLight3D {
-                                position: Vec3::ZERO,
                                 color: *color,
                                 intensity: *intensity,
                                 radius: *radius,
@@ -523,18 +522,32 @@ impl SerializedScene {
         }
     }
 
-    /// 保存场景到JSON文件
-    pub fn save_to_file(&self, path: &str) -> Result<(), Box<dyn std::error::Error>> {
+    /// 保存场景到JSON文件（异步版本）
+    pub async fn save_to_file_async(&self, path: &str) -> Result<(), Box<dyn std::error::Error>> {
         let json = serde_json::to_string_pretty(self)?;
-        std::fs::write(path, json)?;
+        tokio::fs::write(path, json).await?;
         Ok(())
     }
 
-    /// 从JSON文件加载场景
-    pub fn load_from_file(path: &str) -> Result<Self, Box<dyn std::error::Error>> {
-        let json = std::fs::read_to_string(path)?;
+    /// 从JSON文件加载场景（异步版本）
+    pub async fn load_from_file_async(path: &str) -> Result<Self, Box<dyn std::error::Error>> {
+        let json = tokio::fs::read_to_string(path).await?;
         let scene = serde_json::from_str(&json)?;
         Ok(scene)
+    }
+
+    /// 保存场景到JSON文件（同步版本，用于向后兼容）
+    pub fn save_to_file(&self, path: &str) -> Result<(), Box<dyn std::error::Error>> {
+        tokio::task::block_in_place(|| {
+            tokio::runtime::Handle::current().block_on(self.save_to_file_async(path))
+        })
+    }
+
+    /// 从JSON文件加载场景（同步版本，用于向后兼容）
+    pub fn load_from_file(path: &str) -> Result<Self, Box<dyn std::error::Error>> {
+        tokio::task::block_in_place(|| {
+            tokio::runtime::Handle::current().block_on(Self::load_from_file_async(path))
+        })
     }
 }
 

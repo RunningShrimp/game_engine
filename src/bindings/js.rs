@@ -3,6 +3,7 @@
 //! This adapter provides JavaScript scripting support using QuickJS.
 
 use crate::impl_default;
+use crate::error::safe_lock;
 use super::protocol::{BindingAdapter, BindingCommand, BindingEvent, BindingResult, ComponentData};
 use rquickjs::{Context, Function, Object, Runtime, Value};
 use std::collections::VecDeque;
@@ -76,9 +77,9 @@ impl JsBindingAdapter {
                     "spawn",
                     Function::new(ctx.clone(), move |json: String| -> u64 {
                         if let Ok(components) = serde_json::from_str::<Vec<ComponentData>>(&json) {
-                            q.lock()
-                                .unwrap()
-                                .push(BindingCommand::SpawnEntity { components });
+                            if let Ok(mut queue) = safe_lock(&q, "js_command_queue") {
+                                queue.push(BindingCommand::SpawnEntity { components });
+                            }
                         }
                         0 // Actual entity ID will be returned via event
                     }),
@@ -91,9 +92,9 @@ impl JsBindingAdapter {
                 .set(
                     "despawn",
                     Function::new(ctx.clone(), move |entity_id: u64| {
-                        q.lock()
-                            .unwrap()
-                            .push(BindingCommand::DespawnEntity { entity_id });
+                        if let Ok(mut queue) = safe_lock(&q, "js_command_queue") {
+                            queue.push(BindingCommand::DespawnEntity { entity_id });
+                        }
                     }),
                 )
                 .unwrap();
@@ -106,12 +107,14 @@ impl JsBindingAdapter {
                     Function::new(
                         ctx.clone(),
                         move |entity_id: u64, x: f32, y: f32, z: f32| {
-                            q.lock().unwrap().push(BindingCommand::SetPosition {
+                            if let Ok(mut queue) = safe_lock(&q, "js_command_queue") {
+                                queue.push(BindingCommand::SetPosition {
                                 entity_id,
                                 x,
                                 y,
                                 z,
                             });
+                            }
                         },
                     ),
                 )
@@ -125,12 +128,14 @@ impl JsBindingAdapter {
                     Function::new(
                         ctx.clone(),
                         move |name: String, path: String, volume: f32, looped: bool| {
-                            q.lock().unwrap().push(BindingCommand::PlaySound {
+                            if let Ok(mut queue) = safe_lock(&q, "js_command_queue") {
+                                queue.push(BindingCommand::PlaySound {
                                 name,
                                 path,
                                 volume,
                                 looped,
                             });
+                            }
                         },
                     ),
                 )
@@ -142,7 +147,9 @@ impl JsBindingAdapter {
                 .set(
                     "stopSound",
                     Function::new(ctx.clone(), move |name: String| {
-                        q.lock().unwrap().push(BindingCommand::StopSound { name });
+                        if let Ok(mut queue) = safe_lock(&q, "js_command_queue") {
+                            queue.push(BindingCommand::StopSound { name });
+                        }
                     }),
                 )
                 .unwrap();
@@ -234,7 +241,11 @@ impl BindingAdapter for JsBindingAdapter {
     }
 
     fn poll_commands(&mut self) -> Vec<BindingCommand> {
-        self.command_queue.lock().unwrap().drain()
+        if let Ok(mut queue) = safe_lock(&self.command_queue, "js_command_queue") {
+            queue.drain()
+        } else {
+            Vec::new()
+        }
     }
 
     fn shutdown(&mut self) {

@@ -2,8 +2,11 @@
 //!
 //! 提供错误统计、聚合和可视化功能。
 
-use crate::core::error::EngineError;
-use crate::impl_default;
+use crate::{
+    core::error::EngineError,
+    impl_default,
+    error::safe_lock,
+};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -150,7 +153,7 @@ impl ErrorAggregator {
 
         let record = ErrorRecord::new(&error_type, &source_str, &message);
 
-        let mut stats = self.stats.lock().unwrap();
+        let mut stats = safe_lock(&self.stats, "error_stats").unwrap_or_default();
         stats.total_count += 1;
 
         // 更新按类型统计
@@ -187,7 +190,7 @@ impl ErrorAggregator {
             record = record.with_details(d);
         }
 
-        let mut stats = self.stats.lock().unwrap();
+        let mut stats = safe_lock(&self.stats, "error_stats").unwrap_or_default();
         stats.total_count += 1;
 
         *stats.by_type.entry(error_type_str.clone()).or_insert(0) += 1;
@@ -204,12 +207,12 @@ impl ErrorAggregator {
 
     /// 获取错误统计
     pub fn get_stats(&self) -> ErrorStats {
-        self.stats.lock().unwrap().clone()
+        safe_lock(&self.stats, "error_stats").unwrap_or_default().clone()
     }
 
     /// 获取错误摘要
     pub fn get_summary(&self) -> ErrorSummary {
-        let stats = self.stats.lock().unwrap();
+        let stats = safe_lock(&self.stats, "error_stats").unwrap_or_default();
         ErrorSummary {
             total_errors: stats.total_count,
             error_rate: stats.error_rate,
@@ -224,7 +227,7 @@ impl ErrorAggregator {
 
     /// 清除所有统计
     pub fn clear(&self) {
-        let mut stats = self.stats.lock().unwrap();
+        let mut stats = safe_lock(&self.stats, "error_stats").unwrap_or_default();
         *stats = ErrorStats::default();
     }
 
