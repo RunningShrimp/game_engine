@@ -96,6 +96,22 @@ impl<T: 'static + Send + Sync> Handle<T> {
             })
     }
 
+    /// 非阻塞方式获取加载状态
+    pub fn get_state_non_blocking(&self) -> Option<LoadState<T>>
+    where
+        T: Clone,
+    {
+        self.container
+            .state
+            .try_read()
+            .ok()
+            .and_then(|state| match &*state {
+                LoadState::Loaded(v) => Some(LoadState::Loaded(v.clone())),
+                LoadState::Failed(e) => Some(LoadState::Failed(e.clone())),
+                LoadState::Loading => Some(LoadState::Loading),
+            })
+    }
+
     /// 带超时的资源获取，在指定时间内尝试获取资源
     pub fn get_with_timeout(&self, timeout: Duration) -> Option<T>
     where
@@ -334,7 +350,7 @@ impl AssetServer {
         
         while timeout_counter < MAX_TIMEOUT {
             // 检查是否已完成
-            if let Some(result) = handle.get_non_blocking() {
+            if let Some(result) = handle.get_state_non_blocking() {
                 return match result {
                     LoadState::Loaded(_) => Ok(handle),
                     LoadState::Failed(e) => Err(e),
@@ -371,7 +387,7 @@ impl AssetServer {
         const MAX_TIMEOUT: u32 = 1000;
         
         while timeout_counter < MAX_TIMEOUT {
-            if let Some(result) = handle.get_non_blocking() {
+            if let Some(result) = handle.get_state_non_blocking() {
                 return match result {
                     LoadState::Loaded(_) => Ok(handle),
                     LoadState::Failed(e) => Err(e),
