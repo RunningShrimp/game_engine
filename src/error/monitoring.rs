@@ -604,10 +604,10 @@ impl ErrorMonitor {
 
     /// 清除历史记录
     pub fn clear_history(&self) {
-        if let Ok(mut history) = &self.error_history.lock() {
+        if let Ok(ref mut history) = &self.error_history.lock() {
             history.clear();
         }
-        if let Ok(mut stats) = &self.stats.lock() {
+        if let Ok(ref mut stats) = &self.stats.lock() {
             stats.total_errors = 0;
             stats.errors_by_severity.clear();
             stats.errors_by_category.clear();

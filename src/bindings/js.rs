@@ -77,7 +77,7 @@ impl JsBindingAdapter {
                     "spawn",
                     Function::new(ctx.clone(), move |json: String| -> u64 {
                         if let Ok(components) = serde_json::from_str::<Vec<ComponentData>>(&json) {
-                            if let Ok(mut queue) = &q.lock() {
+                            if let Ok(ref mut queue) = &q.lock() {
                                 queue.push(BindingCommand::SpawnEntity { components });
                             }
                         }
@@ -92,7 +92,7 @@ impl JsBindingAdapter {
                 .set(
                     "despawn",
                     Function::new(ctx.clone(), move |entity_id: u64| {
-                        if let Ok(mut queue) = &q.lock() {
+                        if let Ok(ref mut queue) = &q.lock() {
                             queue.push(BindingCommand::DespawnEntity { entity_id });
                         }
                     }),
@@ -107,7 +107,7 @@ impl JsBindingAdapter {
                     Function::new(
                         ctx.clone(),
                         move |entity_id: u64, x: f32, y: f32, z: f32| {
-                            if let Ok(mut queue) = &q.lock() {
+                            if let Ok(ref mut queue) = &q.lock() {
                                 queue.push(BindingCommand::SetPosition {
                                 entity_id,
                                 x,
@@ -128,7 +128,7 @@ impl JsBindingAdapter {
                     Function::new(
                         ctx.clone(),
                         move |name: String, path: String, volume: f32, looped: bool| {
-                            if let Ok(mut queue) = &q.lock() {
+                            if let Ok(ref mut queue) = &q.lock() {
                                 queue.push(BindingCommand::PlaySound {
                                 name,
                                 path,
@@ -147,7 +147,7 @@ impl JsBindingAdapter {
                 .set(
                     "stopSound",
                     Function::new(ctx.clone(), move |name: String| {
-                        if let Ok(mut queue) = &q.lock() {
+                        if let Ok(ref mut queue) = &q.lock() {
                             queue.push(BindingCommand::StopSound { name });
                         }
                     }),
@@ -241,7 +241,7 @@ impl BindingAdapter for JsBindingAdapter {
     }
 
     fn poll_commands(&mut self) -> Vec<BindingCommand> {
-        if let Ok(mut queue) = &self.command_queue.lock() {
+        if let Ok(ref mut queue) = &self.command_queue.lock() {
             queue.drain()
         } else {
             Vec::new()
