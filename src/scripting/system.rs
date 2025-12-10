@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::sync::{mpsc, Arc, Mutex};
 
-use crate::error::safe_lock;
+
 use std::thread;
 
 /// 脚本语言类型
@@ -66,13 +66,13 @@ impl ScriptSystem {
 
     /// 注册脚本上下文
     pub fn register_context(&self, language: ScriptLanguage, context: Box<dyn ScriptContext>) {
-        let mut contexts = safe_lock(&self.contexts, "script_contexts").unwrap_or_default();
+        let mut contexts = &self.contexts.lock().unwrap_or_default();
         contexts.insert(language, context);
     }
 
     /// 执行脚本
     pub fn execute(&self, language: ScriptLanguage, code: &str) -> ScriptResult {
-        let mut contexts = safe_lock(&self.contexts, "script_contexts").unwrap_or_default();
+        let mut contexts = &self.contexts.lock().unwrap_or_default();
         if let Some(context) = contexts.get_mut(&language) {
             context.execute(code)
         } else {
@@ -97,7 +97,7 @@ impl ScriptSystem {
         name: &str,
         args: &[ScriptValue],
     ) -> ScriptResult {
-        let mut contexts = safe_lock(&self.contexts, "script_contexts").unwrap_or_default();
+        let mut contexts = &self.contexts.lock().unwrap_or_default();
         if let Some(context) = contexts.get_mut(&language) {
             context.call_function(name, args)
         } else {
@@ -112,7 +112,7 @@ impl ScriptSystem {
         name: &str,
         value: ScriptValue,
     ) -> ScriptResult {
-        let mut contexts = safe_lock(&self.contexts, "script_contexts").unwrap_or_default();
+        let mut contexts = &self.contexts.lock().unwrap_or_default();
         if let Some(context) = contexts.get_mut(&language) {
             context.set_global(name, value)
         } else {
@@ -122,7 +122,7 @@ impl ScriptSystem {
 
     /// 获取全局变量
     pub fn get_global(&self, language: ScriptLanguage, name: &str) -> Option<ScriptValue> {
-        let contexts = safe_lock(&self.contexts, "script_contexts").unwrap_or_default();
+        let contexts = &self.contexts.lock().unwrap_or_default();
         contexts.get(&language).and_then(|ctx| ctx.get_global(name))
     }
 }
@@ -316,15 +316,15 @@ impl JavaScriptContext {
                         });
 
                         // 更新本地缓存
-                        globals_clone.safe_lock("js_globals_cache").unwrap_or_default().insert(name, value);
+                        globals_clone.lock().unwrap_or_default().insert(name, value);
                         let _ = response.send(result);
                     }
                     JsCommand::GetGlobal(name, response) => {
-                        let value = globals_clone.safe_lock("js_globals_cache").unwrap_or_default().get(&name).cloned();
+                        let value = globals_clone.lock().unwrap_or_default().get(&name).cloned();
                         let _ = response.send(value);
                     }
                     JsCommand::Reset(response) => {
-                        globals_clone.safe_lock("js_globals_cache").unwrap_or_default().clear();
+                        globals_clone.lock().unwrap_or_default().clear();
                         let _ = response.send(());
                     }
                     JsCommand::Shutdown => break,
@@ -383,7 +383,7 @@ impl ScriptContext for JavaScriptContext {
     }
 
     fn get_global(&self, name: &str) -> Option<ScriptValue> {
-        self.globals_cache.safe_lock("js_globals_cache").unwrap_or_default().get(name).cloned()
+        self.globals_cache.lock().unwrap_or_default().get(name).cloned()
     }
 
     fn reset(&mut self) {

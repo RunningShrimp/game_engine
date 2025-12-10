@@ -4,7 +4,7 @@
 
 use super::*;
 use bevy_ecs::prelude::*;
-use crate::error::safe_lock;
+
 
 /// 命令trait
 pub trait Command: Send + Sync + 'static {
@@ -100,7 +100,7 @@ impl CommandHandler {
         let (event_type, event_data) = command.execute(world)?;
 
         // 创建存储事件
-        let mut sequence = safe_lock(&self.manager.sequence_generator, "sequence_generator").unwrap_or_default();
+        let mut sequence = &self.manager.sequence_generator.lock().unwrap_or_default();
         *sequence += 1;
         let event_id = EventId::now(*sequence);
         drop(sequence);
@@ -115,7 +115,7 @@ impl CommandHandler {
         // 保存事件
         self.manager
             .event_store
-            .safe_lock("event_store")
+            .lock()
             .unwrap_or_default()
             .save_event(stored_event)?;
 

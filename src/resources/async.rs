@@ -12,7 +12,7 @@ impl<T> Handle<T> {
         Self { inner: Arc::new(Mutex::new(None)) }
     }
     pub fn get(&self) -> Option<T> where T: Clone {
-        crate::error::safe_lock(&self.inner, "AsyncHandle.inner").unwrap().clone()
+        crate::error::&self.inner.lock().unwrap().clone()
     }
 }
 
@@ -25,7 +25,7 @@ impl AssetManagerAsync {
             let p = path;
             let data = tokio::fs::read(p).await.ok();
             if let Some(d) = data {
-                *crate::error::safe_lock(&inner, "AsyncAssetLoader.inner").unwrap() = Some(d);
+                *crate::error::&inner.lock().unwrap() = Some(d);
             }
         });
         (handle, task)

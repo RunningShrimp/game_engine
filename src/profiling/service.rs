@@ -145,7 +145,7 @@ impl ProfilingService {
 
         // 设置运行状态
         {
-            let mut state = crate::error::safe_lock(&self.state, "ProfilingService.state")
+            let mut state = crate::error::&self.state.lock()
                 .map_err(|e| crate::profiling::ProfilingError::ConfigurationError(e.to_string()))?;
             state.is_running = true;
         }
@@ -169,7 +169,7 @@ impl ProfilingService {
 
         // 设置运行状态
         {
-            let mut state = crate::error::safe_lock(&self.state, "ProfilingService.state")
+            let mut state = crate::error::&self.state.lock()
                 .map_err(|e| crate::profiling::ProfilingError::ConfigurationError(e.to_string()))?;
             state.is_running = false;
         }
@@ -190,14 +190,14 @@ impl ProfilingService {
 
         // 更新收集器
         {
-            let mut collector = crate::error::safe_lock(&self.collector, "ProfilingService.collector")
+            let mut collector = crate::error::&self.collector.lock()
                 .map_err(|e| crate::profiling::ProfilingError::ConfigurationError(e.to_string()))?;
             collector.record_value(name, value);
         }
 
         // 更新告警检查
         {
-            let mut alerting_engine = crate::error::safe_lock(&self.alerting_engine, "ProfilingService.alerting_engine")
+            let mut alerting_engine = crate::error::&self.alerting_engine.lock()
                 .map_err(|e| crate::profiling::ProfilingError::ConfigurationError(e.to_string()))?;
             alerting_engine.update_metric(name, value);
         }
@@ -232,13 +232,13 @@ impl ProfilingService {
         }
 
         let collector_stats = {
-            let collector = crate::error::safe_lock(&self.collector, "ProfilingService.collector")
+            let collector = crate::error::&self.collector.lock()
                 .map_err(|e| crate::profiling::ProfilingError::ConfigurationError(e.to_string()))?;
             collector.get_collector_stats()
         };
 
         let current_values = {
-            let collector = crate::error::safe_lock(&self.collector, "ProfilingService.collector")
+            let collector = crate::error::&self.collector.lock()
                 .map_err(|e| crate::profiling::ProfilingError::ConfigurationError(e.to_string()))?;
             collector.get_current_values()
         };
@@ -271,7 +271,7 @@ impl ProfilingService {
         }
 
         // 查询存储数据
-        let storage = crate::error::safe_lock(&self.storage, "ProfilingService.storage")
+        let storage = crate::error::&self.storage.lock()
             .map_err(|e| crate::profiling::ProfilingError::ConfigurationError(e.to_string()))?;
         let query_condition = QueryCondition {
             metric_names: Some(vec![metric_name.to_string()]),
@@ -307,7 +307,7 @@ impl ProfilingService {
 
     /// 获取服务状态
     pub fn get_service_state(&self) -> ProfilingResult<ServiceState> {
-        let state = crate::error::safe_lock(&self.state, "ProfilingService.state")
+        let state = crate::error::&self.state.lock()
             .map_err(|e| crate::profiling::ProfilingError::ConfigurationError(e.to_string()))?;
         Ok(state.clone())
     }
@@ -318,7 +318,7 @@ impl ProfilingService {
             return Ok(Vec::new());
         }
 
-        let alerting_engine = crate::error::safe_lock(&self.alerting_engine, "ProfilingService.alerting_engine")
+        let alerting_engine = crate::error::&self.alerting_engine.lock()
             .map_err(|e| crate::profiling::ProfilingError::ConfigurationError(e.to_string()))?;
         Ok(alerting_engine.get_active_alerts())
     }
@@ -329,7 +329,7 @@ impl ProfilingService {
             return Ok(false);
         }
 
-        let mut alerting_engine = crate::error::safe_lock(&self.alerting_engine, "ProfilingService.alerting_engine")
+        let mut alerting_engine = crate::error::&self.alerting_engine.lock()
             .map_err(|e| crate::profiling::ProfilingError::ConfigurationError(e.to_string()))?;
         Ok(alerting_engine.acknowledge_alert(alert_id))
     }
@@ -342,7 +342,7 @@ impl ProfilingService {
             ));
         }
 
-        let storage = crate::error::safe_lock(&self.storage, "ProfilingService.storage")
+        let storage = crate::error::&self.storage.lock()
             .map_err(|e| crate::profiling::ProfilingError::ConfigurationError(e.to_string()))?;
         let exporter = DataExporter::new(
             &self.config.storage_config.data_dir,
@@ -396,7 +396,7 @@ impl ProfilingService {
 
         // 重置计数器
         {
-            let mut collector = crate::error::safe_lock(&self.collector, "ProfilingService.collector")
+            let mut collector = crate::error::&self.collector.lock()
                 .map_err(|e| crate::profiling::ProfilingError::ConfigurationError(e.to_string()))?;
             collector.reset();
             report.operations.push("重置指标收集器".to_string());
@@ -404,7 +404,7 @@ impl ProfilingService {
 
         // 检查告警状态
         {
-            let alerting_engine = crate::error::safe_lock(&self.alerting_engine, "ProfilingService.alerting_engine")
+            let alerting_engine = crate::error::&self.alerting_engine.lock()
                 .map_err(|e| crate::profiling::ProfilingError::ConfigurationError(e.to_string()))?;
             let active_alerts = alerting_engine.get_active_alerts();
             if active_alerts.len() > self.config.alerting_config.max_active_alerts / 2 {
@@ -435,7 +435,7 @@ impl ProfilingService {
 
         let collector = Arc::clone(&self.collector);
         let storage = {
-            let storage = crate::error::safe_lock(&self.storage, "ProfilingService.storage")
+            let storage = crate::error::&self.storage.lock()
                 .map_err(|e| crate::profiling::ProfilingError::ConfigurationError(e.to_string()))?;
             // 创建一个新的存储实例用于仪表板
             PersistentStorage::new(self.config.storage_config.clone())?
@@ -448,7 +448,7 @@ impl ProfilingService {
         )?;
 
         {
-            let mut dashboard = crate::error::safe_lock(&self.dashboard, "ProfilingService.dashboard")
+            let mut dashboard = crate::error::&self.dashboard.lock()
                 .map_err(|e| crate::profiling::ProfilingError::ConfigurationError(e.to_string()))?;
             *dashboard = Some(dashboard_server);
         }
@@ -458,7 +458,7 @@ impl ProfilingService {
 
     /// 停止仪表板服务器
     fn stop_dashboard_server(&mut self) -> ProfilingResult<()> {
-        let mut dashboard = crate::error::safe_lock(&self.dashboard, "ProfilingService.dashboard")
+        let mut dashboard = crate::error::&self.dashboard.lock()
             .map_err(|e| crate::profiling::ProfilingError::ConfigurationError(e.to_string()))?;
         *dashboard = None;
         Ok(())
@@ -466,7 +466,7 @@ impl ProfilingService {
 
     /// 添加默认告警规则
     fn add_default_alert_rules(&self) -> ProfilingResult<()> {
-        let mut alerting_engine = crate::error::safe_lock(&self.alerting_engine, "ProfilingService.alerting_engine")
+        let mut alerting_engine = crate::error::&self.alerting_engine.lock()
             .map_err(|e| crate::profiling::ProfilingError::ConfigurationError(e.to_string()))?;
 
         // FPS告警

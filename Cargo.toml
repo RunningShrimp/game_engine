@@ -14,9 +14,9 @@ categories = ["game-engines", "graphics", "multimedia"]
 
 [dependencies]
 # Core dependencies
-winit = "0.30"
-wgpu = "27.0.1"
-pollster = "0.4"
+winit = "0.29"
+wgpu = "0.20"
+pollster = "0.3"
 futures = "0.3"
 bytemuck = { version = "1", features = ["derive"] }
 bincode = "2.0"

@@ -260,7 +260,7 @@ impl AsyncShaderCompiler {
                 Some(request) = request_rx.recv() => {
                     // 添加到优先级队列
                     {
-                        let mut queue = safe_lock(&priority_queue, "priority_queue").unwrap();
+                        let mut queue = &priority_queue.lock().unwrap();
                         queue.push(request);
                         stats.total_requests += 1;
                         stats.pending += 1;
@@ -296,7 +296,7 @@ impl AsyncShaderCompiler {
         if let Ok(permit) = semaphore.clone().try_acquire_owned() {
             // 从队列取出最高优先级的请求
             let request = {
-                let mut q = safe_lock(&queue, "priority_queue").unwrap();
+                let mut q = &queue.lock().unwrap();
                 q.pop()
             };
 
@@ -321,7 +321,7 @@ impl AsyncShaderCompiler {
                     // 检查缓存
                     let cached_result = if enable_cache {
                         if let Some(cache) = &cache_clone {
-                            let mut cache_guard = safe_lock(&cache, "shader_cache").unwrap();
+                            let mut cache_guard = &cache.lock().unwrap();
                             cache_guard.get(&cache_key).ok().flatten()
                         } else {
                             None
@@ -363,7 +363,7 @@ impl AsyncShaderCompiler {
                     if let Ok(ref compiled) = result {
                         if enable_cache {
                             if let Some(cache) = &cache_clone {
-                                let mut cache_guard = safe_lock(&cache, "shader_cache").unwrap();
+                                let mut cache_guard = &cache.lock().unwrap();
                                 let _ =
                                     cache_guard.put_source(&compiled.cache_key, &compiled.source);
                             }
@@ -389,7 +389,7 @@ impl AsyncShaderCompiler {
         priority: ShaderCompilePriority,
     ) -> Result<oneshot::Receiver<Result<CompiledShader, CompileError>>, RenderError> {
         let id = {
-            let mut next_id = safe_lock(&self.next_id, "next_id").unwrap();
+            let mut next_id = &self.next_id.lock().unwrap();
             let id = *next_id;
             *next_id += 1;
             id
@@ -425,7 +425,7 @@ impl AsyncShaderCompiler {
 
     /// 获取编译进度
     pub fn get_progress(&self) -> Option<CompileProgress> {
-        let mut rx = safe_lock(&self.progress_rx, "progress_rx").unwrap();
+        let mut rx = &self.progress_rx.lock().unwrap();
         rx.try_recv().ok()
     }
 

@@ -226,9 +226,9 @@ impl GameClient {
                     NetworkError::ConnectionError(format!("Failed to set nonblocking: {}", e))
                 })?;
 
-                *crate::error::safe_lock(&self.stream, "client_stream").unwrap() = Some(stream.into());
+                *crate::error::&self.stream.lock().unwrap() = Some(stream.into());
 
-                let mut state_guard = crate::error::safe_lock(&self.state, "client_state").unwrap();
+                let mut state_guard = crate::error::&self.state.lock().unwrap();
                 state_guard.connection_state = ConnectionState::Connected;
                 state_guard.server_addr = Some(addr);
                 state_guard.client_id = Some(rand::random());
@@ -245,7 +245,7 @@ impl GameClient {
                 let state_clone = Arc::clone(&self.state);
                 let running_clone = Arc::clone(&self.running);
 
-                *crate::error::safe_lock(&self.running, "client_running").unwrap() = true;
+                *crate::error::&self.running.lock().unwrap() = true;
                 std::thread::spawn(move || {
                     Self::receive_loop_sync(stream_clone, state_clone, running_clone);
                 });
@@ -268,17 +268,17 @@ impl GameClient {
 
     /// 同步版本的断开连接方法（向后兼容）
     pub fn disconnect_sync(&mut self) -> Result<(), NetworkError> {
-        *crate::error::safe_lock(&self.running, "client_running").unwrap() = false;
+        *crate::error::&self.running.lock().unwrap() = false;
 
-        if let Some(stream) = crate::error::safe_lock(&self.stream, "client_stream").unwrap().take() {
+        if let Some(stream) = crate::error::&self.stream.lock().unwrap().take() {
             let disconnect_msg = NetworkMessage::Disconnect {
-                client_id: crate::error::safe_lock(&self.state, "client_state").unwrap().client_id.unwrap_or(0),
+                client_id: crate::error::&self.state.lock().unwrap().client_id.unwrap_or(0),
             };
             let _ = Self::send_to_stream_sync(&stream, &disconnect_msg);
             let _ = stream.shutdown(std::net::Shutdown::Both);
         }
 
-        let mut state_guard = crate::error::safe_lock(&self.state, "client_state").unwrap();
+        let mut state_guard = crate::error::&self.state.lock().unwrap();
         state_guard.connection_state = ConnectionState::Disconnected;
 
         Ok(())
@@ -286,7 +286,7 @@ impl GameClient {
 
     /// 同步版本的发送消息方法（向后兼容）
     pub fn send_message_sync(&self, message: &NetworkMessage) -> Result<(), NetworkError> {
-        if let Some(ref stream) = *crate::error::safe_lock(&self.stream, "client_stream").unwrap() {
+        if let Some(ref stream) = *crate::error::&self.stream.lock().unwrap() {
             Self::send_to_stream_sync(stream, message)
         } else {
             Err(NetworkError::SendError("Not connected".to_string()))
@@ -354,8 +354,8 @@ impl GameClient {
     ) {
         let mut buffer = vec![0u8; 4096];
 
-        while *crate::error::safe_lock(running, "client_running").unwrap() {
-            if let Some(ref stream) = *crate::error::safe_lock(stream, "client_stream").unwrap() {
+        while *crate::error::running.lock().unwrap() {
+            if let Some(ref stream) = *crate::error::stream.lock().unwrap() {
                 match stream.read(&mut buffer) {
                     Ok(0) => {
                         // 连接关闭
@@ -382,7 +382,7 @@ impl GameClient {
         }
 
         // 更新连接状态
-        let mut state_guard = crate::error::safe_lock(state, "client_state").unwrap();
+        let mut state_guard = crate::error::state.lock().unwrap();
         state_guard.connection_state = ConnectionState::Disconnected;
         drop(state_guard);
         
@@ -461,14 +461,14 @@ impl GameClient {
         stream: Arc<Mutex<Option<TokioTcpStream>>>,
         running: Arc<Mutex<bool>>,
     ) {
-        while *crate::error::safe_lock(running, "client_running").unwrap() {
+        while *crate::error::running.lock().unwrap() {
             std::thread::sleep(Duration::from_secs(1));
 
             let heartbeat_msg = NetworkMessage::Heartbeat {
                 timestamp: current_timestamp_ms(),
             };
 
-            if let Some(ref stream) = *crate::error::safe_lock(&stream, "client_stream").unwrap() {
+            if let Some(ref stream) = *crate::error::&stream.lock().unwrap() {
                 let _ = Self::send_to_stream_sync(stream, &heartbeat_msg);
             }
         }
@@ -496,22 +496,22 @@ impl GameClient {
 
     /// 同步版本的获取网络状态引用（向后兼容）
     pub fn state_sync(&self) -> std::sync::MutexGuard<'_, NetworkState> {
-        crate::error::safe_lock(&self.state, "client_state").unwrap()
+        crate::error::&self.state.lock().unwrap()
     }
 
     /// 同步版本的获取连接状态（向后兼容）
     pub fn connection_state_sync(&self) -> ConnectionState {
-        crate::error::safe_lock(&self.state, "client_state").unwrap().connection_state
+        crate::error::&self.state.lock().unwrap().connection_state
     }
 
     /// 同步版本的获取客户端ID（向后兼容）
     pub fn client_id_sync(&self) -> Option<u64> {
-        crate::error::safe_lock(&self.state, "client_state").unwrap().client_id
+        crate::error::&self.state.lock().unwrap().client_id
     }
 
     /// 同步版本的检查是否已连接（向后兼容）
     pub fn is_connected_sync(&self) -> bool {
-        crate::error::safe_lock(&self.state, "client_state").unwrap().connection_state == ConnectionState::Connected
+        crate::error::&self.state.lock().unwrap().connection_state == ConnectionState::Connected
     }
 
     /// 异步重连循环
@@ -610,7 +610,7 @@ impl GameClient {
         config: ClientConfig,
     ) {
         // 检查是否需要重连
-        if !*crate::error::safe_lock(&running, "client_running").unwrap() {
+        if !*crate::error::&running.lock().unwrap() {
             return;
         }
         
@@ -619,19 +619,19 @@ impl GameClient {
         
         // 创建重连线程
         std::thread::spawn(move || {
-            while *crate::error::safe_lock(&running, "client_running").unwrap() {
-                let mut attempts_guard = crate::error::safe_lock(&reconnect_attempts, "reconnect_attempts").unwrap();
+            while *crate::error::&running.lock().unwrap() {
+                let mut attempts_guard = crate::error::&reconnect_attempts.lock().unwrap();
                 
                 // 检查是否达到最大重连次数
                 if *attempts_guard >= config.max_reconnect_attempts {
                     // 达到最大重连次数，停止尝试
-                    let mut state_guard = crate::error::safe_lock(&state, "client_state").unwrap();
+                    let mut state_guard = crate::error::&state.lock().unwrap();
                     state_guard.connection_state = ConnectionState::Disconnected;
                     break;
                 }
                 
                 // 更新连接状态为正在重连
-                let mut state_guard = crate::error::safe_lock(&state, "client_state").unwrap();
+                let mut state_guard = crate::error::&state.lock().unwrap();
                 state_guard.connection_state = ConnectionState::Reconnecting;
                 drop(state_guard);
                 
@@ -642,10 +642,10 @@ impl GameClient {
                 match StdTcpStream::connect(format!("{}:{}", config.server_address, config.server_port)) {
                     Ok(new_stream) => {
                         // 重连成功，更新流和状态
-                        let mut stream_guard = crate::error::safe_lock(&stream, "client_stream").unwrap();
+                        let mut stream_guard = crate::error::&stream.lock().unwrap();
                         *stream_guard = Some(new_stream.into());
                         
-                        let mut state_guard = crate::error::safe_lock(&state, "client_state").unwrap();
+                        let mut state_guard = crate::error::&state.lock().unwrap();
                         state_guard.connection_state = ConnectionState::Connected;
                         state_guard.client_id = Some(rand::random());
                         

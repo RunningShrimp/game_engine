@@ -238,7 +238,7 @@ impl GameServer {
             NetworkError::ConnectionError(format!("Failed to set nonblocking: {}", e))
         })?;
 
-        *crate::error::safe_lock(&self.running, "server_running").unwrap() = true;
+        *crate::error::&self.running.lock().unwrap() = true;
 
         let clients = Arc::clone(&self.clients);
         let running = Arc::clone(&self.running);
@@ -264,7 +264,7 @@ impl GameServer {
 
     /// 同步版本的停止方法（向后兼容）
     pub fn stop_sync(&mut self) {
-        *crate::error::safe_lock(&self.running, "server_running").unwrap() = false;
+        *crate::error::&self.running.lock().unwrap() = false;
     }
 
     /// 异步接受连接
@@ -317,11 +317,11 @@ impl GameServer {
         config: ServerConfig,
         delay_compensation: Arc<Mutex<delay_compensation::ServerDelayCompensation>>,
     ) {
-        while *crate::error::safe_lock(running, "server_running").unwrap() {
+        while *crate::error::running.lock().unwrap() {
             match listener.accept() {
                 Ok((stream, addr)) => {
                     let client_id = rand::random();
-                    let mut clients_guard = crate::error::safe_lock(clients, "server_clients").unwrap();
+                    let mut clients_guard = crate::error::clients.lock().unwrap();
 
                     // 检查连接数限制
                     if clients_guard.len() >= config.max_connections {
@@ -406,7 +406,7 @@ impl GameServer {
         delay_compensation: Arc<Mutex<delay_compensation::ServerDelayCompensation>>,
     ) {
         let mut connection = {
-            let mut clients_guard = crate::error::safe_lock(clients, "server_clients").unwrap();
+            let mut clients_guard = crate::error::clients.lock().unwrap();
             clients_guard.remove(&client_id)
         };
 
@@ -444,7 +444,7 @@ impl GameServer {
         }
 
         // 清理客户端连接
-        crate::error::safe_lock(clients, "server_clients").unwrap().remove(&client_id);
+        crate::error::clients.lock().unwrap().remove(&client_id);
     }
 
     /// 异步处理消息
@@ -511,7 +511,7 @@ impl GameServer {
             }
             NetworkMessage::Disconnect { client_id: _ } => {
                 // 处理断开连接
-                crate::error::safe_lock(clients, "server_clients").unwrap().remove(&client_id);
+                crate::error::clients.lock().unwrap().remove(&client_id);
             }
             NetworkMessage::Heartbeat { timestamp: _ } => {
                 // 更新心跳
@@ -666,22 +666,22 @@ impl GameServer {
 
     /// 同步版本的客户端连接数（向后兼容）
     pub fn client_count_sync(&self) -> usize {
-        crate::error::safe_lock(&self.clients, "server_clients").unwrap().len()
+        crate::error::&self.clients.lock().unwrap().len()
     }
 
     /// 同步版本的所有客户端ID（向后兼容）
     pub fn get_client_ids_sync(&self) -> Vec<u64> {
-        crate::error::safe_lock(&self.clients, "server_clients").unwrap().keys().copied().collect()
+        crate::error::&self.clients.lock().unwrap().keys().copied().collect()
     }
 
     /// 同步版本的更新服务器tick（向后兼容）
     pub fn update_tick_sync(&self) {
-        *crate::error::safe_lock(&self.current_tick, "server_tick").unwrap() += 1;
+        *crate::error::&self.current_tick.lock().unwrap() += 1;
     }
 
     /// 同步版本的获取当前tick（向后兼容）
     pub fn current_tick_sync(&self) -> u64 {
-        *crate::error::safe_lock(&self.current_tick, "server_tick").unwrap()
+        *crate::error::&self.current_tick.lock().unwrap()
     }
 
     /// 异步心跳检查器
@@ -714,10 +714,10 @@ impl GameServer {
         running: Arc<Mutex<bool>>,
         timeout_ms: u64,
     ) {
-        while *crate::error::safe_lock(running, "server_running").unwrap() {
+        while *crate::error::running.lock().unwrap() {
             std::thread::sleep(Duration::from_secs(1));
 
-            let mut clients_guard = crate::error::safe_lock(clients, "server_clients").unwrap();
+            let mut clients_guard = crate::error::clients.lock().unwrap();
             let mut to_remove = Vec::new();
 
             for (client_id, conn) in clients_guard.iter() {

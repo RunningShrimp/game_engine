@@ -325,7 +325,7 @@ impl NetworkService {
     /// 发送时间同步请求
     pub fn send_time_sync_request(state: &NetworkState) -> Result<(), String> {
         if let Some(ref compensation) = state.delay_compensation {
-            let compensation_guard = safe_lock(compensation, "delay_compensation").unwrap_or_default();
+            let compensation_guard = compensation.lock().unwrap_or_default();
             let sync_request = compensation_guard.create_sync_request();
             Self::send(
                 state,
@@ -570,7 +570,7 @@ pub fn network_sync_send_system(
     }
 
     let serializer = state.delta_serializer.as_ref().unwrap();
-    let mut serializer_guard = safe_lock(serializer, "delta_serializer").unwrap_or_default();
+    let mut serializer_guard = serializer.lock().unwrap_or_default();
 
     // 收集需要同步的实体
     let mut entities_to_sync = Vec::new();

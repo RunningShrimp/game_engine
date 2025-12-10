@@ -339,7 +339,7 @@ impl ErrorMonitor {
 
         // 添加到历史记录
         {
-            let mut history = safe_lock(&self.error_history, "error_history").unwrap_or_default();
+            let mut history = &self.error_history.lock().unwrap_or_default();
             history.push_front(error_detail);
             
             // 限制历史记录大小
@@ -350,7 +350,7 @@ impl ErrorMonitor {
 
         // 更新统计
         {
-            let mut stats = safe_lock(&self.stats, "error_stats").unwrap_or_default();
+            let mut stats = &self.stats.lock().unwrap_or_default();
             stats.record_error(&error);
         }
 
@@ -383,7 +383,7 @@ impl ErrorMonitor {
 
         // 添加到历史记录
         {
-            let mut history = safe_lock(&self.error_history, "error_history").unwrap_or_default();
+            let mut history = &self.error_history.lock().unwrap_or_default();
             history.push_front(error_detail);
             
             // 限制历史记录大小
@@ -394,7 +394,7 @@ impl ErrorMonitor {
 
         // 更新统计
         {
-            let mut stats = safe_lock(&self.stats, "error_stats").unwrap_or_default();
+            let mut stats = &self.stats.lock().unwrap_or_default();
             stats.record_error(&error);
         }
 
@@ -420,13 +420,13 @@ impl ErrorMonitor {
 
     /// 获取错误详情
     fn get_error_detail(&self, error_id: &str) -> Option<ErrorDetail> {
-        let history = safe_lock(&self.error_history, "error_history").ok()?;
+        let history = &self.error_history.lock().ok()?;
         history.iter().find(|e| e.id == error_id).cloned()
     }
 
     /// 更新错误详情
     fn update_error_detail(&self, error_detail: ErrorDetail) {
-        let mut history = safe_lock(&self.error_history, "error_history").unwrap_or_default();
+        let mut history = &self.error_history.lock().unwrap_or_default();
         if let Some(pos) = history.iter().position(|e| e.id == error_detail.id) {
             history[pos] = error_detail;
         }
@@ -434,12 +434,12 @@ impl ErrorMonitor {
 
     /// 获取错误统计
     pub fn get_stats(&self) -> ErrorStats {
-        safe_lock(&self.stats, "error_stats").unwrap_or_default().clone()
+        &self.stats.lock().unwrap_or_default().clone()
     }
 
     /// 获取最近的错误
     pub fn get_recent_errors(&self, count: usize) -> Vec<ErrorDetail> {
-        let history = safe_lock(&self.error_history, "error_history").unwrap_or_default();
+        let history = &self.error_history.lock().unwrap_or_default();
         history.iter().take(count).cloned().collect()
     }
 
@@ -544,7 +544,7 @@ impl ErrorMonitor {
         
         // 检查严重错误阈值
         if error.severity() >= ErrorSeverity::Critical {
-            let critical_count = safe_lock(&self.stats, "error_stats")
+            let critical_count = &self.stats.lock()
                 .unwrap_or_default()
                 .errors_by_severity
                 .get(&ErrorSeverity::Critical)
@@ -561,7 +561,7 @@ impl ErrorMonitor {
         }
 
         // 检查总错误数阈值
-        let total_errors = safe_lock(&self.stats, "error_stats").unwrap_or_default().total_errors;
+        let total_errors = &self.stats.lock().unwrap_or_default().total_errors;
         if total_errors >= thresholds.total_error_threshold as u64 {
             self.trigger_alert(&format!(
                 "Total error threshold exceeded: {} >= {}",
@@ -604,10 +604,10 @@ impl ErrorMonitor {
 
     /// 清除历史记录
     pub fn clear_history(&self) {
-        if let Ok(mut history) = safe_lock(&self.error_history, "error_history") {
+        if let Ok(mut history) = &self.error_history.lock() {
             history.clear();
         }
-        if let Ok(mut stats) = safe_lock(&self.stats, "error_stats") {
+        if let Ok(mut stats) = &self.stats.lock() {
             stats.total_errors = 0;
             stats.errors_by_severity.clear();
             stats.errors_by_category.clear();
@@ -631,7 +631,7 @@ impl ErrorMonitor {
                 
                 // 定期更新统计
                 {
-                    let mut stats = safe_lock(&error_history, "error_history").unwrap_or_default();
+                    let mut stats = &error_history.lock().unwrap_or_default();
                     let recent_count = stats.len();
                     
                     // 模拟统计更新（实际应该基于时间窗口）

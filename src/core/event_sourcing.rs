@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
 
-use crate::error::safe_lock;
+
 use thiserror::Error;
 
 /// 事件ID（时间戳 + 序列号）
@@ -360,7 +360,7 @@ impl EventSourcingManager {
         event: E,
         aggregate_id: Option<u32>,
     ) -> Result<EventId, EventError> {
-        let mut sequence = safe_lock(&self.sequence_generator, "sequence_generator").unwrap_or_default();
+        let mut sequence = &self.sequence_generator.lock().unwrap_or_default();
         *sequence += 1;
         let event_id = EventId::now(*sequence);
 
@@ -377,7 +377,7 @@ impl EventSourcingManager {
         };
 
         // 保存事件
-        safe_lock(&self.event_store, "event_store").unwrap_or_default().save_event(stored_event)?;
+        &self.event_store.lock().unwrap_or_default().save_event(stored_event)?;
         
         // 发布事件到事件总线
         self.event_bus.publish(event);
@@ -386,7 +386,7 @@ impl EventSourcingManager {
         if let Some(agg_id) = aggregate_id {
             let event_count = self
                 .event_store
-                .safe_lock("event_store")
+                .lock()
                 .unwrap_or_default()
                 .get_aggregate_events(agg_id)
                 .len();
@@ -412,11 +412,11 @@ impl EventSourcingManager {
     ) -> Result<(), EventError> {
         let events = if let (Some(from_id), Some(to_id)) = (from, to) {
             self.event_store
-                .safe_lock("event_store")
+                .lock()
                 .unwrap_or_default()
                 .get_events_range(from_id, to_id)
         } else {
-            self.event_store.safe_lock("event_store").unwrap_or_default().get_all_events()
+            self.event_store.lock().unwrap_or_default().get_all_events()
         };
 
         for stored_event in events {
@@ -438,7 +438,7 @@ impl EventSourcingManager {
         // 尝试从快照恢复
         if let Ok(snapshot) = self
             .snapshot_store
-            .safe_lock("snapshot_store")
+            .lock()
             .unwrap_or_default()
             .get_latest_snapshot(aggregate_id)
         {
@@ -449,7 +449,7 @@ impl EventSourcingManager {
         // 重放快照之后的事件
         let events = self
             .event_store
-            .safe_lock("event_store")
+            .lock()
             .unwrap_or_default()
             .get_aggregate_events(aggregate_id);
 
@@ -461,7 +461,7 @@ impl EventSourcingManager {
 
     /// 撤销最后一个事件
     pub fn undo_last_event(&self, world: &mut World) -> Result<Option<EventId>, EventError> {
-        let events = self.event_store.safe_lock("event_store").unwrap_or_default().get_all_events();
+        let events = self.event_store.lock().unwrap_or_default().get_all_events();
 
         if let Some(last_event) = events.last() {
             // 反序列化并撤销
@@ -477,7 +477,7 @@ impl EventSourcingManager {
 
     /// 清理旧事件
     fn cleanup_old_events(&self) -> Result<(), EventError> {
-        let mut store = self.event_store.safe_lock("event_store").unwrap_or_default();
+        let mut store = self.event_store.lock().unwrap_or_default();
         let events = store.get_all_events();
 
         if events.len() > self.max_history_length {
@@ -490,13 +490,13 @@ impl EventSourcingManager {
 
     /// 获取事件历史
     pub fn get_event_history(&self) -> Vec<StoredEvent> {
-        self.event_store.safe_lock("event_store").unwrap_or_default().get_all_events()
+        self.event_store.lock().unwrap_or_default().get_all_events()
     }
 
     /// 获取聚合事件历史
     pub fn get_aggregate_history(&self, aggregate_id: u32) -> Vec<StoredEvent> {
         self.event_store
-            .safe_lock("event_store")
+            .lock()
             .unwrap_or_default()
             .get_aggregate_events(aggregate_id)
     }
