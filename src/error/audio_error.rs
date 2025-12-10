@@ -728,7 +728,7 @@ mod tests {
     #[test]
     fn test_unsupported_format_error() {
         let err = AudioError::unsupported_format("test.xyz", "XYZ");
-        assert!(matches!(err, AudioError::UnsupportedFormat { file: _, format: "XYZ", .. }));
+        assert!(matches!(err, AudioError::UnsupportedFormat { file: _, format, .. } if format.as_str() == "XYZ"));
         assert!(err.is_file_related());
         assert!(err.is_recoverable());
     }

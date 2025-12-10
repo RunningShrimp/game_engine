@@ -233,7 +233,7 @@ pub enum GamepadButton {
     DPadRight,
 }
 
-#[derive(bevy_ecs::system::Resource, Default, Clone)]
+#[derive(bevy_ecs::prelude::Resource, Default, Clone)]
 pub struct InputBuffer {
     pub events: Vec<InputEvent>,
 }

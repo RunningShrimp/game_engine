@@ -14,37 +14,37 @@ categories = ["game-engines", "graphics", "multimedia"]
 
 [dependencies]
 # Core dependencies
-winit = "0.29"
-wgpu = { version = "0.20.1", features = ["webgpu"] }
-pollster = "0.3"
+winit = "0.30"
+wgpu = "27.0.1"
+pollster = "0.4"
 futures = "0.3"
 bytemuck = { version = "1", features = ["derive"] }
-bincode = "1.3"
-image = { version = "0.24", default-features = false, features = ["png", "jpeg"] }
+bincode = "2.0"
+image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 # Network compression
-flate2 = { version = "1.0", default-features = false, features = ["rust_backend"] }
+flate2 = { version = "1.1", default-features = false, features = ["rust_backend"] }
 # Texture compression (optional - will implement basic BC decoding without external library for now)
 # dxt-compressor = "0.1"  # Commented out - library not available, using basic implementation
-notify = "6"
-thiserror = "1.0"
+notify = "8"
+thiserror = "2.0"
 sha2 = "0.10"
 hex = "0.4"
 hmac = "0.12"
 aes-gcm = "0.10"
-tempfile = "3.10"
+tempfile = "3.23"
 parking_lot = "0.12"
 
 # Core Architecture
-bevy_ecs = "0.14"
-glam = { version = "0.25", features = ["bytemuck", "serde"] }
+bevy_ecs = "0.17"
+glam = { version = "0.30", features = ["bytemuck", "serde"] }
 tokio = { version = "1", features = ["full"] }
 tokio-util = "0.7"
 async-trait = "0.1"
 crossbeam-channel = "0.5"
-libloading = "0.8"
-rayon = "1.8"
+libloading = "0.9"
+rayon = "1.11"
 
 # SIMD Optimizations (separated crate)
 game_engine_simd = { path = "game_engine_simd", version = "0.1.0" }
@@ -56,43 +56,44 @@ game_engine_hardware = { path = "game_engine_hardware", version = "0.1.0" }
 game_engine_profiling = { path = "game_engine_profiling", version = "0.1.0" }
 
 # Physics
-rapier2d = "0.20"
-rapier3d = "0.20"
+rapier2d = "0.31"
+rapier3d = "0.31"
 
 # Unique identifier generation
-uuid = { version = "1.0", features = ["v4"] }
+uuid = { version = "1.19", features = ["v4"] }
 
 # GLTF
 gltf = { version = "1.4", optional = true }
 
 # XR
-openxr = "0.18"
+openxr = "0.19"
 
 # GUI & Tools
-egui = "0.28"
-egui-wgpu = "0.28"
-egui-winit = "0.28"
+egui = "0.33"
+egui-wgpu = "0.33"
+egui-winit = "0.33"
 
 # Scripting
-rquickjs = { version = "0.5", features = ["full"] }
-pyo3 = { version = "0.21", features = ["auto-initialize"], optional = true }
+rquickjs = { version = "0.10", features = ["full"] }
+pyo3 = { version = "0.27", features = ["auto-initialize"], optional = true }
 
 # WebAssembly runtime
-wasmtime = { version = "21.0", optional = true }
+wasmtime = { version = "39.0", optional = true }
 
 # Logging
 log = "0.4"
 
-webbrowser = "0.8"
+webbrowser = "1.0"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"] }
-rand = "0.8"
+rand = "0.9"
 rodio = "0.21.1"
 raw-window-handle = "0.6.2"
-num_cpus = "1.16"
+num_cpus = "1.17"
 dirs = "6.0.0"
 ort = { version = "2.0.0-rc.10", features = ["download-binaries"] }
 toml = "0.9.8"
+fastrand = "2.3.0"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -116,8 +117,8 @@ wgpu_perf = []
 
 [dev-dependencies]
 anyhow = "1.0.100"
-criterion = { version = "0.7.0", features = ["html_reports"] }
-proptest = "1.0.0"
+criterion = { version = "0.8.1", features = ["html_reports"] }
+proptest = "1.9.0"
 
 [[bench]]
 name = "math_benchmarks"

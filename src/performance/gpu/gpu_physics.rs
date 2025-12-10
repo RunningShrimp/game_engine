@@ -558,7 +558,6 @@ impl GPUPhysicsSimulator {
         buffer_slice.map_async(wgpu::MapMode::Read, move |result| {
             let _ = sender.send(result);
         });
-        device.poll(wgpu::Maintain::Wait);
 
         if receiver.recv().ok().and_then(|r| r.ok()).is_some() {
             let data = buffer_slice.get_mapped_range();

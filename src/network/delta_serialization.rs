@@ -351,14 +351,14 @@ impl DeltaSerializer {
 
     /// 序列化增量数据包
     pub fn serialize_delta(&self, packet: &DeltaPacket) -> Result<Vec<u8>, NetworkError> {
-        bincode::serialize(packet).map_err(|e| {
+        bincode::encode_to_vec(packet, bincode::config::standard()).map_err(|e| {
             NetworkError::SerializationError(format!("Delta serialization failed: {}", e))
         })
     }
 
     /// 反序列化增量数据包
     pub fn deserialize_delta(&self, data: &[u8]) -> Result<DeltaPacket, NetworkError> {
-        bincode::deserialize(data).map_err(|e| {
+        bincode::decode_from_slice::<DeltaPacket, _>(data, bincode::config::standard()).map(|(packet, _)| packet).map_err(|e| {
             NetworkError::SerializationError(format!("Delta deserialization failed: {}", e))
         })
     }
@@ -435,14 +435,14 @@ impl BatchDeltaSerializer {
 
     /// 批量序列化
     pub fn serialize_batch(&self, packets: &[DeltaPacket]) -> Result<Vec<u8>, NetworkError> {
-        bincode::serialize(packets).map_err(|e| {
+        bincode::encode_to_vec(packets, bincode::config::standard()).map_err(|e| {
             NetworkError::SerializationError(format!("Batch serialization failed: {}", e))
         })
     }
 
     /// 批量反序列化
     pub fn deserialize_batch(&self, data: &[u8]) -> Result<Vec<DeltaPacket>, NetworkError> {
-        bincode::deserialize(data).map_err(|e| {
+        bincode::decode_from_slice::<Vec<DeltaPacket>, _>(data, bincode::config::standard()).map(|(packets, _)| packets).map_err(|e| {
             NetworkError::SerializationError(format!("Batch deserialization failed: {}", e))
         })
     }

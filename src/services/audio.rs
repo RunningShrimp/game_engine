@@ -384,7 +384,7 @@ pub enum AudioCommand {
 /// 音频队列资源
 ///
 /// ECS资源，用于向音频驱动线程发送命令。
-#[derive(bevy_ecs::system::Resource, Clone)]
+#[derive(bevy_ecs::prelude::Resource, Clone)]
 pub struct AudioQueueResource(pub crossbeam_channel::Sender<AudioCommand>);
 
 /// 启动音频驱动线程

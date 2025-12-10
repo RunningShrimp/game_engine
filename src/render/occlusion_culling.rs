@@ -646,12 +646,10 @@ impl HierarchicalZCulling {
 
         // 提交命令并等待完成
         queue.submit(std::iter::once(encoder.finish()));
-        device.poll(wgpu::Maintain::Wait);
 
         // 读取结果（使用同步模式，参考wgpu.rs中的实现）
         let buffer_slice = result_buffer.slice(..);
         buffer_slice.map_async(wgpu::MapMode::Read, |_| {});
-        device.poll(wgpu::Maintain::Wait);
 
         // 读取映射的数据
         let data = buffer_slice.get_mapped_range();
@@ -857,14 +855,12 @@ impl HierarchicalZCulling {
         // 尝试映射缓冲区（非阻塞）
         // 注意：map_async是异步的，需要先调用poll检查状态
         buffer_slice.map_async(wgpu::MapMode::Read, |_| {});
-        device.poll(wgpu::Maintain::Poll);
         
         // 检查是否已映射
         // 注意：wgpu的map_async是异步的，我们需要等待映射完成
         // 这里简化处理：如果映射未完成，返回None
         // 实际应该使用更好的同步机制（如使用futures或回调）
         // 为了简化，我们使用同步poll等待映射完成
-        device.poll(wgpu::Maintain::Wait);
 
         // 读取结果
         let data = buffer_slice.get_mapped_range();

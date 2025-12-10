@@ -343,7 +343,7 @@ impl SecureSession {
         let encrypted = self.encryptor.encrypt(message)?;
 
         // 再签名
-        let encrypted_bytes = bincode::serialize(&encrypted)
+        let encrypted_bytes = bincode::encode_to_vec(&encrypted, bincode::config::standard())
             .map_err(|e| NetworkError::SerializationError(e.to_string()))?;
         let signature = self.signer.sign(&encrypted_bytes);
 
@@ -359,7 +359,7 @@ impl SecureSession {
         signed_encrypted: &SignedEncryptedMessage,
     ) -> Result<Vec<u8>, NetworkError> {
         // 先验证签名
-        let encrypted_bytes = bincode::serialize(&signed_encrypted.encrypted)
+        let encrypted_bytes = bincode::encode_to_vec(&signed_encrypted.encrypted, bincode::config::standard())
             .map_err(|e| NetworkError::SerializationError(e.to_string()))?;
         if !self
             .signer

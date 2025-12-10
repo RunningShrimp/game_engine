@@ -26,14 +26,14 @@ pub struct PhysicsWorld3D {
     pub integration_parameters: IntegrationParameters,
     pub physics_pipeline: PhysicsPipeline,
     pub island_manager: IslandManager,
-    pub broad_phase: Box<dyn BroadPhase>,
+    pub broad_phase: DefaultBroadPhase,
     pub narrow_phase: NarrowPhase,
     pub impulse_joint_set: ImpulseJointSet,
     pub multibody_joint_set: MultibodyJointSet,
     pub ccd_solver: CCDSolver,
     pub rigid_body_set: RigidBodySet,
     pub collider_set: ColliderSet,
-    pub query_pipeline: QueryPipeline,
+    pub query_pipeline: rapier3d::pipeline::QueryPipeline<'static>,
 }
 
 impl_default!(PhysicsWorld3D {

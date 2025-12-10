@@ -489,7 +489,7 @@ impl Engine {
         render_service: &mut RenderService,
         render_cache: &mut crate::render::graph::RenderCache,
         window: &WinitWindow,
-        elwt: &winit::event_loop::EventLoopWindowTarget<()>,
+        elwt: &winit::event_loop::ActiveEventLoop,
     ) {
         match event {
             WindowEvent::CloseRequested => {

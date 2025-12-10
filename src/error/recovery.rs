@@ -19,6 +19,8 @@ pub enum RecoveryResult<T> {
     Skipped(RecoveryInfo),
     /// 需要重试
     Retry(RetryInfo),
+    /// 记录错误并继续
+    LogAndContinue(RecoveryInfo),
 }
 
 /// 恢复信息
@@ -533,9 +535,9 @@ impl RecoveryManager {
                 let result = recoverer.recover(&error, &updated_context);
                 
                 // 记录恢复历史
-                if let RecoveryResult::Degraded(_, ref info) 
-                | RecoveryResult::Skipped(ref info) 
-                | RecoveryResult::LogAndContinue(ref info) = &result {
+                if let RecoveryResult::Degraded(_, info)
+                | RecoveryResult::Skipped(info)
+                | RecoveryResult::LogAndContinue(info) = &result {
                     self.recovery_history.push(info.clone());
                 }
                 
@@ -579,7 +581,7 @@ pub fn recover_with_default_strategy<T>(
         Ok(value) => RecoveryResult::Success(value),
         Err(error) => {
             let mut manager = RecoveryManager::new();
-            match manager.recover(error, operation) {
+            match manager.recover(error.clone(), operation) {
                 RecoveryResult::Success(()) => RecoveryResult::Failed(error), // 原操作失败
                 RecoveryResult::Degraded(_, _) => RecoveryResult::Failed(error), // 降级但仍失败
                 RecoveryResult::Skipped(_) => RecoveryResult::Failed(error), // 跳过但仍失败
@@ -624,7 +626,7 @@ mod tests {
             start_time: std::time::Instant::now(),
         };
 
-        let error = EngineError::Render(RenderError::out_of_memory("GPU memory full"));
+        let error = EngineError::Render(crate::error::engine_error::RenderError::General("GPU memory full".to_string()));
         let result = recovery.recover(&error, &context);
         
         assert!(matches!(result, RecoveryResult::Degraded(_, _)));
@@ -641,7 +643,7 @@ mod tests {
             start_time: std::time::Instant::now(),
         };
 
-        let error = EngineError::Audio(AudioError::invalid_volume(1.5));
+        let error = EngineError::Audio(crate::error::engine_error::AudioError::InvalidVolume(1.5));
         let result = recovery.recover(&error, &context);
         
         assert!(matches!(result, RecoveryResult::Degraded(_, _)));
@@ -658,7 +660,7 @@ mod tests {
             start_time: std::time::Instant::now(),
         };
 
-        let error = EngineError::Physics(PhysicsError::world_not_initialized());
+        let error = EngineError::Physics(crate::error::engine_error::PhysicsError::WorldNotInitialized);
         let result = recovery.recover(&error, &context);
         
         assert!(matches!(result, RecoveryResult::Skipped(_)));
@@ -675,7 +677,7 @@ mod tests {
             start_time: std::time::Instant::now(),
         };
 
-        let error = EngineError::Resource(ResourceError::not_found("texture.png"));
+        let error = EngineError::Resource(crate::error::engine_error::ResourceError::NotFound("texture.png".to_string()));
         let result = recovery.recover(&error, &context);
         
         assert!(matches!(result, RecoveryResult::Degraded(_, _)));
@@ -685,7 +687,7 @@ mod tests {
     fn test_recovery_manager() {
         let mut manager = RecoveryManager::new();
         
-        let error = EngineError::Render(RenderError::out_of_memory("GPU memory full"));
+        let error = EngineError::Render(crate::error::engine_error::RenderError::General("GPU memory full".to_string()));
         let result = manager.recover(error, "render_test");
         
         assert!(matches!(result, RecoveryResult::Degraded(_, _)));

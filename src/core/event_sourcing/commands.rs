@@ -38,7 +38,7 @@ impl Command for CreateEntityCommand {
         event.apply(world)?;
 
         // 序列化事件
-        let data = bincode::serialize(&event)
+        let data = bincode::encode_to_vec(&event, bincode::config::standard())
             .map_err(|e| EventError::SerializationError(e.to_string()))?;
 
         Ok((event.event_type().to_string(), data))
@@ -68,7 +68,7 @@ impl Command for DeleteEntityCommand {
         event.apply(world)?;
 
         // 序列化事件
-        let data = bincode::serialize(&event)
+        let data = bincode::encode_to_vec(&event, bincode::config::standard())
             .map_err(|e| EventError::SerializationError(e.to_string()))?;
 
         Ok((event.event_type().to_string(), data))

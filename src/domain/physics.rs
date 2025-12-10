@@ -540,7 +540,7 @@ pub struct PhysicsWorld {
     /// 岛屿管理器
     pub island_manager: IslandManager,
     /// 宽相碰撞检测
-    pub broad_phase: Box<dyn BroadPhase>,
+    pub broad_phase: DefaultBroadPhase,
     /// 窄相碰撞检测
     pub narrow_phase: NarrowPhase,
     /// 冲量关节集
@@ -550,7 +550,7 @@ pub struct PhysicsWorld {
     /// CCD 求解器
     pub ccd_solver: CCDSolver,
     /// 查询管线
-    pub query_pipeline: QueryPipeline,
+    pub query_pipeline: rapier3d::pipeline::QueryPipeline<'static>,
     /// 刚体集
     pub rigid_body_set: RigidBodySet,
     /// 碰撞体集

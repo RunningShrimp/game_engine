@@ -113,7 +113,7 @@ impl RetryConfig {
 }
 
 /// 重试条件
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub enum RetryCondition {
     /// 总是重试
     Always,

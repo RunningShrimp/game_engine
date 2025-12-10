@@ -205,7 +205,7 @@ impl GameClient {
         stream: &mut TokioTcpStream,
         message: &NetworkMessage,
     ) -> Result<(), NetworkError> {
-        let data = bincode::serialize(message)
+        let data = bincode::encode_to_vec(message, bincode::config::standard())
             .map_err(|e| NetworkError::SerializationError(e.to_string()))?;
 
         // 发送消息
@@ -298,7 +298,7 @@ impl GameClient {
         stream: &StdTcpStream,
         message: &NetworkMessage,
     ) -> Result<(), NetworkError> {
-        let data = bincode::serialize(message)
+        let data = bincode::encode_to_vec(message, bincode::config::standard())
             .map_err(|e| NetworkError::SerializationError(e.to_string()))?;
 
         // 发送消息
@@ -324,7 +324,7 @@ impl GameClient {
                     Ok(n) => {
                         // 处理接收到的数据
                         let data = &buffer[..n];
-                        if let Ok(message) = bincode::deserialize::<NetworkMessage>(data) {
+                        if let Ok((message, _)) = bincode::decode_from_slice::<NetworkMessage, _>(data, bincode::config::standard()) {
                             Self::process_message_async(&message, &state).await;
                         }
                     }
@@ -364,7 +364,7 @@ impl GameClient {
                     Ok(n) => {
                         // 处理接收到的数据
                         let data = &buffer[..n];
-                        if let Ok(message) = bincode::deserialize::<NetworkMessage>(data) {
+                        if let Ok((message, _)) = bincode::decode_from_slice::<NetworkMessage, _>(data, bincode::config::standard()) {
                             Self::process_message_sync(&message, &state);
                         }
                     }

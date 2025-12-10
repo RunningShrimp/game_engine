@@ -594,7 +594,7 @@ impl NetworkPacketAnalyzer {
         direction: PacketDirection,
     ) -> Result<AnalyzedPacket, NetworkError> {
         // 序列化消息
-        let data = bincode::serialize(message)
+        let data = bincode::encode_to_vec(message, bincode::config::standard())
             .map_err(|e| NetworkError::SerializationError(e.to_string()))?;
 
         self.analyze_packet(&data, source_address, destination_address, direction)
@@ -715,7 +715,7 @@ impl NetworkPacketAnalyzer {
         }
 
         // 检查是否是网络消息
-        if let Ok(_) = bincode::deserialize::<NetworkMessage>(data) {
+        if let Ok(_) = bincode::decode_from_slice::<NetworkMessage, _>(data, bincode::config::standard()) {
             return PacketProtocol::Custom;
         }
 
@@ -993,7 +993,7 @@ impl NetworkMessageParser {
 
 impl PacketParser for NetworkMessageParser {
     fn parse(&self, data: &[u8]) -> Result<ParsedContent, String> {
-        match bincode::deserialize::<NetworkMessage>(data) {
+        match bincode::decode_from_slice::<NetworkMessage, _>(data, bincode::config::standard()).map(|(msg, _)| msg) {
             Ok(message) => {
                 let mut fields = HashMap::new();
                 let message_type = match &message {
@@ -1485,7 +1485,7 @@ mod tests {
     fn test_network_message_parsing() {
         let parser = NetworkMessageParser::new();
         let message = NetworkMessage::Heartbeat { timestamp: 12345 };
-        let data = bincode::serialize(&message).unwrap();
+        let data = bincode::encode_to_vec(&message, bincode::config::standard()).unwrap();
         
         let result = parser.parse(&data);
         assert!(result.is_ok());

@@ -366,7 +366,7 @@ impl EventSourcingManager {
 
         // 序列化事件
         let event_type = event.event_type();
-        let data = bincode::serialize(&event)
+        let data = bincode::encode_to_vec(&event, bincode::config::standard())
             .map_err(|e| EventError::SerializationError(e.to_string()))?;
 
         let stored_event = StoredEvent {

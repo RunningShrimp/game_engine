@@ -813,7 +813,7 @@ mod tests {
     #[test]
     fn test_binding_conflict_error() {
         let err = InputError::binding_conflict("jump", "space");
-        assert!(matches!(err, InputError::BindingConflict { action: "jump", existing: "space", .. }));
+        assert!(matches!(err, InputError::BindingConflict { action, existing, .. } if action.as_str() == "jump" && existing.as_str() == "space"));
         assert_eq!(err.severity(), ErrorSeverity::Error);
         assert!(err.is_mapping_related());
         assert!(err.is_recoverable());
