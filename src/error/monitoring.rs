@@ -339,7 +339,7 @@ impl ErrorMonitor {
 
         // 添加到历史记录
         {
-            let mut history = &self.error_history.lock().unwrap_or_default();
+            let mut history = &self.error_history.lock().unwrap();
             history.push_front(error_detail);
             
             // 限制历史记录大小
@@ -350,7 +350,7 @@ impl ErrorMonitor {
 
         // 更新统计
         {
-            let mut stats = &self.stats.lock().unwrap_or_default();
+            let mut stats = &self.stats.lock().unwrap();
             stats.record_error(&error);
         }
 
@@ -383,7 +383,7 @@ impl ErrorMonitor {
 
         // 添加到历史记录
         {
-            let mut history = &self.error_history.lock().unwrap_or_default();
+            let mut history = &self.error_history.lock().unwrap();
             history.push_front(error_detail);
             
             // 限制历史记录大小
@@ -394,7 +394,7 @@ impl ErrorMonitor {
 
         // 更新统计
         {
-            let mut stats = &self.stats.lock().unwrap_or_default();
+            let mut stats = &self.stats.lock().unwrap();
             stats.record_error(&error);
         }
 
@@ -426,7 +426,7 @@ impl ErrorMonitor {
 
     /// 更新错误详情
     fn update_error_detail(&self, error_detail: ErrorDetail) {
-        let mut history = &self.error_history.lock().unwrap_or_default();
+        let mut history = &self.error_history.lock().unwrap();
         if let Some(pos) = history.iter().position(|e| e.id == error_detail.id) {
             history[pos] = error_detail;
         }
@@ -434,12 +434,12 @@ impl ErrorMonitor {
 
     /// 获取错误统计
     pub fn get_stats(&self) -> ErrorStats {
-        &self.stats.lock().unwrap_or_default().clone()
+        &self.stats.lock().unwrap().clone()
     }
 
     /// 获取最近的错误
     pub fn get_recent_errors(&self, count: usize) -> Vec<ErrorDetail> {
-        let history = &self.error_history.lock().unwrap_or_default();
+        let history = &self.error_history.lock().unwrap();
         history.iter().take(count).cloned().collect()
     }
 
@@ -561,7 +561,7 @@ impl ErrorMonitor {
         }
 
         // 检查总错误数阈值
-        let total_errors = &self.stats.lock().unwrap_or_default().total_errors;
+        let total_errors = &self.stats.lock().unwrap().total_errors;
         if total_errors >= thresholds.total_error_threshold as u64 {
             self.trigger_alert(&format!(
                 "Total error threshold exceeded: {} >= {}",
@@ -631,7 +631,7 @@ impl ErrorMonitor {
                 
                 // 定期更新统计
                 {
-                    let mut stats = &error_history.lock().unwrap_or_default();
+                    let mut stats = &error_history.lock().unwrap();
                     let recent_count = stats.len();
                     
                     // 模拟统计更新（实际应该基于时间窗口）
