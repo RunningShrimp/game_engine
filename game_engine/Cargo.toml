@@ -1,0 +1,167 @@
+[package]
+name = "game_engine"
+version = "0.1.0"
+edition = "2024"
+authors = ["Your Name <your.email@example.com>"]
+description = "A high-performance cross-platform 2D/3D game engine built with Rust"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/username/game_engine"
+homepage = "https://github.com/username/game_engine"
+documentation = "https://docs.rs/game_engine"
+readme = "README.md"
+keywords = ["game-engine", "wgpu", "ecs", "rendering", "physics"]
+categories = ["game-engines", "graphics", "multimedia"]
+
+[dependencies]
+# Core dependencies
+winit = "0.31.0-beta.2"
+wgpu = "27.0.1"
+pollster = "0.4"
+futures = "0.3.31"
+bytemuck = { version = "1.24.0", features = ["derive"] }
+bincode = "2.0.1"
+image = { version = "0.25.9", default-features = false, features = ["png", "jpeg"] }
+serde.workspace = true
+serde_json.workspace = true
+# Network compression
+flate2 = { version = "1.1.5", default-features = false, features = ["rust_backend"] }
+# Texture compression (optional - will implement basic BC decoding without external library for now)
+# dxt-compressor = "0.1"  # Commented out - library not available, using basic implementation
+notify = "8.2.0"
+thiserror = "2.0.17"
+sha2 = "0.10.9"
+hex = "0.4.3"
+hmac = "0.12.1"
+aes-gcm = "0.10.3"
+tempfile = "3.23"
+parking_lot.workspace = true
+
+# Core Architecture
+bevy_ecs.workspace = true
+glam.workspace = true
+tokio.workspace = true
+tokio-util = "0.7.13"
+async-trait = "0.1.81"
+crossbeam-channel = "0.5.13"
+libloading = "0.9.0"
+rayon = "1.11.0"
+
+# SIMD Optimizations (separated crate - temporarily disabled)
+# game_engine_simd = { path = "game_engine_simd", version = "0.1.0" }
+
+# Hardware detection and optimization (separated crate - temporarily disabled)
+# game_engine_hardware = { path = "game_engine_hardware", version = "0.1.0" }
+
+# Performance profiling and benchmarking (separated crate - temporarily disabled)
+# game_engine_performance = { path = "game_engine_performance", version = "0.1.0" }
+
+# Physics
+rapier2d = "0.31"
+rapier3d = "0.31"
+
+# Unique identifier generation
+uuid = { version = "1.19.0", features = ["v4"] }
+
+# GLTF
+gltf = { version = "1.4.1", optional = true }
+
+# XR
+openxr = "0.19.0"
+
+# GUI & Tools
+egui = "0.33.3"
+egui-wgpu = "0.33.3"
+egui-winit = "0.33.3"
+
+# Scripting
+rquickjs = { version = "0.10.0", features = ["full"] }
+pyo3 = { version = "0.27.2", features = ["auto-initialize"], optional = true }
+
+# WebAssembly runtime
+wasmtime = { version = "39.0.1", optional = true }
+
+# Logging
+log.workspace = true
+
+webbrowser = "1.0.6"
+tracing.workspace = true
+tracing-subscriber = { version = "0.3.22", features = ["fmt", "env-filter"] }
+rand = "0.10.0-rc.5"
+rodio = "0.21.1"
+raw-window-handle = "0.6.2"
+num_cpus = "1.17"
+dirs = "6.0.0"
+ort = { version = "2.0.0-rc.10", features = ["download-binaries"] }
+toml = "0.9.8"
+fastrand = "2.3.0"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.2.106"
+console_error_panic_hook = "0.1.7"
+wasm-bindgen-futures = "0.4.56"
+web-sys = { version = "0.3.83", features = ["Window", "Response", "Headers", "Storage", "CacheStorage", "IdbFactory", "IdbDatabase", "IdbTransaction", "IdbObjectStore", "IdbOpenDbRequest", "IdbRequest"] }
+base64 = "0.22.1"
+
+[features]
+use_bevy_ecs = []
+async_assets = []  # 已弃用：异步资源加载现在是默认行为
+physics_2d = []
+xr = []
+gltf = ["dep:gltf"]
+wasm = ["dep:wasmtime"]
+simd = []  # 添加simd特性
+profiling = []  # 添加profiling特性
+default = ["physics_2d", "gltf", "async_assets"]  # 异步资源加载设为默认
+wgpu_perf = []
+
+[dev-dependencies]
+anyhow = "1.0.100"
+criterion = { version = "0.8.1", features = ["html_reports"] }
+proptest = "1.9.0"
+
+[[bench]]
+name = "math_benchmarks"
+harness = false
+
+[[bench]]
+name = "ecs_benchmarks"
+harness = false
+
+[[bench]]
+name = "physics_benchmarks"
+harness = false
+
+[[bench]]
+name = "render_benchmarks"
+harness = false
+
+[[bench]]
+name = "pathfinding_benchmarks"
+harness = false
+
+[[example]]
+name = "hello_world"
+path = "examples/hello_world.rs"
+
+[[example]]
+name = "rendering"
+path = "examples/rendering.rs"
+
+[[example]]
+name = "physics"
+path = "examples/physics.rs"
+
+[[example]]
+name = "animation"
+path = "examples/animation.rs"
+
+[[example]]
+name = "multiplayer"
+path = "examples/multiplayer.rs"
+
+[[example]]
+name = "game"
+path = "examples/game.rs"

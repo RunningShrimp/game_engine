@@ -1,0 +1,3 @@
+(dyn for<'a> std::ops::Fn(rapier3d::geometry::ColliderHandle, &'a rapier3d::geometry::Collider) -> bool + 'static)
+&'static (dyn for<'a> std::ops::Fn(rapier3d::geometry::ColliderHandle, &'a rapier3d::geometry::Collider) -> bool + 'static)
+std::option::Option<&'static (dyn for<'a> std::ops::Fn(rapier3d::geometry::ColliderHandle, &'a rapier3d::geometry::Collider) -> bool + 'static)>

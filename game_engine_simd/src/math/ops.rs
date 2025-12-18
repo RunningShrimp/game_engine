@@ -451,8 +451,6 @@ mod tests {
         ///
         /// 相比标准实现，在1000+向量时可获得3-5x性能提升
         pub fn batch_transform_vec3_optimized(matrix: &Mat4, vectors: &[Vec3]) -> VectorBatchResult {
-            let mut results: Vec<Vec3> = Vec::with_capacity(vectors.len());
-            
             #[cfg(target_arch = "x86_64")]
             {
                 if is_x86_feature_detected!("avx2") {
@@ -468,13 +466,15 @@ mod tests {
             
             #[cfg(target_arch = "aarch64")]
             {
-                unsafe {
-                    return Self::batch_transform_vec3_neon_optimized(matrix, vectors);
+                if std::arch::is_aarch64_feature_detected!("neon") {
+                    unsafe {
+                        return Self::batch_transform_vec3_neon_optimized(matrix, vectors);
+                    }
                 }
             }
             
             // 标量回退
-            unreachable!() // 已经在上面的条件分支中返回了
+            Self::batch_transform_vec3_fallback(matrix, vectors)
         }
         
         /// AVX2优化的批量3D向量变换

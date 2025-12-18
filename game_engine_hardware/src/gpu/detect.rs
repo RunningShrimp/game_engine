@@ -2,7 +2,7 @@
 /// 
 /// 检测并识别主流GPU，包括独立显卡和集成显卡
 
-use std::collections::HashMap;
+
 
 /// GPU厂商
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
@@ -78,10 +78,9 @@ pub fn detect_gpu() -> GpuInfo {
 /// 设备类型（本地定义，避免依赖wgpu）
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum DeviceType {
+    #[allow(dead_code)]
     DiscreteGpu,
     IntegratedGpu,
-    Cpu,
-    Other,
 }
 
 /// 通过wgpu检测GPU（可选功能）
@@ -140,14 +139,14 @@ fn detect_gpu_wgpu() -> Option<GpuInfo> {
     let device_type = match info.device_type {
         WgpuDeviceType::DiscreteGpu => DeviceType::DiscreteGpu,
         WgpuDeviceType::IntegratedGpu => DeviceType::IntegratedGpu,
-        WgpuDeviceType::Cpu => DeviceType::Cpu,
-        _ => DeviceType::Other,
+        WgpuDeviceType::Cpu => DeviceType::IntegratedGpu, // Treat CPU as integrated for simplicity
+        _ => DeviceType::IntegratedGpu, // Default to integrated for unknown types
     };
     
     let tier = classify_gpu_tier(vendor, &info.name, device_type);
     
-    // 估算显存（wgpu不直接提供）
-    let vram_mb = estimate_vram(&info.name, device_type);
+    ///// 估算显存（wgpu不直接提供）
+    let vram_mb = 2048; // Default value for now
     
     Some(GpuInfo {
         vendor,
@@ -371,12 +370,12 @@ fn classify_gpu_tier(vendor: GpuVendor, name: &str, device_type: DeviceType) -> 
             match device_type {
                 DeviceType::DiscreteGpu => GpuTier::Medium,
                 DeviceType::IntegratedGpu => GpuTier::MediumLow,
-                _ => GpuTier::Low,
             }
         }
     }
 }
 
+/*
 /// 估算显存大小
 fn estimate_vram(name: &str, device_type: DeviceType) -> u64 {
     let name_lower = name.to_lowercase();
@@ -398,6 +397,7 @@ fn estimate_vram(name: &str, device_type: DeviceType) -> u64 {
         2048 // 集成显卡
     }
 }
+*/
 
 #[cfg(test)]
 mod tests {

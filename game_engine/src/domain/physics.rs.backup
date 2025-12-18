@@ -1,0 +1,48 @@
+// 在physics.rs文件中添加一个测试模块来验证Rapier3D类型是否实现了Sync和Send
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_physics_world_send_sync() {
+        // 测试PhysicsWorld是否实现了Send
+        fn assert_send<T: Send>() {}
+        assert_send::<PhysicsWorld>();
+        
+        // 测试PhysicsWorld是否实现了Sync
+        fn assert_sync<T: Sync>() {}
+        assert_sync::<PhysicsWorld>();
+    }
+
+    #[test]
+    fn test_rapier_types_send_sync() {
+        // 测试各种Rapier3D类型是否实现了Send和Sync
+        
+        // PhysicsPipeline
+        fn assert_send_physics_pipeline<T: Send>() {}
+        fn assert_sync_physics_pipeline<T: Sync>() {}
+        assert_send_physics_pipeline::<PhysicsPipeline>();
+        assert_sync_physics_pipeline::<PhysicsPipeline>();
+        
+        // IslandManager
+        fn assert_send_island_manager<T: Send>() {}
+        fn assert_sync_island_manager<T: Sync>() {}
+        assert_send_island_manager::<IslandManager>();
+        assert_sync_island_manager::<IslandManager>();
+        
+        // DefaultBroadPhase
+        fn assert_send_broad_phase<T: Send>() {}
+        fn assert_sync_broad_phase<T: Sync>() {}
+        assert_send_broad_phase::<DefaultBroadPhase>();
+        assert_sync_broad_phase::<DefaultBroadPhase>();
+        
+        // NarrowPhase
+        fn assert_send_narrow_phase<T: Send>() {}
+        fn assert_sync_narrow_phase<T: Sync>() {}
+        assert_send_narrow_phase::<NarrowPhase>();
+        assert_sync_narrow_phase::<NarrowPhase>();
+        
+        // 其他类型可以类似测试...
+    }
+}

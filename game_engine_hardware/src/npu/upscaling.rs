@@ -2,7 +2,7 @@
 /// 
 /// 使用神经网络模型进行图像超分辨率处理
 
-use crate::error::{HardwareError, HardwareResult};
+use crate::error::HardwareResult;
 use crate::npu::sdk::{NpuSdkManager, NpuInferenceEngine, NpuBackend};
 use crate::upscaling::sdk::{UpscalingEngine, UpscalingTechnology, UpscalingQuality, TextureHandle};
 use std::path::PathBuf;
@@ -68,7 +68,6 @@ pub struct NpuUpscalingEngine {
     render_width: u32,
     render_height: u32,
     quality: UpscalingQuality,
-    model_path: PathBuf,
 }
 
 impl NpuUpscalingEngine {
@@ -106,7 +105,6 @@ impl NpuUpscalingEngine {
             render_width,
             render_height,
             quality,
-            model_path,
         })
     }
     
@@ -120,54 +118,7 @@ impl NpuUpscalingEngine {
         self.model
     }
     
-    /// 处理图像块
-    fn process_tile(&self, tile_data: &[f32]) -> HardwareResult<Vec<f32>> {
-        self.npu_engine.infer(tile_data)
-    }
     
-    /// 将图像分块处理（用于大分辨率）
-    fn process_tiled(&self, input: &[f32], width: u32, height: u32) -> HardwareResult<Vec<f32>> {
-        // 分块大小 (例如 256x256)
-        let tile_size = 256;
-        let scale = self.model.scale_factor();
-        
-        let output_width = width * scale;
-        let output_height = height * scale;
-        let mut output = vec![0.0; (output_width * output_height * 3) as usize];
-        
-        // 分块处理
-        for y in (0..height).step_by(tile_size as usize) {
-            for x in (0..width).step_by(tile_size as usize) {
-                let tile_w = tile_size.min(width - x);
-                let tile_h = tile_size.min(height - y);
-                
-                // 提取块
-                let mut tile = Vec::new();
-                for ty in 0..tile_h {
-                    for tx in 0..tile_w {
-                        let idx = ((y + ty) * width + (x + tx)) as usize * 3;
-                        tile.extend_from_slice(&input[idx..idx + 3]);
-                    }
-                }
-                
-                // 处理块
-                let output_tile = self.process_tile(&tile)?;
-                
-                // 写回输出
-                for ty in 0..(tile_h * scale) {
-                    for tx in 0..(tile_w * scale) {
-                        let out_x = x * scale + tx;
-                        let out_y = y * scale + ty;
-                        let out_idx = (out_y * output_width + out_x) as usize * 3;
-                        let tile_idx = (ty * tile_w * scale + tx) as usize * 3;
-                        output[out_idx..out_idx + 3].copy_from_slice(&output_tile[tile_idx..tile_idx + 3]);
-                    }
-                }
-            }
-        }
-        
-        Ok(output)
-    }
 }
 
 impl UpscalingEngine for NpuUpscalingEngine {
@@ -262,7 +213,7 @@ impl NpuUpscalingManager {
         ];
         
         for model in models {
-            let model_path = PathBuf::from("models/upscaling")
+            let _model_path = PathBuf::from("models/upscaling")
                 .join(model.model_filename());
             
             // 实际应该检查文件是否存在
@@ -409,7 +360,7 @@ mod tests {
     
     #[test]
     fn test_hybrid_strategy() {
-        let mut strategy = HybridUpscalingStrategy::new();
+        let strategy = HybridUpscalingStrategy::new();
         
         // 测试不同帧时间下的选择
         for frame_time in [10.0, 16.67, 20.0, 30.0] {

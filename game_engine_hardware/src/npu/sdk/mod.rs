@@ -581,7 +581,7 @@ mod tests {
     fn test_create_engine() {
         let manager = NpuSdkManager::new(None);
         
-        if let Ok(mut engine) = manager.create_engine(None) {
+        if let Ok(engine) = manager.create_engine(None) {
             println!("成功创建引擎: {:?}", engine.backend());
             println!("输入形状: {:?}", engine.input_shape());
             println!("输出形状: {:?}", engine.output_shape());

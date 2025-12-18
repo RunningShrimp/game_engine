@@ -1,166 +1,24 @@
-[package]
-name = "game_engine"
-version = "0.1.0"
-edition = "2024"
-authors = ["Your Name <your.email@example.com>"]
-description = "A high-performance cross-platform 2D/3D game engine built with Rust"
-license = "MIT OR Apache-2.0"
-repository = "https://github.com/username/game_engine"
-homepage = "https://github.com/username/game_engine"
-documentation = "https://docs.rs/game_engine"
-readme = "README.md"
-keywords = ["game-engine", "wgpu", "ecs", "rendering", "physics"]
-categories = ["game-engines", "graphics", "multimedia"]
+[workspace]
+members = [
+    ".",
+    "game_engine",
+    "test_rapier_sync",
+    "test_physics_world_sync"
+]
+resolver = "3"
 
-[dependencies]
+[workspace.dependencies]
 # Core dependencies
-winit = "0.29"
-wgpu = "0.20"
-pollster = "0.3"
-futures = "0.3"
-bytemuck = { version = "1", features = ["derive"] }
-bincode = "2.0"
-image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
+wgpu = "27.0.1"
+winit = "0.31"
+bevy_ecs = "0.17.3"
+glam = { version = "0.30.9", features = ["bytemuck", "serde"] }
+tokio = { version = "1.48", features = ["full"] }
+
+# Common dependencies
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-# Network compression
-flate2 = { version = "1.1", default-features = false, features = ["rust_backend"] }
-# Texture compression (optional - will implement basic BC decoding without external library for now)
-# dxt-compressor = "0.1"  # Commented out - library not available, using basic implementation
-notify = "8"
-thiserror = "2.0"
-sha2 = "0.10"
-hex = "0.4"
-hmac = "0.12"
-aes-gcm = "0.10"
-tempfile = "3.23"
-parking_lot = "0.12"
-
-# Core Architecture
-bevy_ecs = "0.17"
-glam = { version = "0.30", features = ["bytemuck", "serde"] }
-tokio = { version = "1", features = ["full"] }
-tokio-util = "0.7"
-async-trait = "0.1"
-crossbeam-channel = "0.5"
-libloading = "0.9"
-rayon = "1.11"
-
-# SIMD Optimizations (separated crate)
-game_engine_simd = { path = "game_engine_simd", version = "0.1.0" }
-
-# Hardware detection and optimization (separated crate)
-game_engine_hardware = { path = "game_engine_hardware", version = "0.1.0" }
-
-# Performance profiling and benchmarking (separated crate)
-game_engine_profiling = { path = "game_engine_profiling", version = "0.1.0" }
-
-# Physics
-rapier2d = "0.31"
-rapier3d = "0.31"
-
-# Unique identifier generation
-uuid = { version = "1.19", features = ["v4"] }
-
-# GLTF
-gltf = { version = "1.4", optional = true }
-
-# XR
-openxr = "0.19"
-
-# GUI & Tools
-egui = "0.33"
-egui-wgpu = "0.33"
-egui-winit = "0.33"
-
-# Scripting
-rquickjs = { version = "0.10", features = ["full"] }
-pyo3 = { version = "0.27", features = ["auto-initialize"], optional = true }
-
-# WebAssembly runtime
-wasmtime = { version = "39.0", optional = true }
-
-# Logging
 log = "0.4"
-
-webbrowser = "1.0"
+parking_lot = "0.12.5"
+crossbeam = "0.8"
 tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"] }
-rand = "0.9"
-rodio = "0.21.1"
-raw-window-handle = "0.6.2"
-num_cpus = "1.17"
-dirs = "6.0.0"
-ort = { version = "2.0.0-rc.10", features = ["download-binaries"] }
-toml = "0.9.8"
-fastrand = "2.3.0"
-
-[lib]
-crate-type = ["cdylib", "rlib"]
-
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-wasm-bindgen = "0.2"
-console_error_panic_hook = "0.1"
-wasm-bindgen-futures = "0.4"
-web-sys = { version = "0.3", features = ["Window", "Response", "Headers", "Storage", "CacheStorage", "IdbFactory", "IdbDatabase", "IdbTransaction", "IdbObjectStore", "IdbOpenDbRequest", "IdbRequest"] }
-base64 = "0.22"
-
-[features]
-use_bevy_ecs = []
-async_assets = []  # 已弃用：异步资源加载现在是默认行为
-physics_2d = []
-xr = []
-gltf = ["dep:gltf"]
-wasm = ["dep:wasmtime"]
-default = ["physics_2d", "gltf", "async_assets"]  # 异步资源加载设为默认
-wgpu_perf = []
-
-[dev-dependencies]
-anyhow = "1.0.100"
-criterion = { version = "0.8.1", features = ["html_reports"] }
-proptest = "1.9.0"
-
-[[bench]]
-name = "math_benchmarks"
-harness = false
-
-[[bench]]
-name = "ecs_benchmarks"
-harness = false
-
-[[bench]]
-name = "physics_benchmarks"
-harness = false
-
-[[bench]]
-name = "render_benchmarks"
-harness = false
-
-[[bench]]
-name = "pathfinding_benchmarks"
-harness = false
-
-[[example]]
-name = "hello_world"
-path = "examples/hello_world.rs"
-
-[[example]]
-name = "rendering"
-path = "examples/rendering.rs"
-
-[[example]]
-name = "physics"
-path = "examples/physics.rs"
-
-[[example]]
-name = "animation"
-path = "examples/animation.rs"
-
-[[example]]
-name = "multiplayer"
-path = "examples/multiplayer.rs"
-
-[[example]]
-name = "game"
-path = "examples/game.rs"
-

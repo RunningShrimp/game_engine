@@ -283,7 +283,7 @@ impl AudioSpatialOps {
     ) -> Vec<(f32, f32)> {
         let mut hrtf_pairs = Vec::with_capacity(elevations.len());
         
-        for (&elev, &azim) in elevations.iter().zip(azimuths.iter()) {
+        for (&_elev, &azim) in elevations.iter().zip(azimuths.iter()) {
             // 简化的 HRTF: 根据方向应用 ITD (Interaural Time Difference) 和 ILD (Interaural Level Difference)
             
             // 计算左右声道的 ITD 延迟
@@ -587,7 +587,7 @@ impl AudioDSPOps {
         let mut gain_vectors = Vec::with_capacity(sources.len());
         for (i, &gain) in gains.iter().enumerate() {
             if i < sources.len() {
-                gain_vectors.push(vdupq_n_f32(gain));
+                gain_vectors.push(unsafe { vdupq_n_f32(gain) });
             }
         }
         
@@ -597,23 +597,23 @@ impl AudioDSPOps {
         
         for chunk_idx in 0..chunks {
             let offset = chunk_idx * 4;
-            let mut sum_v = vdupq_n_f32(0.0);
+            let mut sum_v = unsafe { vdupq_n_f32(0.0) };
             
             // 混合所有源
             for (source_idx, source) in sources.iter().enumerate() {
                 if offset + 4 <= source.len() {
-                    let source_v = vld1q_f32(source.as_ptr().add(offset));
+                    let source_v = unsafe { vld1q_f32(source.as_ptr().add(offset)) };
                     let gain_v = gain_vectors.get(source_idx)
                         .copied()
-                        .unwrap_or(vdupq_n_f32(1.0));
-                    let scaled_v = vmulq_f32(source_v, gain_v);
-                    sum_v = vaddq_f32(sum_v, scaled_v);
+                        .unwrap_or(unsafe { vdupq_n_f32(1.0) });
+                    let scaled_v = unsafe { vmulq_f32(source_v, gain_v) };
+                    sum_v = unsafe { vaddq_f32(sum_v, scaled_v) };
                 }
             }
             
             // 存储结果
             let mut tmp = [0.0f32; 4];
-            vst1q_f32(tmp.as_mut_ptr(), sum_v);
+            unsafe { vst1q_f32(tmp.as_mut_ptr(), sum_v) };
             
             // 计算峰值和RMS
             for val in &tmp {
