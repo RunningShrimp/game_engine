@@ -1,6 +1,6 @@
-//! 物理插件
-//!
-//! 提供物理模拟功能，基于 Rapier 物理引擎。
+//  物理插件
+// 
+//  提供物理模拟功能，基于 Rapier 物理引擎。
 
 use crate::impl_default;
 use crate::plugins::{EnginePlugin, App, PluginVersion, PluginDependency};

@@ -1,8 +1,8 @@
-//! 寻路系统性能基准测试
-//!
-//! 测试A*寻路算法和并行寻路服务的性能
+//  寻路系统性能基准测试
+// 
+//  测试A*寻路算法和并行寻路服务的性能
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
 use game_engine::ai::pathfinding::{
     NavigationMesh, ParallelPathfindingService, PathfindingService,
 };

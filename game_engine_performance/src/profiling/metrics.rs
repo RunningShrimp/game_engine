@@ -1,6 +1,6 @@
-//! 性能指标模块
-//!
-//! 定义全面的性能指标体系，包括渲染、内存、物理、音频和系统指标。
+//  性能指标模块
+// 
+//  定义全面的性能指标体系，包括渲染、内存、物理、音频和系统指标。
 
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 // 指标分类
 // ============================================================================
 
-/// 指标类别
+//  指标类别
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum MetricCategory {
     /// 渲染指标
@@ -62,7 +62,7 @@ impl MetricCategory {
     }
 }
 
-/// 指标单位
+//  指标单位
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum MetricUnit {
     /// 无单位
@@ -115,9 +115,9 @@ impl MetricUnit {
 // 性能计数器
 // ============================================================================
 
-/// 性能计数器
-/// 
-/// 使用原子操作确保线程安全，支持高频率更新
+//  性能计数器
+//  
+//  使用原子操作确保线程安全，支持高频率更新
 #[derive(Debug)]
 pub struct PerformanceCounter {
     /// 计数器名称
@@ -237,7 +237,7 @@ impl PerformanceCounter {
 // 预定义指标
 // ============================================================================
 
-/// 渲染指标
+//  渲染指标
 pub mod render {
     use super::*;
 
@@ -253,7 +253,7 @@ pub mod render {
     pub const BUFFER_UPLOAD_TIME: &str = "render.buffer_upload_time";
 }
 
-/// 内存指标
+//  内存指标
 pub mod memory {
     use super::*;
 
@@ -268,7 +268,7 @@ pub mod memory {
     pub const LEAK_COUNT: &str = "memory.leak_count";
 }
 
-/// 物理指标
+//  物理指标
 pub mod physics {
     use super::*;
 
@@ -282,7 +282,7 @@ pub mod physics {
     pub const CONTACT_POINTS: &str = "physics.contact_points";
 }
 
-/// 音频指标
+//  音频指标
 pub mod audio {
     use super::*;
 
@@ -296,7 +296,7 @@ pub mod audio {
     pub const DROPPED_FRAMES: &str = "audio.dropped_frames";
 }
 
-/// 系统指标
+//  系统指标
 pub mod system {
     use super::*;
 
@@ -314,7 +314,7 @@ pub mod system {
 // 指标注册表
 // ============================================================================
 
-/// 指标定义
+//  指标定义
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MetricDefinition {
     /// 指标名称
@@ -331,7 +331,7 @@ pub struct MetricDefinition {
     pub default_threshold: Option<f32>,
 }
 
-/// 指标注册表
+//  指标注册表
 #[derive(Debug, Default)]
 pub struct MetricRegistry {
     /// 指标定义映射
@@ -470,7 +470,7 @@ impl MetricRegistry {
 // 宏定义
 // ============================================================================
 
-/// 创建性能计数器的宏
+//  创建性能计数器的宏
 #[macro_export]
 macro_rules! define_counter {
     ($registry:expr, $name:expr, $category:expr, $unit:expr) => {
@@ -478,7 +478,7 @@ macro_rules! define_counter {
     };
 }
 
-/// 记录性能指标的宏
+//  记录性能指标的宏
 #[macro_export]
 macro_rules! record_metric {
     ($registry:expr, $name:expr, $value:expr) => {
@@ -488,7 +488,7 @@ macro_rules! record_metric {
     };
 }
 
-/// 增加性能指标的宏
+//  增加性能指标的宏
 #[macro_export]
 macro_rules! increment_metric {
     ($registry:expr, $name:expr) => {

@@ -1,33 +1,33 @@
-//! 环形缓冲区池模块
-//!
-//! 实现高性能的环形缓冲区管理，用于优化Staging Buffer的内存分配。
-//!
-//! ## 架构设计
-//!
-//! ```text
-//! ┌─────────────────────────────────────────────────────────┐
-//! │                  Ring Buffer Pool                       │
-//! ├─────────────────────────────────────────────────────────┤
-//! │  1. 三重缓冲机制                                        │
-//! │     - Buffer 0: CPU写入 (当前帧)                        │
-//! │     - Buffer 1: GPU使用 (上一帧)                        │
-//! │     - Buffer 2: 待回收 (前两帧)                          │
-//! │                                                          │
-//! │  2. 环形索引管理                                        │
-//! │     - 写入指针: 当前写入位置                             │
-//! │     - 读取指针: GPU读取位置                              │
-//! │     - 安全边界: 避免覆盖未使用的内存                      │
-//! │                                                          │
-//! │  3. 内存块分级                                          │
-//! │     - 小块: 64KB (频繁分配的小数据)                      │
-//! │     - 中块: 1MB (中等大小数据)                          │
-//! │     - 大块: 4MB (大块数据)                              │
-//! └─────────────────────────────────────────────────────────┘
-//! ```
+//  环形缓冲区池模块
+// 
+//  实现高性能的环形缓冲区管理，用于优化Staging Buffer的内存分配。
+// 
+//  ## 架构设计
+// 
+//  ```text
+//  ┌─────────────────────────────────────────────────────────┐
+//  │                  Ring Buffer Pool                       │
+//  ├─────────────────────────────────────────────────────────┤
+//  │  1. 三重缓冲机制                                        │
+//  │     - Buffer 0: CPU写入 (当前帧)                        │
+//  │     - Buffer 1: GPU使用 (上一帧)                        │
+//  │     - Buffer 2: 待回收 (前两帧)                          │
+//  │                                                          │
+//  │  2. 环形索引管理                                        │
+//  │     - 写入指针: 当前写入位置                             │
+//  │     - 读取指针: GPU读取位置                              │
+//  │     - 安全边界: 避免覆盖未使用的内存                      │
+//  │                                                          │
+//  │  3. 内存块分级                                          │
+//  │     - 小块: 64KB (频繁分配的小数据)                      │
+//  │     - 中块: 1MB (中等大小数据)                          │
+//  │     - 大块: 4MB (大块数据)                              │
+//  └─────────────────────────────────────────────────────────┘
+//  ```
 
 use std::collections::VecDeque;
-use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 
 use parking_lot::Mutex;
 
@@ -160,7 +160,8 @@ impl AllocationStats {
             self.fragmentation_ratio = 0.0;
         } else {
             // 碎片化 = (总容量 - 活跃字节数) / 总容量
-            self.fragmentation_ratio = (total_capacity - self.active_bytes) as f32 / total_capacity as f32;
+            self.fragmentation_ratio =
+                (total_capacity - self.active_bytes) as f32 / total_capacity as f32;
         }
     }
 }
@@ -300,7 +301,7 @@ impl RingBuffer {
     pub fn allocate(&self, size: u64, alignment: u64, frame: u64) -> Option<MemoryBlock> {
         // 对齐大小和偏移
         let aligned_size = align_to(size, alignment);
-        
+
         // 尝试从空闲块中复用
         if let Some(mut block) = self.try_reuse_block(aligned_size, alignment, frame) {
             block.mark_writing();
@@ -320,35 +321,45 @@ impl RingBuffer {
                 // 没有足够空间，需要等待GPU完成
                 return None;
             }
-            
+
             // 环绕到开头
             let new_write_offset = align_to(0, alignment);
             if new_write_offset + aligned_size > current_read {
                 return None; // 空间不足
             }
-            
+
             // 更新写入偏移
-            if self.write_offset.compare_exchange(
-                current_write,
-                new_write_offset + aligned_size,
-                Ordering::Release,
-                Ordering::Relaxed,
-            ).is_ok() {
+            if self
+                .write_offset
+                .compare_exchange(
+                    current_write,
+                    new_write_offset + aligned_size,
+                    Ordering::Release,
+                    Ordering::Relaxed,
+                )
+                .is_ok()
+            {
                 let block_id = self.next_block_id.fetch_add(1, Ordering::Relaxed);
-                let mut block = MemoryBlock::new(block_id, aligned_size, new_write_offset, alignment, frame);
+                let mut block =
+                    MemoryBlock::new(block_id, aligned_size, new_write_offset, alignment, frame);
                 block.mark_writing();
                 return Some(block);
             }
         } else {
             // 正常分配
-            if self.write_offset.compare_exchange(
-                current_write,
-                end_offset,
-                Ordering::Release,
-                Ordering::Relaxed,
-            ).is_ok() {
+            if self
+                .write_offset
+                .compare_exchange(
+                    current_write,
+                    end_offset,
+                    Ordering::Release,
+                    Ordering::Relaxed,
+                )
+                .is_ok()
+            {
                 let block_id = self.next_block_id.fetch_add(1, Ordering::Relaxed);
-                let mut block = MemoryBlock::new(block_id, aligned_size, aligned_offset, alignment, frame);
+                let mut block =
+                    MemoryBlock::new(block_id, aligned_size, aligned_offset, alignment, frame);
                 block.mark_writing();
                 return Some(block);
             }
@@ -360,42 +371,44 @@ impl RingBuffer {
     /// 尝试复用空闲块
     fn try_reuse_block(&self, size: u64, alignment: u64, frame: u64) -> Option<MemoryBlock> {
         let mut free_blocks = self.free_blocks.lock();
-        
+
         // 寻找大小合适的块 (最佳适配)
         let mut best_index = None;
         let mut best_size = u64::MAX;
-        
+
         for (i, block) in free_blocks.iter().enumerate() {
-            if block.size >= size && 
-               block.offset % alignment == 0 && 
-               block.can_reuse(frame) &&
-               block.size < best_size {
+            if block.size >= size
+                && block.offset % alignment == 0
+                && block.can_reuse(frame)
+                && block.size < best_size
+            {
                 best_index = Some(i);
                 best_size = block.size;
             }
         }
-        
+
         if let Some(index) = best_index {
             let mut block = free_blocks.remove(index).unwrap();
             block.mark_writing();
             return Some(block);
         }
-        
+
         None
     }
 
     /// 释放内存块
     pub fn deallocate(&self, mut block: MemoryBlock) {
         block.mark_pending(self.current_frame.load(Ordering::Relaxed));
-        
+
         let mut free_blocks = self.free_blocks.lock();
-        
+
         // 按偏移排序插入，保持有序
-        let insert_pos = free_blocks.binary_search_by_key(&block.offset, |b| b.offset)
+        let insert_pos = free_blocks
+            .binary_search_by_key(&block.offset, |b| b.offset)
             .unwrap_or_else(|pos| pos);
-        
+
         free_blocks.insert(insert_pos, block);
-        
+
         // 尝试合并相邻的空闲块
         self.coalesce_free_blocks(&mut free_blocks);
     }
@@ -405,21 +418,21 @@ impl RingBuffer {
         if free_blocks.len() < 2 {
             return;
         }
-        
+
         let mut i = 0;
         while i < free_blocks.len() - 1 {
             let current = &free_blocks[i];
             let next = &free_blocks[i + 1];
-            
+
             // 检查是否相邻且都可以复用
-            if current.offset + current.size == next.offset &&
-               current.can_reuse(self.current_frame.load(Ordering::Relaxed)) &&
-               next.can_reuse(self.current_frame.load(Ordering::Relaxed)) {
-                
+            if current.offset + current.size == next.offset
+                && current.can_reuse(self.current_frame.load(Ordering::Relaxed))
+                && next.can_reuse(self.current_frame.load(Ordering::Relaxed))
+            {
                 // 合并块
                 let mut merged = current.clone();
                 merged.size += next.size;
-                
+
                 // 移除两个块并插入合并后的块
                 free_blocks.remove(i + 1);
                 free_blocks[i] = merged;
@@ -459,7 +472,8 @@ impl RingBuffer {
     pub fn reset(&self) {
         self.write_offset.store(0, Ordering::Release);
         self.read_offset.store(0, Ordering::Release);
-        self.state.store(BufferState::Idle as usize, Ordering::Release);
+        self.state
+            .store(BufferState::Idle as usize, Ordering::Release);
         self.blocks.lock().clear();
         self.free_blocks.lock().clear();
         self.next_block_id.store(1, Ordering::Relaxed);
@@ -486,20 +500,26 @@ pub struct RingBufferPool {
 }
 
 impl RingBufferPool {
+    /// 获取设备引用（用于调试）
+    pub fn device(&self) -> &Arc<wgpu::Device> {
+        &self.device
+    }
+
+    /// 创建新的环形缓冲区池（使用默认大小）
+    pub fn new_default(device: Arc<wgpu::Device>) -> Self {
+        Self::new(device, DEFAULT_RING_BUFFER_SIZE)
+    }
+
     /// 创建新的环形缓冲区池
     pub fn new(device: Arc<wgpu::Device>, buffer_size: u64) -> Self {
         let mut ring_buffers = Vec::with_capacity(TRIPLE_BUFFER_COUNT);
-        
+
         // 创建三个环形缓冲区
         for i in 0..TRIPLE_BUFFER_COUNT {
-            let buffer = RingBuffer::new(
-                &device,
-                buffer_size,
-                Some(&format!("Ring Buffer {}", i)),
-            );
+            let buffer = RingBuffer::new(&device, buffer_size, Some(&format!("Ring Buffer {}", i)));
             ring_buffers.push(buffer);
         }
-        
+
         Self {
             ring_buffers,
             current_buffer_index: 0,
@@ -512,10 +532,10 @@ impl RingBufferPool {
     /// 分配内存块
     pub fn allocate(&mut self, size: u64, alignment: u64) -> Option<MemoryBlock> {
         let start_time = std::time::Instant::now();
-        
+
         // 获取当前活动缓冲区
         let current_buffer = &self.ring_buffers[self.current_buffer_index];
-        
+
         // 尝试分配
         if let Some(block) = current_buffer.allocate(size, alignment, self.current_frame) {
             // 更新统计信息
@@ -528,13 +548,13 @@ impl RingBufferPool {
                 stats.update_peak();
                 stats.allocation_latency_us = start_time.elapsed().as_micros() as f32;
             }
-            
+
             return Some(block);
         }
-        
+
         // 当前缓冲区空间不足，尝试切换到下一个缓冲区
         self.switch_to_next_buffer();
-        
+
         // 在新缓冲区中再次尝试分配
         let current_buffer = &self.ring_buffers[self.current_buffer_index];
         if let Some(block) = current_buffer.allocate(size, alignment, self.current_frame) {
@@ -548,7 +568,7 @@ impl RingBufferPool {
                 stats.update_peak();
                 stats.allocation_latency_us = start_time.elapsed().as_micros() as f32;
             }
-            
+
             Some(block)
         } else {
             None // 分配失败
@@ -562,12 +582,12 @@ impl RingBufferPool {
             let mut stats = self.stats.lock();
             stats.active_allocations = stats.active_allocations.saturating_sub(1);
             stats.active_bytes = stats.active_bytes.saturating_sub(block.size);
-            
+
             // 计算碎片化程度
             let total_capacity = self.ring_buffers.iter().map(|b| b.size).sum::<u64>();
             stats.calculate_fragmentation(total_capacity);
         }
-        
+
         // 找到对应的环形缓冲区并释放
         for ring_buffer in &self.ring_buffers {
             if block.offset < ring_buffer.size {
@@ -581,18 +601,18 @@ impl RingBufferPool {
     fn switch_to_next_buffer(&mut self) {
         // 标记当前缓冲区为GPU使用状态
         let _current_buffer = &self.ring_buffers[self.current_buffer_index];
-        
+
         // 使用帧计数进行同步 (wgpu 0.20+ 移除了 Fence API)
         // 记录当前帧号用于后续同步检查
         let current_frame = self.current_frame;
-        
+
         // 标记所有活跃块为GPU使用状态
         // 这里需要更复杂的逻辑来跟踪每个块的状态
         // 简化实现：基于帧计数进行同步
-        
+
         // 切换到下一个缓冲区
         self.current_buffer_index = (self.current_buffer_index + 1) % TRIPLE_BUFFER_COUNT;
-        
+
         // 更新新缓冲区的帧号
         let next_buffer = &self.ring_buffers[self.current_buffer_index];
         next_buffer.update_frame(current_frame);
@@ -601,12 +621,12 @@ impl RingBufferPool {
     /// 帧结束时调用
     pub fn end_frame(&mut self) {
         self.current_frame += 1;
-        
+
         // 更新所有缓冲区的帧号
         for ring_buffer in &self.ring_buffers {
             ring_buffer.update_frame(self.current_frame);
         }
-        
+
         // 检查GPU是否完成了早期帧的工作
         self.check_gpu_completion();
     }
@@ -617,13 +637,14 @@ impl RingBufferPool {
         // 这里需要与Fence同步
         // 简化实现：假设GPU延迟为2帧
         let safe_frame = self.current_frame.saturating_sub(GPU_FRAME_DELAY);
-        
+
         for ring_buffer in &self.ring_buffers {
             // 检查可以复用的块
             let mut free_blocks = ring_buffer.free_blocks.lock();
             for block in free_blocks.iter_mut() {
-                if block.state == BufferState::Pending && 
-                   block.completed_frame.unwrap_or(0) <= safe_frame {
+                if block.state == BufferState::Pending
+                    && block.completed_frame.unwrap_or(0) <= safe_frame
+                {
                     block.reset();
                 }
             }
@@ -688,7 +709,10 @@ mod tests {
         assert_eq!(BlockSize::for_request(32 * 1024), BlockSize::Small);
         assert_eq!(BlockSize::for_request(128 * 1024), BlockSize::Medium);
         assert_eq!(BlockSize::for_request(2 * 1024 * 1024), BlockSize::Large);
-        assert_eq!(BlockSize::for_request(8 * 1024 * 1024), BlockSize::Custom(8 * 1024 * 1024));
+        assert_eq!(
+            BlockSize::for_request(8 * 1024 * 1024),
+            BlockSize::Custom(8 * 1024 * 1024)
+        );
     }
 
     #[test]
@@ -713,14 +737,14 @@ mod tests {
     #[test]
     fn test_memory_block_reuse() {
         let mut block = MemoryBlock::new(1, 1024, 0, 256, 10);
-        
+
         // 初始状态可以复用
         assert!(block.can_reuse(15));
-        
+
         // 标记为写入中不能复用
         block.mark_writing();
         assert!(!block.can_reuse(15));
-        
+
         // 标记为待回收，需要等待足够帧数
         block.mark_pending(10);
         assert!(!block.can_reuse(12)); // 不足2帧延迟
@@ -730,15 +754,15 @@ mod tests {
     #[test]
     fn test_allocation_stats() {
         let mut stats = AllocationStats::default();
-        
+
         stats.total_allocations = 10;
         stats.total_bytes_allocated = 1024 * 1024;
         stats.active_allocations = 5;
         stats.active_bytes = 512 * 1024;
-        
+
         stats.update_peak();
         assert_eq!(stats.peak_bytes, 512 * 1024);
-        
+
         stats.calculate_fragmentation(2 * 1024 * 1024);
         assert_eq!(stats.fragmentation_ratio, 0.75); // (2MB - 512KB) / 2MB
     }

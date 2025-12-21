@@ -529,6 +529,12 @@ impl RenderCache {
     pub fn culling_stats(&self) -> (u32, u32) {
         (self.culled_count, self.total_count)
     }
+
+    /// 使缓存失效
+    pub fn invalidate(&mut self) {
+        self.last_tree = None;
+        self.last_instances.clear();
+    }
 }
 
 /// 2D视口剔除器

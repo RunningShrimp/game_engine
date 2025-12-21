@@ -1,22 +1,22 @@
-//! 性能监控仪表板后端服务
-//!
-//! 提供 REST API 和 WebSocket 接口，供前端仪表板获取性能数据。
-//! 支持实时指标、历史数据和告警信息。
-//!
-//! ## API 端点
-//!
-//! - `GET /api/metrics` - 获取当前性能指标
-//! - `GET /api/chart-data` - 获取图表数据
-//! - `GET /api/alerts` - 获取告警信息
-//! - `WS /ws` - WebSocket 实时数据推送
-//!
-//! ## 使用示例
-//!
-//! ```ignore
-//! // 启动仪表板服务
-//! let dashboard = DashboardService::new(profiling_service);
-//! dashboard.start_server("127.0.0.1:8080").await?;
-//! ```
+//  性能监控仪表板后端服务
+// 
+//  提供 REST API 和 WebSocket 接口，供前端仪表板获取性能数据。
+//  支持实时指标、历史数据和告警信息。
+// 
+//  ## API 端点
+// 
+//  - `GET /api/metrics` - 获取当前性能指标
+//  - `GET /api/chart-data` - 获取图表数据
+//  - `GET /api/alerts` - 获取告警信息
+//  - `WS /ws` - WebSocket 实时数据推送
+// 
+//  ## 使用示例
+// 
+//  ```ignore
+//  // 启动仪表板服务
+//  let dashboard = DashboardService::new(profiling_service);
+//  dashboard.start_server("127.0.0.1:8080").await?;
+//  ```
 
 use std::collections::HashMap;
 use std::sync::Arc;

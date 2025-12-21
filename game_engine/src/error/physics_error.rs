@@ -1,8 +1,8 @@
-//! 物理系统错误类型
-//!
-//! 定义了物理系统相关的所有错误类型，包括刚体、碰撞体、约束等。
+//  物理系统错误类型
+// 
+//  定义了物理系统相关的所有错误类型，包括刚体、碰撞体、约束等。
 
-use crate::error::{ErrorSeverity, ErrorCategory};
+use crate::error::{ErrorCategory, ErrorSeverity};
 use thiserror::Error;
 
 /// 物理系统错误
@@ -17,7 +17,6 @@ pub enum PhysicsError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -27,7 +26,6 @@ pub enum PhysicsError {
         /// 刚体ID
         body_id: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -39,7 +37,6 @@ pub enum PhysicsError {
         /// 参数值
         value: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -49,7 +46,6 @@ pub enum PhysicsError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -59,7 +55,6 @@ pub enum PhysicsError {
         /// 碰撞体ID
         collider_id: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -71,7 +66,6 @@ pub enum PhysicsError {
         /// 参数值
         value: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -81,7 +75,6 @@ pub enum PhysicsError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -91,7 +84,6 @@ pub enum PhysicsError {
         /// 约束ID
         joint_id: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -99,7 +91,6 @@ pub enum PhysicsError {
     #[error("Physics world not initialized")]
     WorldNotInitialized {
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -109,7 +100,6 @@ pub enum PhysicsError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -119,7 +109,6 @@ pub enum PhysicsError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -129,7 +118,6 @@ pub enum PhysicsError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -139,7 +127,6 @@ pub enum PhysicsError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -149,7 +136,6 @@ pub enum PhysicsError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -159,7 +145,6 @@ pub enum PhysicsError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -169,7 +154,6 @@ pub enum PhysicsError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -179,7 +163,6 @@ pub enum PhysicsError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -189,7 +172,6 @@ pub enum PhysicsError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -199,7 +181,6 @@ pub enum PhysicsError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -209,7 +190,6 @@ pub enum PhysicsError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -219,7 +199,6 @@ pub enum PhysicsError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -229,7 +208,6 @@ pub enum PhysicsError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -239,7 +217,6 @@ pub enum PhysicsError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -249,7 +226,6 @@ pub enum PhysicsError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 }
@@ -387,10 +363,7 @@ impl PhysicsError {
     }
 
     /// 创建带有严重级别的通用物理错误
-    pub fn general_with_severity(
-        message: impl Into<String>,
-        severity: ErrorSeverity,
-    ) -> Self {
+    pub fn general_with_severity(message: impl Into<String>, severity: ErrorSeverity) -> Self {
         Self::General {
             message: message.into(),
             severity,
@@ -431,7 +404,9 @@ impl PhysicsError {
     pub fn is_recoverable(&self) -> bool {
         match self {
             // 严重错误通常不可恢复
-            PhysicsError::WorldNotInitialized { severity, .. } => *severity < ErrorSeverity::Critical,
+            PhysicsError::WorldNotInitialized { severity, .. } => {
+                *severity < ErrorSeverity::Critical
+            }
 
             // 参数错误通常可恢复（可以通过修正参数）
             PhysicsError::InvalidRigidBodyParameter { .. }

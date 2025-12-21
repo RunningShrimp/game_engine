@@ -1,5 +1,5 @@
-use glam::Vec2;
 use crate::impl_default;
+use glam::Vec2;
 
 /// 贝塞尔曲线控制点
 #[derive(Debug, Clone, Copy)]

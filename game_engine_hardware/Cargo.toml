@@ -15,10 +15,10 @@ categories = ["hardware-support", "performance"]
 [dependencies]
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.145"
-thiserror = "1.0.69"
+thiserror = "2.0.17"
 ort = { version = "2.0.0-rc.10", features = ["download-binaries"], optional = true }
 dirs = "6.0"
-tracing = "0.1.43"
+tracing = "0.1.44"
 wgpu = { workspace = true, optional = true }
 num_cpus = "1.17.0"
 

@@ -1,6 +1,6 @@
-//! 音频插件
-//!
-//! 提供音频播放功能，支持2D和3D空间音频。
+//  音频插件
+// 
+//  提供音频播放功能，支持2D和3D空间音频。
 
 use crate::impl_default;
 use crate::plugins::{EnginePlugin, App, PluginVersion, PluginDependency};

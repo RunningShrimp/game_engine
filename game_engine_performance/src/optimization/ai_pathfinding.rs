@@ -1,17 +1,17 @@
-//! AI 路径寻找加速
-//!
-//! 使用 SIMD 和并行处理优化多个智能体的路径寻找
-//! - SIMD 加速启发式函数
-//! - 批量寻路
-//! - 路径缓存
-//! - 多智能体协调
+//  AI 路径寻找加速
+// 
+//  使用 SIMD 和并行处理优化多个智能体的路径寻找
+//  - SIMD 加速启发式函数
+//  - 批量寻路
+//  - 路径缓存
+//  - 多智能体协调
 
 use glam::Vec3;
 use std::cmp::Ordering;
 use std::collections::{HashMap, BinaryHeap, HashSet};
 use rayon::prelude::*;
 
-/// 启发式函数类型
+//  启发式函数类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum HeuristicType {
     /// 曼哈顿距离
@@ -22,7 +22,7 @@ pub enum HeuristicType {
     Chebyshev,
 }
 
-/// A* 寻路节点
+//  A* 寻路节点
 #[derive(Debug, Clone, Copy)]
 pub struct PathNode {
     /// 节点位置
@@ -58,7 +58,7 @@ impl Ord for PathNode {
     }
 }
 
-/// 寻路结果
+//  寻路结果
 #[derive(Debug, Clone)]
 pub struct PathfindingResult {
     /// 路径 (位置数组)
@@ -73,7 +73,7 @@ pub struct PathfindingResult {
     pub compute_time_ms: f32,
 }
 
-/// SIMD 启发式函数
+//  SIMD 启发式函数
 pub struct SIMDHeuristics;
 
 impl SIMDHeuristics {
@@ -190,8 +190,8 @@ impl SIMDHeuristics {
             .collect()
     }
 }
-/// 单个智能体的寻路器
-/// 支持多种启发式函数和可扩展的寻路算法
+//  单个智能体的寻路器
+//  支持多种启发式函数和可扩展的寻路算法
 #[derive(Clone)]
 pub struct AgentPathfinder {
 
@@ -400,7 +400,7 @@ impl AgentPathfinder {
     }
 }
 
-/// 批量路径寻找管理器
+//  批量路径寻找管理器
 pub struct BatchPathfinder {
     /// 所有智能体
     agents: HashMap<u32, AgentPathfinder>,
@@ -585,7 +585,7 @@ mod tests {
         
         let result = agent.find_path(target, 1.0);
         assert!(result.found);
-        assert!(result.path.len() > 0);
+        assert!(result.path.is_empty());
         assert!(result.path_length > 0.0);
         
         // 验证路径包含目标点

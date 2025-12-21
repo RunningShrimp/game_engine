@@ -3,7 +3,7 @@ use std::collections::VecDeque;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
-/// 对象池 - 减少内存分配和释放的开销
+//  对象池 - 减少内存分配和释放的开销
 pub struct ObjectPool<T> {
     available: VecDeque<T>,
     factory: Box<dyn Fn() -> T>,
@@ -58,9 +58,9 @@ impl<T> ObjectPool<T> {
 // 线程安全对象池
 // ============================================================================
 
-/// 线程安全对象池（使用无锁队列）
+//  线程安全对象池（使用无锁队列）
 ///
-/// 支持多线程并发获取和归还对象，使用无锁队列减少锁竞争。
+//  支持多线程并发获取和归还对象，使用无锁队列减少锁竞争。
 pub struct SyncObjectPool<T: Send> {
     /// 可用对象队列（无锁）
     available_sender: Sender<T>,
@@ -196,7 +196,7 @@ impl<T: Send> SyncObjectPool<T> {
     }
 }
 
-/// 对象池统计信息
+//  对象池统计信息
 #[derive(Debug, Clone, Copy, Default)]
 pub struct PoolStats {
     /// 总分配次数
@@ -226,15 +226,15 @@ impl PoolStats {
 // 可重置对象池
 // ============================================================================
 
-/// 可重置对象 trait
+//  可重置对象 trait
 pub trait Resettable {
     /// 重置对象到初始状态
     fn reset(&mut self);
 }
 
-/// 可重置对象池
+//  可重置对象池
 ///
-/// 在归还对象时自动调用 reset() 方法
+//  在归还对象时自动调用 reset() 方法
 pub struct ResettablePool<T: Resettable> {
     available: VecDeque<T>,
     factory: Box<dyn Fn() -> T>,
@@ -284,9 +284,9 @@ impl<T: Resettable> ResettablePool<T> {
 // RAII 池化对象
 // ============================================================================
 
-/// RAII 池化对象包装器
+//  RAII 池化对象包装器
 ///
-/// 当对象离开作用域时自动归还到池中
+//  当对象离开作用域时自动归还到池中
 pub struct Pooled<T: Send + 'static> {
     value: Option<T>,
     pool: Arc<SyncObjectPool<T>>,
@@ -344,9 +344,9 @@ impl<T: Send + 'static> std::ops::DerefMut for Pooled<T> {
 // 分类对象池
 // ============================================================================
 
-/// 分类对象池
+//  分类对象池
 ///
-/// 根据大小或类型自动选择不同的池
+//  根据大小或类型自动选择不同的池
 pub struct SizedPool<T: Send> {
     small: SyncObjectPool<T>,
     medium: SyncObjectPool<T>,
@@ -403,6 +403,73 @@ impl<T: Send + 'static> SizedPool<T> {
     /// 获取所有池的统计信息
     pub fn stats(&self) -> (PoolStats, PoolStats, PoolStats) {
         (self.small.stats(), self.medium.stats(), self.large.stats())
+    }
+}
+
+// ============================================================================
+// Resettable trait实现（为标准库类型）
+// ============================================================================
+
+use glam::{Mat4, Vec3};
+
+impl Resettable for Vec<u8> {
+    fn reset(&mut self) {
+        self.clear();
+    }
+}
+
+impl Resettable for Vec<f32> {
+    fn reset(&mut self) {
+        self.clear();
+    }
+}
+
+impl Resettable for Vec<Vec3> {
+    fn reset(&mut self) {
+        self.clear();
+    }
+}
+
+impl Resettable for Vec<Mat4> {
+    fn reset(&mut self) {
+        self.clear();
+    }
+}
+
+// 扩展支持更多高频分配类型
+impl Resettable for Vec<glam::Quat> {
+    fn reset(&mut self) {
+        self.clear();
+    }
+}
+
+impl Resettable for Vec<glam::Vec2> {
+    fn reset(&mut self) {
+        self.clear();
+    }
+}
+
+impl Resettable for Vec<glam::Vec4> {
+    fn reset(&mut self) {
+        self.clear();
+    }
+}
+
+impl Resettable for String {
+    fn reset(&mut self) {
+        self.clear();
+    }
+}
+
+impl<K, V> Resettable for std::collections::HashMap<K, V> {
+    fn reset(&mut self) {
+        self.clear();
+    }
+}
+
+impl Resettable for Vec<u32> {
+    fn reset(&mut self) {
+        self.clear();
     }
 }
 

@@ -1,6 +1,6 @@
-//! 性能数据存储模块
-//!
-//! 提供内存中环形缓冲区、持久化存储、数据压缩和查询功能。
+//  性能数据存储模块
+// 
+//  提供内存中环形缓冲区、持久化存储、数据压缩和查询功能。
 
 use std::collections::{HashMap, VecDeque};
 use std::path::{Path, PathBuf};
@@ -17,9 +17,9 @@ use crate::profiling::ProfilingResult;
 // 环形缓冲区
 // ============================================================================
 
-/// 环形缓冲区
-/// 
-/// 固定大小的循环缓冲区，自动覆盖最旧的数据
+//  环形缓冲区
+//  
+//  固定大小的循环缓冲区，自动覆盖最旧的数据
 #[derive(Debug, Clone)]
 pub struct RingBuffer<T> {
     /// 数据存储
@@ -142,7 +142,7 @@ impl<T> RingBuffer<T> {
     }
 }
 
-/// 环形缓冲区迭代器
+//  环形缓冲区迭代器
 pub struct RingBufferIter<'a, T> {
     buffer: &'a [Option<T>],
     pos: usize,
@@ -169,7 +169,7 @@ impl<'a, T> Iterator for RingBufferIter<'a, T> {
 // 性能数据点
 // ============================================================================
 
-/// 性能数据点
+//  性能数据点
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DataPoint {
     /// 时间戳
@@ -220,7 +220,7 @@ impl DataPoint {
 // 数据压缩
 // ============================================================================
 
-/// 压缩算法类型
+//  压缩算法类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CompressionType {
     /// 无压缩
@@ -233,7 +233,7 @@ pub enum CompressionType {
     Zstd,
 }
 
-/// 压缩配置
+//  压缩配置
 #[derive(Debug, Clone)]
 pub struct CompressionConfig {
     /// 压缩类型
@@ -254,7 +254,7 @@ impl Default for CompressionConfig {
     }
 }
 
-/// 数据压缩器
+//  数据压缩器
 pub struct DataCompressor {
     config: CompressionConfig,
 }
@@ -339,7 +339,7 @@ impl DataCompressor {
 // 持久化存储
 // ============================================================================
 
-/// 存储配置
+//  存储配置
 #[derive(Debug, Clone)]
 pub struct StorageConfig {
     /// 数据目录
@@ -375,7 +375,7 @@ impl Default for StorageConfig {
     }
 }
 
-/// 文件信息
+//  文件信息
 #[derive(Debug, Clone)]
 struct FileInfo {
     path: PathBuf,
@@ -384,7 +384,7 @@ struct FileInfo {
     is_compressed: bool,
 }
 
-/// 持久化存储
+//  持久化存储
 pub struct PersistentStorage {
     config: StorageConfig,
     current_file: Option<BufWriter<File>>,
@@ -675,7 +675,7 @@ impl Drop for PersistentStorage {
     }
 }
 
-/// 存储统计信息
+//  存储统计信息
 #[derive(Debug, Clone)]
 pub struct StorageStats {
     /// 总文件数
@@ -694,7 +694,7 @@ pub struct StorageStats {
 // 查询接口
 // ============================================================================
 
-/// 查询条件
+//  查询条件
 #[derive(Debug, Clone)]
 pub struct QueryCondition {
     /// 指标名称过滤
@@ -713,7 +713,7 @@ pub struct QueryCondition {
     pub order_by: Option<QueryOrder>,
 }
 
-/// 查询排序方式
+//  查询排序方式
 #[derive(Debug, Clone, Copy)]
 pub enum QueryOrder {
     /// 按时间戳升序
@@ -726,7 +726,7 @@ pub enum QueryOrder {
     ValueDesc,
 }
 
-/// 查询结果
+//  查询结果
 #[derive(Debug, Clone)]
 pub struct QueryResult {
     /// 数据点
@@ -737,7 +737,7 @@ pub struct QueryResult {
     pub query_duration: Duration,
 }
 
-/// 数据查询器
+//  数据查询器
 pub struct DataQueryer {
     storage_dir: PathBuf,
     file_prefix: String,

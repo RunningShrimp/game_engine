@@ -6,14 +6,16 @@ pub mod shader_cache_helper;
 pub mod text;
 pub mod texture_compression;
 pub mod tilemap;
-pub mod wgpu_utils;
 pub mod wgpu_modules;
+pub mod wgpu_utils;
 
 pub trait RenderDevice {}
 pub trait RenderQueue {}
 pub mod backend;
 pub mod batch_builder;
+pub mod batch_optimizer;
 pub mod clipping;
+pub mod gpu_instancing;
 pub mod csm;
 pub mod deferred;
 pub mod frustum;
@@ -67,6 +69,14 @@ pub use occlusion_culling::HierarchicalZCulling;
 // Re-export Pipeline Optimization components
 pub use pipeline_optimization::{
     CommandBuffer, DrawCallOptimizer, GPUMemoryManager, RenderMetrics, RenderPipelineOptimization,
+};
+
+// Re-export Batch Optimizer components
+pub use batch_optimizer::{BatchOptimizer, BatchOptimizerStats, BatchPerformanceMonitor, OptimizedBatch};
+
+// Re-export GPU Instancing components
+pub use gpu_instancing::{
+    GpuInstancingConfig, GpuInstancingRenderer, GpuInstancingStats, InstanceData,
 };
 
 // Re-export Ray Tracing components

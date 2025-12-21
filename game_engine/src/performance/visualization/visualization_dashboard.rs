@@ -260,7 +260,7 @@ impl VisualizationDashboard {
 
     /// 渲染为ASCII表格（用于调试）
     pub fn render_ascii(&self) -> String {
-        let mut output = format!("╔════════════════════════════════════════════════╗\n");
+        let mut output = "╔════════════════════════════════════════════════╗\n".to_string();
         output.push_str(&format!("║ {} │\n", self.layout.title));
         output.push_str(&format!(
             "╠════════════════════════════════════════════════╣\n"

@@ -1,10 +1,16 @@
-/// 性能监测和报告系统
+/// 性能监测和报告系统 (遗留版本)
 ///
 /// 统一收集、分析和报告性能数据
+///
+/// # 弃用说明
+/// 此模块中的类型已被 system_monitor 模块中的新实现替代。
+/// 新代码应使用 system_monitor 中的类型，此模块仅为向后兼容保留。
+/// 计划在下一个主要版本中移除此模块。
 use std::collections::HashMap;
 use std::time::Instant;
 
 /// 性能指标类型
+#[deprecated(since = "0.1.0", note = "Use system_monitor::PerformanceMetrics instead")]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum MetricType {
     // CPU 指标

@@ -1,12 +1,12 @@
-//! 命令模式实现
-//!
-//! 为事件溯源提供命令接口
+//  命令模式实现
+// 
+//  为事件溯源提供命令接口
 
 use super::*;
 use super::{EntityCreatedEvent, EntityDeletedEvent, EntityUpdatedEvent};
+use crate::error::safe_lock;
 use bevy_ecs::prelude::*;
-use crate::error::safe_write;
-
+use bincode;
 
 /// 命令trait
 pub trait Command: Send + Sync + 'static {
@@ -40,8 +40,7 @@ impl Command for CreateEntityCommand {
         event.apply(world)?;
 
         // 序列化事件
-        let data = bincode::encode_to_vec(&event, bincode::config::standard())
-            .map_err(|e| EventError::SerializationError(e.to_string()))?;
+        let data = bincode::serialize(&event).unwrap();
 
         Ok((event.event_type().to_string(), data))
     }
@@ -69,8 +68,7 @@ impl Command for DeleteEntityCommand {
         event.apply(world)?;
 
         // 序列化事件
-        let data = bincode::encode_to_vec(&event, bincode::config::standard())
-            .map_err(|e| EventError::SerializationError(e.to_string()))?;
+        let data = bincode::serialize(&event).unwrap();
 
         Ok((event.event_type().to_string(), data))
     }
@@ -101,8 +99,7 @@ impl Command for UpdateEntityCommand {
         event.apply(world)?;
 
         // 序列化事件
-        let data = bincode::encode_to_vec(&event, bincode::config::standard())
-            .map_err(|e| EventError::SerializationError(e.to_string()))?;
+        let data = bincode::serialize(&event).unwrap();
 
         Ok((event.event_type().to_string(), data))
     }
@@ -134,7 +131,8 @@ impl CommandHandler {
         let (event_type, event_data) = command.execute(world)?;
 
         // 创建存储事件
-        let mut sequence = safe_write(&self.manager.sequence_generator).expect("Failed to acquire lock for sequence generator");
+        let mut sequence = safe_lock(&self.manager.sequence_generator, "sequence_generator")
+            .expect("Failed to acquire lock for sequence generator");
         *sequence += 1;
         let event_id = EventId::now(*sequence);
         drop(sequence);
@@ -147,7 +145,9 @@ impl CommandHandler {
         };
 
         // 保存事件
-        safe_write(&self.manager.event_store).expect("Failed to acquire lock for event store").save_event(stored_event)?;
+        safe_lock(&self.manager.event_store, "event_store")
+            .expect("Failed to acquire lock for event store")
+            .save_event(stored_event)?;
 
         Ok(event_id)
     }

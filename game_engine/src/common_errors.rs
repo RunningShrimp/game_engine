@@ -1,27 +1,27 @@
-//! 通用错误处理模块
-//!
-//! 提供统一的错误类型定义和处理模式，整合基础设施层和领域层错误。
-//!
-//! ## 错误类型层次结构
-//!
-//! ```text
-//! GameEngineError (顶层错误类型)
-//! ├── Infrastructure (基础设施层错误)
-//! │   ├── Init (初始化错误)
-//! │   ├── Render (渲染错误)
-//! │   ├── Asset (资源错误)
-//! │   ├── Physics (物理错误)
-//! │   ├── Audio (音频错误)
-//! │   ├── Script (脚本错误)
-//! │   ├── Platform (平台错误)
-//! │   ├── Io (IO错误)
-//! │   └── General (通用错误)
-//! └── Domain (领域层错误)
-//!     ├── Audio (音频领域错误)
-//!     ├── Physics (物理领域错误)
-//!     ├── Scene (场景领域错误)
-//!     └── General (通用领域错误)
-//! ```
+//  通用错误处理模块
+// 
+//  提供统一的错误类型定义和处理模式，整合基础设施层和领域层错误。
+// 
+//  ## 错误类型层次结构
+// 
+//  ```text
+//  GameEngineError (顶层错误类型)
+//  ├── Infrastructure (基础设施层错误)
+//  │   ├── Init (初始化错误)
+//  │   ├── Render (渲染错误)
+//  │   ├── Asset (资源错误)
+//  │   ├── Physics (物理错误)
+//  │   ├── Audio (音频错误)
+//  │   ├── Script (脚本错误)
+//  │   ├── Platform (平台错误)
+//  │   ├── Io (IO错误)
+//  │   └── General (通用错误)
+//  └── Domain (领域层错误)
+//      ├── Audio (音频领域错误)
+//      ├── Physics (物理领域错误)
+//      ├── Scene (场景领域错误)
+//      └── General (通用领域错误)
+//  ```
 
 use thiserror::Error;
 
@@ -417,119 +417,122 @@ impl From<crate::domain::errors::SceneError> for SceneDomainError {
 }
 
 // From implementations for legacy error types
-impl From<crate::core::error::RenderError> for CommonRenderError {
-    fn from(error: crate::core::error::RenderError) -> Self {
+impl From<crate::error::RenderError> for CommonRenderError {
+    fn from(error: crate::error::RenderError) -> Self {
         match error {
-            crate::core::error::RenderError::SurfaceCreation(msg) => Self::SurfaceCreation(msg),
-            crate::core::error::RenderError::NoAdapter => Self::NoAdapter,
-            crate::core::error::RenderError::DeviceRequest(msg) => Self::DeviceRequest(msg),
-            crate::core::error::RenderError::ShaderCompilation(msg) => Self::ShaderCompilation(msg),
-            crate::core::error::RenderError::PipelineCreation(msg) => Self::PipelineCreation(msg),
-            crate::core::error::RenderError::TextureCreation(msg) => Self::TextureCreation(msg),
-            crate::core::error::RenderError::Surface(msg) => Self::Surface(msg),
-            crate::core::error::RenderError::FrameSubmission(msg) => Self::FrameSubmission(msg),
-            crate::core::error::RenderError::InvalidState(msg) => Self::InvalidState(msg),
+            crate::error::RenderError::SurfaceCreation { message, .. } => Self::SurfaceCreation(message),
+            crate::error::RenderError::Adapter { .. } => Self::NoAdapter,
+            crate::error::RenderError::DeviceCreation { message, .. } => Self::DeviceRequest(message),
+            crate::error::RenderError::ShaderCompilation { message, .. } => Self::ShaderCompilation(message),
+            crate::error::RenderError::PipelineCreation { message, .. } => Self::PipelineCreation(message),
+            crate::error::RenderError::TextureCreation { message, .. } => Self::TextureCreation(message),
+            crate::error::RenderError::Surface { message, .. } => Self::Surface(message),
+            crate::error::RenderError::FrameSubmission { message, .. } => Self::FrameSubmission(message),
+            crate::error::RenderError::InvalidState { message, .. } => Self::InvalidState(message),
+            // Handle other variants that might exist
+            _ => Self::InvalidState("Unknown render error".to_string()),
         }
     }
 }
 
-impl From<crate::core::error::AssetError> for CommonAssetError {
-    fn from(error: crate::core::error::AssetError) -> Self {
+impl From<crate::error::ResourceError> for CommonAssetError {
+    fn from(error: crate::error::ResourceError) -> Self {
         match error {
-            crate::core::error::AssetError::NotFound { path } => Self::NotFound { path },
-            crate::core::error::AssetError::LoadFailed { path, reason } => Self::LoadFailed { path, reason },
-            crate::core::error::AssetError::InvalidFormat { path, expected } => Self::InvalidFormat { path, expected },
-            crate::core::error::AssetError::Decode(msg) => Self::Decode(msg),
-            crate::core::error::AssetError::DependencyMissing(msg) => Self::DependencyMissing(msg),
+            crate::error::ResourceError::NotFound { path, .. } => Self::NotFound { path },
+            // For other resource errors, convert to generic load failed
+            _ => Self::LoadFailed {
+                path: "unknown".to_string(),
+                reason: format!("Resource error: {:?}", error),
+            },
         }
     }
 }
 
-impl From<crate::core::error::PhysicsError> for CommonPhysicsError {
-    fn from(error: crate::core::error::PhysicsError) -> Self {
+impl From<crate::crate::error::PhysicsError> for CommonPhysicsError {
+    fn from(error: crate::crate::error::PhysicsError) -> Self {
         match error {
-            crate::core::error::PhysicsError::InvalidRigidBody => Self::InvalidRigidBody,
-            crate::core::error::PhysicsError::InvalidCollider => Self::InvalidCollider,
-            crate::core::error::PhysicsError::NotInitialized => Self::NotInitialized,
-            crate::core::error::PhysicsError::InvalidConfig(msg) => Self::InvalidConfig(msg),
+            crate::crate::error::PhysicsError::InvalidRigidBody => Self::InvalidRigidBody,
+            crate::crate::error::PhysicsError::InvalidCollider => Self::InvalidCollider,
+            crate::crate::error::PhysicsError::NotInitialized => Self::NotInitialized,
+            crate::crate::error::PhysicsError::InvalidConfig(msg) => Self::InvalidConfig(msg),
         }
     }
 }
 
-impl From<crate::core::error::AudioError> for CommonAudioError {
-    fn from(error: crate::core::error::AudioError) -> Self {
+impl From<crate::crate::error::AudioError> for CommonAudioError {
+    fn from(error: crate::crate::error::AudioError) -> Self {
         match error {
-            crate::core::error::AudioError::DeviceInit => Self::DeviceInit,
-            crate::core::error::AudioError::FileNotFound(path) => Self::FileNotFound(path),
-            crate::core::error::AudioError::DecodeFailed(msg) => Self::DecodeFailed(msg),
-            crate::core::error::AudioError::Playback(msg) => Self::Playback(msg),
-            crate::core::error::AudioError::InvalidFormat(msg) => Self::InvalidFormat(msg),
+            crate::crate::error::AudioError::DeviceInit => Self::DeviceInit,
+            crate::crate::error::AudioError::FileNotFound(path) => Self::FileNotFound(path),
+            crate::crate::error::AudioError::DecodeFailed(msg) => Self::DecodeFailed(msg),
+            crate::crate::error::AudioError::Playback(msg) => Self::Playback(msg),
+            crate::crate::error::AudioError::InvalidFormat(msg) => Self::InvalidFormat(msg),
         }
     }
 }
 
-impl From<crate::core::error::ScriptError> for CommonScriptError {
-    fn from(error: crate::core::error::ScriptError) -> Self {
+impl From<crate::crate::error::ScriptError> for CommonScriptError {
+    fn from(error: crate::crate::error::ScriptError) -> Self {
         match error {
-            crate::core::error::ScriptError::Compilation(msg) => Self::Compilation(msg),
-            crate::core::error::ScriptError::Runtime(msg) => Self::Runtime(msg),
-            crate::core::error::ScriptError::NotFound(path) => Self::NotFound(path),
-            crate::core::error::ScriptError::InvalidBinding(msg) => Self::InvalidBinding(msg),
-            crate::core::error::ScriptError::Timeout(ms) => Self::Timeout(ms),
+            crate::crate::error::ScriptError::Compilation(msg) => Self::Compilation(msg),
+            crate::crate::error::ScriptError::Runtime(msg) => Self::Runtime(msg),
+            crate::crate::error::ScriptError::NotFound(path) => Self::NotFound(path),
+            crate::crate::error::ScriptError::InvalidBinding(msg) => Self::InvalidBinding(msg),
+            crate::crate::error::ScriptError::Timeout(ms) => Self::Timeout(ms),
         }
     }
 }
 
-impl From<crate::core::error::PlatformError> for CommonPlatformError {
-    fn from(error: crate::core::error::PlatformError) -> Self {
+impl From<crate::crate::error::PlatformError> for CommonPlatformError {
+    fn from(error: crate::crate::error::PlatformError) -> Self {
         match error {
-            crate::core::error::PlatformError::WindowCreation(msg) => Self::WindowCreation(msg),
-            crate::core::error::PlatformError::EventLoop(msg) => Self::EventLoop(msg),
-            crate::core::error::PlatformError::InputDevice(msg) => Self::InputDevice(msg),
-            crate::core::error::PlatformError::Filesystem(msg) => Self::Filesystem(msg),
-            crate::core::error::PlatformError::NotSupported(msg) => Self::NotSupported(msg),
+            crate::crate::error::PlatformError::WindowCreation(msg) => Self::WindowCreation(msg),
+            crate::crate::error::PlatformError::EventLoop(msg) => Self::EventLoop(msg),
+            crate::crate::error::PlatformError::InputDevice(msg) => Self::InputDevice(msg),
+            crate::crate::error::PlatformError::Filesystem(msg) => Self::Filesystem(msg),
+            crate::crate::error::PlatformError::NotSupported(msg) => Self::NotSupported(msg),
         }
     }
 }
 
 /// 从现有错误类型的转换
-impl From<crate::core::error::EngineError> for GameEngineError {
-    fn from(error: crate::core::error::EngineError) -> Self {
+impl From<crate::crate::error::EngineError> for GameEngineError {
+    fn from(error: crate::crate::error::EngineError) -> Self {
         match error {
-            crate::core::error::EngineError::Init(msg) => {
+            crate::crate::error::EngineError::Init(msg) => {
                 Self::Infrastructure(InfrastructureError::Init(msg))
             }
-            crate::core::error::EngineError::Render(e) => {
+            crate::crate::error::EngineError::Render(e) => {
                 Self::Infrastructure(InfrastructureError::Render(CommonRenderError::from(e)))
             }
-            crate::core::error::EngineError::Asset(e) => {
+            crate::crate::error::EngineError::Asset(e) => {
                 Self::Infrastructure(InfrastructureError::Asset(e.into()))
             }
-            crate::core::error::EngineError::Physics(e) => {
+            crate::crate::error::EngineError::Physics(e) => {
                 Self::Infrastructure(InfrastructureError::Physics(e.into()))
             }
-            crate::core::error::EngineError::Audio(e) => {
+            crate::crate::error::EngineError::Audio(e) => {
                 Self::Infrastructure(InfrastructureError::Audio(e.into()))
             }
-            crate::core::error::EngineError::Script(e) => {
+            crate::crate::error::EngineError::Script(e) => {
                 Self::Infrastructure(InfrastructureError::Script(e.into()))
             }
-            crate::core::error::EngineError::Platform(e) => {
+            crate::crate::error::EngineError::Platform(e) => {
                 Self::Infrastructure(InfrastructureError::Platform(e.into()))
             }
-            crate::core::error::EngineError::Window(msg) => {
+            crate::crate::error::EngineError::Window(msg) => {
                 Self::Infrastructure(InfrastructureError::Window(msg))
             }
-            crate::core::error::EngineError::RenderInit(e) => {
+            crate::crate::error::EngineError::RenderInit(e) => {
                 Self::Infrastructure(InfrastructureError::RenderInit(e))
             }
-            crate::core::error::EngineError::EventLoop(msg) => {
+            crate::crate::error::EngineError::EventLoop(msg) => {
                 Self::Infrastructure(InfrastructureError::EventLoop(msg))
             }
-            crate::core::error::EngineError::Io(e) => {
+            crate::crate::error::EngineError::Io(e) => {
                 Self::Infrastructure(InfrastructureError::Io(e))
             }
-            crate::core::error::EngineError::General(msg) => {
+            crate::crate::error::EngineError::General(msg) => {
                 Self::Infrastructure(InfrastructureError::General(msg))
             }
         }
@@ -577,7 +580,7 @@ mod tests {
     #[test]
     fn test_legacy_error_conversion() {
         // 测试从旧的EngineError转换
-        let old_err = crate::core::error::EngineError::Init("test".to_string());
+        let old_err = crate::crate::error::EngineError::Init("test".to_string());
         let new_err: GameEngineError = old_err.into();
         assert!(matches!(new_err, GameEngineError::Infrastructure(InfrastructureError::Init(_))));
 

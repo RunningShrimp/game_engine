@@ -3,44 +3,48 @@ use std::sync::Arc;
 use winit::{
     dpi::PhysicalSize,
     event_loop::ActiveEventLoop,
+    window::Fullscreen,
     window::{Window, WindowAttributes},
 };
 
-#[derive(Clone)]
 pub struct WinitWindow {
-    window: Arc<dyn Window>,
+    window: Arc<Window>,
 }
 
 impl WinitWindow {
-    pub fn new(event_loop: &dyn ActiveEventLoop, size: (u32, u32)) -> Self {
-        let win = event_loop.create_window(
-            WindowAttributes::default()
-                .with_min_surface_size(PhysicalSize::new(size.0, size.1))
-        ).unwrap();
-        Self {
-            window: Arc::new(win),
-        }
+    pub fn new(event_loop: &ActiveEventLoop, size: (u32, u32)) -> Self {
+        let win = event_loop
+            .create_window(
+                WindowAttributes::default().with_inner_size(PhysicalSize::new(size.0, size.1)),
+            )
+            .unwrap();
+        Self { window: Arc::new(win) }
     }
 
-    pub fn try_new(event_loop: &dyn ActiveEventLoop, size: (u32, u32)) -> Option<Self> {
-        let win = event_loop.create_window(
-            WindowAttributes::default()
-                .with_min_surface_size(PhysicalSize::new(size.0, size.1))
-        ).ok()?;
+    pub fn try_new(event_loop: &ActiveEventLoop, size: (u32, u32)) -> Option<Self> {
+        let win = event_loop
+            .create_window(
+                WindowAttributes::default().with_inner_size(PhysicalSize::new(size.0, size.1)),
+            )
+            .ok()?;
         Some(Self {
             window: Arc::new(win),
         })
     }
-    pub fn raw(&self) -> &dyn Window {
+    pub fn raw(&self) -> &Window {
         &*self.window
     }
-    
+
     pub fn id(&self) -> winit::window::WindowId {
         self.window.id()
     }
-    
+
     pub fn request_redraw(&self) {
         self.window.request_redraw();
+    }
+
+    pub fn outer_size(&self) -> winit::dpi::PhysicalSize<u32> {
+        self.window.outer_size()
     }
 }
 
@@ -63,7 +67,7 @@ impl crate::platform::Window for WinitWindow {
         if fullscreen {
             // 根据错误提示，Fullscreen枚举是私有的，需要从monitor模块导入
             self.window
-                .set_fullscreen(Some(winit::monitor::Fullscreen::Borderless(None)));
+                .set_fullscreen(Some(Fullscreen::Borderless(None)));
         } else {
             self.window.set_fullscreen(None);
         }

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::time::SystemTime;
 
-/// 性能基线类型
+//  性能基线类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BaselineType {
     Baseline,    // 设置为基准
@@ -30,7 +30,7 @@ impl BaselineType {
     }
 }
 
-/// 单个性能指标的基线
+//  单个性能指标的基线
 #[derive(Debug, Clone)]
 pub struct PerformanceBaseline {
     pub metric_name: String,
@@ -96,7 +96,7 @@ impl PerformanceBaseline {
     }
 }
 
-/// 回归测试结果
+//  回归测试结果
 #[derive(Debug, Clone)]
 pub struct RegressionTestResult {
     pub metric_name: String,
@@ -168,7 +168,7 @@ impl RegressionTestResult {
     }
 }
 
-/// 回归测试套件
+//  回归测试套件
 #[derive(Default)]
 pub struct RegressionTestSuite {
     baselines: HashMap<String, PerformanceBaseline>,
@@ -388,8 +388,7 @@ impl RegressionTestSuite {
     }
 }
 
-
-/// 回归测试摘要
+//  回归测试摘要
 #[derive(Debug, Clone)]
 pub struct RegressionSummary {
     pub total_tests: usize,

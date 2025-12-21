@@ -1,34 +1,35 @@
-//! 网络安全模块
-//!
-//! 实现消息加密和客户端认证机制，确保网络通信的安全性。
-//!
-//! ## 安全机制
-//!
-//! 1. **消息加密**: 使用AES-256-GCM对称加密保护消息内容
-//! 2. **客户端认证**: 基于令牌的认证机制
-//! 3. **消息签名**: HMAC-SHA256消息认证码防止篡改
-//! 4. **密钥交换**: 使用Diffie-Hellman密钥交换建立安全通道
-//!
-//! ## 架构设计
-//!
-//! ```text
-//! ┌─────────────────┐         ┌─────────────────┐
-//! │     Client      │         │     Server      │
-//! │                 │         │                 │
-//! │  Generate Key  │────────►│  Verify Token   │
-//! │  Exchange      │         │  & Establish    │
-//! │                 │         │  Session        │
-//! │  Encrypt Msg   │────────►│  Decrypt &      │
-//! │  & Sign        │         │  Verify         │
-//! └─────────────────┘         └─────────────────┘
-//! ```
+//  网络安全模块
+// 
+//  实现消息加密和客户端认证机制，确保网络通信的安全性。
+// 
+//  ## 安全机制
+// 
+//  1. **消息加密**: 使用AES-256-GCM对称加密保护消息内容
+//  2. **客户端认证**: 基于令牌的认证机制
+//  3. **消息签名**: HMAC-SHA256消息认证码防止篡改
+//  4. **密钥交换**: 使用Diffie-Hellman密钥交换建立安全通道
+// 
+//  ## 架构设计
+// 
+//  ```text
+//  ┌─────────────────┐         ┌─────────────────┐
+//  │     Client      │         │     Server      │
+//  │                 │         │                 │
+//  │  Generate Key  │────────►│  Verify Token   │
+//  │  Exchange      │         │  & Establish    │
+//  │                 │         │  Session        │
+//  │  Encrypt Msg   │────────►│  Decrypt &      │
+//  │  & Sign        │         │  Verify         │
+//  └─────────────────┘         └─────────────────┘
+//  ```
 
 use crate::core::utils::current_timestamp_ms;
 use crate::network::NetworkError;
 use aes_gcm::{
-    aead::{Aead, KeyInit},
     Aes256Gcm, Nonce,
+    aead::{Aead, KeyInit},
 };
+use bincode;
 use hmac::{Hmac, Mac};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -39,6 +40,8 @@ type HmacSha256 = Hmac<Sha256>;
 /// 认证令牌
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AuthToken {
+    /// 令牌版本（用于协议兼容性）
+    pub version: u8,
     /// 令牌ID
     pub token_id: String,
     /// 客户端ID
@@ -52,16 +55,18 @@ pub struct AuthToken {
 impl AuthToken {
     /// 创建新的认证令牌
     pub fn new(client_id: u64, secret_key: &[u8], validity_duration_ms: u64) -> Self {
+        const CURRENT_VERSION: u8 = 1;
         let token_id = format!("token_{}_{}", client_id, current_timestamp_ms());
         let expires_at = current_timestamp_ms() + validity_duration_ms;
 
-        // 生成签名
+        // 生成签名（包含版本以防止版本混淆攻击）
         let mut mac =
             <HmacSha256 as Mac>::new_from_slice(secret_key).expect("HMAC can take key of any size");
-        mac.update(format!("{}_{}_{}", token_id, client_id, expires_at).as_bytes());
+        mac.update(format!("{}_{}_{}_{}", CURRENT_VERSION, token_id, client_id, expires_at).as_bytes());
         let signature = mac.finalize().into_bytes().to_vec();
 
         Self {
+            version: CURRENT_VERSION,
             token_id,
             client_id,
             expires_at,
@@ -71,15 +76,21 @@ impl AuthToken {
 
     /// 验证令牌
     pub fn verify(&self, secret_key: &[u8]) -> bool {
+        // 检查版本兼容性
+        const CURRENT_VERSION: u8 = 1;
+        if self.version != CURRENT_VERSION {
+            return false;
+        }
+
         // 检查是否过期
         if current_timestamp_ms() > self.expires_at {
             return false;
         }
 
-        // 验证签名
+        // 验证签名（包含版本以防止版本混淆攻击）
         let mut mac =
             <HmacSha256 as Mac>::new_from_slice(secret_key).expect("HMAC can take key of any size");
-        mac.update(format!("{}_{}_{}", self.token_id, self.client_id, self.expires_at).as_bytes());
+        mac.update(format!("{}_{}_{}_{}", self.version, self.token_id, self.client_id, self.expires_at).as_bytes());
         let expected_signature = mac.finalize().into_bytes();
 
         // 使用常量时间比较防止时序攻击
@@ -105,9 +116,12 @@ pub struct MessageEncryptor {
 impl MessageEncryptor {
     /// 创建新的消息加密器
     pub fn new(key: [u8; 32]) -> Self {
-        let cipher = Aes256Gcm::new_from_slice(&key)
-            .expect("AES-256-GCM key should be 32 bytes");
-        Self { cipher, counter: 0, key }
+        let cipher = Aes256Gcm::new_from_slice(&key).expect("AES-256-GCM key should be 32 bytes");
+        Self {
+            cipher,
+            counter: 0,
+            key,
+        }
     }
 
     /// 从密钥派生加密器
@@ -129,9 +143,10 @@ impl MessageEncryptor {
         self.counter += 1;
 
         let nonce = Nonce::from_slice(&nonce_bytes);
-        
+
         // 使用 AES-256-GCM 进行认证加密
-        let ciphertext = self.cipher
+        let ciphertext = self
+            .cipher
             .encrypt(nonce, plaintext)
             .map_err(|e| NetworkError::CompressionError(format!("Encryption error: {}", e)))?;
 
@@ -163,23 +178,34 @@ impl MessageEncryptor {
         ciphertext_with_tag.extend_from_slice(&encrypted.tag);
 
         // 使用 AES-256-GCM 进行认证解密
-        let plaintext = self.cipher
+        let plaintext = self
+            .cipher
             .decrypt(nonce, ciphertext_with_tag.as_ref())
-            .map_err(|_| NetworkError::CompressionError(
-                "Decryption failed: authentication tag mismatch or corrupted data".to_string(),
-            ))?;
+            .map_err(|_| {
+                NetworkError::CompressionError(
+                    "Decryption failed: authentication tag mismatch or corrupted data".to_string(),
+                )
+            })?;
 
         Ok(plaintext)
     }
 
     /// 生成nonce（12字节）
-    fn generate_nonce(&self) -> [u8; 12] {
+    /// 确保nonce在同key下唯一，防止AES-GCM重放攻击
+    fn generate_nonce(&mut self) -> [u8; 12] {
         let mut nonce = [0u8; 12];
+
+        // 前8字节：原子计数器（保证单调递增）
         let counter_bytes = self.counter.to_le_bytes();
         nonce[..8].copy_from_slice(&counter_bytes);
-        // 剩余4字节添加时间戳以增加随机性
+
+        // 后4字节：时间戳的低位（增加熵，即使计数器重置也有区分度）
         let timestamp = current_timestamp_ms();
         nonce[8..12].copy_from_slice(&timestamp.to_le_bytes()[..4]);
+
+        // 计数器递增（使用checked_add避免溢出）
+        self.counter = self.counter.checked_add(1).unwrap_or(0);
+
         nonce
     }
 
@@ -281,8 +307,8 @@ impl MessageSigner {
 
     /// 签名消息
     pub fn sign(&self, message: &[u8]) -> Vec<u8> {
-        let mut mac =
-            <HmacSha256 as Mac>::new_from_slice(&self.signing_key).expect("HMAC can take key of any size");
+        let mut mac = <HmacSha256 as Mac>::new_from_slice(&self.signing_key)
+            .expect("HMAC can take key of any size");
         mac.update(message);
         mac.finalize().into_bytes().to_vec()
     }
@@ -343,7 +369,7 @@ impl SecureSession {
         let encrypted = self.encryptor.encrypt(message)?;
 
         // 再签名
-        let encrypted_bytes = bincode::encode_to_vec(&encrypted, bincode::config::standard())
+        let encrypted_bytes = bincode::serialize(&encrypted)
             .map_err(|e| NetworkError::SerializationError(e.to_string()))?;
         let signature = self.signer.sign(&encrypted_bytes);
 
@@ -359,7 +385,7 @@ impl SecureSession {
         signed_encrypted: &SignedEncryptedMessage,
     ) -> Result<Vec<u8>, NetworkError> {
         // 先验证签名
-        let encrypted_bytes = bincode::encode_to_vec(&signed_encrypted.encrypted, bincode::config::standard())
+        let encrypted_bytes = bincode::serialize(&signed_encrypted.encrypted)
             .map_err(|e| NetworkError::SerializationError(e.to_string()))?;
         if !self
             .signer

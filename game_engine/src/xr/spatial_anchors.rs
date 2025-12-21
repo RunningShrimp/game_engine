@@ -1,35 +1,35 @@
-//! OpenXR 空间锚点扩展集成
-//!
-//! 实现OpenXR空间锚点扩展（XR_MSFT_spatial_anchor），提供持久化的空间定位点。
-//!
-//! ## 功能特性
-//!
-//! - 创建和销毁空间锚点
-//! - 锚点持久化存储
-//! - 锚点位置和旋转追踪
-//! - 锚点有效性检测
-//! - 锚点查询和过滤
-//!
-//! ## 使用示例
-//!
-//! ```rust
-//! use crate::xr::spatial_anchors::*;
-//!
-//! // 创建空间锚点管理器
-//! let mut anchor_manager = SpatialAnchorManager::new()?;
-//!
-//! // 在当前位置创建锚点
-//! let pose = Pose {
-//!     position: Vec3::new(0.0, 0.0, -1.0),
-//!     orientation: Quat::IDENTITY,
-//! };
-//! let anchor_id = anchor_manager.create_anchor(pose, "MyAnchor")?;
-//!
-//! // 查询锚点
-//! if let Some(anchor) = anchor_manager.get_anchor(anchor_id) {
-//!     println!("Anchor position: {:?}", anchor.pose.position);
-//! }
-//! ```
+//  OpenXR 空间锚点扩展集成
+// 
+//  实现OpenXR空间锚点扩展（XR_MSFT_spatial_anchor），提供持久化的空间定位点。
+// 
+//  ## 功能特性
+// 
+//  - 创建和销毁空间锚点
+//  - 锚点持久化存储
+//  - 锚点位置和旋转追踪
+//  - 锚点有效性检测
+//  - 锚点查询和过滤
+// 
+//  ## 使用示例
+// 
+//  ```rust
+//  use crate::xr::spatial_anchors::*;
+// 
+//  // 创建空间锚点管理器
+//  let mut anchor_manager = SpatialAnchorManager::new()?;
+// 
+//  // 在当前位置创建锚点
+//  let pose = Pose {
+//      position: Vec3::new(0.0, 0.0, -1.0),
+//      orientation: Quat::IDENTITY,
+//  };
+//  let anchor_id = anchor_manager.create_anchor(pose, "MyAnchor")?;
+// 
+//  // 查询锚点
+//  if let Some(anchor) = anchor_manager.get_anchor(anchor_id) {
+//      println!("Anchor position: {:?}", anchor.pose.position);
+//  }
+//  ```
 
 use super::*;
 use crate::core::utils::current_timestamp_ms;

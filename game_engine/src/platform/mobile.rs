@@ -1,6 +1,6 @@
-//! 移动平台优化模块
-//!
-//! 提供移动平台特定的优化和配置
+//  移动平台优化模块
+// 
+//  提供移动平台特定的优化和配置
 
 use crate::config::graphics::GraphicsConfig;
 use crate::impl_default;
@@ -171,7 +171,6 @@ impl MobilePerformanceMonitor {
         self.charging = charging;
     }
 }
-
 
 /// 性能问题
 #[derive(Debug, Clone, PartialEq)]

@@ -1,6 +1,6 @@
 use crate::animation::{InterpolationMode, KeyframeTrack};
-use glam::{Quat, Vec3};
 use crate::impl_default;
+use glam::{Quat, Vec3};
 
 /// 关键帧编辑器
 pub struct KeyframeEditor {

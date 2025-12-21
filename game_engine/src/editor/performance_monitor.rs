@@ -44,7 +44,6 @@ impl PerformanceMonitor {
             fps: 1.0 / delta_time.as_secs_f32(),
             render_time: 0.0,
             update_time: 0.0,
-            physics_time: 0.0,
             memory_usage: self.memory_profiler.get_current_memory_usage() as f32 / 1024.0 / 1024.0,
             draw_calls: 0,
             triangle_count: 0,
@@ -96,6 +95,48 @@ impl PerformanceMonitor {
 
         // 显示实时性能指标
         ui.collapsing("Real-time Metrics", |ui| {
+            ui.horizontal(|ui| {
+                ui.label("FPS:");
+                ui.label(format!("{:.1}", metrics.fps));
+            });
+            
+            // 扩展指标：GPU渲染时间细分
+            ui.collapsing("GPU Render Times", |ui| {
+                ui.horizontal(|ui| {
+                    ui.label("Total:");
+                    ui.label(format!("{:.2}ms", metrics.render_time));
+                });
+                // 注意：需要从PerformanceMetrics获取细分时间
+                // 这里只是UI框架，实际数据需要从扩展的PerformanceMetrics获取
+            });
+            
+            // 扩展指标：ECS系统执行时间
+            ui.collapsing("ECS System Time", |ui| {
+                ui.label(format!("{:.2}ms", 0.0)); // 占位，需要实际数据
+            });
+            
+            // 扩展指标：物理引擎时间
+            ui.collapsing("Physics Update Time", |ui| {
+                ui.label(format!("{:.2}ms", 0.0)); // 占位，需要实际数据
+            });
+            
+            // 扩展指标：网络同步延迟
+            ui.collapsing("Network Sync Latency", |ui| {
+                ui.label(format!("{:.2}ms", 0.0)); // 占位，需要实际数据
+            });
+            
+            // 扩展指标：内存分配统计
+            ui.collapsing("Memory Allocation Stats", |ui| {
+                ui.horizontal(|ui| {
+                    ui.label("Allocations:");
+                    ui.label(format!("{}", 0)); // 占位，需要实际数据
+                });
+                ui.horizontal(|ui| {
+                    ui.label("Deallocations:");
+                    ui.label(format!("{}", 0)); // 占位，需要实际数据
+                });
+            });
+            
             ui.horizontal(|ui| {
                 ui.label("FPS:");
                 ui.label(format!("{:.1}", metrics.fps));
@@ -191,7 +232,7 @@ impl PerformanceMonitor {
                 ui.label("Allocation Statistics:");
                 let stats = self.memory_profiler.get_allocation_stats();
                 let mut sorted_stats: Vec<_> = stats.iter().collect();
-                sorted_stats.sort_by(|a, b| b.1 .1.cmp(&a.1 .1));
+                sorted_stats.sort_by(|a, b| b.1.1.cmp(&a.1.1));
 
                 for (tag, (count, size)) in sorted_stats.iter().take(10) {
                     ui.label(format!(

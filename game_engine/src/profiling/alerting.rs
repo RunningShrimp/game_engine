@@ -1,6 +1,6 @@
-//! 性能告警模块
-//!
-//! 提供阈值告警、趋势异常检测、多级告警和通知集成功能。
+//  性能告警模块
+// 
+//  提供阈值告警、趋势异常检测、多级告警和通知集成功能。
 
 use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, Mutex};

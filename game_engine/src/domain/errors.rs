@@ -1,6 +1,7 @@
-//! 领域特定错误类型
+//  领域特定错误类型
 
 use thiserror::Error;
+use serde::{Serialize, Deserialize};
 
 /// 领域层错误枚举
 #[derive(Error, Debug, Clone)]
@@ -60,6 +61,12 @@ pub enum PhysicsError {
     /// 无效形状
     #[error("Invalid shape: {0}")]
     InvalidShape(String),
+    /// 形状创建失败
+    #[error("Shape creation failed: {0}")]
+    ShapeCreationError(String),
+    /// 锁获取失败
+    #[error("Lock acquisition failed: {0}")]
+    LockError(String),
 }
 
 /// 场景领域错误
@@ -83,7 +90,7 @@ pub enum SceneError {
 }
 
 /// 错误恢复策略
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum RecoveryStrategy {
     /// 重试操作
     Retry { max_attempts: u32, delay_ms: u64 },
@@ -98,7 +105,7 @@ pub enum RecoveryStrategy {
 }
 
 /// 补偿操作
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompensationAction {
     /// 操作ID
     pub id: String,
@@ -131,21 +138,30 @@ mod tests {
     fn test_domain_error_from_audio_error() {
         let audio_error = AudioError::InvalidVolume(1.5);
         let domain_error: DomainError = audio_error.into();
-        assert!(matches!(domain_error, DomainError::Audio(AudioError::InvalidVolume(_))));
+        assert!(matches!(
+            domain_error,
+            DomainError::Audio(AudioError::InvalidVolume(_))
+        ));
     }
 
     #[test]
     fn test_domain_error_from_physics_error() {
         let physics_error = PhysicsError::InvalidParameter("test".to_string());
         let domain_error: DomainError = physics_error.into();
-        assert!(matches!(domain_error, DomainError::Physics(PhysicsError::InvalidParameter(_))));
+        assert!(matches!(
+            domain_error,
+            DomainError::Physics(PhysicsError::InvalidParameter(_))
+        ));
     }
 
     #[test]
     fn test_domain_error_from_scene_error() {
         let scene_error = SceneError::SceneNotFound("test".to_string());
         let domain_error: DomainError = scene_error.into();
-        assert!(matches!(domain_error, DomainError::Scene(SceneError::SceneNotFound(_))));
+        assert!(matches!(
+            domain_error,
+            DomainError::Scene(SceneError::SceneNotFound(_))
+        ));
     }
 
     #[test]
@@ -156,37 +172,94 @@ mod tests {
 
     #[test]
     fn test_audio_error_variants() {
-        assert!(matches!(AudioError::SourceNotFound("test".to_string()), AudioError::SourceNotFound(_)));
-        assert!(matches!(AudioError::PlaybackFailed("test".to_string()), AudioError::PlaybackFailed(_)));
-        assert!(matches!(AudioError::InvalidFormat("test".to_string()), AudioError::InvalidFormat(_)));
-        assert!(matches!(AudioError::DeviceError("test".to_string()), AudioError::DeviceError(_)));
-        assert!(matches!(AudioError::InvalidVolume(1.5), AudioError::InvalidVolume(_)));
+        assert!(matches!(
+            AudioError::SourceNotFound("test".to_string()),
+            AudioError::SourceNotFound(_)
+        ));
+        assert!(matches!(
+            AudioError::PlaybackFailed("test".to_string()),
+            AudioError::PlaybackFailed(_)
+        ));
+        assert!(matches!(
+            AudioError::InvalidFormat("test".to_string()),
+            AudioError::InvalidFormat(_)
+        ));
+        assert!(matches!(
+            AudioError::DeviceError("test".to_string()),
+            AudioError::DeviceError(_)
+        ));
+        assert!(matches!(
+            AudioError::InvalidVolume(1.5),
+            AudioError::InvalidVolume(_)
+        ));
     }
 
     #[test]
     fn test_physics_error_variants() {
-        assert!(matches!(PhysicsError::BodyNotFound("test".to_string()), PhysicsError::BodyNotFound(_)));
-        assert!(matches!(PhysicsError::ColliderNotFound("test".to_string()), PhysicsError::ColliderNotFound(_)));
-        assert!(matches!(PhysicsError::InvalidParameter("test".to_string()), PhysicsError::InvalidParameter(_)));
-        assert!(matches!(PhysicsError::WorldNotInitialized, PhysicsError::WorldNotInitialized));
-        assert!(matches!(PhysicsError::JointCreationFailed("test".to_string()), PhysicsError::JointCreationFailed(_)));
+        assert!(matches!(
+            PhysicsError::BodyNotFound("test".to_string()),
+            PhysicsError::BodyNotFound(_)
+        ));
+        assert!(matches!(
+            PhysicsError::ColliderNotFound("test".to_string()),
+            PhysicsError::ColliderNotFound(_)
+        ));
+        assert!(matches!(
+            PhysicsError::InvalidParameter("test".to_string()),
+            PhysicsError::InvalidParameter(_)
+        ));
+        assert!(matches!(
+            PhysicsError::WorldNotInitialized,
+            PhysicsError::WorldNotInitialized
+        ));
+        assert!(matches!(
+            PhysicsError::JointCreationFailed("test".to_string()),
+            PhysicsError::JointCreationFailed(_)
+        ));
     }
 
     #[test]
     fn test_scene_error_variants() {
-        assert!(matches!(SceneError::EntityNotFound("test".to_string()), SceneError::EntityNotFound(_)));
-        assert!(matches!(SceneError::SceneNotFound("test".to_string()), SceneError::SceneNotFound(_)));
-        assert!(matches!(SceneError::ComponentNotFound("test".to_string()), SceneError::ComponentNotFound(_)));
-        assert!(matches!(SceneError::SerializationFailed("test".to_string()), SceneError::SerializationFailed(_)));
-        assert!(matches!(SceneError::DeserializationFailed("test".to_string()), SceneError::DeserializationFailed(_)));
+        assert!(matches!(
+            SceneError::EntityNotFound("test".to_string()),
+            SceneError::EntityNotFound(_)
+        ));
+        assert!(matches!(
+            SceneError::SceneNotFound("test".to_string()),
+            SceneError::SceneNotFound(_)
+        ));
+        assert!(matches!(
+            SceneError::ComponentNotFound("test".to_string()),
+            SceneError::ComponentNotFound(_)
+        ));
+        assert!(matches!(
+            SceneError::SerializationFailed("test".to_string()),
+            SceneError::SerializationFailed(_)
+        ));
+        assert!(matches!(
+            SceneError::DeserializationFailed("test".to_string()),
+            SceneError::DeserializationFailed(_)
+        ));
     }
 
     #[test]
     fn test_recovery_strategy_variants() {
-        assert!(matches!(RecoveryStrategy::Retry { max_attempts: 3, delay_ms: 100 }, RecoveryStrategy::Retry { .. }));
-        assert!(matches!(RecoveryStrategy::UseDefault, RecoveryStrategy::UseDefault));
+        assert!(matches!(
+            RecoveryStrategy::Retry {
+                max_attempts: 3,
+                delay_ms: 100
+            },
+            RecoveryStrategy::Retry { .. }
+        ));
+        assert!(matches!(
+            RecoveryStrategy::UseDefault,
+            RecoveryStrategy::UseDefault
+        ));
         assert!(matches!(RecoveryStrategy::Skip, RecoveryStrategy::Skip));
-        assert!(matches!(RecoveryStrategy::LogAndContinue, RecoveryStrategy::LogAndContinue));
+        assert!(matches!(
+            RecoveryStrategy::LogAndContinue,
+            RecoveryStrategy::LogAndContinue
+        ));
         assert!(matches!(RecoveryStrategy::Fail, RecoveryStrategy::Fail));
     }
 
@@ -195,7 +268,10 @@ mod tests {
         let action = CompensationAction::new("test_id", "test_action", json!({"key": "value"}));
         assert_eq!(action.id, "test_id");
         assert_eq!(action.action_type, "test_action");
-        assert_eq!(action.data.get("key").and_then(|v| v.as_str()), Some("value"));
+        assert_eq!(
+            action.data.get("key").and_then(|v| v.as_str()),
+            Some("value")
+        );
     }
 
     #[test]

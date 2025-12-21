@@ -1,15 +1,15 @@
-//! Actor模式实现
-//! 替代channel通信，实现更细粒度的并发控制
-//!
-//! 使用异步非阻塞消息处理，避免阻塞主循环
+//  Actor模式实现
+//  替代channel通信，实现更细粒度的并发控制
+// 
+//  使用异步非阻塞消息处理，避免阻塞主循环
 
 use crate::domain::errors::DomainError;
 use crate::ecs::AiComponent;
+use crate::resources::runtime::global_runtime;
 use bevy_ecs::prelude::*;
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap};
 use tokio::sync::mpsc;
-use crate::resources::runtime::global_runtime;
 
 /// 消息优先级
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -101,14 +101,14 @@ where
     T: Send + 'static,
 {
     /// 发送消息到Actor（正常优先级）
-    /// 
+    ///
     /// 非阻塞操作，立即返回
     pub fn send(&self, message: T) -> Result<(), DomainError> {
         self.send_with_priority(message, MessagePriority::Normal)
     }
 
     /// 发送带优先级的消息到Actor
-    /// 
+    ///
     /// 非阻塞操作，立即返回
     pub fn send_with_priority(
         &self,
@@ -122,21 +122,21 @@ where
     }
 
     /// 发送高优先级消息
-    /// 
+    ///
     /// 非阻塞操作，立即返回
     pub fn send_high_priority(&self, message: T) -> Result<(), DomainError> {
         self.send_with_priority(message, MessagePriority::High)
     }
 
     /// 发送紧急消息
-    /// 
+    ///
     /// 非阻塞操作，立即返回
     pub fn send_urgent(&self, message: T) -> Result<(), DomainError> {
         self.send_with_priority(message, MessagePriority::Urgent)
     }
 
     /// 停止Actor
-    /// 
+    ///
     /// 发送停止信号，Actor会在处理完当前消息后停止
     pub fn stop(self) -> Result<(), DomainError> {
         self.sender
@@ -312,7 +312,10 @@ impl ActorSystem {
     }
 
     /// 获取Actor句柄
-    pub fn get_handle<A>(&self, name: &str) -> Option<&mpsc::UnboundedSender<ActorMessage<A::Message>>>
+    pub fn get_handle<A>(
+        &self,
+        name: &str,
+    ) -> Option<&mpsc::UnboundedSender<ActorMessage<A::Message>>>
     where
         A: Actor,
     {

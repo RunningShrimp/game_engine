@@ -1,6 +1,6 @@
-//! 脚本系统完整实现
-//!
-//! 提供Lua和Rust脚本集成，支持运行时脚本执行、热重载和跨语言互操作。
+//  脚本系统完整实现
+// 
+//  提供Lua和Rust脚本集成，支持运行时脚本执行、热重载和跨语言互操作。
 
 use crate::impl_default;
 pub mod api;
@@ -155,10 +155,11 @@ fn execute_script(
     match script.language {
         ScriptLanguage::Lua => {
             if let Some(ref mut lua_engine) = scripting.lua_engine {
-                  // 设置实体上下文
-                  lua_engine
-                      .context
-                      .set_global("current_entity", lua_support::LuaValue::Number(entity.to_bits() as f64));                // 执行脚本
+                // 设置实体上下文
+                lua_engine.context.set_global(
+                    "current_entity",
+                    lua_support::LuaValue::Number(entity.to_bits() as f64),
+                ); // 执行脚本
                 lua_engine.execute(&script.script_name, &script.script_source)?;
             } else {
                 return Err("Lua engine not available".to_string());
@@ -181,7 +182,10 @@ fn execute_script(
                         if scripting.config.enable_rust {
                             return Err(format!("Rust script engine initialization failed: {}", e));
                         } else {
-                            return Err(format!("Rust script engine not enabled. Set enable_rust=true in ScriptingConfig. Error: {}", e));
+                            return Err(format!(
+                                "Rust script engine not enabled. Set enable_rust=true in ScriptingConfig. Error: {}",
+                                e
+                            ));
                         }
                     }
                     _ => {
@@ -238,10 +242,9 @@ pub fn setup_scripting(world: &mut World, config: ScriptingConfig) {
 
     // 注册Lua上下文到通用脚本系统
     if config.enable_lua {
-        resource.system.register_context(
-            ScriptLanguage::Lua,
-            Box::new(LuaContext::new()),
-        );
+        resource
+            .system
+            .register_context(ScriptLanguage::Lua, Box::new(LuaContext::new()));
     }
 
     // 注册其他脚本上下文

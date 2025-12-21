@@ -1,33 +1,33 @@
-//! 网络同步算法模块
-//!
-//! 实现状态同步和事件同步，包括冲突解决机制。
-//!
-//! ## 设计原理
-//!
-//! 网络同步通过以下机制确保客户端和服务器状态一致：
-//!
-//! ```text
-//! ┌─────────────────┐         ┌─────────────────┐
-//! │     Client      │         │     Server      │
-//! │                 │         │                 │
-//! │  Local State   │────────►│  Validate       │
-//! │  (Predicted)   │         │  & Resolve      │
-//! │                 │         │                 │
-//! │  Apply Server  │◄────────│  Authoritative  │
-//! │  State         │         │  State          │
-//! └─────────────────┘         └─────────────────┘
-//! ```
-//!
-//! ## 核心机制
-//!
-//! 1. **状态同步**: 定期同步游戏状态（位置、旋转、速度等）
-//! 2. **事件同步**: 同步离散事件（开火、拾取物品等）
-//! 3. **冲突解决**: 服务器权威，客户端校正
-//! 4. **平滑插值**: 减少状态跳变，提升体验
+//  网络同步算法模块
+// 
+//  实现状态同步和事件同步，包括冲突解决机制。
+// 
+//  ## 设计原理
+// 
+//  网络同步通过以下机制确保客户端和服务器状态一致：
+// 
+//  ```text
+//  ┌─────────────────┐         ┌─────────────────┐
+//  │     Client      │         │     Server      │
+//  │                 │         │                 │
+//  │  Local State   │────────►│  Validate       │
+//  │  (Predicted)   │         │  & Resolve      │
+//  │                 │         │                 │
+//  │  Apply Server  │◄────────│  Authoritative  │
+//  │  State         │         │  State          │
+//  └─────────────────┘         └─────────────────┘
+//  ```
+// 
+//  ## 核心机制
+// 
+//  1. **状态同步**: 定期同步游戏状态（位置、旋转、速度等）
+//  2. **事件同步**: 同步离散事件（开火、拾取物品等）
+//  3. **冲突解决**: 服务器权威，客户端校正
+//  4. **平滑插值**: 减少状态跳变，提升体验
 
 use crate::core::utils::current_timestamp_ms;
-use crate::network::delta_serialization::{DeltaPacket, DeltaSerializer, EntityDelta};
 use crate::network::NetworkError;
+use crate::network::delta_serialization::{DeltaPacket, DeltaSerializer, EntityDelta};
 use glam::{Quat, Vec3};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -119,7 +119,7 @@ impl EntityState {
 }
 
 /// 网络事件
-#[derive(Debug, Clone, Serialize, Deserialize, bincode::Encode, bincode::Decode)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NetworkEvent {
     /// 事件ID（全局唯一）
     pub event_id: u64,
@@ -136,7 +136,7 @@ pub struct NetworkEvent {
 }
 
 /// 事件类型
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, bincode::Encode, bincode::Decode)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum EventType {
     /// 开火
     Fire,

@@ -1,11 +1,10 @@
-/// 自动配置系统
-/// 
-/// 根据硬件能力自动生成最优配置
-
+//! 自动配置系统
+//!
+//! 根据硬件能力自动生成最优配置
 use crate::capability::evaluation::{HardwareCapability, PerformanceTier};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
-/// 质量预设
+//  质量预设
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum QualityPreset {
     Low,
@@ -15,16 +14,16 @@ pub enum QualityPreset {
     Custom,
 }
 
-/// 自动配置
+//  自动配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AutoConfig {
     pub quality_preset: QualityPreset,
-    
+
     // 渲染设置
     pub resolution_scale: f32,
     pub target_fps: u32,
     pub vsync_enabled: bool,
-    
+
     // 图形质量
     pub shadow_quality: ShadowQuality,
     pub texture_quality: TextureQuality,
@@ -33,14 +32,14 @@ pub struct AutoConfig {
     pub bloom: bool,
     pub motion_blur: bool,
     pub depth_of_field: bool,
-    
+
     // 高级特性
     pub raytracing_enabled: bool,
     pub dlss_enabled: bool,
     pub fsr_enabled: bool,
     pub mesh_shaders_enabled: bool,
     pub vrs_enabled: bool,
-    
+
     // 性能优化
     pub use_npu_acceleration: bool,
     pub parallel_task_count: usize,
@@ -88,7 +87,7 @@ impl AutoConfig {
             PerformanceTier::Low => Self::low_preset(capability),
         }
     }
-    
+
     fn ultra_preset(capability: &HardwareCapability) -> Self {
         Self {
             quality_preset: QualityPreset::Ultra,
@@ -114,7 +113,7 @@ impl AutoConfig {
             lod_bias: 0.0,
         }
     }
-    
+
     fn high_preset(capability: &HardwareCapability) -> Self {
         Self {
             quality_preset: QualityPreset::High,
@@ -140,7 +139,7 @@ impl AutoConfig {
             lod_bias: 0.0,
         }
     }
-    
+
     fn medium_high_preset(capability: &HardwareCapability) -> Self {
         Self {
             quality_preset: QualityPreset::High,
@@ -166,7 +165,7 @@ impl AutoConfig {
             lod_bias: 0.5,
         }
     }
-    
+
     fn medium_preset(capability: &HardwareCapability) -> Self {
         Self {
             quality_preset: QualityPreset::Medium,
@@ -192,7 +191,7 @@ impl AutoConfig {
             lod_bias: 1.0,
         }
     }
-    
+
     fn low_medium_preset(capability: &HardwareCapability) -> Self {
         Self {
             quality_preset: QualityPreset::Medium,
@@ -218,7 +217,7 @@ impl AutoConfig {
             lod_bias: 1.5,
         }
     }
-    
+
     fn low_preset(capability: &HardwareCapability) -> Self {
         Self {
             quality_preset: QualityPreset::Low,
@@ -244,14 +243,14 @@ impl AutoConfig {
             lod_bias: 2.0,
         }
     }
-    
+
     /// 保存配置到文件
     pub fn save_to_file(&self, path: &str) -> Result<(), Box<dyn std::error::Error>> {
         let json = serde_json::to_string_pretty(self)?;
         std::fs::write(path, json)?;
         Ok(())
     }
-    
+
     /// 从文件加载配置
     pub fn load_from_file(path: &str) -> Result<Self, Box<dyn std::error::Error>> {
         let json = std::fs::read_to_string(path)?;
@@ -263,19 +262,19 @@ impl AutoConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{detect_gpu, detect_npu, detect_soc, HardwareCapability};
+    use crate::{HardwareCapability, detect_gpu, detect_npu, detect_soc};
 
     #[test]
     fn test_auto_config() {
         let gpu = detect_gpu();
         let npu = detect_npu();
         let soc = detect_soc();
-        
+
         let capability = HardwareCapability::evaluate(&gpu, &npu, &soc);
         let config = AutoConfig::from_capability(&capability);
-        
+
         println!("Auto Config: {:#?}", config);
-        
+
         assert!(config.resolution_scale > 0.0);
         assert!(config.target_fps > 0);
     }
@@ -285,16 +284,16 @@ mod tests {
         let gpu = detect_gpu();
         let npu = detect_npu();
         let soc = detect_soc();
-        
+
         let capability = HardwareCapability::evaluate(&gpu, &npu, &soc);
         let config = AutoConfig::from_capability(&capability);
-        
+
         let path = "/tmp/test_config.json";
         config.save_to_file(path).unwrap();
-        
+
         let loaded = AutoConfig::load_from_file(path).unwrap();
         assert_eq!(config.quality_preset, loaded.quality_preset);
-        
+
         std::fs::remove_file(path).ok();
     }
 }

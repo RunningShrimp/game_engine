@@ -3,8 +3,8 @@ use super::{Input, InputEvent, KeyCode, Modifiers, MouseButton};
 use crate::error::safe_lock;
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
-use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
+use wasm_bindgen::prelude::*;
 use web_sys::{HtmlCanvasElement, KeyboardEvent, MouseEvent, TouchEvent, WheelEvent, Window};
 
 /// Web平台输入处理器
@@ -54,11 +54,15 @@ impl WebInput {
             let closure = Closure::wrap(Box::new(move |event: KeyboardEvent| {
                 if let Some(key_code) = map_key_code(&event.code()) {
                     let modifiers = get_modifiers(&event);
-                    safe_lock(&keys, "WebInput.keys_pressed").unwrap().insert(key_code);
-                    safe_lock(&events, "WebInput.events").unwrap().push(InputEvent::KeyPressed {
-                        key: key_code,
-                        modifiers,
-                    });
+                    safe_lock(&keys, "WebInput.keys_pressed")
+                        .unwrap()
+                        .insert(key_code);
+                    safe_lock(&events, "WebInput.events")
+                        .unwrap()
+                        .push(InputEvent::KeyPressed {
+                            key: key_code,
+                            modifiers,
+                        });
                 }
             }) as Box<dyn FnMut(_)>);
             self.window
@@ -72,11 +76,15 @@ impl WebInput {
             let closure = Closure::wrap(Box::new(move |event: KeyboardEvent| {
                 if let Some(key_code) = map_key_code(&event.code()) {
                     let modifiers = get_modifiers(&event);
-                    safe_lock(&keys, "WebInput.keys_pressed").unwrap().remove(&key_code);
-                    safe_lock(&events, "WebInput.events").unwrap().push(InputEvent::KeyReleased {
-                        key: key_code,
-                        modifiers,
-                    });
+                    safe_lock(&keys, "WebInput.keys_pressed")
+                        .unwrap()
+                        .remove(&key_code);
+                    safe_lock(&events, "WebInput.events")
+                        .unwrap()
+                        .push(InputEvent::KeyReleased {
+                            key: key_code,
+                            modifiers,
+                        });
                 }
             }) as Box<dyn FnMut(_)>);
             self.window
@@ -92,7 +100,9 @@ impl WebInput {
                 let x = event.offset_x() as f32;
                 let y = event.offset_y() as f32;
                 *safe_lock(&pos, "WebInput.mouse_pos").unwrap() = (x, y);
-                safe_lock(&events, "WebInput.events").unwrap().push(InputEvent::MouseMoved { x, y });
+                safe_lock(&events, "WebInput.events")
+                    .unwrap()
+                    .push(InputEvent::MouseMoved { x, y });
             }) as Box<dyn FnMut(_)>);
             self.canvas
                 .add_event_listener_with_callback("mousemove", closure.as_ref().unchecked_ref())?;
@@ -106,7 +116,9 @@ impl WebInput {
                 let button = map_mouse_button(event.button());
                 let x = event.offset_x() as f32;
                 let y = event.offset_y() as f32;
-                safe_lock(&buttons, "WebInput.mouse_buttons").unwrap().insert(button);
+                safe_lock(&buttons, "WebInput.mouse_buttons")
+                    .unwrap()
+                    .insert(button);
                 safe_lock(&events, "WebInput.events")
                     .unwrap()
                     .push(InputEvent::MouseButtonPressed { button, x, y });
@@ -123,7 +135,9 @@ impl WebInput {
                 let button = map_mouse_button(event.button());
                 let x = event.offset_x() as f32;
                 let y = event.offset_y() as f32;
-                safe_lock(&buttons, "WebInput.mouse_buttons").unwrap().remove(&button);
+                safe_lock(&buttons, "WebInput.mouse_buttons")
+                    .unwrap()
+                    .remove(&button);
                 safe_lock(&events, "WebInput.events")
                     .unwrap()
                     .push(InputEvent::MouseButtonReleased { button, x, y });
@@ -154,15 +168,22 @@ impl WebInput {
 
 impl Input for WebInput {
     fn poll_events(&mut self) -> Vec<InputEvent> {
-        safe_lock(&self.events, "WebInput.events").unwrap().drain(..).collect()
+        safe_lock(&self.events, "WebInput.events")
+            .unwrap()
+            .drain(..)
+            .collect()
     }
 
     fn is_key_pressed(&self, key: KeyCode) -> bool {
-        safe_lock(&self.keys_pressed, "WebInput.keys_pressed").unwrap().contains(&key)
+        safe_lock(&self.keys_pressed, "WebInput.keys_pressed")
+            .unwrap()
+            .contains(&key)
     }
 
     fn is_mouse_button_pressed(&self, button: MouseButton) -> bool {
-        safe_lock(&self.mouse_buttons, "WebInput.mouse_buttons").unwrap().contains(&button)
+        safe_lock(&self.mouse_buttons, "WebInput.mouse_buttons")
+            .unwrap()
+            .contains(&button)
     }
 
     fn mouse_position(&self) -> (f32, f32) {

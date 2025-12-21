@@ -1,6 +1,6 @@
-//! 性能数据可视化模块
-//!
-//! 提供性能趋势分析、图表生成和数据导出功能。
+//  性能数据可视化模块
+// 
+//  提供性能趋势分析、图表生成和数据导出功能。
 
 use std::collections::HashMap;
 use std::fs::File;
@@ -16,7 +16,7 @@ use crate::profiling::ProfilingResult;
 // 图表数据结构
 // ============================================================================
 
-/// 图表类型
+//  图表类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ChartType {
     /// 折线图
@@ -46,7 +46,7 @@ impl ChartType {
     }
 }
 
-/// 图表数据点
+//  图表数据点
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChartDataPoint {
     /// X轴值
@@ -59,7 +59,7 @@ pub struct ChartDataPoint {
     pub color: Option<String>,
 }
 
-/// 图表数据系列
+//  图表数据系列
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChartSeries {
     /// 系列名称
@@ -74,7 +74,7 @@ pub struct ChartSeries {
     pub visible: bool,
 }
 
-/// 图表配置
+//  图表配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChartConfig {
     /// 图表标题
@@ -116,7 +116,7 @@ impl Default for ChartConfig {
     }
 }
 
-/// 图表数据
+//  图表数据
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChartData {
     /// 图表配置
@@ -129,7 +129,7 @@ pub struct ChartData {
 // 趋势分析
 // ============================================================================
 
-/// 趋势方向
+//  趋势方向
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum TrendDirection {
     /// 上升
@@ -162,7 +162,7 @@ impl TrendDirection {
     }
 }
 
-/// 趋势分析结果
+//  趋势分析结果
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TrendAnalysis {
     /// 指标名称
@@ -183,7 +183,7 @@ pub struct TrendAnalysis {
     pub anomalies: Vec<AnomalyPoint>,
 }
 
-/// 异常点
+//  异常点
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AnomalyPoint {
     /// 时间戳
@@ -196,7 +196,7 @@ pub struct AnomalyPoint {
     pub anomaly_type: AnomalyType,
 }
 
-/// 异常类型
+//  异常类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum AnomalyType {
     /// 峰值异常
@@ -220,7 +220,7 @@ impl AnomalyType {
     }
 }
 
-/// 趋势分析器
+//  趋势分析器
 pub struct TrendAnalyzer {
     /// 分析窗口大小
     window_size: usize,
@@ -443,7 +443,7 @@ impl TrendAnalyzer {
 // 数据导出
 // ============================================================================
 
-/// 导出格式
+//  导出格式
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ExportFormat {
     /// CSV格式
@@ -476,7 +476,7 @@ impl ExportFormat {
     }
 }
 
-/// 导出配置
+//  导出配置
 #[derive(Debug, Clone)]
 pub struct ExportConfig {
     /// 导出格式
@@ -506,7 +506,7 @@ impl Default for ExportConfig {
     }
 }
 
-/// 数据导出器
+//  数据导出器
 pub struct DataExporter {
     queryer: DataQueryer,
 }

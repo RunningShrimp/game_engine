@@ -1,13 +1,13 @@
-use crate::core::error::RenderError;
+use crate::error::RenderError;
 use crate::domain::render::{
-    PbrScene as DomainPbrScene, RenderCommand, RenderObject as DomainRenderObject,
-    RenderObjectId, RenderScene, RenderStrategy,
+    PbrScene as DomainPbrScene, RenderCommand, RenderObject as DomainRenderObject, RenderObjectId,
+    RenderScene, RenderStrategy,
 };
 use crate::ecs::{Mesh, Transform};
 use crate::render::frustum::Frustum;
 use crate::render::lod::{LodConfig, LodConfigBuilder, LodQuality, LodSelector};
 use crate::render::pbr::{DirectionalLight, PointLight3D};
-use crate::render::wgpu_utils::{ WgpuRenderer};
+use crate::render::wgpu_utils::WgpuRenderer;
 use bevy_ecs::prelude::*;
 use glam::{Mat4, Vec3};
 use std::collections::HashMap;
@@ -276,6 +276,12 @@ impl RenderService {
     }
 
     /// 获取需要渲染的对象
+    /// 更新视口大小
+    pub fn update_viewport(&mut self, width: u32, height: u32) {
+        // 更新内部状态，例如阴影贴图分辨率、UI布局等
+        tracing::debug!(target: "render", "Viewport updated to {}x{}", width, height);
+    }
+
     pub fn get_renderable_objects(&self) -> impl Iterator<Item = &DomainRenderObject> {
         self.render_scene.renderable_objects()
     }
@@ -610,11 +616,7 @@ impl RenderService {
     /// let adjustment = service.suggest_lod_adjustment(16.0, Some(0.9));
     /// assert!(adjustment > 0.0);
     /// ```
-    pub fn suggest_lod_adjustment(
-        &self,
-        frame_time_ms: f32,
-        gpu_load: Option<f32>,
-    ) -> f32 {
+    pub fn suggest_lod_adjustment(&self, frame_time_ms: f32, gpu_load: Option<f32>) -> f32 {
         // 业务规则：如果帧时间超过阈值，建议降低LOD质量
         let frame_time_threshold = 16.7; // 60 FPS
         let frame_time_adjustment = if frame_time_ms > frame_time_threshold {
@@ -819,7 +821,7 @@ impl RenderService {
         view_proj: [[f32; 4]; 4],
         camera_pos: [f32; 3],
         egui_renderer: Option<&mut egui_wgpu::Renderer>,
-        egui_shapes: &[egui::ClippedPrimitive],
+        egui_primitives: &[egui::ClippedPrimitive],
         pixels_per_point: f32,
     ) -> Result<(), RenderError> {
         // 更新缓存
@@ -842,7 +844,7 @@ impl RenderService {
             view_proj,
             camera_pos,
             egui_renderer,
-            egui_shapes,
+            egui_primitives,
             pixels_per_point,
         );
 
@@ -949,23 +951,24 @@ mod tests {
         let mut world = World::new();
 
         // 添加点光源
-        let light_entity = world.spawn((
+        world.spawn((
             Transform {
                 pos: Vec3::new(1.0, 2.0, 3.0),
                 rot: glam::Quat::IDENTITY,
                 scale: Vec3::ONE,
             },
-            EcsPointLight3D {
-                color: [1.0, 1.0, 1.0],
+            PointLight3D {
+                position: Vec3::new(1.0, 2.0, 3.0),
+                color: Vec3::new(1.0, 1.0, 1.0),
                 intensity: 1.0,
                 radius: 10.0,
             },
         ));
 
         // 添加方向光
-        world.spawn(DirectionalLightComp {
-            direction: [0.0, -1.0, 0.0],
-            color: [1.0, 1.0, 1.0],
+        world.spawn(DirectionalLight {
+            direction: Vec3::new(0.0, -1.0, 0.0),
+            color: Vec3::new(1.0, 1.0, 1.0),
             intensity: 0.8,
         });
 
@@ -988,8 +991,9 @@ mod tests {
                 rot: glam::Quat::IDENTITY,
                 scale: Vec3::ONE,
             },
-            EcsPointLight3D {
-                color: [1.0, 1.0, 1.0],
+            PointLight3D {
+                position: Vec3::ZERO,
+                color: Vec3::new(1.0, 1.0, 1.0),
                 intensity: 0.0, // 无效
                 radius: 10.0,
             },
@@ -1002,8 +1006,9 @@ mod tests {
                 rot: glam::Quat::IDENTITY,
                 scale: Vec3::ONE,
             },
-            EcsPointLight3D {
-                color: [1.0, 1.0, 1.0],
+            PointLight3D {
+                position: Vec3::ONE,
+                color: Vec3::new(1.0, 1.0, 1.0),
                 intensity: 1.0, // 有效
                 radius: 10.0,
             },

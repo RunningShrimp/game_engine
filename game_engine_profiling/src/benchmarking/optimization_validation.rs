@@ -1,6 +1,6 @@
 use std::time::{Duration, SystemTime};
 
-/// 性能优化目标
+//  性能优化目标
 #[derive(Debug, Clone)]
 pub struct OptimizationGoal {
     pub metric_name: String,
@@ -58,7 +58,7 @@ impl OptimizationGoal {
     }
 }
 
-/// CPU与GPU性能比较结果
+//  CPU与GPU性能比较结果
 #[derive(Debug, Clone)]
 pub struct CpuGpuComparison {
     pub operation: String,
@@ -114,7 +114,7 @@ impl CpuGpuComparison {
     }
 }
 
-/// 优化验证结果
+//  优化验证结果
 #[derive(Debug, Clone)]
 pub struct OptimizationResult {
     pub goal: OptimizationGoal,
@@ -162,7 +162,7 @@ impl OptimizationResult {
     }
 }
 
-/// 性能验证套件
+//  性能验证套件
 #[derive(Default)]
 pub struct PerformanceValidationSuite {
     goals: Vec<OptimizationGoal>,
@@ -320,8 +320,7 @@ impl PerformanceValidationSuite {
     }
 }
 
-
-/// 验证摘要
+//  验证摘要
 #[derive(Debug, Clone)]
 pub struct ValidationSummary {
     pub total_goals: usize,

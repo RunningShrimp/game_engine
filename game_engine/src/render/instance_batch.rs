@@ -1,33 +1,33 @@
-//! 3D 网格实例化批处理模块
-//!
-//! 通过将相同 Mesh + Material 的对象合并为单次 Draw Call，
-//! 减少 70-90% 的渲染开销。
-//!
-//! ## SIMD 优化
-//!
-//! 本模块使用 game_engine_simd 库进行 SIMD 优化：
-//! - 批量矩阵变换使用 AVX2/NEON 指令集
-//! - 包围体计算使用向量化算法
-//! - 实例数据更新使用批量内存操作
-//!
-//! ## 架构设计
-//!
-//! ```text
-//! ┌─────────────────────────────────────────────────────────┐
-//! │                  Instance Batching Pipeline              │
-//! ├─────────────────────────────────────────────────────────┤
-//! │  1. Batch Collection (System)                            │
-//! │     - 遍历所有 Mesh3D + Transform 实体                    │
-//! │     - 按 (mesh_id, material_id) 分组                      │
-//! │                                                          │
-//! │  2. Batch Upload (System)                                │
-//! │     - 检测脏批次                                          │
-//! │     - 增量更新 GPU 实例数据                               │
-//! │                                                          │
-//! │  3. Instanced Draw                                       │
-//! │     - 单次 draw_indexed_instanced 绘制整个批次             │
-//! └─────────────────────────────────────────────────────────┘
-//! ```
+//  3D 网格实例化批处理模块
+// 
+//  通过将相同 Mesh + Material 的对象合并为单次 Draw Call，
+//  减少 70-90% 的渲染开销。
+// 
+//  ## SIMD 优化
+// 
+//  本模块使用 game_engine_simd 库进行 SIMD 优化：
+//  - 批量矩阵变换使用 AVX2/NEON 指令集
+//  - 包围体计算使用向量化算法
+//  - 实例数据更新使用批量内存操作
+// 
+//  ## 架构设计
+// 
+//  ```text
+//  ┌─────────────────────────────────────────────────────────┐
+//  │                  Instance Batching Pipeline              │
+//  ├─────────────────────────────────────────────────────────┤
+//  │  1. Batch Collection (System)                            │
+//  │     - 遍历所有 Mesh3D + Transform 实体                    │
+//  │     - 按 (mesh_id, material_id) 分组                      │
+//  │                                                          │
+//  │  2. Batch Upload (System)                                │
+//  │     - 检测脏批次                                          │
+//  │     - 增量更新 GPU 实例数据                               │
+//  │                                                          │
+//  │  3. Instanced Draw                                       │
+//  │     - 单次 draw_indexed_instanced 绘制整个批次             │
+//  └─────────────────────────────────────────────────────────┘
+//  ```
 
 use crate::render::mesh::GpuMesh;
 use crate::render::pbr_renderer::Instance3D;
@@ -40,6 +40,29 @@ use tracing;
 // ============================================================================
 // 核心数据结构
 // ============================================================================
+
+/// 实例批次性能统计信息
+#[derive(Debug, Clone)]
+pub struct InstanceBatchStats {
+    /// 总更新次数
+    pub update_count: u64,
+    /// 总上传的实例数
+    pub total_uploaded_instances: u64,
+    /// 总上传的字节数
+    pub total_uploaded_bytes: u64,
+    /// 增量更新次数
+    pub incremental_update_count: u64,
+    /// 完整重建次数
+    pub full_rebuild_count: u64,
+    /// 当前实例数量
+    pub current_instance_count: usize,
+    /// 缓冲区容量
+    pub buffer_capacity: usize,
+    /// 平均每次更新的上传实例数
+    pub average_upload_size: u64,
+    /// 增量更新比例（0.0-1.0）
+    pub incremental_update_ratio: f64,
+}
 
 /// 批次键：唯一标识一个批次
 ///
@@ -84,7 +107,8 @@ impl Ord for BatchKey {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         // 优先级排序：pipeline_id > blend_mode > depth_test > render_flags > mesh_id > material_id
         // 渲染管线切换成本最高，其次是混合模式和深度测试，最后是材质和网格
-        self.pipeline_id.cmp(&other.pipeline_id)
+        self.pipeline_id
+            .cmp(&other.pipeline_id)
             .then(self.blend_mode.cmp(&other.blend_mode))
             .then(self.depth_test.cmp(&other.depth_test))
             .then(self.render_flags.cmp(&other.render_flags))
@@ -258,14 +282,15 @@ impl Instance3DDirtyTracker {
 
             // 优化：只比较实际存在的实例
             let chunk_end = end.min(old_count);
-            
+
             // 快速检测块是否有变化
             // 如果块内实例数量变化，整个块都脏了
-            let chunk_instance_count_changed = (chunk_end - start) != ((chunk_idx + 1) * self.chunk_size).min(old_count) - start;
-            
+            let chunk_instance_count_changed =
+                (chunk_end - start) != ((chunk_idx + 1) * self.chunk_size).min(old_count) - start;
+
             if chunk_instance_count_changed {
                 chunk_has_changes = true;
-                
+
                 // 标记块内所有实例为脏
                 for i in start..end {
                     self.instance_dirty[i] = true;
@@ -287,13 +312,13 @@ impl Instance3DDirtyTracker {
             // 如果块有变化，生成脏范围
             if chunk_has_changes {
                 self.chunk_dirty[chunk_idx] = true;
-                
+
                 if range_start.is_none() {
                     range_start = Some(start as u32);
                 }
             } else {
                 self.chunk_dirty[chunk_idx] = false;
-                
+
                 if let Some(start_idx) = range_start {
                     self.dirty_ranges.push((start_idx, start as u32));
                     range_start = None;
@@ -376,6 +401,16 @@ pub struct InstanceBatch {
     pub indirect_buffer: Option<wgpu::Buffer>,
     #[cfg(feature = "wgpu_perf")]
     pub indirect_count: u32,
+    /// 性能统计：总更新次数
+    pub update_count: u64,
+    /// 性能统计：总上传的实例数
+    pub total_uploaded_instances: u64,
+    /// 性能统计：总上传的字节数
+    pub total_uploaded_bytes: u64,
+    /// 性能统计：增量更新次数
+    pub incremental_update_count: u64,
+    /// 性能统计：完整重建次数
+    pub full_rebuild_count: u64,
 }
 
 impl InstanceBatch {
@@ -401,6 +436,11 @@ impl InstanceBatch {
             indirect_buffer: None,
             #[cfg(feature = "wgpu_perf")]
             indirect_count: 0,
+            update_count: 0,
+            total_uploaded_instances: 0,
+            total_uploaded_bytes: 0,
+            incremental_update_count: 0,
+            full_rebuild_count: 0,
         }
     }
 
@@ -429,28 +469,28 @@ impl InstanceBatch {
             self.bounding_radius = 0.0;
             return;
         }
-        
+
         // 计算包围体
         self.compute_bounds_internal()
     }
-    
+
     /// 计算点集的AABB
     fn compute_aabb(&self, points: &[glam::Vec3]) -> (glam::Vec3, glam::Vec3) {
         if points.is_empty() {
             return (glam::Vec3::ZERO, glam::Vec3::ZERO);
         }
-        
+
         let mut min = points[0];
         let mut max = points[0];
-        
+
         for &point in points.iter().skip(1) {
             min = min.min(point);
             max = max.max(point);
         }
-        
+
         (min, max)
     }
-    
+
     /// 计算包围体（内部实现）
     fn compute_bounds_internal(&mut self) {
         let base_min = glam::Vec3::from_array(self.mesh.aabb_min);
@@ -465,10 +505,10 @@ impl InstanceBatch {
             glam::Vec3::new(base_max.x, base_max.y, base_min.z),
             glam::Vec3::new(base_max.x, base_max.y, base_max.z),
         ];
-        
+
         // 收集所有变换后的点
         let mut transformed_points = Vec::with_capacity(self.instances.len() * 8);
-        
+
         // 变换所有实例的所有角点
         for inst in &self.instances {
             let matrix = glam::Mat4::from_cols_array_2d(&inst.model);
@@ -477,25 +517,28 @@ impl InstanceBatch {
                 transformed_points.push(transformed);
             }
         }
-        
+
         // 计算AABB
         let (world_min, world_max) = self.compute_aabb(&transformed_points);
-        
+
         // 计算包围球
         let center: glam::Vec3 = (world_min + world_max) * 0.5;
         let radius = (world_max - center).length();
-        
+
         self.bounding_center = center.to_array();
         self.bounding_radius = radius;
     }
-    /// 更新 GPU 缓冲区
+    /// 更新 GPU 缓冲区（优化版本：增量更新 + 性能监控）
     pub fn update_buffer(&mut self, device: &wgpu::Device, queue: &wgpu::Queue) {
         if self.instances.is_empty() {
             return;
         }
 
+        self.update_count += 1;
+        let was_full_rebuild = self.instance_buffer.is_none() || self.buffer_capacity < self.instances.len();
+
         // 1. 检查容量并调整缓冲区
-        if self.instance_buffer.is_none() || self.buffer_capacity < self.instances.len() {
+        if was_full_rebuild {
             // 预留 50% 额外空间，减少频繁重建
             let new_capacity = (self.instances.len() * 3 / 2).max(64);
             let buffer_size = new_capacity * std::mem::size_of::<Instance3D>();
@@ -510,6 +553,7 @@ impl InstanceBatch {
 
             // 缓冲区重建，强制全量更新
             self.dirty_tracker.reset();
+            self.full_rebuild_count += 1;
         }
 
         // 2. 检测脏数据
@@ -519,8 +563,12 @@ impl InstanceBatch {
             return;
         }
 
-        // 3. 上传数据
+        // 3. 批量上传数据（优化：合并相邻范围减少上传次数）
         if let Some(buffer) = &self.instance_buffer {
+            let instance_size = std::mem::size_of::<Instance3D>();
+            let mut total_uploaded = 0u64;
+            let mut total_bytes = 0u64;
+
             for &(start, end) in dirty_ranges {
                 let start_index = start as usize;
                 let end_index = end as usize;
@@ -529,17 +577,61 @@ impl InstanceBatch {
                     continue;
                 }
                 let actual_end = end_index.min(self.instances.len());
+                let instance_count = actual_end - start_index;
 
                 let data = &self.instances[start_index..actual_end];
-                let offset =
-                    (start_index * std::mem::size_of::<Instance3D>()) as wgpu::BufferAddress;
+                let offset = (start_index * instance_size) as wgpu::BufferAddress;
+                let byte_size = (instance_count * instance_size) as u64;
 
                 queue.write_buffer(buffer, offset, bytemuck::cast_slice(data));
+
+                total_uploaded += instance_count as u64;
+                total_bytes += byte_size;
             }
+
+            // 更新性能统计
+            self.total_uploaded_instances += total_uploaded;
+            self.total_uploaded_bytes += total_bytes;
+            if !was_full_rebuild {
+                self.incremental_update_count += 1;
+            }
+
+            // 记录性能指标
+            tracing::debug!(
+                target: "instance_batch",
+                "Batch {:?}: uploaded {} instances ({} bytes) in {} ranges",
+                self.key,
+                total_uploaded,
+                total_bytes,
+                dirty_ranges.len()
+            );
         }
         #[cfg(feature = "wgpu_perf")]
         {
             self.update_indirect(device, queue);
+        }
+    }
+
+    /// 获取性能统计信息
+    pub fn get_performance_stats(&self) -> InstanceBatchStats {
+        InstanceBatchStats {
+            update_count: self.update_count,
+            total_uploaded_instances: self.total_uploaded_instances,
+            total_uploaded_bytes: self.total_uploaded_bytes,
+            incremental_update_count: self.incremental_update_count,
+            full_rebuild_count: self.full_rebuild_count,
+            current_instance_count: self.instances.len(),
+            buffer_capacity: self.buffer_capacity,
+            average_upload_size: if self.update_count > 0 {
+                self.total_uploaded_instances / self.update_count
+            } else {
+                0
+            },
+            incremental_update_ratio: if self.update_count > 0 {
+                self.incremental_update_count as f64 / self.update_count as f64
+            } else {
+                0.0
+            },
         }
     }
 
@@ -877,30 +969,35 @@ impl BatchManager {
         let base_min = glam::Vec3::from_array(batch.mesh.aabb_min);
         let base_max = glam::Vec3::from_array(batch.mesh.aabb_max);
         let base_center = (base_min + base_max) * 0.5;
-        
+
         for (idx, inst) in batch.instances.iter().enumerate() {
             let transform = glam::Mat4::from_cols_array_2d(&inst.model);
             let center = transform.transform_point3(base_center);
             instance_centers.push((idx, center.to_array()));
         }
-        
+
         // 2. 对实例按X坐标排序（简单的空间排序策略）
-        instance_centers.sort_by(|a, b| a.1[0].partial_cmp(&b.1[0]).unwrap_or(std::cmp::Ordering::Equal));
-        
+        instance_centers.sort_by(|a, b| {
+            a.1[0]
+                .partial_cmp(&b.1[0])
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+
         // 3. 创建批次，按空间排序后的顺序分组
-        let mut batch_instances: Vec<Vec<Instance3D>> = vec![Vec::with_capacity(ideal_size); num_splits];
-        
+        let mut batch_instances: Vec<Vec<Instance3D>> =
+            vec![Vec::with_capacity(ideal_size); num_splits];
+
         for (split_idx, (inst_idx, _)) in instance_centers.into_iter().enumerate() {
             let target_batch = split_idx % num_splits;
             batch_instances[target_batch].push(batch.instances[inst_idx].clone());
         }
-        
+
         // 4. 创建新批次
         for (i, instances) in batch_instances.into_iter().enumerate() {
             if instances.is_empty() {
                 continue;
             }
-            
+
             let mut new_batch = InstanceBatch::new(
                 batch.key,
                 batch.mesh.clone(),
@@ -939,9 +1036,7 @@ impl BatchManager {
         self.small_batch_keys.clear();
         for (key, batch) in &self.batches {
             let instance_count = batch.instance_count() as usize;
-            if instance_count < self.dynamic_config.small_batch_threshold
-                && instance_count > 0
-            {
+            if instance_count < self.dynamic_config.small_batch_threshold && instance_count > 0 {
                 self.small_batch_keys.push(*key);
             }
         }
@@ -950,11 +1045,15 @@ impl BatchManager {
         // 1. 首先按渲染状态（pipeline_id, blend_mode, depth_test）分组
         // 2. 然后在同一渲染状态组内，尝试合并不同材质/网格的小批次
         let mut render_state_groups: HashMap<(u32, u8, bool), Vec<BatchKey>> = HashMap::new();
-        
+
         // 按渲染状态分组小批次
         for key in &self.small_batch_keys {
             if let Some(batch) = self.batches.get(key) {
-                let render_state_key = (batch.key.pipeline_id, batch.key.blend_mode, batch.key.depth_test);
+                let render_state_key = (
+                    batch.key.pipeline_id,
+                    batch.key.blend_mode,
+                    batch.key.depth_test,
+                );
                 render_state_groups
                     .entry(render_state_key)
                     .or_insert_with(Vec::new)
@@ -975,14 +1074,18 @@ impl BatchManager {
         // 清空小批次列表（已处理）
         self.small_batch_keys.clear();
     }
-    
+
     /// 跨材质/网格合并小批次
-    fn merge_cross_material_batches(&mut self, render_state_key: (u32, u8, bool), batch_keys: Vec<BatchKey>) {
+    fn merge_cross_material_batches(
+        &mut self,
+        render_state_key: (u32, u8, bool),
+        batch_keys: Vec<BatchKey>,
+    ) {
         let (_pipeline_id, _blend_mode, _depth_test) = render_state_key;
-        
+
         // 按材质/网格分组，以便进行智能合并
         let mut material_mesh_groups: HashMap<(u64, u64), Vec<BatchKey>> = HashMap::new();
-        
+
         for key in &batch_keys {
             if let Some(batch) = self.batches.get(key) {
                 let mm_key = (batch.key.mesh_id, batch.key.material_id);
@@ -992,20 +1095,20 @@ impl BatchManager {
                     .push(*key);
             }
         }
-        
+
         // 首先合并相同材质/网格的批次
         for (_mm_key, mm_batch_keys) in material_mesh_groups {
             if mm_batch_keys.len() < 2 {
                 continue;
             }
-            
+
             // 计算总实例数
             let total_instances: usize = mm_batch_keys
                 .iter()
                 .filter_map(|key| self.batches.get(key))
                 .map(|batch| batch.instance_count() as usize)
                 .sum();
-            
+
             // 如果合并后的批次仍然小于理想大小，则合并
             if total_instances <= self.dynamic_config.ideal_batch_size {
                 // 找到该材质/网格的任意一个批次作为group_key
@@ -1016,7 +1119,7 @@ impl BatchManager {
                 }
             }
         }
-        
+
         // 然后尝试跨材质/网格合并剩余的小批次
         // 重新获取当前批次状态，因为有些批次可能已经被合并
         let mut remaining_batches: Vec<BatchKey> = Vec::new();
@@ -1024,71 +1127,85 @@ impl BatchManager {
             if self.batches.contains_key(key) {
                 if let Some(batch) = self.batches.get(key) {
                     let instance_count = batch.instance_count() as usize;
-                    if instance_count < self.dynamic_config.small_batch_threshold && instance_count > 0 {
+                    if instance_count < self.dynamic_config.small_batch_threshold
+                        && instance_count > 0
+                    {
                         remaining_batches.push(*key);
                     }
                 }
             }
         }
-        
+
         // 如果剩余批次数量不足，跳过跨材质合并
         if remaining_batches.len() < 2 {
             return;
         }
-        
+
         // 尝试将剩余的小批次合并成较大的批次组
         // 这里使用简单的贪心算法：每次选择实例数最少的批次进行合并
         let mut merged = false;
         let mut temp_batches = remaining_batches.clone();
-        
+
         while temp_batches.len() > 1 {
             // 按实例数排序，从最小的开始合并
             temp_batches.sort_by_key(|key| {
-                self.batches.get(key).map_or(0, |batch| batch.instance_count() as usize)
+                self.batches
+                    .get(key)
+                    .map_or(0, |batch| batch.instance_count() as usize)
             });
-            
+
             let first_key = temp_batches[0];
             let second_key = temp_batches[1];
-            
+
             // 检查总实例数
             let total_instances: usize = {
-                let first_count = self.batches.get(&first_key).map_or(0, |b| b.instance_count() as usize);
-                let second_count = self.batches.get(&second_key).map_or(0, |b| b.instance_count() as usize);
+                let first_count = self
+                    .batches
+                    .get(&first_key)
+                    .map_or(0, |b| b.instance_count() as usize);
+                let second_count = self
+                    .batches
+                    .get(&second_key)
+                    .map_or(0, |b| b.instance_count() as usize);
                 first_count + second_count
             };
-            
+
             // 如果合并后的批次小于理想大小，则尝试合并
             if total_instances <= self.dynamic_config.ideal_batch_size {
                 // 尝试跨材质/网格合并
                 if self.attempt_cross_material_merge(&first_key, &second_key) {
-                        // 从临时列表中移除已合并的批次
-                        temp_batches.remove(1);
-                        temp_batches.remove(0);
-                        merged = true;
-                    } else {
-                        // 如果合并失败，将第一个批次标记为不可合并
-                        temp_batches.remove(0);
-                    }
+                    // 从临时列表中移除已合并的批次
+                    temp_batches.remove(1);
+                    temp_batches.remove(0);
+                    merged = true;
                 } else {
-                    // 如果合并后超过理想大小，停止尝试
-                    break;
+                    // 如果合并失败，将第一个批次标记为不可合并
+                    temp_batches.remove(0);
                 }
+            } else {
+                // 如果合并后超过理想大小，停止尝试
+                break;
+            }
         }
-        
+
         if merged {
             // 更新统计信息
             self.stats.batches_merged += 1;
         }
     }
-    
+
     /// 尝试跨材质/网格合并两个批次
-    fn attempt_cross_material_merge(&mut self, source_key: &BatchKey, target_key: &BatchKey) -> bool {
+    fn attempt_cross_material_merge(
+        &mut self,
+        source_key: &BatchKey,
+        target_key: &BatchKey,
+    ) -> bool {
         // 获取源批次和目标批次的所有权
         let source_batch = match self.batches.remove(source_key) {
             Some(source) => source,
             None => return false, // 批次不存在，无法合并
         };
-        
+
         let target_batch = match self.batches.remove(target_key) {
             Some(target) => target,
             None => {
@@ -1097,60 +1214,75 @@ impl BatchManager {
                 return false; // 批次不存在，无法合并
             }
         };
-        
+
         // 检查两个批次是否具有兼容的渲染状态
-        if source_batch.key.pipeline_id != target_batch.key.pipeline_id ||
-           source_batch.key.blend_mode != target_batch.key.blend_mode ||
-           source_batch.key.depth_test != target_batch.key.depth_test {
+        if source_batch.key.pipeline_id != target_batch.key.pipeline_id
+            || source_batch.key.blend_mode != target_batch.key.blend_mode
+            || source_batch.key.depth_test != target_batch.key.depth_test
+        {
             // 把批次放回去
             self.batches.insert(*source_key, source_batch);
             self.batches.insert(*target_key, target_batch);
             return false;
         }
-        
+
         // 检查网格兼容性（简单实现，实际应用中可能需要更复杂的检查）
         // 比较顶点布局的关键参数是否兼容
-        if source_batch.mesh.vertex_layout.array_stride != target_batch.mesh.vertex_layout.array_stride ||
-           source_batch.mesh.vertex_layout.step_mode != target_batch.mesh.vertex_layout.step_mode ||
-           source_batch.mesh.vertex_layout.attributes.len() != target_batch.mesh.vertex_layout.attributes.len() {
+        if source_batch.mesh.vertex_layout.array_stride
+            != target_batch.mesh.vertex_layout.array_stride
+            || source_batch.mesh.vertex_layout.step_mode
+                != target_batch.mesh.vertex_layout.step_mode
+            || source_batch.mesh.vertex_layout.attributes.len()
+                != target_batch.mesh.vertex_layout.attributes.len()
+        {
             // 把批次放回去
             self.batches.insert(*source_key, source_batch);
             self.batches.insert(*target_key, target_batch);
             return false; // 顶点布局不兼容，无法合并
         }
-        
+
         // 比较每个顶点属性
-        for (source_attr, target_attr) in source_batch.mesh.vertex_layout.attributes.iter()
-            .zip(target_batch.mesh.vertex_layout.attributes.iter()) {
-            if source_attr.format != target_attr.format ||
-               source_attr.shader_location != target_attr.shader_location {
+        for (source_attr, target_attr) in source_batch
+            .mesh
+            .vertex_layout
+            .attributes
+            .iter()
+            .zip(target_batch.mesh.vertex_layout.attributes.iter())
+        {
+            if source_attr.format != target_attr.format
+                || source_attr.shader_location != target_attr.shader_location
+            {
                 // 把批次放回去
                 self.batches.insert(*source_key, source_batch);
                 self.batches.insert(*target_key, target_batch);
                 return false; // 顶点属性不兼容，无法合并
             }
         }
-        
+
         // 创建一个新的批次，合并两个批次的实例
         let mut new_batch = InstanceBatch::new(
             source_batch.key,
             source_batch.mesh.clone(),
             source_batch.material_bind_group.clone(),
         );
-        
+
         // 添加源批次的实例
-        new_batch.instances.extend_from_slice(&source_batch.instances);
-        
+        new_batch
+            .instances
+            .extend_from_slice(&source_batch.instances);
+
         // 添加目标批次的实例
         // 注意：这里目标批次的实例将使用源批次的材质和网格
-        new_batch.instances.extend_from_slice(&target_batch.instances);
-        
+        new_batch
+            .instances
+            .extend_from_slice(&target_batch.instances);
+
         // 复制额外绑定组
         new_batch.extra_material_bind_groups = source_batch.extra_material_bind_groups.clone();
-        
+
         // 重新计算包围体
         new_batch.recompute_bounds();
-        
+
         // 生成新的批次键
         let new_key = BatchKey {
             mesh_id: source_batch.key.mesh_id,
@@ -1160,10 +1292,10 @@ impl BatchManager {
             depth_test: source_batch.key.depth_test,
             render_flags: source_batch.key.render_flags,
         };
-        
+
         // 添加新批次
         self.batches.insert(new_key, new_batch);
-        
+
         tracing::debug!(
             target: "render",
             "Cross-material merged batches {:?} and {:?} into batch {:?}",
@@ -1171,7 +1303,7 @@ impl BatchManager {
             target_batch.key,
             new_key
         );
-        
+
         true
     }
 
@@ -1321,17 +1453,24 @@ impl BatchManager {
     /// 获取可见批次迭代器（按渲染状态排序）
     pub fn visible_batches(&self) -> impl Iterator<Item = &InstanceBatch> {
         // 按渲染状态排序批次键，减少渲染状态切换
-        let mut sorted_keys: Vec<_> = self.visible_batch_keys
+        let mut sorted_keys: Vec<_> = self
+            .visible_batch_keys
             .iter()
-            .filter(|key| self.batches.get(key).map_or(false, |batch| !batch.instances.is_empty()))
+            .filter(|key| {
+                self.batches
+                    .get(key)
+                    .map_or(false, |batch| !batch.instances.is_empty())
+            })
             .cloned()
             .collect();
-        
+
         // 使用BatchKey的Ord实现进行排序
         sorted_keys.sort();
-        
+
         // 返回排序后的批次
-        sorted_keys.into_iter().filter_map(|key| self.batches.get(&key))
+        sorted_keys
+            .into_iter()
+            .filter_map(|key| self.batches.get(&key))
     }
 
     pub fn small_batches(&self) -> impl Iterator<Item = &InstanceBatch> {
@@ -1534,8 +1673,6 @@ pub fn batch_collection_system(
     mut batch_manager: ResMut<BatchManager>,
     query: Query<(&Mesh3DRenderer, &crate::ecs::Transform)>,
 ) {
-
-
     // 清空上一帧的实例
     batch_manager.clear_instances();
 

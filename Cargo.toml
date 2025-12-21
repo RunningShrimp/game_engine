@@ -1,24 +1,26 @@
 [workspace]
 members = [
-    ".",
     "game_engine",
-    "test_rapier_sync",
-    "test_physics_world_sync"
+    "game_engine_hardware",
+    "game_engine_performance",
+    "game_engine_profiling",
+    "game_engine_simd"
 ]
+
 resolver = "3"
 
 [workspace.dependencies]
 # Core dependencies
-wgpu = "27.0.1"
-winit = "0.31"
-bevy_ecs = "0.17.3"
-glam = { version = "0.30.9", features = ["bytemuck", "serde"] }
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.145"
+thiserror = "2.0"
+log = "0.4.29"
+tracing = "0.1.44"
+bevy_ecs = "0.17"
+glam = { version = "0.30", features = ["serde"] }
 tokio = { version = "1.48", features = ["full"] }
-
-# Common dependencies
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-log = "0.4"
 parking_lot = "0.12.5"
-crossbeam = "0.8"
-tracing = "0.1"
+wgpu = "27.0.1"
+futures = "0.3.31"
+flate2 = { version = "1.1.5", default-features = false, features = ["rust_backend"] }
+uuid = { version = "1.19", features = ["v4"] }

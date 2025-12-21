@@ -1,17 +1,25 @@
-//! 物理系统模块
-//!
-//! 提供物理模拟功能，基于富领域对象架构。
-//! 使用 `crate::domain::physics` 模块中的富领域对象。
+//  物理系统模块
+// 
+//  提供物理模拟功能，基于富领域对象架构。
+//  使用 `crate::domain::physics` 模块中的富领域对象。
 
 use crate::impl_default;
 
+pub mod collision_performance;
 pub mod dirty_tracker;
 pub mod joints;
 pub mod parallel;
 pub mod physics3d;
+pub mod spatial_partition;
 
+pub use collision_performance::{
+    CollisionPerformanceMonitor, CollisionPerformanceStats, CollisionProfiler,
+};
 pub use dirty_tracker::{
     BatchSyncData, CachedPhysicsState, PhysicsDirty, PhysicsSyncConfig, PhysicsSyncStats,
+};
+pub use spatial_partition::{
+    BVHTree, SpatialHash, SpatialPartitionManager, SpatialPartitionType,
 };
 
 #[cfg(feature = "physics_2d")]
@@ -118,7 +126,9 @@ pub struct ColliderDesc {
 }
 
 impl_default!(ColliderDesc {
-    shape_type: crate::domain::physics::ShapeType::Cuboid { half_extents: glam::Vec3::ONE * 0.5 },
+    shape_type: crate::domain::physics::ShapeType::Cuboid {
+        half_extents: glam::Vec3::ONE * 0.5
+    },
     half_extents: glam::Vec3::ONE * 0.5,
     radius: 0.5,
 });
@@ -139,7 +149,13 @@ pub fn init_physics_bodies(
         let body_id = RigidBodyId::new(entity.index() as u64);
 
         // 创建富领域对象刚体
-        let body = RigidBody::new(body_id, rb_desc.body_type, rb_desc.position, rb_desc.rotation, 1.0);
+        let body = RigidBody::with_all(
+            body_id,
+            rb_desc.body_type,
+            rb_desc.position,
+            rb_desc.rotation,
+            1.0,
+        );
 
         // 添加到物理世界
         if let Err(e) = physics_service.create_body(body) {
@@ -155,8 +171,12 @@ pub fn init_physics_bodies(
                 crate::domain::physics::ShapeType::Cuboid { half_extents: _ } => {
                     Collider::cuboid(collider_id, cd.half_extents)
                 }
-                crate::domain::physics::ShapeType::Ball { radius: _ } => Collider::ball(collider_id, cd.radius),
-                crate::domain::physics::ShapeType::Sphere { radius } => Collider::ball(collider_id, radius),
+                crate::domain::physics::ShapeType::Ball { radius: _ } => {
+                    Collider::ball(collider_id, cd.radius)
+                }
+                crate::domain::physics::ShapeType::Sphere { radius } => {
+                    Collider::ball(collider_id, radius)
+                }
                 crate::domain::physics::ShapeType::Capsule { radius, height } => {
                     // 使用胶囊体的高度和半径创建一个近似的球体碰撞体
                     Collider::ball(collider_id, (radius + height / 2.0) / 2.0)
@@ -171,7 +191,10 @@ pub fn init_physics_bodies(
                     // 对于凸多边形，使用包围球近似
                     Collider::ball(collider_id, cd.radius.max(0.5))
                 }
-                crate::domain::physics::ShapeType::TriMesh { vertices: _, indices: _ } => {
+                crate::domain::physics::ShapeType::TriMesh {
+                    vertices: _,
+                    indices: _,
+                } => {
                     // 对于三角网格，使用包围球近似
                     Collider::ball(collider_id, cd.radius.max(0.5))
                 }
@@ -197,7 +220,6 @@ pub use init_physics_bodies as init_physics_bodies_v2;
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::domain::{PhysicsDomainService, RigidBody, RigidBodyId, RigidBodyType};
     use glam::Vec3;
 

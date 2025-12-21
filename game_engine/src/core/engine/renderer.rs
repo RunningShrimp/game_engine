@@ -1,16 +1,17 @@
-//! 渲染模块
-//!
-//! 负责游戏引擎的渲染逻辑，包括：
-//! - 场景渲染
-//! - 光照处理
-//! - 相机管理
-//! - 渲染统计更新
-//! - 性能监控
+//  渲染模块
+// 
+//  负责游戏引擎的渲染逻辑，包括：
+//  - 场景渲染
+//  - 光照处理
+//  - 相机管理
+//  - 渲染统计更新
+//  - 性能监控
 
-use crate::services::render::RenderService;
-use crate::ecs::{PointLight, Transform, Camera, Projection};
+use crate::ecs::{Camera, PointLight, Projection, Transform};
 use crate::platform::winit::WinitWindow;
+use crate::platform::run_sync;
 use crate::render::wgpu_utils::{GpuPointLight, WgpuRenderer};
+use crate::services::render::RenderService;
 use bevy_ecs::prelude::*;
 use glam::Mat4;
 
@@ -43,12 +44,16 @@ pub fn render(
     render_cache: &mut crate::render::graph::RenderCache,
     window: &WinitWindow,
 ) {
-    let _span = tracing::info_span!(target: "render", "frame").entered();
+    let _frame_span = crate::performance::tracing_metrics::TracingMetricsManager::frame_span(
+        world.entities().len() as usize,
+        window.raw().scale_factor() as f64
+    ).entered();
 
     // Editor UI
     editor_ctx.begin_frame(window.raw());
-    crate::editor::inspect_world_ui(&editor_ctx.context, world);
-    let (egui_shapes, egui_renderer) = editor_ctx.end_frame(window.raw());
+    // TODO: 实现世界检查UI
+    // crate::editor::inspect_world_ui(&editor_ctx.context, world);
+    let egui_primitives = editor_ctx.end_frame(window.raw());
     let pixels_per_point = window.raw().scale_factor() as f32;
 
     // Render with frustum culling
@@ -76,8 +81,8 @@ pub fn render(
         &scene,
         view_proj,
         camera_pos,
-        Some(egui_renderer),
-        &egui_shapes,
+        None, // TODO: Implement proper egui renderer
+        &egui_primitives,
         pixels_per_point,
     );
 
@@ -128,11 +133,11 @@ fn extract_lights(world: &mut World) -> Vec<GpuPointLight> {
 /// # 返回
 ///
 /// (视图-投影矩阵, 相机位置)
-fn setup_camera(world: &mut World, renderer: &WgpuRenderer) -> ([f32; 16], [f32; 3]) {
+fn setup_camera(world: &mut World, renderer: &WgpuRenderer) -> ([[f32; 4]; 4], [f32; 3]) {
     let mut view_proj = glam::Mat4::IDENTITY.to_cols_array_2d();
     let mut camera_pos = [0.0; 3];
     let mut query_cam = world.query::<(&Transform, &Camera)>();
-    
+
     for (t, c) in query_cam.iter(world) {
         if c.is_active {
             camera_pos = t.pos.to_array();
@@ -142,7 +147,7 @@ fn setup_camera(world: &mut World, renderer: &WgpuRenderer) -> ([f32; 16], [f32;
             break;
         }
     }
-    
+
     (view_proj, camera_pos)
 }
 
@@ -162,14 +167,7 @@ fn calculate_projection_matrix(camera: &Camera, renderer: &WgpuRenderer) -> Mat4
     match camera.projection {
         Projection::Orthographic { scale, near, far } => {
             let aspect = renderer.config().width as f32 / renderer.config().height as f32;
-            glam::Mat4::orthographic_rh(
-                -aspect * scale,
-                aspect * scale,
-                -scale,
-                scale,
-                near,
-                far,
-            )
+            glam::Mat4::orthographic_rh(-aspect * scale, aspect * scale, -scale, scale, near, far)
         }
         Projection::Perspective {
             fov,
@@ -200,12 +198,18 @@ fn render_pbr_scene(
     renderer: &mut WgpuRenderer,
     render_service: &mut RenderService,
     scene: &crate::services::render::PbrScene,
-    view_proj: [f32; 16],
+    view_proj: [[f32; 4]; 4],
     camera_pos: [f32; 3],
-    egui_renderer: Option<egui_wgpu::Renderer>,
-    egui_shapes: &[egui::ClippedPrimitive],
+    _egui_renderer: Option<egui_wgpu::Renderer>,
+    egui_primitives: &[egui::ClippedPrimitive],
     pixels_per_point: f32,
 ) {
+    let batch_count = world.get_resource::<crate::render::instance_batch::BatchManager>()
+        .map(|bm| bm.stats.total_batches).unwrap_or(0);
+    let _render_span = crate::performance::tracing_metrics::TracingMetricsManager::render_submit_span(
+        batch_count as usize,
+        egui_primitives.len()
+    ).entered();
     if let Some(mut bm) = world.get_resource_mut::<crate::render::instance_batch::BatchManager>() {
         renderer.upload_batches(&mut bm);
         if let Err(e) = render_service.paint_pbr(
@@ -214,8 +218,8 @@ fn render_pbr_scene(
             scene,
             view_proj,
             camera_pos,
-            egui_renderer,
-            egui_shapes,
+            None, // TODO: Implement proper egui renderer
+            egui_primitives,
             pixels_per_point,
         ) {
             tracing::warn!(target: "render", "Render error: {}", e);
@@ -240,20 +244,14 @@ fn update_materials(world: &mut World, renderer: &mut WgpuRenderer) {
     } else {
         Vec::new()
     };
-    
+
     if !updates.is_empty() {
         if let Some(mut reg) =
             world.get_resource_mut::<crate::resources::manager::MaterialRegistry>()
         {
             if let Some(ref pbr) = renderer.pbr_renderer {
                 for (id, mat) in updates {
-                    reg.update_material_params(
-                        renderer.device(),
-                        renderer.queue(),
-                        pbr,
-                        id,
-                        &mat,
-                    );
+                    reg.update_material_params(renderer.device(), renderer.queue(), pbr, id, &mat);
                 }
             }
         }
@@ -290,20 +288,20 @@ fn update_render_stats(
             stats.gpu_pass_ms = Some(dt);
         }
     }
-    
+
     // Update draw call and instance statistics
     let (dc, ic) = renderer.draw_stats();
     let bm_stats = world
         .get_resource::<crate::render::instance_batch::BatchManager>()
         .map(|bm| bm.stats);
-    
+
     if let Some(mut stats) = world.get_resource_mut::<RenderStats>() {
         stats.draw_calls = dc;
         stats.instances = ic;
         stats.passes = renderer.pass_count();
         stats.culled_objects = culled;
         stats.total_objects = total;
-        
+
         if let Some(bms) = bm_stats {
             stats.batch_total = bms.total_batches;
             stats.batch_instances = bms.total_instances;
@@ -311,7 +309,7 @@ fn update_render_stats(
             stats.batch_small_draw_calls = bms.small_draw_calls;
             stats.batch_visible_batches = bms.visible_batches;
         }
-        
+
         // Update timing statistics
         let (upload, main, ui) = renderer.stage_timings_ms();
         stats.upload_ms = upload;
@@ -342,7 +340,7 @@ fn check_performance_warnings(stats: &mut RenderStats) {
             tracing::warn!(target: "render_perf", "Upload time too high: {:.2}ms", u);
         }
     }
-    
+
     // Main render time warning
     if let Some(m) = stats.main_ms {
         if m > 16.7 {
@@ -350,7 +348,7 @@ fn check_performance_warnings(stats: &mut RenderStats) {
             tracing::warn!(target: "render_perf", "Main render time too high: {:.2}ms", m);
         }
     }
-    
+
     // UI render time warning
     if let Some(u) = stats.ui_ms {
         if u > 4.0 {
@@ -358,7 +356,7 @@ fn check_performance_warnings(stats: &mut RenderStats) {
             tracing::warn!(target: "render_perf", "UI render time too high: {:.2}ms", u);
         }
     }
-    
+
     // Offscreen render time warning
     if let Some(o) = stats.offscreen_ms {
         if o > 8.0 {
@@ -379,16 +377,6 @@ fn check_performance_warnings(stats: &mut RenderStats) {
 fn write_render_stats_csv(stats: &RenderStats, window: &WinitWindow) {
     let path = std::env::temp_dir().join("render_stats.csv");
     let _ = (|| {
-        let mut f = tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current().block_on(async {
-                tokio::fs::OpenOptions::new()
-                    .create(true)
-                    .append(true)
-                    .open(&path).await
-                    .ok()
-            })
-        })?;
-        
         let line = format!(
             "{},{},{},{},{},{},{},{},{},{},{},{},{}\n",
             stats.draw_calls,
@@ -398,21 +386,30 @@ fn write_render_stats_csv(stats: &RenderStats, window: &WinitWindow) {
             stats.main_ms.unwrap_or(0.0),
             stats.ui_ms.unwrap_or(0.0),
             stats.offscreen_ms.unwrap_or(0.0),
-            window.scale_factor(),
+            window.raw().scale_factor(),
             stats.batch_total,
             stats.batch_instances,
             stats.batch_saved_draw_calls,
             stats.batch_small_draw_calls,
             stats.batch_visible_batches
         );
-        
-        use tokio::io::AsyncWriteExt;
-        let _ = tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current().block_on(async {
-                f.write_all(line.as_bytes()).await
-            })
+
+        let path_clone = path.clone();
+        let line_clone = line.clone();
+        let _ = run_sync(async move {
+            use tokio::io::AsyncWriteExt;
+            if let Ok(mut f) = tokio::fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(&path_clone)
+                .await
+            {
+                f.write_all(line_clone.as_bytes()).await.ok()
+            } else {
+                None
+            }
         });
-        
+
         Some(())
     })();
 }
@@ -435,7 +432,7 @@ pub fn get_render_info(world: &World, renderer: &WgpuRenderer) -> String {
     let bm_stats = world
         .get_resource::<crate::render::instance_batch::BatchManager>()
         .map(|bm| bm.stats);
-    
+
     format!(
         "Draw Calls: {}, Instances: {}, Passes: {}, Batches: {}",
         dc,

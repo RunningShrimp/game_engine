@@ -1,9 +1,9 @@
-//! 着色器缓存辅助函数
-//!
-//! 提供便捷的着色器创建函数，自动集成缓存和异步编译功能。
+//  着色器缓存辅助函数
+// 
+//  提供便捷的着色器创建函数，自动集成缓存和异步编译功能。
 
-use crate::core::error::RenderError;
-use crate::render::shader_async::{wait_for_compile, AsyncShaderCompiler, ShaderCompilePriority};
+use crate::error::RenderError;
+use crate::render::shader_async::{AsyncShaderCompiler, ShaderCompilePriority, wait_for_compile};
 use crate::render::shader_cache::{ShaderCache, ShaderCacheKey};
 
 /// 创建带缓存的着色器模块
@@ -78,13 +78,20 @@ pub async fn create_shader_module_async(
     let rx = compiler
         .compile_async(label, source, "", priority)
         .map_err(|e| {
-            RenderError::InvalidState(format!("Failed to submit compile request: {}", e))
+            RenderError::InvalidState {
+                message: format!("Failed to submit compile request: {}", e),
+                severity: crate::error::ErrorSeverity::Error
+            }
         })?;
 
     // 等待编译完成
     let compiled = wait_for_compile(rx)
         .await
-        .map_err(|e| RenderError::ShaderCompilation(e.to_string()))?;
+        .map_err(|e| RenderError::ShaderCompilation {
+            shader: "unknown".to_string(),
+            message: e.to_string(),
+            severity: crate::error::ErrorSeverity::Error
+        })?;
 
     // 在主线程创建着色器模块（wgpu要求在主线程）
     // 注意：实际的wgpu编译仍然需要在主线程进行
@@ -106,7 +113,10 @@ pub async fn compile_shaders_async(
         let rx = compiler
             .compile_async(label, source, "", priority)
             .map_err(|e| {
-                RenderError::InvalidState(format!("Failed to submit compile request: {}", e))
+                RenderError::InvalidState {
+                message: format!("Failed to submit compile request: {}", e),
+                severity: crate::error::ErrorSeverity::Error
+            }
             })?;
         receivers.push((label, source, rx));
     }
@@ -118,12 +128,17 @@ pub async fn compile_shaders_async(
             Ok(_compiled) => {
                 // 注意：实际的wgpu::ShaderModule创建需要在主线程
                 // 这里返回错误提示需要在主线程创建
-                results.push(Err(RenderError::InvalidState(
-                    "Shader module creation must be done on main thread".to_string(),
-                )));
+                results.push(Err(RenderError::InvalidState {
+                    message: "Shader module creation must be done on main thread".to_string(),
+                    severity: crate::error::ErrorSeverity::Error,
+                }));
             }
             Err(e) => {
-                results.push(Err(RenderError::ShaderCompilation(e.to_string())));
+                results.push(Err(RenderError::ShaderCompilation {
+                    shader: "unknown".to_string(),
+                    message: e.to_string(),
+                    severity: crate::error::ErrorSeverity::Error
+                }));
             }
         }
     }

@@ -1,6 +1,6 @@
-//! 全局异步运行时
-//!
-//! 提供统一的Tokio运行时，避免每个模块创建独立运行时
+//  全局异步运行时
+// 
+//  提供统一的Tokio运行时，避免每个模块创建独立运行时
 
 use std::sync::OnceLock;
 use tokio::runtime::Runtime;
@@ -31,9 +31,14 @@ where
     global_runtime().spawn(future)
 }
 
+use crate::platform::run_sync;
+
 /// 阻塞执行异步任务（仅在无法避免阻塞时使用）
-pub fn block_on<F: std::future::Future>(future: F) -> F::Output {
-    global_runtime().block_on(future)
+pub fn block_on<F: std::future::Future + Send + 'static>(future: F) -> F::Output 
+where
+    F::Output: Send,
+{
+    run_sync(future)
 }
 
 #[cfg(test)]
@@ -55,7 +60,7 @@ mod tests {
             42
         });
 
-        let result = block_on(handle).unwrap();
+        let result = run_sync(handle).unwrap();
         assert_eq!(result, 42);
     }
 }

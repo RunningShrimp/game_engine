@@ -1,10 +1,10 @@
-//! WGPU GPU 计算集成
-//!
-//! 集成 WGPU 和 GPU 计算能力
-//! - 计算管道管理
-//! - WGSL 着色器编译
-//! - GPU 资源管理
-//! - 性能监控
+//  WGPU GPU 计算集成
+// 
+//  集成 WGPU 和 GPU 计算能力
+//  - 计算管道管理
+//  - WGSL 着色器编译
+//  - GPU 资源管理
+//  - 性能监控
 
 use crate::impl_default;
 use std::collections::HashMap;

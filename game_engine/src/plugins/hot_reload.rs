@@ -1,6 +1,6 @@
-//! 插件热加载系统
-//!
-//! 支持运行时动态加载和卸载插件，无需重启引擎
+//  插件热加载系统
+// 
+//  支持运行时动态加载和卸载插件，无需重启引擎
 
 use super::{EnginePlugin, PluginRegistry, PluginError, PluginResult};
 use std::path::{Path, PathBuf};
@@ -9,6 +9,7 @@ use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, Duration};
 use notify::{Watcher, RecursiveMode, Event, EventKind};
 use thiserror::Error;
+use crate::platform::run_sync;
 
 #[cfg(unix)]
 use libloading::{Library, Symbol};
@@ -63,11 +64,9 @@ impl HotReloadManager {
         let plugin_dir = plugin_directory.into();
         
         // 确保目录存在
-        tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current().block_on(async {
-                tokio::fs::create_dir_all(&plugin_dir).await
-                    .map_err(|e| HotReloadError::FileSystemError(e.to_string()))
-            })
+        run_sync(async {
+            tokio::fs::create_dir_all(&plugin_dir).await
+                .map_err(|e| HotReloadError::FileSystemError(e.to_string()))
         })?;
         
         let pending_reloads = Arc::new(Mutex::new(Vec::new()));
@@ -116,11 +115,10 @@ impl HotReloadManager {
         }
         
         // 获取文件修改时间
-        let metadata = tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current().block_on(async {
-                tokio::fs::metadata(plugin_path).await
-            })
-        }).map_err(|e| HotReloadError::FileSystemError(e.to_string()))?;
+        let metadata = run_sync(async {
+            tokio::fs::metadata(plugin_path).await
+                .map_err(|e| HotReloadError::FileSystemError(e.to_string()))
+        })?;
         let last_modified = metadata.modified()
             .map_err(|e| HotReloadError::FileSystemError(e.to_string()))?;
         
@@ -222,11 +220,10 @@ impl HotReloadManager {
         for plugin_name in pending {
             // 检查文件是否真的被修改
             if let Some(handle) = self.dynamic_plugins.get(&plugin_name) {
-                let metadata = tokio::task::block_in_place(|| {
-                    tokio::runtime::Handle::current().block_on(async {
-                        tokio::fs::metadata(&handle.path).await
-                    })
-                }).map_err(|e| HotReloadError::FileSystemError(e.to_string()))?;
+                let metadata = run_sync(async {
+                    tokio::fs::metadata(&handle.path).await
+                        .map_err(|e| HotReloadError::FileSystemError(e.to_string()))
+                })?;
                 
                 if let Ok(modified) = metadata.modified() {
                     if modified > handle.last_modified {
@@ -250,20 +247,18 @@ impl HotReloadManager {
             return Ok(loaded);
         }
         
-        let entries = tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current().block_on(async {
-                let mut entries = Vec::new();
-                let mut dir = tokio::fs::read_dir(&self.plugin_directory).await
-                    .map_err(|e| HotReloadError::FileSystemError(e.to_string()))?;
-                
-                while let Some(entry) = dir.next_entry().await
-                    .map_err(|e| HotReloadError::FileSystemError(e.to_string()))? {
-                    entries.push(entry);
-                }
-                
-                Ok::<Vec<_>, HotReloadError>(entries)
-            })
-        }).map_err(|e| HotReloadError::FileSystemError(e.to_string()))?;
+        let entries = run_sync(async {
+            let mut entries = Vec::new();
+            let mut dir = tokio::fs::read_dir(&self.plugin_directory).await
+                .map_err(|e| HotReloadError::FileSystemError(e.to_string()))?;
+            
+            while let Some(entry) = dir.next_entry().await
+                .map_err(|e| HotReloadError::FileSystemError(e.to_string()))? {
+                entries.push(entry);
+            }
+            
+            Ok::<Vec<_>, HotReloadError>(entries)
+        })?;
         
         for entry in entries {
             let entry = entry.map_err(|e| HotReloadError::FileSystemError(e.to_string()))?;
@@ -305,6 +300,33 @@ impl Drop for HotReloadManager {
     fn drop(&mut self) {
         // 清理所有动态加载的插件
         self.dynamic_plugins.clear();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::env;
+
+    #[test]
+    fn test_new_creates_plugin_directory() {
+        let temp = env::temp_dir().join("test_hot_reload_plugins");
+        let _ = std::fs::remove_dir_all(&temp);
+        let mgr = HotReloadManager::new(temp.clone());
+        assert!(mgr.is_ok());
+        assert!(temp.exists());
+        let _ = std::fs::remove_dir_all(temp);
+    }
+
+    #[test]
+    fn test_scan_and_load_empty_returns_empty() {
+        let temp = env::temp_dir().join("test_hot_reload_scan");
+        let _ = std::fs::remove_dir_all(&temp);
+        let mut mgr = HotReloadManager::new(temp.clone()).unwrap();
+        let mut registry = PluginRegistry::new();
+        let loaded = mgr.scan_and_load(&mut registry).unwrap();
+        assert!(loaded.is_empty());
+        let _ = std::fs::remove_dir_all(temp);
     }
 }
 

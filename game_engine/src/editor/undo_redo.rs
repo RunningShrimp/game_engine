@@ -1,30 +1,29 @@
-//! 撤销/重做系统
-//!
-//! 提供编辑器操作的撤销和重做功能，基于命令模式实现。
-//!
-//! # 架构设计
-//!
-//! - `Command` trait: 定义可撤销操作的接口
-//! - `CommandManager`: 管理命令历史和执行
-//! - `CompositeCommand`: 组合多个命令为一个原子操作
-//! - `PropertyChange`: 通用属性变更命令
-//!
-//! # 示例
-//!
-//! ```ignore
-//! // 创建命令管理器
-//! let mut manager = CommandManager::new(100);
-//!
-//! // 执行命令
-//! manager.execute(Box::new(SetPositionCommand::new(entity, old_pos, new_pos)));
-//!
-//! // 撤销
-//! manager.undo();
-//!
-//! // 重做
-//! manager.redo();
-//! ```
-
+//  撤销/重做系统
+// 
+//  提供编辑器操作的撤销和重做功能，基于命令模式实现。
+// 
+//  # 架构设计
+// 
+//  - `Command` trait: 定义可撤销操作的接口
+//  - `CommandManager`: 管理命令历史和执行
+//  - `CompositeCommand`: 组合多个命令为一个原子操作
+//  - `PropertyChange`: 通用属性变更命令
+// 
+//  # 示例
+// 
+//  ```ignore
+//  // 创建命令管理器
+//  let mut manager = CommandManager::new(100);
+// 
+//  // 执行命令
+//  manager.execute(Box::new(SetPositionCommand::new(entity, old_pos, new_pos)));
+// 
+//  // 撤销
+//  manager.undo();
+// 
+//  // 重做
+//  manager.redo();
+//  ```
 
 use std::any::Any;
 use std::collections::VecDeque;
@@ -32,7 +31,7 @@ use std::fmt;
 use thiserror::Error;
 
 /// 命令 trait - 定义可撤销操作的接口
-pub trait Command: fmt::Debug + Send {
+pub trait Command: fmt::Debug + Send + Sync {
     /// 执行命令
     fn execute(&mut self, context: &mut dyn Any) -> Result<(), CommandError>;
 
@@ -92,7 +91,7 @@ pub struct CommandManager {
     /// 上次命令时间戳
     last_command_time: std::time::Instant,
     /// 变更监听器
-    change_listeners: Vec<Box<dyn Fn(&dyn Command, bool) + Send>>,
+    change_listeners: Vec<Box<dyn Fn(&dyn Command, bool) + Send + Sync>>,
 }
 
 impl CommandManager {
@@ -117,7 +116,7 @@ impl CommandManager {
     /// 添加变更监听器
     pub fn add_listener<F>(&mut self, listener: F)
     where
-        F: Fn(&dyn Command, bool) + Send + 'static,
+        F: Fn(&dyn Command, bool) + Send + Sync + 'static,
     {
         self.change_listeners.push(Box::new(listener));
     }
@@ -332,7 +331,6 @@ impl Default for CommandManager {
     }
 }
 
-
 // ============================================================================
 // 组合命令
 // ============================================================================
@@ -410,7 +408,7 @@ pub struct PropertyChangeCommand<T: Clone + Send + fmt::Debug + 'static> {
     /// 描述
     description: String,
     /// 应用函数
-    apply_fn: Box<dyn Fn(&mut dyn Any, u64, &T) -> Result<(), String> + Send>,
+    apply_fn: Box<dyn Fn(&mut dyn Any, u64, &T) -> Result<(), String> + Send + Sync>,
 }
 
 impl<T: Clone + Send + fmt::Debug + 'static> PropertyChangeCommand<T> {
@@ -423,7 +421,7 @@ impl<T: Clone + Send + fmt::Debug + 'static> PropertyChangeCommand<T> {
         apply_fn: F,
     ) -> Self
     where
-        F: Fn(&mut dyn Any, u64, &T) -> Result<(), String> + Send + 'static,
+        F: Fn(&mut dyn Any, u64, &T) -> Result<(), String> + Send + Sync + 'static,
     {
         Self {
             target_id,
@@ -446,7 +444,7 @@ impl<T: Clone + Send + fmt::Debug + 'static> fmt::Debug for PropertyChangeComman
     }
 }
 
-impl<T: Clone + Send + fmt::Debug + 'static> Command for PropertyChangeCommand<T> {
+impl<T: Clone + Send + Sync + fmt::Debug + 'static> Command for PropertyChangeCommand<T> {
     fn execute(&mut self, context: &mut dyn Any) -> Result<(), CommandError> {
         (self.apply_fn)(context, self.target_id, &self.new_value)
             .map_err(|e| CommandError::ExecutionFailed(e))
@@ -633,5 +631,15 @@ mod tests {
 
         // 撤销组合命令
         composite.undo(&mut context).unwrap();
+    }
+}
+
+impl fmt::Debug for CommandManager {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("CommandManager")
+            .field("undo_stack_len", &self.undo_stack.len())
+            .field("redo_stack_len", &self.redo_stack.len())
+            .field("change_listeners_count", &self.change_listeners.len())
+            .finish()
     }
 }

@@ -1,6 +1,6 @@
-//! XR插件
-//!
-//! 提供VR/AR功能扩展，支持OpenXR标准。
+//  XR插件
+// 
+//  提供VR/AR功能扩展，支持OpenXR标准。
 
 use crate::impl_default;
 use crate::plugins::{EnginePlugin, App, PluginVersion, PluginDependency};

@@ -1,6 +1,6 @@
-//! 场景管理器插件
-//!
-//! 提供场景管理功能，支持场景加载、保存、切换等。
+//  场景管理器插件
+// 
+//  提供场景管理功能，支持场景加载、保存、切换等。
 
 use crate::impl_default;
 use crate::plugins::{EnginePlugin, App, PluginVersion, PluginDependency};

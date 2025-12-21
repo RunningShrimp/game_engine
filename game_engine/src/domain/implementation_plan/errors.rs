@@ -1,4 +1,4 @@
-//! 实施计划领域特定错误类型
+//  实施计划领域特定错误类型
 
 use thiserror::Error;
 
@@ -98,59 +98,125 @@ mod tests {
     fn test_implementation_plan_error_from_task_error() {
         let task_error = TaskError::TaskNotFound("test".to_string());
         let impl_error: ImplementationPlanError = task_error.into();
-        assert!(matches!(impl_error, ImplementationPlanError::Task(TaskError::TaskNotFound(_))));
+        assert!(matches!(
+            impl_error,
+            ImplementationPlanError::Task(TaskError::TaskNotFound(_))
+        ));
     }
 
     #[test]
     fn test_implementation_plan_error_from_milestone_error() {
         let milestone_error = MilestoneError::MilestoneNotFound("test".to_string());
         let impl_error: ImplementationPlanError = milestone_error.into();
-        assert!(matches!(impl_error, ImplementationPlanError::Milestone(MilestoneError::MilestoneNotFound(_))));
+        assert!(matches!(
+            impl_error,
+            ImplementationPlanError::Milestone(MilestoneError::MilestoneNotFound(_))
+        ));
     }
 
     #[test]
     fn test_implementation_plan_error_from_risk_error() {
         let risk_error = RiskError::RiskNotFound("test".to_string());
         let impl_error: ImplementationPlanError = risk_error.into();
-        assert!(matches!(impl_error, ImplementationPlanError::Risk(RiskError::RiskNotFound(_))));
+        assert!(matches!(
+            impl_error,
+            ImplementationPlanError::Risk(RiskError::RiskNotFound(_))
+        ));
     }
 
     #[test]
     fn test_implementation_plan_error_from_report_error() {
         let report_error = ReportError::GenerationFailed("test".to_string());
         let impl_error: ImplementationPlanError = report_error.into();
-        assert!(matches!(impl_error, ImplementationPlanError::Report(ReportError::GenerationFailed(_))));
+        assert!(matches!(
+            impl_error,
+            ImplementationPlanError::Report(ReportError::GenerationFailed(_))
+        ));
     }
 
     #[test]
     fn test_task_error_variants() {
-        assert!(matches!(TaskError::TaskNotFound("test".to_string()), TaskError::TaskNotFound(_)));
-        assert!(matches!(TaskError::InvalidStatusTransition { from: "todo".to_string(), to: "done".to_string() }, TaskError::InvalidStatusTransition { .. }));
-        assert!(matches!(TaskError::TaskAlreadyExists("test".to_string()), TaskError::TaskAlreadyExists(_)));
-        assert!(matches!(TaskError::InvalidParameter("test".to_string()), TaskError::InvalidParameter(_)));
-        assert!(matches!(TaskError::DependencyCycle, TaskError::DependencyCycle));
+        assert!(matches!(
+            TaskError::TaskNotFound("test".to_string()),
+            TaskError::TaskNotFound(_)
+        ));
+        assert!(matches!(
+            TaskError::InvalidStatusTransition {
+                from: "todo".to_string(),
+                to: "done".to_string()
+            },
+            TaskError::InvalidStatusTransition { .. }
+        ));
+        assert!(matches!(
+            TaskError::TaskAlreadyExists("test".to_string()),
+            TaskError::TaskAlreadyExists(_)
+        ));
+        assert!(matches!(
+            TaskError::InvalidParameter("test".to_string()),
+            TaskError::InvalidParameter(_)
+        ));
+        assert!(matches!(
+            TaskError::DependencyCycle,
+            TaskError::DependencyCycle
+        ));
     }
 
     #[test]
     fn test_milestone_error_variants() {
-        assert!(matches!(MilestoneError::MilestoneNotFound("test".to_string()), MilestoneError::MilestoneNotFound(_)));
-        assert!(matches!(MilestoneError::MilestoneAlreadyExists("test".to_string()), MilestoneError::MilestoneAlreadyExists(_)));
-        assert!(matches!(MilestoneError::InvalidParameter("test".to_string()), MilestoneError::InvalidParameter(_)));
-        assert!(matches!(MilestoneError::TaskDependencyConflict("test".to_string()), MilestoneError::TaskDependencyConflict(_)));
+        assert!(matches!(
+            MilestoneError::MilestoneNotFound("test".to_string()),
+            MilestoneError::MilestoneNotFound(_)
+        ));
+        assert!(matches!(
+            MilestoneError::MilestoneAlreadyExists("test".to_string()),
+            MilestoneError::MilestoneAlreadyExists(_)
+        ));
+        assert!(matches!(
+            MilestoneError::InvalidParameter("test".to_string()),
+            MilestoneError::InvalidParameter(_)
+        ));
+        assert!(matches!(
+            MilestoneError::TaskDependencyConflict("test".to_string()),
+            MilestoneError::TaskDependencyConflict(_)
+        ));
     }
 
     #[test]
     fn test_risk_error_variants() {
-        assert!(matches!(RiskError::RiskNotFound("test".to_string()), RiskError::RiskNotFound(_)));
-        assert!(matches!(RiskError::RiskAlreadyExists("test".to_string()), RiskError::RiskAlreadyExists(_)));
-        assert!(matches!(RiskError::InvalidParameter("test".to_string()), RiskError::InvalidParameter(_)));
-        assert!(matches!(RiskError::InvalidStatusTransition { from: "identified".to_string(), to: "mitigated".to_string() }, RiskError::InvalidStatusTransition { .. }));
+        assert!(matches!(
+            RiskError::RiskNotFound("test".to_string()),
+            RiskError::RiskNotFound(_)
+        ));
+        assert!(matches!(
+            RiskError::RiskAlreadyExists("test".to_string()),
+            RiskError::RiskAlreadyExists(_)
+        ));
+        assert!(matches!(
+            RiskError::InvalidParameter("test".to_string()),
+            RiskError::InvalidParameter(_)
+        ));
+        assert!(matches!(
+            RiskError::InvalidStatusTransition {
+                from: "identified".to_string(),
+                to: "mitigated".to_string()
+            },
+            RiskError::InvalidStatusTransition { .. }
+        ));
     }
 
     #[test]
     fn test_report_error_variants() {
-        assert!(matches!(ReportError::GenerationFailed("test".to_string()), ReportError::GenerationFailed(_)));
-        assert!(matches!(ReportError::InsufficientData("test".to_string()), ReportError::InsufficientData(_)));
-        assert!(matches!(ReportError::InvalidParameter("test".to_string()), ReportError::InvalidParameter(_)));
+        assert!(matches!(
+            ReportError::GenerationFailed("test".to_string()),
+            ReportError::GenerationFailed(_)
+        ));
+        assert!(matches!(
+            ReportError::InsufficientData("test".to_string()),
+            ReportError::InsufficientData(_)
+        ));
+        assert!(matches!(
+            ReportError::InvalidParameter("test".to_string()),
+            ReportError::InvalidParameter(_)
+        ));
     }
 }

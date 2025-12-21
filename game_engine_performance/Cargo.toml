@@ -9,11 +9,16 @@ description = "Unified performance analysis module for the game engine"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.145"
 wgpu = { workspace = true }
+crossbeam-channel = "0.5.15"
 crossbeam = "0.8"
 log = "0.4.29"
 num-traits = "0.2"
-tracing = "0.1.43"
+tracing = "0.1.44"
 glam = { workspace = true, features = ["bytemuck", "serde"] }
+thiserror = "2.0"
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["full"] }
+
+# Dev dependency on workspace crate to make doc tests and examples resolve the engine types
+game_engine = { path = "../game_engine", package = "game_engine" }

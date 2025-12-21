@@ -1,17 +1,17 @@
-//! 间接绘制模块
-//!
-//! 实现优化的 GPU 间接绘制支持。
-//!
-//! ## 性能优化
-//!
-//! - **缓冲区复用**：复用缓冲区，避免每帧重建
-//! - **批量更新**：使用批量更新减少CPU开销
-//! - **内存对齐**：优化缓冲区布局，提高GPU内存访问效率
-//! - **多绘制支持**：使用 `MULTI_DRAW_INDIRECT` 减少绘制调用开销
-//!
-//! ## 错误处理
-//!
-//! 所有操作都包含完善的错误处理，确保在资源不足或无效参数时能够优雅降级。
+//  间接绘制模块
+// 
+//  实现优化的 GPU 间接绘制支持。
+// 
+//  ## 性能优化
+// 
+//  - **缓冲区复用**：复用缓冲区，避免每帧重建
+//  - **批量更新**：使用批量更新减少CPU开销
+//  - **内存对齐**：优化缓冲区布局，提高GPU内存访问效率
+//  - **多绘制支持**：使用 `MULTI_DRAW_INDIRECT` 减少绘制调用开销
+// 
+//  ## 错误处理
+// 
+//  所有操作都包含完善的错误处理，确保在资源不足或无效参数时能够优雅降级。
 
 use thiserror::Error;
 
@@ -33,6 +33,9 @@ pub enum IndirectDrawError {
     /// 缓冲区更新失败
     #[error("Failed to update buffer: {0}")]
     BufferUpdateFailed(String),
+    /// 设备不可用
+    #[error("Device not available for buffer operations")]
+    DeviceNotAvailable,
 }
 
 /// 间接绘制参数
@@ -193,19 +196,23 @@ impl IndirectDrawBuffer {
     /// # 错误
     ///
     /// 如果参数数量超过缓冲区容量，返回错误。
-    pub fn update(&self, queue: &wgpu::Queue, args: &[DrawIndirectArgs]) -> Result<(), IndirectDrawError> {
+    pub fn update(
+        &self,
+        queue: &wgpu::Queue,
+        args: &[DrawIndirectArgs],
+    ) -> Result<(), IndirectDrawError> {
         if args.len() > self.max_draws as usize {
             return Err(IndirectDrawError::InsufficientCapacity {
                 required: args.len() as u32,
                 available: self.max_draws,
             });
         }
-        
+
         if !args.is_empty() {
             let data = bytemuck::cast_slice(args);
             queue.write_buffer(&self.buffer, 0, data);
         }
-        
+
         Ok(())
     }
 
@@ -219,19 +226,23 @@ impl IndirectDrawBuffer {
     /// # 错误
     ///
     /// 如果参数数量超过缓冲区容量，返回错误。
-    pub fn update_indexed(&self, queue: &wgpu::Queue, args: &[DrawIndexedIndirectArgs]) -> Result<(), IndirectDrawError> {
+    pub fn update_indexed(
+        &self,
+        queue: &wgpu::Queue,
+        args: &[DrawIndexedIndirectArgs],
+    ) -> Result<(), IndirectDrawError> {
         if args.len() > self.max_draws as usize {
             return Err(IndirectDrawError::InsufficientCapacity {
                 required: args.len() as u32,
                 available: self.max_draws,
             });
         }
-        
+
         if !args.is_empty() {
             let data = bytemuck::cast_slice(args);
             queue.write_buffer(&self.buffer, 0, data);
         }
-        
+
         Ok(())
     }
 
@@ -260,14 +271,14 @@ impl IndirectDrawBuffer {
                 available: self.max_draws,
             });
         }
-        
+
         if !args.is_empty() {
             let byte_offset = (offset as usize * std::mem::size_of::<DrawIndexedIndirectArgs>())
                 as wgpu::BufferAddress;
             let data = bytemuck::cast_slice(args);
             queue.write_buffer(&self.buffer, byte_offset, data);
         }
-        
+
         Ok(())
     }
 
@@ -315,7 +326,7 @@ impl MultiDrawIndirect {
         Self {
             commands: Vec::with_capacity(max_draws as usize),
             indirect_buffer: IndirectDrawBuffer::new_indexed(device, max_draws),
-            device: None, // 暂时不使用设备引用，避免生命周期问题
+            device: Some(std::sync::Arc::new(device.clone())), // 存储设备引用用于后续缓冲区扩展
         }
     }
 
@@ -330,7 +341,6 @@ impl MultiDrawIndirect {
     /// 添加绘制命令（自动扩展缓冲区）
     ///
     /// # 参数
-    /// - `device`: WGPU设备（用于扩展缓冲区）
     /// - `args`: 绘制参数
     ///
     /// # 错误
@@ -340,20 +350,24 @@ impl MultiDrawIndirect {
     /// # 性能优化
     /// - 如果超出容量，自动扩展缓冲区
     /// - 批量添加时使用预分配容量
-    pub fn push(&mut self, device: &wgpu::Device, args: DrawIndexedIndirectArgs) -> Result<(), IndirectDrawError> {
+    pub fn push(&mut self, args: DrawIndexedIndirectArgs) -> Result<(), IndirectDrawError> {
         // 如果接近容量限制，扩展缓冲区
         if self.commands.len() >= self.indirect_buffer.max_draws as usize {
-            let new_capacity = (self.indirect_buffer.max_draws * 2).max(64);
-            self.indirect_buffer.ensure_capacity(device, new_capacity);
+            if let Some(device) = &self.device {
+                let new_capacity = (self.indirect_buffer.max_draws * 2).max(64);
+                self.indirect_buffer.ensure_capacity(device, new_capacity);
+            } else {
+                return Err(IndirectDrawError::DeviceNotAvailable);
+            }
         }
-        
+
         // 验证参数有效性
         if args.index_count == 0 {
             return Err(IndirectDrawError::InvalidArguments(
                 "index_count cannot be zero".to_string(),
             ));
         }
-        
+
         self.commands.push(args);
         Ok(())
     }
@@ -361,7 +375,6 @@ impl MultiDrawIndirect {
     /// 批量添加绘制命令
     ///
     /// # 参数
-    /// - `device`: WGPU设备（用于扩展缓冲区）
     /// - `args`: 绘制参数迭代器
     ///
     /// # 错误
@@ -373,17 +386,20 @@ impl MultiDrawIndirect {
     /// - 自动扩展缓冲区以适应更多命令
     pub fn extend(
         &mut self,
-        device: &wgpu::Device,
         args: impl IntoIterator<Item = DrawIndexedIndirectArgs>,
     ) -> Result<(), IndirectDrawError> {
         let args_vec: Vec<_> = args.into_iter().collect();
-        
+
         // 检查是否需要扩展缓冲区
         if self.commands.len() + args_vec.len() > self.indirect_buffer.max_draws as usize {
-            let new_capacity = ((self.commands.len() + args_vec.len()) as u32 * 3 / 2).max(64);
-            self.indirect_buffer.ensure_capacity(device, new_capacity);
+            if let Some(device) = &self.device {
+                let new_capacity = ((self.commands.len() + args_vec.len()) as u32 * 3 / 2).max(64);
+                self.indirect_buffer.ensure_capacity(device, new_capacity);
+            } else {
+                return Err(IndirectDrawError::DeviceNotAvailable);
+            }
         }
-        
+
         // 验证所有参数的有效性
         for arg in &args_vec {
             if arg.index_count == 0 {
@@ -392,7 +408,7 @@ impl MultiDrawIndirect {
                 ));
             }
         }
-        
+
         self.commands.extend(args_vec);
         Ok(())
     }

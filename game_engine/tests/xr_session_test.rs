@@ -3,7 +3,7 @@
 #[cfg(not(target_arch = "wasm32"))]
 #[test]
 fn test_openxr_session_creation() {
-    use game_engine::xr::{XrConfig, XrSessionState, OpenXrBackend};
+    use game_engine::xr::{OpenXrBackend, XrConfig, XrSessionState};
 
     // 配置OpenXR
     let config = XrConfig {
@@ -16,10 +16,10 @@ fn test_openxr_session_creation() {
     match OpenXrBackend::new(config) {
         Ok(mut backend) => {
             println!("✓ OpenXR instance created successfully");
-            
+
             // 会话创建需要实际的wgpu设备，这里我们只测试实例创建
             assert_eq!(backend.state(), XrSessionState::Idle);
-        },
+        }
         Err(err) => {
             // 当没有OpenXR运行时安装时，打印信息而不是失败
             println!("⚠ OpenXR not available: {}", err);

@@ -1,0 +1,46 @@
+# Clippy配置
+
+# 允许的警告（在某些情况下可以接受）
+allow = [
+    # 允许复杂函数（某些核心函数确实复杂）
+    "clippy::cognitive_complexity",
+    # 允许多个参数（某些API需要多个参数）
+    "clippy::too_many_arguments",
+    # 允许类型复杂度（某些类型确实复杂）
+    "clippy::type_complexity",
+]
+
+# 禁止的警告（必须修复）
+deny = [
+    # 禁止使用unwrap（应使用expect或Result）
+    "clippy::unwrap_used",
+    # 禁止使用expect（应使用Result）
+    "clippy::expect_used",
+    # 禁止使用panic（应使用Result）
+    "clippy::panic",
+    # 禁止未使用的变量（应使用_前缀）
+    "clippy::unused_variables",
+    # 禁止未使用的导入
+    "clippy::unused_imports",
+]
+
+# 警告级别（默认）
+warn = [
+    # 代码复杂度警告
+    "clippy::complexity",
+    # 性能警告
+    "clippy::perf",
+    # 风格警告
+    "clippy::style",
+    # 正确性警告
+    "clippy::correctness",
+    # 可疑代码警告
+    "clippy::suspicious",
+]
+
+# 最大函数复杂度
+cognitive-complexity-threshold = 25
+
+# 最大函数参数数量
+too-many-arguments-threshold = 7
+

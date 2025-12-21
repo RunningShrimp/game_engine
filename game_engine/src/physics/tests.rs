@@ -13,11 +13,12 @@ mod property_tests {
         ) {
             let mut service = PhysicsDomainService::new();
             let body_id = RigidBodyId::new(1);
-            let body = RigidBody::new(
+            let body = RigidBody::with_all(
                 body_id,
                 RigidBodyType::Dynamic,
                 Vec3::new(x, y, 0.0),
                 glam::Quat::IDENTITY,
+                1.0,
             );
             prop_assert!(service.create_body(body).is_ok());
             let pos = service.get_body_position(body_id);

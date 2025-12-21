@@ -1,7 +1,7 @@
-//! Unified Command/Event Protocol
-//!
-//! This protocol defines a language-agnostic interface between
-//! scripting languages and the engine core.
+//  Unified Command/Event Protocol
+// 
+//  This protocol defines a language-agnostic interface between
+//  scripting languages and the engine core.
 
 use serde::{Deserialize, Serialize};
 

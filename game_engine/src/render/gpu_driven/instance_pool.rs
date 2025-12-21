@@ -1,13 +1,13 @@
-//! 实例数据池模块
-//!
-//! 实现持久化的GPU实例数据管理，支持增量更新和脏标记系统。
-//!
-//! ## 性能优化
-//!
-//! - **数据持久化**: 实例数据在GPU上持久化，避免每帧重新上传
-//! - **增量更新**: 只上传变化的实例数据，减少CPU-GPU带宽占用
-//! - **脏标记系统**: 使用块级和实例级脏标记，快速检测变化
-//! - **批量更新**: 合并脏范围，减少API调用开销
+//  实例数据池模块
+// 
+//  实现持久化的GPU实例数据管理，支持增量更新和脏标记系统。
+// 
+//  ## 性能优化
+// 
+//  - **数据持久化**: 实例数据在GPU上持久化，避免每帧重新上传
+//  - **增量更新**: 只上传变化的实例数据，减少CPU-GPU带宽占用
+//  - **脏标记系统**: 使用块级和实例级脏标记，快速检测变化
+//  - **批量更新**: 合并脏范围，减少API调用开销
 
 use crate::render::gpu_driven::culling::GpuInstance;
 use crate::render::gpu_driven::indirect::IndirectDrawError;
@@ -98,7 +98,9 @@ impl InstanceDataPool {
         let instance_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("Instance Data Pool"),
             size: aligned_size,
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::VERTEX,
+            usage: wgpu::BufferUsages::STORAGE
+                | wgpu::BufferUsages::COPY_DST
+                | wgpu::BufferUsages::VERTEX,
             mapped_at_creation: false,
         });
 
@@ -195,11 +197,11 @@ impl InstanceDataPool {
     pub fn mark_range_dirty(&mut self, start: u32, end: u32) {
         let start_idx = start as usize;
         let end_idx = (end as usize).min(self.dirty_bits.len());
-        
+
         for i in start_idx..end_idx {
             self.dirty_bits[i] = true;
         }
-        
+
         let chunk_start = start_idx / self.chunk_size;
         let chunk_end = (end_idx + self.chunk_size - 1) / self.chunk_size;
         for i in chunk_start..chunk_end.min(self.chunk_dirty.len()) {
@@ -234,14 +236,18 @@ impl InstanceDataPool {
 
         for i in 0..instances.len().min(self.dirty_bits.len()) {
             let is_dirty = self.dirty_bits[i]
-                || self.prev_instances.get(i).map(|prev| {
-                    // 比较实例数据
-                    prev.instance_id != instances[i].instance_id
-                        || prev.aabb_min != instances[i].aabb_min
-                        || prev.aabb_max != instances[i].aabb_max
-                        || prev.model != instances[i].model
-                        || prev.flags != instances[i].flags
-                }).unwrap_or(true);
+                || self
+                    .prev_instances
+                    .get(i)
+                    .map(|prev| {
+                        // 比较实例数据
+                        prev.instance_id != instances[i].instance_id
+                            || prev.aabb_min != instances[i].aabb_min
+                            || prev.aabb_max != instances[i].aabb_max
+                            || prev.model != instances[i].model
+                            || prev.flags != instances[i].flags
+                    })
+                    .unwrap_or(true);
 
             if is_dirty {
                 if range_start.is_none() {
@@ -369,7 +375,9 @@ impl InstanceDataPool {
         self.instance_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("Instance Data Pool (Resized)"),
             size: aligned_size,
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::VERTEX,
+            usage: wgpu::BufferUsages::STORAGE
+                | wgpu::BufferUsages::COPY_DST
+                | wgpu::BufferUsages::VERTEX,
             mapped_at_creation: false,
         });
 
@@ -396,7 +404,6 @@ impl InstanceDataPool {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
 
     #[test]
     fn test_instance_pool_creation() {
@@ -413,4 +420,3 @@ mod tests {
         // assert!(pool.has_dirty());
     }
 }
-

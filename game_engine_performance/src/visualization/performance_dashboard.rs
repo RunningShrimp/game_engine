@@ -1,15 +1,15 @@
-//! 性能仪表板
-//!
-//! 实时性能数据可视化
-//! - 指标跟踪
-//! - 趋势分析
-//! - 告警系统
-//! - 历史数据
+//  性能仪表板
+// 
+//  实时性能数据可视化
+//  - 指标跟踪
+//  - 趋势分析
+//  - 告警系统
+//  - 历史数据
 
 use std::collections::VecDeque;
 use std::time::SystemTime;
 
-/// 性能指标快照
+//  性能指标快照
 #[derive(Debug, Clone)]
 pub struct MetricSnapshot {
     /// 指标名称
@@ -39,7 +39,7 @@ impl MetricSnapshot {
     }
 }
 
-/// 性能告警
+//  性能告警
 #[derive(Debug, Clone)]
 pub struct PerformanceAlert {
     /// 告警级别
@@ -54,7 +54,7 @@ pub struct PerformanceAlert {
     pub threshold: f64,
 }
 
-/// 告警级别
+//  告警级别
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum AlertLevel {
     /// 信息
@@ -84,7 +84,7 @@ impl PerformanceAlert {
     }
 }
 
-/// 性能指标追踪器
+//  性能指标追踪器
 pub struct MetricTracker {
     /// 指标历史
     history: VecDeque<MetricSnapshot>,
@@ -223,7 +223,7 @@ impl MetricTracker {
     }
 }
 
-/// 趋势
+//  趋势
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Trend {
     /// 上升
@@ -234,7 +234,7 @@ pub enum Trend {
     Stable,
 }
 
-/// 指标摘要
+//  指标摘要
 #[derive(Debug, Clone)]
 pub struct MetricSummary {
     /// 数据点数
@@ -251,7 +251,7 @@ pub struct MetricSummary {
     pub alert_count: usize,
 }
 
-/// 完整的性能仪表板
+//  完整的性能仪表板
 pub struct PerformanceDashboard {
     /// 指标追踪器映射
     trackers: std::collections::HashMap<String, MetricTracker>,

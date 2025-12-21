@@ -1,9 +1,9 @@
-//! 里程碑管理领域对象
-//!
-//! 该模块实现了里程碑管理的核心业务逻辑，包括里程碑的创建、
-//! 任务关联和进度跟踪。
+//  里程碑管理领域对象
+// 
+//  该模块实现了里程碑管理的核心业务逻辑，包括里程碑的创建、
+//  任务关联和进度跟踪。
 
-use crate::domain::implementation_plan::errors::{MilestoneError, ImplementationPlanError};
+use crate::domain::implementation_plan::errors::{ImplementationPlanError, MilestoneError};
 use crate::domain::implementation_plan::task::{TaskId, TaskStatus};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
@@ -106,9 +106,9 @@ impl Milestone {
     pub fn new(id: MilestoneId, name: impl Into<String>) -> Result<Self, ImplementationPlanError> {
         let name = name.into();
         if name.trim().is_empty() {
-            return Err(ImplementationPlanError::Milestone(MilestoneError::InvalidParameter(
-                "Milestone name cannot be empty".to_string(),
-            )));
+            return Err(ImplementationPlanError::Milestone(
+                MilestoneError::InvalidParameter("Milestone name cannot be empty".to_string()),
+            ));
         }
 
         let now = Self::current_timestamp();
@@ -141,9 +141,11 @@ impl Milestone {
     /// 添加任务到里程碑
     pub fn add_task(&mut self, task_id: TaskId) -> Result<(), ImplementationPlanError> {
         if self.status == MilestoneStatus::Completed {
-            return Err(ImplementationPlanError::Milestone(MilestoneError::InvalidParameter(
-                "Cannot add tasks to completed milestone".to_string(),
-            )));
+            return Err(ImplementationPlanError::Milestone(
+                MilestoneError::InvalidParameter(
+                    "Cannot add tasks to completed milestone".to_string(),
+                ),
+            ));
         }
 
         self.task_ids.insert(task_id);
@@ -154,18 +156,23 @@ impl Milestone {
     /// 从里程碑移除任务
     pub fn remove_task(&mut self, task_id: &TaskId) -> Result<(), ImplementationPlanError> {
         if self.status == MilestoneStatus::Completed {
-            return Err(ImplementationPlanError::Milestone(MilestoneError::InvalidParameter(
-                "Cannot remove tasks from completed milestone".to_string(),
-            )));
+            return Err(ImplementationPlanError::Milestone(
+                MilestoneError::InvalidParameter(
+                    "Cannot remove tasks from completed milestone".to_string(),
+                ),
+            ));
         }
 
         if self.task_ids.remove(task_id) {
             self.updated_at = Self::current_timestamp();
             Ok(())
         } else {
-            Err(ImplementationPlanError::Milestone(MilestoneError::InvalidParameter(
-                format!("Task {} not found in milestone", task_id),
-            )))
+            Err(ImplementationPlanError::Milestone(
+                MilestoneError::InvalidParameter(format!(
+                    "Task {} not found in milestone",
+                    task_id
+                )),
+            ))
         }
     }
 
@@ -178,9 +185,9 @@ impl Milestone {
                 Ok(())
             }
             MilestoneStatus::InProgress => Ok(()), // 已经是进行中状态
-            MilestoneStatus::Completed => Err(ImplementationPlanError::Milestone(MilestoneError::InvalidParameter(
-                "Cannot start completed milestone".to_string(),
-            ))),
+            MilestoneStatus::Completed => Err(ImplementationPlanError::Milestone(
+                MilestoneError::InvalidParameter("Cannot start completed milestone".to_string()),
+            )),
         }
     }
 
@@ -197,14 +204,24 @@ impl Milestone {
     }
 
     /// 计算里程碑进度（0.0 到 1.0）
-    pub fn calculate_progress(&self, task_statuses: &std::collections::HashMap<TaskId, TaskStatus>) -> f32 {
+    pub fn calculate_progress(
+        &self,
+        task_statuses: &std::collections::HashMap<TaskId, TaskStatus>,
+    ) -> f32 {
         if self.task_ids.is_empty() {
-            return if self.status == MilestoneStatus::Completed { 1.0 } else { 0.0 };
+            return if self.status == MilestoneStatus::Completed {
+                1.0
+            } else {
+                0.0
+            };
         }
 
-        let completed_count = self.task_ids.iter()
+        let completed_count = self
+            .task_ids
+            .iter()
             .filter(|task_id| {
-                task_statuses.get(task_id)
+                task_statuses
+                    .get(task_id)
                     .map(|status| *status == TaskStatus::Done)
                     .unwrap_or(false)
             })
@@ -214,9 +231,13 @@ impl Milestone {
     }
 
     /// 检查里程碑是否可以完成（所有任务已完成）
-    pub fn can_complete(&self, task_statuses: &std::collections::HashMap<TaskId, TaskStatus>) -> bool {
+    pub fn can_complete(
+        &self,
+        task_statuses: &std::collections::HashMap<TaskId, TaskStatus>,
+    ) -> bool {
         self.task_ids.iter().all(|task_id| {
-            task_statuses.get(task_id)
+            task_statuses
+                .get(task_id)
                 .map(|status| *status == TaskStatus::Done)
                 .unwrap_or(false)
         })
@@ -253,7 +274,10 @@ impl MilestoneManager {
     }
 
     /// 创建里程碑
-    pub fn create_milestone(&mut self, name: impl Into<String>) -> Result<MilestoneId, ImplementationPlanError> {
+    pub fn create_milestone(
+        &mut self,
+        name: impl Into<String>,
+    ) -> Result<MilestoneId, ImplementationPlanError> {
         let id = MilestoneId::new(self.next_id);
         self.next_id += 1;
 
@@ -270,7 +294,10 @@ impl MilestoneManager {
     }
 
     /// 获取里程碑的可变引用
-    pub fn get_milestone_mut(&mut self, id: &MilestoneId) -> Result<&mut Milestone, ImplementationPlanError> {
+    pub fn get_milestone_mut(
+        &mut self,
+        id: &MilestoneId,
+    ) -> Result<&mut Milestone, ImplementationPlanError> {
         self.milestones.get_mut(id).ok_or_else(|| {
             ImplementationPlanError::Milestone(MilestoneError::MilestoneNotFound(format!("{}", id)))
         })
@@ -281,7 +308,9 @@ impl MilestoneManager {
         if self.milestones.remove(id).is_some() {
             Ok(())
         } else {
-            Err(ImplementationPlanError::Milestone(MilestoneError::MilestoneNotFound(format!("{}", id))))
+            Err(ImplementationPlanError::Milestone(
+                MilestoneError::MilestoneNotFound(format!("{}", id)),
+            ))
         }
     }
 
@@ -292,12 +321,16 @@ impl MilestoneManager {
 
     /// 获取按状态过滤的里程碑
     pub fn get_milestones_by_status(&self, status: MilestoneStatus) -> Vec<&Milestone> {
-        self.milestones.values().filter(|milestone| milestone.status == status).collect()
+        self.milestones
+            .values()
+            .filter(|milestone| milestone.status == status)
+            .collect()
     }
 
     /// 获取可以开始的里程碑（有任务且状态为未开始）
     pub fn get_startable_milestones(&self) -> Vec<&Milestone> {
-        self.milestones.values()
+        self.milestones
+            .values()
             .filter(|milestone| {
                 milestone.status == MilestoneStatus::NotStarted && !milestone.task_ids.is_empty()
             })
@@ -305,21 +338,31 @@ impl MilestoneManager {
     }
 
     /// 获取可以完成的里程碑
-    pub fn get_completable_milestones(&self, task_statuses: &std::collections::HashMap<TaskId, TaskStatus>) -> Vec<&Milestone> {
-        self.milestones.values()
+    pub fn get_completable_milestones(
+        &self,
+        task_statuses: &std::collections::HashMap<TaskId, TaskStatus>,
+    ) -> Vec<&Milestone> {
+        self.milestones
+            .values()
             .filter(|milestone| {
-                milestone.status != MilestoneStatus::Completed && milestone.can_complete(task_statuses)
+                milestone.status != MilestoneStatus::Completed
+                    && milestone.can_complete(task_statuses)
             })
             .collect()
     }
 
     /// 计算所有里程碑的总体进度
-    pub fn calculate_overall_progress(&self, task_statuses: &std::collections::HashMap<TaskId, TaskStatus>) -> f32 {
+    pub fn calculate_overall_progress(
+        &self,
+        task_statuses: &std::collections::HashMap<TaskId, TaskStatus>,
+    ) -> f32 {
         if self.milestones.is_empty() {
             return 0.0;
         }
 
-        let total_progress: f32 = self.milestones.values()
+        let total_progress: f32 = self
+            .milestones
+            .values()
             .map(|milestone| milestone.calculate_progress(task_statuses))
             .sum();
 
@@ -350,7 +393,12 @@ mod tests {
     #[test]
     fn test_milestone_creation_empty_name() {
         let result = Milestone::new(MilestoneId(1), "");
-        assert!(matches!(result, Err(ImplementationPlanError::Milestone(MilestoneError::InvalidParameter(_)))));
+        assert!(matches!(
+            result,
+            Err(ImplementationPlanError::Milestone(
+                MilestoneError::InvalidParameter(_)
+            ))
+        ));
     }
 
     #[test]
@@ -487,7 +535,11 @@ mod tests {
         assert_eq!(startable.len(), 0);
 
         // 添加任务到里程碑1
-        manager.get_milestone_mut(&id1).unwrap().add_task(TaskId(1)).unwrap();
+        manager
+            .get_milestone_mut(&id1)
+            .unwrap()
+            .add_task(TaskId(1))
+            .unwrap();
 
         let startable = manager.get_startable_milestones();
         assert_eq!(startable.len(), 1);
@@ -506,8 +558,16 @@ mod tests {
         let id2 = manager.create_milestone("Milestone 2").unwrap();
 
         // 添加任务
-        manager.get_milestone_mut(&id1).unwrap().add_task(TaskId(1)).unwrap();
-        manager.get_milestone_mut(&id2).unwrap().add_task(TaskId(2)).unwrap();
+        manager
+            .get_milestone_mut(&id1)
+            .unwrap()
+            .add_task(TaskId(1))
+            .unwrap();
+        manager
+            .get_milestone_mut(&id2)
+            .unwrap()
+            .add_task(TaskId(2))
+            .unwrap();
 
         // 没有任务完成
         assert_eq!(manager.calculate_overall_progress(&task_statuses), 0.0);

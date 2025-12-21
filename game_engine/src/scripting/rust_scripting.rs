@@ -1,11 +1,10 @@
-//! Rust脚本引擎
-//!
-//! 提供Rust代码的动态编译和执行功能。
+//  Rust脚本引擎
+// 
+//  提供Rust代码的动态编译和执行功能。
 
 use super::system::{ScriptContext, ScriptResult, ScriptValue};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-
 
 /// Rust脚本引擎
 pub struct RustScriptEngine {
@@ -118,7 +117,6 @@ impl RustScriptEngine {
     }
 }
 
-
 impl RustScriptContext {
     /// 添加预定义的脚本函数
     pub fn register_builtin_functions(&mut self) {
@@ -200,6 +198,7 @@ impl ScriptContext for RustScriptContextAdapter {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::safe_lock;
 
     #[test]
     fn test_rust_script_engine() {
@@ -214,14 +213,14 @@ mod tests {
         let call_count_clone = call_count.clone();
 
         engine.register_function("test_func", move || {
-            let mut count = safe_lock(&call_count_clone, "test_rust_script_engine.call_count").unwrap();
+            let mut count = safe_lock(&call_count_clone, "test_call_count").unwrap();
             *count += 1;
         });
 
         // 测试函数调用
         let result = engine.call_function("test_func");
         assert!(result.is_ok());
-        assert_eq!(*safe_lock(&call_count, "test_rust_script_engine.call_count").unwrap(), 1);
+        assert_eq!(*safe_lock(&call_count, "test_call_count").unwrap(), 1);
     }
 
     #[test]

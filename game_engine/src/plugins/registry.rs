@@ -1,6 +1,6 @@
-//! 插件注册表
-//!
-//! 管理所有已注册的插件。
+//  插件注册表
+// 
+//  管理所有已注册的插件。
 
 use super::{EnginePlugin, App, PluginMetadata, PluginDependency};
 use std::collections::{HashMap, HashSet};

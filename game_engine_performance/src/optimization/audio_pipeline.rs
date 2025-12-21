@@ -1,16 +1,16 @@
-//! 实时音频处理管道
-//!
-//! 提供优化的音频处理管道，集成各种音频效果和处理操作
-//! - 音频混合
-//! - 实时效果处理
-//! - 批量音频更新
-//! - 性能监控
+//  实时音频处理管道
+// 
+//  提供优化的音频处理管道，集成各种音频效果和处理操作
+//  - 音频混合
+//  - 实时效果处理
+//  - 批量音频更新
+//  - 性能监控
 
 use crate::impl_default;
 use glam::Vec3;
 use std::collections::HashMap;
 
-/// 音频处理效果类型
+//  音频处理效果类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum AudioEffectType {
     /// 低通滤波
@@ -27,7 +27,7 @@ pub enum AudioEffectType {
     Spatial,
 }
 
-/// 音频效果参数
+//  音频效果参数
 #[derive(Debug, Clone)]
 pub struct AudioEffect {
     /// 效果类型
@@ -64,7 +64,7 @@ impl AudioEffect {
     }
 }
 
-/// 音频输出通道
+//  音频输出通道
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum AudioChannel {
     /// 主输出
@@ -79,7 +79,7 @@ pub enum AudioChannel {
     Ambient,
 }
 
-/// 音频通道混合器
+//  音频通道混合器
 pub struct AudioChannelMixer {
     /// 各通道音量
     channel_volumes: HashMap<AudioChannel, f32>,
@@ -178,7 +178,7 @@ impl AudioChannelMixer {
     }
 }
 
-/// 实时音频处理管道
+//  实时音频处理管道
 pub struct AudioProcessingPipeline {
     /// 音频通道混合器
     mixer: AudioChannelMixer,
@@ -190,7 +190,7 @@ pub struct AudioProcessingPipeline {
     metrics: AudioPipelineMetrics,
 }
 
-/// 音频管道性能指标
+//  音频管道性能指标
 #[derive(Debug, Clone, Default)]
 pub struct AudioPipelineMetrics {
     /// 处理的样本数
@@ -296,7 +296,7 @@ impl AudioProcessingPipeline {
     }
 }
 
-/// 批量音频更新管理器
+//  批量音频更新管理器
 pub struct BatchAudioUpdater {
     /// 待处理的音频更新队列
     pending_updates: Vec<AudioUpdate>,
@@ -304,7 +304,7 @@ pub struct BatchAudioUpdater {
     max_batch_size: usize,
 }
 
-/// 单个音频更新
+//  单个音频更新
 #[derive(Debug, Clone)]
 pub struct AudioUpdate {
     /// 音频源标识

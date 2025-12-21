@@ -1,15 +1,15 @@
-//! GPU 计算着色器资源管理
-//!
-//! 用于管理 WGPU 计算管道和着色器资源
-//! - 计算管道创建和管理
-//! - 绑定组管理
-//! - 缓冲区管理
-//! - 计算任务调度
+//  GPU 计算着色器资源管理
+// 
+//  用于管理 WGPU 计算管道和着色器资源
+//  - 计算管道创建和管理
+//  - 绑定组管理
+//  - 缓冲区管理
+//  - 计算任务调度
 
 use std::fmt;
 use std::sync::Arc;
 
-/// 计算着色器配置
+//  计算着色器配置
 #[derive(Debug, Clone)]
 pub struct ComputeShaderConfig {
     /// 着色器源代码
@@ -52,7 +52,7 @@ impl ComputeShaderConfig {
     }
 }
 
-/// 绑定组条目
+//  绑定组条目
 #[derive(Debug, Clone)]
 pub struct BindGroupEntry {
     /// 绑定点位置
@@ -63,7 +63,7 @@ pub struct BindGroupEntry {
     pub buffer_type: u32,
 }
 
-/// GPU 缓冲区
+//  GPU 缓冲区
 pub struct GPUBuffer {
     /// 缓冲区标识
     pub id: u32,
@@ -87,7 +87,7 @@ impl GPUBuffer {
     }
 }
 
-/// GPU 计算管道
+//  GPU 计算管道
 pub struct ComputePipeline {
     /// 管道标识
     pub id: u32,
@@ -151,7 +151,7 @@ impl fmt::Debug for ComputePipeline {
     }
 }
 
-/// GPU 计算资源管理器
+//  GPU 计算资源管理器
 pub struct ComputeResourceManager {
     /// 已创建的管道
     pipelines: Vec<Arc<ComputePipeline>>,
@@ -234,7 +234,7 @@ impl ComputeResourceManager {
     }
 }
 
-/// WGSL (WebGPU Shading Language) 计算着色器生成器
+//  WGSL (WebGPU Shading Language) 计算着色器生成器
 pub struct ComputeShaderGenerator;
 
 impl ComputeShaderGenerator {

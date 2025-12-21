@@ -1,6 +1,6 @@
-//! 动画服务层
-//!
-//! 遵循DDD贫血模型，将动画业务逻辑封装在Service中
+//  动画服务层
+// 
+//  遵循DDD贫血模型，将动画业务逻辑封装在Service中
 
 use super::clip::AnimationClip;
 use super::player::AnimationPlayer;

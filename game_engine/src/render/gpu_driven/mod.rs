@@ -1,61 +1,61 @@
-//! GPU Driven Rendering 模块
-//!
-//! 实现基于 GPU 的高性能渲染技术：
-//! - **计算着色器剔除（Compute Shader Culling）** - **默认启用**
-//! - 间接绘制（Indirect Drawing）- 可选优化
-//! - 层次化场景剔除（BVH/八叉树）- 未来扩展
-//!
-//! ## GPU驱动剔除（默认策略）
-//!
-//! GPU驱动剔除现在是引擎的默认剔除策略，提供：
-//! - **高性能**：GPU并行处理，预计性能提升 30-50%（取决于场景复杂度）
-//! - **自动回退**：如果GPU剔除不可用，自动回退到CPU剔除
-//! - **优化着色器**：使用优化的计算着色器，减少分支和内存访问
-//!
-//! ## 性能优化
-//!
-//! 计算着色器优化：
-//! - 展开循环以减少分支预测失败
-//! - 使用`select`函数替代if-else分支
-//! - 早期退出优化
-//! - 优化的AABB变换
-//!
-//! ## 架构设计
-//!
-//! ```text
-//! ┌─────────────────────────────────────────────────────────┐
-//! │                    GPU Driven Pipeline                   │
-//! ├─────────────────────────────────────────────────────────┤
-//! │  1. Upload Instance Data                                 │
-//! │     - 所有实例数据上传到 GPU 存储缓冲区                    │
-//! │                                                          │
-//! │  2. Frustum Culling (Compute Shader)                     │
-//! │     - 计算着色器并行检测每个实例的视锥剔除                  │
-//! │     - 输出可见实例索引到间接缓冲区                         │
-//! │                                                          │
-//! │  3. Indirect Draw                                        │
-//! │     - 使用 DrawIndirect 命令                              │
-//! │     - GPU 自动确定绘制数量                                 │
-//! └─────────────────────────────────────────────────────────┘
-//! ```
+//  GPU Driven Rendering 模块
+// 
+//  实现基于 GPU 的高性能渲染技术：
+//  - **计算着色器剔除（Compute Shader Culling）** - **默认启用**
+//  - 间接绘制（Indirect Drawing）- 可选优化
+//  - 层次化场景剔除（BVH/八叉树）- 未来扩展
+// 
+//  ## GPU驱动剔除（默认策略）
+// 
+//  GPU驱动剔除现在是引擎的默认剔除策略，提供：
+//  - **高性能**：GPU并行处理，预计性能提升 30-50%（取决于场景复杂度）
+//  - **自动回退**：如果GPU剔除不可用，自动回退到CPU剔除
+//  - **优化着色器**：使用优化的计算着色器，减少分支和内存访问
+// 
+//  ## 性能优化
+// 
+//  计算着色器优化：
+//  - 展开循环以减少分支预测失败
+//  - 使用`select`函数替代if-else分支
+//  - 早期退出优化
+//  - 优化的AABB变换
+// 
+//  ## 架构设计
+// 
+//  ```text
+//  ┌─────────────────────────────────────────────────────────┐
+//  │                    GPU Driven Pipeline                   │
+//  ├─────────────────────────────────────────────────────────┤
+//  │  1. Upload Instance Data                                 │
+//  │     - 所有实例数据上传到 GPU 存储缓冲区                    │
+//  │                                                          │
+//  │  2. Frustum Culling (Compute Shader)                     │
+//  │     - 计算着色器并行检测每个实例的视锥剔除                  │
+//  │     - 输出可见实例索引到间接缓冲区                         │
+//  │                                                          │
+//  │  3. Indirect Draw                                        │
+//  │     - 使用 DrawIndirect 命令                              │
+//  │     - GPU 自动确定绘制数量                                 │
+//  └─────────────────────────────────────────────────────────┘
+//  ```
 
+pub mod command_generator;
 pub mod culling;
 pub mod culling_manager;
 pub mod indirect;
-pub mod instance_pool;
-pub mod command_generator;
 pub mod indirect_manager;
+pub mod instance_pool;
 
 // 遮挡剔除集成
 use crate::impl_default;
 use crate::render::occlusion_culling::HierarchicalZCulling;
 
+pub use command_generator::GpuCommandGenerator;
 pub use culling::{CullingUniforms, GpuCuller, GpuInstance};
 pub use culling_manager::GpuCullingManager;
 pub use indirect::{DrawIndirectArgs, IndirectDrawBuffer};
-pub use instance_pool::InstanceDataPool;
-pub use command_generator::GpuCommandGenerator;
 pub use indirect_manager::{GpuIndirectDrawConfig, GpuIndirectDrawManager};
+pub use instance_pool::InstanceDataPool;
 
 /// GPU Driven 渲染配置
 ///
@@ -313,7 +313,7 @@ impl GpuDrivenRenderer {
             Some(self.indirect_buffer.buffer()),
             view_proj,
             instance_count,
-            index_count,  // 传递索引数，用于生成间接绘制命令
+            index_count, // 传递索引数，用于生成间接绘制命令
         );
 
         // 注意：实际可见实例数量需要从GPU计数器异步读取
@@ -337,15 +337,17 @@ impl GpuDrivenRenderer {
         index_count: u32,
     ) -> Result<(), crate::render::gpu_driven::indirect::IndirectDrawError> {
         use crate::render::gpu_driven::indirect::DrawIndexedIndirectArgs;
-        
+
         // 使用vertex_count验证索引范围
         if index_count > vertex_count {
-            return Err(crate::render::gpu_driven::indirect::IndirectDrawError::InvalidVertexCount {
-                expected: vertex_count,
-                actual: index_count,
-            });
+            return Err(
+                crate::render::gpu_driven::indirect::IndirectDrawError::InvalidVertexCount {
+                    expected: vertex_count,
+                    actual: index_count,
+                },
+            );
         }
-        
+
         let args = DrawIndexedIndirectArgs {
             index_count,
             instance_count,
@@ -353,7 +355,7 @@ impl GpuDrivenRenderer {
             base_vertex: 0,
             first_instance: 0,
         };
-        
+
         self.indirect_buffer.update_indexed(queue, &[args])?;
         Ok(())
     }
@@ -387,7 +389,7 @@ impl GpuDrivenRenderer {
     /// 获取可见实例数量（异步读取）
     ///
     /// 注意：这是一个异步操作，需要从GPU读取计数器。
-    /// 实际使用中应该使用异步读取或查询机制。
+    /// 获取可见实例数量
     ///
     /// # 参数
     /// - `device`: WGPU设备
@@ -395,46 +397,11 @@ impl GpuDrivenRenderer {
     ///
     /// # 返回
     /// 可见实例数量（如果读取成功）
-    pub fn get_visible_count(&self, device: &wgpu::Device, queue: &wgpu::Queue) -> Option<u32> {
-        // 创建一个临时缓冲区用于读取计数器
-        let readback_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("Visible Instance Count Readback"),
-            size: 4,
-            usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
-            mapped_at_creation: false,
-        });
-        
-        // 提交复制命令
-        let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("Copy Visible Count Encoder"),
-        });
-        encoder.copy_buffer_to_buffer(
-            &self.counter_buffer,
-            0,
-            &readback_buffer,
-            0,
-            4,
-        );
-        queue.submit(std::iter::once(encoder.finish()));
-        
-        // 异步读取缓冲区
-        let buffer_slice = readback_buffer.slice(..);
-        buffer_slice.map_async(wgpu::MapMode::Read, |result| {
-            if let Ok(()) = result {
-                let data = buffer_slice.get_mapped_range();
-                // 将BufferView转换为[u8; 4]
-                let bytes: [u8; 4] = data[0..4].try_into().expect("Slice with incorrect length");
-                let count = u32::from_le_bytes(bytes);
-                drop(data);
-                readback_buffer.unmap();
-                // 实际实现应该返回count，但这里为了保持接口一致性返回None
-                // 完整实现需要使用异步回调或future
-            }
-        });
-        
-        // 注意：实际实现需要使用异步读取或查询机制
-        // 这里返回None表示需要异步读取
-        // 实际使用中应该使用wgpu的异步读取功能
+    ///
+    /// 注意：当前实现返回None，异步读取功能需要重新设计
+    pub fn get_visible_count(&self, _device: &wgpu::Device, _queue: &wgpu::Queue) -> Option<u32> {
+        // TODO: 重新设计异步GPU缓冲区读取功能
+        // 当前返回None表示异步读取尚未实现
         None
     }
 
@@ -451,7 +418,10 @@ impl GpuDrivenRenderer {
     /// # 错误
     ///
     /// 如果初始化失败，返回错误。
-    pub fn initialize_occlusion_culling(&mut self, device: &wgpu::Device) -> Result<(), crate::render::occlusion_culling::OcclusionError> {
+    pub fn initialize_occlusion_culling(
+        &mut self,
+        device: &wgpu::Device,
+    ) -> Result<(), crate::render::occlusion_culling::OcclusionError> {
         if let Some(ref mut occluder) = self.occlusion_culler {
             occluder.initialize(device)?;
         }

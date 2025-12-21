@@ -1,6 +1,6 @@
-//! GPU剔除管理器
-//!
-//! 提供高级API管理GPU剔除资源，避免每帧创建/销毁缓冲区。
+//  GPU剔除管理器
+// 
+//  提供高级API管理GPU剔除资源，避免每帧创建/销毁缓冲区。
 
 use super::culling::{GpuCuller, GpuInstance};
 use wgpu::{Buffer, CommandEncoder, Device, Queue};
@@ -174,7 +174,6 @@ impl GpuCullingManager {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
 
     #[test]
     fn test_gpu_culling_manager_creation() {

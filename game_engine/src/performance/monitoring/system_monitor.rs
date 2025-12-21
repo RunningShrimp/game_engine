@@ -1,16 +1,16 @@
-//! 系统性能监控器
-//!
-//! 实时性能监控和数据收集
-//! - 帧率监控
-//! - 内存跟踪
-//! - CPU 使用率
-//! - 性能统计
+//  系统性能监控器
+// 
+//  实时性能监控和数据收集
+//  - 帧率监控
+//  - 内存跟踪
+//  - CPU 使用率
+//  - 性能统计
 
 use std::collections::VecDeque;
 use std::time::{Duration, Instant};
 
 /// 性能指标
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct PerformanceMetrics {
     /// 帧率 (FPS)
     pub fps: f32,
@@ -22,9 +22,28 @@ pub struct PerformanceMetrics {
     pub cpu_usage_percent: f32,
     /// GPU 使用率 (%)
     pub gpu_usage_percent: f32,
+    /// GPU渲染时间细分（毫秒）
+    pub gpu_render_time_ms: f32,
+    /// GPU几何处理时间（毫秒）
+    pub gpu_geometry_time_ms: f32,
+    /// GPU光照计算时间（毫秒）
+    pub gpu_lighting_time_ms: f32,
+    /// GPU后处理时间（毫秒）
+    pub gpu_postprocess_time_ms: f32,
+    /// ECS系统执行时间（毫秒）
+    pub ecs_system_time_ms: f32,
+    /// 物理引擎更新时间（毫秒）
+    pub physics_update_time_ms: f32,
+    /// 网络同步延迟（毫秒）
+    pub network_sync_latency_ms: f32,
+    /// 内存分配次数
+    pub memory_allocations: u64,
+    /// 内存释放次数
+    pub memory_deallocations: u64,
 }
 
 /// 帧时间采样器
+#[derive(Debug)]
 pub struct FrameTimeSampler {
     /// 采样缓冲区
     samples: VecDeque<Duration>,
@@ -108,6 +127,7 @@ impl FrameTimeSampler {
 }
 
 /// 内存监控器
+#[derive(Debug)]
 pub struct MemoryMonitor {
     /// 采样历史
     history: VecDeque<u64>,
@@ -162,6 +182,7 @@ impl MemoryMonitor {
 }
 
 /// CPU 监控器
+#[derive(Debug)]
 pub struct CPUMonitor {
     /// 采样历史 (%)
     history: VecDeque<f32>,
@@ -203,6 +224,7 @@ impl CPUMonitor {
 }
 
 /// 综合性能监控器
+#[derive(Debug)]
 pub struct SystemPerformanceMonitor {
     /// 帧时间采样器
     pub frame_sampler: FrameTimeSampler,
@@ -221,13 +243,7 @@ impl SystemPerformanceMonitor {
             frame_sampler: FrameTimeSampler::new(300), // 300 帧缓冲
             memory_monitor: MemoryMonitor::new(300),
             cpu_monitor: CPUMonitor::new(300),
-            metrics: PerformanceMetrics {
-                fps: 0.0,
-                frame_time_ms: 0.0,
-                memory_usage_mb: 0.0,
-                cpu_usage_percent: 0.0,
-                gpu_usage_percent: 0.0,
-            },
+            metrics: PerformanceMetrics::default(),
         }
     }
 
@@ -255,18 +271,9 @@ impl SystemPerformanceMonitor {
         PerformanceReport {
             current_fps: self.metrics.fps,
             average_frame_time_ms: self.frame_sampler.average_frame_time().as_secs_f32() * 1000.0,
-            min_frame_time_ms: self
-                .frame_sampler
-                .min_frame_time()
-                .map(|d| d.as_secs_f32() * 1000.0),
-            max_frame_time_ms: self
-                .frame_sampler
-                .max_frame_time()
-                .map(|d| d.as_secs_f32() * 1000.0),
-            p99_frame_time_ms: self
-                .frame_sampler
-                .percentile(99.0)
-                .map(|d| d.as_secs_f32() * 1000.0),
+            min_frame_time_ms: self.frame_sampler.min_frame_time().map(|d| d.as_secs_f32() * 1000.0),
+            max_frame_time_ms: self.frame_sampler.max_frame_time().map(|d| d.as_secs_f32() * 1000.0),
+            p99_frame_time_ms: self.frame_sampler.percentile(99.0).map(|d| d.as_secs_f32() * 1000.0),
             current_memory_mb: self.memory_monitor.current_memory_mb(),
             average_memory_mb: self.memory_monitor.average_memory_mb(),
             peak_memory_mb: self.memory_monitor.peak_memory_mb(),
@@ -275,11 +282,46 @@ impl SystemPerformanceMonitor {
         }
     }
 
+    /// 返回当前性能指标快照
+    pub fn get_metrics(&self) -> PerformanceMetrics {
+        self.metrics
+    }
+
+    /// 更新GPU渲染时间细分
+    pub fn update_gpu_render_times(&mut self, render_time_ms: f32, geometry_time_ms: f32, lighting_time_ms: f32, postprocess_time_ms: f32) {
+        self.metrics.gpu_render_time_ms = render_time_ms;
+        self.metrics.gpu_geometry_time_ms = geometry_time_ms;
+        self.metrics.gpu_lighting_time_ms = lighting_time_ms;
+        self.metrics.gpu_postprocess_time_ms = postprocess_time_ms;
+    }
+
+    /// 更新ECS系统执行时间
+    pub fn update_ecs_system_time(&mut self, time_ms: f32) {
+        self.metrics.ecs_system_time_ms = time_ms;
+    }
+
+    /// 更新物理引擎更新时间
+    pub fn update_physics_time(&mut self, time_ms: f32) {
+        self.metrics.physics_update_time_ms = time_ms;
+    }
+
+    /// 更新网络同步延迟
+    pub fn update_network_latency(&mut self, latency_ms: f32) {
+        self.metrics.network_sync_latency_ms = latency_ms;
+    }
+
+    /// 更新内存分配统计
+    pub fn update_memory_stats(&mut self, allocations: u64, deallocations: u64) {
+        self.metrics.memory_allocations = allocations;
+        self.metrics.memory_deallocations = deallocations;
+    }
+
     /// 重置所有监控器
     pub fn reset(&mut self) {
         self.frame_sampler.clear();
         self.memory_monitor = MemoryMonitor::new(300);
         self.cpu_monitor = CPUMonitor::new(300);
+        self.metrics = PerformanceMetrics::default();
     }
 }
 

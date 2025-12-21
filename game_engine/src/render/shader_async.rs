@@ -1,26 +1,26 @@
-//! 异步着色器编译系统
-//!
-//! 使用异步编译减少主线程阻塞，提升启动性能和响应性。
-//!
-//! ## 设计原则
-//!
-//! 1. **异步编译**: 使用`tokio::task::spawn_blocking`在后台线程编译
-//! 2. **编译队列**: 优先级队列管理编译任务
-//! 3. **进度跟踪**: 实时追踪编译进度
-//! 4. **超时处理**: 防止编译任务无限期阻塞
-//! 5. **优先级管理**: 关键着色器优先编译
+//  异步着色器编译系统
+// 
+//  使用异步编译减少主线程阻塞，提升启动性能和响应性。
+// 
+//  ## 设计原则
+// 
+//  1. **异步编译**: 使用`tokio::task::spawn_blocking`在后台线程编译
+//  2. **编译队列**: 优先级队列管理编译任务
+//  3. **进度跟踪**: 实时追踪编译进度
+//  4. **超时处理**: 防止编译任务无限期阻塞
+//  5. **优先级管理**: 关键着色器优先编译
 
-use crate::core::error::RenderError;
-use crate::impl_default;
+use crate::error::RenderError;
+use crate::error::safe_lock;
 use crate::render::shader_cache::{ShaderCache, ShaderCacheKey};
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use thiserror::Error;
-use crate::error::safe_lock;
 use tokio::sync::{mpsc, oneshot};
 use tokio::time::timeout;
+use num_cpus;
 
 /// 着色器编译优先级
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -134,6 +134,12 @@ pub struct CompileProgress {
     pub in_progress: usize,
     /// 等待中数
     pub pending: usize,
+    /// 队列长度
+    pub queue_length: usize,
+    /// 平均等待时间（毫秒）
+    pub avg_wait_time_ms: f64,
+    /// 最大等待时间（毫秒）
+    pub max_wait_time_ms: f64,
 }
 
 impl CompileProgress {
@@ -152,17 +158,38 @@ impl CompileProgress {
 pub struct AsyncShaderCompilerConfig {
     /// 最大并发编译数
     pub max_concurrent_compiles: usize,
+    /// spawn_blocking最大并发数 (0表示无限制)
+    pub max_spawn_blocking: usize,
     /// 编译超时时间（毫秒）
     pub compile_timeout_ms: u64,
     /// 是否启用缓存
     pub enable_cache: bool,
 }
 
-impl_default!(AsyncShaderCompilerConfig {
-    max_concurrent_compiles: 4,
-    compile_timeout_ms: 5000,
-    enable_cache: true,
-});
+impl AsyncShaderCompilerConfig {
+    /// 创建基于CPU核数的推荐配置
+    pub fn with_cpu_aware_defaults() -> Self {
+        let cpu_count = num_cpus::get();
+        Self {
+            max_concurrent_compiles: cpu_count.max(2).min(8), // CPU核数，最小2，最大8
+            max_spawn_blocking: (cpu_count / 2).max(1).min(4), // CPU核数的一半，最小1，最大4（编译较重）
+            compile_timeout_ms: 5000,
+            enable_cache: true,
+        }
+    }
+}
+
+impl Default for AsyncShaderCompilerConfig {
+    fn default() -> Self {
+        let cpu_count = num_cpus::get();
+        Self {
+            max_concurrent_compiles: cpu_count.max(2).min(8), // CPU核数，最小2，最大8
+            max_spawn_blocking: (cpu_count / 2).max(1).min(4), // CPU核数的一半，最小1，最大4（编译较重）
+            compile_timeout_ms: 5000,
+            enable_cache: true,
+        }
+    }
+}
 
 /// 异步着色器编译器
 pub struct AsyncShaderCompiler {
@@ -176,6 +203,18 @@ pub struct AsyncShaderCompiler {
     next_id: Arc<Mutex<u64>>,
     /// 着色器缓存（可选）
     cache: Option<Arc<Mutex<ShaderCache>>>,
+    /// 等待时间统计
+    wait_time_stats: Arc<Mutex<ShaderWaitTimeStats>>,
+    /// spawn_blocking并发控制
+    spawn_blocking_semaphore: Arc<tokio::sync::Semaphore>,
+}
+
+/// 着色器等待时间统计
+#[derive(Debug, Clone, Default)]
+struct ShaderWaitTimeStats {
+    total_wait_time_ms: f64,
+    max_wait_time_ms: f64,
+    sample_count: u64,
 }
 
 impl AsyncShaderCompiler {
@@ -194,7 +233,19 @@ impl AsyncShaderCompiler {
         let timeout_ms = config.compile_timeout_ms;
         let enable_cache = config.enable_cache;
 
+        let wait_stats_arc = Arc::new(Mutex::new(ShaderWaitTimeStats::default()));
+
+        // 创建spawn_blocking信号量
+        let spawn_blocking_limit = if config.max_spawn_blocking == 0 {
+            usize::MAX // 无限制
+        } else {
+            config.max_spawn_blocking
+        };
+        let spawn_blocking_semaphore = Arc::new(tokio::sync::Semaphore::new(spawn_blocking_limit));
+
         // 启动编译任务处理器
+        let wait_stats_clone = Arc::clone(&wait_stats_arc);
+        let spawn_blocking_sem_clone = Arc::clone(&spawn_blocking_semaphore);
         tokio::spawn(Self::compiler_task(
             request_rx,
             progress_tx,
@@ -202,6 +253,8 @@ impl AsyncShaderCompiler {
             max_concurrent,
             timeout_ms,
             enable_cache,
+            wait_stats_clone,
+            spawn_blocking_sem_clone,
         ));
 
         Ok(Self {
@@ -210,6 +263,8 @@ impl AsyncShaderCompiler {
             progress_rx: Arc::new(Mutex::new(progress_rx)),
             next_id: Arc::new(Mutex::new(1)),
             cache: cache_arc,
+            wait_time_stats: wait_stats_arc,
+            spawn_blocking_semaphore,
         })
     }
 
@@ -240,6 +295,8 @@ impl AsyncShaderCompiler {
         max_concurrent: usize,
         timeout_ms: u64,
         enable_cache: bool,
+        wait_time_stats: Arc<Mutex<ShaderWaitTimeStats>>,
+        spawn_blocking_semaphore: Arc<tokio::sync::Semaphore>,
     ) {
         use tokio::sync::Semaphore;
 
@@ -253,6 +310,9 @@ impl AsyncShaderCompiler {
             failed: 0,
             in_progress: 0,
             pending: 0,
+            queue_length: 0,
+            avg_wait_time_ms: 0.0,
+            max_wait_time_ms: 0.0,
         };
 
         loop {
@@ -275,6 +335,8 @@ impl AsyncShaderCompiler {
                         progress_tx.clone(),
                         timeout_ms,
                         enable_cache,
+                        wait_time_stats.clone(),
+                        spawn_blocking_semaphore.clone(),
                     ).await;
                 }
                 else => break,
@@ -291,18 +353,38 @@ impl AsyncShaderCompiler {
         progress_tx: mpsc::UnboundedSender<CompileProgress>,
         timeout_ms: u64,
         enable_cache: bool,
+        wait_time_stats: Arc<Mutex<ShaderWaitTimeStats>>,
+        spawn_blocking_semaphore: Arc<tokio::sync::Semaphore>,
     ) {
         // 尝试获取信号量许可
         if let Ok(permit) = semaphore.clone().try_acquire_owned() {
             // 从队列取出最高优先级的请求
             let request = {
-                let mut q = safe_lock(&queue, "shader_compile_queue").unwrap();
-                q.pop()
+                match safe_lock(&queue, "shader_compile_queue") {
+                    Ok(mut q) => q.pop(),
+                    Err(e) => {
+                        tracing::error!("Failed to acquire shader_compile_queue lock: {}", e);
+                        return; // 无法获取锁，跳过此次处理
+                    }
+                }
             };
 
             if let Some(request) = request {
                 stats.pending -= 1;
                 stats.in_progress += 1;
+
+                // 计算等待时间并更新统计
+                let wait_time_ms = request.created_at.elapsed().as_secs_f64() * 1000.0;
+                {
+                    if let Ok(mut wait_stats) = safe_lock(&wait_time_stats, "wait_time_stats") {
+                        wait_stats.total_wait_time_ms += wait_time_ms;
+                        wait_stats.max_wait_time_ms = wait_stats.max_wait_time_ms.max(wait_time_ms);
+                        wait_stats.sample_count += 1;
+                    } else {
+                        tracing::error!("Failed to acquire wait_time_stats lock, skipping statistics update");
+                    }
+                }
+
                 let _ = progress_tx.send(stats.clone());
 
                 let cache_clone = cache.clone();
@@ -312,6 +394,11 @@ impl AsyncShaderCompiler {
                 let compile_options = request.compile_options.clone();
 
                 // 在新任务中执行编译
+                let _span = crate::performance::tracing_metrics::TracingMetricsManager::shader_compile_span(
+                    &label.as_ref().unwrap_or(&"unnamed".to_string()),
+                    source.len(),
+                    enable_cache
+                ).entered();
                 tokio::spawn(async move {
                     let start = Instant::now();
 
@@ -324,7 +411,7 @@ impl AsyncShaderCompiler {
                     // 检查缓存
                     let cached_result = if enable_cache {
                         if let Some(cache) = &cache_clone {
-                            let cache_guard = safe_lock(&cache, "shader_cache").unwrap();
+                            let mut cache_guard = safe_lock(&cache, "shader_cache").unwrap();
                             cache_guard.get(&cache_key).ok().flatten()
                         } else {
                             None
@@ -343,7 +430,9 @@ impl AsyncShaderCompiler {
                     } else {
                         // 缓存未命中，执行编译
                         // 注意：wgpu的create_shader_module是同步的，需要在阻塞任务中执行
+                        let permit = spawn_blocking_semaphore.acquire().await.unwrap();
                         let compile_future = tokio::task::spawn_blocking(move || {
+                            // 许可将在函数结束时自动释放
                             // 这里只是验证和预处理源码
                             // 实际的wgpu编译需要在主线程进行
                             // 当前实现：返回源码，实际编译由调用者完成
@@ -352,6 +441,7 @@ impl AsyncShaderCompiler {
                                 source,
                                 compile_time_ms: start.elapsed().as_secs_f32() * 1000.0,
                             })
+                            // 许可将在函数结束时自动释放
                         });
 
                         // 带超时的编译
@@ -367,7 +457,8 @@ impl AsyncShaderCompiler {
                         if enable_cache {
                             if let Some(cache) = &cache_clone {
                                 let mut cache_guard = safe_lock(&cache, "shader_cache").unwrap();
-                                let _ = cache_guard.put_source(&compiled.cache_key, &compiled.source);
+                                let _ =
+                                    cache_guard.put_source(&compiled.cache_key, &compiled.source);
                             }
                         }
                     }
@@ -410,7 +501,10 @@ impl AsyncShaderCompiler {
         };
 
         self.request_tx.send(request).map_err(|e| {
-            RenderError::InvalidState(format!("Failed to send compile request: {}", e))
+            RenderError::InvalidState {
+                message: format!("Failed to send compile request: {}", e),
+                severity: crate::error::ErrorSeverity::Error
+            }
         })?;
 
         Ok(response_rx)
@@ -428,12 +522,32 @@ impl AsyncShaderCompiler {
     /// 获取编译进度
     pub fn get_progress(&self) -> Option<CompileProgress> {
         let mut rx = safe_lock(&self.progress_rx, "shader_progress_rx").unwrap();
-        rx.try_recv().ok()
+        let mut progress = rx.try_recv().ok()?;
+
+        // 添加等待时间统计
+        if let Ok(wait_stats) = safe_lock(&self.wait_time_stats, "wait_time_stats") {
+            progress.queue_length = progress.pending;
+            progress.avg_wait_time_ms = if wait_stats.sample_count > 0 {
+                wait_stats.total_wait_time_ms / wait_stats.sample_count as f64
+            } else {
+                0.0
+            };
+            progress.max_wait_time_ms = wait_stats.max_wait_time_ms;
+        } else {
+            tracing::warn!("Failed to acquire wait_time_stats lock, using default values");
+        }
+
+        Some(progress)
     }
 
     /// 获取缓存（如果启用）
     pub fn cache(&self) -> Option<Arc<Mutex<ShaderCache>>> {
         self.cache.as_ref().map(|c| Arc::clone(c))
+    }
+
+    /// 获取编译器配置
+    pub fn config(&self) -> &AsyncShaderCompilerConfig {
+        &self.config
     }
 }
 

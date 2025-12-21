@@ -1,7 +1,7 @@
 use crate::impl_default;
 use glam::Mat4;
 
-/// 平面
+//  平面
 #[derive(Debug, Clone, Copy)]
 pub struct Plane {
     pub normal: glam::Vec3,
@@ -28,7 +28,7 @@ impl Plane {
     }
 }
 
-/// 视锥体剔除
+//  视锥体剔除
 #[derive(Default)]
 pub struct FrustumCulling {
     /// 视锥体平面
@@ -126,7 +126,7 @@ impl FrustumCulling {
     }
 }
 
-/// 遮挡剔除 (简化版)
+//  遮挡剔除 (简化版)
 #[derive(Default)]
 pub struct OcclusionCulling {
     /// 遮挡物列表 (简化为球体)
@@ -160,7 +160,7 @@ impl OcclusionCulling {
     }
 }
 
-/// LOD (Level of Detail) 管理器
+//  LOD (Level of Detail) 管理器
 pub struct LodManager {
     /// LOD距离阈值
     lod_distances: Vec<f32>,

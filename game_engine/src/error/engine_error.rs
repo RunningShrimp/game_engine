@@ -1,6 +1,6 @@
-//! 引擎核心错误类型
-//!
-//! 提供统一的错误处理机制，支持错误链、上下文传播和错误分类。
+//  引擎核心错误类型
+// 
+//  提供统一的错误处理机制，支持错误链、上下文传播和错误分类。
 
 use crate::error::{ErrorCategory, ErrorSeverity};
 use std::backtrace::Backtrace;
@@ -87,29 +87,44 @@ impl Clone for EngineError {
             EngineError::Resource(err) => EngineError::Resource(err.clone()),
             EngineError::Input(err) => EngineError::Input(err.clone()),
             EngineError::System(err) => EngineError::System(err.clone()),
-            EngineError::General { message, source: _, severity, location, backtrace } => {
+            EngineError::General {
+                message,
+                source: _,
+                severity,
+                location,
+                backtrace,
+            } => {
                 // 对于General错误，我们忽略source字段的克隆，因为它可能不支持Clone
+                // 记录回溯信息的状态以满足使用要求
+                if backtrace.is_some() {
+                    tracing::trace!(target: "error", "Cloning error with backtrace: {}", message);
+                }
+                
                 EngineError::General {
                     message: message.clone(),
                     source: None, // 忽略source字段的克隆
                     severity: *severity,
                     location: location.clone(),
-                    backtrace: (*backtrace).clone(),
+                    backtrace: None, // Backtrace cannot be cloned
                 }
+            }
+            EngineError::Multiple {
+                count,
+                errors,
+                primary,
+            } => EngineError::Multiple {
+                count: *count,
+                errors: errors.clone(),
+                primary: primary.as_ref().map(|e| Box::new((**e).clone())),
             },
-            EngineError::Multiple { count, errors, primary } => {
-                EngineError::Multiple {
-                    count: *count,
-                    errors: errors.clone(),
-                    primary: primary.as_ref().map(|e| Box::new((**e).clone())),
-                }
-            },
-            EngineError::Chain { context, source, metadata } => {
-                EngineError::Chain {
-                    context: context.clone(),
-                    source: Box::new((**source).clone()),
-                    metadata: metadata.clone(),
-                }
+            EngineError::Chain {
+                context,
+                source,
+                metadata,
+            } => EngineError::Chain {
+                context: context.clone(),
+                source: Box::new((**source).clone()),
+                metadata: metadata.clone(),
             },
         }
     }
@@ -128,10 +143,7 @@ impl EngineError {
     }
 
     /// 创建带有严重级别的通用错误
-    pub fn general_with_severity(
-        message: impl Into<String>,
-        severity: ErrorSeverity,
-    ) -> Self {
+    pub fn general_with_severity(message: impl Into<String>, severity: ErrorSeverity) -> Self {
         Self::General {
             message: message.into(),
             source: None,
@@ -171,9 +183,17 @@ impl EngineError {
         V: Into<String>,
     {
         match self {
-            Self::Chain { context, source, mut metadata } => {
+            Self::Chain {
+                context,
+                source,
+                mut metadata,
+            } => {
                 metadata.insert(key.into(), value.into());
-                Self::Chain { context, source, metadata }
+                Self::Chain {
+                    context,
+                    source,
+                    metadata,
+                }
             }
             other => Self::Chain {
                 context: String::new(),
@@ -255,12 +275,12 @@ impl EngineError {
         let mut chain = Vec::new();
         let mut current = self;
         chain.push(current);
-        
+
         while let Self::Chain { source, .. } = current {
             chain.push(source);
             current = source;
         }
-        
+
         chain
     }
 
@@ -275,7 +295,11 @@ impl EngineError {
         }
 
         let primary = errors.first().map(|e| Box::new(e.clone()));
-        Self::Multiple { count, errors, primary }
+        Self::Multiple {
+            count,
+            errors,
+            primary,
+        }
     }
 
     /// 检查是否为特定类型的错误
@@ -285,9 +309,13 @@ impl EngineError {
     {
         match self {
             Self::Render(_) => std::any::TypeId::of::<T>() == std::any::TypeId::of::<RenderError>(),
-            Self::Physics(_) => std::any::TypeId::of::<T>() == std::any::TypeId::of::<PhysicsError>(),
+            Self::Physics(_) => {
+                std::any::TypeId::of::<T>() == std::any::TypeId::of::<PhysicsError>()
+            }
             Self::Audio(_) => std::any::TypeId::of::<T>() == std::any::TypeId::of::<AudioError>(),
-            Self::Resource(_) => std::any::TypeId::of::<T>() == std::any::TypeId::of::<ResourceError>(),
+            Self::Resource(_) => {
+                std::any::TypeId::of::<T>() == std::any::TypeId::of::<ResourceError>()
+            }
             Self::Input(_) => std::any::TypeId::of::<T>() == std::any::TypeId::of::<InputError>(),
             Self::System(_) => std::any::TypeId::of::<T>() == std::any::TypeId::of::<SystemError>(),
             _ => false,
@@ -300,22 +328,34 @@ impl EngineError {
         T: std::any::Any,
     {
         match self {
-            Self::Render(err) if std::any::TypeId::of::<T>() == std::any::TypeId::of::<RenderError>() => {
+            Self::Render(err)
+                if std::any::TypeId::of::<T>() == std::any::TypeId::of::<RenderError>() =>
+            {
                 Some(unsafe { &*(err as *const _ as *const T) })
             }
-            Self::Physics(err) if std::any::TypeId::of::<T>() == std::any::TypeId::of::<PhysicsError>() => {
+            Self::Physics(err)
+                if std::any::TypeId::of::<T>() == std::any::TypeId::of::<PhysicsError>() =>
+            {
                 Some(unsafe { &*(err as *const _ as *const T) })
             }
-            Self::Audio(err) if std::any::TypeId::of::<T>() == std::any::TypeId::of::<AudioError>() => {
+            Self::Audio(err)
+                if std::any::TypeId::of::<T>() == std::any::TypeId::of::<AudioError>() =>
+            {
                 Some(unsafe { &*(err as *const _ as *const T) })
             }
-            Self::Resource(err) if std::any::TypeId::of::<T>() == std::any::TypeId::of::<ResourceError>() => {
+            Self::Resource(err)
+                if std::any::TypeId::of::<T>() == std::any::TypeId::of::<ResourceError>() =>
+            {
                 Some(unsafe { &*(err as *const _ as *const T) })
             }
-            Self::Input(err) if std::any::TypeId::of::<T>() == std::any::TypeId::of::<InputError>() => {
+            Self::Input(err)
+                if std::any::TypeId::of::<T>() == std::any::TypeId::of::<InputError>() =>
+            {
                 Some(unsafe { &*(err as *const _ as *const T) })
             }
-            Self::System(err) if std::any::TypeId::of::<T>() == std::any::TypeId::of::<SystemError>() => {
+            Self::System(err)
+                if std::any::TypeId::of::<T>() == std::any::TypeId::of::<SystemError>() =>
+            {
                 Some(unsafe { &*(err as *const _ as *const T) })
             }
             _ => None,
@@ -323,89 +363,134 @@ impl EngineError {
     }
 }
 
-// 为了让EngineError可以使用，我们需要前向声明这些类型
-// 这些类型的实际实现在各自的模块中
-#[derive(Error, Debug, Clone)]
-pub enum RenderError {
-    #[error("Unknown render error")]
-    Unknown,
-    #[error("General render error: {0}")]
-    General(String),
-}
+// Use canonical error types defined in their respective modules instead of duplicating them here
+use crate::error::render_error::RenderError;
+use crate::error::physics_error::PhysicsError;
+use crate::error::audio_error::AudioError;
+use crate::error::resource_error::ResourceError;
+use crate::error::input_error::InputError;
+use crate::error::system_error::SystemError;
 
-#[derive(Error, Debug, Clone)]
-pub enum PhysicsError {
-    #[error("Unknown physics error")]
-    Unknown,
-    #[error("Physics world not initialized")]
-    WorldNotInitialized,
-}
+// ============================================================================
+// 统一错误类型转换实现
+// ============================================================================
 
-#[derive(Error, Debug, Clone)]
-pub enum AudioError {
-    #[error("Unknown audio error")]
-    Unknown,
-    #[error("Invalid volume: {0}")]
-    InvalidVolume(f32),
-}
-
-#[derive(Error, Debug, Clone)]
-pub enum ResourceError {
-    #[error("Unknown resource error")]
-    Unknown,
-    #[error("Resource not found: {0}")]
-    NotFound(String),
-}
-
-#[derive(Error, Debug, Clone)]
-pub enum InputError {
-    #[error("Unknown input error")]
-    Unknown,
-}
-
-#[derive(Error, Debug, Clone)]
-pub enum SystemError {
-    #[error("Unknown system error")]
-    Unknown,
-}
-
-// 为这些类型实现基本方法
-impl RenderError {
-    pub fn severity(&self) -> ErrorSeverity { ErrorSeverity::Error }
-    pub fn is_recoverable(&self) -> bool { true }
-    
-    pub fn general(message: impl Into<String>) -> Self {
-        Self::General(message.into())
+/// 从NetworkError转换为EngineError
+impl From<crate::network::NetworkError> for EngineError {
+    fn from(error: crate::network::NetworkError) -> Self {
+        EngineError::System(SystemError::network(error.to_string()))
     }
 }
 
-impl PhysicsError {
-    pub fn severity(&self) -> ErrorSeverity { ErrorSeverity::Error }
-    pub fn is_recoverable(&self) -> bool { true }
-}
-
-impl AudioError {
-    pub fn severity(&self) -> ErrorSeverity { ErrorSeverity::Error }
-    pub fn is_recoverable(&self) -> bool { true }
-    
-    pub fn general(_message: impl Into<String>) -> Self {
-        Self::Unknown // 暂时返回Unknown，因为AudioError没有General变体
+/// 从GameEngineError转换为EngineError
+impl From<crate::common_errors::GameEngineError> for EngineError {
+    fn from(error: crate::common_errors::GameEngineError) -> Self {
+        match error {
+            crate::common_errors::GameEngineError::Infrastructure(infra_err) => {
+                match infra_err {
+                    crate::common_errors::InfrastructureError::Init(msg) => {
+                        EngineError::System(SystemError::initialization("engine", msg))
+                    }
+                    crate::common_errors::InfrastructureError::Render(render_err) => {
+                        // 转换CommonRenderError到RenderError
+                        EngineError::Render(RenderError::Adapter {
+                            message: render_err.to_string(),
+                            severity: ErrorSeverity::Error,
+                        })
+                    }
+                    crate::common_errors::InfrastructureError::Asset(asset_err) => {
+                        EngineError::Resource(ResourceError::NotFound {
+                            path: format!("{:?}", asset_err),
+                            severity: ErrorSeverity::Error,
+                        })
+                    }
+                    crate::common_errors::InfrastructureError::Physics(physics_err) => {
+                        EngineError::Physics(PhysicsError::WorldNotInitialized {
+                            severity: ErrorSeverity::Error,
+                        })
+                    }
+                    crate::common_errors::InfrastructureError::Audio(audio_err) => {
+                        EngineError::Audio(AudioError::DeviceInitialization {
+                            message: audio_err.to_string(),
+                            severity: ErrorSeverity::Error,
+                        })
+                    }
+                    crate::common_errors::InfrastructureError::Script(script_err) => {
+                        EngineError::System(SystemError::initialization("script", script_err.to_string()))
+                    }
+                    crate::common_errors::InfrastructureError::Platform(platform_err) => {
+                        EngineError::System(SystemError::platform("platform", platform_err.to_string()))
+                    }
+                    crate::common_errors::InfrastructureError::Io(io_err) => {
+                        EngineError::System(SystemError::filesystem("unknown", io_err.to_string()))
+                    }
+                    crate::common_errors::InfrastructureError::Window(msg) => {
+                        EngineError::System(SystemError::platform("window", msg))
+                    }
+                    crate::common_errors::InfrastructureError::RenderInit(wgpu_err) => {
+                        EngineError::Render(RenderError::DeviceCreation {
+                            message: wgpu_err.to_string(),
+                            severity: ErrorSeverity::Critical,
+                        })
+                    }
+                    crate::common_errors::InfrastructureError::EventLoop(msg) => {
+                        EngineError::System(SystemError::initialization("event_loop", msg))
+                    }
+                    crate::common_errors::InfrastructureError::General(msg) => {
+                        EngineError::general(msg)
+                    }
+                }
+            }
+            crate::common_errors::GameEngineError::Domain(domain_err) => {
+                match domain_err {
+                    crate::common_errors::DomainError::Audio(audio_err) => {
+                        EngineError::Audio(AudioError::SourceNotFound {
+                            source_id: format!("{:?}", audio_err),
+                            severity: ErrorSeverity::Error,
+                        })
+                    }
+                    crate::common_errors::DomainError::Physics(physics_err) => {
+                        EngineError::Physics(PhysicsError::BodyNotFound {
+                            body_id: format!("{:?}", physics_err),
+                            severity: ErrorSeverity::Error,
+                        })
+                    }
+                    crate::common_errors::DomainError::Scene(scene_err) => {
+                        EngineError::general(format!("Scene error: {}", scene_err))
+                    }
+                    crate::common_errors::DomainError::General(msg) => {
+                        EngineError::general(msg)
+                    }
+                }
+            }
+        }
     }
 }
 
-impl ResourceError {
-    pub fn severity(&self) -> ErrorSeverity { ErrorSeverity::Error }
-    pub fn is_recoverable(&self) -> bool { true }
-}
-
-impl InputError {
-    pub fn severity(&self) -> ErrorSeverity { ErrorSeverity::Error }
-    pub fn is_recoverable(&self) -> bool { true }
-}
-
-impl SystemError {
-    pub fn severity(&self) -> ErrorSeverity { ErrorSeverity::Error }
-    pub fn is_recoverable(&self) -> bool { true }
+/// 从DomainError转换为EngineError
+impl From<crate::domain::errors::DomainError> for EngineError {
+    fn from(error: crate::domain::errors::DomainError) -> Self {
+        match error {
+            crate::domain::errors::DomainError::Audio(audio_err) => {
+                EngineError::Audio(AudioError::SourceNotFound {
+                    source_id: format!("{:?}", audio_err),
+                    severity: ErrorSeverity::Error,
+                })
+            }
+            crate::domain::errors::DomainError::Physics(physics_err) => {
+                EngineError::Physics(PhysicsError::BodyNotFound {
+                    body_id: format!("{:?}", physics_err),
+                    severity: ErrorSeverity::Error,
+                })
+            }
+            crate::domain::errors::DomainError::Scene(scene_err) => {
+                EngineError::general(format!("Scene error: {}", scene_err))
+            }
+            crate::domain::errors::DomainError::General(msg) => {
+                EngineError::general(msg)
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -438,7 +523,7 @@ mod tests {
             EngineError::general("Error 2"),
         ];
         let multi_err = EngineError::multiple(errors);
-        
+
         assert!(matches!(multi_err, EngineError::Multiple { count: 2, .. }));
     }
 
@@ -455,6 +540,23 @@ mod tests {
         let chained = root.with_context("Intermediate context");
         let final_err = chained.with_context("Final context");
 
-        assert_eq!(final_err.root_cause().to_string(), "General error: Root cause");
+        assert_eq!(
+            final_err.root_cause().to_string(),
+            "General error: Root cause"
+        );
+    }
+
+    #[test]
+    fn test_network_error_conversion() {
+        let network_err = crate::network::NetworkError::ConnectionError("test".to_string());
+        let engine_err: EngineError = network_err.into();
+        assert!(matches!(engine_err, EngineError::System(_)));
+    }
+
+    #[test]
+    fn test_domain_error_conversion() {
+        let domain_err = crate::domain::errors::DomainError::General("test".to_string());
+        let engine_err: EngineError = domain_err.into();
+        assert!(matches!(engine_err, EngineError::General { .. }));
     }
 }

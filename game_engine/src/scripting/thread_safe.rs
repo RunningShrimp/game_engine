@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::sync::mpsc::{channel, Receiver, Sender};
+use std::sync::mpsc::{Receiver, Sender, channel};
 use std::thread;
 
 /// 脚本命令
@@ -179,7 +179,6 @@ impl ThreadSafeScriptSystem {
         }
     }
 }
-
 
 #[cfg(test)]
 mod tests {

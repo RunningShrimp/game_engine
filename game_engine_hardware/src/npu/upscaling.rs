@@ -1,13 +1,14 @@
-/// 基于NPU的AI超分辨率
-/// 
-/// 使用神经网络模型进行图像超分辨率处理
-
+//  基于NPU的AI超分辨率
+///
+//  使用神经网络模型进行图像超分辨率处理
 use crate::error::HardwareResult;
-use crate::npu::sdk::{NpuSdkManager, NpuInferenceEngine, NpuBackend};
-use crate::upscaling::sdk::{UpscalingEngine, UpscalingTechnology, UpscalingQuality, TextureHandle};
+use crate::npu::sdk::{NpuBackend, NpuInferenceEngine, NpuSdkManager};
+use crate::upscaling::sdk::{
+    TextureHandle, UpscalingEngine, UpscalingQuality, UpscalingTechnology,
+};
 use std::path::PathBuf;
 
-/// AI超分辨率模型类型
+//  AI超分辨率模型类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AiUpscalingModel {
     /// ESRGAN (Enhanced Super-Resolution GAN)
@@ -33,7 +34,7 @@ impl AiUpscalingModel {
             AiUpscalingModel::Lightweight => "lightweight_x2.onnx",
         }
     }
-    
+
     /// 获取放大倍数
     pub fn scale_factor(&self) -> u32 {
         match self {
@@ -41,12 +42,15 @@ impl AiUpscalingModel {
             _ => 4,
         }
     }
-    
+
     /// 是否适合移动端
     pub fn is_mobile_friendly(&self) -> bool {
-        matches!(self, AiUpscalingModel::RealESRGAN | AiUpscalingModel::Lightweight)
+        matches!(
+            self,
+            AiUpscalingModel::RealESRGAN | AiUpscalingModel::Lightweight
+        )
     }
-    
+
     /// 获取推理耗时估算 (ms)
     pub fn estimated_inference_time_ms(&self) -> f32 {
         match self {
@@ -59,7 +63,7 @@ impl AiUpscalingModel {
     }
 }
 
-/// NPU超分辨率引擎
+//  NPU超分辨率引擎
 pub struct NpuUpscalingEngine {
     npu_engine: Box<dyn NpuInferenceEngine>,
     model: AiUpscalingModel,
@@ -81,22 +85,21 @@ impl NpuUpscalingEngine {
     ) -> HardwareResult<Self> {
         // 创建NPU推理引擎
         let mut npu_engine = npu_manager.create_engine(None)?;
-        
+
         // 计算渲染分辨率
         let scale = quality.render_scale();
         let render_width = (display_width as f32 * scale) as u32;
         let render_height = (display_height as f32 * scale) as u32;
-        
+
         // 构建模型路径
-        let model_path = PathBuf::from("models/upscaling")
-            .join(model.model_filename());
-        
+        let model_path = PathBuf::from("models/upscaling").join(model.model_filename());
+
         // 加载模型
         npu_engine.load_model(&model_path)?;
-        
+
         // 预热
         npu_engine.warmup()?;
-        
+
         Ok(Self {
             npu_engine,
             model,
@@ -107,83 +110,85 @@ impl NpuUpscalingEngine {
             quality,
         })
     }
-    
+
     /// 获取NPU后端
     pub fn npu_backend(&self) -> NpuBackend {
         self.npu_engine.backend()
     }
-    
+
     /// 获取模型类型
     pub fn model_type(&self) -> AiUpscalingModel {
         self.model
     }
-    
-    
 }
 
 impl UpscalingEngine for NpuUpscalingEngine {
     fn initialize(&mut self, display_width: u32, display_height: u32) -> HardwareResult<()> {
         self.display_width = display_width;
         self.display_height = display_height;
-        
+
         let scale = self.quality.render_scale();
         self.render_width = (display_width as f32 * scale) as u32;
         self.render_height = (display_height as f32 * scale) as u32;
-        
+
         Ok(())
     }
-    
-    fn upscale(&self, _input_texture: TextureHandle, _output_texture: TextureHandle) -> HardwareResult<()> {
+
+    fn upscale(
+        &self,
+        _input_texture: TextureHandle,
+        _output_texture: TextureHandle,
+    ) -> HardwareResult<()> {
         // 实际实现需要：
         // 1. 从输入纹理读取像素数据
         // 2. 转换为模型输入格式
         // 3. 调用NPU推理
         // 4. 转换输出格式
         // 5. 写入输出纹理
-        
+
         // 这里是简化的占位实现
         tracing::info!(target: "npu", "[NPU超分] 使用 {:?} 后端", self.npu_backend());
         tracing::info!(target: "npu", "[NPU超分] 模型: {:?}", self.model);
         tracing::info!(target: "npu", "[NPU超分] 从 {}x{} 超分到 {}x{}", 
                  self.render_width, self.render_height,
                  self.display_width, self.display_height);
-        
+
         Ok(())
     }
-    
+
     fn set_quality(&mut self, quality: UpscalingQuality) -> HardwareResult<()> {
         self.quality = quality;
-        
+
         let scale = quality.render_scale();
         self.render_width = (self.display_width as f32 * scale) as u32;
         self.render_height = (self.display_height as f32 * scale) as u32;
-        
+
         Ok(())
     }
-    
+
     fn render_resolution(&self) -> (u32, u32) {
         (self.render_width, self.render_height)
     }
-    
+
     fn display_resolution(&self) -> (u32, u32) {
         (self.display_width, self.display_height)
     }
-    
+
     fn technology(&self) -> UpscalingTechnology {
         // NPU超分使用自定义技术标识
         UpscalingTechnology::None // 可以扩展枚举添加 NpuAI
     }
-    
+
     fn supports_motion_vectors(&self) -> bool {
         false // AI超分通常不需要运动矢量
     }
-    
+
     fn supports_depth_buffer(&self) -> bool {
         false
     }
 }
 
-/// NPU超分辨率管理器
+//  NPU超分辨率管理器
 pub struct NpuUpscalingManager {
     npu_manager: NpuSdkManager,
     available_models: Vec<AiUpscalingModel>,
@@ -196,11 +201,11 @@ impl NpuUpscalingManager {
             npu_manager,
             available_models: Vec::new(),
         };
-        
+
         manager.detect_available_models();
         manager
     }
-    
+
     /// 检测可用的模型
     fn detect_available_models(&mut self) {
         // 检查模型文件是否存在
@@ -211,26 +216,25 @@ impl NpuUpscalingManager {
             AiUpscalingModel::SwinIR,
             AiUpscalingModel::Lightweight,
         ];
-        
+
         for model in models {
-            let _model_path = PathBuf::from("models/upscaling")
-                .join(model.model_filename());
-            
+            let _model_path = PathBuf::from("models/upscaling").join(model.model_filename());
+
             // 实际应该检查文件是否存在
             // if model_path.exists() {
             //     self.available_models.push(model);
             // }
-            
+
             // 简化实现：假设所有模型都可用
             self.available_models.push(model);
         }
     }
-    
+
     /// 获取可用模型
     pub fn available_models(&self) -> &[AiUpscalingModel] {
         &self.available_models
     }
-    
+
     /// 推荐模型
     pub fn recommend_model(&self, is_mobile: bool) -> AiUpscalingModel {
         if is_mobile {
@@ -241,7 +245,7 @@ impl NpuUpscalingManager {
             AiUpscalingModel::RealESRGAN
         }
     }
-    
+
     /// 创建NPU超分辨率引擎
     pub fn create_engine(
         &self,
@@ -251,7 +255,7 @@ impl NpuUpscalingManager {
         quality: UpscalingQuality,
     ) -> HardwareResult<NpuUpscalingEngine> {
         let model = model.unwrap_or_else(|| self.recommend_model(false));
-        
+
         NpuUpscalingEngine::new(
             &self.npu_manager,
             model,
@@ -262,9 +266,9 @@ impl NpuUpscalingManager {
     }
 }
 
-/// 混合超分辨率策略
-/// 
-/// 根据场景自动选择传统超分或AI超分
+//  混合超分辨率策略
+///
+//  根据场景自动选择传统超分或AI超分
 pub struct HybridUpscalingStrategy {
     traditional_engine: Option<Box<dyn UpscalingEngine>>,
     npu_engine: Option<NpuUpscalingEngine>,
@@ -280,17 +284,17 @@ impl HybridUpscalingStrategy {
             use_npu_threshold: 16.67, // 60fps
         }
     }
-    
+
     /// 设置传统超分引擎
     pub fn set_traditional_engine(&mut self, engine: Box<dyn UpscalingEngine>) {
         self.traditional_engine = Some(engine);
     }
-    
+
     /// 设置NPU超分引擎
     pub fn set_npu_engine(&mut self, engine: NpuUpscalingEngine) {
         self.npu_engine = Some(engine);
     }
-    
+
     /// 根据当前帧时间选择引擎
     pub fn select_engine(&self, frame_time_ms: f32) -> Option<&dyn UpscalingEngine> {
         if frame_time_ms < self.use_npu_threshold {
@@ -299,15 +303,15 @@ impl HybridUpscalingStrategy {
                 return Some(engine as &dyn UpscalingEngine);
             }
         }
-        
+
         // 性能不足或NPU不可用，使用传统超分
         if let Some(ref engine) = self.traditional_engine {
             return Some(engine.as_ref());
         }
-        
+
         None
     }
-    
+
     /// 设置使用NPU的帧时间阈值
     pub fn set_npu_threshold(&mut self, threshold_ms: f32) {
         self.use_npu_threshold = threshold_ms;
@@ -341,27 +345,27 @@ mod tests {
             tracing::info!(target: "npu", "  推理耗时: {:.1}ms", model.estimated_inference_time_ms());
         }
     }
-    
+
     #[test]
     fn test_npu_upscaling_manager() {
         let npu_info = detect_npu();
         let npu_manager = NpuSdkManager::new(npu_info);
         let upscaling_manager = NpuUpscalingManager::new(npu_manager);
-        
+
         tracing::info!(target: "npu", "可用模型:");
         for model in upscaling_manager.available_models() {
             tracing::info!(target: "npu", "  - {:?}", model);
         }
-        
+
         tracing::info!(target: "npu", "\n推荐模型:");
         tracing::info!(target: "npu", "  移动端: {:?}", upscaling_manager.recommend_model(true));
         tracing::info!(target: "npu", "  桌面端: {:?}", upscaling_manager.recommend_model(false));
     }
-    
+
     #[test]
     fn test_hybrid_strategy() {
         let strategy = HybridUpscalingStrategy::new();
-        
+
         // 测试不同帧时间下的选择
         for frame_time in [10.0, 16.67, 20.0, 30.0] {
             tracing::info!(target: "npu", "帧时间 {:.1}ms:", frame_time);

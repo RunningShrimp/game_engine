@@ -1,14 +1,13 @@
-/// 批量数据处理SIMD优化模块
-/// 
-/// 用于渲染管线中的大批量数据处理
-
-mod transform;
-mod skinning;
+//  批量数据处理SIMD优化模块
 mod particle;
+mod skinning;
+///
+/// 用于渲染管线中的大批量数据处理
+mod transform;
 
-pub use transform::*;
-pub use skinning::*;
 pub use particle::*;
+pub use skinning::*;
+pub use transform::*;
 
 use crate::SimdBackend;
 

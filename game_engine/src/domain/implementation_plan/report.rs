@@ -1,11 +1,11 @@
-//! 报告生成领域对象
-//!
-//! 该模块实现了报告生成的业务逻辑，支持生成实施计划执行报告。
+//  报告生成领域对象
+// 
+//  该模块实现了报告生成的业务逻辑，支持生成实施计划执行报告。
 
 use crate::domain::implementation_plan::errors::ImplementationPlanError;
-use crate::domain::implementation_plan::task::{TaskStatus, TaskManager};
 use crate::domain::implementation_plan::milestone::MilestoneManager;
 use crate::domain::implementation_plan::risk::RiskManager;
+use crate::domain::implementation_plan::task::{TaskManager, TaskStatus};
 use serde::{Deserialize, Serialize};
 
 /// 任务统计信息
@@ -155,9 +155,9 @@ impl ImplementationReport {
         let milestone_progress = self.milestone_stats.average_progress;
         let risk_progress = self.risk_stats.mitigation_progress;
 
-        self.overall_progress = task_progress * task_weight +
-                               milestone_progress * milestone_weight +
-                               risk_progress * risk_weight;
+        self.overall_progress = task_progress * task_weight
+            + milestone_progress * milestone_weight
+            + risk_progress * risk_weight;
     }
 
     /// 生成关键问题分析
@@ -166,16 +166,21 @@ impl ImplementationReport {
 
         // 分析任务相关问题
         if self.task_stats.overdue > 0 {
-            self.key_issues.push(format!("有 {} 个任务已过期", self.task_stats.overdue));
+            self.key_issues
+                .push(format!("有 {} 个任务已过期", self.task_stats.overdue));
         }
 
         if self.task_stats.completion_rate < 0.5 {
-            self.key_issues.push("任务完成率较低，需要加快进度".to_string());
+            self.key_issues
+                .push("任务完成率较低，需要加快进度".to_string());
         }
 
         // 分析里程碑相关问题
         if self.milestone_stats.overdue > 0 {
-            self.key_issues.push(format!("有 {} 个里程碑已过期", self.milestone_stats.overdue));
+            self.key_issues.push(format!(
+                "有 {} 个里程碑已过期",
+                self.milestone_stats.overdue
+            ));
         }
 
         if self.milestone_stats.average_progress < 0.3 {
@@ -184,15 +189,22 @@ impl ImplementationReport {
 
         // 分析风险相关问题
         if self.risk_stats.occurred > 0 {
-            self.key_issues.push(format!("有 {} 个风险已发生", self.risk_stats.occurred));
+            self.key_issues
+                .push(format!("有 {} 个风险已发生", self.risk_stats.occurred));
         }
 
         if self.risk_stats.high_priority > 0 {
-            self.key_issues.push(format!("有 {} 个高优先级风险需要关注", self.risk_stats.high_priority));
+            self.key_issues.push(format!(
+                "有 {} 个高优先级风险需要关注",
+                self.risk_stats.high_priority
+            ));
         }
 
         if self.risk_stats.with_overdue_measures > 0 {
-            self.key_issues.push(format!("有 {} 个风险的缓解措施已过期", self.risk_stats.with_overdue_measures));
+            self.key_issues.push(format!(
+                "有 {} 个风险的缓解措施已过期",
+                self.risk_stats.with_overdue_measures
+            ));
         }
 
         if self.key_issues.is_empty() {
@@ -206,33 +218,41 @@ impl ImplementationReport {
 
         // 基于统计数据生成建议
         if self.task_stats.overdue > 0 {
-            self.recommendations.push("优先处理过期任务，重新评估时间计划".to_string());
+            self.recommendations
+                .push("优先处理过期任务，重新评估时间计划".to_string());
         }
 
         if self.task_stats.completion_rate < 0.7 {
-            self.recommendations.push("增加资源投入，加快任务执行速度".to_string());
+            self.recommendations
+                .push("增加资源投入，加快任务执行速度".to_string());
         }
 
         if self.milestone_stats.overdue > 0 {
-            self.recommendations.push("审查里程碑计划，调整关键路径".to_string());
+            self.recommendations
+                .push("审查里程碑计划，调整关键路径".to_string());
         }
 
         if self.risk_stats.high_priority > 0 {
-            self.recommendations.push("制定高风险缓解计划，分配专门资源".to_string());
+            self.recommendations
+                .push("制定高风险缓解计划，分配专门资源".to_string());
         }
 
         if self.risk_stats.with_overdue_measures > 0 {
-            self.recommendations.push("跟进过期缓解措施，评估影响".to_string());
+            self.recommendations
+                .push("跟进过期缓解措施，评估影响".to_string());
         }
 
         if self.overall_progress > 0.8 {
-            self.recommendations.push("项目进展良好，准备收尾工作".to_string());
+            self.recommendations
+                .push("项目进展良好，准备收尾工作".to_string());
         } else if self.overall_progress < 0.3 {
-            self.recommendations.push("项目进度严重滞后，需要管理层干预".to_string());
+            self.recommendations
+                .push("项目进度严重滞后，需要管理层干预".to_string());
         }
 
         if self.recommendations.is_empty() {
-            self.recommendations.push("继续保持当前进度，定期监控项目状态".to_string());
+            self.recommendations
+                .push("继续保持当前进度，定期监控项目状态".to_string());
         }
     }
 
@@ -265,7 +285,11 @@ impl ReportGenerator {
         self.collect_task_statistics(&mut report.task_stats, task_manager);
 
         // 收集里程碑统计
-        self.collect_milestone_statistics(&mut report.milestone_stats, milestone_manager, task_manager);
+        self.collect_milestone_statistics(
+            &mut report.milestone_stats,
+            milestone_manager,
+            task_manager,
+        );
 
         // 收集风险统计
         self.collect_risk_statistics(&mut report.risk_stats, risk_manager);
@@ -285,10 +309,22 @@ impl ReportGenerator {
         let tasks = task_manager.get_all_tasks();
 
         stats.total = tasks.len();
-        stats.todo = tasks.iter().filter(|t| t.status == TaskStatus::Todo).count();
-        stats.in_progress = tasks.iter().filter(|t| t.status == TaskStatus::InProgress).count();
-        stats.done = tasks.iter().filter(|t| t.status == TaskStatus::Done).count();
-        stats.cancelled = tasks.iter().filter(|t| t.status == TaskStatus::Cancelled).count();
+        stats.todo = tasks
+            .iter()
+            .filter(|t| t.status == TaskStatus::Todo)
+            .count();
+        stats.in_progress = tasks
+            .iter()
+            .filter(|t| t.status == TaskStatus::InProgress)
+            .count();
+        stats.done = tasks
+            .iter()
+            .filter(|t| t.status == TaskStatus::Done)
+            .count();
+        stats.cancelled = tasks
+            .iter()
+            .filter(|t| t.status == TaskStatus::Cancelled)
+            .count();
         stats.overdue = tasks.iter().filter(|t| t.is_overdue()).count();
 
         if stats.total > 0 {
@@ -312,13 +348,32 @@ impl ReportGenerator {
         }
 
         stats.total = milestones.len();
-        stats.not_started = milestones.iter().filter(|m| m.status == crate::domain::implementation_plan::milestone::MilestoneStatus::NotStarted).count();
-        stats.in_progress = milestones.iter().filter(|m| m.status == crate::domain::implementation_plan::milestone::MilestoneStatus::InProgress).count();
-        stats.completed = milestones.iter().filter(|m| m.status == crate::domain::implementation_plan::milestone::MilestoneStatus::Completed).count();
+        stats.not_started = milestones
+            .iter()
+            .filter(|m| {
+                m.status
+                    == crate::domain::implementation_plan::milestone::MilestoneStatus::NotStarted
+            })
+            .count();
+        stats.in_progress = milestones
+            .iter()
+            .filter(|m| {
+                m.status
+                    == crate::domain::implementation_plan::milestone::MilestoneStatus::InProgress
+            })
+            .count();
+        stats.completed = milestones
+            .iter()
+            .filter(|m| {
+                m.status
+                    == crate::domain::implementation_plan::milestone::MilestoneStatus::Completed
+            })
+            .count();
         stats.overdue = milestones.iter().filter(|m| m.is_overdue()).count();
 
         if stats.total > 0 {
-            let total_progress: f32 = milestones.iter()
+            let total_progress: f32 = milestones
+                .iter()
                 .map(|m| m.calculate_progress(&task_statuses))
                 .sum();
             stats.average_progress = total_progress / stats.total as f32;
@@ -330,10 +385,26 @@ impl ReportGenerator {
         let risks = risk_manager.get_all_risks();
 
         stats.total = risks.len();
-        stats.identified = risks.iter().filter(|r| r.status == crate::domain::implementation_plan::risk::RiskStatus::Identified).count();
-        stats.mitigating = risks.iter().filter(|r| r.status == crate::domain::implementation_plan::risk::RiskStatus::Mitigating).count();
-        stats.mitigated = risks.iter().filter(|r| r.status == crate::domain::implementation_plan::risk::RiskStatus::Mitigated).count();
-        stats.occurred = risks.iter().filter(|r| r.status == crate::domain::implementation_plan::risk::RiskStatus::Occurred).count();
+        stats.identified = risks
+            .iter()
+            .filter(|r| {
+                r.status == crate::domain::implementation_plan::risk::RiskStatus::Identified
+            })
+            .count();
+        stats.mitigating = risks
+            .iter()
+            .filter(|r| {
+                r.status == crate::domain::implementation_plan::risk::RiskStatus::Mitigating
+            })
+            .count();
+        stats.mitigated = risks
+            .iter()
+            .filter(|r| r.status == crate::domain::implementation_plan::risk::RiskStatus::Mitigated)
+            .count();
+        stats.occurred = risks
+            .iter()
+            .filter(|r| r.status == crate::domain::implementation_plan::risk::RiskStatus::Occurred)
+            .count();
         stats.high_priority = risk_manager.get_high_priority_risks().len();
         stats.with_overdue_measures = risk_manager.get_risks_with_overdue_measures().len();
         stats.mitigation_progress = risk_manager.calculate_overall_mitigation_progress();
@@ -349,9 +420,9 @@ impl Default for ReportGenerator {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::implementation_plan::task::TaskManager;
     use crate::domain::implementation_plan::milestone::MilestoneManager;
     use crate::domain::implementation_plan::risk::RiskManager;
+    use crate::domain::implementation_plan::task::TaskManager;
 
     #[test]
     fn test_implementation_report_creation() {
@@ -363,8 +434,7 @@ mod tests {
 
     #[test]
     fn test_implementation_report_with_description() {
-        let report = ImplementationReport::new("Test Report")
-            .with_description("Test description");
+        let report = ImplementationReport::new("Test Report").with_description("Test description");
         assert_eq!(report.description, Some("Test description".to_string()));
     }
 
@@ -398,9 +468,24 @@ mod tests {
 
         assert!(report.key_issues.len() > 0);
         assert!(report.key_issues.iter().any(|issue| issue.contains("过期")));
-        assert!(report.key_issues.iter().any(|issue| issue.contains("完成率较低")));
-        assert!(report.key_issues.iter().any(|issue| issue.contains("已发生")));
-        assert!(report.key_issues.iter().any(|issue| issue.contains("高优先级")));
+        assert!(
+            report
+                .key_issues
+                .iter()
+                .any(|issue| issue.contains("完成率较低"))
+        );
+        assert!(
+            report
+                .key_issues
+                .iter()
+                .any(|issue| issue.contains("已发生"))
+        );
+        assert!(
+            report
+                .key_issues
+                .iter()
+                .any(|issue| issue.contains("高优先级"))
+        );
     }
 
     #[test]
@@ -416,10 +501,30 @@ mod tests {
         report.generate_recommendations();
 
         assert!(report.recommendations.len() > 0);
-        assert!(report.recommendations.iter().any(|rec| rec.contains("过期")));
-        assert!(report.recommendations.iter().any(|rec| rec.contains("资源投入")));
-        assert!(report.recommendations.iter().any(|rec| rec.contains("高风险")));
-        assert!(report.recommendations.iter().any(|rec| rec.contains("严重滞后")));
+        assert!(
+            report
+                .recommendations
+                .iter()
+                .any(|rec| rec.contains("过期"))
+        );
+        assert!(
+            report
+                .recommendations
+                .iter()
+                .any(|rec| rec.contains("资源投入"))
+        );
+        assert!(
+            report
+                .recommendations
+                .iter()
+                .any(|rec| rec.contains("高风险"))
+        );
+        assert!(
+            report
+                .recommendations
+                .iter()
+                .any(|rec| rec.contains("严重滞后"))
+        );
     }
 
     #[test]
@@ -435,12 +540,14 @@ mod tests {
         let milestone_manager = MilestoneManager::new();
         let risk_manager = RiskManager::new();
 
-        let report = generator.generate_report(
-            "Test Report",
-            &task_manager,
-            &milestone_manager,
-            &risk_manager,
-        ).unwrap();
+        let report = generator
+            .generate_report(
+                "Test Report",
+                &task_manager,
+                &milestone_manager,
+                &risk_manager,
+            )
+            .unwrap();
 
         assert_eq!(report.title, "Test Report");
         assert_eq!(report.task_stats.total, 0);
@@ -467,8 +574,16 @@ mod tests {
         let task2_id = task_manager.create_task("Task 2").unwrap();
         let task3_id = task_manager.create_task("Task 3").unwrap();
 
-        task_manager.get_task_mut(&task1_id).unwrap().complete().unwrap();
-        task_manager.get_task_mut(&task2_id).unwrap().start().unwrap();
+        task_manager
+            .get_task_mut(&task1_id)
+            .unwrap()
+            .complete()
+            .unwrap();
+        task_manager
+            .get_task_mut(&task2_id)
+            .unwrap()
+            .start()
+            .unwrap();
 
         generator.collect_task_statistics(&mut stats, &task_manager);
 
@@ -494,7 +609,9 @@ mod tests {
         };
 
         // 创建测试里程碑
-        let milestone_id = milestone_manager.create_milestone("Test Milestone").unwrap();
+        let milestone_id = milestone_manager
+            .create_milestone("Test Milestone")
+            .unwrap();
 
         generator.collect_milestone_statistics(&mut stats, &milestone_manager, &task_manager);
 
@@ -519,7 +636,9 @@ mod tests {
         };
 
         // 创建测试风险
-        let risk_id = risk_manager.create_risk("Test Risk", "Test description").unwrap();
+        let risk_id = risk_manager
+            .create_risk("Test Risk", "Test description")
+            .unwrap();
 
         generator.collect_risk_statistics(&mut stats, &risk_manager);
 

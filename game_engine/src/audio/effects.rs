@@ -1,41 +1,41 @@
-//! 高级音频效果模块
-//!
-//! 实现各种音频效果处理器，包括混响、均衡器、压缩器等。
-//!
-//! ## 功能特性
-//!
-//! - 混响效果（Reverb）
-//! - 均衡器（Equalizer）
-//! - 压缩器（Compressor）
-//! - 延迟效果（Delay/Echo）
-//! - 失真效果（Distortion）
-//! - 效果链管理
-//!
-//! ## 使用示例
-//!
-//! ```rust
-//! use crate::audio::effects::*;
-//!
-//! // 创建效果链
-//! let mut chain = EffectChain::new();
-//!
-//! // 添加混响效果
-//! let reverb = ReverbEffect::new(ReverbConfig {
-//!     room_size: 0.8,
-//!     damping: 0.5,
-//!     wet_level: 0.3,
-//!     dry_level: 0.7,
-//! });
-//! chain.add_effect(Box::new(reverb));
-//!
-//! // 添加均衡器
-//! let eq = EqualizerEffect::new(EqualizerConfig::default());
-//! chain.add_effect(Box::new(eq));
-//!
-//! // 处理音频数据
-//! let mut samples = vec![0.5; 44100];
-//! chain.process(&mut samples);
-//! ```
+//  高级音频效果模块
+// 
+//  实现各种音频效果处理器，包括混响、均衡器、压缩器等。
+// 
+//  ## 功能特性
+// 
+//  - 混响效果（Reverb）
+//  - 均衡器（Equalizer）
+//  - 压缩器（Compressor）
+//  - 延迟效果（Delay/Echo）
+//  - 失真效果（Distortion）
+//  - 效果链管理
+// 
+//  ## 使用示例
+// 
+//  ```rust
+//  use crate::audio::effects::*;
+// 
+//  // 创建效果链
+//  let mut chain = EffectChain::new();
+// 
+//  // 添加混响效果
+//  let reverb = ReverbEffect::new(ReverbConfig {
+//      room_size: 0.8,
+//      damping: 0.5,
+//      wet_level: 0.3,
+//      dry_level: 0.7,
+//  });
+//  chain.add_effect(Box::new(reverb));
+// 
+//  // 添加均衡器
+//  let eq = EqualizerEffect::new(EqualizerConfig::default());
+//  chain.add_effect(Box::new(eq));
+// 
+//  // 处理音频数据
+//  let mut samples = vec![0.5; 44100];
+//  chain.process(&mut samples);
+//  ```
 
 use crate::impl_default;
 use thiserror::Error;
@@ -235,16 +235,56 @@ pub struct EqualizerConfig {
 
 impl_default!(EqualizerConfig {
     bands: vec![
-        EqualizerBand { frequency: 60.0, gain: 0.0, q: 1.0 },
-        EqualizerBand { frequency: 170.0, gain: 0.0, q: 1.0 },
-        EqualizerBand { frequency: 310.0, gain: 0.0, q: 1.0 },
-        EqualizerBand { frequency: 600.0, gain: 0.0, q: 1.0 },
-        EqualizerBand { frequency: 1000.0, gain: 0.0, q: 1.0 },
-        EqualizerBand { frequency: 3000.0, gain: 0.0, q: 1.0 },
-        EqualizerBand { frequency: 6000.0, gain: 0.0, q: 1.0 },
-        EqualizerBand { frequency: 12000.0, gain: 0.0, q: 1.0 },
-        EqualizerBand { frequency: 14000.0, gain: 0.0, q: 1.0 },
-        EqualizerBand { frequency: 16000.0, gain: 0.0, q: 1.0 },
+        EqualizerBand {
+            frequency: 60.0,
+            gain: 0.0,
+            q: 1.0
+        },
+        EqualizerBand {
+            frequency: 170.0,
+            gain: 0.0,
+            q: 1.0
+        },
+        EqualizerBand {
+            frequency: 310.0,
+            gain: 0.0,
+            q: 1.0
+        },
+        EqualizerBand {
+            frequency: 600.0,
+            gain: 0.0,
+            q: 1.0
+        },
+        EqualizerBand {
+            frequency: 1000.0,
+            gain: 0.0,
+            q: 1.0
+        },
+        EqualizerBand {
+            frequency: 3000.0,
+            gain: 0.0,
+            q: 1.0
+        },
+        EqualizerBand {
+            frequency: 6000.0,
+            gain: 0.0,
+            q: 1.0
+        },
+        EqualizerBand {
+            frequency: 12000.0,
+            gain: 0.0,
+            q: 1.0
+        },
+        EqualizerBand {
+            frequency: 14000.0,
+            gain: 0.0,
+            q: 1.0
+        },
+        EqualizerBand {
+            frequency: 16000.0,
+            gain: 0.0,
+            q: 1.0
+        },
     ],
     sample_rate: 44100.0,
 });

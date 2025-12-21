@@ -1,17 +1,17 @@
-//! 性能分析和报告生成工具
-//!
-//! 分析性能数据并生成详细报告
-//! - 性能分析
-//! - 瓶颈检测
-//! - HTML 报告生成
-//! - 对标对比
+//  性能分析和报告生成工具
+// 
+//  分析性能数据并生成详细报告
+//  - 性能分析
+//  - 瓶颈检测
+//  - HTML 报告生成
+//  - 对标对比
 
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 use std::time::SystemTime;
 
-/// 性能分析结果
+//  性能分析结果
 #[derive(Debug, Clone)]
 pub struct PerformanceAnalysis {
     /// 分析名称
@@ -24,7 +24,7 @@ pub struct PerformanceAnalysis {
     pub recommendations: Vec<String>,
 }
 
-/// 瓶颈信息
+//  瓶颈信息
 #[derive(Debug, Clone)]
 pub struct Bottleneck {
     /// 瓶颈名称
@@ -37,7 +37,7 @@ pub struct Bottleneck {
     pub suggestion: String,
 }
 
-/// 性能分析器
+//  性能分析器
 pub struct PerformanceAnalyzer {
     /// 分析结果
     analyses: HashMap<String, PerformanceAnalysis>,
@@ -306,7 +306,7 @@ impl PerformanceAnalyzer {
         ));
 
         // 添加每个分析
-        for (_, analysis) in &self.analyses {
+        for analysis in self.analyses.values() {
             html.push_str(&format!(
                 "    <div class=\"analysis\">\n        <h2>{}</h2>\n",
                 analysis.name

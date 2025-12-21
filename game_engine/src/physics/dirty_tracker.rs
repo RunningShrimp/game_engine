@@ -1,30 +1,30 @@
-//! 物理脏标记追踪模块
-//!
-//! 通过脏标记机制优化物理系统与 Transform 的同步，
-//! 仅同步发生变化的物体，减少不必要的数据传输。
-//!
-//! ## 优化效果
-//!
-//! - 静止物体零开销
-//! - 休眠物体自动跳过
-//! - 批量同步减少分散访问
-//!
-//! ## 使用示例
-//!
-//! ```ignore
-//! // 使用优化后的同步系统
-//! fn physics_sync_system(
-//!     physics_state: Res<PhysicsState>,
-//!     mut query: Query<(&RigidBodyComp, &mut Transform, &mut PhysicsDirty)>,
-//! ) {
-//!     for (rb, mut transform, mut dirty) in query.iter_mut() {
-//!         if dirty.needs_sync() {
-//!             // 执行同步...
-//!             dirty.clear();
-//!         }
-//!     }
-//! }
-//! ```
+//  物理脏标记追踪模块
+// 
+//  通过脏标记机制优化物理系统与 Transform 的同步，
+//  仅同步发生变化的物体，减少不必要的数据传输。
+// 
+//  ## 优化效果
+// 
+//  - 静止物体零开销
+//  - 休眠物体自动跳过
+//  - 批量同步减少分散访问
+// 
+//  ## 使用示例
+// 
+//  ```ignore
+//  // 使用优化后的同步系统
+//  fn physics_sync_system(
+//      physics_state: Res<PhysicsState>,
+//      mut query: Query<(&RigidBodyComp, &mut Transform, &mut PhysicsDirty)>,
+//  ) {
+//      for (rb, mut transform, mut dirty) in query.iter_mut() {
+//          if dirty.needs_sync() {
+//              // 执行同步...
+//              dirty.clear();
+//          }
+//      }
+//  }
+//  ```
 
 use crate::impl_default;
 use bevy_ecs::prelude::*;
@@ -32,12 +32,7 @@ use glam::{Quat, Vec3};
 
 // 性能监控集成
 #[cfg(feature = "profiling")]
-use crate::profiling::{
-    ScopedTimer,
-    record_counter,
-    record_timing,
-    prelude::*,
-};
+use crate::profiling::{ScopedTimer, prelude::*, record_counter, record_timing};
 
 // ============================================================================
 // 脏标记组件
@@ -230,7 +225,7 @@ pub fn optimized_physics_sync_system(
 ) {
     #[cfg(feature = "profiling")]
     let _timer = ScopedTimer::new("physics_sync_system");
-    
+
     #[cfg(feature = "profiling")]
     record_counter!(physics.sync_system_calls, 1);
     let world = physics_service.get_world();
@@ -284,7 +279,7 @@ pub fn optimized_physics_sync_system(
                     new_position,
                     new_rotation,
                     body_state.linear_velocity,
-                    body_state.angular_velocity,
+                    body_state.angular_velocity.length(), // 使用角速度的长度
                     body_state.sleeping,
                 );
 
@@ -318,7 +313,7 @@ pub fn transform_to_physics_sync_system(
 ) {
     #[cfg(feature = "profiling")]
     let _timer = ScopedTimer::new("transform_to_physics_sync_system");
-    
+
     #[cfg(feature = "profiling")]
     record_counter!(physics.transform_sync_system_calls, 1);
     for (rb_comp, transform, dirty) in query.iter() {

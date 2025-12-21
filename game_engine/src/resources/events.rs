@@ -1,5 +1,5 @@
-use std::sync::Mutex;
 use crate::error::safe_lock;
+use std::sync::Mutex;
 
 pub enum AssetEvent {
     FontJsonReady { name: String, data: String },

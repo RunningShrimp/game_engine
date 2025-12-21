@@ -1,40 +1,40 @@
-//! Staging Buffer性能测试
-//!
-//! 对比原始实现和新的环形缓冲区实现的性能差异。
-//!
-//! ## 测试目标
-//!
-//! ```text
-//! ┌─────────────────────────────────────────────────┐
-//! │              Performance Tests                   │
-//! ├─────────────────────────────────────────────────┤
-//! │  1. 内存分配性能                                      │
-//! │     - 分配延迟对比                                    │
-//! │     - 吞吐量测试                                    │
-//! │     - 内存使用率对比                                │
-//! │                                                          │
-//! │  2. 实际使用场景                                      │
-//! │     - 小数据频繁分配                                  │
-//! │     - 大数据块分配                                    │
-//! │     - 混合负载测试                                    │
-//! │                                                          │
-//! │  3. 长期稳定性测试                                    │
-//! │     - 内存泄漏检测                                    │
-//! │     - 碎片化程度跟踪                                │
-//! │     - 性能衰减分析                                    │
-//! └─────────────────────────────────────────────────┘
-//! ```
+//  Staging Buffer性能测试
+// 
+//  对比原始实现和新的环形缓冲区实现的性能差异。
+// 
+//  ## 测试目标
+// 
+//  ```text
+//  ┌─────────────────────────────────────────────────┐
+//  │              Performance Tests                   │
+//  ├─────────────────────────────────────────────────┤
+//  │  1. 内存分配性能                                      │
+//  │     - 分配延迟对比                                    │
+//  │     - 吞吐量测试                                    │
+//  │     - 内存使用率对比                                │
+//  │                                                          │
+//  │  2. 实际使用场景                                      │
+//  │     - 小数据频繁分配                                  │
+//  │     - 大数据块分配                                    │
+//  │     - 混合负载测试                                    │
+//  │                                                          │
+//  │  3. 长期稳定性测试                                    │
+//  │     - 内存泄漏检测                                    │
+//  │     - 碎片化程度跟踪                                │
+//  │     - 性能衰减分析                                    │
+//  └─────────────────────────────────────────────────┘
+//  ```
 
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use std::{mem, ptr};
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
+use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
 use wgpu::{BufferDescriptor, BufferUsages};
 
 use game_engine::resources::{
-    StagingBufferPool, EnhancedStagingBufferPool, create_enhanced_staging_buffer_pool,
-    create_default_staging_buffer_pool
+    EnhancedStagingBufferPool, StagingBufferPool, create_default_staging_buffer_pool,
+    create_enhanced_staging_buffer_pool,
 };
 
 // ============================================================================
@@ -95,13 +95,13 @@ impl TestConfig {
         Self {
             name: "Mixed Workload Test".to_string(),
             allocation_sizes: vec![
-                512,      // 512B
-                2048,     // 2KB
-                8192,     // 8KB
-                32768,    // 32KB
-                131072,   // 128KB
-                524288,   // 512KB
-                2097152,  // 2MB
+                512,     // 512B
+                2048,    // 2KB
+                8192,    // 8KB
+                32768,   // 32KB
+                131072,  // 128KB
+                524288,  // 512KB
+                2097152, // 2MB
             ],
             allocation_count: 5000,
             thread_count: 1,
@@ -178,13 +178,13 @@ impl TestResults {
     /// 记录分配
     fn record_allocation(&mut self, latency_ns: u64, size: u64, success: bool) {
         self.total_allocations += 1;
-        
+
         if success {
             self.successful_allocations += 1;
             self.total_bytes_allocated += size;
-            
+
             // 更新延迟统计
-            self.average_allocation_latency_ns = 
+            self.average_allocation_latency_ns =
                 (self.average_allocation_latency_ns + latency_ns) / 2;
             self.min_allocation_latency_ns = self.min_allocation_latency_ns.min(latency_ns);
             self.max_allocation_latency_ns = self.max_allocation_latency_ns.max(latency_ns);
@@ -196,14 +196,15 @@ impl TestResults {
     /// 完成测试
     fn finalize(&mut self, test_duration: Duration) {
         self.test_duration = test_duration;
-        
+
         // 计算吞吐量
         let duration_secs = test_duration.as_secs_f64();
         if duration_secs > 0.0 {
-            self.throughput_allocations_per_sec = self.successful_allocations as f64 / duration_secs;
+            self.throughput_allocations_per_sec =
+                self.successful_allocations as f64 / duration_secs;
             self.throughput_bytes_per_sec = self.total_bytes_allocated as f64 / duration_secs;
         }
-        
+
         // 计算平均内存使用量
         if self.successful_allocations > 0 {
             self.average_memory_usage = self.total_bytes_allocated / self.successful_allocations;
@@ -251,42 +252,38 @@ impl TestResults {
 /// 测试原始Staging Buffer实现
 fn test_original_implementation(config: &TestConfig) -> TestResults {
     let mut results = TestResults::new(format!("Original - {}", config.name));
-    
+
     // 模拟原始实现（简化版本）
     let start_time = Instant::now();
     let mut current_memory_usage = 0u64;
     let mut peak_memory_usage = 0u64;
-    
+
     for _ in 0..config.allocation_count {
         for &size in &config.allocation_sizes {
             let allocation_start = Instant::now();
-            
+
             // 模拟分配延迟（基于原始实现的特征）
             let allocation_latency = simulate_original_allocation_latency(size);
-            
+
             // 模拟内存使用
             current_memory_usage += size;
             peak_memory_usage = peak_memory_usage.max(current_memory_usage);
-            
+
             // 模拟分配成功
-            results.record_allocation(
-                allocation_latency,
-                size,
-                true,
-            );
-            
+            results.record_allocation(allocation_latency, size, true);
+
             // 模拟释放（简化处理）
             if current_memory_usage > size * 2 {
                 current_memory_usage -= size;
             }
-            
+
             // 防止测试运行过长
             if start_time.elapsed() > config.test_duration {
                 break;
             }
         }
     }
-    
+
     results.finalize(start_time.elapsed());
     results.memory_utilization = if peak_memory_usage > 0 {
         (current_memory_usage as f32 / peak_memory_usage as f32).min(1.0)
@@ -295,7 +292,7 @@ fn test_original_implementation(config: &TestConfig) -> TestResults {
     };
     results.peak_memory_usage = peak_memory_usage;
     results.average_memory_usage = current_memory_usage;
-    
+
     results
 }
 
@@ -306,7 +303,7 @@ fn simulate_original_allocation_latency(size: u64) -> u64 {
     // - 中数据：中等 (~20μs)
     // - 大数据：较慢 (~100μs)
     // - 每帧重建开销：显著增加延迟
-    
+
     let base_latency = if size < 64 * 1024 {
         5_000 // 5μs
     } else if size < 1024 * 1024 {
@@ -314,14 +311,14 @@ fn simulate_original_allocation_latency(size: u64) -> u64 {
     } else {
         100_000 // 100μs
     };
-    
+
     // 模拟每帧重建的额外开销
     let frame_overhead = if size > 1024 * 1024 {
         200_000 // 大数据受帧重建影响更大
     } else {
         50_000 // 中等开销
     };
-    
+
     base_latency + frame_overhead + (rand::random::<u32>() % 10_000) as u64
 }
 
@@ -332,42 +329,39 @@ fn simulate_original_allocation_latency(size: u64) -> u64 {
 /// 测试增强型Staging Buffer实现
 fn test_enhanced_implementation(config: &TestConfig) -> TestResults {
     let mut results = TestResults::new(format!("Enhanced - {}", config.name));
-    
+
     // 模拟增强实现的特征
     let start_time = Instant::now();
     let mut current_memory_usage = 0u64;
     let mut peak_memory_usage = 0u64;
     let mut preallocation_hits = 0u64;
-    
+
     for _ in 0..config.allocation_count {
         for &size in &config.allocation_sizes {
             let allocation_start = Instant::now();
-            
+
             // 模拟增强实现的分配延迟
-            let allocation_latency = simulate_enhanced_allocation_latency(size, &mut preallocation_hits);
-            
+            let allocation_latency =
+                simulate_enhanced_allocation_latency(size, &mut preallocation_hits);
+
             // 模拟内存使用（更高效）
             current_memory_usage += size;
             peak_memory_usage = peak_memory_usage.max(current_memory_usage);
-            
-            results.record_allocation(
-                allocation_latency,
-                size,
-                true,
-            );
-            
+
+            results.record_allocation(allocation_latency, size, true);
+
             // 模拟释放（更高效的回收）
             if current_memory_usage > size * 3 {
                 current_memory_usage -= size;
             }
-            
+
             // 防止测试运行过长
             if start_time.elapsed() > config.test_duration {
                 break;
             }
         }
     }
-    
+
     results.finalize(start_time.elapsed());
     results.memory_utilization = if peak_memory_usage > 0 {
         (current_memory_usage as f32 / peak_memory_usage as f32).min(1.0)
@@ -376,7 +370,7 @@ fn test_enhanced_implementation(config: &TestConfig) -> TestResults {
     };
     results.peak_memory_usage = peak_memory_usage;
     results.average_memory_usage = current_memory_usage;
-    
+
     results
 }
 
@@ -387,10 +381,10 @@ fn simulate_enhanced_allocation_latency(size: u64, preallocation_hits: &mut u64)
     // - 智能分配：快速 (~2μs)
     // - 环形缓冲区：无帧重建开销
     // - 内存池复用：减少分配延迟
-    
+
     let preallocation_hit_rate = 0.8; // 80%命中率
     let is_preallocated = rand::random::<f32>() < preallocation_hit_rate;
-    
+
     let base_latency = if is_preallocated {
         *preallocation_hits += 1;
         500 // 0.5μs - 预分配命中
@@ -401,7 +395,7 @@ fn simulate_enhanced_allocation_latency(size: u64, preallocation_hits: &mut u64)
     } else {
         15_000 // 15μs - 大数据智能分配
     };
-    
+
     // 无帧重建开销，只有少量随机变化
     base_latency + (rand::random::<u32>() % 2_000) as u64
 }
@@ -413,16 +407,16 @@ fn simulate_enhanced_allocation_latency(size: u64, preallocation_hits: &mut u64)
 /// 运行对比测试
 fn run_comparison_test(config: TestConfig) -> (TestResults, TestResults) {
     println!("Running comparison test: {}", config.name);
-    
+
     // 测试原始实现
     let original_results = test_original_implementation(&config);
-    
+
     // 测试增强实现
     let enhanced_results = test_enhanced_implementation(&config);
-    
+
     // 输出对比结果
     print_comparison(&original_results, &enhanced_results);
-    
+
     (original_results, enhanced_results)
 }
 
@@ -431,45 +425,54 @@ fn print_comparison(original: &TestResults, enhanced: &TestResults) {
     println!("\n=== PERFORMANCE COMPARISON ===");
     println!("Original implementation:");
     println!("{}", original.generate_report());
-    
+
     println!("Enhanced implementation:");
     println!("{}", enhanced.generate_report());
-    
+
     // 计算改进幅度
     let latency_improvement = if original.average_allocation_latency_ns > 0 {
-        (original.average_allocation_latency_ns as f32 - enhanced.average_allocation_latency_ns as f32) 
-            / original.average_allocation_latency_ns as f32 * 100.0
+        (original.average_allocation_latency_ns as f32
+            - enhanced.average_allocation_latency_ns as f32)
+            / original.average_allocation_latency_ns as f32
+            * 100.0
     } else {
         0.0
     };
-    
+
     let throughput_improvement = if original.throughput_allocations_per_sec > 0.0 {
-        (enhanced.throughput_allocations_per_sec - original.throughput_allocations_per_sec) 
-            / original.throughput_allocations_per_sec * 100.0
+        (enhanced.throughput_allocations_per_sec - original.throughput_allocations_per_sec)
+            / original.throughput_allocations_per_sec
+            * 100.0
     } else {
         0.0
     };
-    
+
     let memory_efficiency_improvement = enhanced.memory_utilization - original.memory_utilization;
-    
+
     println!("\n=== IMPROVEMENT SUMMARY ===");
-    println!("Allocation latency improvement: {:.1}%", latency_improvement);
+    println!(
+        "Allocation latency improvement: {:.1}%",
+        latency_improvement
+    );
     println!("Throughput improvement: {:.1}%", throughput_improvement);
-    println!("Memory efficiency improvement: {:.1}%", memory_efficiency_improvement * 100.0);
-    
+    println!(
+        "Memory efficiency improvement: {:.1}%",
+        memory_efficiency_improvement * 100.0
+    );
+
     // 验证性能目标
     if latency_improvement >= 70.0 {
         println!("✓ Latency improvement target achieved (≥70%)");
     } else {
         println!("✗ Latency improvement target not achieved (<70%)");
     }
-    
+
     if throughput_improvement >= 50.0 {
         println!("✓ Throughput improvement target achieved (≥50%)");
     } else {
         println!("✗ Throughput improvement target not achieved (<50%)");
     }
-    
+
     if memory_efficiency_improvement >= 0.3 {
         println!("✓ Memory efficiency improvement target achieved (≥30%)");
     } else {
@@ -484,7 +487,7 @@ fn print_comparison(original: &TestResults, enhanced: &TestResults) {
 /// 基准测试函数
 fn bench_original_implementation(c: &mut Criterion) {
     let config = TestConfig::mixed_workload_test();
-    
+
     c.bench_function("original_staging_buffer", |b| {
         b.iter(|| {
             let _results = test_original_implementation(&config);
@@ -496,7 +499,7 @@ fn bench_original_implementation(c: &mut Criterion) {
 /// 基准测试函数
 fn bench_enhanced_implementation(c: &mut Criterion) {
     let config = TestConfig::mixed_workload_test();
-    
+
     c.bench_function("enhanced_staging_buffer", |b| {
         b.iter(|| {
             let _results = test_enhanced_implementation(&config);
@@ -508,10 +511,10 @@ fn bench_enhanced_implementation(c: &mut Criterion) {
 /// 分配大小基准测试
 fn bench_allocation_sizes(c: &mut Criterion) {
     let sizes = vec![1024, 4096, 16384, 65536, 262144, 1048576]; // 1KB-1MB
-    
+
     for &size in &sizes {
         let size_str = format!("{}KB", size / 1024);
-        
+
         // 原始实现
         c.bench_with_input(
             BenchmarkId::new("original", size_str.clone()),
@@ -523,7 +526,7 @@ fn bench_allocation_sizes(c: &mut Criterion) {
                 })
             },
         );
-        
+
         // 增强实现
         c.bench_with_input(
             BenchmarkId::new("enhanced", size_str.clone()),
@@ -542,10 +545,10 @@ fn bench_allocation_sizes(c: &mut Criterion) {
 /// 并发性能基准测试
 fn bench_concurrent_allocation(c: &mut Criterion) {
     let thread_counts = vec![1, 2, 4, 8];
-    
+
     for &thread_count in &thread_counts {
         let thread_str = format!("{}_threads", thread_count);
-        
+
         c.bench_with_input(
             BenchmarkId::new("concurrent_original", thread_str.clone()),
             thread_count,
@@ -560,7 +563,7 @@ fn bench_concurrent_allocation(c: &mut Criterion) {
                 })
             },
         );
-        
+
         c.bench_with_input(
             BenchmarkId::new("concurrent_enhanced", thread_str.clone()),
             thread_count,
@@ -586,7 +589,7 @@ fn bench_concurrent_allocation(c: &mut Criterion) {
 /// 运行所有性能测试
 pub fn run_all_performance_tests() {
     println!("=== STAGING BUFFER PERFORMANCE TESTS ===\n");
-    
+
     let test_configs = vec![
         TestConfig::small_data_test(),
         TestConfig::medium_data_test(),
@@ -594,91 +597,103 @@ pub fn run_all_performance_tests() {
         TestConfig::mixed_workload_test(),
         TestConfig::concurrent_test(),
     ];
-    
+
     let mut all_original_results = Vec::new();
     let mut all_enhanced_results = Vec::new();
-    
+
     for config in test_configs {
         let (original, enhanced) = run_comparison_test(config);
         all_original_results.push(original);
         all_enhanced_results.push(enhanced);
     }
-    
+
     // 生成总体报告
     generate_overall_report(&all_original_results, &all_enhanced_results);
 }
 
 /// 生成总体报告
-fn generate_overall_report(
-    original_results: &[TestResults],
-    enhanced_results: &[TestResults],
-) {
+fn generate_overall_report(original_results: &[TestResults], enhanced_results: &[TestResults]) {
     println!("\n=== OVERALL PERFORMANCE SUMMARY ===");
-    
+
     // 计算平均改进幅度
     let avg_latency_improvement = original_results
         .iter()
         .zip(enhanced_results.iter())
         .map(|(orig, enh)| {
             if orig.average_allocation_latency_ns > 0 {
-                (orig.average_allocation_latency_ns as f32 - enh.average_allocation_latency_ns as f32) 
-                    / orig.average_allocation_latency_ns as f32 * 100.0
+                (orig.average_allocation_latency_ns as f32
+                    - enh.average_allocation_latency_ns as f32)
+                    / orig.average_allocation_latency_ns as f32
+                    * 100.0
             } else {
                 0.0
             }
         })
-        .sum::<f32>() / original_results.len() as f32;
-    
+        .sum::<f32>()
+        / original_results.len() as f32;
+
     let avg_throughput_improvement = original_results
         .iter()
         .zip(enhanced_results.iter())
         .map(|(orig, enh)| {
             if orig.throughput_allocations_per_sec > 0.0 {
-                (enh.throughput_allocations_per_sec - orig.throughput_allocations_per_sec) 
-                    / orig.throughput_allocations_per_sec * 100.0
+                (enh.throughput_allocations_per_sec - orig.throughput_allocations_per_sec)
+                    / orig.throughput_allocations_per_sec
+                    * 100.0
             } else {
                 0.0
             }
         })
-        .sum::<f32>() / original_results.len() as f32;
-    
+        .sum::<f32>()
+        / original_results.len() as f32;
+
     let avg_memory_efficiency_improvement = enhanced_results
         .iter()
         .zip(original_results.iter())
         .map(|(enh, orig)| enh.memory_utilization - orig.memory_utilization)
-        .sum::<f32>() / enhanced_results.len() as f32;
-    
-    println!("Average allocation latency improvement: {:.1}%", avg_latency_improvement);
-    println!("Average throughput improvement: {:.1}%", avg_throughput_improvement);
-    println!("Average memory efficiency improvement: {:.1}%", avg_memory_efficiency_improvement * 100.0);
-    
+        .sum::<f32>()
+        / enhanced_results.len() as f32;
+
+    println!(
+        "Average allocation latency improvement: {:.1}%",
+        avg_latency_improvement
+    );
+    println!(
+        "Average throughput improvement: {:.1}%",
+        avg_throughput_improvement
+    );
+    println!(
+        "Average memory efficiency improvement: {:.1}%",
+        avg_memory_efficiency_improvement * 100.0
+    );
+
     // 验收标准
     let mut targets_met = 0;
     let total_targets = 3;
-    
+
     if avg_latency_improvement >= 70.0 {
         println!("✓ Latency target achieved (≥70%)");
         targets_met += 1;
     } else {
         println!("✗ Latency target not achieved (<70%)");
     }
-    
+
     if avg_throughput_improvement >= 50.0 {
         println!("✓ Throughput target achieved (≥50%)");
         targets_met += 1;
     } else {
         println!("✗ Throughput target not achieved (<50%)");
     }
-    
+
     if avg_memory_efficiency_improvement >= 0.3 {
         println!("✓ Memory efficiency target achieved (≥30%)");
         targets_met += 1;
     } else {
         println!("✗ Memory efficiency target not achieved (<30%)");
     }
-    
+
     println!("\nTargets met: {}/{}", targets_met, total_targets);
-    
+
     if targets_met >= 2 {
         println!("✓ OVERALL PERFORMANCE TARGETS ACHIEVED");
     } else {
@@ -727,13 +742,13 @@ mod tests {
     #[test]
     fn test_allocation_recording() {
         let mut results = TestResults::new("Test".to_string());
-        
+
         results.record_allocation(1000, 1024, true);
         assert_eq!(results.total_allocations, 1);
         assert_eq!(results.successful_allocations, 1);
         assert_eq!(results.total_bytes_allocated, 1024);
         assert_eq!(results.average_allocation_latency_ns, 500);
-        
+
         results.record_allocation(2000, 2048, false);
         assert_eq!(results.total_allocations, 2);
         assert_eq!(results.successful_allocations, 1);
@@ -745,10 +760,10 @@ mod tests {
     fn test_simulation_functions() {
         let small_latency = simulate_original_allocation_latency(1024);
         assert!(small_latency > 0);
-        
+
         let large_latency = simulate_original_allocation_latency(2 * 1024 * 1024);
         assert!(large_latency > small_latency);
-        
+
         let mut hits = 0u64;
         let enhanced_latency = simulate_enhanced_allocation_latency(1024, &mut hits);
         assert!(enhanced_latency < small_latency);
@@ -769,7 +784,7 @@ mod tests {
         results.test_duration = Duration::from_secs(10);
         results.throughput_allocations_per_sec = 95.0;
         results.throughput_bytes_per_sec = 10.0 * 1024.0 * 1024.0; // 10MB/s
-        
+
         let report = results.generate_report();
         assert!(report.contains("Small Data Test"));
         assert!(report.contains("950 (95.0%)"));

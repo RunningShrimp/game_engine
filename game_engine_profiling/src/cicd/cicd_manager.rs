@@ -1,6 +1,6 @@
 use std::time::{Duration, SystemTime};
 
-/// CI/CD 阶段
+//  CI/CD 阶段
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CicdStage {
     Checkout,
@@ -38,7 +38,7 @@ impl CicdStage {
     }
 }
 
-/// 阶段执行状态
+//  阶段执行状态
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum StageStatus {
     Pending,
@@ -67,7 +67,7 @@ impl StageStatus {
     }
 }
 
-/// 阶段执行结果
+//  阶段执行结果
 #[derive(Debug, Clone)]
 pub struct StageResult {
     pub stage: CicdStage,
@@ -124,7 +124,7 @@ impl StageResult {
     }
 }
 
-/// CI/CD 流水线
+//  CI/CD 流水线
 pub struct CicdPipeline {
     pipeline_id: String,
     stages: Vec<StageResult>,
@@ -319,7 +319,7 @@ impl CicdPipeline {
     }
 }
 
-/// 流水线状态
+//  流水线状态
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PipelineStatus {
     Pending,
@@ -339,7 +339,7 @@ impl PipelineStatus {
     }
 }
 
-/// CI/CD 流水线摘要
+//  CI/CD 流水线摘要
 #[derive(Debug, Clone)]
 pub struct CicdSummary {
     pub pipeline_id: String,
@@ -353,7 +353,7 @@ pub struct CicdSummary {
     pub branch: String,
 }
 
-/// CI/CD 管理器
+//  CI/CD 管理器
 #[derive(Default)]
 pub struct CicdManager {
     pipelines: Vec<CicdPipeline>,
@@ -457,7 +457,7 @@ impl CicdManager {
     }
 }
 
-/// CI/CD 统计
+//  CI/CD 统计
 #[derive(Debug, Clone)]
 pub struct CicdStatistics {
     pub total_pipelines: usize,
@@ -514,7 +514,7 @@ mod tests {
         let mut manager = CicdManager::new();
 
         let id1 = manager.create_pipeline("abc123", "main");
-        let id2 = manager.create_pipeline("def456", "dev");
+        let _id2 = manager.create_pipeline("def456", "dev");
 
         assert_eq!(manager.pipelines.len(), 2);
         assert!(manager.get_pipeline(&id1).is_some());

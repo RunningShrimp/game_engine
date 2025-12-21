@@ -1,6 +1,6 @@
-//! 性能指标模块
-//!
-//! 定义全面的性能指标体系，包括渲染、内存、物理、音频和系统指标。
+//  性能指标模块
+// 
+//  定义全面的性能指标体系，包括渲染、内存、物理、音频和系统指标。
 
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};

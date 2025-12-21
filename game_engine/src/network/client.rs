@@ -35,11 +35,10 @@ use crate::network::compression;
 use crate::network::delay_compensation;
 use crate::network::{ConnectionState, NetworkError, NetworkMessage, NetworkState};
 use bincode;
-use std::sync::Arc;
-use std::time::Duration;
+use std::sync::{Arc, Mutex};use crate::platform::run_sync;use std::time::Duration;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpStream as TokioTcpStream};
-use tokio::sync::Mutex;
+use tokio::sync::Mutex as TokioMutex;
 use tokio::task;
 use std::net::{SocketAddr, TcpStream as StdTcpStream};
 
@@ -205,7 +204,7 @@ impl GameClient {
         stream: &mut TokioTcpStream,
         message: &NetworkMessage,
     ) -> Result<(), NetworkError> {
-        let data = bincode::encode_to_vec(message, bincode::config::standard())
+        let data = bincode::serialize(message)
             .map_err(|e| NetworkError::SerializationError(e.to_string()))?;
 
         // 发送消息
@@ -327,7 +326,7 @@ impl GameClient {
         stream: &StdTcpStream,
         message: &NetworkMessage,
     ) -> Result<(), NetworkError> {
-        let data = bincode::encode_to_vec(message, bincode::config::standard())
+        let data = bincode::serialize(message)
             .map_err(|e| NetworkError::SerializationError(e.to_string()))?;
 
         // 发送消息
@@ -353,7 +352,7 @@ impl GameClient {
                     Ok(n) => {
                         // 处理接收到的数据
                         let data = &buffer[..n];
-                        if let Ok((message, _)) = bincode::decode_from_slice::<NetworkMessage, _>(data, bincode::config::standard()) {
+                        if let Ok(message) = bincode::deserialize::<NetworkMessage>(data) {
                             Self::process_message_async(&message, &state).await;
                         }
                     }
@@ -404,7 +403,7 @@ impl GameClient {
                         Ok(n) => {
                             // 处理接收到的数据
                             let data = &buffer[..n];
-                            if let Ok((message, _)) = bincode::decode_from_slice::<NetworkMessage, _>(data, bincode::config::standard()) {
+                            if let Ok(message) = bincode::deserialize::<NetworkMessage>(data) {
                                 Self::process_message_sync(&message, &state);
                             }
                         }
@@ -549,16 +548,22 @@ impl GameClient {
         stream: &mut TokioTcpStream,
         message: &NetworkMessage,
     ) -> Result<(), NetworkError> {
-        let data = bincode::encode_to_vec(message, bincode::config::standard())
+        let data = bincode::serialize(message)
             .map_err(|e| NetworkError::SerializationError(e.to_string()))?;
 
-        // 在同步上下文中阻塞地写入tokio流
-        tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current().block_on(async {
+        // Runtime-aware sync write: detect if we're in a tokio runtime
+        if tokio::runtime::Handle::try_current().is_ok() {
+            // Inside runtime: this is problematic, return error instead of blocking
+            return Err(NetworkError::SyncOperationInRuntime(
+                "Cannot use sync network operations inside tokio runtime. Use async version instead.".to_string()
+            ));
+        } else {
+            // Outside runtime: safe to block
+            run_sync(async {
                 stream.write_all(&data).await
                     .map_err(|e| NetworkError::SendError(e.to_string()))
             })
-        })
+        }
     }
 
     /// 异步获取网络状态引用

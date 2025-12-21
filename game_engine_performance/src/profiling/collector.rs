@@ -1,6 +1,6 @@
-//! 性能数据收集器
-//!
-//! 提供高精度时间测量、低开销计数器和批量数据聚合功能。
+//  性能数据收集器
+// 
+//  提供高精度时间测量、低开销计数器和批量数据聚合功能。
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -15,9 +15,9 @@ use crate::profiling::ProfilingResult;
 // 高精度计时器
 // ============================================================================
 
-/// 高精度计时器
-/// 
-/// 使用RAII模式自动记录作用域时间
+//  高精度计时器
+//  
+//  使用RAII模式自动记录作用域时间
 #[derive(Debug)]
 pub struct HighPrecisionTimer {
     /// 计时器名称
@@ -89,9 +89,9 @@ impl Drop for HighPrecisionTimer {
     }
 }
 
-/// 作用域计时器宏
-/// 
-/// 自动创建和销毁计时器
+//  作用域计时器宏
+//  
+//  自动创建和销毁计时器
 #[macro_export]
 macro_rules! timed_scope {
     ($collector:expr, $name:expr) => {
@@ -106,9 +106,9 @@ macro_rules! timed_scope {
 // 滑动窗口聚合器
 // ============================================================================
 
-/// 滑动窗口聚合器
-/// 
-/// 用于实时统计和趋势分析
+//  滑动窗口聚合器
+//  
+//  用于实时统计和趋势分析
 #[derive(Debug, Clone)]
 pub struct SlidingWindowAggregator {
     /// 数据点
@@ -220,7 +220,7 @@ impl SlidingWindowAggregator {
 // 异步数据传输器
 // ============================================================================
 
-/// 异步数据传输配置
+//  异步数据传输配置
 #[derive(Debug, Clone)]
 pub struct AsyncTransferConfig {
     /// 批处理大小
@@ -244,7 +244,7 @@ impl Default for AsyncTransferConfig {
     }
 }
 
-/// 待传输的数据项
+//  待传输的数据项
 #[derive(Debug, Clone)]
 pub struct DataItem {
     /// 指标名称
@@ -257,9 +257,9 @@ pub struct DataItem {
     pub tags: HashMap<String, String>,
 }
 
-/// 异步数据传输器
-/// 
-/// 在后台线程中批量处理数据传输，减少主线程开销
+//  异步数据传输器
+//  
+//  在后台线程中批量处理数据传输，减少主线程开销
 pub struct AsyncDataTransmitter {
     /// 配置
     config: AsyncTransferConfig,
@@ -408,7 +408,7 @@ impl Drop for AsyncDataTransmitter {
 // 指标收集器
 // ============================================================================
 
-/// 指标收集器配置
+//  指标收集器配置
 #[derive(Debug, Clone)]
 pub struct CollectorConfig {
     /// 采样频率 (Hz)
@@ -435,9 +435,9 @@ impl Default for CollectorConfig {
     }
 }
 
-/// 指标收集器
-/// 
-/// 统一收集和管理所有性能指标
+//  指标收集器
+//  
+//  统一收集和管理所有性能指标
 pub struct MetricCollector {
     /// 配置
     config: CollectorConfig,
@@ -582,7 +582,7 @@ impl MetricCollector {
     }
 }
 
-/// 滑动窗口统计信息
+//  滑动窗口统计信息
 #[derive(Debug, Clone)]
 pub struct WindowStats {
     /// 平均值
@@ -601,7 +601,7 @@ pub struct WindowStats {
     pub sample_count: usize,
 }
 
-/// 收集器统计信息
+//  收集器统计信息
 #[derive(Debug, Clone)]
 pub struct CollectorStats {
     /// 运行时间

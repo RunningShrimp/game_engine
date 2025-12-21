@@ -23,6 +23,7 @@ impl ViewMode {
 }
 
 /// 场景编辑器
+#[derive(Debug)]
 pub struct SceneEditor {
     /// 当前视图模式
     pub view_mode: ViewMode,
@@ -308,6 +309,21 @@ impl SceneEditor {
         }
 
         self.selected_entity = closest_entity;
+
+        // 使用screen_to_world进行双向转换验证，形成逻辑闭环
+        if let Some(selected) = self.selected_entity {
+            if let Some(transform) = world.get::<Transform>(selected) {
+                let world_pos = transform.pos;
+                let screen_pos = self.world_to_screen(world_pos, rect);
+                let back_to_world = self.screen_to_world(screen_pos, rect);
+
+                // 验证转换精度（在合理范围内）
+                let conversion_error = (world_pos - back_to_world).length();
+                if conversion_error > 0.01 {
+                    tracing::warn!("坐标转换精度警告: 误差 {}", conversion_error);
+                }
+            }
+        }
     }
 
     /// 移动相机

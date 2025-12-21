@@ -1,15 +1,15 @@
-//! GPU vs CPU 性能对比工具
-//!
-//! 量化 GPU 加速的性能收益
-//! - CPU 基准测试
-//! - GPU 模拟执行
-//! - 性能对比分析
-//! - 优化建议
+//  GPU vs CPU 性能对比工具
+// 
+//  量化 GPU 加速的性能收益
+//  - CPU 基准测试
+//  - GPU 模拟执行
+//  - 性能对比分析
+//  - 优化建议
 
 use glam::{Mat4, Vec3, Vec4};
 use std::time::Instant;
 
-/// 性能对比框架
+//  性能对比框架
 pub struct PerformanceBenchmark {
     /// 基准名称
     pub name: String,
@@ -210,7 +210,7 @@ impl PerformanceBenchmark {
     }
 }
 
-/// CPU 基准结果
+//  CPU 基准结果
 #[derive(Debug, Clone)]
 pub struct CPUBenchmarkResult {
     /// 基准名称
@@ -223,7 +223,7 @@ pub struct CPUBenchmarkResult {
     pub ops_per_sec: f64,
 }
 
-/// GPU 模拟执行结果
+//  GPU 模拟执行结果
 #[derive(Debug, Clone)]
 pub struct GPUSimulationResult {
     /// 基准名称
@@ -271,7 +271,7 @@ impl GPUSimulationResult {
     }
 }
 
-/// 性能对比分析
+//  性能对比分析
 #[derive(Debug, Clone)]
 pub struct PerformanceAnalysis {
     /// 操作名称
@@ -317,7 +317,7 @@ impl PerformanceAnalysis {
     }
 }
 
-/// 完整的 GPU 对比套件
+//  完整的 GPU 对比套件
 pub struct GPUComparativeBenchmarkSuite {
     /// 所有分析
     pub analyses: Vec<PerformanceAnalysis>,
@@ -333,7 +333,12 @@ impl GPUComparativeBenchmarkSuite {
 
     /// 运行完整基准
     pub fn run_all(&mut self) {
-        let test_sizes = vec![1000, 10000, 100000];
+        // Use much smaller sizes when running unit tests to keep test time short.
+        let test_sizes = if cfg!(test) {
+            vec![10, 100, 1000]
+        } else {
+            vec![1000, 10000, 100000]
+        };
 
         for size in test_sizes {
             let bench = PerformanceBenchmark::new(format!("Size {}", size), size, 100);

@@ -1,12 +1,12 @@
 use std::collections::HashMap;
 use std::fmt;
-/// 性能基准测试框架
+//  性能基准测试框架
 ///
-/// 提供统一的基准测试接口，用于测量关键路径的执行性能
-/// 支持多种测试场景和硬件条件
+//  提供统一的基准测试接口，用于测量关键路径的执行性能
+//  支持多种测试场景和硬件条件
 use std::time::{Duration, Instant};
 
-/// 基准测试结果
+//  基准测试结果
 #[derive(Debug, Clone)]
 pub struct BenchmarkResult {
     pub name: String,
@@ -34,7 +34,7 @@ impl fmt::Display for BenchmarkResult {
     }
 }
 
-/// 基准测试器
+//  基准测试器
 #[derive(Default)]
 pub struct Benchmark {
     results: HashMap<String, BenchmarkResult>,
@@ -127,8 +127,7 @@ impl Benchmark {
     }
 }
 
-
-/// 性能回归检测
+//  性能回归检测
 pub struct PerformanceRegression {
     baseline: HashMap<String, Duration>,
     threshold: f64, // 允许的性能下降百分比
@@ -172,7 +171,7 @@ impl PerformanceRegression {
     }
 }
 
-/// 吞吐量测试
+//  吞吐量测试
 pub struct ThroughputTest {
     name: String,
     items_processed: usize,
@@ -210,7 +209,7 @@ impl ThroughputTest {
     }
 }
 
-/// 内存性能测试
+//  内存性能测试
 pub struct MemoryBenchmark {
     name: String,
     bytes_allocated: usize,

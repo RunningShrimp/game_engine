@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 use std::time::{Duration, SystemTime};
 
-/// 帧处理阶段的性能数据
+//  帧处理阶段的性能数据
 #[derive(Debug, Clone, PartialEq)]
 pub struct PhaseMetrics {
     pub phase_name: String,
@@ -44,7 +44,7 @@ impl PhaseMetrics {
     }
 }
 
-/// 单帧的完整性能快照
+//  单帧的完整性能快照
 #[derive(Debug, Clone)]
 pub struct FrameSnapshot {
     pub frame_number: u64,
@@ -113,7 +113,7 @@ impl FrameSnapshot {
     }
 }
 
-/// 帧分析仪 - 收集并分析多帧性能数据
+//  帧分析仪 - 收集并分析多帧性能数据
 pub struct FrameAnalyzer {
     frame_buffer: VecDeque<FrameSnapshot>,
     max_frames: usize,
@@ -327,13 +327,21 @@ mod tests {
         let mut analyzer = FrameAnalyzer::new(10);
 
         analyzer.start_frame(0, Duration::from_millis(16));
-        analyzer.add_phase(PhaseMetrics::new("physics", Duration::from_micros(3000))).unwrap();
-        analyzer.add_phase(PhaseMetrics::new("render", Duration::from_micros(12000))).unwrap();
+        analyzer
+            .add_phase(PhaseMetrics::new("physics", Duration::from_micros(3000)))
+            .unwrap();
+        analyzer
+            .add_phase(PhaseMetrics::new("render", Duration::from_micros(12000)))
+            .unwrap();
         analyzer.end_frame().unwrap();
 
         analyzer.start_frame(1, Duration::from_millis(17));
-        analyzer.add_phase(PhaseMetrics::new("physics", Duration::from_micros(3100))).unwrap();
-        analyzer.add_phase(PhaseMetrics::new("render", Duration::from_micros(13000))).unwrap();
+        analyzer
+            .add_phase(PhaseMetrics::new("physics", Duration::from_micros(3100)))
+            .unwrap();
+        analyzer
+            .add_phase(PhaseMetrics::new("render", Duration::from_micros(13000)))
+            .unwrap();
         analyzer.end_frame().unwrap();
 
         assert_eq!(analyzer.get_frame_count(), 2);
@@ -375,10 +383,12 @@ mod tests {
         for i in 0..5 {
             analyzer.start_frame(i, Duration::from_millis(16));
             let render_time = 10000 + (i as u128 * 1000);
-            analyzer.add_phase(PhaseMetrics::new(
-                "render",
-                Duration::from_micros(render_time as u64),
-            )).unwrap();
+            analyzer
+                .add_phase(PhaseMetrics::new(
+                    "render",
+                    Duration::from_micros(render_time as u64),
+                ))
+                .unwrap();
             analyzer.end_frame().unwrap();
         }
 

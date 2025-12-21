@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::time::Duration;
 
-/// 瓶颈严重程度
+//  瓶颈严重程度
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum BottleneckSeverity {
     Low = 0,      // <20% variance
@@ -30,7 +30,7 @@ impl BottleneckSeverity {
     }
 }
 
-/// 瓶颈类型
+//  瓶颈类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BottleneckType {
     CPU,
@@ -54,7 +54,7 @@ impl BottleneckType {
     }
 }
 
-/// 单个瓶颈诊断
+//  单个瓶颈诊断
 #[derive(Debug, Clone)]
 pub struct BottleneckDiagnosis {
     pub phase_name: String,
@@ -138,7 +138,7 @@ impl BottleneckDiagnosis {
     }
 }
 
-/// 瓶颈检测引擎
+//  瓶颈检测引擎
 #[derive(Default)]
 pub struct BottleneckDetector {
     phase_history: HashMap<String, Vec<Duration>>,
@@ -323,7 +323,6 @@ impl BottleneckDetector {
             .unwrap_or(0)
     }
 }
-
 
 #[cfg(test)]
 mod tests {

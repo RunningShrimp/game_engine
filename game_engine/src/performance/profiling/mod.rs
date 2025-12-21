@@ -1,9 +1,18 @@
-//! 简化的性能分析模块
-//!
-//! 提供基本的性能分析功能
+//  性能分析模块
+// 
+//  注意：此模块的功能已统一到 game_engine::profiling 模块。
+// 为了向后兼容，这里重新导出主模块的功能。
 
+// 重新导出主模块的功能（统一API）
+pub use crate::profiling::*;
+
+// 向后兼容：保留原有的导出
 mod profiler;
 pub use profiler::Profiler;
+
+// 持续性能分析器模块（对外导出）
+pub mod continuous_profiler;
+pub use continuous_profiler::ContinuousProfiler;
 
 use std::collections::HashMap;
 use std::time::Instant;
@@ -58,7 +67,7 @@ impl AdvancedProfiler {
     /// 结束帧
     pub fn end_frame(&mut self, metrics: AdvancedPerfMetrics) {
         self.latest_metrics = Some(metrics.clone());
-        
+
         self.history.push(metrics);
         if self.history.len() > self.max_history_length {
             self.history.remove(0);
@@ -129,8 +138,6 @@ pub struct GpuProfiler {
     /// 查询结果
     queries: HashMap<String, f32>, // name -> time_ms
 }
-
-
 
 impl GpuProfiler {
     /// 创建新的GPU分析器

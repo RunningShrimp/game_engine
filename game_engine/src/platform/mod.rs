@@ -1,6 +1,6 @@
-pub mod winit;
-pub mod power_aware;
 pub mod hardware_info;
+pub mod power_aware;
+pub mod winit;
 
 use thiserror::Error;
 
@@ -74,6 +74,8 @@ pub enum InputEvent {
         delta_x: f32,
         delta_y: f32,
     },
+    MouseEntered,
+    MouseLeft,
 
     // Touch (mobile/tablet)
     TouchStart {
@@ -171,6 +173,7 @@ pub enum KeyCode {
     Shift,
     Control,
     Alt,
+    Meta,
     Space,
     Enter,
     Backspace,
@@ -184,6 +187,9 @@ pub enum KeyCode {
     PageUp,
     PageDown,
     Insert,
+    NumLock,
+    ScrollLock,
+    Pause,
     Unknown(u32),
 }
 
@@ -234,9 +240,16 @@ pub enum GamepadButton {
     DPadRight,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct MouseState {
+    pub x: f32,
+    pub y: f32,
+}
+
 #[derive(bevy_ecs::prelude::Resource, Default, Clone)]
 pub struct InputBuffer {
     pub events: Vec<InputEvent>,
+    pub mouse_states: std::collections::HashMap<u32, MouseState>,
 }
 
 /// 输入动作状态
@@ -314,20 +327,47 @@ pub trait Filesystem: Send + Sync {
     async fn read_dir(&self, path: &Path) -> Result<Vec<std::path::PathBuf>, FsError>;
     /// 文件监视（保持同步）
     fn watch(&self, path: &Path, tx: Sender<FsEvent>) -> Result<WatchHandle, FsError>;
-    
+
     /// 向后兼容的同步方法
     fn read_sync(&self, path: &Path) -> Result<Vec<u8>, FsError> {
-        // 使用tokio的block_on来同步调用异步方法
-        tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current().block_on(self.read(path))
+        // Runtime-aware sync helper: use block_in_place inside a runtime; otherwise use a small executor
+        let path_clone = path.to_path_buf();
+        // 对于trait方法，我们需要直接调用tokio::fs而不是通过self
+        // 因为self在async move中无法使用
+        run_sync(async move {
+            tokio::fs::read(&path_clone)
+                .await
+                .map_err(|e| FsError::IoError(e.to_string()))
         })
     }
-    
+
     fn write_sync(&self, path: &Path, data: &[u8]) -> Result<(), FsError> {
-        // 使用tokio的block_on来同步调用异步方法
-        tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current().block_on(self.write(path, data))
+        // Runtime-aware sync helper: use block_in_place inside a runtime; otherwise use a small executor
+        let path_clone = path.to_path_buf();
+        let data_clone = data.to_vec();
+        run_sync(async move {
+            tokio::fs::write(&path_clone, &data_clone)
+                .await
+                .map_err(|e| FsError::IoError(e.to_string()))
         })
+    }
+}
+
+// Runtime-aware helper for syncing an async future to a blocking context.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn run_sync<Fut: std::future::Future + Send + 'static>(fut: Fut) -> Fut::Output 
+where
+    Fut::Output: Send,
+{
+    if tokio::runtime::Handle::try_current().is_ok() {
+        // Inside runtime: use block_in_place to avoid blocking the runtime
+        // Note: This requires the future to be Send, which is already required by the function signature
+        tokio::task::block_in_place(|| {
+            tokio::runtime::Handle::current().block_on(fut)
+        })
+    } else {
+        // Outside runtime, use a small executor to drive the future to completion.
+        pollster::block_on(fut)
     }
 }
 
@@ -382,11 +422,15 @@ impl NativeFilesystem {
 #[async_trait::async_trait]
 impl Filesystem for NativeFilesystem {
     async fn read(&self, path: &Path) -> Result<Vec<u8>, FsError> {
-        tokio::fs::read(path).await.map_err(|e| FsError::IoError(e.to_string()))
+        tokio::fs::read(path)
+            .await
+            .map_err(|e| FsError::IoError(e.to_string()))
     }
 
     async fn write(&self, path: &Path, data: &[u8]) -> Result<(), FsError> {
-        tokio::fs::write(path, data).await.map_err(|e| FsError::IoError(e.to_string()))
+        tokio::fs::write(path, data)
+            .await
+            .map_err(|e| FsError::IoError(e.to_string()))
     }
 
     fn exists(&self, path: &Path) -> bool {
@@ -398,21 +442,31 @@ impl Filesystem for NativeFilesystem {
     }
 
     async fn create_dir_all(&self, path: &Path) -> Result<(), FsError> {
-        tokio::fs::create_dir_all(path).await.map_err(|e| FsError::IoError(e.to_string()))
+        tokio::fs::create_dir_all(path)
+            .await
+            .map_err(|e| FsError::IoError(e.to_string()))
     }
 
     async fn remove_file(&self, path: &Path) -> Result<(), FsError> {
-        tokio::fs::remove_file(path).await.map_err(|e| FsError::IoError(e.to_string()))
+        tokio::fs::remove_file(path)
+            .await
+            .map_err(|e| FsError::IoError(e.to_string()))
     }
 
     async fn read_dir(&self, path: &Path) -> Result<Vec<std::path::PathBuf>, FsError> {
         let mut entries = Vec::new();
-        let mut dir = tokio::fs::read_dir(path).await.map_err(|e| FsError::IoError(e.to_string()))?;
-        
-        while let Some(entry) = dir.next_entry().await.map_err(|e| FsError::IoError(e.to_string()))? {
+        let mut dir = tokio::fs::read_dir(path)
+            .await
+            .map_err(|e| FsError::IoError(e.to_string()))?;
+
+        while let Some(entry) = dir
+            .next_entry()
+            .await
+            .map_err(|e| FsError::IoError(e.to_string()))?
+        {
             entries.push(entry.path());
         }
-        
+
         Ok(entries)
     }
 
@@ -421,6 +475,41 @@ impl Filesystem for NativeFilesystem {
         Ok(WatchHandle {
             inner: Box::new(()),
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::tempdir;
+
+    #[test]
+    fn test_read_write_sync_outside_runtime() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("test_sync.txt");
+        let data = b"hello sync";
+        std::fs::write(&path, data).unwrap();
+
+        let fs = NativeFilesystem::new();
+        let read = fs.read_sync(&path).expect("read_sync failed");
+        assert_eq!(read, data);
+
+        let write_path = dir.path().join("test_sync_write.txt");
+        fs.write_sync(&write_path, b"written").expect("write_sync failed");
+        let got = std::fs::read(&write_path).unwrap();
+        assert_eq!(got, b"written");
+    }
+
+    #[tokio::test]
+    async fn test_read_write_sync_inside_runtime() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("test_async_sync.txt");
+        let data = b"hello async".to_vec();
+        tokio::fs::write(&path, &data).await.unwrap();
+
+        let fs = NativeFilesystem::new();
+        let read = fs.read_sync(&path).expect("read_sync inside runtime failed");
+        assert_eq!(read, data);
     }
 }
 
@@ -434,12 +523,12 @@ pub use web_input::WebInput;
 // 移动平台优化
 #[cfg(any(target_os = "android", target_os = "ios"))]
 pub use mobile::{
-    get_mobile_config, is_mobile_platform, GyroscopeData, MobileAdaptivePerformance, MobileConfig,
-    MobileInputHandler, MobilePerformanceMonitor, PerformanceIssue, TouchPoint,
+    GyroscopeData, MobileAdaptivePerformance, MobileConfig, MobileInputHandler,
+    MobilePerformanceMonitor, PerformanceIssue, TouchPoint, get_mobile_config, is_mobile_platform,
 };
 
 // 控制台平台支持
 pub use console::{
-    get_console_config, is_console_platform, ButtonState, ConsoleConfig, ConsoleInputHandler,
-    ConsolePerformanceMonitor, ConsolePlatform, ControllerState,
+    ButtonState, ConsoleConfig, ConsoleInputHandler, ConsolePerformanceMonitor, ConsolePlatform,
+    ControllerState, get_console_config, is_console_platform,
 };

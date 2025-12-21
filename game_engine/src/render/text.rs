@@ -436,7 +436,6 @@ impl TextLayouter {
     }
 }
 
-
 /// MSDF 着色器代码
 pub const MSDF_SHADER: &str = r#"
 struct MsdfUniforms {

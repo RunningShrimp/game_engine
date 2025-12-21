@@ -1,8 +1,8 @@
-//! 音频系统错误类型
-//!
-//! 定义了音频系统相关的所有错误类型，包括音频设备、音频源、播放控制等。
+//  音频系统错误类型
+// 
+//  定义了音频系统相关的所有错误类型，包括音频设备、音频源、播放控制等。
 
-use crate::error::{ErrorSeverity, ErrorCategory};
+use crate::error::{ErrorCategory, ErrorSeverity};
 use thiserror::Error;
 
 /// 音频系统错误
@@ -17,7 +17,6 @@ pub enum AudioError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -27,7 +26,6 @@ pub enum AudioError {
         /// 设备名称
         device_name: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -37,7 +35,6 @@ pub enum AudioError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -47,7 +44,6 @@ pub enum AudioError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -57,7 +53,6 @@ pub enum AudioError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -67,7 +62,6 @@ pub enum AudioError {
         /// 音频源ID
         source_id: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -79,7 +73,6 @@ pub enum AudioError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -91,7 +84,6 @@ pub enum AudioError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -103,7 +95,6 @@ pub enum AudioError {
         /// 音频格式
         format: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -113,7 +104,6 @@ pub enum AudioError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -123,7 +113,6 @@ pub enum AudioError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -133,7 +122,6 @@ pub enum AudioError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -143,7 +131,6 @@ pub enum AudioError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -153,7 +140,6 @@ pub enum AudioError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -163,7 +149,6 @@ pub enum AudioError {
         /// 音量值
         value: f32,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -173,7 +158,6 @@ pub enum AudioError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -183,7 +167,6 @@ pub enum AudioError {
         /// 音调值
         value: f32,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -193,7 +176,6 @@ pub enum AudioError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -203,7 +185,6 @@ pub enum AudioError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -213,7 +194,6 @@ pub enum AudioError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -223,7 +203,6 @@ pub enum AudioError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -233,7 +212,6 @@ pub enum AudioError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -245,7 +223,6 @@ pub enum AudioError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -255,7 +232,6 @@ pub enum AudioError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -265,7 +241,6 @@ pub enum AudioError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -277,7 +252,6 @@ pub enum AudioError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -287,7 +261,6 @@ pub enum AudioError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -297,7 +270,6 @@ pub enum AudioError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -307,7 +279,6 @@ pub enum AudioError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -317,7 +288,6 @@ pub enum AudioError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 }
@@ -372,10 +342,7 @@ impl AudioError {
     }
 
     /// 创建文件加载错误
-    pub fn file_loading(
-        file: impl Into<String>,
-        message: impl Into<String>,
-    ) -> Self {
+    pub fn file_loading(file: impl Into<String>, message: impl Into<String>) -> Self {
         Self::FileLoading {
             file: file.into(),
             message: message.into(),
@@ -384,10 +351,7 @@ impl AudioError {
     }
 
     /// 创建解码错误
-    pub fn decoding(
-        file: impl Into<String>,
-        message: impl Into<String>,
-    ) -> Self {
+    pub fn decoding(file: impl Into<String>, message: impl Into<String>) -> Self {
         Self::Decoding {
             file: file.into(),
             message: message.into(),
@@ -396,10 +360,7 @@ impl AudioError {
     }
 
     /// 创建不支持的格式错误
-    pub fn unsupported_format(
-        file: impl Into<String>,
-        format: impl Into<String>,
-    ) -> Self {
+    pub fn unsupported_format(file: impl Into<String>, format: impl Into<String>) -> Self {
         Self::UnsupportedFormat {
             file: file.into(),
             format: format.into(),
@@ -488,10 +449,7 @@ impl AudioError {
     }
 
     /// 创建效果错误
-    pub fn effect(
-        effect: impl Into<String>,
-        message: impl Into<String>,
-    ) -> Self {
+    pub fn effect(effect: impl Into<String>, message: impl Into<String>) -> Self {
         Self::Effect {
             effect: effect.into(),
             message: message.into(),
@@ -516,10 +474,7 @@ impl AudioError {
     }
 
     /// 创建总线错误
-    pub fn bus(
-        bus: impl Into<String>,
-        message: impl Into<String>,
-    ) -> Self {
+    pub fn bus(bus: impl Into<String>, message: impl Into<String>) -> Self {
         Self::Bus {
             bus: bus.into(),
             message: message.into(),
@@ -552,10 +507,7 @@ impl AudioError {
     }
 
     /// 创建带有严重级别的通用音频错误
-    pub fn general_with_severity(
-        message: impl Into<String>,
-        severity: ErrorSeverity,
-    ) -> Self {
+    pub fn general_with_severity(message: impl Into<String>, severity: ErrorSeverity) -> Self {
         Self::General {
             message: message.into(),
             severity,
@@ -617,8 +569,7 @@ impl AudioError {
             | AudioError::Stop { .. } => true,
 
             // 参数错误通常可恢复（可以修正参数）
-            AudioError::InvalidVolume { .. }
-            | AudioError::InvalidPitch { .. } => true,
+            AudioError::InvalidVolume { .. } | AudioError::InvalidPitch { .. } => true,
 
             // 其他错误需要根据严重级别判断
             _ => self.severity() < ErrorSeverity::Critical,
@@ -728,7 +679,9 @@ mod tests {
     #[test]
     fn test_unsupported_format_error() {
         let err = AudioError::unsupported_format("test.xyz", "XYZ");
-        assert!(matches!(err, AudioError::UnsupportedFormat { file: _, ref format, .. } if format.as_str() == "XYZ"));
+        assert!(
+            matches!(err, AudioError::UnsupportedFormat { file: _, ref format, .. } if format.as_str() == "XYZ")
+        );
         assert!(err.is_file_related());
         assert!(err.is_recoverable());
     }

@@ -1,6 +1,6 @@
-//! 粒子发射器组件和 GPU 粒子系统
-//!
-//! 支持大规模粒子模拟，完全在 GPU 上执行。
+//  粒子发射器组件和 GPU 粒子系统
+// 
+//  支持大规模粒子模拟，完全在 GPU 上执行。
 
 use crate::impl_default;
 use bevy_ecs::prelude::*;

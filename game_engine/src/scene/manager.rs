@@ -1,6 +1,6 @@
-//! 场景管理器
-//!
-//! 提供场景的加载、保存、切换和管理功能。
+//  场景管理器
+// 
+//  提供场景的加载、保存、切换和管理功能。
 
 use bevy_ecs::prelude::*;
 use std::collections::HashMap;

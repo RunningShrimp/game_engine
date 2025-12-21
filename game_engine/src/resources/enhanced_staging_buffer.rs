@@ -1,45 +1,48 @@
-//! 增强型Staging Buffer管理模块
-//!
-//! 使用环形缓冲区池的高性能Staging Buffer管理，优化CPU-GPU数据传输。
-//!
-//! ## 架构设计
-//!
-//! ```text
-//! ┌─────────────────────────────────────────────────────────┐
-//! │              Enhanced Staging Buffer                 │
-//! ├─────────────────────────────────────────────────────────┤
-//! │  1. 环形缓冲区集成                                    │
-//! │     - RingBufferPool: 三重缓冲机制                        │
-//! │     - SmartMemoryAllocator: 智能分配策略                 │
-//! │     - PreallocationManager: 预分配优化                    │
-//! │                                                          │
-//! │  2. 向后兼容接口                                        │
-//! │     - 保持现有API不变                                  │
-//! │     - 内部使用新的内存池                                │
-//! │     - 性能透明提升                                    │
-//! │                                                          │
-//! │  3. 性能监控                                            │
-//! │     - 实时统计信息                                      │
-//! │     - 内存使用率跟踪                                    │
-//! │     - 分配延迟测量                                    │
-//! └─────────────────────────────────────────────────────────┘
-//! ```
+//  增强型Staging Buffer管理模块
+// 
+//  使用环形缓冲区池的高性能Staging Buffer管理，优化CPU-GPU数据传输。
+// 
+//  ## 架构设计
+// 
+//  ```text
+//  ┌─────────────────────────────────────────────────────────┐
+//  │              Enhanced Staging Buffer                 │
+//  ├─────────────────────────────────────────────────────────┤
+//  │  1. 环形缓冲区集成                                    │
+//  │     - RingBufferPool: 三重缓冲机制                        │
+//  │     - SmartMemoryAllocator: 智能分配策略                 │
+//  │     - PreallocationManager: 预分配优化                    │
+//  │                                                          │
+//  │  2. 向后兼容接口                                        │
+//  │     - 保持现有API不变                                  │
+//  │     - 内部使用新的内存池                                │
+//  │     - 性能透明提升                                    │
+//  │                                                          │
+//  │  3. 性能监控                                            │
+//  │     - 实时统计信息                                      │
+//  │     - 内存使用率跟踪                                    │
+//  │     - 分配延迟测量                                    │
+//  └─────────────────────────────────────────────────────────┘
+//  ```
 
 use std::collections::VecDeque;
 use std::sync::Arc;
 
 use parking_lot::Mutex;
 
-use super::ring_buffer_pool::{MemoryBlock, align_to};
-use super::memory_allocator::{SmartMemoryAllocator, AllocationRequest, AllocationType, AllocationPriority, create_high_performance_allocator};
+use super::memory_allocator::{
+    AllocationPriority, AllocationRequest, AllocationType, SmartMemoryAllocator,
+    create_high_performance_allocator,
+};
 use super::preallocation_manager::{PreallocationManager, create_default_preallocation_manager};
+use super::ring_buffer_pool::{MemoryBlock, align_to};
 
 // ============================================================================
 // 增强型Staging Buffer
 // ============================================================================
 
 /// 增强型Staging Buffer
-/// 
+///
 /// 集成了环形缓冲区池、智能内存分配器和预分配管理器的高性能Staging Buffer。
 #[derive(Debug)]
 pub struct EnhancedStagingBuffer {
@@ -164,6 +167,16 @@ impl EnhancedStagingBuffer {
         self.block.as_mut()
     }
 
+    /// 获取分配器引用（用于调试和监控）
+    pub fn allocator(&self) -> Option<&Arc<Mutex<SmartMemoryAllocator>>> {
+        self.allocator.as_ref()
+    }
+
+    /// 获取预分配管理器引用（用于调试和监控）
+    pub fn preallocation_manager(&self) -> Option<&Arc<Mutex<PreallocationManager>>> {
+        self.preallocation_manager.as_ref()
+    }
+
     /// 解除映射以供GPU使用
     pub fn unmap(&self) {
         // 这里需要实际的unmap操作
@@ -197,7 +210,7 @@ pub struct EnhancedPoolStats {
 }
 
 /// 增强型Staging Buffer池
-/// 
+///
 /// 集成了环形缓冲区池、智能内存分配器和预分配管理器的高性能池。
 #[derive(Debug)]
 pub struct EnhancedStagingBufferPool {
@@ -223,11 +236,15 @@ impl EnhancedStagingBufferPool {
     /// 创建新的增强型Staging Buffer池
     pub fn new(device: Arc<wgpu::Device>) -> Self {
         // 创建高性能内存分配器
-        let allocator = Arc::new(Mutex::new(create_high_performance_allocator(device.clone())));
-        
+        let allocator = Arc::new(Mutex::new(create_high_performance_allocator(
+            device.clone(),
+        )));
+
         // 创建默认预分配管理器
-        let preallocation_manager = Arc::new(Mutex::new(create_default_preallocation_manager(device.clone())));
-        
+        let preallocation_manager = Arc::new(Mutex::new(create_default_preallocation_manager(
+            device.clone(),
+        )));
+
         Self {
             allocator,
             preallocation_manager,
@@ -253,15 +270,19 @@ impl EnhancedStagingBufferPool {
     /// - offset: 缓冲区中的对齐偏移量
     pub fn allocate(&mut self, size: u64, alignment: u64) -> (usize, u64) {
         let start_time = std::time::Instant::now();
-        
+
         // 创建分配请求
         let request = AllocationRequest::new(size)
             .with_alignment(alignment)
             .with_type(AllocationType::Temporary)
             .with_priority(AllocationPriority::Normal);
-        
+
         // 尝试从预分配管理器分配
-        let mut buffer = if let Some(block) = self.preallocation_manager.lock().allocate(request.clone(), 0) {
+        let mut buffer = if let Some(block) = self
+            .preallocation_manager
+            .lock()
+            .allocate(request.clone(), 0)
+        {
             let mut enhanced_buffer = EnhancedStagingBuffer::from_block(
                 block,
                 Some(self.allocator.clone()),
@@ -282,29 +303,29 @@ impl EnhancedStagingBufferPool {
                 self.create_fallback_buffer(size)
             }
         };
-        
+
         // 尝试写入数据（这里简化处理）
         let offset = if let Some(write_offset) = buffer.write(&[], alignment) {
             write_offset
         } else {
             0
         };
-        
+
         let buffer_index = self.active_buffers.len();
         self.active_buffers.push_back(buffer);
-        
+
         // 更新统计信息
         {
             let mut stats = self.stats.lock();
             stats.base_stats.total_allocations += 1;
             stats.base_stats.total_bytes_uploaded += size;
             stats.base_stats.active_buffers += 1;
-            
+
             let allocation_latency = start_time.elapsed().as_micros() as f32;
-            stats.average_allocation_latency_us = 
+            stats.average_allocation_latency_us =
                 (stats.average_allocation_latency_us + allocation_latency) / 2.0;
         }
-        
+
         (buffer_index, offset)
     }
 
@@ -317,12 +338,15 @@ impl EnhancedStagingBufferPool {
             usage: wgpu::BufferUsages::MAP_WRITE | wgpu::BufferUsages::COPY_SRC,
             mapped_at_creation: true,
         });
-        
+
         // 验证缓冲区创建成功
         if buffer.size() != size {
-            tracing::error!("Failed to create fallback buffer with requested size {}", size);
+            tracing::error!(
+                "Failed to create fallback buffer with requested size {}",
+                size
+            );
         }
-        
+
         // 创建内存块
         let block = MemoryBlock {
             id: 0,
@@ -334,7 +358,7 @@ impl EnhancedStagingBufferPool {
             completed_frame: None,
             gpu_usage_frame: None,
         };
-        
+
         EnhancedStagingBuffer::from_block(
             block,
             Some(self.allocator.clone()),
@@ -369,11 +393,11 @@ impl EnhancedStagingBufferPool {
             let mut frame = self.current_frame.lock();
             *frame += 1;
         }
-        
+
         // 更新分配器和预分配管理器
         self.allocator.lock().end_frame();
         self.preallocation_manager.lock().end_frame();
-        
+
         // 回收活跃缓冲区
         for mut buffer in self.active_buffers.drain(..) {
             if let Some(block) = buffer.block() {
@@ -383,14 +407,14 @@ impl EnhancedStagingBufferPool {
                     self.allocator.lock().deallocate(block.clone());
                 }
             }
-            
+
             // 如果有空闲空间，保留缓冲区
             if self.free_buffers.len() < self.max_free_buffers {
                 buffer.reset();
                 self.free_buffers.push_back(buffer);
             }
         }
-        
+
         // 更新统计信息
         self.update_stats();
     }
@@ -398,24 +422,24 @@ impl EnhancedStagingBufferPool {
     /// 更新统计信息
     fn update_stats(&mut self) {
         let mut stats = self.stats.lock();
-        
+
         // 获取分配器统计
         stats.allocator_stats = self.allocator.lock().stats();
-        
+
         // 获取预分配统计
         stats.preallocation_stats = self.preallocation_manager.lock().stats();
-        
+
         // 计算环形缓冲区使用率
         stats.ring_buffer_utilization = self.allocator.lock().utilization();
-        
+
         // 获取内存压力级别
         let pressure = self.allocator.lock().current_pressure();
         stats.memory_pressure = format!("{:?}", pressure);
-        
+
         // 更新预分配命中率和内存节省率
         stats.preallocation_hit_rate = stats.preallocation_stats.hit_rate;
         stats.memory_savings_rate = stats.preallocation_stats.memory_savings_rate;
-        
+
         // 重置活跃缓冲区计数
         stats.base_stats.active_buffers = 0;
     }
@@ -437,10 +461,10 @@ impl EnhancedStagingBufferPool {
     pub fn force_gc(&mut self) {
         self.allocator.lock().force_gc();
         self.preallocation_manager.lock().force_reclaim_all();
-        
+
         // 清理空闲缓冲区
         self.free_buffers.clear();
-        
+
         tracing::debug!(target: "enhanced_staging_buffer", "Forced garbage collection completed");
     }
 
@@ -450,14 +474,14 @@ impl EnhancedStagingBufferPool {
         let total_capacity = allocator.total_capacity();
         let active_bytes = allocator.stats().active_bytes;
         let utilization = allocator.utilization();
-        
+
         (total_capacity, active_bytes, utilization)
     }
 
     /// 获取性能指标
     pub fn performance_metrics(&self) -> EnhancedPerformanceMetrics {
         let stats = self.stats();
-        
+
         EnhancedPerformanceMetrics {
             total_allocations: stats.base_stats.total_allocations,
             total_bytes_uploaded: stats.base_stats.total_bytes_uploaded,
@@ -530,11 +554,11 @@ mod tests {
     #[test]
     fn test_enhanced_staging_buffer_write() {
         let mut buffer = EnhancedStagingBuffer::new(1024, None, None);
-        
+
         // 测试写入
         let data = vec![1u8; 100];
         let offset = buffer.write(&data, 256);
-        
+
         assert!(offset.is_some());
         assert_eq!(buffer.offset(), 256 + data.len() as u64);
     }
@@ -559,7 +583,7 @@ mod tests {
             memory_pressure: "Low".to_string(),
             active_buffers: 5,
         };
-        
+
         assert_eq!(metrics.total_allocations, 100);
         assert_eq!(metrics.total_bytes_uploaded, 1024 * 1024);
         assert_eq!(metrics.average_allocation_latency_us, 50.0);

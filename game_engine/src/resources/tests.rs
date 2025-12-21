@@ -42,7 +42,10 @@ mod tests {
             match &*h.container.state.read().unwrap() {
                 LoadState::Failed(r) => assert_eq!(r, "File not found"),
                 _ => {
-                    panic!("Expected Failed state, got {:?}", h.container.state.read().unwrap());
+                    panic!(
+                        "Expected Failed state, got {:?}",
+                        h.container.state.read().unwrap()
+                    );
                 }
             }
         } else {

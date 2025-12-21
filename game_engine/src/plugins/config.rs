@@ -1,6 +1,6 @@
-//! 插件配置系统
-//!
-//! 管理插件的配置文件和启用/禁用状态
+//  插件配置系统
+// 
+//  管理插件的配置文件和启用/禁用状态
 
 use crate::impl_default;
 use serde::{Serialize, Deserialize};

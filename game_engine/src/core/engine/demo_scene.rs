@@ -1,15 +1,15 @@
-//! 演示场景模块
-//!
-//! 负责创建游戏引擎的演示场景，包括：
-//! - 物理对象生成
-//! - 精灵网格生成
-//! - 光源设置
-//! - 脚本实体创建
+//  演示场景模块
+// 
+//  负责创建游戏引擎的演示场景，包括：
+//  - 物理对象生成
+//  - 精灵网格生成
+//  - 光源设置
+//  - 脚本实体创建
 
 use crate::ecs::{PointLight, PreviousTransform, Sprite, Transform};
-use crate::scripting::Script;
-use crate::render::backend::TextureHandle;
 use crate::resources::manager::AssetServer;
+use crate::resources::manager::Handle;
+use crate::scripting::Script;
 use bevy_ecs::prelude::*;
 use glam::{Quat, Vec3};
 
@@ -71,7 +71,9 @@ fn spawn_physics_scene(world: &mut World) {
             rotation: glam::Quat::IDENTITY,
         },
         ColliderDesc {
-            shape_type: ShapeType::Cuboid,
+            shape_type: ShapeType::Cuboid {
+                half_extents: glam::Vec3::new(400.0, 10.0, 0.0),
+            },
             half_extents: glam::Vec3::new(400.0, 10.0, 0.0),
             radius: 0.0,
         },
@@ -92,15 +94,13 @@ fn spawn_physics_scene(world: &mut World) {
             },
             RigidBodyDesc {
                 body_type: RigidBodyType::Dynamic,
-                position: glam::Vec3::new(
-                    400.0 + i as f32 * 10.0,
-                    500.0 + i as f32 * 50.0,
-                    0.0,
-                ),
+                position: glam::Vec3::new(400.0 + i as f32 * 10.0, 500.0 + i as f32 * 50.0, 0.0),
                 rotation: glam::Quat::IDENTITY,
             },
             ColliderDesc {
-                shape_type: ShapeType::Cuboid,
+                shape_type: ShapeType::Cuboid {
+                    half_extents: glam::Vec3::new(15.0, 15.0, 0.0),
+                },
                 half_extents: glam::Vec3::new(15.0, 15.0, 0.0),
                 radius: 0.0,
             },
@@ -128,7 +128,7 @@ fn spawn_physics_scene(world: &mut World) {
 ///
 /// * `world` - ECS世界
 /// * `atlas_handle` - 图集纹理句柄
-fn spawn_sprite_grid(world: &mut World, atlas_handle: &TextureHandle) {
+fn spawn_sprite_grid(world: &mut World, atlas_handle: &Handle<u32>) {
     for y in -2..=2 {
         for x in -8..=8 {
             let mut entity = world.spawn((
@@ -150,7 +150,9 @@ fn spawn_sprite_grid(world: &mut World, atlas_handle: &TextureHandle) {
 
             // 为奇数位置的精灵添加图集纹理
             if (x + y) % 2 != 0 {
-                entity.insert(atlas_handle.clone());
+                entity.insert(crate::ecs::TextureHandle {
+                    handle: atlas_handle.clone(),
+                });
             }
         }
     }
@@ -196,11 +198,11 @@ pub fn spawn_additional_entities(world: &mut World, asset_server: &AssetServer) 
     // 即使我们不直接使用着色器句柄，调用load_texture表明asset_server正在被使用
     // 在实际应用中，这里可能会加载实际的纹理资源
     let _shader_handle = asset_server.load_texture(shader_path);
-    
+
     // 加载图集资源
     let atlas_path = std::path::Path::new("assets/atlas.png");
     let atlas_handle = asset_server.load_atlas(atlas_path);
-    
+
     // 生成一个使用图集的精灵实体
     let atlas_entity_id = {
         let entity = world.spawn((
@@ -222,7 +224,7 @@ pub fn spawn_additional_entities(world: &mut World, asset_server: &AssetServer) 
         ));
         entity.id()
     };
-    
+
     // 生成一个带有脚本的精灵
     let script_entity_id = {
         let entity = world.spawn((
@@ -244,12 +246,13 @@ pub fn spawn_additional_entities(world: &mut World, asset_server: &AssetServer) 
                     let y = 200.0 + Math.cos(time * 2.0) * 100.0;
                     transform.pos.x = x;
                     transform.pos.y = y;
-                "#.to_string(),
+                "#
+                .to_string(),
                 enabled: true,
             },
         ));
         entity.id()
     };
-    
+
     tracing::info!(target: "demo_scene", "Spawned additional demo entities with IDs: {:?} and {:?}", atlas_entity_id, script_entity_id);
 }

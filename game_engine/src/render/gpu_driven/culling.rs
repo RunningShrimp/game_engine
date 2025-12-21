@@ -1,40 +1,40 @@
-//! GPU 剔除模块
-//!
-//! 实现基于计算着色器的视锥剔除，提供高性能的GPU端可见性判断。
-//!
-//! ## 架构设计
-//!
-//! - **GpuCuller**: GPU剔除器，管理计算着色器和资源
-//! - **CullingUniforms**: 剔除Uniform数据（视锥平面、实例数量）
-//! - **GpuInstance**: GPU实例数据（模型矩阵、AABB）
-//!
-//! ## 性能特性
-//!
-//! - 并行处理：每个实例在独立的GPU线程中处理
-//! - 原子操作：使用原子计数器收集可见实例
-//! - 内存优化：紧凑的数据布局，减少内存带宽
-//!
-//! ## 使用示例
-//!
-//! ```ignore
-//! use game_engine::render::gpu_driven::culling::{GpuCuller, GpuInstance};
-//!
-//! // 创建GPU剔除器
-//! let culler = GpuCuller::new(device, max_instances, 64);
-//!
-//! // 准备实例数据
-//! let instances: Vec<GpuInstance> = collect_instances();
-//!
-//! // 执行剔除
-//! culler.cull(
-//!     &mut encoder,
-//!     device,
-//!     queue,
-//!     instance_buffer,
-//!     view_proj,
-//!     instance_count,
-//! );
-//! ```
+//  GPU 剔除模块
+// 
+//  实现基于计算着色器的视锥剔除，提供高性能的GPU端可见性判断。
+// 
+//  ## 架构设计
+// 
+//  - **GpuCuller**: GPU剔除器，管理计算着色器和资源
+//  - **CullingUniforms**: 剔除Uniform数据（视锥平面、实例数量）
+//  - **GpuInstance**: GPU实例数据（模型矩阵、AABB）
+// 
+//  ## 性能特性
+// 
+//  - 并行处理：每个实例在独立的GPU线程中处理
+//  - 原子操作：使用原子计数器收集可见实例
+//  - 内存优化：紧凑的数据布局，减少内存带宽
+// 
+//  ## 使用示例
+// 
+//  ```ignore
+//  use game_engine::render::gpu_driven::culling::{GpuCuller, GpuInstance};
+// 
+//  // 创建GPU剔除器
+//  let culler = GpuCuller::new(device, max_instances, 64);
+// 
+//  // 准备实例数据
+//  let instances: Vec<GpuInstance> = collect_instances();
+// 
+//  // 执行剔除
+//  culler.cull(
+//      &mut encoder,
+//      device,
+//      queue,
+//      instance_buffer,
+//      view_proj,
+//      instance_count,
+//  );
+//  ```
 
 use crate::impl_default;
 
@@ -66,7 +66,7 @@ impl CullingUniforms {
     /// 返回包含视锥平面的剔除Uniform数据
     pub fn new(view_proj: [[f32; 4]; 4], instance_count: u32, index_count: u32) -> Self {
         let mut frustum_planes = [[0.0f32; 4]; 6];
-        
+
         // 从视图投影矩阵提取视锥平面
         // 左平面
         frustum_planes[0] = [
@@ -110,7 +110,7 @@ impl CullingUniforms {
             view_proj[2][3] - view_proj[2][2],
             view_proj[3][3] - view_proj[3][2],
         ];
-        
+
         // 归一化平面
         for i in 0..6 {
             let len = (frustum_planes[i][0] * frustum_planes[i][0]
@@ -124,7 +124,7 @@ impl CullingUniforms {
                 frustum_planes[i][3] /= len;
             }
         }
-        
+
         Self {
             view_proj,
             frustum_planes,
@@ -133,12 +133,12 @@ impl CullingUniforms {
             _pad: [0, 0],
         }
     }
-    
+
     /// 从视图投影矩阵提取视锥平面（兼容旧接口）
     ///
     /// 此方法用于向后兼容，默认不生成间接绘制命令。
     pub fn from_view_proj(view_proj: [[f32; 4]; 4], instance_count: u32) -> Self {
-        Self::new(view_proj, instance_count, 0)  // 默认不生成间接绘制命令
+        Self::new(view_proj, instance_count, 0) // 默认不生成间接绘制命令
     }
 }
 
@@ -336,7 +336,7 @@ impl GpuCuller {
             None,
             view_proj,
             instance_count,
-            0,  // 不生成间接绘制命令
+            0, // 不生成间接绘制命令
         )
     }
 

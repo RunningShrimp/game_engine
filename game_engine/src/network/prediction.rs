@@ -1,39 +1,39 @@
-//! 客户端预测系统
-//!
-//! 实现客户端预测、状态回滚和重放机制，减少输入延迟，提升多人游戏体验。
-//!
-//! ## 设计原则
-//!
-//! 1. **输入缓冲**: 存储本地输入历史，用于回滚和重放
-//! 2. **状态快照**: 定期保存游戏状态快照，用于快速回滚
-//! 3. **预测执行**: 在服务器确认前本地执行输入
-//! 4. **回滚重放**: 服务器状态不一致时回滚并重放输入
-//!
-//! ## 架构设计
-//!
-//! ```text
-//! ┌─────────────────────────────────────────────────────────┐
-//! │              Client-Side Prediction Pipeline            │
-//! ├─────────────────────────────────────────────────────────┤
-//! │  1. Input Capture                                       │
-//! │     - Capture user input                                │
-//! │     - Store in command queue                            │
-//! │     - Send to server                                    │
-//! │                                                          │
-//! │  2. Local Prediction                                    │
-//! │     - Execute input locally                             │
-//! │     - Update game state                                 │
-//! │     - Render immediately                                │
-//! │                                                          │
-//! │  3. Server Confirmation                                 │
-//! │     - Receive server state                              │
-//! │     - Compare with local state                          │
-//! │                                                          │
-//! │  4. Rollback & Replay (if needed)                      │
-//! │     - Rollback to confirmed state                       │
-//! │     - Replay unconfirmed inputs                         │
-//! └─────────────────────────────────────────────────────────┘
-//! ```
+//  客户端预测系统
+// 
+//  实现客户端预测、状态回滚和重放机制，减少输入延迟，提升多人游戏体验。
+// 
+//  ## 设计原则
+// 
+//  1. **输入缓冲**: 存储本地输入历史，用于回滚和重放
+//  2. **状态快照**: 定期保存游戏状态快照，用于快速回滚
+//  3. **预测执行**: 在服务器确认前本地执行输入
+//  4. **回滚重放**: 服务器状态不一致时回滚并重放输入
+// 
+//  ## 架构设计
+// 
+//  ```text
+//  ┌─────────────────────────────────────────────────────────┐
+//  │              Client-Side Prediction Pipeline            │
+//  ├─────────────────────────────────────────────────────────┤
+//  │  1. Input Capture                                       │
+//  │     - Capture user input                                │
+//  │     - Store in command queue                            │
+//  │     - Send to server                                    │
+//  │                                                          │
+//  │  2. Local Prediction                                    │
+//  │     - Execute input locally                             │
+//  │     - Update game state                                 │
+//  │     - Render immediately                                │
+//  │                                                          │
+//  │  3. Server Confirmation                                 │
+//  │     - Receive server state                              │
+//  │     - Compare with local state                          │
+//  │                                                          │
+//  │  4. Rollback & Replay (if needed)                      │
+//  │     - Rollback to confirmed state                       │
+//  │     - Replay unconfirmed inputs                         │
+//  └─────────────────────────────────────────────────────────┘
+//  ```
 
 use crate::impl_default;
 use crate::network::delay_compensation;
@@ -190,7 +190,6 @@ impl ClientPredictionManager {
             delay_compensation: delay_compensation::ClientDelayCompensation::new(),
         }
     }
-
 }
 
 impl Default for ClientPredictionManager {

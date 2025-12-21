@@ -1,10 +1,10 @@
-//! GPU vs CPU 性能对比工具
-//!
-//! 量化 GPU 加速的性能收益
-//! - CPU 基准测试
-//! - GPU 模拟执行
-//! - 性能对比分析
-//! - 优化建议
+//  GPU vs CPU 性能对比工具
+// 
+//  量化 GPU 加速的性能收益
+//  - CPU 基准测试
+//  - GPU 模拟执行
+//  - 性能对比分析
+//  - 优化建议
 
 use glam::{Mat4, Vec3, Vec4};
 use std::time::Instant;

@@ -1,10 +1,10 @@
-//! 性能基准测试套件
-//!
-//! 建立性能基线并跟踪优化效果
-//! - 关键操作基准测试
-//! - 性能回归检测
-//! - 基线管理
-//! - 对比分析
+//  性能基准测试套件
+// 
+//  建立性能基线并跟踪优化效果
+//  - 关键操作基准测试
+//  - 性能回归检测
+//  - 基线管理
+//  - 对比分析
 
 use glam::{Mat4, Quat, Vec3};
 use serde::{Deserialize, Serialize};
@@ -13,7 +13,7 @@ use std::fs;
 use std::path::Path;
 use std::time::SystemTime;
 
-/// 基准测试结果数据结构
+//  基准测试结果数据结构
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BenchmarkBaseline {
     /// 基准名称
@@ -55,7 +55,7 @@ impl BenchmarkBaseline {
     }
 }
 
-/// 性能回归检测器
+//  性能回归检测器
 #[derive(Debug)]
 pub struct RegressionDetector {
     /// 基准数据
@@ -142,7 +142,7 @@ impl RegressionDetector {
     }
 }
 
-/// 回归报告
+//  回归报告
 #[derive(Debug, Clone)]
 pub struct RegressionReport {
     /// 基准名称
@@ -159,7 +159,7 @@ pub struct RegressionReport {
     pub severity: String,
 }
 
-/// 关键路径基准测试套件
+//  关键路径基准测试套件
 pub struct CriticalPathBenchmarks;
 
 impl CriticalPathBenchmarks {
@@ -411,7 +411,7 @@ mod tests {
     #[test]
     fn test_critical_path_benchmarks() {
         let results = CriticalPathBenchmarks::run_all();
-        assert!(results.len() > 0);
+        assert!(!results.is_empty());
 
         // 验证每个基准都有结果
         for (name, baseline) in results {

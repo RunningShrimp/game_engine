@@ -6,12 +6,15 @@ pub mod x86;
 #[cfg(target_arch = "aarch64")]
 pub mod arm;
 
-mod scalar;
 mod dispatch;
 pub mod ops;
+mod scalar;
 
-pub use dispatch::{Vec3Simd, Vec4Simd, Mat4Simd, QuatSimd};
-pub use ops::{MatrixBatchOps, VectorBatchOps, GeometryOps, TransformOps, PerformanceTest, VectorBatchResult, BoundingVolumeOps};
+pub use dispatch::{Mat4Simd, QuatSimd, Vec3Simd, Vec4Simd};
+pub use ops::{
+    BoundingVolumeOps, GeometryOps, MatrixBatchOps, PerformanceTest, TransformOps, VectorBatchOps,
+    VectorBatchResult,
+};
 
 /// 向量运算trait
 pub trait VectorOps {
@@ -38,10 +41,10 @@ mod tests {
     fn test_vec4_operations() {
         let a = Vec4Simd::new(1.0, 2.0, 3.0, 4.0);
         let b = Vec4Simd::new(5.0, 6.0, 7.0, 8.0);
-        
+
         let dot = a.dot(&b);
         assert!((dot - 70.0).abs() < 1e-5);
-        
+
         let sum = a.add(&b);
         assert!((sum.data[0] - 6.0).abs() < 1e-5);
     }

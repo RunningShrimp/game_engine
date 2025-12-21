@@ -1,5 +1,5 @@
-//! 音频领域对象
-//! 实现富领域对象，将音频业务逻辑封装到对象中
+//  音频领域对象
+//  实现富领域对象，将音频业务逻辑封装到对象中
 
 use crate::domain::errors::{AudioError, CompensationAction, DomainError, RecoveryStrategy};
 use crate::domain::value_objects::Volume;
@@ -532,7 +532,7 @@ mod tests {
         let mut source = AudioSource::new(AudioSourceId(1));
         source.state = AudioSourceState::Loading;
         source.path = Some("test.wav".to_string());
-        
+
         assert!(source.play().is_err());
     }
 
@@ -548,7 +548,7 @@ mod tests {
         // 测试：暂停非播放状态应该成功（无操作）
         let mut source = AudioSource::new(AudioSourceId(1));
         source.state = AudioSourceState::Stopped;
-        
+
         assert!(source.pause().is_ok());
         assert_eq!(source.state, AudioSourceState::Stopped); // 状态不变
     }
@@ -558,7 +558,7 @@ mod tests {
         // 测试：恢复非暂停状态应该成功（无操作）
         let mut source = AudioSource::new(AudioSourceId(1));
         source.state = AudioSourceState::Stopped;
-        
+
         assert!(source.resume().is_ok());
         assert_eq!(source.state, AudioSourceState::Stopped); // 状态不变
     }
@@ -570,7 +570,7 @@ mod tests {
         source.path = Some("test.wav".to_string());
         source.duration = Some(10.0);
         source.playback_position = 5.0;
-        
+
         source.play().unwrap();
         assert_eq!(source.playback_position, 0.0);
     }
@@ -583,7 +583,7 @@ mod tests {
         source.duration = Some(10.0);
         source.playback_position = 5.0;
         source.state = AudioSourceState::Paused;
-        
+
         source.play().unwrap();
         assert_eq!(source.playback_position, 5.0); // 位置保持不变
     }
@@ -594,7 +594,7 @@ mod tests {
         let mut source = AudioSource::new(AudioSourceId(1));
         source.path = Some("test.wav".to_string());
         source.playback_position = 5.0;
-        
+
         source.stop().unwrap();
         assert_eq!(source.playback_position, 0.0);
         assert_eq!(source.state, AudioSourceState::Stopped);
@@ -611,7 +611,7 @@ mod tests {
         let mut source = AudioSource::new(AudioSourceId(1));
         source.set_looped(true).unwrap();
         assert!(source.looped);
-        
+
         source.set_looped(false).unwrap();
         assert!(!source.looped);
     }
@@ -621,7 +621,7 @@ mod tests {
         let mut source = AudioSource::new(AudioSourceId(1));
         source.duration = Some(10.0);
         source.playback_position = 5.0;
-        
+
         assert_eq!(source.get_progress(), 0.5);
     }
 
@@ -635,14 +635,14 @@ mod tests {
     fn test_audio_source_seek() {
         let mut source = AudioSource::new(AudioSourceId(1));
         source.duration = Some(10.0);
-        
+
         source.seek(5.0).unwrap();
         assert_eq!(source.playback_position, 5.0);
-        
+
         // 超出范围应该被限制
         source.seek(15.0).unwrap();
         assert_eq!(source.playback_position, 10.0);
-        
+
         // 负数应该被限制为0
         source.seek(-5.0).unwrap();
         assert_eq!(source.playback_position, 0.0);
@@ -689,7 +689,7 @@ mod tests {
             max_attempts: 1,
             delay_ms: 1,
         };
-        
+
         let error = AudioError::PlaybackFailed("test".to_string());
         // 注意：recover_from_error会尝试调用play()
         // 如果path和duration都存在，play()可能会成功（因为load_file只是检查文件是否存在）
@@ -716,7 +716,7 @@ mod tests {
             max_attempts: 1,
             delay_ms: 1,
         };
-        
+
         let error = AudioError::SourceNotFound("test.wav".to_string());
         // 由于没有path，恢复应该失败
         let result = source.recover_from_error(&error);
@@ -729,10 +729,10 @@ mod tests {
         source.volume = Volume::new_unchecked(0.9);
         source.looped = true;
         source.recovery_strategy = RecoveryStrategy::UseDefault;
-        
+
         let error = AudioError::PlaybackFailed("test".to_string());
         let result = source.recover_from_error(&error);
-        
+
         assert!(result.is_ok());
         assert_eq!(source.volume.value(), 0.5); // 默认音量
         assert!(!source.looped); // 默认不循环
@@ -743,10 +743,10 @@ mod tests {
         let mut source = AudioSource::new(AudioSourceId(1));
         source.volume = Volume::new_unchecked(0.8);
         source.recovery_strategy = RecoveryStrategy::Skip;
-        
+
         let error = AudioError::PlaybackFailed("test".to_string());
         let result = source.recover_from_error(&error);
-        
+
         assert!(result.is_ok());
         assert_eq!(source.volume.value(), 0.8); // 状态不应该改变
     }
@@ -756,10 +756,10 @@ mod tests {
         let mut source = AudioSource::new(AudioSourceId(1));
         source.volume = Volume::new_unchecked(0.8);
         source.recovery_strategy = RecoveryStrategy::LogAndContinue;
-        
+
         let error = AudioError::PlaybackFailed("test".to_string());
         let result = source.recover_from_error(&error);
-        
+
         assert!(result.is_ok());
         assert_eq!(source.volume.value(), 0.8); // 状态不应该改变
     }
@@ -768,10 +768,10 @@ mod tests {
     fn test_audio_source_recover_from_error_fail() {
         let mut source = AudioSource::new(AudioSourceId(1));
         source.recovery_strategy = RecoveryStrategy::Fail;
-        
+
         let error = AudioError::PlaybackFailed("test".to_string());
         let result = source.recover_from_error(&error);
-        
+
         assert!(result.is_err());
         if let Err(DomainError::Audio(e)) = result {
             assert!(matches!(e, AudioError::PlaybackFailed(_)));
@@ -787,9 +787,9 @@ mod tests {
         source.volume = Volume::new_unchecked(0.7);
         source.looped = true;
         source.playback_position = 5.5;
-        
+
         let compensation = source.create_compensation();
-        
+
         assert_eq!(compensation.action_type, "restore_audio_state");
         assert!(compensation.data.get("state").is_some());
         assert!(compensation.data.get("volume").is_some());
@@ -804,18 +804,18 @@ mod tests {
         source.volume = Volume::new_unchecked(0.7);
         source.looped = true;
         source.playback_position = 5.5;
-        
+
         let compensation = source.create_compensation();
-        
+
         // 修改状态
         source.state = AudioSourceState::Stopped;
         source.volume = Volume::new_unchecked(0.3);
         source.looped = false;
         source.playback_position = 10.0;
-        
+
         // 恢复状态
         source.restore_from_compensation(&compensation).unwrap();
-        
+
         assert_eq!(source.state, AudioSourceState::Playing);
         assert!((source.volume.value() - 0.7).abs() < 0.001);
         assert_eq!(source.looped, true);
@@ -826,7 +826,7 @@ mod tests {
     fn test_audio_source_restore_from_compensation_partial() {
         // 测试部分数据缺失的情况
         let mut source = AudioSource::new(AudioSourceId(1));
-        
+
         let compensation = CompensationAction::new(
             "test",
             "restore_audio_state",
@@ -835,7 +835,7 @@ mod tests {
                 // 其他字段缺失
             }),
         );
-        
+
         source.restore_from_compensation(&compensation).unwrap();
         assert!((source.volume.value() - 0.8).abs() < 0.001);
     }

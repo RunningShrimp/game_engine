@@ -1,10 +1,11 @@
-//! 实体测试模块
-//!
-//! 提供对域实体的全面测试覆盖，包括身份相等性、生命周期方法和状态变化测试。
+//  实体测试模块
+// 
+//  提供对域实体的全面测试覆盖，包括身份相等性、生命周期方法和状态变化测试。
 
 use crate::domain::entity::*;
 use crate::domain::errors::{DomainError, SceneError};
 use crate::ecs::{Camera, PointLight, Sprite, Transform};
+use crate::error::safe_lock;
 use glam::{Quat, Vec3};
 use serde_json;
 
@@ -601,7 +602,7 @@ mod entity_edge_cases_tests {
             .map(|i| {
                 let entity_clone = Arc::clone(&entity);
                 thread::spawn(move || {
-                    let mut entity = entity_clone.lock().unwrap();
+                    let mut entity = safe_lock(&entity_clone, "entity_test_clone").unwrap();
                     let key = format!("thread_{}", i);
                     let value = serde_json::json!(i);
                     entity.set_property(&key, value).unwrap();
@@ -613,7 +614,7 @@ mod entity_edge_cases_tests {
             handle.join().unwrap();
         }
         
-        let entity = entity.lock().unwrap();
+        let entity = safe_lock(&entity, "entity_test_final").unwrap();
         assert_eq!(entity.properties.len(), 10);
         
         for i in 0..10 {

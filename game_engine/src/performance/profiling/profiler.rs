@@ -78,6 +78,11 @@ impl Profiler {
         self.scopes.values().collect()
     }
 
+    /// 创建一个性能测量作用域守卫
+    pub fn profile_scope(&mut self, name: impl Into<String>) -> ProfileScope<'_> {
+        ProfileScope::new(self, name)
+    }
+
     /// 清空所有统计信息
     pub fn clear(&mut self) {
         self.scopes.clear();
@@ -111,9 +116,15 @@ pub struct ProfileScope<'a> {
 }
 
 impl<'a> ProfileScope<'a> {
+    /// 创建新的性能测量作用域守卫
     pub fn new(profiler: &'a mut Profiler, name: impl Into<String>) -> Self {
         profiler.begin_scope(name);
         Self { profiler }
+    }
+
+    /// 获取当前作用域的名称（用于调试）
+    pub fn name(&self) -> Option<&str> {
+        self.profiler.current_scope.as_ref().map(|(name, _)| name.as_str())
     }
 }
 
@@ -121,6 +132,15 @@ impl<'a> Drop for ProfileScope<'a> {
     fn drop(&mut self) {
         self.profiler.end_scope();
     }
+}
+
+/// 创建性能测量作用域的宏
+/// 使用示例: profile_scope!(profiler, "my_function")
+#[macro_export]
+macro_rules! profile_scope {
+    ($profiler:expr, $name:expr) => {
+        let _scope = $crate::performance::profiling::ProfileScope::new($profiler, $name);
+    };
 }
 
 #[cfg(test)]
@@ -155,11 +175,27 @@ mod tests {
         let mut profiler = Profiler::new();
 
         {
-            let _scope = ProfileScope::new(&mut profiler, "auto_scope");
+            let scope = ProfileScope::new(&mut profiler, "auto_scope");
             thread::sleep(Duration::from_millis(10));
+
+            // 测试name方法
+            assert_eq!(scope.name(), Some("auto_scope"));
         } // 作用域结束时自动调用end_scope
 
         let stats = profiler.get_stats("auto_scope").unwrap();
+        assert_eq!(stats.call_count, 1);
+    }
+
+    #[test]
+    fn test_profile_scope_method() {
+        let mut profiler = Profiler::new();
+
+        {
+            let _scope = profiler.profile_scope("method_scope");
+            thread::sleep(Duration::from_millis(5));
+        } // 作用域结束时自动调用end_scope
+
+        let stats = profiler.get_stats("method_scope").unwrap();
         assert_eq!(stats.call_count, 1);
     }
 }

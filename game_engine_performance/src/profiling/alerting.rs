@@ -1,6 +1,6 @@
-//! 性能告警模块
-//!
-//! 提供阈值告警、趋势异常检测、多级告警和通知集成功能。
+//  性能告警模块
+// 
+//  提供阈值告警、趋势异常检测、多级告警和通知集成功能。
 
 use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, Mutex};
@@ -16,7 +16,7 @@ use crate::profiling::ProfilingResult;
 // 告警配置
 // ============================================================================
 
-/// 告警配置
+//  告警配置
 #[derive(Debug, Clone)]
 pub struct AlertingConfig {
     /// 告警检查间隔
@@ -49,7 +49,7 @@ impl Default for AlertingConfig {
     }
 }
 
-/// 通知配置
+//  通知配置
 #[derive(Debug, Clone)]
 pub struct NotificationConfig {
     /// 是否启用邮件通知
@@ -79,7 +79,7 @@ impl Default for NotificationConfig {
     }
 }
 
-/// 邮件配置
+//  邮件配置
 #[derive(Debug, Clone)]
 pub struct EmailConfig {
     /// SMTP服务器地址
@@ -98,7 +98,7 @@ pub struct EmailConfig {
     pub use_tls: bool,
 }
 
-/// 日志级别
+//  日志级别
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum LogLevel {
     Info,
@@ -122,7 +122,7 @@ impl LogLevel {
 // 告警策略
 // ============================================================================
 
-/// 告警策略类型
+//  告警策略类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AlertStrategy {
     /// 阈值告警
@@ -135,7 +135,7 @@ pub enum AlertStrategy {
     Composite,
 }
 
-/// 阈值告警策略
+//  阈值告警策略
 #[derive(Debug, Clone)]
 pub struct ThresholdAlertStrategy {
     /// 告警级别
@@ -150,7 +150,7 @@ pub struct ThresholdAlertStrategy {
     pub enable_recovery_notification: bool,
 }
 
-/// 趋势告警策略
+//  趋势告警策略
 #[derive(Debug, Clone)]
 pub struct TrendAlertStrategy {
     /// 告警级别
@@ -165,7 +165,7 @@ pub struct TrendAlertStrategy {
     pub trend_direction: Option<TrendDirection>,
 }
 
-/// 异常检测告警策略
+//  异常检测告警策略
 #[derive(Debug, Clone)]
 pub struct AnomalyAlertStrategy {
     /// 告警级别
@@ -178,7 +178,7 @@ pub struct AnomalyAlertStrategy {
     pub sensitivity: AnomalySensitivity,
 }
 
-/// 异常检测算法
+//  异常检测算法
 #[derive(Debug, Clone, Copy)]
 pub enum AnomalyAlgorithm {
     /// Z-Score检测
@@ -191,7 +191,7 @@ pub enum AnomalyAlgorithm {
     MovingAverageDeviation,
 }
 
-/// 异常敏感度
+//  异常敏感度
 #[derive(Debug, Clone, Copy)]
 pub enum AnomalySensitivity {
     Low,
@@ -211,7 +211,7 @@ impl AnomalySensitivity {
     }
 }
 
-/// 复合告警策略
+//  复合告警策略
 #[derive(Debug, Clone)]
 pub struct CompositeAlertStrategy {
     /// 子策略列表
@@ -222,7 +222,7 @@ pub struct CompositeAlertStrategy {
     pub required_matches: usize,
 }
 
-/// 复合操作符
+//  复合操作符
 #[derive(Debug, Clone, Copy)]
 pub enum CompositeOperator {
     /// 所有条件都满足
@@ -237,7 +237,7 @@ pub enum CompositeOperator {
 // 告警实例
 // ============================================================================
 
-/// 告警实例
+//  告警实例
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AlertInstance {
     /// 告警ID
@@ -270,7 +270,7 @@ pub struct AlertInstance {
     pub metadata: HashMap<String, String>,
 }
 
-/// 告警状态
+//  告警状态
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum AlertStatus {
     /// 活跃
@@ -294,7 +294,7 @@ impl AlertStatus {
     }
 }
 
-/// 告警通知
+//  告警通知
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AlertNotification {
     /// 告警ID
@@ -309,7 +309,7 @@ pub struct AlertNotification {
     pub error_message: Option<String>,
 }
 
-/// 通知类型
+//  通知类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum NotificationType {
     Email,
@@ -319,7 +319,7 @@ pub enum NotificationType {
     Teams,
 }
 
-/// 通知状态
+//  通知状态
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum NotificationStatus {
     Pending,
@@ -332,7 +332,7 @@ pub enum NotificationStatus {
 // 告警引擎
 // ============================================================================
 
-/// 告警引擎
+//  告警引擎
 pub struct AlertingEngine {
     config: AlertingConfig,
     alert_strategies: HashMap<String, Vec<AlertStrategy>>,
@@ -971,7 +971,7 @@ impl AlertingEngine {
 // 通知发送器
 // ============================================================================
 
-/// 通知发送器
+//  通知发送器
 pub struct NotificationSender {
     config: NotificationConfig,
 }

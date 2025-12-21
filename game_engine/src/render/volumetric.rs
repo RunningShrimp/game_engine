@@ -1,18 +1,18 @@
-//! 体积渲染模块
-//!
-//! 实现体积渲染效果，包括：
-//! - 雾效果（线性、指数、高度雾）
-//! - 体积光（God Rays）
-//! - 云渲染
-//! - 体积阴影
+//  体积渲染模块
+// 
+//  实现体积渲染效果，包括：
+//  - 雾效果（线性、指数、高度雾）
+//  - 体积光（God Rays）
+//  - 云渲染
+//  - 体积阴影
 
-use crate::core::error::RenderError;
+use crate::error::RenderError;
 use crate::impl_default;
 use glam::{Mat4, Vec3};
 use wgpu::util::DeviceExt;
 use wgpu::{
-    BindGroup, BindGroupLayout, Buffer, Device, Queue, RenderPass, RenderPipeline,
-    Sampler, Texture, TextureView,
+    BindGroup, BindGroupLayout, Buffer, Device, Queue, RenderPass, RenderPipeline, Sampler,
+    Texture, TextureView,
 };
 
 /// 体积渲染配置
@@ -317,15 +317,15 @@ impl VolumetricRenderer {
         depth_sampler: &Sampler,
     ) -> Result<BindGroup, RenderError> {
         let Some(bind_group_layout) = &self.bind_group_layout else {
-            return Err(RenderError::InvalidState(
+            return Err(RenderError::InvalidState { message: 
                 "Bind group layout not initialized".into(),
-            ));
+                severity: crate::error::ErrorSeverity::Error });
         };
 
         let Some(uniform_buffer) = &self.uniform_buffer else {
-            return Err(RenderError::InvalidState(
+            return Err(RenderError::InvalidState { message: 
                 "Uniform buffer not initialized".into(),
-            ));
+                severity: crate::error::ErrorSeverity::Error });
         };
 
         Ok(device.create_bind_group(&wgpu::BindGroupDescriptor {

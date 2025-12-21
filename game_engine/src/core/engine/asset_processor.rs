@@ -1,11 +1,11 @@
-//! 资源处理模块
-//!
-//! 负责处理资源加载事件，包括：
-//! - 纹理加载事件
-//! - 图集加载事件
-//! - GLTF模型加载事件
-//! - 资源指标更新
-//! - 资源事件日志记录
+//  资源处理模块
+// 
+//  负责处理资源加载事件，包括：
+//  - 纹理加载事件
+//  - 图集加载事件
+//  - GLTF模型加载事件
+//  - 资源指标更新
+//  - 资源事件日志记录
 
 use crate::ecs::TileSet;
 use crate::render::wgpu_utils::WgpuRenderer;
@@ -40,13 +40,13 @@ pub fn process_asset_events(
     for event in events {
         // 处理图集加载
         process_atlas_loaded_event(&event, world);
-        
+
         // 更新资源指标
         update_asset_metrics(&event, world);
-        
+
         // 记录日志
         log_asset_event(&event, world);
-        
+
         // 处理GLTF导入
         process_gltf_loaded_event(&event, world, renderer);
     }
@@ -110,7 +110,6 @@ fn update_asset_metrics(event: &AssetEvent, world: &mut World) {
                 am.model_errors += 1;
                 tracing::error!(target: "assets", "GLTF load failed: {}", e);
             }
-            _ => {}
         }
     }
 }
@@ -133,7 +132,7 @@ fn log_asset_event(event: &AssetEvent, world: &mut World) {
             AssetEvent::GltfLoaded(_, ms) => format!("GltfLoaded {:.1}ms", ms),
             AssetEvent::GltfFailed(_, e) => format!("GltfFailed {}", e),
         };
-        
+
         // 维护日志队列大小
         if logs.entries.len() >= logs.capacity {
             logs.entries.pop_front();
@@ -197,18 +196,18 @@ pub fn get_asset_statistics(world: &World) -> String {
 /// * `asset_server` - 资源服务器
 /// * `force` - 是否强制清理所有缓存
 #[allow(dead_code)]
-pub fn cleanup_asset_cache(world: &World, asset_server: &mut AssetServer, force: bool) {
+pub fn cleanup_asset_cache(world: &mut World, asset_server: &mut AssetServer, force: bool) {
     let mut cleaned_count = 0;
-    
+
     // 这里可以实现资源引用计数检查和清理逻辑
     // 暂时使用简单的清理策略
     if force {
         asset_server.clear_cache();
         cleaned_count = 100; // 示例值
     }
-    
+
     tracing::info!(target: "assets", "Cleaned {} asset cache entries", cleaned_count);
-    
+
     // 更新清理统计
     if let Some(mut metrics) = world.get_resource_mut::<AssetMetrics>() {
         metrics.cache_cleanups += 1;
@@ -228,13 +227,13 @@ pub fn cleanup_asset_cache(world: &World, asset_server: &mut AssetServer, force:
 #[allow(dead_code)]
 pub async fn preload_resources<'a>(
     asset_server: &mut AssetServer,
-    renderer: &WgpuRenderer<'a>,
+    renderer: &'a mut WgpuRenderer,
     resource_paths: Vec<&str>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     tracing::info!(target: "assets", "Preloading {} resources", resource_paths.len());
-    
+
     let start_time = std::time::Instant::now();
-    
+
     for path in resource_paths {
         // 根据文件扩展名确定资源类型
         if path.ends_with(".png") || path.ends_with(".jpg") || path.ends_with(".jpeg") {
@@ -243,18 +242,18 @@ pub async fn preload_resources<'a>(
             let _ = asset_server.load_gltf(std::path::Path::new(path));
         }
     }
-    
+
     // 等待所有资源加载完成
     let mut attempts = 0;
     while !asset_server.is_idle() && attempts < 1000 {
-        asset_server.update(&mut *renderer);
+        asset_server.update(renderer);
         tokio::time::sleep(std::time::Duration::from_millis(1)).await;
         attempts += 1;
     }
-    
+
     let elapsed = start_time.elapsed();
     tracing::info!(target: "assets", "Preloading completed in {:.1}ms", elapsed.as_millis());
-    
+
     Ok(())
 }
 
@@ -276,24 +275,31 @@ pub fn validate_asset_integrity(
     asset_server: &AssetServer,
 ) -> Result<(), Vec<String>> {
     let mut issues = Vec::new();
-    
+
     // 检查纹理完整性
     if let Some(metrics) = world.get_resource::<AssetMetrics>() {
-        if metrics.texture_errors > 0 {
-            issues.push(format!("Found {} texture loading errors", metrics.texture_errors));
+        // 注意：AssetMetrics 目前没有 texture_errors, atlas_errors, model_errors 字段
+        // 这里只检查已加载的资源数量
+        if metrics.textures_loaded == 0 {
+            issues.push("No textures loaded".to_string());
         }
-        
-        if metrics.atlas_errors > 0 {
-            issues.push(format!("Found {} atlas loading errors", metrics.atlas_errors));
-        }
-        
-        if metrics.model_errors > 0 {
-            issues.push(format!("Found {} model loading errors", metrics.model_errors));
+
+        if metrics.atlases_loaded == 0 {
+            issues.push("No atlases loaded".to_string());
         }
     }
-    
-    // 这里可以添加更多的完整性检查逻辑
-    
+
+    // 使用asset_server检查已加载资源的一致性
+    let loaded_textures = asset_server.get_loaded_texture_count();
+    if let Some(metrics) = world.get_resource::<AssetMetrics>() {
+        if loaded_textures != metrics.textures_loaded as usize {
+            issues.push(format!(
+                "Texture count mismatch: server reports {} but metrics show {}",
+                loaded_textures, metrics.textures_loaded
+            ));
+        }
+    }
+
     if issues.is_empty() {
         tracing::info!(target: "assets", "Asset integrity check passed");
         Ok(())

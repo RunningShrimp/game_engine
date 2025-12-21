@@ -1,6 +1,6 @@
-//! JavaScript Binding Adapter using rquickjs
-//!
-//! This adapter provides JavaScript scripting support using QuickJS.
+//  JavaScript Binding Adapter using rquickjs
+// 
+//  This adapter provides JavaScript scripting support using QuickJS.
 
 // 移除未使用的导入，如果将来需要可以重新导入
 use super::protocol::{BindingAdapter, BindingCommand, BindingEvent, BindingResult, ComponentData};
@@ -107,12 +107,7 @@ impl JsBindingAdapter {
                         ctx.clone(),
                         move |entity_id: u64, x: f32, y: f32, z: f32| {
                             if let Ok(mut queue) = q.lock() {
-                                queue.push(BindingCommand::SetPosition {
-                                entity_id,
-                                x,
-                                y,
-                                z,
-                            });
+                                queue.push(BindingCommand::SetPosition { entity_id, x, y, z });
                             }
                         },
                     ),
@@ -129,11 +124,11 @@ impl JsBindingAdapter {
                         move |name: String, path: String, volume: f32, looped: bool| {
                             if let Ok(mut queue) = q.lock() {
                                 queue.push(BindingCommand::PlaySound {
-                                name,
-                                path,
-                                volume,
-                                looped,
-                            });
+                                    name,
+                                    path,
+                                    volume,
+                                    looped,
+                                });
                             }
                         },
                     ),

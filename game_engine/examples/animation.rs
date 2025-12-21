@@ -1,6 +1,6 @@
-//! 动画示例
-//!
-//! 展示骨骼动画、关键帧动画等功能
+//  动画示例
+// 
+//  展示骨骼动画、关键帧动画等功能
 
 use bevy_ecs::prelude::*;
 use game_engine::animation::{AnimationClip, AnimationPlayer, InterpolationMode, KeyframeTrack};

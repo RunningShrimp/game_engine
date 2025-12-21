@@ -1,4 +1,4 @@
-//! 移动平台配置模块
+//  移动平台配置模块
 
 use crate::impl_default;
 use serde::{Deserialize, Serialize};

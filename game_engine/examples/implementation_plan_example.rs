@@ -1,9 +1,9 @@
-//! 实施计划执行系统示例
-//!
-//! 本示例演示如何使用实施计划执行系统来管理项目任务、里程碑和风险。
+//  实施计划执行系统示例
+// 
+//  本示例演示如何使用实施计划执行系统来管理项目任务、里程碑和风险。
 
-use std::collections::HashMap;
 use chrono::{DateTime, Utc};
+use std::collections::HashMap;
 
 /// 任务状态枚举
 #[derive(Debug, Clone, PartialEq)]
@@ -108,7 +108,13 @@ impl ImplementationPlanExecutor {
     }
 
     /// 创建里程碑
-    fn create_milestone(&mut self, id: String, title: String, description: String, target_date: DateTime<Utc>) {
+    fn create_milestone(
+        &mut self,
+        id: String,
+        title: String,
+        description: String,
+        target_date: DateTime<Utc>,
+    ) {
         let milestone = Milestone {
             id: id.clone(),
             title,
@@ -135,7 +141,13 @@ impl ImplementationPlanExecutor {
     }
 
     /// 识别风险
-    fn identify_risk(&mut self, id: String, description: String, severity: RiskSeverity, mitigation: String) {
+    fn identify_risk(
+        &mut self,
+        id: String,
+        description: String,
+        severity: RiskSeverity,
+        mitigation: String,
+    ) {
         let risk = Risk {
             id: id.clone(),
             description,
@@ -163,20 +175,43 @@ impl ImplementationPlanExecutor {
 
         // 任务统计
         let total_tasks = self.tasks.len();
-        let completed_tasks = self.tasks.values().filter(|t| t.status == TaskStatus::Completed).count();
-        let in_progress_tasks = self.tasks.values().filter(|t| t.status == TaskStatus::InProgress).count();
+        let completed_tasks = self
+            .tasks
+            .values()
+            .filter(|t| t.status == TaskStatus::Completed)
+            .count();
+        let in_progress_tasks = self
+            .tasks
+            .values()
+            .filter(|t| t.status == TaskStatus::InProgress)
+            .count();
 
         report.push_str(&format!("## 任务统计\n"));
         report.push_str(&format!("- 总任务数: {}\n", total_tasks));
         report.push_str(&format!("- 已完成: {}\n", completed_tasks));
         report.push_str(&format!("- 进行中: {}\n", in_progress_tasks));
-        report.push_str(&format!("- 完成率: {:.1}%\n\n", if total_tasks > 0 { (completed_tasks as f32 / total_tasks as f32) * 100.0 } else { 0.0 }));
+        report.push_str(&format!(
+            "- 完成率: {:.1}%\n\n",
+            if total_tasks > 0 {
+                (completed_tasks as f32 / total_tasks as f32) * 100.0
+            } else {
+                0.0
+            }
+        ));
 
         // 里程碑统计
         let total_milestones = self.milestones.len();
-        let completed_milestones = self.milestones.values().filter(|m| m.status == TaskStatus::Completed).count();
+        let completed_milestones = self
+            .milestones
+            .values()
+            .filter(|m| m.status == TaskStatus::Completed)
+            .count();
         let avg_progress: f32 = if total_milestones > 0 {
-            self.milestones.values().map(|m| m.progress as f32).sum::<f32>() / total_milestones as f32
+            self.milestones
+                .values()
+                .map(|m| m.progress as f32)
+                .sum::<f32>()
+                / total_milestones as f32
         } else {
             0.0
         };
@@ -188,8 +223,16 @@ impl ImplementationPlanExecutor {
 
         // 风险统计
         let total_risks = self.risks.len();
-        let resolved_risks = self.risks.values().filter(|r| r.status == RiskStatus::Resolved).count();
-        let high_severity_risks = self.risks.values().filter(|r| r.severity == RiskSeverity::High || r.severity == RiskSeverity::Critical).count();
+        let resolved_risks = self
+            .risks
+            .values()
+            .filter(|r| r.status == RiskStatus::Resolved)
+            .count();
+        let high_severity_risks = self
+            .risks
+            .values()
+            .filter(|r| r.severity == RiskSeverity::High || r.severity == RiskSeverity::Critical)
+            .count();
 
         report.push_str(&format!("## 风险统计\n"));
         report.push_str(&format!("- 总风险数: {}\n", total_risks));
@@ -205,7 +248,10 @@ impl ImplementationPlanExecutor {
                 TaskStatus::Completed => "已完成",
                 TaskStatus::Blocked => "已阻塞",
             };
-            report.push_str(&format!("- **{}**: {} ({})\n", task.title, status_str, task.responsible));
+            report.push_str(&format!(
+                "- **{}**: {} ({})\n",
+                task.title, status_str, task.responsible
+            ));
         }
 
         report.push_str("\n## 里程碑详情\n");
@@ -216,7 +262,10 @@ impl ImplementationPlanExecutor {
                 TaskStatus::Completed => "已完成",
                 TaskStatus::Blocked => "已阻塞",
             };
-            report.push_str(&format!("- **{}**: {}% 完成 ({})\n", milestone.title, milestone.progress, status_str));
+            report.push_str(&format!(
+                "- **{}**: {}% 完成 ({})\n",
+                milestone.title, milestone.progress, status_str
+            ));
         }
 
         report.push_str("\n## 风险详情\n");
@@ -233,7 +282,10 @@ impl ImplementationPlanExecutor {
                 RiskStatus::Mitigated => "已缓解",
                 RiskStatus::Resolved => "已解决",
             };
-            report.push_str(&format!("- **{}** ({}): {}\n", risk.description, severity_str, status_str));
+            report.push_str(&format!(
+                "- **{}** ({}): {}\n",
+                risk.description, severity_str, status_str
+            ));
         }
 
         report

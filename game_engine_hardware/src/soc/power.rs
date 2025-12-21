@@ -1,12 +1,11 @@
-/// SoC功耗管理和热节流优化
-/// 
-/// 针对移动平台的功耗和热管理
-
+//  SoC功耗管理和热节流优化
+///
+//  针对移动平台的功耗和热管理
 use super::detect::{SocInfo, SocVendor};
 use crate::utils::ring_buffer::RingBuffer;
 use std::time::Instant;
 
-/// 功耗管理器
+//  功耗管理器
 pub struct PowerManager {
     soc_info: Option<SocInfo>,
     thermal_state: ThermalState,
@@ -15,7 +14,7 @@ pub struct PowerManager {
     last_update: Instant,
 }
 
-/// 热状态
+//  热状态
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum ThermalState {
     /// 正常
@@ -28,7 +27,7 @@ pub enum ThermalState {
     Critical,
 }
 
-/// 功耗模式
+//  功耗模式
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PowerMode {
     /// 省电模式
@@ -41,7 +40,7 @@ pub enum PowerMode {
     Extreme,
 }
 
-/// 性能历史记录
+//  性能历史记录
 struct PerformanceHistory {
     frame_times: RingBuffer<f32>,
     thermal_readings: RingBuffer<f32>,
@@ -54,22 +53,22 @@ impl PerformanceHistory {
             thermal_readings: RingBuffer::new(max_size),
         }
     }
-    
+
     fn add_frame_time(&mut self, time_ms: f32) {
         self.frame_times.push(time_ms);
     }
-    
+
     fn add_thermal_reading(&mut self, temp: f32) {
         self.thermal_readings.push(temp);
     }
-    
+
     fn average_frame_time(&self) -> f32 {
         if self.frame_times.is_empty() {
             return 16.67; // 默认60fps
         }
         self.frame_times.average()
     }
-    
+
     fn average_temperature(&self) -> f32 {
         if self.thermal_readings.is_empty() {
             return 35.0; // 默认温度
@@ -78,7 +77,7 @@ impl PerformanceHistory {
     }
 }
 
-/// 性能调整建议
+//  性能调整建议
 #[derive(Debug, Clone)]
 pub struct PerformanceAdjustment {
     pub resolution_scale: f32,
@@ -97,7 +96,7 @@ impl PowerManager {
         } else {
             PowerMode::Performance
         };
-        
+
         Self {
             soc_info,
             thermal_state: ThermalState::Normal,
@@ -106,38 +105,38 @@ impl PowerManager {
             last_update: Instant::now(),
         }
     }
-    
+
     /// 是否为移动平台
     pub fn is_mobile(&self) -> bool {
         self.soc_info.is_some()
     }
-    
+
     /// 设置功耗模式
     pub fn set_power_mode(&mut self, mode: PowerMode) {
         self.power_mode = mode;
     }
-    
+
     /// 获取当前功耗模式
     pub fn power_mode(&self) -> PowerMode {
         self.power_mode
     }
-    
+
     /// 获取热状态
     pub fn thermal_state(&self) -> ThermalState {
         self.thermal_state
     }
-    
+
     /// 更新性能数据
     pub fn update(&mut self, frame_time_ms: f32) {
         self.performance_history.add_frame_time(frame_time_ms);
-        
+
         // 检测温度（简化实现）
         let temp = self.estimate_temperature();
         self.performance_history.add_thermal_reading(temp);
-        
+
         // 更新热状态
         let new_thermal_state = self.classify_thermal_state(temp);
-        
+
         // 如果热状态变化，记录日志
         if new_thermal_state != self.thermal_state {
             tracing::info!(target: "power_management", 
@@ -145,22 +144,22 @@ impl PowerManager {
                 self.thermal_state, new_thermal_state, temp);
             self.thermal_state = new_thermal_state;
         }
-        
+
         self.last_update = Instant::now();
     }
-    
+
     /// 动态调整性能（根据热状态）
     pub fn adjust_performance_dynamically(&mut self) -> Option<PerformanceAdjustment> {
         // 如果设备过热，自动切换到省电模式
-        if self.thermal_state >= ThermalState::Critical && self.power_mode != PowerMode::PowerSaver {
+        if self.thermal_state >= ThermalState::Critical && self.power_mode != PowerMode::PowerSaver
+        {
             tracing::warn!(target: "power_management", 
                 "Device overheating, switching to power saver mode");
             self.power_mode = PowerMode::PowerSaver;
         }
-        
+
         // 如果设备温度正常且性能模式过低，可以提升性能
-        if self.thermal_state == ThermalState::Normal && 
-           self.power_mode == PowerMode::PowerSaver {
+        if self.thermal_state == ThermalState::Normal && self.power_mode == PowerMode::PowerSaver {
             let avg_frame_time = self.performance_history.average_frame_time();
             // 如果帧时间稳定且低于目标，可以提升性能
             if avg_frame_time < 20.0 {
@@ -169,22 +168,22 @@ impl PowerManager {
                 self.power_mode = PowerMode::Balanced;
             }
         }
-        
+
         self.get_adjustment_recommendation()
     }
-    
+
     /// 估算温度
     fn estimate_temperature(&self) -> f32 {
         // 简化的温度估算（实际应该读取系统传感器）
         let avg_frame_time = self.performance_history.average_frame_time();
-        
+
         // 帧时间越长，说明负载越高，温度越高
         let base_temp = 35.0;
         let load_factor = (avg_frame_time / 16.67).min(2.0);
-        
+
         base_temp + load_factor * 20.0
     }
-    
+
     /// 分类热状态
     fn classify_thermal_state(&self, temp: f32) -> ThermalState {
         if temp < 45.0 {
@@ -197,43 +196,39 @@ impl PowerManager {
             ThermalState::Critical
         }
     }
-    
+
     /// 获取性能调整建议
     pub fn get_adjustment_recommendation(&self) -> Option<PerformanceAdjustment> {
         if !self.is_mobile() {
             return None;
         }
-        
+
         let avg_frame_time = self.performance_history.average_frame_time();
         let target_frame_time = match self.power_mode {
-            PowerMode::PowerSaver => 33.33, // 30fps
-            PowerMode::Balanced => 16.67,   // 60fps
+            PowerMode::PowerSaver => 33.33,  // 30fps
+            PowerMode::Balanced => 16.67,    // 60fps
             PowerMode::Performance => 16.67, // 60fps
             PowerMode::Extreme => 11.11,     // 90fps
         };
-        
+
         // 根据热状态和性能调整
         match self.thermal_state {
-            ThermalState::Critical => {
-                Some(PerformanceAdjustment {
-                    resolution_scale: 0.5,
-                    target_fps: 30,
-                    shadow_quality: 0,
-                    particle_budget_scale: 0.3,
-                    lod_bias: 2.0,
-                    reason: "严重发热，大幅降低画质".to_string(),
-                })
-            }
-            ThermalState::Hot => {
-                Some(PerformanceAdjustment {
-                    resolution_scale: 0.75,
-                    target_fps: 30,
-                    shadow_quality: 1,
-                    particle_budget_scale: 0.5,
-                    lod_bias: 1.5,
-                    reason: "设备发热，降低画质".to_string(),
-                })
-            }
+            ThermalState::Critical => Some(PerformanceAdjustment {
+                resolution_scale: 0.5,
+                target_fps: 30,
+                shadow_quality: 0,
+                particle_budget_scale: 0.3,
+                lod_bias: 2.0,
+                reason: "严重发热，大幅降低画质".to_string(),
+            }),
+            ThermalState::Hot => Some(PerformanceAdjustment {
+                resolution_scale: 0.75,
+                target_fps: 30,
+                shadow_quality: 1,
+                particle_budget_scale: 0.5,
+                lod_bias: 1.5,
+                reason: "设备发热，降低画质".to_string(),
+            }),
             ThermalState::Warm if avg_frame_time > target_frame_time * 1.2 => {
                 Some(PerformanceAdjustment {
                     resolution_scale: 0.85,
@@ -263,15 +258,15 @@ impl PowerManager {
             _ => None,
         }
     }
-    
+
     /// 获取电池优化建议
     pub fn get_battery_optimization(&self) -> Vec<&'static str> {
         if !self.is_mobile() {
             return vec!["非移动平台，无需电池优化"];
         }
-        
+
         let mut tips = Vec::new();
-        
+
         match self.power_mode {
             PowerMode::PowerSaver => {
                 tips.push("✓ 已启用省电模式");
@@ -288,22 +283,22 @@ impl PowerManager {
                 tips.push("⚠ 建议连接充电器使用");
             }
         }
-        
+
         if self.thermal_state >= ThermalState::Hot {
             tips.push("⚠ 设备发热，建议降低画质或休息片刻");
         }
-        
+
         tips
     }
-    
+
     /// 获取SoC特定优化建议
     pub fn get_soc_specific_tips(&self) -> Vec<String> {
         let Some(soc) = &self.soc_info else {
             return vec!["非移动平台".to_string()];
         };
-        
+
         let mut tips = Vec::new();
-        
+
         match soc.vendor {
             SocVendor::Apple => {
                 tips.push("Apple芯片优化:".to_string());
@@ -327,10 +322,10 @@ impl PowerManager {
                 tips.push("通用移动平台优化".to_string());
             }
         }
-        
+
         tips
     }
-    
+
     /// 获取性能统计
     pub fn get_stats(&self) -> PowerStats {
         PowerStats {
@@ -344,7 +339,7 @@ impl PowerManager {
     }
 }
 
-/// 功耗统计
+//  功耗统计
 #[derive(Debug, Clone)]
 pub struct PowerStats {
     pub average_frame_time_ms: f32,
@@ -364,19 +359,19 @@ mod tests {
     fn test_power_manager() {
         let soc = detect_soc();
         let mut manager = PowerManager::new(soc);
-        
+
         println!("Is Mobile: {}", manager.is_mobile());
         println!("Power Mode: {:?}", manager.power_mode());
-        
+
         // 模拟一些帧
         for i in 0..100 {
             let frame_time = 16.67 + (i as f32 * 0.1);
             manager.update(frame_time);
         }
-        
+
         let stats = manager.get_stats();
         println!("Stats: {:#?}", stats);
-        
+
         if let Some(adjustment) = manager.get_adjustment_recommendation() {
             println!("Adjustment: {:#?}", adjustment);
         }
@@ -386,7 +381,7 @@ mod tests {
     fn test_battery_optimization() {
         let soc = detect_soc();
         let manager = PowerManager::new(soc);
-        
+
         println!("Battery Optimization Tips:");
         for tip in manager.get_battery_optimization() {
             println!("  {}", tip);

@@ -1,12 +1,14 @@
-//! 物理领域对象
-//! 实现富领域对象设计模式，将物理相关的业务逻辑封装到领域对象中
+//  物理领域对象
+//  实现富领域对象设计模式，将物理相关的业务逻辑封装到领域对象中
 
 // 移除未使用的EntityId导入，如果将来需要可以重新导入
-use crate::domain::errors::PhysicsError;
+use crate::domain::errors::{CompensationAction, DomainError, PhysicsError, RecoveryStrategy};
+use crate::error::safe_lock;
 // 移除未使用的Transform导入，如果将来需要可以重新导入
 use glam::{Quat, Vec3};
 use rapier3d::na::{Point3, Quaternion, UnitQuaternion, Vector3};
 use rapier3d::prelude::*;
+// use rapier3d::pipeline::QueryPipeline; // Temporarily disabled
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Mutex;
@@ -15,7 +17,7 @@ use std::sync::Mutex;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum RigidBodyType {
     /// 静态刚体，不受力影响，不能移动
-    Static,
+    Fixed,
     /// 动态刚体，受力影响，可以移动
     Dynamic,
     /// 运动学刚体，可以被直接控制移动，但不受力影响
@@ -40,7 +42,10 @@ pub enum ShapeType {
     /// 凸多边形
     ConvexHull { points: Vec<Vec3> },
     /// 三角网格
-    TriMesh { vertices: Vec<Vec3>, indices: Vec<[u32; 3]> },
+    TriMesh {
+        vertices: Vec<Vec3>,
+        indices: Vec<[u32; 3]>,
+    },
 }
 
 /// 刚体状态
@@ -94,28 +99,41 @@ impl ColliderId {
 #[derive(Debug, Clone)]
 pub struct RigidBody {
     /// 刚体ID
-    id: RigidBodyId,
+    pub(crate) id: RigidBodyId,
     /// 刚体类型
-    body_type: RigidBodyType,
+    pub(crate) body_type: RigidBodyType,
     /// 位置
-    position: Vec3,
+    pub(crate) position: Vec3,
     /// 旋转
-    rotation: Quat,
+    pub(crate) rotation: Quat,
     /// 线性速度
-    linear_velocity: Vec3,
+    pub(crate) linear_velocity: Vec3,
     /// 角速度
-    angular_velocity: Vec3,
+    pub(crate) angular_velocity: Vec3,
     /// 质量
-    mass: f32,
+    pub(crate) mass: f32,
     /// 摩擦系数
-    friction: f32,
+    pub(crate) friction: f32,
     /// 弹性系数
-    restitution: f32,
+    pub(crate) restitution: f32,
+    /// 是否处于休眠状态
+    pub(crate) sleeping: bool,
+    /// 错误恢复策略
+    pub(crate) recovery_strategy: RecoveryStrategy,
 }
 
 impl RigidBody {
-    /// 创建新的刚体
+    /// 创建新的刚体（默认旋转和质量）
     pub fn new(
+        id: RigidBodyId,
+        body_type: RigidBodyType,
+        position: Vec3,
+    ) -> Self {
+        Self::with_all(id, body_type, position, Quat::IDENTITY, 1.0)
+    }
+
+    /// 创建新的刚体（完整参数）
+    pub fn with_all(
         id: RigidBodyId,
         body_type: RigidBodyType,
         position: Vec3,
@@ -132,12 +150,17 @@ impl RigidBody {
             mass,
             friction: 0.5,
             restitution: 0.3,
+            sleeping: false,
+            recovery_strategy: RecoveryStrategy::Retry {
+                max_attempts: 3,
+                delay_ms: 100,
+            },
         }
     }
 
     /// 创建动态刚体（为了兼容测试代码）
     pub fn dynamic(id: RigidBodyId, position: Vec3) -> Self {
-        Self::new(id, RigidBodyType::Dynamic, position, Quat::IDENTITY, 1.0)
+        Self::new(id, RigidBodyType::Dynamic, position)
     }
 
     /// 获取刚体ID
@@ -175,6 +198,17 @@ impl RigidBody {
         self.mass
     }
 
+    /// 设置质量
+    pub fn set_mass(&mut self, mass: f32) -> Result<(), DomainError> {
+        if mass <= 0.0 {
+            return Err(DomainError::Physics(PhysicsError::InvalidParameter(
+                "Mass must be positive".to_string(),
+            )));
+        }
+        self.mass = mass;
+        Ok(())
+    }
+
     /// 获取摩擦系数
     pub fn friction(&self) -> f32 {
         self.friction
@@ -183,6 +217,117 @@ impl RigidBody {
     /// 获取弹性系数
     pub fn restitution(&self) -> f32 {
         self.restitution
+    }
+
+    /// 执行错误恢复
+    pub fn recover_from_error(&mut self, error: &PhysicsError) -> Result<(), DomainError> {
+        match &self.recovery_strategy {
+            RecoveryStrategy::Retry {
+                max_attempts,
+                delay_ms,
+            } => {
+                for attempt in 1..=*max_attempts {
+                    tracing::warn!(target: "physics", "Retry attempt {} for rigid body {}", attempt, self.id.as_u64());
+                    std::thread::sleep(std::time::Duration::from_millis(*delay_ms));
+
+                    match error {
+                        PhysicsError::InvalidParameter(_) => {
+                            // 尝试重置为默认值
+                            self.mass = 1.0;
+                            self.position = Vec3::ZERO;
+                            return Ok(());
+                        }
+                        _ => break,
+                    }
+                }
+                Err(DomainError::Physics(error.clone()))
+            }
+            RecoveryStrategy::UseDefault => {
+                self.mass = 1.0;
+                self.linear_velocity = Vec3::ZERO;
+                self.angular_velocity = Vec3::ZERO;
+                Ok(())
+            }
+            RecoveryStrategy::Skip => Ok(()),
+            RecoveryStrategy::LogAndContinue => {
+                tracing::error!(target: "physics", "Physics error logged: {:?}", error);
+                Ok(())
+            }
+            RecoveryStrategy::Fail => Err(DomainError::Physics(error.clone())),
+        }
+    }
+
+    /// 创建补偿操作
+    pub fn create_compensation(&self) -> CompensationAction {
+        CompensationAction::new(
+            format!("rigid_body_{}", self.id.as_u64()),
+            "restore_physics_state".to_string(),
+            serde_json::json!({
+                "position": [self.position.x, self.position.y, self.position.z],
+                "rotation": [self.rotation.x, self.rotation.y, self.rotation.z, self.rotation.w],
+                "linear_velocity": [self.linear_velocity.x, self.linear_velocity.y, self.linear_velocity.z],
+                "angular_velocity": [self.angular_velocity.x, self.angular_velocity.y, self.angular_velocity.z],
+                "mass": self.mass,
+                "sleeping": self.sleeping
+            }),
+        )
+    }
+
+    /// 从补偿操作恢复
+    pub fn restore_from_compensation(
+        &mut self,
+        action: &CompensationAction,
+    ) -> Result<(), DomainError> {
+        if let Some(pos) = action.data.get("position").and_then(|v| v.as_array()) {
+            if pos.len() == 3 {
+                self.position = Vec3::new(
+                    pos[0].as_f64().unwrap_or(0.0) as f32,
+                    pos[1].as_f64().unwrap_or(0.0) as f32,
+                    pos[2].as_f64().unwrap_or(0.0) as f32,
+                );
+            }
+        }
+
+        if let Some(rot) = action.data.get("rotation").and_then(|v| v.as_array()) {
+            if rot.len() == 4 {
+                self.rotation = Quat::from_xyzw(
+                    rot[0].as_f64().unwrap_or(0.0) as f32,
+                    rot[1].as_f64().unwrap_or(0.0) as f32,
+                    rot[2].as_f64().unwrap_or(0.0) as f32,
+                    rot[3].as_f64().unwrap_or(1.0) as f32,
+                );
+            }
+        }
+
+        if let Some(lv) = action.data.get("linear_velocity").and_then(|v| v.as_array()) {
+            if lv.len() == 3 {
+                self.linear_velocity = Vec3::new(
+                    lv[0].as_f64().unwrap_or(0.0) as f32,
+                    lv[1].as_f64().unwrap_or(0.0) as f32,
+                    lv[2].as_f64().unwrap_or(0.0) as f32,
+                );
+            }
+        }
+
+        if let Some(av) = action.data.get("angular_velocity").and_then(|v| v.as_array()) {
+            if av.len() == 3 {
+                self.angular_velocity = Vec3::new(
+                    av[0].as_f64().unwrap_or(0.0) as f32,
+                    av[1].as_f64().unwrap_or(0.0) as f32,
+                    av[2].as_f64().unwrap_or(0.0) as f32,
+                );
+            }
+        }
+
+        if let Some(mass) = action.data.get("mass").and_then(|v| v.as_f64()) {
+            self.mass = mass as f32;
+        }
+
+        if let Some(sleeping) = action.data.get("sleeping").and_then(|v| v.as_bool()) {
+            self.sleeping = sleeping;
+        }
+
+        Ok(())
     }
 
     /// 设置位置
@@ -220,27 +365,22 @@ impl RigidBody {
 #[derive(Debug, Clone)]
 pub struct Collider {
     /// 碰撞体ID
-    id: ColliderId,
+    pub(crate) id: ColliderId,
     /// 关联的刚体ID
-    body_id: RigidBodyId,
+    pub(crate) body_id: RigidBodyId,
     /// 形状类型
-    shape_type: ShapeType,
+    pub(crate) shape_type: ShapeType,
     /// 密度
-    density: f32,
+    pub(crate) density: f32,
     /// 摩擦系数
-    friction: f32,
+    pub(crate) friction: f32,
     /// 弹性系数
-    restitution: f32,
+    pub(crate) restitution: f32,
 }
 
 impl Collider {
     /// 创建新的碰撞体
-    pub fn new(
-        id: ColliderId,
-        body_id: RigidBodyId,
-        shape_type: ShapeType,
-        density: f32,
-    ) -> Self {
+    pub fn new(id: ColliderId, body_id: RigidBodyId, shape_type: ShapeType, density: f32) -> Self {
         Self {
             id,
             body_id,
@@ -272,6 +412,24 @@ impl Collider {
             density: 1.0,
             friction: 0.5,
             restitution: 0.3,
+        }
+    }
+
+    /// 获取立方体半长宽
+    pub fn half_extents(&self) -> Vec3 {
+        if let ShapeType::Cuboid { half_extents } = &self.shape_type {
+            *half_extents
+        } else {
+            Vec3::ZERO
+        }
+    }
+
+    /// 获取球体半径
+    pub fn radius(&self) -> f32 {
+        match &self.shape_type {
+            ShapeType::Ball { radius } => *radius,
+            ShapeType::Sphere { radius } => *radius,
+            _ => 0.0,
         }
     }
 
@@ -317,7 +475,6 @@ impl Collider {
 }
 
 /// 物理世界领域对象
-#[derive(Debug)]
 pub struct PhysicsWorld {
     /// 重力
     gravity: Vector<Real>,
@@ -341,6 +498,8 @@ pub struct PhysicsWorld {
     rigid_body_set: RigidBodySet,
     /// 碰撞体集
     collider_set: ColliderSet,
+    /// 查询流水线 (暂时禁用)
+    // query_pipeline: QueryPipeline,
     /// 刚体句柄映射
     pub(crate) body_handles: HashMap<RigidBodyId, RigidBodyHandle>,
     /// 碰撞体句柄映射
@@ -362,6 +521,7 @@ impl PhysicsWorld {
             ccd_solver: CCDSolver::new(),
             rigid_body_set: RigidBodySet::new(),
             collider_set: ColliderSet::new(),
+            // query_pipeline: QueryPipeline::new(), // Temporarily disabled
             body_handles: HashMap::new(),
             collider_handles: HashMap::new(),
         }
@@ -370,11 +530,11 @@ impl PhysicsWorld {
     /// 添加刚体
     pub fn add_body(&mut self, body: RigidBody) -> Result<RigidBodyHandle, PhysicsError> {
         let rb = rapier3d::prelude::RigidBodyBuilder::new(match body.body_type() {
-            RigidBodyType::Static => rapier3d::prelude::RigidBodyType::Fixed,
+            RigidBodyType::Fixed => rapier3d::prelude::RigidBodyType::Fixed,
             RigidBodyType::Dynamic => rapier3d::prelude::RigidBodyType::Dynamic,
             RigidBodyType::Kinematic => rapier3d::prelude::RigidBodyType::KinematicPositionBased,
         })
-        .position(Isometry::from_parts(
+        .pose(Isometry::from_parts(
             Translation::new(body.position().x, body.position().y, body.position().z),
             UnitQuaternion::from_quaternion(Quaternion::new(
                 body.rotation().w,
@@ -383,11 +543,23 @@ impl PhysicsWorld {
                 body.rotation().z,
             )),
         ))
-        .linvel(body.linear_velocity().x, body.linear_velocity().y, body.linear_velocity().z)
-        .angvel(body.angular_velocity().x, body.angular_velocity().y, body.angular_velocity().z)
-        .mass(body.mass())
-        .friction(body.friction())
-        .restitution(body.restitution())
+        .linvel(
+            [
+                body.linear_velocity().x,
+                body.linear_velocity().y,
+                body.linear_velocity().z,
+            ]
+            .into(),
+        )
+        .angvel(
+            [
+                body.angular_velocity().x,
+                body.angular_velocity().y,
+                body.angular_velocity().z,
+            ]
+            .into(),
+        )
+        .additional_mass(body.mass())
         .build();
 
         let handle = self.rigid_body_set.insert(rb);
@@ -395,10 +567,35 @@ impl PhysicsWorld {
         Ok(handle)
     }
 
+    /// 获取刚体只读引用
+    pub fn get_body(&self, id: RigidBodyId) -> Option<&rapier3d::prelude::RigidBody> {
+        if let Some(handle) = self.body_handles.get(&id) {
+            self.rigid_body_set.get(*handle)
+        } else {
+            None
+        }
+    }
+
+    /// 获取刚体可变引用
+    pub fn get_body_mut(&mut self, id: RigidBodyId) -> Option<&mut rapier3d::prelude::RigidBody> {
+        if let Some(handle) = self.body_handles.get(&id) {
+            self.rigid_body_set.get_mut(*handle)
+        } else {
+            None
+        }
+    }
+
     /// 移除刚体
     pub fn remove_body(&mut self, id: RigidBodyId) -> Result<RigidBodyHandle, PhysicsError> {
         if let Some(handle) = self.body_handles.remove(&id) {
-            self.rigid_body_set.remove(handle, &mut self.collider_set, &mut self.impulse_joint_set, &mut self.multibody_joint_set);
+            self.rigid_body_set.remove(
+                handle,
+                &mut self.island_manager,
+                &mut self.collider_set,
+                &mut self.impulse_joint_set,
+                &mut self.multibody_joint_set,
+                true, // remove attached colliders
+            );
             Ok(handle)
         } else {
             Err(PhysicsError::BodyNotFound(format!("Body {}", id.as_u64())))
@@ -413,12 +610,16 @@ impl PhysicsWorld {
     ) -> Result<ColliderHandle, PhysicsError> {
         // 获取刚体句柄
         let body_handle = *self.body_handles.get(&body_id).ok_or_else(|| {
-            PhysicsError::BodyNotFound(format!("Body {} for collider {}", body_id.as_u64(), collider.id().as_u64()))
+            PhysicsError::BodyNotFound(format!(
+                "Body {} for collider {}",
+                body_id.as_u64(),
+                collider.id().as_u64()
+            ))
         })?;
 
         // 创建Rapier形状
         let shape: SharedShape = match collider.shape_type() {
-            ShapeType::Sphere { radius } => SharedShape::ball(radius),
+            ShapeType::Sphere { radius } | ShapeType::Ball { radius } => SharedShape::ball(radius),
             ShapeType::Cuboid { half_extents } => {
                 SharedShape::cuboid(half_extents.x, half_extents.y, half_extents.z)
             }
@@ -426,20 +627,19 @@ impl PhysicsWorld {
             ShapeType::Cylinder { radius, height } => SharedShape::cylinder(height / 2.0, radius),
             ShapeType::Cone { radius, height } => SharedShape::cone(height / 2.0, radius),
             ShapeType::ConvexHull { points } => {
-                let points: Vec<_> = points
-                    .iter()
-                    .map(|p| Point3::new(p.x, p.y, p.z))
-                    .collect();
-                SharedShape::convex_hull(&points)
-                    .ok_or(PhysicsError::InvalidShape("Failed to create convex hull".to_string()))?
+                let points: Vec<_> = points.iter().map(|p| Point3::new(p.x, p.y, p.z)).collect();
+                SharedShape::convex_hull(&points).ok_or(PhysicsError::InvalidShape(
+                    "Failed to create convex hull".to_string(),
+                ))?
             }
             ShapeType::TriMesh { vertices, indices } => {
                 let vertices: Vec<_> = vertices
                     .iter()
                     .map(|v| Point3::new(v.x, v.y, v.z))
                     .collect();
-                let indices: Vec<_> = indices.iter().map(|i| Point3::new(i[0], i[1], i[2])).collect();
+                let indices: Vec<_> = indices.iter().map(|i| [i[0], i[1], i[2]]).collect();
                 SharedShape::trimesh(vertices, indices)
+                    .map_err(|e| PhysicsError::ShapeCreationError(format!("Failed to create trimesh: {}", e)))?
             }
         };
 
@@ -451,7 +651,9 @@ impl PhysicsWorld {
             .build();
 
         // 添加到物理世界
-        let handle = self.collider_set.insert_with_parent(coll, body_handle, &mut self.rigid_body_set);
+        let handle =
+            self.collider_set
+                .insert_with_parent(coll, body_handle, &mut self.rigid_body_set);
         self.collider_handles.insert(collider.id(), handle);
         Ok(handle)
     }
@@ -459,10 +661,18 @@ impl PhysicsWorld {
     /// 移除碰撞体
     pub fn remove_collider(&mut self, id: ColliderId) -> Result<ColliderHandle, PhysicsError> {
         if let Some(handle) = self.collider_handles.remove(&id) {
-            self.collider_set.remove(handle, &mut self.island_manager, &mut self.rigid_body_set, true);
+            self.collider_set.remove(
+                handle,
+                &mut self.island_manager,
+                &mut self.rigid_body_set,
+                true,
+            );
             Ok(handle)
         } else {
-            Err(PhysicsError::ColliderNotFound(format!("Collider {}", id.as_u64())))
+            Err(PhysicsError::ColliderNotFound(format!(
+                "Collider {}",
+                id.as_u64()
+            )))
         }
     }
 
@@ -470,7 +680,8 @@ impl PhysicsWorld {
     pub fn get_body_state(&self, id: RigidBodyId) -> Option<RigidBodyState> {
         if let Some(handle) = self.body_handles.get(&id) {
             if let Some(rb) = self.rigid_body_set.get(*handle) {
-                let position = Vec3::new(rb.translation().x, rb.translation().y, rb.translation().z);
+                let position =
+                    Vec3::new(rb.translation().x, rb.translation().y, rb.translation().z);
                 let rotation = Quat::from_xyzw(
                     rb.rotation().i,
                     rb.rotation().j,
@@ -480,7 +691,7 @@ impl PhysicsWorld {
                 let linear_velocity = Vec3::new(rb.linvel().x, rb.linvel().y, rb.linvel().z);
                 let angular_velocity = Vec3::new(rb.angvel().x, rb.angvel().y, rb.angvel().z);
                 let sleeping = rb.is_sleeping();
-                
+
                 Some(RigidBodyState {
                     position,
                     rotation,
@@ -502,7 +713,9 @@ impl PhysicsWorld {
         self.integration_parameters.dt = delta_time;
 
         // 执行物理步进
-        self.physics_pipeline.lock().unwrap().step(
+        let mut physics_pipeline = safe_lock(&self.physics_pipeline, "PhysicsWorld.physics_pipeline")
+            .map_err(|e| PhysicsError::LockError(format!("Failed to acquire physics pipeline lock: {}", e)))?;
+        physics_pipeline.step(
             &self.gravity,
             &self.integration_parameters,
             &mut self.island_manager,
@@ -513,8 +726,12 @@ impl PhysicsWorld {
             &mut self.impulse_joint_set,
             &mut self.multibody_joint_set,
             &mut self.ccd_solver,
-            None,
+            &(),
+            &(),
         );
+
+        // 更新查询流水线，以支持射线投射等查询，实现逻辑闭环
+        // self.query_pipeline.update(&self.rigid_body_set, &self.collider_set);
 
         Ok(())
     }
@@ -531,36 +748,38 @@ impl PhysicsWorld {
             Vector3::new(direction.x, direction.y, direction.z),
         );
 
-        // 创建查询管线
-        let mut query_pipeline = QueryPipeline::with_update_mode(QueryPipelineMode::CurrentFrame);
-        query_pipeline.update(&self.collider_set);
+        // 简化的射线投射实现，遍历所有碰撞体进行相交测试
+        // 这是一个临时实现，直到 QueryPipeline 问题解决
+        let mut closest_hit: Option<(RigidBodyId, f32, Vec3)> = None;
+        let mut closest_distance = f32::INFINITY;
 
-        // 执行射线投射
-        if let Some((handle, toi)) = query_pipeline.cast_ray(
-            &self.rigid_body_set,
-            &self.collider_set,
-            &ray,
-            max_distance,
-            true,
-            QueryFilter::default(),
-        ) {
-            // 获取碰撞体并找到对应的刚体ID
-            if let Some(collider) = self.collider_set.get(handle) {
-                let rigid_body_handle = collider.parent()?;
-                // 查找刚体ID
-                for (id, &rb_handle) in &self.body_handles {
-                    if rb_handle == rigid_body_handle {
-                        let hit_point = ray.point_at(toi);
-                        return Some((
-                            *id,
-                            toi,
-                            Vec3::new(hit_point.x, hit_point.y, hit_point.z),
-                        ));
+        // 遍历所有碰撞体进行相交测试
+        for (_collider_handle, collider) in self.collider_set.iter() {
+            if let Some(ball) = collider.shape().as_ball() {
+                let collider_pos = collider.position();
+                let ball_center = Point3::new(collider_pos.translation.x, collider_pos.translation.y, collider_pos.translation.z);
+                let distance_to_center = (ball_center - ray.origin).magnitude();
+
+                if distance_to_center <= ball.radius + max_distance {
+                    let distance = distance_to_center - ball.radius;
+                    if distance >= 0.0 && distance < closest_distance && distance <= max_distance {
+                        // 通过句柄反查 RigidBodyId
+                        if let Some(parent_handle) = collider.parent() {
+                            for (id, &h) in self.body_handles.iter() {
+                                if h == parent_handle {
+                                    let hit_point = origin + direction * distance;
+                                    closest_hit = Some((*id, distance, hit_point));
+                                    closest_distance = distance;
+                                    break;
+                                }
+                            }
+                        }
                     }
                 }
             }
         }
-        None
+
+        closest_hit
     }
 
     /// 创建刚体（与add_body功能相同，为了兼容测试代码）
@@ -597,7 +816,11 @@ impl PhysicsWorld {
     }
 
     /// 设置刚体位置
-    pub fn set_body_position(&mut self, id: RigidBodyId, position: Vec3) -> Result<(), PhysicsError> {
+    pub fn set_body_position(
+        &mut self,
+        id: RigidBodyId,
+        position: Vec3,
+    ) -> Result<(), PhysicsError> {
         if let Some(handle) = self.body_handles.get(&id) {
             if let Some(rb) = self.rigid_body_set.get_mut(*handle) {
                 let translation = Translation::new(position.x, position.y, position.z);
@@ -641,7 +864,8 @@ impl PhysicsWorld {
         if let Some(handle) = self.body_handles.get(&body.id()) {
             if let Some(rb) = self.rigid_body_set.get_mut(*handle) {
                 // 更新位置和旋转
-                let translation = Translation::new(body.position().x, body.position().y, body.position().z);
+                let translation =
+                    Translation::new(body.position().x, body.position().y, body.position().z);
                 let rotation = UnitQuaternion::from_quaternion(Quaternion::new(
                     body.rotation().w,
                     body.rotation().x,
@@ -649,25 +873,37 @@ impl PhysicsWorld {
                     body.rotation().z,
                 ));
                 rb.set_position(Isometry::from_parts(translation, rotation), true);
-                
+
                 // 更新速度
-                rb.set_linvel(Vector3::new(
-                    body.linear_velocity().x,
-                    body.linear_velocity().y,
-                    body.linear_velocity().z,
-                ), true);
-                rb.set_angvel(Vector3::new(
-                    body.angular_velocity().x,
-                    body.angular_velocity().y,
-                    body.angular_velocity().z,
-                ), true);
-                
+                rb.set_linvel(
+                    Vector3::new(
+                        body.linear_velocity().x,
+                        body.linear_velocity().y,
+                        body.linear_velocity().z,
+                    ),
+                    true,
+                );
+                rb.set_angvel(
+                    Vector3::new(
+                        body.angular_velocity().x,
+                        body.angular_velocity().y,
+                        body.angular_velocity().z,
+                    ),
+                    true,
+                );
+
                 Ok(())
             } else {
-                Err(PhysicsError::BodyNotFound(format!("Body {}", body.id().as_u64())))
+                Err(PhysicsError::BodyNotFound(format!(
+                    "Body {}",
+                    body.id().as_u64()
+                )))
             }
         } else {
-            Err(PhysicsError::BodyNotFound(format!("Body {}", body.id().as_u64())))
+            Err(PhysicsError::BodyNotFound(format!(
+                "Body {}",
+                body.id().as_u64()
+            )))
         }
     }
 }
@@ -683,7 +919,7 @@ mod tests {
         // 测试PhysicsWorld是否实现了Send
         fn assert_send<T: Send>() {}
         assert_send::<PhysicsWorld>();
-        
+
         // 测试PhysicsWorld是否实现了Sync
         fn assert_sync<T: Sync>() {}
         assert_sync::<PhysicsWorld>();
@@ -692,31 +928,31 @@ mod tests {
     #[test]
     fn test_rapier_types_send_sync() {
         // 测试各种Rapier3D类型是否实现了Send和Sync
-        
+
         // PhysicsPipeline
         fn assert_send_physics_pipeline<T: Send>() {}
         fn assert_sync_physics_pipeline<T: Sync>() {}
         assert_send_physics_pipeline::<PhysicsPipeline>();
         assert_sync_physics_pipeline::<PhysicsPipeline>();
-        
+
         // IslandManager
         fn assert_send_island_manager<T: Send>() {}
         fn assert_sync_island_manager<T: Sync>() {}
         assert_send_island_manager::<IslandManager>();
         assert_sync_island_manager::<IslandManager>();
-        
+
         // DefaultBroadPhase
         fn assert_send_broad_phase<T: Send>() {}
         fn assert_sync_broad_phase<T: Sync>() {}
         assert_send_broad_phase::<DefaultBroadPhase>();
         assert_sync_broad_phase::<DefaultBroadPhase>();
-        
+
         // NarrowPhase
         fn assert_send_narrow_phase<T: Send>() {}
         fn assert_sync_narrow_phase<T: Sync>() {}
         assert_send_narrow_phase::<NarrowPhase>();
         assert_sync_narrow_phase::<NarrowPhase>();
-        
+
         // 其他类型可以类似测试...
     }
 }

@@ -3,7 +3,7 @@ use crate::impl_default;
 use serde::{Deserialize, Serialize};
 
 /// 输入配置
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, bevy_ecs::prelude::Resource)]
 pub struct InputConfig {
     /// 鼠标灵敏度
     pub mouse_sensitivity: f32,

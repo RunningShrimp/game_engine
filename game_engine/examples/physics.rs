@@ -1,6 +1,6 @@
-//! 物理示例
-//!
-//! 展示物理系统、碰撞检测、刚体等功能
+//  物理示例
+// 
+//  展示物理系统、碰撞检测、刚体等功能
 
 use bevy_ecs::prelude::*;
 use game_engine::core::Engine;

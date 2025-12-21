@@ -1,6 +1,6 @@
-//! 渲染示例
-//!
-//! 展示PBR渲染、后处理效果等高级渲染功能
+//  渲染示例
+// 
+//  展示PBR渲染、后处理效果等高级渲染功能
 
 use bevy_ecs::prelude::*;
 use game_engine::core::Engine;

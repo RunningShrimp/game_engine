@@ -1,58 +1,58 @@
-//! 网络数据压缩模块
-//!
-//! 实现网络数据的压缩和解压缩，进一步减少网络带宽使用。
-//!
-//! ## 设计原理
-//!
-//! 网络压缩在增量序列化之后应用，进一步减少传输的数据量：
-//!
-//! ```text
-//! ┌─────────────────┐
-//! │  Delta Data     │
-//! │  (Serialized)   │
-//! └────────┬────────┘
-//!          │
-//!          ▼
-//! ┌─────────────────┐
-//! │   Compress      │
-//! │   (flate2)      │
-//! └────────┬────────┘
-//!          │
-//!          ▼
-//! ┌─────────────────┐
-//! │  Compressed     │
-//! │  Data (Smaller) │
-//! └─────────────────┘
-//! ```
-//!
-//! ## 性能优化
-//!
-//! - 减少网络带宽使用 30-60%（与增量序列化结合可达70-90%）
-//! - 支持多种压缩级别（速度 vs 压缩率）
-//! - 自动检测数据是否值得压缩
-//! - 支持流式压缩（大块数据）
-//!
-//! ## 使用示例
-//!
-//! ```rust
-//! use game_engine::network::{NetworkCompressor, CompressionLevel};
-//!
-//! // 创建压缩器
-//! let compressor = NetworkCompressor::new(CompressionLevel::Balanced);
-//!
-//! // 压缩数据
-//! let data = vec![0u8; 1000];
-//! let compressed = compressor.compress(&data)?;
-//!
-//! // 解压缩数据
-//! let decompressed = compressor.decompress(&compressed)?;
-//! assert_eq!(data, decompressed);
-//! ```
+//  网络数据压缩模块
+// 
+//  实现网络数据的压缩和解压缩，进一步减少网络带宽使用。
+// 
+//  ## 设计原理
+// 
+//  网络压缩在增量序列化之后应用，进一步减少传输的数据量：
+// 
+//  ```text
+//  ┌─────────────────┐
+//  │  Delta Data     │
+//  │  (Serialized)   │
+//  └────────┬────────┘
+//           │
+//           ▼
+//  ┌─────────────────┐
+//  │   Compress      │
+//  │   (flate2)      │
+//  └────────┬────────┘
+//           │
+//           ▼
+//  ┌─────────────────┐
+//  │  Compressed     │
+//  │  Data (Smaller) │
+//  └─────────────────┘
+//  ```
+// 
+//  ## 性能优化
+// 
+//  - 减少网络带宽使用 30-60%（与增量序列化结合可达70-90%）
+//  - 支持多种压缩级别（速度 vs 压缩率）
+//  - 自动检测数据是否值得压缩
+//  - 支持流式压缩（大块数据）
+// 
+//  ## 使用示例
+// 
+//  ```rust
+//  use game_engine::network::{NetworkCompressor, CompressionLevel};
+// 
+//  // 创建压缩器
+//  let compressor = NetworkCompressor::new(CompressionLevel::Balanced);
+// 
+//  // 压缩数据
+//  let data = vec![0u8; 1000];
+//  let compressed = compressor.compress(&data)?;
+// 
+//  // 解压缩数据
+//  let decompressed = compressor.decompress(&compressed)?;
+//  assert_eq!(data, decompressed);
+//  ```
 
 use crate::network::NetworkError;
+use flate2::Compression;
 use flate2::read::DeflateDecoder;
 use flate2::write::DeflateEncoder;
-use flate2::Compression;
 use std::io::{Read, Write};
 
 /// 压缩级别

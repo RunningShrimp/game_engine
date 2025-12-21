@@ -1,11 +1,10 @@
-//! 重试机制
-//!
-//! 提供灵活的重试策略，支持指数退避、条件重试和超时控制。
+//  重试机制
+//
+//  提供灵活的重试策略，支持指数退避、条件重试和超时控制。
 
 use crate::error::{EngineError, ErrorSeverity};
-use crate::error::engine_error::{RenderError, AudioError};
-use std::time::{Duration, Instant};
 use std::future::Future;
+use std::time::{Duration, Instant};
 
 /// 重试配置
 #[derive(Debug)]
@@ -24,6 +23,8 @@ pub struct RetryConfig {
     pub exponential_backoff: bool,
     /// 重试条件
     pub retry_condition: Option<RetryCondition>,
+    /// 超时时间
+    pub timeout: Option<Duration>,
 }
 
 impl Default for RetryConfig {
@@ -36,6 +37,7 @@ impl Default for RetryConfig {
             jitter_factor: 0.1,
             exponential_backoff: true,
             retry_condition: None,
+            timeout: None,
         }
     }
 }
@@ -91,7 +93,9 @@ impl RetryConfig {
     /// 计算重试延迟
     pub fn calculate_delay(&self, attempt: u32) -> Duration {
         let base_delay = if self.exponential_backoff {
-            let multiplier = self.backoff_multiplier.powi(attempt.saturating_sub(1) as i32);
+            let multiplier = self
+                .backoff_multiplier
+                .powi(attempt.saturating_sub(1) as i32);
             self.base_delay.mul_f64(multiplier)
         } else {
             self.base_delay
@@ -99,9 +103,7 @@ impl RetryConfig {
 
         let delay_with_jitter = if self.jitter_factor > 0.0 {
             let jitter_range = base_delay.mul_f64(self.jitter_factor);
-            let jitter = Duration::from_millis(
-                fastrand::u64(0..=jitter_range.as_millis() as u64)
-            );
+            let jitter = Duration::from_millis(fastrand::u64(0..=jitter_range.as_millis() as u64));
             base_delay + jitter
         } else {
             base_delay
@@ -166,10 +168,10 @@ pub enum RetryResult<T> {
     },
     /// 超时
     Timeout {
-        /// 超时时间
-        timeout: Duration,
         /// 总尝试次数
         attempts: u32,
+        /// 总耗时
+        total_duration: Duration,
     },
 }
 
@@ -184,15 +186,29 @@ struct RetryState {
     next_retry_time: Option<Instant>,
 }
 
+impl RetryState {
+    /// 获取重试开始时间
+    fn start_time(&self) -> Instant {
+        self.start_time
+    }
+
+    /// 获取重试持续时间
+    fn elapsed(&self) -> Duration {
+        self.start_time.elapsed()
+    }
+
+    /// 检查是否超时
+    fn is_timeout(&self, timeout: Duration) -> bool {
+        self.elapsed() > timeout
+    }
+}
+
 /// 重试执行器
 pub struct RetryExecutor;
 
 impl RetryExecutor {
     /// 同步执行重试
-    pub fn execute<T, F>(
-        config: &RetryConfig,
-        mut operation: F,
-    ) -> RetryResult<T>
+    pub fn execute<T, F>(config: &RetryConfig, mut operation: F) -> RetryResult<T>
     where
         F: FnMut() -> Result<T, EngineError>,
     {
@@ -204,6 +220,20 @@ impl RetryExecutor {
         };
 
         loop {
+            // 记录重试开始时间（用于调试和确保方法被调用）
+            let retry_start = state.start_time();
+            let _ = retry_start; // 确保变量被使用
+
+            // 检查是否超时
+            if let Some(timeout) = config.timeout {
+                if state.is_timeout(timeout) {
+                    return RetryResult::Timeout {
+                        attempts: state.attempt - 1,
+                        total_duration: state.elapsed(),
+                    };
+                }
+            }
+
             state.attempt += 1;
 
             // 检查是否超过最大重试次数
@@ -240,9 +270,8 @@ impl RetryExecutor {
 
                     // 计算下次重试时间
                     if state.attempt <= config.max_attempts {
-                        state.next_retry_time = Some(
-                            Instant::now() + config.calculate_delay(state.attempt - 1)
-                        );
+                        state.next_retry_time =
+                            Some(Instant::now() + config.calculate_delay(state.attempt - 1));
                     }
                 }
             }
@@ -258,10 +287,7 @@ impl RetryExecutor {
     }
 
     /// 异步执行重试
-    pub async fn execute_async<T, F, Fut>(
-        config: &RetryConfig,
-        mut operation: F,
-    ) -> RetryResult<T>
+    pub async fn execute_async<T, F, Fut>(config: &RetryConfig, mut operation: F) -> RetryResult<T>
     where
         F: FnMut() -> Fut,
         Fut: Future<Output = Result<T, EngineError>>,
@@ -310,9 +336,8 @@ impl RetryExecutor {
 
                     // 计算下次重试时间
                     if state.attempt <= config.max_attempts {
-                        state.next_retry_time = Some(
-                            Instant::now() + config.calculate_delay(state.attempt - 1)
-                        );
+                        state.next_retry_time =
+                            Some(Instant::now() + config.calculate_delay(state.attempt - 1));
                     }
                 }
             }
@@ -349,8 +374,8 @@ impl RetryExecutor {
             // 检查总超时
             if start_time.elapsed() > timeout {
                 return RetryResult::Timeout {
-                    timeout,
                     attempts: state.attempt - 1,
+                    total_duration: start_time.elapsed(),
                 };
             }
 
@@ -388,9 +413,8 @@ impl RetryExecutor {
 
                     // 计算下次重试时间
                     if state.attempt <= config.max_attempts {
-                        state.next_retry_time = Some(
-                            Instant::now() + config.calculate_delay(state.attempt - 1)
-                        );
+                        state.next_retry_time =
+                            Some(Instant::now() + config.calculate_delay(state.attempt - 1));
                     }
                 }
             }
@@ -428,8 +452,8 @@ impl RetryExecutor {
             // 检查总超时
             if start_time.elapsed() > timeout {
                 return RetryResult::Timeout {
-                    timeout,
                     attempts: state.attempt - 1,
+                    total_duration: start_time.elapsed(),
                 };
             }
 
@@ -467,9 +491,8 @@ impl RetryExecutor {
 
                     // 计算下次重试时间
                     if state.attempt <= config.max_attempts {
-                        state.next_retry_time = Some(
-                            Instant::now() + config.calculate_delay(state.attempt - 1)
-                        );
+                        state.next_retry_time =
+                            Some(Instant::now() + config.calculate_delay(state.attempt - 1));
                     }
                 }
             }
@@ -528,26 +551,39 @@ pub enum RetryPolicy {
 impl std::fmt::Debug for RetryPolicy {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            RetryPolicy::FixedInterval { interval, max_attempts } => {
-                write!(f, "FixedInterval {{ interval: {:?}, max_attempts: {} }}", interval, max_attempts)
-            }
-            RetryPolicy::ExponentialBackoff { 
-                base_interval, 
-                backoff_multiplier, 
-                max_interval, 
-                max_attempts 
+            RetryPolicy::FixedInterval {
+                interval,
+                max_attempts,
             } => {
-                write!(f, "ExponentialBackoff {{ base_interval: {:?}, backoff_multiplier: {}, max_interval: {:?}, max_attempts: {} }}", 
-                       base_interval, backoff_multiplier, max_interval, max_attempts)
+                write!(
+                    f,
+                    "FixedInterval {{ interval: {:?}, max_attempts: {} }}",
+                    interval, max_attempts
+                )
             }
-            RetryPolicy::LinearBackoff { 
-                base_interval, 
-                increment, 
-                max_interval, 
-                max_attempts 
+            RetryPolicy::ExponentialBackoff {
+                base_interval,
+                backoff_multiplier,
+                max_interval,
+                max_attempts,
             } => {
-                write!(f, "LinearBackoff {{ base_interval: {:?}, increment: {:?}, max_interval: {:?}, max_attempts: {} }}", 
-                       base_interval, increment, max_interval, max_attempts)
+                write!(
+                    f,
+                    "ExponentialBackoff {{ base_interval: {:?}, backoff_multiplier: {}, max_interval: {:?}, max_attempts: {} }}",
+                    base_interval, backoff_multiplier, max_interval, max_attempts
+                )
+            }
+            RetryPolicy::LinearBackoff {
+                base_interval,
+                increment,
+                max_interval,
+                max_attempts,
+            } => {
+                write!(
+                    f,
+                    "LinearBackoff {{ base_interval: {:?}, increment: {:?}, max_interval: {:?}, max_attempts: {} }}",
+                    base_interval, increment, max_interval, max_attempts
+                )
             }
             RetryPolicy::Custom { max_attempts, .. } => {
                 write!(f, "Custom {{ max_attempts: {} }}", max_attempts)
@@ -560,38 +596,35 @@ impl std::fmt::Debug for RetryPolicy {
 impl Clone for RetryPolicy {
     fn clone(&self) -> Self {
         match self {
-            RetryPolicy::FixedInterval { interval, max_attempts } => {
-                RetryPolicy::FixedInterval {
-                    interval: *interval,
-                    max_attempts: *max_attempts,
-                }
-            }
+            RetryPolicy::FixedInterval {
+                interval,
+                max_attempts,
+            } => RetryPolicy::FixedInterval {
+                interval: *interval,
+                max_attempts: *max_attempts,
+            },
             RetryPolicy::ExponentialBackoff {
                 base_interval,
                 backoff_multiplier,
                 max_interval,
                 max_attempts,
-            } => {
-                RetryPolicy::ExponentialBackoff {
-                    base_interval: *base_interval,
-                    backoff_multiplier: *backoff_multiplier,
-                    max_interval: *max_interval,
-                    max_attempts: *max_attempts,
-                }
-            }
+            } => RetryPolicy::ExponentialBackoff {
+                base_interval: *base_interval,
+                backoff_multiplier: *backoff_multiplier,
+                max_interval: *max_interval,
+                max_attempts: *max_attempts,
+            },
             RetryPolicy::LinearBackoff {
                 base_interval,
                 increment,
                 max_interval,
                 max_attempts,
-            } => {
-                RetryPolicy::LinearBackoff {
-                    base_interval: *base_interval,
-                    increment: *increment,
-                    max_interval: *max_interval,
-                    max_attempts: *max_attempts,
-                }
-            }
+            } => RetryPolicy::LinearBackoff {
+                base_interval: *base_interval,
+                increment: *increment,
+                max_interval: *max_interval,
+                max_attempts: *max_attempts,
+            },
             RetryPolicy::Custom { .. } => {
                 // Custom变体包含函数指针，无法克隆
                 panic!("Cannot clone RetryPolicy::Custom variant")
@@ -660,7 +693,8 @@ impl RetryPolicy {
                 max_interval,
                 ..
             } => {
-                let delay = *base_interval * backoff_multiplier.powi(attempt.saturating_sub(1) as i32) as u32;
+                let delay = *base_interval
+                    * backoff_multiplier.powi(attempt.saturating_sub(1) as i32) as u32;
                 std::cmp::min(delay, *max_interval)
             }
             RetryPolicy::LinearBackoff {
@@ -701,7 +735,7 @@ macro_rules! retry {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::error::{RenderError, AudioError};
+    use crate::error::{AudioError, RenderError};
 
     #[test]
     fn test_retry_config() {
@@ -729,7 +763,12 @@ mod tests {
         assert!(always.should_retry(&EngineError::general("test")));
         assert!(!never.should_retry(&EngineError::general("test")));
         assert!(on_severity.should_retry(&EngineError::general("test")));
-        assert!(!on_severity.should_retry(&EngineError::general_with_severity("test", ErrorSeverity::Critical)));
+        assert!(
+            !on_severity.should_retry(&EngineError::general_with_severity(
+                "test",
+                ErrorSeverity::Critical
+            ))
+        );
         assert!(on_category.should_retry(&EngineError::Render(RenderError::general("test"))));
         assert!(!on_category.should_retry(&EngineError::Audio(AudioError::general("test"))));
     }
@@ -738,7 +777,7 @@ mod tests {
     fn test_retry_executor_success() {
         let config = RetryConfig::new().max_attempts(3);
         let mut call_count = 0;
-        
+
         let result = RetryExecutor::execute(&config, || {
             call_count += 1;
             if call_count == 1 {
@@ -755,27 +794,23 @@ mod tests {
     #[test]
     fn test_retry_executor_failure() {
         let config = RetryConfig::new().max_attempts(2);
-        
-        let result: RetryResult<String> = RetryExecutor::execute(&config, || {
-            Err(EngineError::general("Always fails"))
-        });
+
+        let result: RetryResult<String> =
+            RetryExecutor::execute(&config, || Err(EngineError::general("Always fails")));
 
         assert!(matches!(result, RetryResult::Failed { attempts: 2, .. }));
     }
 
     #[test]
     fn test_retry_policy_fixed_interval() {
-        let policy = RetryPolicy::fixed_interval(
-            Duration::from_millis(100),
-            3
-        );
+        let policy = RetryPolicy::fixed_interval(Duration::from_millis(100), 3);
 
         assert_eq!(policy.max_attempts(), 3);
-        
+
         let error = EngineError::general("test");
         let delay1 = policy.calculate_delay(1, &error);
         let delay2 = policy.calculate_delay(2, &error);
-        
+
         assert_eq!(delay1, Duration::from_millis(100));
         assert_eq!(delay2, Duration::from_millis(100));
     }
@@ -786,16 +821,16 @@ mod tests {
             Duration::from_millis(100),
             2.0,
             Duration::from_secs(10),
-            3
+            3,
         );
 
         assert_eq!(policy.max_attempts(), 3);
-        
+
         let error = EngineError::general("test");
         let delay1 = policy.calculate_delay(1, &error);
         let delay2 = policy.calculate_delay(2, &error);
         let delay3 = policy.calculate_delay(3, &error);
-        
+
         assert_eq!(delay1, Duration::from_millis(100));
         assert_eq!(delay2, Duration::from_millis(200));
         assert_eq!(delay3, Duration::from_millis(400)); // Capped at max
@@ -807,16 +842,16 @@ mod tests {
             Duration::from_millis(100),
             Duration::from_millis(50),
             Duration::from_secs(1),
-            3
+            3,
         );
 
         assert_eq!(policy.max_attempts(), 3);
-        
+
         let error = EngineError::general("test");
         let delay1 = policy.calculate_delay(1, &error);
         let delay2 = policy.calculate_delay(2, &error);
         let delay3 = policy.calculate_delay(3, &error);
-        
+
         assert_eq!(delay1, Duration::from_millis(100));
         assert_eq!(delay2, Duration::from_millis(150));
         assert_eq!(delay3, Duration::from_millis(200)); // Capped at max

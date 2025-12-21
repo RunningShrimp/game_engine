@@ -1,8 +1,8 @@
-//! 寻路系统
-//!
-//! 实现A*寻路算法和导航网格支持。
+//  寻路系统
+// 
+//  实现A*寻路算法和导航网格支持。
 
-use crossbeam_channel::{unbounded, Receiver, Sender};
+use crossbeam_channel::{Receiver, Sender, unbounded};
 use glam::Vec3;
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap};
@@ -376,6 +376,11 @@ impl ParallelPathfindingService {
             pending_count,
             completed_count,
         }
+    }
+
+    /// 获取当前批量处理大小，形成逻辑闭环
+    pub fn batch_size(&self) -> usize {
+        self.batch_size
     }
 
     /// 优化的工作线程函数

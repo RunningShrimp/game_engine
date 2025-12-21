@@ -1,31 +1,30 @@
-/// GPU特定渲染优化策略
-/// 
-/// 针对不同GPU厂商和型号的特定优化
+//! GPU特定渲染优化策略
+//!
+//! 针对不同GPU厂商和型号的特定优化
+use super::detect::{GpuInfo, GpuTier, GpuVendor};
+use serde::{Deserialize, Serialize};
 
-use super::detect::{GpuInfo, GpuVendor, GpuTier};
-use serde::{Serialize, Deserialize};
-
-/// GPU优化策略
+//  GPU优化策略
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GpuOptimization {
     pub vendor: GpuVendor,
     pub tier: GpuTier,
-    
+
     // 渲染管线优化
     pub preferred_pipeline_mode: PipelineMode,
     pub use_async_compute: bool,
     pub use_bindless_textures: bool,
-    
+
     // 内存优化
     pub texture_streaming_enabled: bool,
     pub texture_compression_format: TextureCompressionFormat,
     pub buffer_pooling_enabled: bool,
-    
+
     // 批处理优化
     pub max_draw_calls_per_frame: u32,
     pub instancing_threshold: u32,
     pub use_indirect_drawing: bool,
-    
+
     // 特效优化
     pub particle_budget: u32,
     pub max_lights_per_frame: u32,
@@ -69,10 +68,10 @@ impl GpuOptimization {
             _ => Self::generic_optimization(gpu),
         }
     }
-    
+
     fn nvidia_optimization(gpu: &GpuInfo) -> Self {
         let is_high_end = gpu.tier >= GpuTier::High;
-        
+
         Self {
             vendor: GpuVendor::Nvidia,
             tier: gpu.tier,
@@ -103,10 +102,10 @@ impl GpuOptimization {
             },
         }
     }
-    
+
     fn amd_optimization(gpu: &GpuInfo) -> Self {
         let is_high_end = gpu.tier >= GpuTier::High;
-        
+
         Self {
             vendor: GpuVendor::Amd,
             tier: gpu.tier,
@@ -137,11 +136,11 @@ impl GpuOptimization {
             },
         }
     }
-    
+
     fn intel_optimization(gpu: &GpuInfo) -> Self {
         let is_arc = gpu.name.to_lowercase().contains("arc");
         let is_high_end = gpu.tier >= GpuTier::MediumHigh;
-        
+
         Self {
             vendor: GpuVendor::Intel,
             tier: gpu.tier,
@@ -167,10 +166,10 @@ impl GpuOptimization {
             shadow_cascade_count: if is_high_end { 3 } else { 2 },
         }
     }
-    
+
     fn apple_optimization(gpu: &GpuInfo) -> Self {
         let is_high_end = gpu.tier >= GpuTier::MediumHigh;
-        
+
         Self {
             vendor: GpuVendor::Apple,
             tier: gpu.tier,
@@ -194,7 +193,7 @@ impl GpuOptimization {
             shadow_cascade_count: if is_high_end { 4 } else { 3 },
         }
     }
-    
+
     fn qualcomm_optimization(gpu: &GpuInfo) -> Self {
         Self {
             vendor: GpuVendor::Qualcomm,
@@ -225,7 +224,7 @@ impl GpuOptimization {
             shadow_cascade_count: 2,
         }
     }
-    
+
     fn mali_optimization(gpu: &GpuInfo) -> Self {
         Self {
             vendor: GpuVendor::Mali,
@@ -251,7 +250,7 @@ impl GpuOptimization {
             shadow_cascade_count: 2,
         }
     }
-    
+
     fn generic_optimization(gpu: &GpuInfo) -> Self {
         Self {
             vendor: GpuVendor::Unknown,
@@ -270,7 +269,7 @@ impl GpuOptimization {
             shadow_cascade_count: 2,
         }
     }
-    
+
     /// 获取推荐的纹理最大尺寸
     pub fn max_texture_size(&self) -> u32 {
         match self.tier {
@@ -280,7 +279,7 @@ impl GpuOptimization {
             _ => 1024,
         }
     }
-    
+
     /// 获取推荐的MSAA采样数
     pub fn recommended_msaa_samples(&self) -> u32 {
         match self.tier {
@@ -290,11 +289,11 @@ impl GpuOptimization {
             _ => 1,
         }
     }
-    
+
     /// 是否应该使用计算着色器
     pub fn should_use_compute_shaders(&self) -> bool {
-        self.tier >= GpuTier::Medium && 
-        !matches!(self.vendor, GpuVendor::Qualcomm | GpuVendor::Mali)
+        self.tier >= GpuTier::Medium
+            && !matches!(self.vendor, GpuVendor::Qualcomm | GpuVendor::Mali)
     }
 }
 
@@ -307,9 +306,9 @@ mod tests {
     fn test_gpu_optimization() {
         let gpu = detect_gpu();
         let optimization = GpuOptimization::for_gpu(&gpu);
-        
+
         println!("GPU Optimization: {:#?}", optimization);
-        
+
         assert!(optimization.max_draw_calls_per_frame > 0);
         assert!(optimization.particle_budget > 0);
     }
@@ -322,7 +321,7 @@ mod tests {
             tier: GpuTier::Flagship,
             ..Default::default()
         };
-        
+
         let opt = GpuOptimization::for_gpu(&gpu_info);
         assert_eq!(opt.preferred_pipeline_mode, PipelineMode::Deferred);
         assert!(opt.use_async_compute);

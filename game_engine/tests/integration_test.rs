@@ -1,12 +1,12 @@
-//! 集成测试套件
-//!
-//! 测试引擎各个系统之间的集成，包括：
-//! - 渲染系统集成
-//! - 物理系统集成
-//! - 音频系统集成
-//! - 场景系统集成
-//! - 错误处理集成
-//! - Actor系统集成
+//  集成测试套件
+// 
+//  测试引擎各个系统之间的集成，包括：
+//  - 渲染系统集成
+//  - 物理系统集成
+//  - 音频系统集成
+//  - 场景系统集成
+//  - 错误处理集成
+//  - Actor系统集成
 
 use bevy_ecs::prelude::*;
 use game_engine::domain::actor::{
@@ -14,11 +14,11 @@ use game_engine::domain::actor::{
     RenderActorMessage,
 };
 use game_engine::domain::{
+    AudioDomainService, PhysicsDomainService, SceneDomainService,
     audio::AudioSourceId,
     physics::{RigidBodyId, RigidBodyType},
     scene::SceneId,
     value_objects::Volume,
-    AudioDomainService, PhysicsDomainService, SceneDomainService,
 };
 use game_engine::ecs::{Sprite, Time, Transform};
 use game_engine::services::render::RenderService;
@@ -123,9 +123,11 @@ fn test_audio_system_integration() {
 
     // 测试设置不存在的音频源音量（应该失败）
     let volume = Volume::new(0.7).unwrap();
-    assert!(audio_service
-        .set_source_volume(AudioSourceId(1), volume)
-        .is_err());
+    assert!(
+        audio_service
+            .set_source_volume(AudioSourceId(1), volume)
+            .is_err()
+    );
 
     // 验证没有音频源
     assert_eq!(audio_service.source_ids().len(), 0);
@@ -148,7 +150,7 @@ fn test_physics_system_integration() {
     );
     let body2 = game_engine::domain::physics::RigidBody::new(
         RigidBodyId(2),
-        RigidBodyType::Fixed,
+        RigidBodyType::Static,
         Vec3::ZERO,
     );
 
@@ -178,9 +180,11 @@ fn test_scene_physics_integration() {
     let mut physics_service = PhysicsDomainService::new();
 
     // 创建场景
-    assert!(scene_service
-        .create_scene(SceneId(1), "PhysicsScene")
-        .is_ok());
+    assert!(
+        scene_service
+            .create_scene(SceneId(1), "PhysicsScene")
+            .is_ok()
+    );
 
     // 加载场景（switch_to_scene需要场景已加载）
     if let Some(scene) = scene_service.get_scene_mut(SceneId(1)) {
@@ -310,9 +314,11 @@ fn test_multi_system_cooperation() {
     let mut physics_service = PhysicsDomainService::new();
 
     // 创建场景
-    assert!(scene_service
-        .create_scene(SceneId(1), "MultiSystemScene")
-        .is_ok());
+    assert!(
+        scene_service
+            .create_scene(SceneId(1), "MultiSystemScene")
+            .is_ok()
+    );
 
     // 加载场景
     if let Some(scene) = scene_service.get_scene_mut(SceneId(1)) {
@@ -610,14 +616,16 @@ fn test_actor_system_integration() {
     let audio_handle = actor_system.register("audio", AudioActor::new()).unwrap();
 
     // 发送音频消息
-    assert!(audio_handle
-        .send(AudioActorMessage::Play {
-            source_id: 1,
-            path: "test.wav".to_string(),
-            volume: 1.0,
-            looped: false,
-        })
-        .is_ok());
+    assert!(
+        audio_handle
+            .send(AudioActorMessage::Play {
+                source_id: 1,
+                path: "test.wav".to_string(),
+                volume: 1.0,
+                looped: false,
+            })
+            .is_ok()
+    );
 
     // 注册物理Actor
     let physics_handle = actor_system
@@ -625,9 +633,11 @@ fn test_actor_system_integration() {
         .unwrap();
 
     // 发送物理消息
-    assert!(physics_handle
-        .send(PhysicsActorMessage::Step { delta_time: 0.016 })
-        .is_ok());
+    assert!(
+        physics_handle
+            .send(PhysicsActorMessage::Step { delta_time: 0.016 })
+            .is_ok()
+    );
 
     // 注册渲染Actor
     let render_handle = actor_system.register("render", RenderActor::new()).unwrap();
@@ -782,9 +792,9 @@ fn test_complete_system_workflow() {
 /// 测试渲染系统集成（多对象场景）
 #[test]
 fn test_render_system_integration_many_objects() {
+    use bevy_ecs::prelude::*;
     use game_engine::ecs::Mesh;
     use game_engine::resources::manager::Handle;
-    use bevy_ecs::prelude::*;
 
     let mut render_service = RenderService::new();
     let mut world = World::new();
@@ -836,11 +846,12 @@ fn test_physics_system_integration_complex_collisions() {
         assert!(physics_service.create_body(body).is_ok());
 
         // 为每个刚体添加碰撞体
-        let collider = Collider::cuboid(
-            ColliderId(i),
-            Vec3::new(0.5, 0.5, 0.5),
+        let collider = Collider::cuboid(ColliderId(i), Vec3::new(0.5, 0.5, 0.5));
+        assert!(
+            physics_service
+                .create_collider(collider, RigidBodyId(i))
+                .is_ok()
         );
-        assert!(physics_service.create_collider(collider, RigidBodyId(i)).is_ok());
     }
 
     // 模拟多帧物理步进
@@ -925,11 +936,11 @@ fn test_error_handling_integration_recovery() {
 
     // 测试场景错误恢复
     assert!(scene_service.create_scene(SceneId(1), "TestScene").is_ok());
-    
+
     // 尝试切换到不存在的场景（应该失败，但不影响现有场景）
     let result = scene_service.switch_to_scene(SceneId(999));
     assert!(result.is_err());
-    
+
     // 验证场景1仍然存在
     assert!(scene_service.get_scene(SceneId(1)).is_some());
 
@@ -937,11 +948,11 @@ fn test_error_handling_integration_recovery() {
     // 创建音频源（文件不存在会失败）
     let result = audio_service.create_source(AudioSourceId(1), "test.wav");
     assert!(result.is_err());
-    
+
     // 尝试播放不存在的音频源（应该失败，但不影响服务状态）
     let result = audio_service.play_source(AudioSourceId(999));
     assert!(result.is_err());
-    
+
     // 验证服务状态正常
     assert_eq!(audio_service.source_ids().len(), 0);
 
@@ -952,11 +963,11 @@ fn test_error_handling_integration_recovery() {
         Vec3::ZERO,
     );
     assert!(physics_service.create_body(body).is_ok());
-    
+
     // 尝试获取不存在刚体的位置（应该失败，但不影响现有刚体）
     let result = physics_service.get_body_position(RigidBodyId(999));
     assert!(result.is_err());
-    
+
     // 验证刚体1仍然存在
     assert!(physics_service.get_body_position(RigidBodyId(1)).is_ok());
 }

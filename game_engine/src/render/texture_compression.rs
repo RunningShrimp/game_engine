@@ -1,8 +1,8 @@
-//! 纹理压缩支持模块
-//!
-//! 提供ASTC、BC等压缩纹理格式的加载和解码支持。
+//  纹理压缩支持模块
+// 
+//  提供ASTC、BC等压缩纹理格式的加载和解码支持。
 
-use crate::core::error::RenderError;
+use crate::error::RenderError;
 
 /// 压缩纹理格式
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -219,10 +219,13 @@ impl AstcDecoder {
         // 当前实现：返回错误，提示需要集成解码库
         // 未来计划：集成astc-rs或类似库实现ASTC解码
         // 相关任务：评估astc-rs库的性能和兼容性，集成到项目中
-        Err(RenderError::InvalidState(format!(
-            "ASTC CPU decoding not yet implemented. Block size: {:?}, Size: {}x{}",
-            block_size, width, height
-        )))
+        Err(RenderError::InvalidState {
+            message: format!(
+                "ASTC CPU decoding not yet implemented. Block size: {:?}, Size: {}x{}",
+                block_size, width, height
+            ),
+            severity: crate::error::ErrorSeverity::Error,
+        })
     }
 }
 
@@ -243,11 +246,14 @@ impl BcDecoder {
         let expected_size = (block_count_x * block_count_y * 8) as usize;
 
         if data.len() < expected_size {
-            return Err(RenderError::InvalidState(format!(
-                "BC1 data size mismatch: expected {}, got {}",
-                expected_size,
-                data.len()
-            )));
+            return Err(RenderError::InvalidState {
+                message: format!(
+                    "BC1 data size mismatch: expected {}, got {}",
+                    expected_size,
+                    data.len()
+                ),
+                severity: crate::error::ErrorSeverity::Error,
+            });
         }
 
         // 使用dxt-compressor解码
@@ -278,7 +284,10 @@ impl BcDecoder {
         }
 
         image::RgbaImage::from_raw(width, height, rgba_data)
-            .ok_or_else(|| RenderError::InvalidState("Failed to create RGBA image".to_string()))
+            .ok_or_else(|| RenderError::InvalidState {
+                message: "Failed to create RGBA image".to_string(),
+                severity: crate::error::ErrorSeverity::Error
+            })
     }
 
     /// 解码BC3纹理数据为RGBA8
@@ -291,10 +300,13 @@ impl BcDecoder {
         // 当前实现：返回错误，提示需要集成解码库
         // 未来计划：集成BC解码库（如dxt-compressor）实现BC3解码
         // 相关任务：评估BC解码库的性能和兼容性，集成到项目中
-        Err(RenderError::InvalidState(format!(
-            "BC3 CPU decoding not yet implemented. Size: {}x{}",
-            width, height
-        )))
+        Err(RenderError::InvalidState {
+            message: format!(
+                "BC3 CPU decoding not yet implemented. Size: {}x{}",
+                width, height
+            ),
+            severity: crate::error::ErrorSeverity::Error,
+        })
     }
 
     /// 解码BC7纹理数据为RGBA8
@@ -307,10 +319,13 @@ impl BcDecoder {
         // 当前实现：返回错误，提示需要集成解码库
         // 未来计划：集成BC解码库实现BC7解码
         // 相关任务：评估BC解码库的性能和兼容性，集成到项目中
-        Err(RenderError::InvalidState(format!(
-            "BC7 CPU decoding not yet implemented. Size: {}x{}",
-            width, height
-        )))
+        Err(RenderError::InvalidState {
+            message: format!(
+                "BC7 CPU decoding not yet implemented. Size: {}x{}",
+                width, height
+            ),
+            severity: crate::error::ErrorSeverity::Error,
+        })
     }
 }
 

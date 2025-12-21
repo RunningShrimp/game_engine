@@ -1,8 +1,8 @@
-//! 物理系统性能基准测试
-//!
-//! 测试物理世界更新、碰撞检测等操作的性能
+//  物理系统性能基准测试
+// 
+//  测试物理世界更新、碰撞检测等操作的性能
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
 
 #[cfg(feature = "physics_2d")]
 fn bench_physics_world_creation(c: &mut Criterion) {
@@ -52,7 +52,6 @@ fn bench_physics_step(c: &mut Criterion) {
             |b, &count| {
                 let mut physics_world = RigidBodySet::new();
                 let mut collider_set = ColliderSet::new();
-                let mut query_pipeline = QueryPipeline::new();
 
                 // 创建地面
                 let ground = RigidBodyBuilder::fixed()
@@ -97,7 +96,6 @@ fn bench_physics_step(c: &mut Criterion) {
                         &mut impulse_joint_set,
                         &mut multibody_joint_set,
                         &mut ccd_solver,
-                        Some(&mut query_pipeline),
                         &physics_hooks,
                         &event_handler,
                     );

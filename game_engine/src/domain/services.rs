@@ -1,5 +1,5 @@
-//! 领域服务层
-//! 实现依赖注入容器和真正的领域服务
+//  领域服务层
+//  实现依赖注入容器和真正的领域服务
 
 use crate::domain::audio::{AudioListener, AudioSource, AudioSourceId};
 use crate::domain::errors::{AudioError, DomainError, PhysicsError};
@@ -185,6 +185,15 @@ impl ServiceContainer for DIContainer {
 ///
 /// 管理音频源的创建、播放、停止等操作。
 ///
+/// ## DDD架构说明
+///
+/// 此Service层负责：
+/// - 管理AudioSource集合（跨聚合操作）
+/// - 协调多个音频源的操作
+/// - 管理主音量和监听器（全局状态）
+///
+/// 业务逻辑（播放控制、状态管理等）在`AudioSource`领域对象中。
+///
 /// # 示例
 ///
 /// ```rust
@@ -199,10 +208,10 @@ impl ServiceContainer for DIContainer {
 ///     "assets/music.mp3"
 /// )?;
 ///
-/// // 播放音频
+/// // 播放音频（Service协调操作，实际逻辑在AudioSource中）
 /// audio_service.play_source(AudioSourceId::new(1))?;
 ///
-/// // 设置音量
+/// // 设置音量（Service协调操作，实际逻辑在AudioSource中）
 /// audio_service.set_source_volume(AudioSourceId::new(1), 0.5)?;
 ///
 /// // 停止音频
@@ -405,6 +414,15 @@ impl AudioDomainService {
 ///
 /// 管理物理世界的创建、更新，以及刚体和碰撞体的操作。
 ///
+/// ## DDD架构说明
+///
+/// 此Service层负责：
+/// - 管理PhysicsWorld（聚合根）
+/// - 协调刚体和碰撞体的创建/销毁
+/// - 步进物理模拟（跨聚合操作）
+///
+/// 业务逻辑（力的应用、位置设置等）在`RigidBody`领域对象中。
+///
 /// # 示例
 ///
 /// ```rust
@@ -490,16 +508,45 @@ impl PhysicsDomainService {
         Ok(())
     }
 
+    /// 添加刚体 (别名，用于兼容测试)
+    pub fn add_body(&mut self, body: RigidBody) -> Result<(), DomainError> {
+        self.create_body(body)
+    }
+
+    /// 更新刚体 (用于兼容测试)
+    pub fn update_body(&mut self, body: &RigidBody) -> Result<(), DomainError> {
+        self.world.update_body(body)?;
+        self.last_updated = Self::current_timestamp();
+        Ok(())
+    }
+
+    /// 步进模拟 (别名，用于兼容测试)
+    pub fn step(&mut self, delta_time: f32) -> Result<(), DomainError> {
+        self.step_simulation(delta_time)
+    }
+
+    /// 添加碰撞体到刚体 (别名，用于兼容测试)
+    pub fn add_collider_to_body(
+        &mut self,
+        collider: Collider,
+        body_id: RigidBodyId,
+    ) -> Result<(), DomainError> {
+        self.create_collider(collider, body_id)
+    }
+
+    /// 移除碰撞体 (别名，用于兼容测试)
+    pub fn remove_collider(&mut self, id: ColliderId) -> Result<(), DomainError> {
+        self.destroy_collider(id)
+    }
+
     /// 应用力到刚体
     pub fn apply_force(
         &mut self,
         body_id: RigidBodyId,
         force: glam::Vec3,
     ) -> Result<(), DomainError> {
-        if let Some(handle) = self.world.body_handles.get(&body_id) {
-            if let Some(rb) = self.world.rigid_body_set.get_mut(*handle) {
-                rb.add_force(vector![force.x, force.y, force.z], true);
-            }
+        if let Some(rb) = self.world.get_body_mut(body_id) {
+            rb.add_force(vector![force.x, force.y, force.z], true);
         }
         self.last_updated = Self::current_timestamp();
         Ok(())
@@ -511,10 +558,8 @@ impl PhysicsDomainService {
         body_id: RigidBodyId,
         impulse: glam::Vec3,
     ) -> Result<(), DomainError> {
-        if let Some(handle) = self.world.body_handles.get(&body_id) {
-            if let Some(rb) = self.world.rigid_body_set.get_mut(*handle) {
-                rb.apply_impulse(vector![impulse.x, impulse.y, impulse.z], true);
-            }
+        if let Some(rb) = self.world.get_body_mut(body_id) {
+            rb.apply_impulse(vector![impulse.x, impulse.y, impulse.z], true);
         }
         self.last_updated = Self::current_timestamp();
         Ok(())
@@ -526,10 +571,8 @@ impl PhysicsDomainService {
         body_id: RigidBodyId,
         position: glam::Vec3,
     ) -> Result<(), DomainError> {
-        if let Some(handle) = self.world.body_handles.get(&body_id) {
-            if let Some(rb) = self.world.rigid_body_set.get_mut(*handle) {
-                rb.set_translation(vector![position.x, position.y, position.z], true);
-            }
+        if let Some(rb) = self.world.get_body_mut(body_id) {
+            rb.set_translation(vector![position.x, position.y, position.z], true);
         }
         self.last_updated = Self::current_timestamp();
         Ok(())
@@ -537,11 +580,9 @@ impl PhysicsDomainService {
 
     /// 获取刚体位置
     pub fn get_body_position(&self, body_id: RigidBodyId) -> Result<glam::Vec3, DomainError> {
-        if let Some(handle) = self.world.body_handles.get(&body_id) {
-            if let Some(rb) = self.world.rigid_body_set.get(*handle) {
-                let pos = rb.translation();
-                return Ok(glam::Vec3::new(pos.x, pos.y, pos.z));
-            }
+        if let Some(rb) = self.world.get_body(body_id) {
+            let pos = rb.translation();
+            return Ok(glam::Vec3::new(pos.x, pos.y, pos.z));
         }
         Err(DomainError::Physics(PhysicsError::BodyNotFound(format!(
             "Body {}",
@@ -574,6 +615,15 @@ impl PhysicsDomainService {
 /// 场景领域服务
 ///
 /// 管理场景的创建、切换、更新等操作。
+///
+/// ## DDD架构说明
+///
+/// 此Service层负责：
+/// - 管理SceneManager（管理多个Scene聚合根）
+/// - 协调场景切换（跨聚合操作）
+/// - 场景查询和更新
+///
+/// 业务逻辑（实体管理、状态转换等）在`Scene`领域对象中。
 ///
 /// # 示例
 ///

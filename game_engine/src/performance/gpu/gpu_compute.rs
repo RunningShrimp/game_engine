@@ -1,10 +1,10 @@
-//! GPU 计算着色器资源管理
-//!
-//! 用于管理 WGPU 计算管道和着色器资源
-//! - 计算管道创建和管理
-//! - 绑定组管理
-//! - 缓冲区管理
-//! - 计算任务调度
+//  GPU 计算着色器资源管理
+// 
+//  用于管理 WGPU 计算管道和着色器资源
+//  - 计算管道创建和管理
+//  - 绑定组管理
+//  - 缓冲区管理
+//  - 计算任务调度
 
 use std::fmt;
 use std::sync::Arc;
@@ -438,6 +438,7 @@ mod tests {
 
         let buffer = manager.create_buffer(1024, 0);
 
+        assert!(manager.get_buffer(buffer.id).is_some());
         assert_eq!(manager.buffer_count(), 1);
         assert_eq!(manager.get_total_memory(), 1024);
     }

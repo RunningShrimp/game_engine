@@ -1,66 +1,67 @@
-//! 增量序列化模块
-//!
-//! 实现网络数据的增量序列化协议，只传输变化的数据以减少网络带宽使用。
-//!
-//! ## 设计原理
-//!
-//! 增量序列化通过比较当前状态和基准状态，只序列化变化的部分：
-//!
-//! ```text
-//! ┌─────────────────┐         ┌─────────────────┐
-//! │   Current State │         │  Baseline State │
-//! │                 │         │                 │
-//! │  Entity A: pos │  Compare │  Entity A: pos  │
-//! │  Entity B: pos │  ──────► │  Entity B: pos  │
-//! │  Entity C: pos │         │  Entity C: pos   │
-//! └─────────────────┘         └─────────────────┘
-//!         │                            │
-//!         └────────────┬───────────────┘
-//!                      ▼
-//!              ┌───────────────┐
-//!              │  Delta Data   │
-//!              │  (Only Changes)│
-//!              └───────────────┘
-//! ```
-//!
-//! ## 性能优化
-//!
-//! - 减少网络带宽使用 50-80%（取决于变化率）
-//! - 支持字段级别的增量更新
-//! - 支持批量增量更新
-//! - 自动基准状态管理
-//!
-//! ## 使用示例
-//!
-//! ```rust
-//! use game_engine::network::{DeltaSerializer, EntityDelta};
-//!
-//! // 创建增量序列化器
-//! let mut serializer = DeltaSerializer::new();
-//!
-//! // 设置基准状态
-//! let baseline = vec![
-//!     EntityDelta { id: 1, position: Some([0.0, 0.0, 0.0]), ..Default::default() },
-//!     EntityDelta { id: 2, position: Some([1.0, 1.0, 1.0]), ..Default::default() },
-//! ];
-//! serializer.set_baseline(baseline);
-//!
-//! // 计算增量
-//! let current = vec![
-//!     EntityDelta { id: 1, position: Some([0.5, 0.0, 0.0]), ..Default::default() },
-//!     EntityDelta { id: 2, position: Some([1.0, 1.0, 1.0]), ..Default::default() },
-//! ];
-//! let delta = serializer.compute_delta(&current);
-//!
-//! // 序列化增量（只包含变化的数据）
-//! let serialized = serializer.serialize_delta(&delta)?;
-//!
-//! // 反序列化并应用增量
-//! let deserialized = serializer.deserialize_delta(&serialized)?;
-//! serializer.apply_delta(&deserialized);
-//! ```
+//  增量序列化模块
+// 
+//  实现网络数据的增量序列化协议，只传输变化的数据以减少网络带宽使用。
+// 
+//  ## 设计原理
+// 
+//  增量序列化通过比较当前状态和基准状态，只序列化变化的部分：
+// 
+//  ```text
+//  ┌─────────────────┐         ┌─────────────────┐
+//  │   Current State │         │  Baseline State │
+//  │                 │         │                 │
+//  │  Entity A: pos │  Compare │  Entity A: pos  │
+//  │  Entity B: pos │  ──────► │  Entity B: pos  │
+//  │  Entity C: pos │         │  Entity C: pos   │
+//  └─────────────────┘         └─────────────────┘
+//          │                            │
+//          └────────────┬───────────────┘
+//                       ▼
+//               ┌───────────────┐
+//               │  Delta Data   │
+//               │  (Only Changes)│
+//               └───────────────┘
+//  ```
+// 
+//  ## 性能优化
+// 
+//  - 减少网络带宽使用 50-80%（取决于变化率）
+//  - 支持字段级别的增量更新
+//  - 支持批量增量更新
+//  - 自动基准状态管理
+// 
+//  ## 使用示例
+// 
+//  ```rust
+//  use game_engine::network::{DeltaSerializer, EntityDelta};
+// 
+//  // 创建增量序列化器
+//  let mut serializer = DeltaSerializer::new();
+// 
+//  // 设置基准状态
+//  let baseline = vec![
+//      EntityDelta { id: 1, position: Some([0.0, 0.0, 0.0]), ..Default::default() },
+//      EntityDelta { id: 2, position: Some([1.0, 1.0, 1.0]), ..Default::default() },
+//  ];
+//  serializer.set_baseline(baseline);
+// 
+//  // 计算增量
+//  let current = vec![
+//      EntityDelta { id: 1, position: Some([0.5, 0.0, 0.0]), ..Default::default() },
+//      EntityDelta { id: 2, position: Some([1.0, 1.0, 1.0]), ..Default::default() },
+//  ];
+//  let delta = serializer.compute_delta(&current);
+// 
+//  // 序列化增量（只包含变化的数据）
+//  let serialized = serializer.serialize_delta(&delta)?;
+// 
+//  // 反序列化并应用增量
+//  let deserialized = serializer.deserialize_delta(&serialized)?;
+//  serializer.apply_delta(&deserialized);
+//  ```
 
 use crate::network::NetworkError;
+use bincode;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -349,14 +350,14 @@ impl DeltaSerializer {
 
     /// 序列化增量数据包
     pub fn serialize_delta(&self, packet: &DeltaPacket) -> Result<Vec<u8>, NetworkError> {
-        bincode::encode_to_vec(packet, bincode::config::standard()).map_err(|e| {
+        bincode::serialize(&packet).map_err(|e| {
             NetworkError::SerializationError(format!("Delta serialization failed: {}", e))
         })
     }
 
     /// 反序列化增量数据包
     pub fn deserialize_delta(&self, data: &[u8]) -> Result<DeltaPacket, NetworkError> {
-        bincode::decode_from_slice::<DeltaPacket, _>(data, bincode::config::standard()).map(|(packet, _)| packet).map_err(|e| {
+        bincode::deserialize::<DeltaPacket>(data).map_err(|e| {
             NetworkError::SerializationError(format!("Delta deserialization failed: {}", e))
         })
     }
@@ -433,14 +434,14 @@ impl BatchDeltaSerializer {
 
     /// 批量序列化
     pub fn serialize_batch(&self, packets: &[DeltaPacket]) -> Result<Vec<u8>, NetworkError> {
-        bincode::encode_to_vec(packets, bincode::config::standard()).map_err(|e| {
+        bincode::serialize(&packets).map_err(|e| {
             NetworkError::SerializationError(format!("Batch serialization failed: {}", e))
         })
     }
 
     /// 批量反序列化
     pub fn deserialize_batch(&self, data: &[u8]) -> Result<Vec<DeltaPacket>, NetworkError> {
-        bincode::decode_from_slice::<Vec<DeltaPacket>, _>(data, bincode::config::standard()).map(|(packets, _)| packets).map_err(|e| {
+        bincode::deserialize::<Vec<DeltaPacket>>(data).map_err(|e| {
             NetworkError::SerializationError(format!("Batch deserialization failed: {}", e))
         })
     }

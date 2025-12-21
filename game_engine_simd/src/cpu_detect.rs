@@ -1,7 +1,6 @@
 /// CPU特性检测模块
-/// 
+///
 /// 运行时检测CPU支持的SIMD指令集和特性
-
 use std::sync::OnceLock;
 
 /// CPU特性标志
@@ -19,12 +18,12 @@ pub struct CpuFeatures {
     pub avx512dq: bool,
     pub avx512vl: bool,
     pub fma: bool,
-    
+
     // ARM特性
     pub neon: bool,
     pub sve: bool,
     pub sve2: bool,
-    
+
     // 厂商信息
     pub vendor: CpuVendor,
     pub brand: String,
@@ -49,18 +48,18 @@ impl CpuFeatures {
         {
             Self::detect_x86_64()
         }
-        
+
         #[cfg(target_arch = "aarch64")]
         {
             Self::detect_aarch64()
         }
-        
+
         #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
         {
             Self::default()
         }
     }
-    
+
     #[cfg(target_arch = "x86_64")]
     fn detect_x86_64() -> Self {
         // 使用std::arch检测CPU特性
@@ -72,16 +71,16 @@ impl CpuFeatures {
         let avx = is_x86_feature_detected!("avx");
         let avx2 = is_x86_feature_detected!("avx2");
         let fma = is_x86_feature_detected!("fma");
-        
+
         // AVX-512检测
         let avx512f = is_x86_feature_detected!("avx512f");
         let avx512dq = avx512f && is_x86_feature_detected!("avx512dq");
         let avx512vl = avx512f && is_x86_feature_detected!("avx512vl");
-        
+
         // 检测厂商
         let vendor = Self::detect_x86_vendor();
         let brand = Self::get_cpu_brand();
-        
+
         Self {
             sse2,
             sse3,
@@ -101,20 +100,20 @@ impl CpuFeatures {
             brand,
         }
     }
-    
+
     #[cfg(target_arch = "aarch64")]
     fn detect_aarch64() -> Self {
         // ARM NEON在aarch64上是强制支持的
         let neon = true;
-        
+
         // SVE检测（需要运行时检查）
         let sve = std::arch::is_aarch64_feature_detected!("sve");
         let sve2 = sve && std::arch::is_aarch64_feature_detected!("sve2");
-        
+
         // 检测厂商
         let vendor = Self::detect_arm_vendor();
         let brand = Self::get_cpu_brand();
-        
+
         Self {
             sse2: false,
             sse3: false,
@@ -134,7 +133,7 @@ impl CpuFeatures {
             brand,
         }
     }
-    
+
     /// 检测x86 CPU厂商信息
     ///
     /// # Safety
@@ -180,24 +179,28 @@ impl CpuFeatures {
                 std::str::from_utf8_unchecked(&result.edx.to_le_bytes()),
                 std::str::from_utf8_unchecked(&result.ecx.to_le_bytes())
             );
-            
+
             match vendor_string.as_str() {
                 "GenuineIntel" => CpuVendor::Intel,
                 "AuthenticAMD" => CpuVendor::Amd,
                 _ => CpuVendor::Other,
             }
         }
-        
+
         #[cfg(not(target_feature = "sse2"))]
         CpuVendor::Other
     }
-    
+
     #[cfg(target_arch = "aarch64")]
     fn detect_arm_vendor() -> CpuVendor {
         // 通过品牌字符串推断厂商
         let brand = Self::get_cpu_brand().to_lowercase();
-        
-        if brand.contains("apple") || brand.contains("m1") || brand.contains("m2") || brand.contains("m3") {
+
+        if brand.contains("apple")
+            || brand.contains("m1")
+            || brand.contains("m2")
+            || brand.contains("m3")
+        {
             CpuVendor::AppleSilicon
         } else if brand.contains("qualcomm") || brand.contains("snapdragon") {
             CpuVendor::Qualcomm
@@ -209,7 +212,7 @@ impl CpuFeatures {
             CpuVendor::Other
         }
     }
-    
+
     fn get_cpu_brand() -> String {
         // 尝试从/proc/cpuinfo读取（Linux）
         #[cfg(target_os = "linux")]
@@ -224,7 +227,7 @@ impl CpuFeatures {
                 }
             }
         }
-        
+
         // macOS可以使用sysctl
         #[cfg(target_os = "macos")]
         {
@@ -233,13 +236,12 @@ impl CpuFeatures {
                 .arg("-n")
                 .arg("machdep.cpu.brand_string")
                 .output()
+                && let Ok(brand) = String::from_utf8(output.stdout)
             {
-                if let Ok(brand) = String::from_utf8(output.stdout) {
-                    return brand.trim().to_string();
-                }
+                return brand.trim().to_string();
             }
         }
-        
+
         "Unknown".to_string()
     }
 }
@@ -282,7 +284,7 @@ pub fn print_cpu_info() {
     println!("Vendor: {:?}", features.vendor);
     println!("Brand: {}", features.brand);
     println!();
-    
+
     #[cfg(target_arch = "x86_64")]
     {
         println!("x86/x64 Features:");
@@ -298,7 +300,7 @@ pub fn print_cpu_info() {
         println!("  AVX-512VL: {}", features.avx512vl);
         println!("  FMA: {}", features.fma);
     }
-    
+
     #[cfg(target_arch = "aarch64")]
     {
         println!("ARM Features:");
@@ -316,13 +318,16 @@ mod tests {
     fn test_cpu_detection() {
         let features = detect_cpu_features();
         println!("Detected CPU features: {:#?}", features);
-        
+
         // 验证基本特性
         #[cfg(target_arch = "x86_64")]
         assert!(features.sse2, "SSE2 should be available on all x86_64 CPUs");
-        
+
         #[cfg(target_arch = "aarch64")]
-        assert!(features.neon, "NEON should be available on all aarch64 CPUs");
+        assert!(
+            features.neon,
+            "NEON should be available on all aarch64 CPUs"
+        );
     }
 
     #[test]

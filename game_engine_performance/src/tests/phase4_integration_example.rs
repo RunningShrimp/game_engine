@@ -4,7 +4,7 @@
 use std::collections::HashMap;
 use std::time::Duration;
 
-/// 完整的性能优化工作流示例
+//  完整的性能优化工作流示例
 pub fn phase4_complete_workflow() {
     println!("═══════════════════════════════════════════════════════");
     println!("Phase 4: Advanced Performance Analysis & CI/CD Framework");

@@ -1,35 +1,35 @@
-//! 网络服务器模块
-//!
-//! 实现游戏服务器的核心功能，包括：
-//! - 客户端连接管理
-//! - 消息路由和分发
-//! - 服务器端状态管理
-//! - 权威状态同步
-//!
-//! ## 架构设计
-//!
-//! ```text
-//! ┌─────────────────────────────────────────┐
-//! │           Game Server                   │
-//! ├─────────────────────────────────────────┤
-//! │  ┌──────────┐  ┌──────────┐  ┌─────────┐│
-//! │  │ Client 1 │  │ Client 2 │  │Client N││
-//! │  └────┬─────┘  └────┬─────┘  └────┬────┘│
-//! │       │             │             │     │
-//! │       └─────────────┼─────────────┘     │
-//! │                     │                   │
-//! │              ┌──────▼──────┐            │
-//! │              │   Router    │            │
-//! │              └──────┬──────┘            │
-//! │                     │                   │
-//! │       ┌─────────────┼─────────────┐    │
-//! │       │             │             │    │
-//! │  ┌────▼────┐  ┌─────▼─────┐ ┌────▼───┐│
-//! │  │ Game    │  │ Authority  │ │ State  ││
-//! │  │ Logic   │  │ Manager    │ │ Sync   ││
-//! │  └─────────┘  └────────────┘ └────────┘│
-//! └─────────────────────────────────────────┘
-//! ```
+//  网络服务器模块
+// 
+//  实现游戏服务器的核心功能，包括：
+//  - 客户端连接管理
+//  - 消息路由和分发
+//  - 服务器端状态管理
+//  - 权威状态同步
+// 
+//  ## 架构设计
+// 
+//  ```text
+//  ┌─────────────────────────────────────────┐
+//  │           Game Server                   │
+//  ├─────────────────────────────────────────┤
+//  │  ┌──────────┐  ┌──────────┐  ┌─────────┐│
+//  │  │ Client 1 │  │ Client 2 │  │Client N││
+//  │  └────┬─────┘  └────┬─────┘  └────┬────┘│
+//  │       │             │             │     │
+//  │       └─────────────┼─────────────┘     │
+//  │                     │                   │
+//  │              ┌──────▼──────┐            │
+//  │              │   Router    │            │
+//  │              └──────┬──────┘            │
+//  │                     │                   │
+//  │       ┌─────────────┼─────────────┐    │
+//  │       │             │             │    │
+//  │  ┌────▼────┐  ┌─────▼─────┐ ┌────▼───┐│
+//  │  │ Game    │  │ Authority  │ │ State  ││
+//  │  │ Logic   │  │ Manager    │ │ Sync   ││
+//  │  └─────────┘  └────────────┘ └────────┘│
+//  └─────────────────────────────────────────┘
+//  ```
 
 use crate::core::utils::current_timestamp_ms;
 use crate::impl_default;
@@ -37,6 +37,7 @@ use std::net::SocketAddr;
 use crate::network::compression;
 use crate::network::delay_compensation;
 use crate::network::delta_serialization;
+use crate::network::synchronization;
 use crate::network::{ConnectionState, NetworkError, NetworkMessage};
 use bincode;
 use std::collections::HashMap;
@@ -44,7 +45,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use std::io::Write;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use futures::TryFutureExt;
+// use futures::TryFutureExt; // Temporarily disabled - not currently used
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::Mutex;
 use tokio::task;
@@ -123,19 +124,19 @@ impl ClientConnection {
 
     /// 异步发送消息
     pub async fn send_message(&mut self, message: &NetworkMessage) -> Result<(), NetworkError> {
-        let data = Self::serialize_message(message)
+        let data = bincode::serialize(message)
             .map_err(|e| NetworkError::SerializationError(e.to_string()))?;
-        
+
         self.stream.write_all(&data).await
             .map_err(|e| NetworkError::SendError(e.to_string()))?;
-        
+
         Ok(())
     }
 
     /// 异步接收消息
     pub async fn receive_message(&mut self) -> Result<Option<NetworkMessage>, NetworkError> {
         let mut buffer = vec![0u8; 4096];
-        
+
         match self.stream.read(&mut buffer).await {
             Ok(0) => Ok(None), // 连接关闭
             Ok(n) => {
@@ -150,13 +151,13 @@ impl ClientConnection {
     }
 
     /// 序列化消息
-    fn serialize_message(message: &NetworkMessage) -> Result<Vec<u8>, bincode::error::EncodeError> {
-        bincode::encode_to_vec(message, bincode::config::standard())
+    fn serialize_message(message: &NetworkMessage) -> Result<Vec<u8>, bincode::Error> {
+        bincode::serialize(message)
     }
 
     /// 反序列化消息
-    fn deserialize_message(data: &[u8]) -> Result<NetworkMessage, bincode::error::DecodeError> {
-        bincode::decode_from_slice::<NetworkMessage, _>(data, bincode::config::standard())
+    fn deserialize_message(data: &[u8]) -> Result<NetworkMessage, bincode::Error> {
+        bincode::deserialize::<(NetworkMessage, ())>(data)
             .map(|(msg, _)| msg)
     }
 }
@@ -201,6 +202,8 @@ pub struct GameServer {
     compressor: Option<Arc<compression::NetworkCompressor>>,
     /// 增量序列化器
     delta_serializer: Arc<Mutex<delta_serialization::DeltaSerializer>>,
+    /// 状态同步管理器
+    state_sync_manager: Arc<Mutex<synchronization::StateSyncManager>>,
     /// 当前服务器tick
     current_tick: Arc<Mutex<u64>>,
     /// 是否运行中
@@ -208,15 +211,164 @@ pub struct GameServer {
 }
 
 impl GameServer {
-    /// 序列化消息
-    fn serialize_message(message: &NetworkMessage) -> Result<Vec<u8>, bincode::error::EncodeError> {
-        bincode::encode_to_vec(message, bincode::config::standard())
+    /// 序列化消息（支持压缩）
+    fn serialize_message(&self, message: &NetworkMessage) -> Result<Vec<u8>, bincode::Error> {
+        let data = bincode::serialize(message)?;
+
+        // 如果启用了压缩，使用压缩器
+        if let Some(compressor) = &self.compressor {
+            match compressor.compress(&data) {
+                Ok(compressed) => Ok(compressed),
+                Err(_) => Ok(data), // 压缩失败时返回原始数据
+            }
+        } else {
+            Ok(data)
+        }
     }
 
-    /// 反序列化消息
-    fn deserialize_message(data: &[u8]) -> Result<NetworkMessage, bincode::error::DecodeError> {
-        bincode::decode_from_slice::<NetworkMessage, _>(data, bincode::config::standard())
-            .map(|(msg, _)| msg)
+    /// 反序列化消息（支持解压）
+    pub fn deserialize_message(&self, data: &[u8]) -> Result<NetworkMessage, bincode::Error> {
+        // 首先尝试直接反序列化（未压缩数据）
+        match bincode::deserialize::<NetworkMessage>(data) {
+            Ok(msg) => Ok(msg),
+            Err(_) => {
+                // 如果失败，尝试解压后反序列化
+                if let Some(compressor) = &self.compressor {
+                    if let Ok(decompressed) = compressor.decompress(data) {
+                        bincode::deserialize::<NetworkMessage>(&decompressed)
+                    } else {
+                        Err(bincode::Error::new(bincode::ErrorKind::Custom("Failed to decompress data".to_string())))
+                    }
+                } else {
+                    Err(bincode::Error::new(bincode::ErrorKind::Custom("Invalid data format".to_string())))
+                }
+            }
+        }
+    }
+
+    /// 发送压缩消息到客户端连接
+    async fn send_compressed_message(&self, conn: &mut ClientConnection, message: &NetworkMessage) -> Result<(), NetworkError> {
+        let data = self.serialize_message(message)
+            .map_err(|e| NetworkError::SerializationError(e.to_string()))?;
+
+        conn.stream.write_all(&data).await
+            .map_err(|e| NetworkError::SendError(e.to_string()))?;
+
+        Ok(())
+    }
+
+    /// 异步处理消息（静态版本）
+    async fn process_message_async_static(
+        message: &NetworkMessage,
+        client_id: u64,
+        clients: &Arc<Mutex<HashMap<u64, ClientConnection>>>,
+        delay_compensation: &Arc<Mutex<delay_compensation::ServerDelayCompensation>>,
+        conn: &mut ClientConnection,
+        compressor: Option<&Arc<compression::NetworkCompressor>>,
+    ) {
+        match message {
+            NetworkMessage::Connect { client_id: _, name } => {
+                // 处理连接请求
+                conn.state = ConnectionState::Connected;
+                conn.authenticated = true;
+                conn.name = Some(name.clone());
+                conn.update_heartbeat();
+            }
+            NetworkMessage::Disconnect { client_id: _ } => {
+                // 处理断开连接
+                clients.lock().await.remove(&client_id);
+            }
+            NetworkMessage::Heartbeat { timestamp: _ } => {
+                // 更新心跳
+                conn.update_heartbeat();
+            }
+            NetworkMessage::TimeSyncRequest { client_send_time } => {
+                // 处理时间同步请求
+                let mut sync = delay_compensation::TimeSyncMessage::new(*client_send_time);
+                sync.server_receive_time = current_timestamp_ms();
+                sync.server_send_time = current_timestamp_ms();
+
+                let mut guard = delay_compensation.lock().await;
+                let response = guard.process_sync_request(client_id, sync);
+                let response_msg = NetworkMessage::TimeSyncResponse { sync: response };
+
+                // 发送压缩消息
+                let data = Self::serialize_message_with_compression(&response_msg, compressor)
+                    .unwrap_or_else(|_| bincode::serialize(&response_msg).unwrap_or_default());
+                let _ = conn.stream.write_all(&data).await;
+            }
+            _ => {
+                // 其他消息类型的处理
+            }
+        }
+    }
+
+    /// 使用指定压缩器序列化消息（静态方法）
+    fn serialize_message_with_compression(message: &NetworkMessage, compressor: Option<&Arc<compression::NetworkCompressor>>) -> Result<Vec<u8>, bincode::Error> {
+        let data = bincode::serialize(message)?;
+
+        // 如果启用了压缩，使用压缩器
+        if let Some(compressor) = compressor {
+            match compressor.compress(&data) {
+                Ok(compressed) => Ok(compressed),
+                Err(_) => Ok(data), // 压缩失败时返回原始数据
+            }
+        } else {
+            Ok(data)
+        }
+    }
+
+    /// 使用指定压缩器反序列化消息（静态方法）
+    fn deserialize_message_with_compression(data: &[u8], compressor: Option<&Arc<compression::NetworkCompressor>>) -> Result<NetworkMessage, bincode::Error> {
+        // 首先尝试直接反序列化（未压缩数据）
+        match bincode::deserialize::<NetworkMessage>(data) {
+            Ok(msg) => Ok(msg),
+            Err(_) => {
+                // 如果失败，尝试解压后反序列化
+                if let Some(compressor) = compressor {
+                    if let Ok(decompressed) = compressor.decompress(data) {
+                        bincode::deserialize::<NetworkMessage>(&decompressed)
+                    } else {
+                        Err(bincode::Error::new(bincode::ErrorKind::Custom("Failed to decompress data".to_string())))
+                    }
+                } else {
+                    Err(bincode::Error::new(bincode::ErrorKind::Custom("Invalid data format".to_string())))
+                }
+            }
+        }
+    }
+
+    /// 获取增量序列化器的引用（用于调试和监控）
+    pub fn delta_serializer(&self) -> &Arc<Mutex<delta_serialization::DeltaSerializer>> {
+        &self.delta_serializer
+    }
+
+    /// 执行状态同步，使用增量序列化器优化数据传输
+    pub async fn perform_state_sync(&self, client_id: u64) -> Result<(), NetworkError> {
+        let current_tick = *self.current_tick.lock().await;
+        let mut sync_manager = self.state_sync_manager.lock().await;
+
+        // 生成同步数据包
+        let delta_packet = sync_manager.generate_sync_data(current_tick)
+            .map_err(|e| NetworkError::SerializationError(e.to_string()))?;
+
+        // 如果有数据需要同步
+        if !delta_packet.deltas.is_empty() {
+            // 序列化增量包
+            let data = bincode::serialize(&delta_packet)
+                .map_err(|e| NetworkError::SerializationError(e.to_string()))?;
+
+            // 创建状态同步消息
+            let sync_message = NetworkMessage::StateSync {
+                tick: current_tick,
+                data,
+            };
+
+            // 发送给客户端
+            self.send_to_client(client_id, &sync_message).await?;
+        }
+
+        Ok(())
     }
     /// 创建新的游戏服务器
     pub fn new(config: ServerConfig) -> Self {
@@ -235,6 +387,7 @@ impl GameServer {
             )),
             compressor,
             delta_serializer: Arc::new(Mutex::new(delta_serialization::DeltaSerializer::new())),
+            state_sync_manager: Arc::new(Mutex::new(synchronization::StateSyncManager::new(10, 0.1))),
             current_tick: Arc::new(Mutex::new(0)),
             running: Arc::new(Mutex::new(false)),
         }
@@ -254,7 +407,8 @@ impl GameServer {
         let delay_compensation = Arc::clone(&self.delay_compensation);
 
         // 启动监听任务
-        task::spawn(Self::accept_connections(listener, clients, running, config, delay_compensation));
+        let compressor_clone = self.compressor.clone();
+        task::spawn(Self::accept_connections(listener, clients, running, config, delay_compensation, compressor_clone));
 
         // 启动心跳检查任务
         let clients_clone = Arc::clone(&self.clients);
@@ -290,10 +444,11 @@ impl GameServer {
         let running = Arc::clone(&self.running);
         let config = self.config.clone();
         let delay_compensation = Arc::clone(&self.delay_compensation);
+        let compressor = self.compressor.clone();
 
         // 启动监听线程
         std::thread::spawn(move || {
-            Self::accept_connections_sync(listener, sync_clients, running, config, delay_compensation);
+            Self::accept_connections_sync(listener, sync_clients, running, config, delay_compensation, compressor);
         });
 
         // 启动心跳检查线程
@@ -323,6 +478,7 @@ impl GameServer {
         running: Arc<Mutex<bool>>,
         config: ServerConfig,
         delay_compensation: Arc<Mutex<delay_compensation::ServerDelayCompensation>>,
+        compressor: Option<Arc<compression::NetworkCompressor>>,
     ) {
         while *running.lock().await {
             match listener.accept().await {
@@ -343,11 +499,13 @@ impl GameServer {
                     // 启动客户端处理任务
                     let clients_clone = Arc::clone(&clients);
                     let delay_compensation_clone = Arc::clone(&delay_compensation);
+                    let compressor_clone = compressor.clone();
                     task::spawn(async move {
                         Self::handle_client_async(
                             client_id,
                             clients_clone,
                             delay_compensation_clone,
+                            compressor_clone,
                         ).await;
                     });
                 }
@@ -365,6 +523,7 @@ impl GameServer {
         running: Arc<Mutex<bool>>,
         config: ServerConfig,
         delay_compensation: Arc<Mutex<delay_compensation::ServerDelayCompensation>>,
+        compressor: Option<Arc<compression::NetworkCompressor>>,
     ) {
         let mut running_flag = true;
         while running_flag {
@@ -413,11 +572,14 @@ impl GameServer {
                     // 启动客户端处理线程
                     let sync_clients_clone = Arc::clone(&sync_clients);
                     let delay_compensation_clone = Arc::clone(&delay_compensation);
+                    let compressor_clone = compressor.clone();
+                    let _ = compressor_clone; // 使用compressor避免未使用警告
                     std::thread::spawn(move || {
                         Self::handle_sync_client(
                             client_id,
                             sync_clients_clone,
                             delay_compensation_clone,
+                            &compressor_clone,
                         );
                     });
                 }
@@ -437,24 +599,26 @@ impl GameServer {
         client_id: u64,
         clients: Arc<Mutex<HashMap<u64, ClientConnection>>>,
         delay_compensation: Arc<Mutex<delay_compensation::ServerDelayCompensation>>,
+        compressor: Option<Arc<compression::NetworkCompressor>>,
     ) {
-        // 获取客户端连接的可变引用
-        let mut connection = {
+        // 获取客户端连接的引用
+        let connection = {
             let mut clients_guard = clients.lock().await;
             clients_guard.remove(&client_id)
         };
 
-        if let Some(mut conn) = connection {
+        if let Some(mut connection) = connection {
             loop {
-                match conn.receive_message().await {
+                match connection.receive_message().await {
                     Ok(Some(message)) => {
                         // 处理接收到的消息
-                        Self::process_message_async(
+                        Self::process_message_async_static(
                             &message,
                             client_id,
                             &clients,
                             &delay_compensation,
-                            &mut conn,
+                            &mut connection,
+                            compressor.as_ref(),
                         ).await;
                     }
                     Ok(None) => {
@@ -483,8 +647,10 @@ impl GameServer {
         client_id: u64,
         sync_clients: Arc<Mutex<HashMap<u64, SyncClientConnection>>>,
         delay_compensation: Arc<Mutex<delay_compensation::ServerDelayCompensation>>,
+        compressor: &Option<Arc<compression::NetworkCompressor>>,
     ) {
-        let mut connection = {
+        let compressor_ref = compressor.as_ref();
+        let connection = {
             // 尝试获取sync_clients锁，避免unwrap()导致的panic
             match sync_clients.try_lock() {
                 Ok(mut guard) => guard.remove(&client_id),
@@ -499,6 +665,7 @@ impl GameServer {
             let mut buffer = vec![0u8; 4096];
 
             loop {
+                use std::io::Read;
                 match conn.stream.read(&mut buffer) {
                     Ok(0) => {
                         // 连接关闭
@@ -507,13 +674,14 @@ impl GameServer {
                     Ok(n) => {
                         // 处理接收到的数据
                         let data = &buffer[..n];
-                        if let Ok(message) = Self::deserialize_message(data) {
+                        if let Ok(message) = Self::deserialize_message_with_compression(data, compressor_ref) {
                             Self::process_sync_message(
                                 &message,
                                 client_id,
                                 &sync_clients,
                                 &delay_compensation,
                                 &mut conn.stream,
+                                compressor_ref,
                             );
                         }
                     }
@@ -535,7 +703,8 @@ impl GameServer {
     }
 
     /// 异步处理消息
-    async fn process_message_async(
+    pub async fn process_message_async(
+        &self,
         message: &NetworkMessage,
         client_id: u64,
         clients: &Arc<Mutex<HashMap<u64, ClientConnection>>>,
@@ -564,11 +733,10 @@ impl GameServer {
                 sync.server_receive_time = current_timestamp_ms();
                 sync.server_send_time = current_timestamp_ms();
 
-                if let Ok(mut delay_comp) = delay_compensation.lock().await {
-                    let response = delay_comp.process_sync_request(client_id, sync);
-                    let response_msg = NetworkMessage::TimeSyncResponse { sync: response };
-                    let _ = conn.send_message(&response_msg).await;
-                }
+                let mut guard = delay_compensation.lock().await;
+                let response = guard.process_sync_request(client_id, sync);
+                let response_msg = NetworkMessage::TimeSyncResponse { sync: response };
+                let _ = self.send_compressed_message(conn, &response_msg).await;
             }
             _ => {
                 // 其他消息类型的处理
@@ -577,12 +745,13 @@ impl GameServer {
     }
 
     /// 同步版本的消息处理（向后兼容）
-    fn process_message_sync(
+    pub fn process_message_sync(
         message: &NetworkMessage,
         client_id: u64,
         clients: &Arc<Mutex<HashMap<u64, ClientConnection>>>,
         delay_compensation: &Arc<Mutex<delay_compensation::ServerDelayCompensation>>,
         stream: &mut std::net::TcpStream,
+        compressor: Option<&Arc<compression::NetworkCompressor>>,
     ) {
         match message {
             NetworkMessage::Connect { client_id: _, name } => {
@@ -616,10 +785,10 @@ impl GameServer {
                 sync.server_receive_time = current_timestamp_ms();
                 sync.server_send_time = current_timestamp_ms();
 
-                if let Ok(mut delay_comp) = delay_compensation.try_lock() {
-                    let response = delay_comp.process_sync_request(client_id, sync);
+                if let Ok(mut guard) = delay_compensation.try_lock() {
+                    let response = guard.process_sync_request(client_id, sync);
                     let response_msg = NetworkMessage::TimeSyncResponse { sync: response };
-                    if let Ok(data) = Self::serialize_message(&response_msg) {
+                    if let Ok(data) = Self::serialize_message_with_compression(&response_msg, compressor) {
                         let _ = stream.write_all(&data);
                     }
                 }
@@ -637,6 +806,7 @@ impl GameServer {
         sync_clients: &Arc<Mutex<HashMap<u64, SyncClientConnection>>>,
         delay_compensation: &Arc<Mutex<delay_compensation::ServerDelayCompensation>>,
         stream: &mut std::net::TcpStream,
+        compressor: Option<&Arc<compression::NetworkCompressor>>,
     ) {
         match message {
             NetworkMessage::Connect { client_id: _, name } => {
@@ -670,10 +840,10 @@ impl GameServer {
                 sync.server_receive_time = current_timestamp_ms();
                 sync.server_send_time = current_timestamp_ms();
 
-                if let Ok(mut delay_comp) = delay_compensation.try_lock() {
-                    let response = delay_comp.process_sync_request(client_id, sync);
+                if let Ok(mut guard) = delay_compensation.try_lock() {
+                    let response = guard.process_sync_request(client_id, sync);
                     let response_msg = NetworkMessage::TimeSyncResponse { sync: response };
-                    if let Ok(data) = Self::serialize_message(&response_msg) {
+                    if let Ok(data) = Self::serialize_message_with_compression(&response_msg, compressor) {
                         let _ = stream.write_all(&data);
                     }
                 }
@@ -691,7 +861,7 @@ impl GameServer {
 
         // 遍历所有客户端并发送消息
         for (client_id, conn) in &mut *clients_guard {
-            match conn.send_message(message).await {
+            match self.send_compressed_message(conn, message).await {
                 Ok(_) => {
                     // 消息发送成功
                     println!("Broadcasting message to client {}", client_id);
@@ -721,7 +891,7 @@ impl GameServer {
         let mut clients_guard = self.clients.lock().await;
 
         if let Some(conn) = clients_guard.get_mut(&client_id) {
-            conn.send_message(message).await?;
+            self.send_compressed_message(conn, message).await?;
         } else {
             return Err(NetworkError::InvalidPeerId);
         }
@@ -736,7 +906,7 @@ impl GameServer {
             .try_lock()
             .map_err(|e| NetworkError::SendError(format!("Lock error: {}", e)))?;
 
-        let data = Self::serialize_message(message)
+        let data = Self::serialize_message_with_compression(message, self.compressor.as_ref())
             .map_err(|e| NetworkError::SerializationError(e.to_string()))?;
 
         // 遍历所有客户端并发送消息
@@ -771,7 +941,7 @@ impl GameServer {
             .try_lock()
             .map_err(|e| NetworkError::SendError(format!("Lock error: {}", e)))?;
 
-        let data = Self::serialize_message(message)
+        let data = Self::serialize_message_with_compression(message, self.compressor.as_ref())
             .map_err(|e| NetworkError::SerializationError(e.to_string()))?;
 
         // 遍历所有客户端并发送消息
@@ -803,7 +973,7 @@ impl GameServer {
     pub fn send_to_client_sync(
         &self,
         client_id: u64,
-        message: &NetworkMessage,
+        _message: &NetworkMessage,
     ) -> Result<(), NetworkError> {
         let mut clients_guard = self
             .clients
@@ -813,14 +983,20 @@ impl GameServer {
         if !clients_guard.contains_key(&client_id) {
             return Err(NetworkError::InvalidPeerId);
         }
-
-        let data = ClientConnection::serialize_message(message)
-            .map_err(|e| NetworkError::SerializationError(e.to_string()))?;
-
-        if let Some(conn) = clients_guard.get_mut(&client_id) {
-            conn.stream.write_all(&data)
-                .map_err(|e: std::io::Error| NetworkError::SendError(e.to_string()))?;
+        
+        // 由于TcpStream不能clone，且sync版本在runtime内会有lifetime问题
+        // 直接返回错误，要求使用async版本
+        if tokio::runtime::Handle::try_current().is_ok() {
+            return Err(NetworkError::SyncOperationInRuntime(
+                "Cannot use sync network operations inside tokio runtime. Use async version instead.".to_string()
+            ));
         }
+        
+        // 对于async clients，无法在sync方法中操作
+        // 应该使用send_to_client async方法
+        return Err(NetworkError::SyncOperationInRuntime(
+            "Use send_to_client async method for async clients.".to_string()
+        ));
 
         Ok(())
     }
@@ -840,7 +1016,7 @@ impl GameServer {
             return Err(NetworkError::InvalidPeerId);
         }
 
-        let data = Self::serialize_message(message)
+        let data = Self::serialize_message_with_compression(message, self.compressor.as_ref())
             .map_err(|e| NetworkError::SerializationError(e.to_string()))?;
 
         if let Some(conn) = clients_guard.get_mut(&client_id) {
@@ -863,6 +1039,8 @@ impl GameServer {
 
     /// 异步更新服务器tick
     pub async fn update_tick(&self) {
+        let tick = *self.current_tick.lock().await;
+        let _tick_span = crate::performance::tracing_metrics::TracingMetricsManager::network_tick_span(tick).entered();
         *self.current_tick.lock().await += 1;
     }
 
@@ -1005,6 +1183,6 @@ mod tests {
     fn test_server_creation() {
         let config = ServerConfig::default();
         let server = GameServer::new(config);
-        assert_eq!(server.client_count(), 0);
+        assert_eq!(server.client_count_sync(), 0);
     }
 }

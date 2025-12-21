@@ -102,29 +102,64 @@ impl GpuMesh {
     pub fn create_test_cube(device: &wgpu::Device) -> Self {
         let vertices = [
             // Front face
-            Vertex3D { pos: [-1.0, -1.0,  1.0], normal: [0.0, 0.0, 1.0], uv: [0.0, 0.0], tangent: [1.0, 0.0, 0.0, 1.0] },
-            Vertex3D { pos: [ 1.0, -1.0,  1.0], normal: [0.0, 0.0, 1.0], uv: [1.0, 0.0], tangent: [1.0, 0.0, 0.0, 1.0] },
-            Vertex3D { pos: [ 1.0,  1.0,  1.0], normal: [0.0, 0.0, 1.0], uv: [1.0, 1.0], tangent: [1.0, 0.0, 0.0, 1.0] },
-            Vertex3D { pos: [-1.0,  1.0,  1.0], normal: [0.0, 0.0, 1.0], uv: [0.0, 1.0], tangent: [1.0, 0.0, 0.0, 1.0] },
+            Vertex3D {
+                pos: [-1.0, -1.0, 1.0],
+                normal: [0.0, 0.0, 1.0],
+                uv: [0.0, 0.0],
+                tangent: [1.0, 0.0, 0.0, 1.0],
+            },
+            Vertex3D {
+                pos: [1.0, -1.0, 1.0],
+                normal: [0.0, 0.0, 1.0],
+                uv: [1.0, 0.0],
+                tangent: [1.0, 0.0, 0.0, 1.0],
+            },
+            Vertex3D {
+                pos: [1.0, 1.0, 1.0],
+                normal: [0.0, 0.0, 1.0],
+                uv: [1.0, 1.0],
+                tangent: [1.0, 0.0, 0.0, 1.0],
+            },
+            Vertex3D {
+                pos: [-1.0, 1.0, 1.0],
+                normal: [0.0, 0.0, 1.0],
+                uv: [0.0, 1.0],
+                tangent: [1.0, 0.0, 0.0, 1.0],
+            },
             // Back face
-            Vertex3D { pos: [-1.0, -1.0, -1.0], normal: [0.0, 0.0, -1.0], uv: [1.0, 0.0], tangent: [-1.0, 0.0, 0.0, 1.0] },
-            Vertex3D { pos: [ 1.0, -1.0, -1.0], normal: [0.0, 0.0, -1.0], uv: [0.0, 0.0], tangent: [-1.0, 0.0, 0.0, 1.0] },
-            Vertex3D { pos: [ 1.0,  1.0, -1.0], normal: [0.0, 0.0, -1.0], uv: [0.0, 1.0], tangent: [-1.0, 0.0, 0.0, 1.0] },
-            Vertex3D { pos: [-1.0,  1.0, -1.0], normal: [0.0, 0.0, -1.0], uv: [1.0, 1.0], tangent: [-1.0, 0.0, 0.0, 1.0] },
+            Vertex3D {
+                pos: [-1.0, -1.0, -1.0],
+                normal: [0.0, 0.0, -1.0],
+                uv: [1.0, 0.0],
+                tangent: [-1.0, 0.0, 0.0, 1.0],
+            },
+            Vertex3D {
+                pos: [1.0, -1.0, -1.0],
+                normal: [0.0, 0.0, -1.0],
+                uv: [0.0, 0.0],
+                tangent: [-1.0, 0.0, 0.0, 1.0],
+            },
+            Vertex3D {
+                pos: [1.0, 1.0, -1.0],
+                normal: [0.0, 0.0, -1.0],
+                uv: [0.0, 1.0],
+                tangent: [-1.0, 0.0, 0.0, 1.0],
+            },
+            Vertex3D {
+                pos: [-1.0, 1.0, -1.0],
+                normal: [0.0, 0.0, -1.0],
+                uv: [1.0, 1.0],
+                tangent: [-1.0, 0.0, 0.0, 1.0],
+            },
         ];
 
         let indices: [u32; 36] = [
             // Front
-            0, 1, 2, 2, 3, 0,
-            // Back
-            4, 6, 5, 6, 4, 7,
-            // Top
-            3, 2, 6, 6, 7, 3,
-            // Bottom
-            0, 5, 1, 5, 0, 4,
-            // Right
-            1, 5, 6, 6, 2, 1,
-            // Left
+            0, 1, 2, 2, 3, 0, // Back
+            4, 6, 5, 6, 4, 7, // Top
+            3, 2, 6, 6, 7, 3, // Bottom
+            0, 5, 1, 5, 0, 4, // Right
+            1, 5, 6, 6, 2, 1, // Left
             0, 3, 7, 7, 4, 0,
         ];
 
@@ -134,10 +169,30 @@ impl GpuMesh {
     /// 创建一个简单的平面网格用于测试
     pub fn create_test_plane(device: &wgpu::Device) -> Self {
         let vertices = [
-            Vertex3D { pos: [-1.0, 0.0, -1.0], normal: [0.0, 1.0, 0.0], uv: [0.0, 0.0], tangent: [1.0, 0.0, 0.0, 1.0] },
-            Vertex3D { pos: [ 1.0, 0.0, -1.0], normal: [0.0, 1.0, 0.0], uv: [1.0, 0.0], tangent: [1.0, 0.0, 0.0, 1.0] },
-            Vertex3D { pos: [ 1.0, 0.0,  1.0], normal: [0.0, 1.0, 0.0], uv: [1.0, 1.0], tangent: [1.0, 0.0, 0.0, 1.0] },
-            Vertex3D { pos: [-1.0, 0.0,  1.0], normal: [0.0, 1.0, 0.0], uv: [0.0, 1.0], tangent: [1.0, 0.0, 0.0, 1.0] },
+            Vertex3D {
+                pos: [-1.0, 0.0, -1.0],
+                normal: [0.0, 1.0, 0.0],
+                uv: [0.0, 0.0],
+                tangent: [1.0, 0.0, 0.0, 1.0],
+            },
+            Vertex3D {
+                pos: [1.0, 0.0, -1.0],
+                normal: [0.0, 1.0, 0.0],
+                uv: [1.0, 0.0],
+                tangent: [1.0, 0.0, 0.0, 1.0],
+            },
+            Vertex3D {
+                pos: [1.0, 0.0, 1.0],
+                normal: [0.0, 1.0, 0.0],
+                uv: [1.0, 1.0],
+                tangent: [1.0, 0.0, 0.0, 1.0],
+            },
+            Vertex3D {
+                pos: [-1.0, 0.0, 1.0],
+                normal: [0.0, 1.0, 0.0],
+                uv: [0.0, 1.0],
+                tangent: [1.0, 0.0, 0.0, 1.0],
+            },
         ];
 
         let indices: [u32; 6] = [0, 1, 2, 2, 3, 0];
@@ -171,11 +226,10 @@ impl GpuMesh {
 }
 
 /// 用于测试的 Mock GpuMesh 工厂
-/// 
+///
 /// 提供创建测试用网格的辅助函数，无需手动构建顶点数据
 #[cfg(test)]
 pub mod test_helpers {
-    use super::*;
 
     /// 测试辅助结构，用于在没有 wgpu 设备的情况下进行测试
     pub struct MockMeshData {
@@ -220,8 +274,8 @@ pub mod test_helpers {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::test_helpers::*;
+    use super::*;
 
     #[test]
     fn test_mock_mesh_data_cube() {

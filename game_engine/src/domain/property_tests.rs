@@ -1,13 +1,10 @@
-//! 领域对象属性测试
-//!
-//! 使用proptest为领域对象和验证逻辑添加属性测试
+//  领域对象属性测试
+// 
+//  使用proptest为领域对象和验证逻辑添加属性测试
 
 #[cfg(test)]
 mod tests {
-    use crate::domain::entity::{EntityId, GameEntity};
-    use crate::domain::physics::{
-        Collider, ColliderId, RigidBody, RigidBodyId, RigidBodyType, ShapeType,
-    };
+    use crate::domain::physics::{Collider, ColliderId, RigidBody, RigidBodyId, RigidBodyType};
     use crate::domain::value_objects::{
         Duration, Mass, Position, Rotation, Scale, Transform, Velocity, Volume,
     };
@@ -226,9 +223,9 @@ mod tests {
                 ColliderId(1),
                 Vec3::new(x, y, z),
             );
-            prop_assert!(collider.half_extents.x > 0.0);
-            prop_assert!(collider.half_extents.y > 0.0);
-            prop_assert!(collider.half_extents.z > 0.0);
+            prop_assert!(collider.half_extents().x > 0.0);
+            prop_assert!(collider.half_extents().y > 0.0);
+            prop_assert!(collider.half_extents().z > 0.0);
         }
 
         #[test]
@@ -239,7 +236,7 @@ mod tests {
                 ColliderId(1),
                 radius,
             );
-            prop_assert!(collider.radius > 0.0);
+            prop_assert!(collider.radius() > 0.0);
         }
 
         #[test]
@@ -585,7 +582,7 @@ mod tests {
             volume_value in 0.0f32..=1.0
         ) {
             use crate::domain::audio::{AudioSource, AudioSourceId};
-            
+
             let mut source = AudioSource::new(AudioSourceId(1));
             if let Some(volume) = Volume::new(volume_value) {
                 if source.set_volume(volume).is_ok() {
@@ -600,7 +597,7 @@ mod tests {
             position in 0.0f32..1000.0
         ) {
             use crate::domain::audio::{AudioSource, AudioSourceId};
-            
+
             let mut source = AudioSource::new(AudioSourceId(1));
             source.playback_position = position;
             prop_assert!(source.playback_position >= 0.0);
@@ -612,16 +609,19 @@ mod tests {
     #[test]
     fn audio_source_state_transitions_valid() {
         use crate::domain::audio::{AudioSource, AudioSourceId, AudioSourceState};
-        
+
         let source = AudioSource::new(AudioSourceId(1));
-        
+
         // 初始状态应该是Stopped
         assert_eq!(source.state, AudioSourceState::Stopped);
-        
+
         // 验证状态是有效值之一
         assert!(matches!(
             source.state,
-            AudioSourceState::Stopped | AudioSourceState::Playing | AudioSourceState::Paused | AudioSourceState::Loading
+            AudioSourceState::Stopped
+                | AudioSourceState::Playing
+                | AudioSourceState::Paused
+                | AudioSourceState::Loading
         ));
     }
 }

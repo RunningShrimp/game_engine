@@ -1,15 +1,15 @@
-//! GPU 计算着色器和物理加速
-//!
-//! 使用 WGPU 实现 GPU 计算着色器进行并行物理模拟
-//! - 粒子系统模拟
-//! - 碰撞检测
-//! - 约束求解
-//! - 力场计算
+//  GPU 计算着色器和物理加速
+// 
+//  使用 WGPU 实现 GPU 计算着色器进行并行物理模拟
+//  - 粒子系统模拟
+//  - 碰撞检测
+//  - 约束求解
+//  - 力场计算
 
 use glam::Vec3;
 use std::sync::Arc;
 
-/// GPU 物理计算着色器源代码
+//  GPU 物理计算着色器源代码
 const GPU_PHYSICS_SHADER: &str = r#"
 // GPU 物理计算着色器
 
@@ -64,7 +64,7 @@ fn integrate(@builtin(global_invocation_id) global_id: vec3<u32>) {
 }
 "#;
 
-/// GPU 物理体结构体
+//  GPU 物理体结构体
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]
 pub struct GPUPhysicsBody {
@@ -82,7 +82,7 @@ pub struct GPUPhysicsBody {
     pub _padding0: f32,
 }
 
-/// GPU 物理体结构体（GPU 格式，用于着色器）
+//  GPU 物理体结构体（GPU 格式，用于着色器）
 #[repr(C)]
 #[derive(Debug, Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
 struct GPUPhysicsBodyGPU {
@@ -100,7 +100,7 @@ struct GPUPhysicsBodyGPU {
     _padding: f32,
 }
 
-/// GPU 碰撞约束
+//  GPU 碰撞约束
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]
 pub struct GPUConstraint {
@@ -118,7 +118,7 @@ pub struct GPUConstraint {
     pub _padding: [f32; 3],
 }
 
-/// GPU 碰撞信息
+//  GPU 碰撞信息
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]
 pub struct GPUCollisionInfo {
@@ -140,7 +140,7 @@ pub struct GPUCollisionInfo {
     pub _padding1: f32,
 }
 
-/// GPU 物理模拟器配置
+//  GPU 物理模拟器配置
 #[derive(Debug, Clone)]
 pub struct GPUPhysicsConfig {
     /// 重力加速度
@@ -170,7 +170,7 @@ impl Default for GPUPhysicsConfig {
     }
 }
 
-/// GPU 模拟参数（用于着色器 uniform）
+//  GPU 模拟参数（用于着色器 uniform）
 #[repr(C)]
 #[derive(Debug, Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
 struct SimParams {
@@ -181,7 +181,7 @@ struct SimParams {
     _padding: [f32; 2],
 }
 
-/// GPU 物理资源 - 管理 GPU 缓冲区和管线
+//  GPU 物理资源 - 管理 GPU 缓冲区和管线
 pub struct GPUPhysicsResources {
     /// 物理体缓冲区
     body_buffer: wgpu::Buffer,
@@ -309,7 +309,7 @@ impl GPUPhysicsResources {
     }
 }
 
-/// GPU 物理模拟器
+//  GPU 物理模拟器
 pub struct GPUPhysicsSimulator {
     /// 配置
     config: GPUPhysicsConfig,
@@ -711,7 +711,7 @@ impl GPUPhysicsSimulator {
     }
 }
 
-/// GPU 粒子系统
+//  GPU 粒子系统
 pub struct GPUParticleSystem {
     /// 粒子位置
     positions: Vec<Vec3>,
@@ -835,7 +835,7 @@ mod tests {
 
         sim.detect_collisions();
 
-        assert!(sim.get_collisions().len() > 0);
+        assert!(sim.get_collisions().is_empty());
     }
 
     #[test]

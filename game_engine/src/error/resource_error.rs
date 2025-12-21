@@ -1,8 +1,8 @@
-//! 资源管理错误类型
-//!
-//! 定义了资源管理相关的所有错误类型，包括资源加载、缓存、流式传输等。
+//  资源管理错误类型
+// 
+//  定义了资源管理相关的所有错误类型，包括资源加载、缓存、流式传输等。
 
-use crate::error::{ErrorSeverity, ErrorCategory};
+use crate::error::{ErrorCategory, ErrorSeverity};
 use thiserror::Error;
 
 /// 资源管理错误
@@ -17,7 +17,6 @@ pub enum ResourceError {
         /// 资源路径
         path: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -29,7 +28,6 @@ pub enum ResourceError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -41,7 +39,6 @@ pub enum ResourceError {
         /// 期望格式
         expected: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -53,7 +50,6 @@ pub enum ResourceError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -65,7 +61,6 @@ pub enum ResourceError {
         /// 缺失的依赖
         dependency: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -75,7 +70,6 @@ pub enum ResourceError {
         /// 资源路径
         path: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -85,7 +79,6 @@ pub enum ResourceError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -97,7 +90,6 @@ pub enum ResourceError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -109,7 +101,6 @@ pub enum ResourceError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -121,7 +112,6 @@ pub enum ResourceError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -133,7 +123,6 @@ pub enum ResourceError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -145,7 +134,6 @@ pub enum ResourceError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -157,7 +145,6 @@ pub enum ResourceError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -171,7 +158,6 @@ pub enum ResourceError {
         /// 实际版本
         found: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -183,7 +169,6 @@ pub enum ResourceError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -195,7 +180,6 @@ pub enum ResourceError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -207,7 +191,6 @@ pub enum ResourceError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -219,7 +202,6 @@ pub enum ResourceError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -231,7 +213,6 @@ pub enum ResourceError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -243,7 +224,6 @@ pub enum ResourceError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -255,7 +235,6 @@ pub enum ResourceError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -265,7 +244,6 @@ pub enum ResourceError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -277,7 +255,6 @@ pub enum ResourceError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -287,7 +264,6 @@ pub enum ResourceError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -297,7 +273,6 @@ pub enum ResourceError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 }
@@ -312,10 +287,7 @@ impl ResourceError {
     }
 
     /// 创建资源加载失败错误
-    pub fn load_failed(
-        path: impl Into<String>,
-        message: impl Into<String>,
-    ) -> Self {
+    pub fn load_failed(path: impl Into<String>, message: impl Into<String>) -> Self {
         Self::LoadFailed {
             path: path.into(),
             message: message.into(),
@@ -324,10 +296,7 @@ impl ResourceError {
     }
 
     /// 创建无效格式错误
-    pub fn invalid_format(
-        path: impl Into<String>,
-        expected: impl Into<String>,
-    ) -> Self {
+    pub fn invalid_format(path: impl Into<String>, expected: impl Into<String>) -> Self {
         Self::InvalidFormat {
             path: path.into(),
             expected: expected.into(),
@@ -336,10 +305,7 @@ impl ResourceError {
     }
 
     /// 创建解析错误
-    pub fn parsing(
-        path: impl Into<String>,
-        message: impl Into<String>,
-    ) -> Self {
+    pub fn parsing(path: impl Into<String>, message: impl Into<String>) -> Self {
         Self::Parsing {
             path: path.into(),
             message: message.into(),
@@ -348,10 +314,7 @@ impl ResourceError {
     }
 
     /// 创建依赖缺失错误
-    pub fn dependency_missing(
-        resource: impl Into<String>,
-        dependency: impl Into<String>,
-    ) -> Self {
+    pub fn dependency_missing(resource: impl Into<String>, dependency: impl Into<String>) -> Self {
         Self::DependencyMissing {
             resource: resource.into(),
             dependency: dependency.into(),
@@ -376,10 +339,7 @@ impl ResourceError {
     }
 
     /// 创建内存不足错误
-    pub fn out_of_memory(
-        resource: impl Into<String>,
-        message: impl Into<String>,
-    ) -> Self {
+    pub fn out_of_memory(resource: impl Into<String>, message: impl Into<String>) -> Self {
         Self::OutOfMemory {
             resource: resource.into(),
             message: message.into(),
@@ -388,10 +348,7 @@ impl ResourceError {
     }
 
     /// 创建上传错误
-    pub fn upload(
-        resource: impl Into<String>,
-        message: impl Into<String>,
-    ) -> Self {
+    pub fn upload(resource: impl Into<String>, message: impl Into<String>) -> Self {
         Self::Upload {
             resource: resource.into(),
             message: message.into(),
@@ -400,10 +357,7 @@ impl ResourceError {
     }
 
     /// 创建下载错误
-    pub fn download(
-        url: impl Into<String>,
-        message: impl Into<String>,
-    ) -> Self {
+    pub fn download(url: impl Into<String>, message: impl Into<String>) -> Self {
         Self::Download {
             url: url.into(),
             message: message.into(),
@@ -412,10 +366,7 @@ impl ResourceError {
     }
 
     /// 创建压缩错误
-    pub fn compression(
-        resource: impl Into<String>,
-        message: impl Into<String>,
-    ) -> Self {
+    pub fn compression(resource: impl Into<String>, message: impl Into<String>) -> Self {
         Self::Compression {
             resource: resource.into(),
             message: message.into(),
@@ -424,10 +375,7 @@ impl ResourceError {
     }
 
     /// 创建解压缩错误
-    pub fn decompression(
-        resource: impl Into<String>,
-        message: impl Into<String>,
-    ) -> Self {
+    pub fn decompression(resource: impl Into<String>, message: impl Into<String>) -> Self {
         Self::Decompression {
             resource: resource.into(),
             message: message.into(),
@@ -436,10 +384,7 @@ impl ResourceError {
     }
 
     /// 创建验证错误
-    pub fn validation(
-        resource: impl Into<String>,
-        message: impl Into<String>,
-    ) -> Self {
+    pub fn validation(resource: impl Into<String>, message: impl Into<String>) -> Self {
         Self::Validation {
             resource: resource.into(),
             message: message.into(),
@@ -462,10 +407,7 @@ impl ResourceError {
     }
 
     /// 创建权限错误
-    pub fn permission(
-        path: impl Into<String>,
-        message: impl Into<String>,
-    ) -> Self {
+    pub fn permission(path: impl Into<String>, message: impl Into<String>) -> Self {
         Self::Permission {
             path: path.into(),
             message: message.into(),
@@ -474,10 +416,7 @@ impl ResourceError {
     }
 
     /// 创建并发访问错误
-    pub fn concurrent_access(
-        resource: impl Into<String>,
-        message: impl Into<String>,
-    ) -> Self {
+    pub fn concurrent_access(resource: impl Into<String>, message: impl Into<String>) -> Self {
         Self::ConcurrentAccess {
             resource: resource.into(),
             message: message.into(),
@@ -486,10 +425,7 @@ impl ResourceError {
     }
 
     /// 创建流式传输错误
-    pub fn streaming(
-        resource: impl Into<String>,
-        message: impl Into<String>,
-    ) -> Self {
+    pub fn streaming(resource: impl Into<String>, message: impl Into<String>) -> Self {
         Self::Streaming {
             resource: resource.into(),
             message: message.into(),
@@ -498,10 +434,7 @@ impl ResourceError {
     }
 
     /// 创建热重载错误
-    pub fn hot_reload(
-        resource: impl Into<String>,
-        message: impl Into<String>,
-    ) -> Self {
+    pub fn hot_reload(resource: impl Into<String>, message: impl Into<String>) -> Self {
         Self::HotReload {
             resource: resource.into(),
             message: message.into(),
@@ -510,10 +443,7 @@ impl ResourceError {
     }
 
     /// 创建资源包错误
-    pub fn bundle(
-        bundle: impl Into<String>,
-        message: impl Into<String>,
-    ) -> Self {
+    pub fn bundle(bundle: impl Into<String>, message: impl Into<String>) -> Self {
         Self::Bundle {
             bundle: bundle.into(),
             message: message.into(),
@@ -522,10 +452,7 @@ impl ResourceError {
     }
 
     /// 创建元数据错误
-    pub fn metadata(
-        resource: impl Into<String>,
-        message: impl Into<String>,
-    ) -> Self {
+    pub fn metadata(resource: impl Into<String>, message: impl Into<String>) -> Self {
         Self::Metadata {
             resource: resource.into(),
             message: message.into(),
@@ -534,10 +461,7 @@ impl ResourceError {
     }
 
     /// 创建引用错误
-    pub fn reference(
-        reference: impl Into<String>,
-        message: impl Into<String>,
-    ) -> Self {
+    pub fn reference(reference: impl Into<String>, message: impl Into<String>) -> Self {
         Self::Reference {
             reference: reference.into(),
             message: message.into(),
@@ -554,10 +478,7 @@ impl ResourceError {
     }
 
     /// 创建生命周期错误
-    pub fn lifecycle(
-        resource: impl Into<String>,
-        message: impl Into<String>,
-    ) -> Self {
+    pub fn lifecycle(resource: impl Into<String>, message: impl Into<String>) -> Self {
         Self::Lifecycle {
             resource: resource.into(),
             message: message.into(),
@@ -582,10 +503,7 @@ impl ResourceError {
     }
 
     /// 创建带有严重级别的通用资源错误
-    pub fn general_with_severity(
-        message: impl Into<String>,
-        severity: ErrorSeverity,
-    ) -> Self {
+    pub fn general_with_severity(message: impl Into<String>, severity: ErrorSeverity) -> Self {
         Self::General {
             message: message.into(),
             severity,
@@ -697,9 +615,7 @@ impl ResourceError {
 impl From<std::io::Error> for ResourceError {
     fn from(err: std::io::Error) -> Self {
         match err.kind() {
-            std::io::ErrorKind::NotFound => {
-                ResourceError::not_found(err.to_string())
-            }
+            std::io::ErrorKind::NotFound => ResourceError::not_found(err.to_string()),
             std::io::ErrorKind::PermissionDenied => {
                 ResourceError::permission(err.to_string(), "Access denied")
             }
@@ -753,7 +669,7 @@ mod tests {
     fn test_from_io_error() {
         let io_err = std::io::Error::new(std::io::ErrorKind::NotFound, "File not found");
         let resource_err: ResourceError = io_err.into();
-        
+
         assert!(matches!(resource_err, ResourceError::NotFound { .. }));
         assert_eq!(resource_err.severity(), ErrorSeverity::Error);
     }

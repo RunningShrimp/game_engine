@@ -1,32 +1,32 @@
-//! 渲染领域对象模块
-//!
-//! 实现富领域对象设计模式，将渲染业务逻辑封装到领域对象中。
-//!
-//! ## 设计原则
-//!
-//! - **RenderObject**: 封装渲染对象的业务逻辑（可见性、LOD、变换）
-//! - **RenderStrategy**: 封装渲染策略决策（批次选择、实例化策略）
-//! - **RenderScene**: 聚合根，管理整个渲染场景
-//!
-//! ## 使用示例
-//!
-//! ```ignore
-//! use game_engine::domain::render::{RenderObject, RenderStrategy, RenderScene};
-//!
-//! // 创建渲染对象
-//! let mut render_obj = RenderObject::new(mesh, transform);
-//! render_obj.update_visibility(&frustum);
-//! render_obj.select_lod(distance, &lod_selector);
-//!
-//! // 创建渲染场景
-//! let mut scene = RenderScene::new();
-//! scene.add_object(render_obj);
-//! scene.build_render_commands(&strategy);
-//! ```
+//  渲染领域对象模块
+// 
+//  实现富领域对象设计模式，将渲染业务逻辑封装到领域对象中。
+// 
+//  ## 设计原则
+// 
+//  - **RenderObject**: 封装渲染对象的业务逻辑（可见性、LOD、变换）
+//  - **RenderStrategy**: 封装渲染策略决策（批次选择、实例化策略）
+//  - **RenderScene**: 聚合根，管理整个渲染场景
+// 
+//  ## 使用示例
+// 
+//  ```ignore
+//  use game_engine::domain::render::{RenderObject, RenderStrategy, RenderScene};
+// 
+//  // 创建渲染对象
+//  let mut render_obj = RenderObject::new(mesh, transform);
+//  render_obj.update_visibility(&frustum);
+//  render_obj.select_lod(distance, &lod_selector);
+// 
+//  // 创建渲染场景
+//  let mut scene = RenderScene::new();
+//  scene.add_object(render_obj);
+//  scene.build_render_commands(&strategy);
+//  ```
 
-use crate::impl_default;
-use crate::core::error::RenderError;
+use crate::error::RenderError;
 use crate::ecs::Transform;
+use crate::impl_default;
 use crate::render::frustum::Frustum;
 use crate::render::lod::{LodQuality, LodSelection, LodSelector};
 use crate::render::mesh::GpuMesh;
@@ -459,9 +459,10 @@ impl RenderObject {
     /// ```
     pub fn validate(&self) -> Result<(), RenderError> {
         if self.bounding_radius <= 0.0 {
-            return Err(RenderError::InvalidState(
-                "Invalid bounding radius".to_string(),
-            ));
+            return Err(RenderError::InvalidState {
+                message: "Invalid bounding radius".to_string(),
+                severity: crate::error::ErrorSeverity::Error
+            });
         }
         Ok(())
     }
@@ -1902,9 +1903,10 @@ impl PbrScene {
     pub fn add_light(&mut self, light: LightSource) -> Result<(), RenderError> {
         // 业务规则：只添加有效的光源
         if !light.is_valid() {
-            return Err(RenderError::InvalidState(
-                "Cannot add invalid light source".to_string(),
-            ));
+            return Err(RenderError::InvalidState {
+                message: "Cannot add invalid light source".to_string(),
+                severity: crate::error::ErrorSeverity::Error
+            });
         }
 
         match light {
@@ -1942,9 +1944,9 @@ impl PbrScene {
                 radius: _,
             } => {
                 // 聚光灯暂不支持，未来可以扩展
-                return Err(RenderError::InvalidState(
+                return Err(RenderError::InvalidState { message: 
                     "Spot lights are not yet supported".to_string(),
-                ));
+                 severity: crate::error::ErrorSeverity::Error });
             }
         }
 
@@ -1993,18 +1995,18 @@ impl PbrScene {
         // 验证所有点光源有效性
         for light in &self.point_lights {
             if light.intensity <= 0.0 || light.radius <= 0.0 {
-                return Err(RenderError::InvalidState(
+                return Err(RenderError::InvalidState { message: 
                     "Invalid point light found in scene".to_string(),
-                ));
+                 severity: crate::error::ErrorSeverity::Error });
             }
         }
 
         // 验证所有方向光有效性
         for light in &self.dir_lights {
             if light.intensity <= 0.0 {
-                return Err(RenderError::InvalidState(
+                return Err(RenderError::InvalidState { message: 
                     "Invalid directional light found in scene".to_string(),
-                ));
+                 severity: crate::error::ErrorSeverity::Error });
             }
         }
 
@@ -2072,9 +2074,7 @@ impl PbrScene {
         // 提取点光源 - 业务规则：只提取有效的光源
         let mut point_light_query = world.query::<(&Transform, &crate::ecs::PointLight3D)>();
         for (transform, light) in point_light_query.iter(world) {
-            if let Some(_light_source) =
-                LightSource::from_ecs_point_light(transform, light)
-            {
+            if let Some(_light_source) = LightSource::from_ecs_point_light(transform, light) {
                 // 转换为渲染层的光源类型
                 scene.point_lights.push(crate::render::pbr::PointLight3D {
                     position: transform.pos,
@@ -2353,16 +2353,16 @@ impl LightSource {
     ) -> Result<Self, RenderError> {
         // 业务规则：强度必须>0
         if intensity <= 0.0 {
-            return Err(RenderError::InvalidState(
+            return Err(RenderError::InvalidState { message: 
                 "Point light intensity must be greater than 0".to_string(),
-            ));
+             severity: crate::error::ErrorSeverity::Error });
         }
 
         // 业务规则：半径必须>0
         if radius <= 0.0 {
-            return Err(RenderError::InvalidState(
+            return Err(RenderError::InvalidState { message: 
                 "Point light radius must be greater than 0".to_string(),
-            ));
+             severity: crate::error::ErrorSeverity::Error });
         }
 
         Ok(Self::Point {
@@ -2425,18 +2425,18 @@ impl LightSource {
     ) -> Result<Self, RenderError> {
         // 业务规则：强度必须>0
         if intensity <= 0.0 {
-            return Err(RenderError::InvalidState(
+            return Err(RenderError::InvalidState { message: 
                 "Directional light intensity must be greater than 0".to_string(),
-            ));
+             severity: crate::error::ErrorSeverity::Error });
         }
 
         // 归一化方向
         let normalized_direction = if direction.length_squared() > 0.0 {
             direction.normalize()
         } else {
-            return Err(RenderError::InvalidState(
+            return Err(RenderError::InvalidState { message: 
                 "Directional light direction cannot be zero".to_string(),
-            ));
+             severity: crate::error::ErrorSeverity::Error });
         };
 
         Ok(Self::Directional {
@@ -2505,32 +2505,32 @@ impl LightSource {
     ) -> Result<Self, RenderError> {
         // 业务规则：强度必须>0
         if intensity <= 0.0 {
-            return Err(RenderError::InvalidState(
+            return Err(RenderError::InvalidState { message: 
                 "Spot light intensity must be greater than 0".to_string(),
-            ));
+             severity: crate::error::ErrorSeverity::Error });
         }
 
         // 业务规则：半径必须>0
         if radius <= 0.0 {
-            return Err(RenderError::InvalidState(
+            return Err(RenderError::InvalidState { message: 
                 "Spot light radius must be greater than 0".to_string(),
-            ));
+             severity: crate::error::ErrorSeverity::Error });
         }
 
         // 业务规则：内角必须<外角
         if inner_cutoff >= outer_cutoff {
-            return Err(RenderError::InvalidState(
+            return Err(RenderError::InvalidState { message: 
                 "Spot light inner cutoff must be less than outer cutoff".to_string(),
-            ));
+             severity: crate::error::ErrorSeverity::Error });
         }
 
         // 归一化方向
         let normalized_direction = if direction.length_squared() > 0.0 {
             direction.normalize()
         } else {
-            return Err(RenderError::InvalidState(
+            return Err(RenderError::InvalidState { message: 
                 "Spot light direction cannot be zero".to_string(),
-            ));
+             severity: crate::error::ErrorSeverity::Error });
         };
 
         Ok(Self::Spot {
@@ -2579,11 +2579,7 @@ impl LightSource {
                 inner_cutoff,
                 outer_cutoff,
                 ..
-            } => {
-                *intensity > 0.0
-                    && *radius > 0.0
-                    && *inner_cutoff < *outer_cutoff
-            }
+            } => *intensity > 0.0 && *radius > 0.0 && *inner_cutoff < *outer_cutoff,
         }
     }
 
@@ -2749,9 +2745,7 @@ impl LightSource {
     /// };
     /// assert!(LightSource::from_ecs_directional_light(&invalid_light).is_none());
     /// ```
-    pub fn from_ecs_directional_light(
-        light: &crate::ecs::DirectionalLightComp,
-    ) -> Option<Self> {
+    pub fn from_ecs_directional_light(light: &crate::ecs::DirectionalLightComp) -> Option<Self> {
         // 业务规则：只创建有效的光源
         if light.intensity > 0.0 {
             Self::new_directional_light(
@@ -2769,8 +2763,8 @@ impl LightSource {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ecs::{DirectionalLightComp, PointLight3D, Transform};
     use crate::render::lod::{LodConfigBuilder, LodQuality};
-    use crate::ecs::{PointLight3D, DirectionalLightComp, Transform};
     use bevy_ecs::prelude::*;
 
     // 注意：这些测试需要实际的GPU设备，所以暂时跳过
@@ -2827,19 +2821,16 @@ mod tests {
     #[test]
     fn test_light_source_point_light_creation_valid() {
         // 测试创建有效的点光源
-        let light = LightSource::new_point_light(
-            Vec3::ZERO,
-            Vec3::ONE,
-            1.0,
-            10.0,
-        ).unwrap();
+        let light = LightSource::new_point_light(Vec3::ZERO, Vec3::ONE, 1.0, 10.0).unwrap();
 
         assert!(light.is_valid());
         assert_eq!(light.intensity(), 1.0);
         assert_eq!(light.color(), Vec3::ONE);
 
         match light {
-            LightSource::Point { position, radius, .. } => {
+            LightSource::Point {
+                position, radius, ..
+            } => {
                 assert_eq!(position, Vec3::ZERO);
                 assert_eq!(radius, 10.0);
             }
@@ -2850,37 +2841,17 @@ mod tests {
     #[test]
     fn test_light_source_point_light_creation_invalid_intensity() {
         // 测试创建无效的点光源（强度<=0）
-        assert!(LightSource::new_point_light(
-            Vec3::ZERO,
-            Vec3::ONE,
-            0.0,
-            10.0,
-        ).is_err());
+        assert!(LightSource::new_point_light(Vec3::ZERO, Vec3::ONE, 0.0, 10.0,).is_err());
 
-        assert!(LightSource::new_point_light(
-            Vec3::ZERO,
-            Vec3::ONE,
-            -1.0,
-            10.0,
-        ).is_err());
+        assert!(LightSource::new_point_light(Vec3::ZERO, Vec3::ONE, -1.0, 10.0,).is_err());
     }
 
     #[test]
     fn test_light_source_point_light_creation_invalid_radius() {
         // 测试创建无效的点光源（半径<=0）
-        assert!(LightSource::new_point_light(
-            Vec3::ZERO,
-            Vec3::ONE,
-            1.0,
-            0.0,
-        ).is_err());
+        assert!(LightSource::new_point_light(Vec3::ZERO, Vec3::ONE, 1.0, 0.0,).is_err());
 
-        assert!(LightSource::new_point_light(
-            Vec3::ZERO,
-            Vec3::ONE,
-            1.0,
-            -1.0,
-        ).is_err());
+        assert!(LightSource::new_point_light(Vec3::ZERO, Vec3::ONE, 1.0, -1.0,).is_err());
     }
 
     #[test]
@@ -2890,7 +2861,8 @@ mod tests {
             Vec3::new(0.0, -1.0, -0.5),
             Vec3::new(1.0, 0.95, 0.8),
             0.9,
-        ).unwrap();
+        )
+        .unwrap();
 
         assert!(light.is_valid());
         assert_eq!(light.intensity(), 0.9);
@@ -2908,21 +2880,15 @@ mod tests {
     #[test]
     fn test_light_source_directional_light_creation_invalid_intensity() {
         // 测试创建无效的方向光（强度<=0）
-        assert!(LightSource::new_directional_light(
-            Vec3::new(0.0, -1.0, 0.0),
-            Vec3::ONE,
-            0.0,
-        ).is_err());
+        assert!(
+            LightSource::new_directional_light(Vec3::new(0.0, -1.0, 0.0), Vec3::ONE, 0.0,).is_err()
+        );
     }
 
     #[test]
     fn test_light_source_directional_light_creation_zero_direction() {
         // 测试创建无效的方向光（方向为零向量）
-        assert!(LightSource::new_directional_light(
-            Vec3::ZERO,
-            Vec3::ONE,
-            1.0,
-        ).is_err());
+        assert!(LightSource::new_directional_light(Vec3::ZERO, Vec3::ONE, 1.0,).is_err());
     }
 
     #[test]
@@ -2933,10 +2899,11 @@ mod tests {
             Vec3::new(0.0, -1.0, 0.0),
             Vec3::ONE,
             1.0,
-            0.5,  // inner_cutoff
-            1.0,  // outer_cutoff
+            0.5, // inner_cutoff
+            1.0, // outer_cutoff
             10.0,
-        ).unwrap();
+        )
+        .unwrap();
 
         assert!(light.is_valid());
         assert_eq!(light.intensity(), 1.0);
@@ -2945,25 +2912,31 @@ mod tests {
     #[test]
     fn test_light_source_spot_light_creation_invalid_cutoff() {
         // 测试创建无效的聚光灯（内角>=外角）
-        assert!(LightSource::new_spot_light(
-            Vec3::ZERO,
-            Vec3::new(0.0, -1.0, 0.0),
-            Vec3::ONE,
-            1.0,
-            1.0,  // inner_cutoff >= outer_cutoff
-            1.0,  // outer_cutoff
-            10.0,
-        ).is_err());
+        assert!(
+            LightSource::new_spot_light(
+                Vec3::ZERO,
+                Vec3::new(0.0, -1.0, 0.0),
+                Vec3::ONE,
+                1.0,
+                1.0, // inner_cutoff >= outer_cutoff
+                1.0, // outer_cutoff
+                10.0,
+            )
+            .is_err()
+        );
 
-        assert!(LightSource::new_spot_light(
-            Vec3::ZERO,
-            Vec3::new(0.0, -1.0, 0.0),
-            Vec3::ONE,
-            1.0,
-            1.5,  // inner_cutoff > outer_cutoff
-            1.0,  // outer_cutoff
-            10.0,
-        ).is_err());
+        assert!(
+            LightSource::new_spot_light(
+                Vec3::ZERO,
+                Vec3::new(0.0, -1.0, 0.0),
+                Vec3::ONE,
+                1.0,
+                1.5, // inner_cutoff > outer_cutoff
+                1.0, // outer_cutoff
+                10.0,
+            )
+            .is_err()
+        );
     }
 
     #[test]
@@ -3039,12 +3012,7 @@ mod tests {
     fn test_pbr_scene_add_point_light() {
         // 测试添加点光源
         let mut scene = PbrScene::new();
-        let light = LightSource::new_point_light(
-            Vec3::ONE,
-            Vec3::ONE,
-            1.0,
-            10.0,
-        ).unwrap();
+        let light = LightSource::new_point_light(Vec3::ONE, Vec3::ONE, 1.0, 10.0).unwrap();
 
         assert!(scene.add_light(light).is_ok());
         assert_eq!(scene.light_count(), 1);
@@ -3057,11 +3025,8 @@ mod tests {
     fn test_pbr_scene_add_directional_light() {
         // 测试添加方向光
         let mut scene = PbrScene::new();
-        let light = LightSource::new_directional_light(
-            Vec3::new(0.0, -1.0, 0.0),
-            Vec3::ONE,
-            0.9,
-        ).unwrap();
+        let light =
+            LightSource::new_directional_light(Vec3::new(0.0, -1.0, 0.0), Vec3::ONE, 0.9).unwrap();
 
         assert!(scene.add_light(light).is_ok());
         assert_eq!(scene.light_count(), 1);
@@ -3076,20 +3041,12 @@ mod tests {
         let mut scene = PbrScene::new();
 
         // 添加点光源
-        let point_light = LightSource::new_point_light(
-            Vec3::ZERO,
-            Vec3::ONE,
-            1.0,
-            10.0,
-        ).unwrap();
+        let point_light = LightSource::new_point_light(Vec3::ZERO, Vec3::ONE, 1.0, 10.0).unwrap();
         assert!(scene.add_light(point_light).is_ok());
 
         // 添加方向光
-        let dir_light = LightSource::new_directional_light(
-            Vec3::new(0.0, -1.0, 0.0),
-            Vec3::ONE,
-            0.9,
-        ).unwrap();
+        let dir_light =
+            LightSource::new_directional_light(Vec3::new(0.0, -1.0, 0.0), Vec3::ONE, 0.9).unwrap();
         assert!(scene.add_light(dir_light).is_ok());
 
         assert_eq!(scene.light_count(), 2);
@@ -3128,7 +3085,8 @@ mod tests {
             0.5,
             1.0,
             10.0,
-        ).unwrap();
+        )
+        .unwrap();
 
         assert!(scene.add_light(spot_light).is_err());
         assert_eq!(scene.light_count(), 0);
@@ -3205,7 +3163,7 @@ mod tests {
             RenderStrategy::StaticBatch,
             vec![RenderObjectId::new(1), RenderObjectId::new(2)],
         );
-        
+
         assert!(matches!(command.strategy, RenderStrategy::StaticBatch));
         assert_eq!(command.object_ids.len(), 2);
         assert!(!command.is_empty());
@@ -3215,11 +3173,9 @@ mod tests {
     fn test_render_command_empty() {
         let empty_command = RenderCommand::new(RenderStrategy::StaticBatch, vec![]);
         assert!(empty_command.is_empty());
-        
-        let non_empty_command = RenderCommand::new(
-            RenderStrategy::StaticBatch,
-            vec![RenderObjectId::new(1)],
-        );
+
+        let non_empty_command =
+            RenderCommand::new(RenderStrategy::StaticBatch, vec![RenderObjectId::new(1)]);
         assert!(!non_empty_command.is_empty());
     }
 
@@ -3227,13 +3183,13 @@ mod tests {
     fn test_render_command_priority() {
         let static_command = RenderCommand::new(RenderStrategy::StaticBatch, vec![]);
         assert_eq!(static_command.priority(), 3);
-        
+
         let instanced_command = RenderCommand::new(RenderStrategy::Instanced, vec![]);
         assert_eq!(instanced_command.priority(), 2);
-        
+
         let dynamic_command = RenderCommand::new(RenderStrategy::DynamicBatch, vec![]);
         assert_eq!(dynamic_command.priority(), 1);
-        
+
         let individual_command = RenderCommand::new(RenderStrategy::Individual, vec![]);
         assert_eq!(individual_command.priority(), 0);
     }
@@ -3244,12 +3200,8 @@ mod tests {
 
     #[test]
     fn test_render_object_compensation_new() {
-        let compensation = RenderObjectCompensation::new(
-            RenderObjectId::new(1),
-            true,
-            None,
-        );
-        
+        let compensation = RenderObjectCompensation::new(RenderObjectId::new(1), true, None);
+
         assert_eq!(compensation.id(), RenderObjectId::new(1));
     }
 
@@ -3269,13 +3221,13 @@ mod tests {
         // 测试实例化策略选择
         let strategy = RenderStrategy::select_for_instances(15, true);
         assert!(matches!(strategy, RenderStrategy::Instanced));
-        
+
         let strategy = RenderStrategy::select_for_instances(5, true);
         assert!(matches!(strategy, RenderStrategy::StaticBatch));
-        
+
         let strategy = RenderStrategy::select_for_instances(5, false);
         assert!(matches!(strategy, RenderStrategy::DynamicBatch));
-        
+
         // 边界值：10个实例
         let strategy = RenderStrategy::select_for_instances(10, true);
         assert!(matches!(strategy, RenderStrategy::StaticBatch)); // 应该使用静态批次，不是实例化
@@ -3295,12 +3247,12 @@ mod tests {
 
     #[test]
     fn test_render_scene_set_lod_selector() {
-        use crate::render::lod::{LodSelector, LodConfig};
-        
+        use crate::render::lod::{LodConfig, LodSelector};
+
         let mut scene = RenderScene::new();
         let config = LodConfig::default();
         let selector = LodSelector::new(config);
-        
+
         scene.set_lod_selector(selector);
         assert!(scene.lod_selector_mut().is_some());
     }
@@ -3308,10 +3260,10 @@ mod tests {
     #[test]
     fn test_render_scene_set_frustum() {
         use crate::render::frustum::Frustum;
-        
+
         let mut scene = RenderScene::new();
         let frustum = Frustum::from_view_projection(Mat4::IDENTITY);
-        
+
         scene.set_frustum(frustum);
         // 验证视锥体已设置（通过行为验证）
     }

@@ -1,20 +1,20 @@
-//! 后处理管线模块
-//!
-//! 提供完整的后处理效果管线，包括：
-//! - Antialiasing（抗锯齿：FXAA/TAA）
-//! - Bloom（辉光效果）
-//! - SSAO（屏幕空间环境光遮蔽）
-//! - Tonemap（HDR色调映射）
-//!
-//! # 示例
-//!
-//! ```ignore
-//! let mut postprocess = PostProcessPipeline::new(&device, &config);
-//! postprocess.set_antialiasing(AntialiasingMode::FXAA);
-//! postprocess.set_bloom_enabled(true);
-//! postprocess.set_bloom_intensity(0.8);
-//! postprocess.render(&mut encoder, &scene_texture, &output_view);
-//! ```
+//  后处理管线模块
+// 
+//  提供完整的后处理效果管线，包括：
+//  - Antialiasing（抗锯齿：FXAA/TAA）
+//  - Bloom（辉光效果）
+//  - SSAO（屏幕空间环境光遮蔽）
+//  - Tonemap（HDR色调映射）
+// 
+//  # 示例
+// 
+//  ```ignore
+//  let mut postprocess = PostProcessPipeline::new(&device, &config);
+//  postprocess.set_antialiasing(AntialiasingMode::FXAA);
+//  postprocess.set_bloom_enabled(true);
+//  postprocess.set_bloom_intensity(0.8);
+//  postprocess.render(&mut encoder, &scene_texture, &output_view);
+//  ```
 
 use crate::impl_default;
 

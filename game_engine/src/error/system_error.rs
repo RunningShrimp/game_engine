@@ -1,8 +1,8 @@
-//! 系统级错误类型
-//!
-//! 定义了系统级相关的所有错误类型，包括初始化、配置、权限等。
+//  系统级错误类型
+// 
+//  定义了系统级相关的所有错误类型，包括初始化、配置、权限等。
 
-use crate::error::{ErrorSeverity, ErrorCategory};
+use crate::error::{ErrorCategory, ErrorSeverity};
 use thiserror::Error;
 
 /// 系统级错误
@@ -19,7 +19,6 @@ pub enum SystemError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -31,7 +30,6 @@ pub enum SystemError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -43,7 +41,6 @@ pub enum SystemError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -55,7 +52,6 @@ pub enum SystemError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -67,7 +63,6 @@ pub enum SystemError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -77,7 +72,6 @@ pub enum SystemError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -89,7 +83,6 @@ pub enum SystemError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -99,7 +92,6 @@ pub enum SystemError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -111,7 +103,6 @@ pub enum SystemError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -121,7 +112,6 @@ pub enum SystemError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -133,7 +123,6 @@ pub enum SystemError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -143,7 +132,6 @@ pub enum SystemError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -155,7 +143,6 @@ pub enum SystemError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -167,7 +154,6 @@ pub enum SystemError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -181,7 +167,6 @@ pub enum SystemError {
         /// 实际版本
         found: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -193,7 +178,6 @@ pub enum SystemError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -205,7 +189,6 @@ pub enum SystemError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -215,7 +198,6 @@ pub enum SystemError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -225,7 +207,6 @@ pub enum SystemError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -237,7 +218,6 @@ pub enum SystemError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -247,7 +227,6 @@ pub enum SystemError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -259,7 +238,6 @@ pub enum SystemError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -271,7 +249,6 @@ pub enum SystemError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -281,7 +258,6 @@ pub enum SystemError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -291,7 +267,6 @@ pub enum SystemError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -303,7 +278,6 @@ pub enum SystemError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -315,7 +289,6 @@ pub enum SystemError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -325,7 +298,6 @@ pub enum SystemError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -335,7 +307,6 @@ pub enum SystemError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -345,7 +316,6 @@ pub enum SystemError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -355,7 +325,6 @@ pub enum SystemError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -365,7 +334,6 @@ pub enum SystemError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -375,7 +343,6 @@ pub enum SystemError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -385,7 +352,6 @@ pub enum SystemError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -395,7 +361,6 @@ pub enum SystemError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -405,17 +370,13 @@ pub enum SystemError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 }
 
 impl SystemError {
     /// 创建初始化错误
-    pub fn initialization(
-        component: impl Into<String>,
-        message: impl Into<String>,
-    ) -> Self {
+    pub fn initialization(component: impl Into<String>, message: impl Into<String>) -> Self {
         Self::Initialization {
             component: component.into(),
             message: message.into(),
@@ -424,10 +385,7 @@ impl SystemError {
     }
 
     /// 创建关闭错误
-    pub fn shutdown(
-        component: impl Into<String>,
-        message: impl Into<String>,
-    ) -> Self {
+    pub fn shutdown(component: impl Into<String>, message: impl Into<String>) -> Self {
         Self::Shutdown {
             component: component.into(),
             message: message.into(),
@@ -436,10 +394,7 @@ impl SystemError {
     }
 
     /// 创建配置错误
-    pub fn configuration(
-        config: impl Into<String>,
-        message: impl Into<String>,
-    ) -> Self {
+    pub fn configuration(config: impl Into<String>, message: impl Into<String>) -> Self {
         Self::Configuration {
             config: config.into(),
             message: message.into(),
@@ -448,10 +403,7 @@ impl SystemError {
     }
 
     /// 创建权限错误
-    pub fn permission(
-        permission: impl Into<String>,
-        message: impl Into<String>,
-    ) -> Self {
+    pub fn permission(permission: impl Into<String>, message: impl Into<String>) -> Self {
         Self::Permission {
             permission: permission.into(),
             message: message.into(),
@@ -460,10 +412,7 @@ impl SystemError {
     }
 
     /// 创建资源不足错误
-    pub fn resource_exhausted(
-        resource: impl Into<String>,
-        message: impl Into<String>,
-    ) -> Self {
+    pub fn resource_exhausted(resource: impl Into<String>, message: impl Into<String>) -> Self {
         Self::ResourceExhausted {
             resource: resource.into(),
             message: message.into(),
@@ -480,10 +429,7 @@ impl SystemError {
     }
 
     /// 创建超时错误
-    pub fn timeout(
-        operation: impl Into<String>,
-        message: impl Into<String>,
-    ) -> Self {
+    pub fn timeout(operation: impl Into<String>, message: impl Into<String>) -> Self {
         Self::Timeout {
             operation: operation.into(),
             message: message.into(),
@@ -500,10 +446,7 @@ impl SystemError {
     }
 
     /// 创建线程错误
-    pub fn thread(
-        thread: impl Into<String>,
-        message: impl Into<String>,
-    ) -> Self {
+    pub fn thread(thread: impl Into<String>, message: impl Into<String>) -> Self {
         Self::Thread {
             thread: thread.into(),
             message: message.into(),
@@ -520,10 +463,7 @@ impl SystemError {
     }
 
     /// 创建文件系统错误
-    pub fn filesystem(
-        path: impl Into<String>,
-        message: impl Into<String>,
-    ) -> Self {
+    pub fn filesystem(path: impl Into<String>, message: impl Into<String>) -> Self {
         Self::Filesystem {
             path: path.into(),
             message: message.into(),
@@ -540,10 +480,7 @@ impl SystemError {
     }
 
     /// 创建平台错误
-    pub fn platform(
-        platform: impl Into<String>,
-        message: impl Into<String>,
-    ) -> Self {
+    pub fn platform(platform: impl Into<String>, message: impl Into<String>) -> Self {
         Self::Platform {
             platform: platform.into(),
             message: message.into(),
@@ -552,10 +489,7 @@ impl SystemError {
     }
 
     /// 创建API错误
-    pub fn api(
-        api: impl Into<String>,
-        message: impl Into<String>,
-    ) -> Self {
+    pub fn api(api: impl Into<String>, message: impl Into<String>) -> Self {
         Self::Api {
             api: api.into(),
             message: message.into(),
@@ -578,10 +512,7 @@ impl SystemError {
     }
 
     /// 创建依赖错误
-    pub fn dependency(
-        dependency: impl Into<String>,
-        message: impl Into<String>,
-    ) -> Self {
+    pub fn dependency(dependency: impl Into<String>, message: impl Into<String>) -> Self {
         Self::Dependency {
             dependency: dependency.into(),
             message: message.into(),
@@ -590,10 +521,7 @@ impl SystemError {
     }
 
     /// 创建状态错误
-    pub fn state(
-        state: impl Into<String>,
-        message: impl Into<String>,
-    ) -> Self {
+    pub fn state(state: impl Into<String>, message: impl Into<String>) -> Self {
         Self::State {
             state: state.into(),
             message: message.into(),
@@ -618,10 +546,7 @@ impl SystemError {
     }
 
     /// 创建性能错误
-    pub fn performance(
-        metric: impl Into<String>,
-        message: impl Into<String>,
-    ) -> Self {
+    pub fn performance(metric: impl Into<String>, message: impl Into<String>) -> Self {
         Self::Performance {
             metric: metric.into(),
             message: message.into(),
@@ -638,10 +563,7 @@ impl SystemError {
     }
 
     /// 创建数据库错误
-    pub fn database(
-        database: impl Into<String>,
-        message: impl Into<String>,
-    ) -> Self {
+    pub fn database(database: impl Into<String>, message: impl Into<String>) -> Self {
         Self::Database {
             database: database.into(),
             message: message.into(),
@@ -650,10 +572,7 @@ impl SystemError {
     }
 
     /// 创建缓存错误
-    pub fn cache(
-        cache: impl Into<String>,
-        message: impl Into<String>,
-    ) -> Self {
+    pub fn cache(cache: impl Into<String>, message: impl Into<String>) -> Self {
         Self::Cache {
             cache: cache.into(),
             message: message.into(),
@@ -678,10 +597,7 @@ impl SystemError {
     }
 
     /// 创建编码错误
-    pub fn encoding(
-        encoding: impl Into<String>,
-        message: impl Into<String>,
-    ) -> Self {
+    pub fn encoding(encoding: impl Into<String>, message: impl Into<String>) -> Self {
         Self::Encoding {
             encoding: encoding.into(),
             message: message.into(),
@@ -690,10 +606,7 @@ impl SystemError {
     }
 
     /// 创建解码错误
-    pub fn decoding(
-        encoding: impl Into<String>,
-        message: impl Into<String>,
-    ) -> Self {
+    pub fn decoding(encoding: impl Into<String>, message: impl Into<String>) -> Self {
         Self::Decoding {
             encoding: encoding.into(),
             message: message.into(),
@@ -758,10 +671,7 @@ impl SystemError {
     }
 
     /// 创建带有严重级别的通用系统错误
-    pub fn general_with_severity(
-        message: impl Into<String>,
-        severity: ErrorSeverity,
-    ) -> Self {
+    pub fn general_with_severity(message: impl Into<String>, severity: ErrorSeverity) -> Self {
         Self::General {
             message: message.into(),
             severity,
@@ -911,18 +821,12 @@ impl SystemError {
 impl From<std::io::Error> for SystemError {
     fn from(err: std::io::Error) -> Self {
         match err.kind() {
-            std::io::ErrorKind::NotFound => {
-                SystemError::filesystem("Unknown", err.to_string())
-            }
+            std::io::ErrorKind::NotFound => SystemError::filesystem("Unknown", err.to_string()),
             std::io::ErrorKind::PermissionDenied => {
                 SystemError::permission("FileAccess", err.to_string())
             }
-            std::io::ErrorKind::OutOfMemory => {
-                SystemError::out_of_memory(err.to_string())
-            }
-            std::io::ErrorKind::TimedOut => {
-                SystemError::timeout("IOOperation", err.to_string())
-            }
+            std::io::ErrorKind::OutOfMemory => SystemError::out_of_memory(err.to_string()),
+            std::io::ErrorKind::TimedOut => SystemError::timeout("IOOperation", err.to_string()),
             _ => SystemError::general(err.to_string()),
         }
     }
@@ -976,7 +880,7 @@ mod tests {
     fn test_from_io_error() {
         let io_err = std::io::Error::new(std::io::ErrorKind::NotFound, "File not found");
         let system_err: SystemError = io_err.into();
-        
+
         assert!(matches!(system_err, SystemError::Filesystem { .. }));
         assert_eq!(system_err.severity(), ErrorSeverity::Error);
     }

@@ -2,6 +2,7 @@ use crate::ecs::Transform;
 use bevy_ecs::prelude::*;
 
 /// 属性检查器
+#[derive(Default, Debug)]
 pub struct Inspector;
 
 impl Inspector {
@@ -11,7 +12,7 @@ impl Inspector {
         ui.separator();
 
         if let Some(entity) = selected_entity {
-            if let Some(mut entity_mut) = world.get_entity_mut(entity) {
+            if let Ok(mut entity_mut) = world.get_entity_mut(entity) {
                 // 显示实体ID
                 ui.label(format!("Entity ID: {:?}", entity));
                 ui.separator();

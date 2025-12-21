@@ -1,4 +1,4 @@
-//! 游戏实体领域对象
+//  游戏实体领域对象
 
 use crate::domain::errors::{DomainError, SceneError};
 use crate::ecs::{Camera, PointLight, Sprite, Transform};
@@ -60,7 +60,7 @@ impl std::fmt::Display for EntityId {
 /// - `state`：只能通过聚合根方法修改（`activate`, `deactivate`, `mark_for_deletion`）
 ///
 /// **注意**：虽然字段是`pub`的（用于序列化），但应该通过聚合根方法访问和修改。
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameEntity {
     /// 实体ID
     pub id: EntityId,
@@ -82,7 +82,7 @@ pub struct GameEntity {
     pub last_modified: u64,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum EntityState {
     /// 活跃状态
     Active,
@@ -383,15 +383,12 @@ mod tests {
     #[test]
     fn test_entity_validate_sprite_and_camera_conflict() {
         // 测试业务规则：实体不能同时拥有Sprite和Camera组件
-        let mut entity = EntityFactory::create_sprite(
-            EntityId(1),
-            glam::Vec3::ZERO,
-            Sprite::default(),
-        );
-        
+        let mut entity =
+            EntityFactory::create_sprite(EntityId(1), glam::Vec3::ZERO, Sprite::default());
+
         // 添加相机组件应该导致验证失败
         entity.camera = Some(Camera::default());
-        
+
         assert!(entity.validate().is_err());
     }
 
@@ -399,15 +396,15 @@ mod tests {
     fn test_entity_validate_positive_scale() {
         // 测试业务规则：Transform的缩放值必须为正数
         let mut entity = EntityFactory::create_basic(EntityId(1), glam::Vec3::ZERO);
-        
+
         // 设置负缩放值
         entity.scale(glam::Vec3::new(-1.0, 1.0, 1.0)).unwrap();
         assert!(entity.validate().is_err());
-        
+
         // 设置零缩放值
         entity.scale(glam::Vec3::new(0.0, 1.0, 1.0)).unwrap();
         assert!(entity.validate().is_err());
-        
+
         // 设置正缩放值
         entity.scale(glam::Vec3::ONE).unwrap();
         assert!(entity.validate().is_ok());
@@ -418,7 +415,7 @@ mod tests {
         // 测试业务规则：待删除的实体不能激活
         let mut entity = GameEntity::new(EntityId(1));
         entity.mark_for_deletion().unwrap();
-        
+
         // 尝试激活应该失败
         assert!(entity.activate().is_err());
     }
@@ -426,24 +423,31 @@ mod tests {
     #[test]
     fn test_entity_properties() {
         let mut entity = GameEntity::new(EntityId(1));
-        
+
         // 设置属性
-        entity.set_property("health", serde_json::json!(100)).unwrap();
-        entity.set_property("name", serde_json::json!("Player")).unwrap();
-        
+        entity
+            .set_property("health", serde_json::json!(100))
+            .unwrap();
+        entity
+            .set_property("name", serde_json::json!("Player"))
+            .unwrap();
+
         // 获取属性
         assert_eq!(entity.get_property("health"), Some(&serde_json::json!(100)));
-        assert_eq!(entity.get_property("name"), Some(&serde_json::json!("Player")));
+        assert_eq!(
+            entity.get_property("name"),
+            Some(&serde_json::json!("Player"))
+        );
         assert_eq!(entity.get_property("nonexistent"), None);
     }
 
     #[test]
     fn test_entity_rotation() {
         let mut entity = EntityFactory::create_basic(EntityId(1), glam::Vec3::ZERO);
-        
+
         let rotation = glam::Quat::from_euler(glam::EulerRot::XYZ, 0.0, 1.0, 0.0);
         entity.rotate(rotation).unwrap();
-        
+
         assert_eq!(entity.transform.as_ref().unwrap().rot, rotation);
     }
 
@@ -451,7 +455,7 @@ mod tests {
     fn test_entity_operations_without_transform() {
         // 测试在没有Transform组件时操作应该失败
         let mut entity = GameEntity::new(EntityId(1));
-        
+
         assert!(entity.set_position(glam::Vec3::ONE).is_err());
         assert!(entity.move_by(glam::Vec3::ONE).is_err());
         assert!(entity.rotate(glam::Quat::IDENTITY).is_err());
@@ -468,7 +472,7 @@ mod tests {
     #[test]
     fn test_entity_factory_create_basic() {
         let entity = EntityFactory::create_basic(EntityId(1), glam::Vec3::new(1.0, 2.0, 3.0));
-        
+
         assert_eq!(entity.id, EntityId(1));
         assert_eq!(entity.position(), Some(glam::Vec3::new(1.0, 2.0, 3.0)));
         assert!(entity.transform.is_some());
@@ -478,7 +482,7 @@ mod tests {
     fn test_entity_factory_create_sprite() {
         let sprite = Sprite::default();
         let entity = EntityFactory::create_sprite(EntityId(1), glam::Vec3::ZERO, sprite);
-        
+
         assert!(entity.sprite.is_some());
         assert!(entity.validate().is_ok());
     }
@@ -487,7 +491,7 @@ mod tests {
     fn test_entity_factory_create_light() {
         let light = PointLight::default();
         let entity = EntityFactory::create_light(EntityId(1), glam::Vec3::ZERO, light);
-        
+
         assert!(entity.point_light.is_some());
         assert!(entity.validate().is_ok());
     }
@@ -496,7 +500,7 @@ mod tests {
     fn test_entity_factory_create_camera() {
         let camera = Camera::default();
         let entity = EntityFactory::create_camera(EntityId(1), glam::Vec3::ZERO, camera);
-        
+
         assert!(entity.camera.is_some());
         assert!(entity.validate().is_ok());
     }
@@ -506,12 +510,9 @@ mod tests {
         // 测试有效的实体应该通过验证
         let entity = EntityFactory::create_basic(EntityId(1), glam::Vec3::ZERO);
         assert!(entity.validate().is_ok());
-        
-        let sprite_entity = EntityFactory::create_sprite(
-            EntityId(2),
-            glam::Vec3::ZERO,
-            Sprite::default(),
-        );
+
+        let sprite_entity =
+            EntityFactory::create_sprite(EntityId(2), glam::Vec3::ZERO, Sprite::default());
         assert!(sprite_entity.validate().is_ok());
     }
 
@@ -531,8 +532,7 @@ mod tests {
 
     #[test]
     fn test_entity_with_name() {
-        let entity = GameEntity::new(EntityId(1))
-            .with_name("Test Entity");
+        let entity = GameEntity::new(EntityId(1)).with_name("Test Entity");
         assert_eq!(entity.name, Some("Test Entity".to_string()));
     }
 
@@ -543,8 +543,7 @@ mod tests {
             rot: glam::Quat::IDENTITY,
             scale: glam::Vec3::ONE,
         };
-        let entity = GameEntity::new(EntityId(1))
-            .with_transform(transform.clone());
+        let entity = GameEntity::new(EntityId(1)).with_transform(transform.clone());
         assert_eq!(entity.transform, Some(transform));
     }
 
@@ -557,10 +556,7 @@ mod tests {
 
     #[test]
     fn test_entity_position_with_transform() {
-        let entity = EntityFactory::create_basic(
-            EntityId(1),
-            glam::Vec3::new(1.0, 2.0, 3.0),
-        );
+        let entity = EntityFactory::create_basic(EntityId(1), glam::Vec3::new(1.0, 2.0, 3.0));
         assert_eq!(entity.position(), Some(glam::Vec3::new(1.0, 2.0, 3.0)));
     }
 }

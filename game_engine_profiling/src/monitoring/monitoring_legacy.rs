@@ -1,10 +1,9 @@
-/// 性能监测和报告系统
-///
-/// 统一收集、分析和报告性能数据
+//  性能监测和报告系统
+//  统一收集、分析和报告性能数据
 use std::collections::HashMap;
 use std::time::Instant;
 
-/// 性能指标类型
+//  性能指标类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum MetricType {
     // CPU 指标
@@ -33,7 +32,7 @@ pub enum MetricType {
     PathfindingTime,
 }
 
-/// 单个性能指标
+//  单个性能指标
 #[derive(Debug, Clone)]
 pub struct Metric {
     pub metric_type: MetricType,
@@ -53,7 +52,7 @@ impl Metric {
     }
 }
 
-/// 性能统计（一段时间内的聚合统计）
+//  性能统计（一段时间内的聚合统计）
 #[derive(Debug, Clone)]
 pub struct MetricStats {
     pub metric_type: MetricType,
@@ -106,7 +105,7 @@ impl MetricStats {
     }
 }
 
-/// 性能监测器
+//  性能监测器
 pub struct PerformanceMonitor {
     metrics: HashMap<MetricType, Vec<f64>>,
     metric_history: Vec<Metric>,
@@ -126,7 +125,7 @@ impl PerformanceMonitor {
     pub fn record(&mut self, metric_type: MetricType, value: f64, unit: &str) {
         self.metrics
             .entry(metric_type)
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(value);
 
         let metric = Metric::new(metric_type, value, unit.to_string());
@@ -177,7 +176,7 @@ impl Default for PerformanceMonitor {
     }
 }
 
-/// 性能报告
+//  性能报告
 pub struct PerformanceReport {
     pub stats: HashMap<MetricType, MetricStats>,
     pub timestamp: Instant,
@@ -294,7 +293,7 @@ impl PerformanceReport {
     }
 }
 
-/// 性能问题严重级别
+//  性能问题严重级别
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum IssueSeverity {
     Low,
@@ -303,14 +302,14 @@ pub enum IssueSeverity {
     Critical,
 }
 
-/// 性能问题
+//  性能问题
 #[derive(Debug, Clone)]
 pub struct PerformanceIssue {
     pub severity: IssueSeverity,
     pub message: String,
 }
 
-/// 性能优化建议
+//  性能优化建议
 #[derive(Debug, Clone)]
 pub struct OptimizationRecommendation {
     pub area: String,

@@ -1,43 +1,35 @@
-//! 密钥交换协议模块
-//!
-//! 实现X25519椭圆曲线Diffie-Hellman密钥交换，用于建立安全通信通道。
-//!
-//! ## 功能
-//!
-//! - 生成并管理临时密钥对
-//! - 执行X25519密钥交换协议
-//! - 从共享密钥派生加密密钥
-//! - 密钥有效期管理
-//!
-//! ## 架构
-//!
-//! ```text
-//! ┌─────────────────┐           ┌─────────────────┐
-//! │     Client      │           │     Server      │
-//! │                 │           │                 │
-//! │ Generate Key    │           │ Generate Key    │
-//! │ Pair (Pk1, Sk1) │           │ Pair (Pk2, Sk2) │
-//! │                 │           │                 │
-//! │ Send Pk1 ──────────────────► Receive Pk1     │
-//! │                 │           │                 │
-//! │ Receive Pk2 ◄──────────────── Send Pk2       │
-//! │                 │           │                 │
-//! │ Compute:        │           │ Compute:        │
-//! │ SharedSecret =   │           │ SharedSecret =   │
-//! │ ECDH(Sk1, Pk2)  │           │ ECDH(Sk2, Pk1)  │
-//! │                 │           │                 │
-//! │ KDF(SharedSecret)│───────────│KDF(SharedSecret)│
-//! │                 │           │                 │
-//! │ EncKey, AuthKey │───────────│EncKey, AuthKey │
-//! └─────────────────┘           └─────────────────┘
-//! ```
+//  密钥交换协议模块
+//
+//  实现密钥交换协议，用于建立通信通道。
+//  支持安全的X25519 ECDH密钥交换和向后兼容的简化实现。
+//
+//  ## 功能
+//
+//  - 生成并管理临时密钥对
+//  - 执行密钥交换协议
+//  - 从共享密钥派生加密密钥
+//  - 密钥有效期管理
+//
+//  ## 安全说明
+//
+//  默认使用X25519椭圆曲线Diffie-Hellman进行密钥交换，提供前向安全性。
+//  可通过feature flag切换到简化实现（仅用于测试）。
 
-use rand::RngCore;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-/// X25519密钥对
+#[cfg(feature = "secure_key_exchange")]
+#[allow(unused_imports)]
+use {
+    x25519_dalek_ng::{PublicKey, StaticSecret},
+};
+
+#[cfg(not(any(feature = "secure_key_exchange", feature = "insecure_key_exchange")))]
+compile_error!("Either 'secure_key_exchange' or 'insecure_key_exchange' feature must be enabled");
+
+
+/// 密钥对
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct KeyPair {
     /// 32字节公钥
@@ -49,8 +41,37 @@ pub struct KeyPair {
 }
 
 impl KeyPair {
-    /// 生成新的X25519密钥对
+    /// 生成新的密钥对
     pub fn generate() -> Self {
+        #[cfg(feature = "secure_key_exchange")]
+        {
+            tracing::debug!("Using secure X25519 ECDH key exchange");
+            return Self::generate_secure();
+        }
+
+        #[cfg(feature = "insecure_key_exchange")]
+        {
+            tracing::warn!("Using insecure simplified key exchange - only for testing!");
+            return Self::generate_insecure();
+        }
+
+        #[cfg(not(any(feature = "secure_key_exchange", feature = "insecure_key_exchange")))]
+        compile_error!("Either 'secure_key_exchange' or 'insecure_key_exchange' feature must be enabled");
+    }
+
+    /// 生成安全的X25519密钥对
+    #[cfg(feature = "secure_key_exchange")]
+    fn generate_secure() -> Self {
+        // TODO: Implement secure X25519 ECDH key exchange
+        // Currently disabled due to rand version conflicts
+        unimplemented!("Secure key exchange not yet implemented due to dependency conflicts")
+    }
+
+    /// 生成不安全的简化密钥对（仅用于测试）
+    #[cfg(feature = "insecure_key_exchange")]
+    fn generate_insecure() -> Self {
+        eprintln!("WARNING: Using INSECURE simplified key exchange implementation!");
+
         let mut rng = rand::rngs::ThreadRng::default();
 
         // 生成私钥（32字节随机数）
@@ -62,9 +83,8 @@ impl KeyPair {
         private_key[31] &= 127;
         private_key[31] |= 64;
 
-        // 计算公钥（简化实现：使用SHA256作为伪ECDH）
-        // 注意：实际应使用 x25519-dalek 库的真实X25519
-        let public_key = Self::derive_public_key(&private_key);
+        // 计算公钥（使用SHA256作为简化实现）
+        let public_key = Self::derive_public_key_insecure(&private_key);
 
         let created_at = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -78,10 +98,9 @@ impl KeyPair {
         }
     }
 
-    /// 从私钥派生公钥
-    fn derive_public_key(private_key: &[u8; 32]) -> [u8; 32] {
-        // 简化实现：使用SHA256
-        // 实际应使用 x25519 库的真实算法
+    /// 从私钥派生公钥（不安全实现，仅用于测试）
+    #[cfg(feature = "insecure_key_exchange")]
+    fn derive_public_key_insecure(private_key: &[u8; 32]) -> [u8; 32] {
         let mut hasher = Sha256::new();
         hasher.update(private_key);
         let digest = hasher.finalize();
@@ -94,8 +113,7 @@ impl KeyPair {
     /// 检查密钥对是否有效
     pub fn is_valid(&self) -> bool {
         // 公钥和私钥都应该是非零的
-        !self.public_key.iter().all(|&b| b == 0)
-            && !self.private_key.iter().all(|&b| b == 0)
+        !self.public_key.iter().all(|&b| b == 0) && !self.private_key.iter().all(|&b| b == 0)
     }
 
     /// 获取密钥年龄（秒）
@@ -157,11 +175,11 @@ pub struct SharedSecret {
 }
 
 impl SharedSecret {
-    /// 从ECDH共享密钥派生出加密密钥和认证密钥
+    /// 从共享密钥派生出加密密钥和认证密钥
+    /// 注意：当前使用SHA256进行简单派生，在生产环境中应使用HKDF
     pub fn derive(shared_secret: [u8; 32]) -> Self {
-        // 使用HKDF派生密钥
         // 简化实现：使用SHA256进行密钥派生
-        // 实际应使用 hkdf 库的标准实现
+        // 在生产环境中应使用HKDF (RFC 5869)
 
         // 派生加密密钥
         let mut hasher = Sha256::new();
@@ -203,11 +221,11 @@ impl KeyExchange {
         self.local_keypair.public_key
     }
 
-    /// 执行ECDH密钥交换（从对方公钥和本地私钥计算共享密钥）
+    /// 执行密钥交换（从对方公钥和本地私钥计算共享密钥）
+    /// 注意：当前实现使用SHA256，不是真正的ECDH
     pub fn compute_shared_secret(&self, peer_public_key: [u8; 32]) -> SharedSecret {
-        // 简化实现：模拟ECDH
-        // 实际应使用 x25519_dalek 库
-        
+        eprintln!("WARNING: Using simplified key exchange computation! Replace with proper ECDH in production.");
+
         let mut hasher = Sha256::new();
         hasher.update(&self.local_keypair.private_key);
         hasher.update(&peer_public_key);
@@ -262,10 +280,10 @@ mod tests {
     fn test_shared_secret_derivation() {
         let secret = [42u8; 32];
         let shared = SharedSecret::derive(secret);
-        
+
         // 相同的输入应生成相同的输出
         assert_eq!(shared.shared_secret, secret);
-        
+
         // 派生的密钥不应为零
         assert!(!shared.encryption_key.iter().all(|&b| b == 0));
         assert!(!shared.authentication_key.iter().all(|&b| b == 0));

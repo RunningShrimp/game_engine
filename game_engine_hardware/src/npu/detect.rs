@@ -1,8 +1,8 @@
-/// NPU（神经网络处理器）检测模块
-/// 
-/// 检测并识别主流NPU，用于AI加速
+//  NPU（神经网络处理器）检测模块
+// 
+//  检测并识别主流NPU，用于AI加速
 
-/// NPU厂商
+//  NPU厂商
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum NpuVendor {
     /// 华为昇腾
@@ -24,7 +24,7 @@ pub enum NpuVendor {
     Unknown,
 }
 
-/// NPU信息
+//  NPU信息
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct NpuInfo {
     pub vendor: NpuVendor,
@@ -49,7 +49,7 @@ impl Default for NpuInfo {
     }
 }
 
-/// 检测NPU信息
+//  检测NPU信息
 pub fn detect_npu() -> Option<NpuInfo> {
     // 检测Apple Neural Engine
     #[cfg(target_os = "macos")]
@@ -58,7 +58,7 @@ pub fn detect_npu() -> Option<NpuInfo> {
             return Some(info);
         }
     }
-    
+
     // 检测Android NPU
     #[cfg(target_os = "android")]
     {
@@ -66,7 +66,7 @@ pub fn detect_npu() -> Option<NpuInfo> {
             return Some(info);
         }
     }
-    
+
     // 检测华为昇腾（Linux）
     #[cfg(target_os = "linux")]
     {
@@ -74,71 +74,70 @@ pub fn detect_npu() -> Option<NpuInfo> {
             return Some(info);
         }
     }
-    
+
     // 检测NVIDIA Tensor Core
     if let Some(info) = detect_nvidia_tensor_core() {
         return Some(info);
     }
-    
+
     // 检测AMD Matrix Core
     if let Some(info) = detect_amd_matrix_core() {
         return Some(info);
     }
-    
+
     None
 }
 
 #[cfg(target_os = "macos")]
 fn detect_apple_neural_engine() -> Option<NpuInfo> {
     use std::process::Command;
-    
+
     // 检测Apple芯片
     if let Ok(output) = Command::new("sysctl")
         .arg("-n")
         .arg("machdep.cpu.brand_string")
         .output()
+        && let Ok(brand) = String::from_utf8(output.stdout)
     {
-        if let Ok(brand) = String::from_utf8(output.stdout) {
-            let brand_lower = brand.to_lowercase();
-            
-            if brand_lower.contains("m3") {
-                return Some(NpuInfo {
-                    vendor: NpuVendor::AppleNeuralEngine,
-                    name: "Apple Neural Engine (M3)".to_string(),
-                    tops: 18.0, // M3的Neural Engine约18 TOPS
-                    supports_int8: true,
-                    supports_fp16: true,
-                    supports_bf16: false,
-                });
-            } else if brand_lower.contains("m2") {
-                return Some(NpuInfo {
-                    vendor: NpuVendor::AppleNeuralEngine,
-                    name: "Apple Neural Engine (M2)".to_string(),
-                    tops: 15.8,
-                    supports_int8: true,
-                    supports_fp16: true,
-                    supports_bf16: false,
-                });
-            } else if brand_lower.contains("m1") {
-                return Some(NpuInfo {
-                    vendor: NpuVendor::AppleNeuralEngine,
-                    name: "Apple Neural Engine (M1)".to_string(),
-                    tops: 11.0,
-                    supports_int8: true,
-                    supports_fp16: true,
-                    supports_bf16: false,
-                });
-            }
+        let brand_lower = brand.to_lowercase();
+
+        if brand_lower.contains("m3") {
+            return Some(NpuInfo {
+                vendor: NpuVendor::AppleNeuralEngine,
+                name: "Apple Neural Engine (M3)".to_string(),
+                tops: 18.0, // M3的Neural Engine约18 TOPS
+                supports_int8: true,
+                supports_fp16: true,
+                supports_bf16: false,
+            });
+        } else if brand_lower.contains("m2") {
+            return Some(NpuInfo {
+                vendor: NpuVendor::AppleNeuralEngine,
+                name: "Apple Neural Engine (M2)".to_string(),
+                tops: 15.8,
+                supports_int8: true,
+                supports_fp16: true,
+                supports_bf16: false,
+            });
+        } else if brand_lower.contains("m1") {
+            return Some(NpuInfo {
+                vendor: NpuVendor::AppleNeuralEngine,
+                name: "Apple Neural Engine (M1)".to_string(),
+                tops: 11.0,
+                supports_int8: true,
+                supports_fp16: true,
+                supports_bf16: false,
+            });
         }
     }
-    
+
     None
 }
 
 #[cfg(target_os = "android")]
 fn detect_android_npu() -> Option<NpuInfo> {
     use std::fs;
-    
+
     // 检测高通Hexagon DSP
     if let Ok(content) = fs::read_to_string("/proc/cpuinfo") {
         if content.to_lowercase().contains("qualcomm") {
@@ -152,7 +151,7 @@ fn detect_android_npu() -> Option<NpuInfo> {
                 supports_bf16: false,
             });
         }
-        
+
         if content.to_lowercase().contains("mediatek") {
             return Some(NpuInfo {
                 vendor: NpuVendor::MediaTekApu,
@@ -164,14 +163,14 @@ fn detect_android_npu() -> Option<NpuInfo> {
             });
         }
     }
-    
+
     None
 }
 
 #[cfg(target_os = "linux")]
 fn detect_huawei_ascend() -> Option<NpuInfo> {
     use std::path::Path;
-    
+
     // 检查是否安装了昇腾驱动
     if Path::new("/usr/local/Ascend").exists() {
         return Some(NpuInfo {
@@ -183,19 +182,20 @@ fn detect_huawei_ascend() -> Option<NpuInfo> {
             supports_bf16: true,
         });
     }
-    
+
     None
 }
 
 fn detect_nvidia_tensor_core() -> Option<NpuInfo> {
     // 通过GPU信息推断Tensor Core
-    use crate::gpu::detect::{detect_gpu, GpuVendor};
-    
+    use crate::gpu::detect::{GpuVendor, detect_gpu};
+
     let gpu = detect_gpu();
     if gpu.vendor == GpuVendor::Nvidia {
         let name_lower = gpu.name.to_lowercase();
-        
-        if name_lower.contains("rtx") || name_lower.contains("a100") || name_lower.contains("h100") {
+
+        if name_lower.contains("rtx") || name_lower.contains("a100") || name_lower.contains("h100")
+        {
             let tops = if name_lower.contains("4090") {
                 1321.0 // RTX 4090 Tensor性能
             } else if name_lower.contains("4080") {
@@ -209,7 +209,7 @@ fn detect_nvidia_tensor_core() -> Option<NpuInfo> {
             } else {
                 100.0
             };
-            
+
             return Some(NpuInfo {
                 vendor: NpuVendor::NvidiaTensorCore,
                 name: format!("{} Tensor Cores", gpu.name),
@@ -220,17 +220,17 @@ fn detect_nvidia_tensor_core() -> Option<NpuInfo> {
             });
         }
     }
-    
+
     None
 }
 
 fn detect_amd_matrix_core() -> Option<NpuInfo> {
-    use crate::gpu::detect::{detect_gpu, GpuVendor};
-    
+    use crate::gpu::detect::{GpuVendor, detect_gpu};
+
     let gpu = detect_gpu();
     if gpu.vendor == GpuVendor::Amd {
         let name_lower = gpu.name.to_lowercase();
-        
+
         // RDNA3架构支持AI加速
         if name_lower.contains("7900") || name_lower.contains("7800") {
             return Some(NpuInfo {
@@ -243,16 +243,16 @@ fn detect_amd_matrix_core() -> Option<NpuInfo> {
             });
         }
     }
-    
+
     None
 }
 
-/// NPU是否可用
+//  NPU是否可用
 pub fn is_npu_available() -> bool {
     detect_npu().is_some()
 }
 
-/// 获取NPU算力（TOPS）
+//  获取NPU算力（TOPS）
 pub fn get_npu_tops() -> f32 {
     detect_npu().map(|npu| npu.tops).unwrap_or(0.0)
 }

@@ -1,0 +1,29 @@
+# Rustfmt配置
+
+# 使用4个空格缩进
+tab_spaces = 4
+
+# 最大行宽
+max_width = 100
+
+# 使用Unix风格的换行符
+newline_style = "Unix"
+
+# 格式化文档注释
+format_code_in_doc_comments = true
+
+# 链式调用换行
+chain_width = 80
+
+# 注释宽度
+comment_width = 80
+
+# 使用尾随逗号
+use_try_shorthand = true
+
+# 使用字段简写
+use_field_init_shorthand = true
+
+# 使用单行匹配
+use_small_heuristics = "Default"
+

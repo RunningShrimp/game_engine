@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-/// 批次键 - 用于合并相同材质和纹理的绘制调用
+//  批次键 - 用于合并相同材质和纹理的绘制调用
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct BatchKey {
     pub material_id: u32,
@@ -8,7 +8,7 @@ pub struct BatchKey {
     pub shader_id: u32,
 }
 
-/// 批次数据
+//  批次数据
 #[derive(Debug, Clone)]
 pub struct Batch {
     pub key: BatchKey,
@@ -18,7 +18,7 @@ pub struct Batch {
     pub index_count: u32,
 }
 
-/// 批量渲染器 - 合并绘制调用以减少CPU开销
+//  批量渲染器 - 合并绘制调用以减少CPU开销
 pub struct BatchRenderer {
     batches: HashMap<BatchKey, Vec<Batch>>,
     max_instances_per_batch: u32,
@@ -88,7 +88,7 @@ impl BatchRenderer {
     }
 }
 
-/// 批次统计信息
+//  批次统计信息
 #[derive(Debug, Clone)]
 pub struct BatchStats {
     pub total_batches: usize,

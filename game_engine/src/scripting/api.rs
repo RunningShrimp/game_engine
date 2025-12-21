@@ -77,7 +77,6 @@ impl ScriptApi {
     }
 }
 
-
 /// 扩展的脚本值类型,支持更多的引擎类型
 #[derive(Debug, Clone)]
 pub enum ExtendedScriptValue {

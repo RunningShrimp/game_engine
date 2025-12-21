@@ -1,6 +1,6 @@
-//! 粒子系统管理器
-//!
-//! 管理多个粒子系统，提供统一的更新和渲染接口。
+//  粒子系统管理器
+// 
+//  管理多个粒子系统，提供统一的更新和渲染接口。
 
 use crate::render::particles::emitter::GpuParticleSystem;
 use wgpu::{CommandEncoder, Device, Queue};
@@ -42,11 +42,7 @@ impl ParticleSystemManager {
     /// # 返回
     ///
     /// 返回系统ID（如果成功）。
-    pub fn add_system(
-        &mut self,
-        device: &Device,
-        max_particles: u32,
-    ) -> Option<usize> {
+    pub fn add_system(&mut self, device: &Device, max_particles: u32) -> Option<usize> {
         if self.systems.len() >= self.max_systems {
             return None;
         }
@@ -81,11 +77,13 @@ impl ParticleSystemManager {
     pub fn update_all(
         &mut self,
         encoder: &mut CommandEncoder,
-        device: &Device,
+        #[allow(unused_variables)] device: &Device,
         queue: &Queue,
         delta_time: f32,
     ) {
         // 为所有粒子系统创建compute pass
+        // 注意：compute_pass当前未使用，未来用于粒子更新计算
+        #[allow(unused_variables)]
         let compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
             label: Some("Particle Update Pass"),
             timestamp_writes: None,
@@ -94,7 +92,7 @@ impl ParticleSystemManager {
         for system in &mut self.systems {
             // 更新系统统计信息
             system.stats.simulation_time_ms += delta_time * 1000.0;
-            
+
             // 如果系统没有初始化，进行初始化
             if system.stats.alive_count == 0 {
                 system.initialize(queue);
@@ -163,4 +161,3 @@ mod tests {
         assert_eq!(manager.max_systems, 10);
     }
 }
-

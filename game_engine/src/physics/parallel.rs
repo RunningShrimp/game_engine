@@ -1,44 +1,44 @@
-//! 优化的并行物理系统
-//!
-//! 将物理模拟移至独立线程，使用双缓冲实现读写分离。
-//! 支持物理岛屿并行处理和并行碰撞检测优化。
-//! 预计性能提升 30-50%（取决于场景复杂度和CPU核心数）。
-//!
-//! ## 架构设计
-//!
-//! ```text
-//! ┌─────────────────┐     ┌─────────────────┐
-//! │   Main Thread   │     │  Physics Thread │
-//! │                 │     │                 │
-//! │  Read Buffer A  │◄────│  Write Buffer B │
-//! │                 │     │                 │
-//! │  Send Commands  │────►│  Process Steps  │
-//! │                 │     │                 │
-//! └─────────────────┘     └─────────────────┘
-//!         │                       │
-//!         └───────┬───────────────┘
-//!                 ▼
-//!            Swap Buffers
-//! ```
-//!
-//! ## 使用示例
-//!
-//! ```ignore
-//! // 创建并行物理世界
-//! let parallel_physics = ParallelPhysicsWorld::new();
-//!
-//! // 发送命令（非阻塞）
-//! parallel_physics.send_command(PhysicsCommand::Step { dt: 0.016 });
-//!
-//! // 读取状态（从读缓冲区）
-//! let positions = parallel_physics.read_body_positions();
-//! ```
+//  优化的并行物理系统
+// 
+//  将物理模拟移至独立线程，使用双缓冲实现读写分离。
+//  支持物理岛屿并行处理和并行碰撞检测优化。
+//  预计性能提升 30-50%（取决于场景复杂度和CPU核心数）。
+// 
+//  ## 架构设计
+// 
+//  ```text
+//  ┌─────────────────┐     ┌─────────────────┐
+//  │   Main Thread   │     │  Physics Thread │
+//  │                 │     │                 │
+//  │  Read Buffer A  │◄────│  Write Buffer B │
+//  │                 │     │                 │
+//  │  Send Commands  │────►│  Process Steps  │
+//  │                 │     │                 │
+//  └─────────────────┘     └─────────────────┘
+//          │                       │
+//          └───────┬───────────────┘
+//                  ▼
+//             Swap Buffers
+//  ```
+// 
+//  ## 使用示例
+// 
+//  ```ignore
+//  // 创建并行物理世界
+//  let parallel_physics = ParallelPhysicsWorld::new();
+// 
+//  // 发送命令（非阻塞）
+//  parallel_physics.send_command(PhysicsCommand::Step { dt: 0.016 });
+// 
+//  // 读取状态（从读缓冲区）
+//  let positions = parallel_physics.read_body_positions();
+//  ```
 
 use crate::impl_default;
-use crossbeam_channel::{unbounded, Receiver, Sender};
+use crossbeam_channel::{Receiver, Sender, unbounded};
 use std::sync::{
-    atomic::{AtomicBool, AtomicUsize, Ordering},
     Arc, RwLock,
+    atomic::{AtomicBool, AtomicUsize, Ordering},
 };
 use std::thread::{self, JoinHandle};
 
@@ -119,7 +119,11 @@ impl DoubleBufferedPhysicsState {
 
     /// 获取读缓冲区快照
     pub fn read(&self) -> PhysicsSnapshot {
-        self.read_buffer.read().unwrap().clone()
+        if self.read_index.load(Ordering::Acquire) {
+            self.write_buffer.read().unwrap().clone()
+        } else {
+            self.read_buffer.read().unwrap().clone()
+        }
     }
 
     /// 写入到写缓冲区
@@ -129,9 +133,9 @@ impl DoubleBufferedPhysicsState {
 
     /// 交换缓冲区
     pub fn swap(&self) {
-        let mut read = self.read_buffer.write().unwrap();
-        let mut write = self.write_buffer.write().unwrap();
-        std::mem::swap(&mut *read, &mut *write);
+        // 切换读取索引而不是实际交换缓冲区内容
+        // 这样可以避免在读取时进行昂贵的内存复制
+        self.read_index.fetch_xor(true, Ordering::AcqRel);
     }
 }
 
@@ -415,7 +419,8 @@ impl PhysicsThreadRunner {
                         &mut impulse_joint_set,
                         &mut multibody_joint_set,
                         &mut ccd_solver,
-                        None,
+                        &(),
+                        &(),
                     );
 
                     // 更新性能统计

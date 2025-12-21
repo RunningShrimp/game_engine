@@ -1,82 +1,104 @@
-//! 统一错误处理模块
-//!
-//! 提供引擎范围内的统一错误类型定义、错误处理策略和恢复机制。
-//!
-//! ## 架构概览
-//!
-//! ```text
-//! ┌─────────────────────────────────────────────────────────┐
-//! │                  错误处理架构                             │
-//! ├─────────────────────────────────────────────────────────┤
-//! │ 1. 核心错误类型 (EngineError)                          │
-//! │    - 统一所有模块的错误类型                              │
-//! │    - 支持错误链和上下文传播                              │
-//! │    - 提供错误分类和严重级别                              │
-//! │                                                         │
-//! │ 2. 模块级错误类型                                        │
-//! │    - RenderError: 渲染系统错误                            │
-//! │    - PhysicsError: 物理系统错误                           │
-//! │    - AudioError: 音频系统错误                             │
-//! │    - ResourceError: 资源管理错误                          │
-//! │    - InputError: 输入系统错误                            │
-//! │    - SystemError: 系统级错误                              │
-//! │                                                         │
-//! │ 3. 错误处理策略                                          │
-//! │    - 错误恢复机制 (recovery.rs)                          │
-//! │    - 重试机制 (retry.rs)                                │
-//! │    - 错误监控 (monitoring.rs)                            │
-//! │                                                         │
-//! │ 4. 错误上下文和传播                                       │
-//! │    - 错误链追踪                                         │
-//! │    - 上下文信息收集                                      │
-//! │    - 结构化错误报告                                      │
-//! └─────────────────────────────────────────────────────────┘
-//! ```
+//  统一错误处理模块
+// 
+//  提供引擎范围内的统一错误类型定义、错误处理策略和恢复机制。
+// 
+//  ## 架构概览
+// 
+//  ```text
+//  ┌─────────────────────────────────────────────────────────┐
+//  │                  错误处理架构                             │
+//  ├─────────────────────────────────────────────────────────┤
+//  │ 1. 核心错误类型 (EngineError)                          │
+//  │    - 统一所有模块的错误类型                              │
+//  │    - 支持错误链和上下文传播                              │
+//  │    - 提供错误分类和严重级别                              │
+//  │                                                         │
+//  │ 2. 模块级错误类型                                        │
+//  │    - RenderError: 渲染系统错误                            │
+//  │    - PhysicsError: 物理系统错误                           │
+//  │    - AudioError: 音频系统错误                             │
+//  │    - ResourceError: 资源管理错误                          │
+//  │    - InputError: 输入系统错误                            │
+//  │    - SystemError: 系统级错误                              │
+//  │                                                         │
+//  │ 3. 错误处理策略                                          │
+//  │    - 错误恢复机制 (recovery.rs)                          │
+//  │    - 重试机制 (retry.rs)                                │
+//  │    - 错误监控 (monitoring.rs)                            │
+//  │                                                         │
+//  │ 4. 错误上下文和传播                                       │
+//  │    - 错误链追踪                                         │
+//  │    - 上下文信息收集                                      │
+//  │    - 结构化错误报告                                      │
+//  └─────────────────────────────────────────────────────────┘
+//  ```
 
-pub mod engine_error;
-pub mod render_error;
-pub mod physics_error;
+/// 音频错误类型 - 音频系统特定的错误
 pub mod audio_error;
-pub mod resource_error;
+/// 引擎核心错误 - 统一的错误处理类型
+pub mod engine_error;
+/// 输入错误类型 - 输入系统特定的错误
 pub mod input_error;
-pub mod system_error;
-pub mod recovery;
-pub mod retry;
-pub mod monitoring;
+/// 锁安全工具 - 线程安全的锁包装器
 pub mod lock_safety;
+#[cfg(test)]
+pub mod concurrency_tests;
+/// 错误监控 - 错误的监控和统计
+pub mod monitoring;
+/// 物理错误类型 - 物理系统特定的错误
+pub mod physics_error;
+/// 错误恢复 - 错误恢复策略和管理器
+pub mod recovery;
+/// 渲染错误类型 - 渲染系统特定的错误
+pub mod render_error;
+/// 资源错误类型 - 资源管理特定的错误
+pub mod resource_error;
+/// 重试机制 - 错误重试执行器和配置
+pub mod retry;
+/// 系统错误类型 - 系统级别的错误
+pub mod system_error;
+/// 统一日志管理 - 日志系统和错误处理的集成
+pub mod logging;
+/// 统一错误处理器 - 错误处理、恢复和日志的集成
+pub mod error_handler;
 
 // Serde imports for serialization/deserialization
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 // 重新导出所有错误类型
-pub use engine_error::EngineError;
-pub use render_error::RenderError;
-pub use physics_error::PhysicsError;
 pub use audio_error::AudioError;
-pub use resource_error::ResourceError;
+pub use engine_error::EngineError;
 pub use input_error::InputError;
+pub use physics_error::PhysicsError;
+pub use render_error::RenderError;
+pub use resource_error::ResourceError;
 pub use system_error::SystemError;
 
 // 重新导出错误处理策略
-pub use recovery::{
-    RecoveryResult, RecoveryInfo, RecoveryStrategy, RecoveryContext,
-    ErrorRecovery, DefaultErrorRecovery, RenderErrorRecovery, AudioErrorRecovery,
-    PhysicsErrorRecovery, ResourceErrorRecovery, RecoveryManager
-};
-pub use retry::{
-    RetryConfig, RetryCondition, RetryResult, RetryPolicy, RetryExecutor,
+pub use lock_safety::{
+    LockError, ScopedLock, safe_lock, safe_read, safe_write, try_lock, try_read, try_write,
 };
 pub use monitoring::{
-    ErrorStats, ErrorReport, ErrorDetail, ErrorTrend, TrendType,
-    ErrorMonitor, MonitorConfig, ErrorThresholds, ErrorReportGenerator,
-    DefaultReportGenerator
+    DefaultReportGenerator, ErrorDetail, ErrorMonitor, ErrorReport, ErrorReportGenerator,
+    ErrorStats, ErrorThresholds, ErrorTrend, MonitorConfig, TrendType,
 };
-pub use lock_safety::{
-    LockError, safe_lock, try_lock, safe_read, safe_write, try_read, try_write,
-    ScopedLock
+pub use recovery::{
+    AudioErrorRecovery, DefaultErrorRecovery, ErrorRecovery, PhysicsErrorRecovery, RecoveryContext,
+    RecoveryInfo, RecoveryManager, RecoveryResult, RecoveryStrategy, RenderErrorRecovery,
+    ResourceErrorRecovery,
+};
+pub use retry::{RetryCondition, RetryConfig, RetryExecutor, RetryPolicy, RetryResult};
+
+// Re-export Logging components
+pub use logging::{
+    init_logger, log, log_error, ConsoleLogSink, FileLogSink, LogEntry, LogLevel, Logger,
+    LoggingConfig, LogSink,
 };
 
-/// 错误严重级别
+// Re-export Error Handler components
+pub use error_handler::{ErrorHandler, ErrorHandlerConfig};
+
+/// 错误严重级别 - 表示错误的严重程度
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub enum ErrorSeverity {
     /// 信息级别 - 不会影响系统运行
@@ -93,6 +115,9 @@ pub enum ErrorSeverity {
 
 impl ErrorSeverity {
     /// 获取严重级别的字符串表示
+    /// 
+    /// # Returns
+    /// 返回严重级别的简洁字符串表示（"INFO", "WARNING", "ERROR", "CRITICAL", "FATAL"）
     pub fn as_str(&self) -> &'static str {
         match self {
             ErrorSeverity::Info => "INFO",
@@ -104,6 +129,12 @@ impl ErrorSeverity {
     }
 
     /// 从字符串解析严重级别
+    /// 
+    /// # Arguments
+    /// * `s` - 要解析的字符串（大小写不敏感）
+    /// 
+    /// # Returns
+    /// 如果字符串有效返回Some(严重级别)，否则返回None
     pub fn from_str(s: &str) -> Option<Self> {
         match s.to_uppercase().as_str() {
             "INFO" => Some(ErrorSeverity::Info),
@@ -116,26 +147,26 @@ impl ErrorSeverity {
     }
 }
 
-/// 错误分类
+/// 错误分类 - 根据错误来源将其分类
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ErrorCategory {
-    /// 渲染相关错误
+    /// 渲染相关错误（GPU、WGPU、着色器等）
     Render,
-    /// 物理相关错误
+    /// 物理相关错误（物理引擎、碰撞检测等）
     Physics,
-    /// 音频相关错误
+    /// 音频相关错误（音频播放、混音等）
     Audio,
-    /// 资源相关错误
+    /// 资源相关错误（资源加载、资源管理等）
     Resource,
-    /// 输入相关错误
+    /// 输入相关错误（控制器、键盘、鼠标等）
     Input,
-    /// 系统相关错误
+    /// 系统相关错误（内存、线程等）
     System,
-    /// 网络相关错误
+    /// 网络相关错误（网络连接、数据传输等）
     Network,
-    /// 脚本相关错误
+    /// 脚本相关错误（脚本执行、脚本编译等）
     Script,
-    /// 平台相关错误
+    /// 平台相关错误（VR/AR、XR特定错误等）
     Platform,
     /// 未知错误类型
     Unknown,
@@ -143,6 +174,9 @@ pub enum ErrorCategory {
 
 impl ErrorCategory {
     /// 获取分类的字符串表示
+    /// 
+    /// # Returns
+    /// 返回分类的简洁字符串表示
     pub fn as_str(&self) -> &'static str {
         match self {
             ErrorCategory::Render => "RENDER",
@@ -159,13 +193,19 @@ impl ErrorCategory {
     }
 }
 
-/// 统一的结果类型
+/// 统一的结果类型 - 返回值为Result<T, EngineError>
 pub type EngineResult<T> = Result<T, EngineError>;
+/// 渲染系统的结果类型
 pub type RenderResult<T> = Result<T, RenderError>;
+/// 物理系统的结果类型
 pub type PhysicsResult<T> = Result<T, PhysicsError>;
+/// 音频系统的结果类型
 pub type AudioResult<T> = Result<T, AudioError>;
+/// 资源系统的结果类型
 pub type ResourceResult<T> = Result<T, ResourceError>;
+/// 输入系统的结果类型
 pub type InputResult<T> = Result<T, InputError>;
+/// 系统级别的结果类型
 pub type SystemResult<T> = Result<T, SystemError>;
 
 #[cfg(test)]
@@ -177,8 +217,11 @@ mod tests {
         assert_eq!(ErrorSeverity::Info.as_str(), "INFO");
         assert_eq!(ErrorSeverity::Fatal.as_str(), "FATAL");
         assert!(ErrorSeverity::Critical > ErrorSeverity::Error);
-        
-        assert_eq!(ErrorSeverity::from_str("warning"), Some(ErrorSeverity::Warning));
+
+        assert_eq!(
+            ErrorSeverity::from_str("warning"),
+            Some(ErrorSeverity::Warning)
+        );
         assert_eq!(ErrorSeverity::from_str("invalid"), None);
     }
 
@@ -186,7 +229,7 @@ mod tests {
     fn test_error_category() {
         assert_eq!(ErrorCategory::Render.as_str(), "RENDER");
         assert_eq!(ErrorCategory::Physics.as_str(), "PHYSICS");
-        
+
         let category = ErrorCategory::Render;
         assert_eq!(category, ErrorCategory::Render);
     }

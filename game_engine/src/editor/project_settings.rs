@@ -1,6 +1,7 @@
+use crate::impl_default;
+use crate::platform::run_sync;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
-use crate::impl_default;
 
 /// 项目设置
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -157,7 +158,8 @@ impl ProjectSettingsManager {
             return Ok(());
         }
 
-        let content = tokio::fs::read_to_string(&self.settings_path).await
+        let content = tokio::fs::read_to_string(&self.settings_path)
+            .await
             .map_err(|e| format!("Failed to read settings file: {}", e))?;
 
         self.settings = serde_json::from_str(&content)
@@ -175,11 +177,13 @@ impl ProjectSettingsManager {
 
         // 确保目录存在
         if let Some(parent) = self.settings_path.parent() {
-            tokio::fs::create_dir_all(parent).await
+            tokio::fs::create_dir_all(parent)
+                .await
                 .map_err(|e| format!("Failed to create settings directory: {}", e))?;
         }
 
-        tokio::fs::write(&self.settings_path, content).await
+        tokio::fs::write(&self.settings_path, content)
+            .await
             .map_err(|e| format!("Failed to write settings file: {}", e))?;
 
         self.has_unsaved_changes = false;
@@ -189,15 +193,41 @@ impl ProjectSettingsManager {
 
     /// 加载设置（同步版本，用于向后兼容）
     pub fn load(&mut self) -> Result<(), String> {
-        tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current().block_on(self.load_async())
-        })
+        let settings_path = self.settings_path.clone();
+        let result: Result<Option<ProjectSettings>, String> = run_sync(async move {
+            if !settings_path.exists() {
+                return Ok(None);
+            }
+            let content = tokio::fs::read_to_string(&settings_path)
+                .await
+                .map_err(|e| format!("Failed to read settings file: {}", e))?;
+            let settings: ProjectSettings = serde_json::from_str(&content)
+                .map_err(|e| format!("Failed to parse settings file: {}", e))?;
+            Ok(Some(settings))
+        });
+        
+        match result {
+            Ok(Some(settings)) => {
+                self.settings = settings;
+                self.has_unsaved_changes = false;
+                Ok(())
+            }
+            Ok(None) => Ok(()),
+            Err(e) => Err(e),
+        }
     }
 
     /// 保存设置（同步版本，用于向后兼容）
     pub fn save(&mut self) -> Result<(), String> {
-        tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current().block_on(self.save_async())
+        let settings_path = self.settings_path.clone();
+        let settings_clone = self.settings.clone();
+        run_sync(async move {
+            let content = serde_json::to_string_pretty(&settings_clone)
+                .map_err(|e| format!("Failed to serialize settings: {}", e))?;
+            tokio::fs::write(&settings_path, content)
+                .await
+                .map_err(|e| format!("Failed to write settings file: {}", e))?;
+            Ok(())
         })
     }
 
@@ -248,6 +278,8 @@ impl ProjectSettingsManager {
                 }
             });
         });
+
+        // Tests are near EOF; add unit tests for save/load sync behavior (outside and inside runtime)
 
         ui.separator();
 
@@ -496,6 +528,27 @@ mod tests {
         let mut manager2 = ProjectSettingsManager::new(settings_path.clone());
         manager2.load().unwrap();
         assert_eq!(manager2.settings.project_name, "Test Project");
+
+        // 清理
+        std::fs::remove_file(settings_path).ok();
+    }
+
+    #[tokio::test]
+    async fn test_settings_manager_runtime() {
+        let temp_dir = env::temp_dir();
+        let settings_path = temp_dir.join("test_settings_rt.json");
+
+        let mut manager = ProjectSettingsManager::new(settings_path.clone());
+        manager.settings.project_name = "RT Project".to_string();
+
+        // 保存 (在运行时内调用同步封装)
+        manager.save().unwrap();
+        assert!(!manager.has_unsaved_changes);
+
+        // 加载
+        let mut manager2 = ProjectSettingsManager::new(settings_path.clone());
+        manager2.load().unwrap();
+        assert_eq!(manager2.settings.project_name, "RT Project");
 
         // 清理
         std::fs::remove_file(settings_path).ok();

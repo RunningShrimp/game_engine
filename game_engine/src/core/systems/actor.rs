@@ -1,6 +1,6 @@
-//! Actor系统集成
-//!
-//! 提供ECS系统来与Actor系统交互
+//  Actor系统集成
+// 
+//  提供ECS系统来与Actor系统交互
 
 use crate::domain::actor::{
     ActorHandle, AudioActorMessage, PhysicsActorMessage, RenderActorMessage,

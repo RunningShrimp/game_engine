@@ -1,6 +1,6 @@
-//! 控制台平台支持模块
-//!
-//! 提供游戏主机平台的抽象和优化
+//  控制台平台支持模块
+// 
+//  提供游戏主机平台的抽象和优化
 
 use crate::config::graphics::{GraphicsConfig, QualityLevel};
 use crate::platform::hardware_info::HardwareInfo;
@@ -43,14 +43,14 @@ pub struct ConsoleConfig {
 
 impl ConsoleConfig {
     /// 从硬件信息创建控制台配置
-    pub fn from_hardware(hardware: &HardwareInfo) -> Self {
+    pub fn from_hardware(_hardware: &HardwareInfo) -> Self {
         let platform = Self::detect_platform();
 
         // 根据平台设置默认配置
         let (target_fps, max_resolution, ray_tracing_enabled, hdr_enabled) = match platform {
             ConsolePlatform::PlayStation5 => (60, (3840, 2160), true, true),
             ConsolePlatform::PlayStation4 => (30, (1920, 1080), false, true),
-            ConsolePlatform::Xbox => (60, (3840, 2160), true, true),
+            ConsolePlatform::XboxSeries => (60, (3840, 2160), true, true),
             ConsolePlatform::XboxOne => (30, (1920, 1080), false, true),
             ConsolePlatform::NintendoSwitch => (30, (1920, 1080), false, false),
             ConsolePlatform::Unknown => (60, (1920, 1080), false, false),
@@ -72,13 +72,14 @@ impl ConsoleConfig {
         // 注意：实际检测需要平台特定的SDK
         // 这里提供占位实现
 
-#[cfg(target_os = "psp")]
+        #[cfg(target_os = "psp")]
         return ConsolePlatform::PlayStationPortable;
 
-    #[cfg(target_os = "ps4")]
+        // PlayStation 4 - 使用自定义检测，因为标准Rust不支持ps4
+        #[cfg(target_os = "psx")]
         return ConsolePlatform::PlayStation4;
 
-        #[cfg(any(target_os = "windows", target_os = "xboxone", target_os = "xboxseries"))]
+        #[cfg(target_os = "windows")]
         {
             // 需要进一步检测是Series还是One
             // 这里简化为Series
@@ -203,7 +204,6 @@ impl ConsoleInputHandler {
     }
 }
 
-
 /// 控制台性能监控
 pub struct ConsolePerformanceMonitor {
     /// 当前帧率
@@ -271,7 +271,6 @@ impl ConsolePerformanceMonitor {
         self.current_fps < target_fps as f32 * 0.9 || self.gpu_usage > 0.95 || self.cpu_usage > 0.95
     }
 }
-
 
 /// 检测是否为控制台平台
 pub fn is_console_platform() -> bool {

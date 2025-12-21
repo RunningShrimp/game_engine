@@ -1,6 +1,6 @@
-//! 资源管理系统插件
-//!
-//! 提供统一的资源加载、管理和缓存功能。
+//  资源管理系统插件
+// 
+//  提供统一的资源加载、管理和缓存功能。
 
 use crate::impl_default;
 use crate::plugins::{EnginePlugin, App, PluginVersion, PluginDependency};

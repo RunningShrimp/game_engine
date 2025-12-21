@@ -1,16 +1,16 @@
-//! WGPU GPU 计算集成
-//!
-//! 集成 WGPU 和 GPU 计算能力
-//! - 计算管道管理
-//! - WGSL 着色器编译
-//! - GPU 资源管理
-//! - 性能监控
+//  WGPU GPU 计算集成
+// 
+//  集成 WGPU 和 GPU 计算能力
+//  - 计算管道管理
+//  - WGSL 着色器编译
+//  - GPU 资源管理
+//  - 性能监控
 
 use crate::impl_default;
 use std::collections::HashMap;
 use std::sync::Arc;
 
-/// GPU 计算设备
+//  GPU 计算设备
 pub struct GPUComputeDevice {
     /// 设备特性
     features: GPUFeatures,
@@ -22,7 +22,7 @@ pub struct GPUComputeDevice {
     supported_formats: Vec<String>,
 }
 
-/// GPU 特性
+//  GPU 特性
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct GPUFeatures {
     /// 是否支持计算着色器
@@ -78,7 +78,7 @@ impl GPUComputeDevice {
     }
 }
 
-/// WGSL 着色器源代码
+//  WGSL 着色器源代码
 #[derive(Debug, Clone)]
 pub struct WGSLShader {
     /// 着色器名称
@@ -274,7 +274,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     }
 }
 
-/// GPU 缓冲区包装器
+//  GPU 缓冲区包装器
 #[derive(Debug, Clone)]
 pub struct GPUBuffer {
     /// 缓冲区名称
@@ -314,7 +314,7 @@ impl GPUBuffer {
     }
 }
 
-/// 计算管道
+//  计算管道
 pub struct ComputePipelineWGPU {
     /// 管道名称
     pub name: String,
@@ -396,7 +396,7 @@ impl ComputePipelineWGPU {
     }
 }
 
-/// GPU 执行结果
+//  GPU 执行结果
 #[derive(Debug, Clone)]
 pub struct GPUExecutionResult {
     /// 是否成功
@@ -441,7 +441,7 @@ impl GPUExecutionResult {
     }
 }
 
-/// 性能对比结果
+//  性能对比结果
 #[derive(Debug, Clone)]
 pub struct PerformanceComparison {
     /// 操作名称

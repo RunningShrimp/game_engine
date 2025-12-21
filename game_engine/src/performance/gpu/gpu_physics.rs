@@ -1,10 +1,10 @@
-//! GPU 计算着色器和物理加速
-//!
-//! 使用 WGPU 实现 GPU 计算着色器进行并行物理模拟
-//! - 粒子系统模拟
-//! - 碰撞检测
-//! - 约束求解
-//! - 力场计算
+//  GPU 计算着色器和物理加速
+// 
+//  使用 WGPU 实现 GPU 计算着色器进行并行物理模拟
+//  - 粒子系统模拟
+//  - 碰撞检测
+//  - 约束求解
+//  - 力场计算
 
 use glam::Vec3;
 use std::sync::Arc;
@@ -204,7 +204,9 @@ impl GPUPhysicsResources {
         let body_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("Physics Body Buffer"),
             size: (max_bodies as u64) * std::mem::size_of::<GPUPhysicsBody>() as u64,
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::COPY_SRC,
+            usage: wgpu::BufferUsages::STORAGE
+                | wgpu::BufferUsages::COPY_DST
+                | wgpu::BufferUsages::COPY_SRC,
             mapped_at_creation: false,
         });
 
@@ -292,6 +294,20 @@ impl GPUPhysicsResources {
         }
     }
 
+    /// 调整缓冲区大小并重新创建绑定组
+    pub fn resize(&mut self, device: &wgpu::Device, new_max_bodies: u32) {
+        self.max_bodies = new_max_bodies;
+        // 重新创建缓冲区
+        self.body_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Physics Body Buffer"),
+            size: (new_max_bodies as u64) * std::mem::size_of::<GPUPhysicsBody>() as u64,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        // 重新创建绑定组
+        self.recreate_bind_group(device);
+    }
+
     /// 重新创建绑定组（当缓冲区大小改变时）
     fn recreate_bind_group(&mut self, device: &wgpu::Device) {
         self.bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
@@ -369,7 +385,12 @@ impl GPUPhysicsSimulator {
     }
 
     /// 初始化 GPU 资源
-    pub fn initialize_gpu(&mut self, device: Arc<wgpu::Device>, queue: Arc<wgpu::Queue>, max_bodies: u32) {
+    pub fn initialize_gpu(
+        &mut self,
+        device: Arc<wgpu::Device>,
+        queue: Arc<wgpu::Queue>,
+        max_bodies: u32,
+    ) {
         let resources = GPUPhysicsResources::new(&device, max_bodies);
         self.gpu_resources = Some(resources);
         self.device = Some(device);
@@ -470,7 +491,7 @@ impl GPUPhysicsSimulator {
         }
 
         let body_count = self.bodies.len() as u32;
-        
+
         // 检查缓冲区大小是否足够
         if body_count > resources.max_bodies {
             // 缓冲区太小，回退到 CPU
@@ -479,27 +500,29 @@ impl GPUPhysicsSimulator {
         }
 
         // 准备物理体数据（转换为 GPU 格式）
-        let gpu_bodies: Vec<GPUPhysicsBodyGPU> = self.bodies.iter().map(|b| {
-            GPUPhysicsBodyGPU {
+        let gpu_bodies: Vec<GPUPhysicsBodyGPU> = self
+            .bodies
+            .iter()
+            .map(|b| GPUPhysicsBodyGPU {
                 position: [b.position.x, b.position.y, b.position.z],
                 inv_mass: b.inv_mass,
                 velocity: [b.velocity.x, b.velocity.y, b.velocity.z],
                 angular_velocity: b.angular_velocity,
                 force: [b.force.x, b.force.y, b.force.z],
                 _padding: 0.0,
-            }
-        }).collect();
+            })
+            .collect();
 
         // 上传物理体数据到 GPU
-        queue.write_buffer(
-            &resources.body_buffer,
-            0,
-            bytemuck::cast_slice(&gpu_bodies),
-        );
+        queue.write_buffer(&resources.body_buffer, 0, bytemuck::cast_slice(&gpu_bodies));
 
         // 准备模拟参数
         let params = SimParams {
-            gravity: [self.config.gravity.x, self.config.gravity.y, self.config.gravity.z],
+            gravity: [
+                self.config.gravity.x,
+                self.config.gravity.y,
+                self.config.gravity.z,
+            ],
             time_step: self.config.time_step,
             damping: self.config.damping,
             body_count,
@@ -507,11 +530,7 @@ impl GPUPhysicsSimulator {
         };
 
         // 上传参数到 GPU
-        queue.write_buffer(
-            &resources.params_buffer,
-            0,
-            bytemuck::bytes_of(&params),
-        );
+        queue.write_buffer(&resources.params_buffer, 0, bytemuck::bytes_of(&params));
 
         // 创建命令编码器
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -529,7 +548,8 @@ impl GPUPhysicsSimulator {
             compute_pass.set_bind_group(0, &resources.bind_group, &[]);
 
             // 计算工作组数量
-            let workgroups = (body_count + self.config.workgroup_size - 1) / self.config.workgroup_size;
+            let workgroups =
+                (body_count + self.config.workgroup_size - 1) / self.config.workgroup_size;
             compute_pass.dispatch_workgroups(workgroups, 1, 1);
         }
 
@@ -577,11 +597,8 @@ impl GPUPhysicsSimulator {
                         gpu_body.velocity[1],
                         gpu_body.velocity[2],
                     );
-                    self.bodies[i].force = Vec3::new(
-                        gpu_body.force[0],
-                        gpu_body.force[1],
-                        gpu_body.force[2],
-                    );
+                    self.bodies[i].force =
+                        Vec3::new(gpu_body.force[0], gpu_body.force[1], gpu_body.force[2]);
                 }
             }
         }
@@ -834,6 +851,11 @@ mod tests {
         let mut sim = GPUPhysicsSimulator::new();
         let body_a = sim.add_body(Vec3::new(0.0, 0.0, 0.0), 1.0);
         let body_b = sim.add_body(Vec3::new(0.5, 0.0, 0.0), 1.0); // 很近
+
+        // 验证身体已添加
+        assert!(body_a >= 0);
+        assert!(body_b >= 0);
+        assert_ne!(body_a, body_b); // 应该是不同的ID
 
         sim.detect_collisions();
 

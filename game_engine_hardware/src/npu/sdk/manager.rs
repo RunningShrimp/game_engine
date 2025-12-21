@@ -1,17 +1,16 @@
-/// 统一的SDK管理器
-/// 
-/// 提供统一的接口来管理和使用各种NPU SDK
-
+use super::super::sdk::{NpuBackend, NpuInferenceEngine};
+//  统一的SDK管理器
+///
+//  提供统一的接口来管理和使用各种NPU SDK
 use crate::error::{HardwareError, HardwareResult};
-use super::super::sdk::{NpuInferenceEngine, NpuBackend};
-use crate::gpu::detect::{detect_gpu, GpuVendor};
-use crate::npu::detect::{detect_npu, NpuVendor};
-use crate::soc::detect::{detect_soc, SocVendor};
+use crate::gpu::detect::{GpuVendor, detect_gpu};
+use crate::npu::detect::{NpuVendor, detect_npu};
+use crate::soc::detect::{SocVendor, detect_soc};
 use std::path::Path;
 
-/// SDK管理器
-/// 
-/// 自动检测硬件并选择最优的SDK
+//  SDK管理器
+///
+//  自动检测硬件并选择最优的SDK
 pub struct SdkManager {
     available_backends: Vec<NpuBackend>,
     preferred_backend: Option<NpuBackend>,
@@ -19,20 +18,20 @@ pub struct SdkManager {
 
 impl SdkManager {
     /// 创建新的SDK管理器
-    /// 
+    ///
     /// 自动检测可用的硬件和SDK
     pub fn new() -> HardwareResult<Self> {
         let mut manager = Self {
             available_backends: Vec::new(),
             preferred_backend: None,
         };
-        
+
         manager.detect_available_backends()?;
         manager.select_preferred_backend();
-        
+
         Ok(manager)
     }
-    
+
     /// 检测可用的后端
     fn detect_available_backends(&mut self) -> HardwareResult<()> {
         // 检测GPU
@@ -58,7 +57,7 @@ impl SdkManager {
                 _ => {}
             }
         }
-        
+
         // 检测NPU
         if let Some(npu_info) = detect_npu() {
             match npu_info.vendor {
@@ -77,7 +76,7 @@ impl SdkManager {
                 _ => {}
             }
         }
-        
+
         // 检测SoC
         if let Some(soc_info) = detect_soc() {
             match soc_info.vendor {
@@ -104,28 +103,28 @@ impl SdkManager {
                 _ => {}
             }
         }
-        
+
         // ONNX Runtime作为通用后备
         if !self.available_backends.contains(&NpuBackend::OnnxRuntime) {
             self.available_backends.push(NpuBackend::OnnxRuntime);
         }
-        
+
         Ok(())
     }
-    
+
     /// 选择首选后端
     fn select_preferred_backend(&mut self) {
         // 优先级：专用NPU > GPU加速 > 通用ONNX Runtime
         let priority_order = [
-            NpuBackend::CoreML,          // Apple Neural Engine
-            NpuBackend::Ascend,           // 华为昇腾NPU
-            NpuBackend::SNPE,         // 高通Hexagon DSP
-            NpuBackend::NeuroPilot,   // 联发科APU
-            NpuBackend::OpenVINO,        // Intel VPU/GPU
-            NpuBackend::ROCm,              // AMD GPU
-            NpuBackend::OnnxRuntime,          // 通用后备
+            NpuBackend::CoreML,      // Apple Neural Engine
+            NpuBackend::Ascend,      // 华为昇腾NPU
+            NpuBackend::SNPE,        // 高通Hexagon DSP
+            NpuBackend::NeuroPilot,  // 联发科APU
+            NpuBackend::OpenVINO,    // Intel VPU/GPU
+            NpuBackend::ROCm,        // AMD GPU
+            NpuBackend::OnnxRuntime, // 通用后备
         ];
-        
+
         for backend in &priority_order {
             if self.available_backends.contains(backend) {
                 self.preferred_backend = Some(*backend);
@@ -133,31 +132,31 @@ impl SdkManager {
             }
         }
     }
-    
+
     /// 获取可用的后端列表
     pub fn available_backends(&self) -> &[NpuBackend] {
         &self.available_backends
     }
-    
+
     /// 获取首选后端
     pub fn preferred_backend(&self) -> Option<NpuBackend> {
         self.preferred_backend
     }
-    
+
     /// 创建推理引擎
-    /// 
+    ///
     /// 使用首选后端创建引擎
     pub fn create_engine(&self) -> HardwareResult<Box<dyn NpuInferenceEngine>> {
-        let backend = self.preferred_backend.ok_or_else(|| {
-            HardwareError::NpuAccelerationError {
-                operation: "create_engine".to_string(),
-                reason: "No available backend".to_string(),
-            }
-        })?;
-        
+        let backend =
+            self.preferred_backend
+                .ok_or_else(|| HardwareError::NpuAccelerationError {
+                    operation: "create_engine".to_string(),
+                    reason: "No available backend".to_string(),
+                })?;
+
         self.create_engine_with_backend(backend)
     }
-    
+
     /// 使用指定后端创建推理引擎
     pub fn create_engine_with_backend(
         &self,
@@ -169,7 +168,7 @@ impl SdkManager {
                 reason: format!("Backend {:?} is not available", backend),
             });
         }
-        
+
         match backend {
             NpuBackend::OnnxRuntime => {
                 use super::onnx_runtime_real::OnnxRuntimeEngineReal;
@@ -215,7 +214,7 @@ impl SdkManager {
             }),
         }
     }
-    
+
     /// 打印可用后端信息
     pub fn print_info(&self) {
         println!("=== SDK Manager Info ===");
@@ -245,32 +244,32 @@ impl Default for SdkManager {
     }
 }
 
-/// 便捷函数：自动选择并创建推理引擎
-/// 
-/// # 示例
-/// 
-/// ```rust,ignore
-/// use crate::sdk_manager::auto_create_engine;
-/// 
-/// let mut engine = auto_create_engine()?;
-/// engine.load_model("model.onnx")?;
-/// let output = engine.infer(&input)?;
-/// ```
+//  便捷函数：自动选择并创建推理引擎
+///
+//  # 示例
+///
+//  ```rust,ignore
+//  use crate::sdk_manager::auto_create_engine;
+///
+//  let mut engine = auto_create_engine()?;
+//  engine.load_model("model.onnx")?;
+//  let output = engine.infer(&input)?;
+//  ```
 pub fn auto_create_engine() -> HardwareResult<Box<dyn NpuInferenceEngine>> {
     let manager = SdkManager::new()?;
     manager.create_engine()
 }
 
-/// 便捷函数：加载模型并创建引擎
-/// 
-/// # 示例
-/// 
-/// ```rust,ignore
-/// use crate::sdk_manager::load_model;
-/// 
-/// let engine = load_model("model.onnx")?;
-/// let output = engine.infer(&input)?;
-/// ```
+//  便捷函数：加载模型并创建引擎
+///
+//  # 示例
+///
+//  ```rust,ignore
+//  use crate::sdk_manager::load_model;
+///
+//  let engine = load_model("model.onnx")?;
+//  let output = engine.infer(&input)?;
+//  ```
 pub fn load_model(model_path: impl AsRef<Path>) -> HardwareResult<Box<dyn NpuInferenceEngine>> {
     let mut engine = auto_create_engine()?;
     engine.load_model(model_path.as_ref())?;
@@ -280,16 +279,16 @@ pub fn load_model(model_path: impl AsRef<Path>) -> HardwareResult<Box<dyn NpuInf
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_manager_creation() {
         let result = SdkManager::new();
         assert!(result.is_ok());
-        
+
         let manager = result.unwrap();
         assert!(!manager.available_backends().is_empty());
     }
-    
+
     #[test]
     fn test_preferred_backend() {
         let manager = SdkManager::new().unwrap();

@@ -1,9 +1,9 @@
-//! 任务管理领域对象
-//!
-//! 该模块实现了任务管理的核心业务逻辑，包括任务的创建、更新、
-//! 状态管理和依赖关系处理。
+//  任务管理领域对象
+// 
+//  该模块实现了任务管理的核心业务逻辑，包括任务的创建、更新、
+//  状态管理和依赖关系处理。
 
-use crate::domain::implementation_plan::errors::{TaskError, ImplementationPlanError};
+use crate::domain::implementation_plan::errors::{ImplementationPlanError, TaskError};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
@@ -198,7 +198,10 @@ impl Task {
     }
 
     /// 移除依赖任务
-    pub fn remove_dependency(&mut self, dependency_id: &TaskId) -> Result<(), ImplementationPlanError> {
+    pub fn remove_dependency(
+        &mut self,
+        dependency_id: &TaskId,
+    ) -> Result<(), ImplementationPlanError> {
         if self.dependencies.remove(dependency_id) {
             self.updated_at = Self::current_timestamp();
             Ok(())
@@ -217,15 +220,19 @@ impl Task {
                 self.updated_at = Self::current_timestamp();
                 Ok(())
             }
-            TaskStatus::Cancelled => Err(ImplementationPlanError::Task(TaskError::InvalidStatusTransition {
-                from: TaskStatus::Cancelled.to_string(),
-                to: TaskStatus::InProgress.to_string(),
-            })),
+            TaskStatus::Cancelled => Err(ImplementationPlanError::Task(
+                TaskError::InvalidStatusTransition {
+                    from: TaskStatus::Cancelled.to_string(),
+                    to: TaskStatus::InProgress.to_string(),
+                },
+            )),
             TaskStatus::InProgress => Ok(()), // 已经是进行中状态
-            TaskStatus::Done => Err(ImplementationPlanError::Task(TaskError::InvalidStatusTransition {
-                from: TaskStatus::Done.to_string(),
-                to: TaskStatus::InProgress.to_string(),
-            })),
+            TaskStatus::Done => Err(ImplementationPlanError::Task(
+                TaskError::InvalidStatusTransition {
+                    from: TaskStatus::Done.to_string(),
+                    to: TaskStatus::InProgress.to_string(),
+                },
+            )),
         }
     }
 
@@ -237,10 +244,12 @@ impl Task {
                 self.updated_at = Self::current_timestamp();
                 Ok(())
             }
-            TaskStatus::Cancelled => Err(ImplementationPlanError::Task(TaskError::InvalidStatusTransition {
-                from: TaskStatus::Cancelled.to_string(),
-                to: TaskStatus::Done.to_string(),
-            })),
+            TaskStatus::Cancelled => Err(ImplementationPlanError::Task(
+                TaskError::InvalidStatusTransition {
+                    from: TaskStatus::Cancelled.to_string(),
+                    to: TaskStatus::Done.to_string(),
+                },
+            )),
             TaskStatus::Done => Ok(()), // 已经是完成状态
         }
     }
@@ -248,10 +257,12 @@ impl Task {
     /// 取消任务
     pub fn cancel(&mut self) -> Result<(), ImplementationPlanError> {
         if self.status == TaskStatus::Done {
-            return Err(ImplementationPlanError::Task(TaskError::InvalidStatusTransition {
-                from: TaskStatus::Done.to_string(),
-                to: TaskStatus::Cancelled.to_string(),
-            }));
+            return Err(ImplementationPlanError::Task(
+                TaskError::InvalidStatusTransition {
+                    from: TaskStatus::Done.to_string(),
+                    to: TaskStatus::Cancelled.to_string(),
+                },
+            ));
         }
 
         self.status = TaskStatus::Cancelled;
@@ -261,7 +272,9 @@ impl Task {
 
     /// 检查任务是否可以开始（所有依赖任务已完成）
     pub fn can_start(&self, completed_tasks: &HashSet<TaskId>) -> bool {
-        self.dependencies.iter().all(|dep| completed_tasks.contains(dep))
+        self.dependencies
+            .iter()
+            .all(|dep| completed_tasks.contains(dep))
     }
 
     /// 检查任务是否过期
@@ -295,7 +308,10 @@ impl TaskManager {
     }
 
     /// 创建任务
-    pub fn create_task(&mut self, name: impl Into<String>) -> Result<TaskId, ImplementationPlanError> {
+    pub fn create_task(
+        &mut self,
+        name: impl Into<String>,
+    ) -> Result<TaskId, ImplementationPlanError> {
         let id = TaskId::new(self.next_id);
         self.next_id += 1;
 
@@ -327,7 +343,9 @@ impl TaskManager {
             }
             Ok(())
         } else {
-            Err(ImplementationPlanError::Task(TaskError::TaskNotFound(format!("{}", id))))
+            Err(ImplementationPlanError::Task(TaskError::TaskNotFound(
+                format!("{}", id),
+            )))
         }
     }
 
@@ -338,17 +356,23 @@ impl TaskManager {
 
     /// 获取按状态过滤的任务
     pub fn get_tasks_by_status(&self, status: TaskStatus) -> Vec<&Task> {
-        self.tasks.values().filter(|task| task.status == status).collect()
+        self.tasks
+            .values()
+            .filter(|task| task.status == status)
+            .collect()
     }
 
     /// 获取可开始的任务（依赖已满足）
     pub fn get_startable_tasks(&self) -> Vec<&Task> {
-        let completed_tasks: HashSet<TaskId> = self.tasks.values()
+        let completed_tasks: HashSet<TaskId> = self
+            .tasks
+            .values()
             .filter(|task| task.status == TaskStatus::Done)
             .map(|task| task.id)
             .collect();
 
-        self.tasks.values()
+        self.tasks
+            .values()
             .filter(|task| task.status == TaskStatus::Todo && task.can_start(&completed_tasks))
             .collect()
     }
@@ -407,7 +431,12 @@ mod tests {
     #[test]
     fn test_task_creation_empty_name() {
         let result = Task::new(TaskId(1), "");
-        assert!(matches!(result, Err(ImplementationPlanError::Task(TaskError::InvalidParameter(_)))));
+        assert!(matches!(
+            result,
+            Err(ImplementationPlanError::Task(TaskError::InvalidParameter(
+                _
+            )))
+        ));
     }
 
     #[test]
@@ -456,7 +485,12 @@ mod tests {
         let mut task = Task::new(TaskId(1), "Test Task").unwrap();
 
         let result = task.add_dependency(TaskId(1));
-        assert!(matches!(result, Err(ImplementationPlanError::Task(TaskError::InvalidParameter(_)))));
+        assert!(matches!(
+            result,
+            Err(ImplementationPlanError::Task(TaskError::InvalidParameter(
+                _
+            )))
+        ));
     }
 
     #[test]
@@ -515,6 +549,10 @@ mod tests {
         let id1 = manager.create_task("Task 1").unwrap();
         let id2 = manager.create_task("Task 2").unwrap();
 
+        // 验证两个任务都已创建
+        assert!(manager.get_task(&id1).is_ok());
+        assert!(manager.get_task(&id2).is_ok());
+
         manager.get_task_mut(&id1).unwrap().start().unwrap();
 
         let todo_tasks = manager.get_tasks_by_status(TaskStatus::Todo);
@@ -532,7 +570,11 @@ mod tests {
         let id2 = manager.create_task("Task 2").unwrap();
 
         // Task 2 depends on Task 1
-        manager.get_task_mut(&id2).unwrap().add_dependency(id1).unwrap();
+        manager
+            .get_task_mut(&id2)
+            .unwrap()
+            .add_dependency(id1)
+            .unwrap();
 
         // Only Task 1 should be startable initially
         let startable = manager.get_startable_tasks();

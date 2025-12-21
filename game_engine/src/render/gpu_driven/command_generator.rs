@@ -1,16 +1,16 @@
-//! GPU命令生成模块
-//!
-//! 在GPU上生成间接绘制命令，减少CPU开销。
-//!
-//! ## 性能优化
-//!
-//! - **GPU端生成**: 使用计算着色器从可见实例生成绘制命令
-//! - **批量处理**: 支持多绘制批处理
-//! - **自动分组**: 自动合并相同网格的实例（实例化）
-//! - **内存优化**: 优化的内存访问模式
+//  GPU命令生成模块
+// 
+//  在GPU上生成间接绘制命令，减少CPU开销。
+// 
+//  ## 性能优化
+// 
+//  - **GPU端生成**: 使用计算着色器从可见实例生成绘制命令
+//  - **批量处理**: 支持多绘制批处理
+//  - **自动分组**: 自动合并相同网格的实例（实例化）
+//  - **内存优化**: 优化的内存访问模式
 
-use wgpu::{Device, ComputePipeline, BindGroupLayout, Buffer};
 use crate::render::gpu_driven::indirect::IndirectDrawError;
+use wgpu::{BindGroupLayout, Buffer, ComputePipeline, Device};
 
 /// GPU命令生成器
 ///
@@ -206,10 +206,10 @@ impl GpuCommandGenerator {
 
         cpass.set_pipeline(&self.pipeline);
         cpass.set_bind_group(0, &bind_group, &[]);
-        
+
         // 将index_count作为push constant传递给着色器
         cpass.set_push_constants(0, bytemuck::bytes_of(&index_count));
-        
+
         // 计算工作组数量（使用最大实例数，实际数量由计数器决定）
         let workgroup_count = (self.max_instances + self.workgroup_size - 1) / self.workgroup_size;
         cpass.dispatch_workgroups(workgroup_count, 1, 1);
@@ -292,7 +292,6 @@ fn generate_commands(@builtin(global_invocation_id) global_id: vec3<u32>, @push_
 
 #[cfg(test)]
 mod tests {
-    use super::*;
 
     #[test]
     fn test_command_generator_creation() {
@@ -302,4 +301,3 @@ mod tests {
         // assert_eq!(generator.workgroup_size(), 64);
     }
 }
-

@@ -1,4 +1,5 @@
 use glam::Vec3;
+use rand::Rng;
 
 /// 地形数据
 #[derive(Clone, Debug)]
@@ -72,8 +73,7 @@ impl TerrainData {
 
     /// 生成随机地形
     pub fn generate_random(&mut self, amplitude: f32) {
-        use rand::rngs::ThreadRng;
-        let mut rng = rand::rngs::ThreadRng::default();
+        let mut rng = rand::rng();
 
         for height in &mut self.heightmap {
             *height = rng.random::<f32>() * amplitude;

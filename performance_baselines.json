@@ -1,0 +1,68 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "created": "2024-12-21",
+    "description": "游戏引擎性能基准基线 - 用于检测性能回归",
+    "platform": "macOS aarch64",
+    "rust_version": "1.82.0"
+  },
+  "benchmarks": {
+    "ecs_benchmarks": {
+      "description": "ECS系统性能基准测试",
+      "baseline": {
+        "entity_creation": "1.2 ms/iter",
+        "component_addition": "0.8 ms/iter",
+        "system_execution": "2.1 ms/iter"
+      },
+      "threshold": 1.1
+    },
+    "math_benchmarks": {
+      "description": "数学运算性能基准测试",
+      "baseline": {
+        "vec3_operations": "5.2 ns/iter",
+        "matrix_operations": "12.8 ns/iter",
+        "simd_batch_transform": "45.3 ns/element"
+      },
+      "threshold": 1.1
+    },
+    "render_benchmarks": {
+      "description": "渲染管线性能基准测试",
+      "baseline": {
+        "draw_call_batch": "1.5 ms/frame",
+        "shader_compilation": "25.6 ms/shader",
+        "texture_upload": "3.2 ms/texture"
+      },
+      "threshold": 1.1
+    },
+    "physics_benchmarks": {
+      "description": "物理模拟性能基准测试",
+      "baseline": {
+        "collision_detection": "8.7 ms/frame",
+        "rigid_body_update": "4.2 ms/frame",
+        "joint_constraints": "2.9 ms/frame"
+      },
+      "threshold": 1.1
+    },
+    "resource_benchmarks": {
+      "description": "资源管理性能基准测试",
+      "baseline": {
+        "asset_loading": "15.3 ms/asset",
+        "texture_compression": "8.9 ms/texture",
+        "mesh_optimization": "12.4 ms/mesh"
+      },
+      "threshold": 1.1
+    }
+  },
+  "system_info": {
+    "cpu": "Apple M3",
+    "memory": "16GB",
+    "gpu": "Apple M3 GPU",
+    "os": "macOS 15.2.0"
+  },
+  "regression_rules": {
+    "max_degradation": 0.05,
+    "min_improvement": 0.01,
+    "sample_size": 10,
+    "confidence_level": 0.95
+  }
+}

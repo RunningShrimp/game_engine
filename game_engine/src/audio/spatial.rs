@@ -1,36 +1,36 @@
-//! 空间音频模块
-//!
-//! 提供 3D 空间音频功能，支持：
-//! - 距离衰减 (Linear, Inverse, Exponential)
-//! - 3D 定位和平移
-//! - 多普勒效果
-//! - 环境遮挡/阻挡
-//! - HRTF (头部相关传输函数) 支持
-//!
-//! # 架构设计
-//!
-//! 遵循与主音频模块相同的贫血模型设计：
-//! - `SpatialAudioState` (Resource): 空间音频状态数据
-//! - `AudioListener` (Component): 听者组件
-//! - `SpatialAudioSource` (Component): 空间音频源组件
-//! - `SpatialAudioService`: 空间音频业务逻辑
-//!
-//! # 示例
-//!
-//! ```ignore
-//! // 设置监听器
-//! commands.spawn((
-//!     AudioListener::new(),
-//!     Transform::from_translation(Vec3::ZERO),
-//! ));
-//!
-//! // 创建空间音频源
-//! commands.spawn((
-//!     SpatialAudioSource::new("explosion")
-//!         .with_distance_model(DistanceModel::Inverse { ref_distance: 1.0, rolloff: 1.0 }),
-//!     Transform::from_translation(Vec3::new(10.0, 0.0, 5.0)),
-//! ));
-//! ```
+//  空间音频模块
+// 
+//  提供 3D 空间音频功能，支持：
+//  - 距离衰减 (Linear, Inverse, Exponential)
+//  - 3D 定位和平移
+//  - 多普勒效果
+//  - 环境遮挡/阻挡
+//  - HRTF (头部相关传输函数) 支持
+// 
+//  # 架构设计
+// 
+//  遵循与主音频模块相同的贫血模型设计：
+//  - `SpatialAudioState` (Resource): 空间音频状态数据
+//  - `AudioListener` (Component): 听者组件
+//  - `SpatialAudioSource` (Component): 空间音频源组件
+//  - `SpatialAudioService`: 空间音频业务逻辑
+// 
+//  # 示例
+// 
+//  ```ignore
+//  // 设置监听器
+//  commands.spawn((
+//      AudioListener::new(),
+//      Transform::from_translation(Vec3::ZERO),
+//  ));
+// 
+//  // 创建空间音频源
+//  commands.spawn((
+//      SpatialAudioSource::new("explosion")
+//          .with_distance_model(DistanceModel::Inverse { ref_distance: 1.0, rolloff: 1.0 }),
+//      Transform::from_translation(Vec3::new(10.0, 0.0, 5.0)),
+//  ));
+//  ```
 
 use crate::impl_default;
 use bevy_ecs::prelude::*;

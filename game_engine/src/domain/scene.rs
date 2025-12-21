@@ -1,8 +1,9 @@
-//! 场景领域对象
-//! 实现场景作为聚合根，管理实体集合
+//  场景领域对象
+//  实现场景作为聚合根，管理实体集合
 
 use crate::domain::entity::{EntityId, GameEntity};
 use crate::domain::errors::{CompensationAction, DomainError, RecoveryStrategy, SceneError};
+use crate::domain::events::{AggregateEventQueue, AggregateRoot, DomainEvent, EntityAddedEvent, SceneActivatedEvent, SceneLoadedEvent};
 use crate::impl_default;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -128,7 +129,10 @@ pub enum SceneState {
 ///
 /// **注意**：虽然字段是`pub`的（用于序列化），但应该通过聚合根方法访问和修改，
 /// 以确保业务规则在边界内执行。直接修改字段可能违反业务规则。
-#[derive(Debug, Clone)]
+///
+/// **注意**：Scene不实现Clone，因为事件队列包含trait object，不能完全克隆。
+/// 如果需要克隆场景，应该通过序列化/反序列化或创建新场景并复制数据。
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Scene {
     /// 场景ID（不可变）
     pub id: SceneId,
@@ -144,9 +148,12 @@ pub struct Scene {
     pub last_modified: u64,
     /// 错误恢复策略
     pub recovery_strategy: RecoveryStrategy,
+    /// 未提交的事件队列（用于事件溯源）
+    #[serde(skip)]
+    event_queue: AggregateEventQueue,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct SceneMetadata {
     /// 作者
     pub author: Option<String>,
@@ -187,6 +194,7 @@ impl Scene {
                 max_attempts: 3,
                 delay_ms: 100,
             },
+            event_queue: AggregateEventQueue::new(),
         }
     }
 
@@ -216,10 +224,10 @@ impl Scene {
     /// ```
     pub fn try_new(id: SceneId, name: impl Into<String>) -> Result<Self, DomainError> {
         let name = name.into();
-        
+
         // 验证场景名称
         Self::validate_scene_name(&name)?;
-        
+
         let now = Self::current_timestamp();
         Ok(Self {
             id,
@@ -237,7 +245,18 @@ impl Scene {
                 max_attempts: 3,
                 delay_ms: 100,
             },
+            event_queue: AggregateEventQueue::new(),
         })
+    }
+
+    /// 获取未提交的事件数量
+    pub fn uncommitted_event_count(&self) -> usize {
+        self.event_queue.uncommitted_count()
+    }
+
+    /// 获取未提交的事件（移动，用于提交到事件存储）
+    pub fn take_uncommitted_events(&mut self) -> Vec<Box<dyn DomainEvent>> {
+        self.event_queue.take_uncommitted_events()
     }
 
     /// 验证场景名称
@@ -252,33 +271,35 @@ impl Scene {
         // 规则 1: 名称不能为空
         if name.is_empty() {
             return Err(DomainError::Scene(SceneError::SceneNotFound(
-                "Scene name cannot be empty".to_string()
+                "Scene name cannot be empty".to_string(),
             )));
         }
-        
+
         // 规则 2: 名称长度限制
         if name.len() > 256 {
-            return Err(DomainError::Scene(SceneError::SceneNotFound(
-                format!("Scene name too long: {} characters (max 256)", name.len())
-            )));
+            return Err(DomainError::Scene(SceneError::SceneNotFound(format!(
+                "Scene name too long: {} characters (max 256)",
+                name.len()
+            ))));
         }
-        
+
         // 规则 3: 名称不能以空格开头或结尾
         if name.starts_with(' ') || name.ends_with(' ') {
             return Err(DomainError::Scene(SceneError::SceneNotFound(
-                "Scene name cannot start or end with spaces".to_string()
+                "Scene name cannot start or end with spaces".to_string(),
             )));
         }
-        
+
         // 规则 4: 只能包含有效字符
         for ch in name.chars() {
             if !ch.is_alphanumeric() && ch != '_' && ch != '-' && ch != ' ' {
-                return Err(DomainError::Scene(SceneError::SceneNotFound(
-                    format!("Invalid character in scene name: '{}'", ch)
-                )));
+                return Err(DomainError::Scene(SceneError::SceneNotFound(format!(
+                    "Invalid character in scene name: '{}'",
+                    ch
+                ))));
             }
         }
-        
+
         Ok(())
     }
 
@@ -300,6 +321,12 @@ impl Scene {
         self.state = SceneState::Loaded;
         self.metadata.modified_at = Self::current_timestamp();
 
+        // 发布领域事件
+        self.event_queue.add_event(SceneLoadedEvent {
+            scene_id: self.id.as_u64(),
+            scene_name: self.name.clone(),
+        });
+
         Ok(())
     }
 
@@ -319,6 +346,15 @@ impl Scene {
         for entity in self.entities.values_mut() {
             entity.activate()?;
         }
+
+        // 验证不变式（特别是相机数量限制和实体激活状态）
+        self.check_invariants()?;
+
+        // 发布领域事件
+        self.event_queue.add_event(SceneActivatedEvent {
+            scene_id: self.id.as_u64(),
+            scene_name: self.name.clone(),
+        });
 
         Ok(())
     }
@@ -365,9 +401,20 @@ impl Scene {
         // 业务规则：验证实体状态
         entity.validate()?;
 
+        // 保存实体ID用于事件发布
+        let entity_id = entity.id.as_u64();
         self.entities.insert(entity.id, entity);
         self.last_modified = Self::current_timestamp();
         self.metadata.version += 1;
+
+        // 发布领域事件
+        self.event_queue.add_event(EntityAddedEvent {
+            scene_id: self.id.as_u64(),
+            entity_id,
+        });
+
+        // 验证不变式（特别是相机数量限制）
+        self.check_invariants()?;
 
         Ok(())
     }
@@ -467,23 +514,42 @@ impl Scene {
         Ok(())
     }
 
-    /// 验证场景完整性
+    /// 验证场景完整性（不变式检查）
+    ///
+    /// 检查所有业务规则和不变性约束：
+    /// 1. 场景名称不能为空
+    /// 2. 实体ID唯一性
+    /// 3. 所有实体必须有效
+    /// 4. 活跃场景最多只能有一个相机
+    /// 5. 场景激活时，所有实体必须激活
+    ///
+    /// # 返回
+    ///
+    /// - `Ok(())`: 所有不变式满足
+    /// - `Err(DomainError)`: 违反某个不变式
     pub fn validate(&self) -> Result<(), DomainError> {
-        // 业务规则：场景必须有名称
+        // 不变式1：场景必须有名称
         if self.name.trim().is_empty() {
             return Err(DomainError::Scene(SceneError::SceneNotFound(
                 "Scene name cannot be empty".to_string(),
             )));
         }
 
-        // 业务规则：实体ID不能重复（已在add_entity中检查）
+        // 不变式2：实体ID唯一性（HashMap保证，但显式检查）
+        let entity_ids: Vec<_> = self.entities.keys().collect();
+        let unique_ids: std::collections::HashSet<_> = entity_ids.iter().collect();
+        if entity_ids.len() != unique_ids.len() {
+            return Err(DomainError::Scene(SceneError::EntityNotFound(
+                "Duplicate entity IDs found in scene".to_string(),
+            )));
+        }
 
-        // 验证所有实体
+        // 不变式3：验证所有实体
         for entity in self.entities.values() {
             entity.validate()?;
         }
 
-        // 业务规则：活跃场景不能有冲突的组件组合
+        // 不变式4：活跃场景最多只能有一个相机
         if self.state == SceneState::Active {
             let camera_count = self
                 .entities
@@ -491,7 +557,50 @@ impl Scene {
                 .filter(|e| e.camera.is_some())
                 .count();
 
-            // 业务规则：一个场景最多只能有一个活跃相机
+            if camera_count > 1 {
+                return Err(DomainError::Scene(SceneError::ComponentNotFound(format!(
+                    "Scene {} has {} cameras, maximum allowed is 1",
+                    self.name, camera_count
+                ))));
+            }
+
+            // 不变式5：场景激活时，所有实体必须激活
+            let inactive_count = self
+                .entities
+                .values()
+                .filter(|e| !e.is_active())
+                .count();
+
+            if inactive_count > 0 {
+                return Err(DomainError::Scene(SceneError::ComponentNotFound(format!(
+                    "Scene {} is active but has {} inactive entities",
+                    self.name, inactive_count
+                ))));
+            }
+        }
+
+        Ok(())
+    }
+
+    /// 检查不变式（内部方法，用于在修改后验证）
+    ///
+    /// 这是一个轻量级的检查，用于在修改操作后快速验证不变式。
+    /// 对于完整的验证，使用`validate()`方法。
+    fn check_invariants(&self) -> Result<(), DomainError> {
+        // 快速检查关键不变式
+        if self.name.trim().is_empty() {
+            return Err(DomainError::Scene(SceneError::SceneNotFound(
+                "Scene name cannot be empty".to_string(),
+            )));
+        }
+
+        if self.state == SceneState::Active {
+            let camera_count = self
+                .entities
+                .values()
+                .filter(|e| e.camera.is_some())
+                .count();
+
             if camera_count > 1 {
                 return Err(DomainError::Scene(SceneError::ComponentNotFound(format!(
                     "Scene {} has {} cameras, maximum allowed is 1",
@@ -572,6 +681,25 @@ impl Scene {
 
     fn current_timestamp() -> u64 {
         crate::core::utils::current_timestamp()
+    }
+}
+
+/// 为Scene实现AggregateRoot trait
+impl AggregateRoot for Scene {
+    fn aggregate_id(&self) -> String {
+        format!("Scene_{}", self.id.as_u64())
+    }
+
+    fn uncommitted_event_count(&self) -> usize {
+        self.event_queue.uncommitted_count()
+    }
+
+    fn take_uncommitted_events(&mut self) -> Vec<Box<dyn DomainEvent>> {
+        self.event_queue.take_uncommitted_events()
+    }
+
+    fn clear_uncommitted_events(&mut self) {
+        self.event_queue.clear();
     }
 }
 
@@ -811,10 +939,10 @@ mod tests {
     fn test_scene_duplicate_entity_error() {
         let mut scene = Scene::new(SceneId(1), "Test Scene");
         scene.load().unwrap();
-        
+
         let entity1 = EntityFactory::create_basic(EntityId(1), Vec3::ZERO);
         scene.add_entity(entity1).unwrap();
-        
+
         // 尝试添加重复ID的实体应该失败
         let entity2 = EntityFactory::create_basic(EntityId(1), Vec3::new(1.0, 1.0, 1.0));
         let result = scene.add_entity(entity2);
@@ -823,13 +951,104 @@ mod tests {
     }
 
     #[test]
+    fn test_scene_invariants_validation() {
+        // 测试不变式1：场景名称不能为空
+        let mut scene = Scene::new(SceneId(1), "Valid Scene");
+        scene.name = String::new();
+        assert!(scene.validate().is_err());
+
+        // 测试不变式2：实体ID唯一性（通过add_entity已保证，但验证方法会检查）
+        let mut scene = Scene::new(SceneId(1), "Test Scene");
+        scene.load().unwrap();
+        let entity1 = EntityFactory::create_basic(EntityId(1), Vec3::ZERO);
+        scene.add_entity(entity1).unwrap();
+        assert!(scene.validate().is_ok());
+
+        // 测试不变式3：所有实体必须有效
+        let mut scene = Scene::new(SceneId(1), "Test Scene");
+        scene.load().unwrap();
+        let mut invalid_entity = EntityFactory::create_sprite(
+            EntityId(1),
+            Vec3::ZERO,
+            crate::ecs::Sprite::default(),
+        );
+        invalid_entity.camera = Some(Camera::default()); // 违反实体不变式
+        scene.entities.insert(EntityId(1), invalid_entity);
+        assert!(scene.validate().is_err());
+
+        // 测试不变式4：活跃场景最多只能有一个相机
+        let mut scene = Scene::new(SceneId(1), "Test Scene");
+        scene.load().unwrap();
+        scene.activate().unwrap();
+
+        let entity1 = EntityFactory::create_camera(EntityId(1), Vec3::ZERO, Camera::default());
+        scene.add_entity(entity1).unwrap();
+        assert!(scene.validate().is_ok());
+
+        let entity2 = EntityFactory::create_camera(EntityId(2), Vec3::new(1.0, 0.0, 0.0), Camera::default());
+        let result = scene.add_entity(entity2);
+        assert!(result.is_err()); // 应该失败，因为已经有相机了
+
+        // 测试不变式5：场景激活时，所有实体必须激活
+        let mut scene = Scene::new(SceneId(1), "Test Scene");
+        scene.load().unwrap();
+        let mut entity = EntityFactory::create_basic(EntityId(1), Vec3::ZERO);
+        entity.deactivate().unwrap();
+        scene.entities.insert(EntityId(1), entity);
+        scene.activate().unwrap(); // activate会激活所有实体，所以应该通过
+        assert!(scene.validate().is_ok());
+    }
+
+    #[test]
+    fn test_scene_invariants_camera_limit() {
+        // 测试相机数量限制不变式
+        let mut scene = Scene::new(SceneId(1), "Test Scene");
+        scene.load().unwrap();
+        scene.activate().unwrap();
+
+        // 添加第一个相机（应该成功）
+        let entity1 = EntityFactory::create_camera(EntityId(1), Vec3::ZERO, Camera::default());
+        assert!(scene.add_entity(entity1).is_ok());
+        assert!(scene.validate().is_ok());
+
+        // 尝试添加第二个相机（应该失败）
+        let entity2 = EntityFactory::create_camera(EntityId(2), Vec3::new(1.0, 0.0, 0.0), Camera::default());
+        let result = scene.add_entity(entity2);
+        assert!(result.is_err());
+        if let Err(DomainError::Scene(SceneError::ComponentNotFound(msg))) = result {
+            assert!(msg.contains("cameras"));
+        } else {
+            panic!("Expected ComponentNotFound error");
+        }
+    }
+
+    #[test]
+    fn test_scene_invariants_entity_activation() {
+        // 测试场景激活时实体必须激活的不变式
+        let mut scene = Scene::new(SceneId(1), "Test Scene");
+        scene.load().unwrap();
+
+        // 添加一个非活跃实体
+        let mut entity = EntityFactory::create_basic(EntityId(1), Vec3::ZERO);
+        entity.deactivate().unwrap();
+        scene.entities.insert(EntityId(1), entity);
+
+        // 激活场景（应该自动激活所有实体）
+        assert!(scene.activate().is_ok());
+        assert!(scene.validate().is_ok());
+
+        // 验证实体已激活
+        assert!(scene.get_entity(EntityId(1)).unwrap().is_active());
+    }
+
+    #[test]
     fn test_scene_invalid_state_transition() {
         let mut scene = Scene::new(SceneId(1), "Test Scene");
-        
+
         // 尝试从未加载状态直接激活应该失败
         let result = scene.activate();
         assert!(result.is_err());
-        
+
         // 正确的状态转换
         scene.load().unwrap();
         scene.activate().unwrap();
@@ -840,7 +1059,7 @@ mod tests {
     fn test_scene_remove_nonexistent_entity() {
         let mut scene = Scene::new(SceneId(1), "Test Scene");
         scene.load().unwrap();
-        
+
         // 尝试移除不存在的实体应该失败
         let result = scene.remove_entity(EntityId(999));
         assert!(result.is_err());
@@ -852,21 +1071,21 @@ mod tests {
         let mut scene = Scene::new(SceneId(1), "Test Scene");
         scene.load().unwrap();
         scene.activate().unwrap();
-        
+
         // 添加多个实体
         for i in 1..=5 {
             let entity = EntityFactory::create_basic(EntityId(i), Vec3::ZERO);
             scene.add_entity(entity).unwrap();
         }
-        
+
         assert_eq!(scene.total_entity_count(), 5);
         assert_eq!(scene.active_entity_count(), 5);
-        
+
         // 停用一个实体
         if let Some(entity) = scene.get_entity_mut(EntityId(3)) {
             entity.deactivate().unwrap();
         }
-        
+
         assert_eq!(scene.total_entity_count(), 5);
         assert_eq!(scene.active_entity_count(), 4);
     }
@@ -882,15 +1101,12 @@ mod tests {
         // 测试业务规则：添加实体时验证实体状态
         let mut scene = Scene::new(SceneId(1), "Test Scene");
         scene.load().unwrap();
-        
+
         // 创建无效实体（Sprite和Camera冲突）
-        let mut invalid_entity = EntityFactory::create_sprite(
-            EntityId(1),
-            Vec3::ZERO,
-            crate::ecs::Sprite::default(),
-        );
+        let mut invalid_entity =
+            EntityFactory::create_sprite(EntityId(1), Vec3::ZERO, crate::ecs::Sprite::default());
         invalid_entity.camera = Some(crate::ecs::Camera::default());
-        
+
         // 添加无效实体应该失败
         assert!(scene.add_entity(invalid_entity).is_err());
     }
@@ -900,11 +1116,11 @@ mod tests {
         // 测试业务规则：场景激活时，所有实体必须激活
         let mut scene = Scene::new(SceneId(1), "Test Scene");
         scene.load().unwrap();
-        
+
         let mut entity = EntityFactory::create_basic(EntityId(1), Vec3::ZERO);
         entity.deactivate().unwrap(); // 先停用
         scene.add_entity(entity).unwrap();
-        
+
         // 激活场景应该激活所有实体
         scene.activate().unwrap();
         assert_eq!(scene.state, SceneState::Active);
@@ -917,10 +1133,10 @@ mod tests {
         let mut scene = Scene::new(SceneId(1), "Test Scene");
         scene.load().unwrap();
         scene.activate().unwrap();
-        
+
         let entity = EntityFactory::create_basic(EntityId(1), Vec3::ZERO);
         scene.add_entity(entity).unwrap();
-        
+
         // 停用场景应该停用所有实体
         scene.deactivate().unwrap();
         assert_eq!(scene.state, SceneState::Inactive);
@@ -932,11 +1148,11 @@ mod tests {
         // 测试业务规则：卸载场景时清除所有实体
         let mut scene = Scene::new(SceneId(1), "Test Scene");
         scene.load().unwrap();
-        
+
         let entity = EntityFactory::create_basic(EntityId(1), Vec3::ZERO);
         scene.add_entity(entity).unwrap();
         assert_eq!(scene.total_entity_count(), 1);
-        
+
         scene.unload().unwrap();
         assert_eq!(scene.total_entity_count(), 0);
     }
@@ -945,14 +1161,14 @@ mod tests {
     fn test_scene_get_entity() {
         let mut scene = Scene::new(SceneId(1), "Test Scene");
         scene.load().unwrap();
-        
+
         let entity = EntityFactory::create_basic(EntityId(1), Vec3::ZERO);
         scene.add_entity(entity).unwrap();
-        
+
         // 获取存在的实体
         assert!(scene.get_entity(EntityId(1)).is_some());
         assert_eq!(scene.get_entity(EntityId(1)).unwrap().id, EntityId(1));
-        
+
         // 获取不存在的实体
         assert!(scene.get_entity(EntityId(999)).is_none());
     }
@@ -961,16 +1177,19 @@ mod tests {
     fn test_scene_get_entity_mut() {
         let mut scene = Scene::new(SceneId(1), "Test Scene");
         scene.load().unwrap();
-        
+
         let entity = EntityFactory::create_basic(EntityId(1), Vec3::ZERO);
         scene.add_entity(entity).unwrap();
-        
+
         // 修改实体
         if let Some(entity) = scene.get_entity_mut(EntityId(1)) {
             entity.set_position(Vec3::ONE).unwrap();
         }
-        
-        assert_eq!(scene.get_entity(EntityId(1)).unwrap().position(), Some(Vec3::ONE));
+
+        assert_eq!(
+            scene.get_entity(EntityId(1)).unwrap().position(),
+            Some(Vec3::ONE)
+        );
     }
 
     #[test]
@@ -997,15 +1216,14 @@ mod tests {
     fn test_scene_find_entity_by_name() {
         let mut scene = Scene::new(SceneId(1), "Test Scene");
         scene.load().unwrap();
-        
-        let entity = EntityFactory::create_basic(EntityId(1), Vec3::ZERO)
-            .with_name("Test Entity");
+
+        let entity = EntityFactory::create_basic(EntityId(1), Vec3::ZERO).with_name("Test Entity");
         scene.add_entity(entity).unwrap();
-        
+
         let found = scene.find_entity_by_name("Test Entity");
         assert!(found.is_some());
         assert_eq!(found.unwrap().id, EntityId(1));
-        
+
         let not_found = scene.find_entity_by_name("Nonexistent");
         assert!(not_found.is_none());
     }
@@ -1014,10 +1232,14 @@ mod tests {
     fn test_scene_entity_ids() {
         let mut scene = Scene::new(SceneId(1), "Test Scene");
         scene.load().unwrap();
-        
-        scene.add_entity(EntityFactory::create_basic(EntityId(1), Vec3::ZERO)).unwrap();
-        scene.add_entity(EntityFactory::create_basic(EntityId(2), Vec3::ZERO)).unwrap();
-        
+
+        scene
+            .add_entity(EntityFactory::create_basic(EntityId(1), Vec3::ZERO))
+            .unwrap();
+        scene
+            .add_entity(EntityFactory::create_basic(EntityId(2), Vec3::ZERO))
+            .unwrap();
+
         let ids = scene.entity_ids();
         assert_eq!(ids.len(), 2);
         assert!(ids.contains(&EntityId(1)));
@@ -1028,13 +1250,13 @@ mod tests {
     fn test_scene_add_entities() {
         let mut scene = Scene::new(SceneId(1), "Test Scene");
         scene.load().unwrap();
-        
+
         let entities = vec![
             EntityFactory::create_basic(EntityId(1), Vec3::ZERO),
             EntityFactory::create_basic(EntityId(2), Vec3::ZERO),
             EntityFactory::create_basic(EntityId(3), Vec3::ZERO),
         ];
-        
+
         scene.add_entities(entities).unwrap();
         assert_eq!(scene.total_entity_count(), 3);
     }
@@ -1043,12 +1265,12 @@ mod tests {
     fn test_scene_add_entities_duplicate_error() {
         let mut scene = Scene::new(SceneId(1), "Test Scene");
         scene.load().unwrap();
-        
+
         let entities = vec![
             EntityFactory::create_basic(EntityId(1), Vec3::ZERO),
             EntityFactory::create_basic(EntityId(1), Vec3::ZERO), // 重复ID
         ];
-        
+
         assert!(scene.add_entities(entities).is_err());
     }
 
@@ -1056,12 +1278,20 @@ mod tests {
     fn test_scene_remove_entities() {
         let mut scene = Scene::new(SceneId(1), "Test Scene");
         scene.load().unwrap();
-        
-        scene.add_entity(EntityFactory::create_basic(EntityId(1), Vec3::ZERO)).unwrap();
-        scene.add_entity(EntityFactory::create_basic(EntityId(2), Vec3::ZERO)).unwrap();
-        scene.add_entity(EntityFactory::create_basic(EntityId(3), Vec3::ZERO)).unwrap();
-        
-        let removed = scene.remove_entities(vec![EntityId(1), EntityId(3)]).unwrap();
+
+        scene
+            .add_entity(EntityFactory::create_basic(EntityId(1), Vec3::ZERO))
+            .unwrap();
+        scene
+            .add_entity(EntityFactory::create_basic(EntityId(2), Vec3::ZERO))
+            .unwrap();
+        scene
+            .add_entity(EntityFactory::create_basic(EntityId(3), Vec3::ZERO))
+            .unwrap();
+
+        let removed = scene
+            .remove_entities(vec![EntityId(1), EntityId(3)])
+            .unwrap();
         assert_eq!(removed.len(), 2);
         assert_eq!(scene.total_entity_count(), 1);
     }
@@ -1071,13 +1301,13 @@ mod tests {
         let mut scene = Scene::new(SceneId(1), "Test Scene");
         scene.load().unwrap();
         scene.activate().unwrap();
-        
+
         let mut entity = EntityFactory::create_basic(EntityId(1), Vec3::ZERO);
         entity.mark_for_deletion().unwrap();
         scene.add_entity(entity).unwrap();
-        
+
         assert_eq!(scene.total_entity_count(), 1);
-        
+
         // 更新场景应该移除待删除的实体
         scene.update(0.016).unwrap();
         assert_eq!(scene.total_entity_count(), 0);
@@ -1088,11 +1318,11 @@ mod tests {
         let mut scene = Scene::new(SceneId(1), "Test Scene");
         scene.load().unwrap();
         // 不激活场景
-        
+
         let mut entity = EntityFactory::create_basic(EntityId(1), Vec3::ZERO);
         entity.mark_for_deletion().unwrap();
         scene.add_entity(entity).unwrap();
-        
+
         // 非活跃场景的update应该成功但不移除实体
         scene.update(0.016).unwrap();
         assert_eq!(scene.total_entity_count(), 1); // 实体仍然存在
@@ -1113,13 +1343,25 @@ mod tests {
         let mut scene = Scene::new(SceneId(1), "Test Scene");
         scene.load().unwrap();
         scene.activate().unwrap();
-        
+
         // 添加两个相机实体
         let camera1 = Camera::default();
         let camera2 = Camera::default();
-        scene.add_entity(EntityFactory::create_camera(EntityId(1), Vec3::ZERO, camera1)).unwrap();
-        scene.add_entity(EntityFactory::create_camera(EntityId(2), Vec3::ZERO, camera2)).unwrap();
-        
+        scene
+            .add_entity(EntityFactory::create_camera(
+                EntityId(1),
+                Vec3::ZERO,
+                camera1,
+            ))
+            .unwrap();
+        scene
+            .add_entity(EntityFactory::create_camera(
+                EntityId(2),
+                Vec3::ZERO,
+                camera2,
+            ))
+            .unwrap();
+
         // 活跃场景不能有多个相机
         assert!(scene.validate().is_err());
     }
@@ -1128,9 +1370,11 @@ mod tests {
     fn test_scene_create_snapshot() {
         let mut scene = Scene::new(SceneId(1), "Test Scene");
         scene.load().unwrap();
-        
-        scene.add_entity(EntityFactory::create_basic(EntityId(1), Vec3::ZERO)).unwrap();
-        
+
+        scene
+            .add_entity(EntityFactory::create_basic(EntityId(1), Vec3::ZERO))
+            .unwrap();
+
         let snapshot = scene.create_snapshot();
         assert_eq!(snapshot.scene_id, SceneId(1));
         assert_eq!(snapshot.name, "Test Scene");
@@ -1142,7 +1386,7 @@ mod tests {
     fn test_scene_manager_get_scene() {
         let mut manager = SceneManager::new();
         manager.create_scene(SceneId(1), "Scene 1").unwrap();
-        
+
         assert!(manager.get_scene(SceneId(1)).is_some());
         assert!(manager.get_scene(SceneId(999)).is_none());
     }
@@ -1153,7 +1397,7 @@ mod tests {
         manager.create_scene(SceneId(1), "Scene 1").unwrap();
         manager.get_scene_mut(SceneId(1)).unwrap().load().unwrap();
         manager.switch_to_scene(SceneId(1)).unwrap();
-        
+
         let deleted = manager.delete_scene(SceneId(1)).unwrap();
         assert_eq!(deleted.id, SceneId(1));
         assert!(manager.active_scene().is_none());
@@ -1170,7 +1414,7 @@ mod tests {
         let mut manager = SceneManager::new();
         manager.create_scene(SceneId(1), "Scene 1").unwrap();
         manager.get_scene_mut(SceneId(1)).unwrap().load().unwrap();
-        
+
         manager.update(0.016).unwrap();
         // 验证更新成功（通过行为验证）
     }
@@ -1179,7 +1423,7 @@ mod tests {
     fn test_scene_manager_validate() {
         let mut manager = SceneManager::new();
         manager.create_scene(SceneId(1), "Scene 1").unwrap();
-        
+
         assert!(manager.validate().is_ok());
     }
 
@@ -1194,10 +1438,10 @@ mod tests {
             max_attempts: 1,
             delay_ms: 1,
         };
-        
+
         let error = SceneError::SerializationFailed("test".to_string());
         let result = scene.recover_from_error(&error);
-        
+
         assert!(result.is_ok());
     }
 
@@ -1208,10 +1452,10 @@ mod tests {
             max_attempts: 1,
             delay_ms: 1,
         };
-        
+
         let error = SceneError::DeserializationFailed("test".to_string());
         let result = scene.recover_from_error(&error);
-        
+
         assert!(result.is_ok());
     }
 
@@ -1222,10 +1466,10 @@ mod tests {
             max_attempts: 1,
             delay_ms: 1,
         };
-        
+
         let error = SceneError::EntityNotFound("test".to_string());
         let result = scene.recover_from_error(&error);
-        
+
         // EntityNotFound错误无法恢复，应该返回错误
         assert!(result.is_err());
     }
@@ -1234,12 +1478,14 @@ mod tests {
     fn test_scene_recover_from_error_use_default() {
         let mut scene = Scene::new(SceneId(1), "Test Scene");
         scene.load().unwrap();
-        scene.add_entity(EntityFactory::create_basic(EntityId(1), Vec3::ZERO)).unwrap();
+        scene
+            .add_entity(EntityFactory::create_basic(EntityId(1), Vec3::ZERO))
+            .unwrap();
         scene.recovery_strategy = RecoveryStrategy::UseDefault;
-        
+
         let error = SceneError::SerializationFailed("test".to_string());
         let result = scene.recover_from_error(&error);
-        
+
         assert!(result.is_ok());
         assert_eq!(scene.state, SceneState::Unloaded);
         assert_eq!(scene.total_entity_count(), 0); // 实体应该被清除
@@ -1250,10 +1496,10 @@ mod tests {
         let mut scene = Scene::new(SceneId(1), "Test Scene");
         scene.load().unwrap();
         scene.recovery_strategy = RecoveryStrategy::Skip;
-        
+
         let error = SceneError::SerializationFailed("test".to_string());
         let result = scene.recover_from_error(&error);
-        
+
         assert!(result.is_ok());
         assert_eq!(scene.state, SceneState::Loaded); // 状态不应该改变
     }
@@ -1263,10 +1509,10 @@ mod tests {
         let mut scene = Scene::new(SceneId(1), "Test Scene");
         scene.load().unwrap();
         scene.recovery_strategy = RecoveryStrategy::LogAndContinue;
-        
+
         let error = SceneError::SerializationFailed("test".to_string());
         let result = scene.recover_from_error(&error);
-        
+
         assert!(result.is_ok());
         assert_eq!(scene.state, SceneState::Loaded); // 状态不应该改变
     }
@@ -1275,10 +1521,10 @@ mod tests {
     fn test_scene_recover_from_error_fail() {
         let mut scene = Scene::new(SceneId(1), "Test Scene");
         scene.recovery_strategy = RecoveryStrategy::Fail;
-        
+
         let error = SceneError::SerializationFailed("test".to_string());
         let result = scene.recover_from_error(&error);
-        
+
         assert!(result.is_err());
         if let Err(DomainError::Scene(e)) = result {
             assert!(matches!(e, SceneError::SerializationFailed(_)));
@@ -1291,10 +1537,12 @@ mod tests {
     fn test_scene_create_compensation() {
         let mut scene = Scene::new(SceneId(1), "Test Scene");
         scene.load().unwrap();
-        scene.add_entity(EntityFactory::create_basic(EntityId(1), Vec3::ZERO)).unwrap();
-        
+        scene
+            .add_entity(EntityFactory::create_basic(EntityId(1), Vec3::ZERO))
+            .unwrap();
+
         let compensation = scene.create_compensation();
-        
+
         assert_eq!(compensation.action_type, "restore_scene_state");
         assert!(compensation.data.get("name").is_some());
         assert!(compensation.data.get("state").is_some());

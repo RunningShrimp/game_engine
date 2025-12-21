@@ -1,6 +1,6 @@
-//! 脚本插件
-//!
-//! 提供Lua和Rust脚本集成，支持运行时脚本执行。
+//  脚本插件
+// 
+//  提供Lua和Rust脚本集成，支持运行时脚本执行。
 
 use crate::plugins::{EnginePlugin, App, PluginVersion, PluginDependency};
 use crate::scripting::{ScriptingConfig, ScriptingResource, scripting_system, setup_scripting, ScriptComponent};

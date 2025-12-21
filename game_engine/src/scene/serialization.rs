@@ -8,6 +8,7 @@ use bevy_ecs::prelude::*;
 use glam::{Quat, Vec3};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use crate::platform::run_sync;
 
 /// 序列化的场景数据
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -256,8 +257,10 @@ impl SerializedScene {
             // 序列化RigidBodyDesc组件
             if let Some(rb) = world.get::<RigidBodyDesc>(entity_ref.id()) {
                 let body_type = match rb.body_type {
-                    crate::domain::physics::RigidBodyType::Dynamic => SerializedRigidBodyType::Dynamic,
-                    crate::domain::physics::RigidBodyType::Static => SerializedRigidBodyType::Fixed,
+                    crate::domain::physics::RigidBodyType::Dynamic => {
+                        SerializedRigidBodyType::Dynamic
+                    }
+                    crate::domain::physics::RigidBodyType::Fixed => SerializedRigidBodyType::Fixed,
                     crate::domain::physics::RigidBodyType::Kinematic => {
                         // 由于新版本中没有区分PositionBased和VelocityBased，我们默认使用PositionBased
                         SerializedRigidBodyType::KinematicPositionBased
@@ -278,8 +281,12 @@ impl SerializedScene {
                 let shape_type = match col.shape_type {
                     ShapeType::Cuboid { .. } => SerializedShapeType::Cuboid,
                     ShapeType::Ball { .. } | ShapeType::Sphere { .. } => SerializedShapeType::Ball,
-                    ShapeType::Capsule { .. } | ShapeType::Cylinder { .. } | ShapeType::Cone { .. } => SerializedShapeType::Cuboid,
-                    ShapeType::ConvexHull { .. } | ShapeType::TriMesh { .. } => SerializedShapeType::Cuboid,
+                    ShapeType::Capsule { .. }
+                    | ShapeType::Cylinder { .. }
+                    | ShapeType::Cone { .. } => SerializedShapeType::Cuboid,
+                    ShapeType::ConvexHull { .. } | ShapeType::TriMesh { .. } => {
+                        SerializedShapeType::Cuboid
+                    }
                 };
                 serialized_entity.components.insert(
                     "Collider".to_string(),
@@ -427,15 +434,19 @@ impl SerializedScene {
                             rotation,
                         } => {
                             let bt = match body_type {
-                            SerializedRigidBodyType::Dynamic => crate::domain::physics::RigidBodyType::Dynamic,
-                            SerializedRigidBodyType::Fixed => crate::domain::physics::RigidBodyType::Static,
-                            SerializedRigidBodyType::KinematicPositionBased => {
-                                crate::domain::physics::RigidBodyType::Kinematic
-                            }
-                            SerializedRigidBodyType::KinematicVelocityBased => {
-                                crate::domain::physics::RigidBodyType::Kinematic
-                            }
-                        };
+                                SerializedRigidBodyType::Dynamic => {
+                                    crate::domain::physics::RigidBodyType::Dynamic
+                                }
+                                SerializedRigidBodyType::Fixed => {
+                                    crate::domain::physics::RigidBodyType::Fixed
+                                }
+                                SerializedRigidBodyType::KinematicPositionBased => {
+                                    crate::domain::physics::RigidBodyType::Kinematic
+                                }
+                                SerializedRigidBodyType::KinematicVelocityBased => {
+                                    crate::domain::physics::RigidBodyType::Kinematic
+                                }
+                            };
                             entity_mut.insert(RigidBodyDesc {
                                 body_type: bt,
                                 position: Vec3::new(
@@ -452,11 +463,13 @@ impl SerializedScene {
                             radius,
                         } => {
                             let st = match shape_type {
-                                SerializedShapeType::Cuboid => ShapeType::Cuboid { half_extents: Vec3::new(
-                                    half_extents[0],
-                                    half_extents[1],
-                                    half_extents.get(2).copied().unwrap_or(0.0),
-                                )},
+                                SerializedShapeType::Cuboid => ShapeType::Cuboid {
+                                    half_extents: Vec3::new(
+                                        half_extents[0],
+                                        half_extents[1],
+                                        half_extents.get(2).copied().unwrap_or(0.0),
+                                    ),
+                                },
                                 SerializedShapeType::Ball => ShapeType::Ball { radius: *radius },
                             };
                             entity_mut.insert(ColliderDesc {
@@ -519,7 +532,11 @@ impl SerializedScene {
     /// 清空场景中的所有实体
     pub fn clear_world(world: &mut World) {
         // 收集所有实体ID
-        let entities: Vec<Entity> = world.query::<EntityRef>().iter(world).map(|e| e.id()).collect();
+        let entities: Vec<Entity> = world
+            .query::<EntityRef>()
+            .iter(world)
+            .map(|e| e.id())
+            .collect();
         // 删除所有实体
         for entity in entities {
             world.despawn(entity);
@@ -527,30 +544,37 @@ impl SerializedScene {
     }
 
     /// 保存场景到JSON文件（异步版本）
-    pub async fn save_to_file_async(&self, path: &str) -> Result<(), Box<dyn std::error::Error>> {
-        let json = serde_json::to_string_pretty(self)?;
-        tokio::fs::write(path, json).await?;
+    pub async fn save_to_file_async(&self, path: &str) -> Result<(), Box<dyn std::error::Error + Send>> {
+        let json = serde_json::to_string_pretty(self)
+            .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send>)?;
+        tokio::fs::write(path, json).await
+            .map_err(|e| Box::new(std::io::Error::from(e)) as Box<dyn std::error::Error + Send>)?;
         Ok(())
     }
 
     /// 从JSON文件加载场景（异步版本）
-    pub async fn load_from_file_async(path: &str) -> Result<Self, Box<dyn std::error::Error>> {
-        let json = tokio::fs::read_to_string(path).await?;
-        let scene = serde_json::from_str(&json)?;
+    pub async fn load_from_file_async(path: &str) -> Result<Self, Box<dyn std::error::Error + Send>> {
+        let json = tokio::fs::read_to_string(path).await
+            .map_err(|e| Box::new(std::io::Error::from(e)) as Box<dyn std::error::Error + Send>)?;
+        let scene = serde_json::from_str(&json)
+            .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send>)?;
         Ok(scene)
     }
 
     /// 保存场景到JSON文件（同步版本，用于向后兼容）
-    pub fn save_to_file(&self, path: &str) -> Result<(), Box<dyn std::error::Error>> {
-        tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current().block_on(self.save_to_file_async(path))
+    pub fn save_to_file(&self, path: &str) -> Result<(), Box<dyn std::error::Error + Send>> {
+        let path_clone = path.to_string();
+        let self_clone = self.clone();
+        run_sync(async move {
+            self_clone.save_to_file_async(&path_clone).await
         })
     }
 
     /// 从JSON文件加载场景（同步版本，用于向后兼容）
-    pub fn load_from_file(path: &str) -> Result<Self, Box<dyn std::error::Error>> {
-        tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current().block_on(Self::load_from_file_async(path))
+    pub fn load_from_file(path: &str) -> Result<Self, Box<dyn std::error::Error + Send>> {
+        let path_clone = path.to_string();
+        run_sync(async move {
+            Self::load_from_file_async(&path_clone).await
         })
     }
 }
@@ -577,7 +601,7 @@ mod tests {
         });
 
         // 序列化场景
-        let scene = SerializedScene::from_world(&world, "test_scene");
+        let scene = SerializedScene::from_world(&mut world, "test_scene");
         assert_eq!(scene.entities.len(), 2);
 
         // 反序列化场景
@@ -601,7 +625,7 @@ mod tests {
             scale: Vec3::ONE,
         });
 
-        let scene = SerializedScene::from_world(&world, "test_scene");
+        let scene = SerializedScene::from_world(&mut world, "test_scene");
 
         // 保存到文件
         let path = "/tmp/test_scene.json";
@@ -613,6 +637,27 @@ mod tests {
         assert_eq!(loaded_scene.entities.len(), 1);
 
         // 清理测试文件
+        std::fs::remove_file(path).ok();
+    }
+
+    #[tokio::test]
+    async fn test_scene_file_io_inside_runtime() {
+        let mut world = World::new();
+        world.spawn(Transform {
+            pos: Vec3::new(7.0, 8.0, 9.0),
+            rot: Quat::IDENTITY,
+            scale: Vec3::ONE,
+        });
+
+        let scene = SerializedScene::from_world(&mut world, "test_scene_rt");
+        let path = "/tmp/test_scene_rt.json";
+
+        // Call the synchronous API from inside a runtime; should use block_in_place internally
+        scene.save_to_file(path).unwrap();
+        let loaded_scene = SerializedScene::load_from_file(path).unwrap();
+        assert_eq!(loaded_scene.name, "test_scene_rt");
+        assert_eq!(loaded_scene.entities.len(), 1);
+
         std::fs::remove_file(path).ok();
     }
 }

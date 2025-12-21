@@ -1,14 +1,14 @@
-//! XR (VR/AR) 演示程序
-//!
-//! 展示OpenXR集成功能，包括：
-//! - XR会话初始化
-//! - 立体渲染
-//! - 控制器输入
-//! - 手部追踪
-//! - 空间锚点
+//  XR (VR/AR) 演示程序
+// 
+//  展示OpenXR集成功能，包括：
+//  - XR会话初始化
+//  - 立体渲染
+//  - 控制器输入
+//  - 手部追踪
+//  - 空间锚点
 
-use game_engine::*;
 use game_engine::xr::*;
+use game_engine::*;
 use std::sync::Arc;
 use winit::event::{Event, WindowEvent};
 use winit::event_loop::EventLoop;
@@ -41,7 +41,7 @@ impl XrDemoState {
         match OpenXrBackend::new(xr_config) {
             Ok(mut backend) => {
                 tracing::info!("OpenXR backend initialized successfully");
-                
+
                 // 3. 初始化手部追踪
                 if let Err(e) = self.hand_tracker.initialize() {
                     tracing::warn!("Failed to initialize hand tracking: {}", e);
@@ -66,23 +66,31 @@ impl XrDemoState {
         }
     }
 
-    fn create_xr_session(&mut self, device: &wgpu::Device, queue: &wgpu::Queue) -> Result<(), Box<dyn std::error::Error>> {
+    fn create_xr_session(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         if let Some(ref mut backend) = self.xr_backend {
             // 创建XR会话
-            backend.create_session(device)
+            backend
+                .create_session(device)
                 .map_err(|e| format!("Failed to create XR session: {}", e))?;
 
             // 创建参考空间
-            backend.create_reference_space()
+            backend
+                .create_reference_space()
                 .map_err(|e| format!("Failed to create reference space: {}", e))?;
 
             // 创建交换链
-            backend.create_swapchains(device, 1920, 1080)
+            backend
+                .create_swapchains(device, 1920, 1080)
                 .map_err(|e| format!("Failed to create swapchains: {}", e))?;
 
             // 初始化XR渲染器
             self.xr_renderer = XrRenderer::new(Arc::new(device.clone()), Arc::new(queue.clone()));
-            self.xr_renderer.initialize()
+            self.xr_renderer
+                .initialize()
                 .map_err(|e| format!("Failed to initialize XR renderer: {}", e))?;
 
             tracing::info!("XR session created successfully");
@@ -117,17 +125,18 @@ impl XrDemoState {
                 }
 
                 // 结束帧
-                let layers = vec![
-                    XrCompositionLayer::Projection {
-                        views: views.iter().map(|view| XrProjectionView {
+                let layers = vec![XrCompositionLayer::Projection {
+                    views: views
+                        .iter()
+                        .map(|view| XrProjectionView {
                             pose: view.pose,
                             fov: view.fov,
                             swapchain_index: view.view_index,
                             image_rect: [0, 0, 1920, 1080],
-                        }).collect()
-                    }
-                ];
-                
+                        })
+                        .collect(),
+                }];
+
                 if let Err(e) = backend.end_frame(&layers) {
                     tracing::warn!("Failed to end XR frame: {}", e);
                 }
@@ -142,7 +151,7 @@ impl XrDemoState {
         match event {
             XrEvent::SessionStateChanged(state) => {
                 tracing::info!("XR session state changed to: {:?}", state);
-                
+
                 match state {
                     XrSessionState::Ready => {
                         tracing::info!("XR session ready");
@@ -174,10 +183,14 @@ impl XrDemoState {
     fn render_xr_frame(&mut self, views: &[XrView]) -> Result<(), Box<dyn std::error::Error>> {
         // 这里应该渲染到XR交换链
         // 占位实现：只记录信息
-        
+
         for (i, view) in views.iter().enumerate() {
-            tracing::debug!("Rendering view {}: position={:?}, fov={:?}", 
-                i, view.pose.position, view.fov);
+            tracing::debug!(
+                "Rendering view {}: position={:?}, fov={:?}",
+                i,
+                view.pose.position,
+                view.fov
+            );
         }
 
         // 模拟渲染一些内容
@@ -188,12 +201,14 @@ impl XrDemoState {
                     position: glam::Vec3::new(
                         (self.frame_count as f32 * 0.01).sin(),
                         1.5,
-                        (self.frame_count as f32 * 0.01).cos()
+                        (self.frame_count as f32 * 0.01).cos(),
                     ),
                     orientation: glam::Quat::IDENTITY,
                 };
-                
-                if let Ok(anchor_id) = anchor_manager.create_anchor(pose, format!("AutoAnchor_{}", self.frame_count)) {
+
+                if let Ok(anchor_id) =
+                    anchor_manager.create_anchor(pose, format!("AutoAnchor_{}", self.frame_count))
+                {
                     tracing::info!("Created auto anchor: {:?}", anchor_id);
                 }
             }
@@ -229,7 +244,7 @@ impl XrDemoState {
             if let Some(palm_pos) = left_hand.get_palm_position() {
                 tracing::debug!("Left palm position: {:?}", palm_pos);
             }
-            
+
             if let Some(index_tip) = left_hand.get_finger_tip(Finger::Index) {
                 tracing::debug!("Left index tip: {:?}", index_tip);
             }
@@ -239,7 +254,7 @@ impl XrDemoState {
             if let Some(palm_pos) = right_hand.get_palm_position() {
                 tracing::debug!("Right palm position: {:?}", palm_pos);
             }
-            
+
             if let Some(index_tip) = right_hand.get_finger_tip(Finger::Index) {
                 tracing::debug!("Right index tip: {:?}", index_tip);
             }

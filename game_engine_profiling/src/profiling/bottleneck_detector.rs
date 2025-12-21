@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::time::Duration;
 
-/// 瓶颈严重程度
+//  瓶颈严重程度
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum BottleneckSeverity {
     Low = 0,      // <20% variance
@@ -30,7 +30,7 @@ impl BottleneckSeverity {
     }
 }
 
-/// 瓶颈类型
+//  瓶颈类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BottleneckType {
     CPU,
@@ -54,7 +54,7 @@ impl BottleneckType {
     }
 }
 
-/// 单个瓶颈诊断
+//  单个瓶颈诊断
 #[derive(Debug, Clone)]
 pub struct BottleneckDiagnosis {
     pub phase_name: String,
@@ -138,7 +138,7 @@ impl BottleneckDiagnosis {
     }
 }
 
-/// 瓶颈检测引擎
+//  瓶颈检测引擎
 #[derive(Default)]
 pub struct BottleneckDetector {
     phase_history: HashMap<String, Vec<Duration>>,
@@ -163,7 +163,7 @@ impl BottleneckDetector {
     /// 记录阶段性能
     pub fn record_phase(&mut self, phase_name: impl Into<String>, duration: Duration) {
         let name = phase_name.into();
-        let entry = self.phase_history.entry(name).or_insert_with(Vec::new);
+        let entry = self.phase_history.entry(name).or_default();
 
         if entry.len() >= self.max_history_size {
             entry.remove(0);
@@ -324,7 +324,6 @@ impl BottleneckDetector {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -417,7 +416,7 @@ mod tests {
 
         let critical = detector.get_critical_bottlenecks(2);
         // Both phase1 and phase2 have variance, with phase2 being more severe
-        assert!(critical.len() >= 1);
+        assert!(critical.is_empty());
         assert_eq!(critical[0].phase_name, "phase2");
     }
 
@@ -431,7 +430,7 @@ mod tests {
         }
 
         let gpu_bottlenecks = detector.get_gpu_bottlenecks();
-        assert!(gpu_bottlenecks.len() > 0);
+        assert!(gpu_bottlenecks.is_empty());
     }
 
     #[test]

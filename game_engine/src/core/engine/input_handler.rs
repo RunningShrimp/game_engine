@@ -1,20 +1,20 @@
-//! 输入处理模块
-//!
-//! 负责处理各种输入事件，包括：
-//! - 窗口事件处理
-//! - 键盘输入处理
-//! - 鼠标输入处理
-//! - 触摸输入处理（如果支持）
-//! - 输入映射和动作处理
+//  输入处理模块
+// 
+//  负责处理各种输入事件，包括：
+//  - 窗口事件处理
+//  - 键盘输入处理
+//  - 鼠标输入处理
+//  - 触摸输入处理（如果支持）
+//  - 输入映射和动作处理
 
-use crate::services::render::RenderService;
-use crate::platform::winit::WinitWindow;
-use crate::platform::{InputBuffer, InputEvent, InputActions, KeyCode, Modifiers, MouseButton};
-use crate::render::wgpu_utils::WgpuRenderer;
 use crate::config::input::InputConfig;
+use crate::platform::winit::WinitWindow;
+use crate::platform::{InputActions, InputBuffer, InputEvent, KeyCode, Modifiers, MouseButton};
+use crate::render::wgpu_utils::WgpuRenderer;
+use crate::services::render::RenderService;
 use bevy_ecs::prelude::*;
-use winit::event::{WindowEvent, PointerSource, ButtonSource};
-use winit::event_loop::ActiveEventLoop;
+use winit::event::WindowEvent;
+use winit::event_loop::EventLoop;
 // 根据winit 0.31.0-beta.2的API变更，EventLoopWindowTarget可能已被移动
 // 我们将使用winit_core中的相应类型
 
@@ -42,21 +42,27 @@ pub fn handle_window_event(
     render_service: &mut RenderService,
     render_cache: &mut crate::render::graph::RenderCache,
     window: &WinitWindow,
-    elwt: &dyn ActiveEventLoop,
+    elwt: &EventLoop<()>,
 ) {
+    // 处理编辑器输入和窗口基础状态更新，实现逻辑闭环
+    let _editor_consumed = editor_ctx.state.on_window_event(window.raw(), event);
+
     match event {
         WindowEvent::CloseRequested => {
             handle_close_requested(world, elwt);
         }
+        WindowEvent::Resized(size) => {
+            // 同步更新渲染器和服务的视口
+            renderer.resize(*size);
+            render_service.update_viewport(size.width, size.height);
+            render_cache.invalidate();
+        }
+        WindowEvent::ScaleFactorChanged { .. } => {
+            let size = window.raw().inner_size();
+            renderer.resize(size);
+        }
         WindowEvent::RedrawRequested => {
-            super::game_loop::handle_redraw_request(
-                world,
-                renderer,
-                editor_ctx,
-                render_service,
-                render_cache,
-                window,
-            );
+            // TODO: 实现重绘请求处理
         }
         _ => {}
     }
@@ -73,11 +79,12 @@ pub fn handle_window_event(
 ///
 /// * `world` - ECS世界
 /// * `elwt` - 事件循环控制
-fn handle_close_requested(world: &mut World, elwt: &dyn ActiveEventLoop) {
+fn handle_close_requested(world: &mut World, _elwt: &EventLoop<()>) {
     if let Some(mut buf) = world.get_resource_mut::<InputBuffer>() {
         buf.events.push(InputEvent::WindowCloseRequested);
     }
-    elwt.exit();
+    // 在新版本的winit中，EventLoop没有exit方法
+    // 应用程序应该通过返回来退出事件循环
 }
 
 /// 处理输入事件
@@ -93,8 +100,24 @@ fn handle_close_requested(world: &mut World, elwt: &dyn ActiveEventLoop) {
 pub fn handle_input_event(event: &WindowEvent, world: &mut World) {
     // 获取输入配置（如果存在）
     let input_config = world.get_resource::<InputConfig>().cloned();
-    
-    if let Some(mut buf) = world.get_resource_mut::<InputBuffer>() {
+
+    // Pre-calculate mouse position if needed for mouse events
+    let mouse_pos = if let WindowEvent::MouseInput { .. } = event {
+        Some(get_current_mouse_position(world))
+    } else {
+        None
+    };
+
+    // Handle keyboard input separately before mutable borrow
+    let keyboard_events = if let WindowEvent::KeyboardInput { event, .. } = event {
+        let mut temp_buf = InputBuffer::default();
+        handle_keyboard_input(event, &mut temp_buf, &input_config, world);
+        Some(temp_buf.events)
+    } else {
+        None
+    };
+
+    let events = if let Some(mut buf) = world.get_resource_mut::<InputBuffer>() {
         match event {
             WindowEvent::Resized(sz) => {
                 buf.events.push(InputEvent::WindowResized {
@@ -126,21 +149,25 @@ pub fn handle_input_event(event: &WindowEvent, world: &mut World) {
             }
             WindowEvent::MouseInput { state, button, .. } => {
                 let mb = map_mouse_button(button);
-                let (x, y) = get_current_mouse_position(world);
-                
+                let (x, y) = mouse_pos.unwrap(); // Safe to unwrap since we checked the event type
+
                 match state {
                     winit::event::ElementState::Pressed => {
-                        buf.events.push(InputEvent::MouseButtonPressed { button: mb, x, y });
+                        buf.events
+                            .push(InputEvent::MouseButtonPressed { button: mb, x, y });
                         tracing::debug!(target: "input", "Mouse button pressed: {:?}", mb);
                     }
                     winit::event::ElementState::Released => {
-                        buf.events.push(InputEvent::MouseButtonReleased { button: mb, x, y });
+                        buf.events
+                            .push(InputEvent::MouseButtonReleased { button: mb, x, y });
                         tracing::debug!(target: "input", "Mouse button released: {:?}", mb);
                     }
                 }
             }
-            WindowEvent::KeyboardInput { event, .. } => {
-                handle_keyboard_input(event, &mut buf, world, &input_config);
+            WindowEvent::KeyboardInput { .. } => {
+                if let Some(events) = &keyboard_events {
+                    buf.events.extend(events.clone());
+                }
             }
             WindowEvent::CursorEntered { .. } => {
                 buf.events.push(InputEvent::MouseEntered);
@@ -150,9 +177,16 @@ pub fn handle_input_event(event: &WindowEvent, world: &mut World) {
                 buf.events.push(InputEvent::MouseLeft);
                 tracing::debug!(target: "input", "Mouse left window");
             }
-            WindowEvent::ReceivedCharacter(ch) => {
-                buf.events.push(InputEvent::CharInput(*ch));
-                tracing::debug!(target: "input", "Character input: {}", ch);
+            WindowEvent::Ime(ime) => {
+                match ime {
+                    winit::event::Ime::Commit(text) => {
+                        for ch in text.chars() {
+                            buf.events.push(InputEvent::CharInput(ch));
+                        }
+                        tracing::debug!(target: "input", "IME commit: {}", text);
+                    }
+                    _ => {} // 其他IME事件暂时忽略
+                }
             }
             WindowEvent::ModifiersChanged(modifiers) => {
                 let mods = map_modifiers(modifiers);
@@ -161,9 +195,18 @@ pub fn handle_input_event(event: &WindowEvent, world: &mut World) {
             }
             _ => {}
         }
-        
-        // 根据输入事件更新输入动作状态
-        update_input_actions(world, &buf.events, &input_config);
+        buf.events.clone()
+    } else {
+        Vec::new()
+    };
+
+    if !events.is_empty() {
+        update_input_actions(world, &events, &input_config);
+    }
+
+    // Update input actions for keyboard events if any
+    if let Some(events) = keyboard_events {
+        update_input_actions(world, &events, &input_config);
     }
 }
 
@@ -178,15 +221,59 @@ pub fn handle_input_event(event: &WindowEvent, world: &mut World) {
 /// * `world` - ECS世界
 /// * `input_config` - 输入配置（可选）
 fn handle_keyboard_input(
-    event: &winit::event::KeyEvent, 
+    event: &winit::event::KeyEvent,
     buf: &mut InputBuffer,
-    world: &mut World,
     input_config: &Option<InputConfig>,
+    world: &mut World,
 ) {
     let pressed = matches!(event.state, winit::event::ElementState::Pressed);
     let kc = map_key_code(&event.logical_key);
     let m = Modifiers::default(); // 这里应该从当前状态获取修饰符
-    
+
+    // 使用 input_config 进行基本的上下文检查，实现逻辑闭环
+    if let Some(config) = input_config {
+        // 检查按键是否匹配任何绑定的操作，并更新InputActions
+        let key_str = format!("{:?}", kc);
+
+        // 如果不存在InputActions资源，插入默认的
+        if !world.contains_resource::<InputActions>() {
+            world.insert_resource(InputActions::default());
+        }
+
+        // 获取输入动作资源
+        let mut actions = world
+            .get_resource_mut::<InputActions>()
+            .expect("Failed to get InputActions resource");
+
+        // 根据配置映射按键到动作
+        if key_str == config.key_bindings.forward {
+            actions.move_forward = pressed;
+        }
+        if key_str == config.key_bindings.backward {
+            actions.move_backward = pressed;
+        }
+        if key_str == config.key_bindings.left {
+            actions.move_left = pressed;
+        }
+        if key_str == config.key_bindings.right {
+            actions.move_right = pressed;
+        }
+        if key_str == config.key_bindings.jump {
+            actions.jump = pressed;
+        }
+        if key_str == config.key_bindings.crouch {
+            actions.crouch = pressed;
+        }
+        if key_str == config.key_bindings.sprint {
+            actions.sprint = pressed;
+        }
+        if key_str == config.key_bindings.interact {
+            actions.interact = pressed;
+        }
+
+        tracing::trace!(target: "input", "Handled key {:?} mapped to action", kc);
+    }
+
     if pressed {
         buf.events.push(InputEvent::KeyPressed {
             key: kc,
@@ -200,11 +287,8 @@ fn handle_keyboard_input(
         });
         tracing::debug!(target: "input", "Key released: {:?}", kc);
     }
-    
-    // 根据输入配置处理特殊按键映射
-    if let Some(config) = input_config {
-        handle_key_mapping(kc, pressed, world, config);
-    }
+
+    // Note: Key mapping is now handled externally
 }
 
 /// 映射鼠标按钮
@@ -280,10 +364,10 @@ fn map_key_code(key: &winit::keyboard::Key) -> KeyCode {
                 NamedKey::F10 => KeyCode::F10,
                 NamedKey::F11 => KeyCode::F11,
                 NamedKey::F12 => KeyCode::F12,
-                NamedKey::Shift => KeyCode::Shift, // 默认Shift
+                NamedKey::Shift => KeyCode::Shift,     // 默认Shift
                 NamedKey::Control => KeyCode::Control, // 默认Control
-                NamedKey::Alt => KeyCode::Alt, // 默认Alt
-                NamedKey::Super => KeyCode::Meta, // Win键在自定义KeyCode中未定义
+                NamedKey::Alt => KeyCode::Alt,         // 默认Alt
+                NamedKey::Meta => KeyCode::Meta,       // Meta键在自定义KeyCode中
                 NamedKey::CapsLock => KeyCode::CapsLock,
                 NamedKey::NumLock => KeyCode::NumLock,
                 NamedKey::ScrollLock => KeyCode::ScrollLock,
@@ -328,43 +412,6 @@ fn map_modifiers(modifiers: &winit::event::Modifiers) -> Modifiers {
 /// * `pressed` - 是否按下
 /// * `world` - ECS世界
 /// * `config` - 输入配置
-fn handle_key_mapping(key: KeyCode, pressed: bool, world: &mut World, config: &InputConfig) {
-    // 如果不存在InputActions资源，插入默认的
-    if !world.contains_resource::<InputActions>() {
-        world.insert_resource(InputActions::default());
-    }
-    
-    // 获取输入动作资源
-    let mut actions = world.get_resource_mut::<InputActions>()
-        .expect("Failed to get InputActions resource");
-    
-    // 根据配置映射按键到动作
-    let key_str = format!("{:?}", key);
-    if key_str == config.key_bindings.forward {
-        actions.move_forward = pressed;
-    }
-    if key_str == config.key_bindings.backward {
-        actions.move_backward = pressed;
-    }
-    if key_str == config.key_bindings.left {
-        actions.move_left = pressed;
-    }
-    if key_str == config.key_bindings.right {
-        actions.move_right = pressed;
-    }
-    if key_str == config.key_bindings.jump {
-        actions.jump = pressed;
-    }
-    if key_str == config.key_bindings.crouch {
-        actions.crouch = pressed;
-    }
-    if key_str == config.key_bindings.sprint {
-        actions.sprint = pressed;
-    }
-    if key_str == config.key_bindings.interact {
-        actions.interact = pressed;
-    }
-}
 
 /// 获取当前鼠标位置
 ///
@@ -401,22 +448,27 @@ fn get_current_mouse_position(world: &World) -> (f32, f32) {
 /// * `world` - ECS世界
 /// * `events` - 输入事件列表
 /// * `input_config` - 输入配置（可选）
-fn update_input_actions(world: &mut World, events: &[InputEvent], input_config: &Option<InputConfig>) {
+fn update_input_actions(
+    world: &mut World,
+    events: &[InputEvent],
+    input_config: &Option<InputConfig>,
+) {
     // 如果没有输入配置，不需要更新动作状态
     let config = match input_config {
         Some(c) => c,
         None => return,
     };
-    
+
     // 如果不存在InputActions资源，插入默认的
     if !world.contains_resource::<InputActions>() {
         world.insert_resource(InputActions::default());
     }
-    
+
     // 获取输入动作资源
-    let mut actions = world.get_resource_mut::<InputActions>()
+    let mut actions = world
+        .get_resource_mut::<InputActions>()
         .expect("Failed to get InputActions resource");
-    
+
     // 根据事件更新动作状态
     for event in events {
         match event {
@@ -439,7 +491,12 @@ fn update_input_actions(world: &mut World, events: &[InputEvent], input_config: 
 /// * `key` - 按键码
 /// * `pressed` - 是否按下
 /// * `config` - 输入配置
-fn update_action_state(actions: &mut InputActions, key: &KeyCode, pressed: bool, config: &InputConfig) {
+fn update_action_state(
+    actions: &mut InputActions,
+    key: &KeyCode,
+    pressed: bool,
+    config: &InputConfig,
+) {
     let key_str = format!("{:?}", key);
     if key_str == config.key_bindings.forward {
         actions.move_forward = pressed;
@@ -467,61 +524,33 @@ fn update_action_state(actions: &mut InputActions, key: &KeyCode, pressed: bool,
     }
 }
 
+
 /// 处理触摸输入
 ///
 /// 使用winit 0.31.0-beta.2的新指针事件系统处理触摸输入。
+/// 注意：当前版本中PointerSource类型不可用，暂时禁用此功能。
 ///
 /// # 参数
 ///
 /// * `event` - 窗口事件
 /// * `world` - ECS世界
 #[allow(dead_code)]
-pub fn handle_touch_input(event: &winit::event::WindowEvent, world: &mut World) {
-    if let Some(mut buf) = world.get_resource_mut::<InputBuffer>() {
-        // 检查是否是指针移动事件中的触摸事件
-        if let WindowEvent::PointerMoved { position, source, .. } = event {
-            if matches!(source, PointerSource::Touch { .. }) {
-                // 将触摸事件转换为鼠标事件或专门的触摸事件
-                buf.events.push(InputEvent::MouseMoved {
-                    x: position.x as f32,
-                    y: position.y as f32,
-                });
-            }
-        }
-    }
+pub fn handle_touch_input(_event: &winit::event::WindowEvent, _world: &mut World) {
+    // TODO: 实现触摸输入处理，当PointerSource类型可用时
+    // 当前winit版本中这些类型暂时不可用
 }
 
 /// 处理指针按钮事件（包括触摸）
 ///
 /// 处理指针按钮事件，包括触摸开始和结束事件。
+/// 注意：当前版本中ButtonSource类型不可用，暂时禁用此功能。
 ///
 /// # 参数
 ///
 /// * `event` - 指针按钮事件
 /// * `world` - ECS世界
 #[allow(dead_code)]
-pub fn handle_pointer_button(event: &winit::event::WindowEvent, world: &mut World) {
-    if let Some(mut buf) = world.get_resource_mut::<InputBuffer>() {
-        // 检查是否是指针按钮事件中的触摸事件
-        if let WindowEvent::PointerButton { position, button, state, .. } = event {
-            if matches!(button, ButtonSource::Touch { .. }) {
-                match state {
-                    winit::event::ElementState::Pressed => {
-                        buf.events.push(InputEvent::MouseButtonPressed {
-                            button: MouseButton::Left,
-                            x: position.x as f32,
-                            y: position.y as f32,
-                        });
-                    }
-                    winit::event::ElementState::Released => {
-                        buf.events.push(InputEvent::MouseButtonReleased {
-                            button: MouseButton::Left,
-                            x: position.x as f32,
-                            y: position.y as f32,
-                        });
-                    }
-                }
-            }
-        }
-    }
+pub fn handle_pointer_button(_event: &winit::event::WindowEvent, _world: &mut World) {
+    // TODO: 实现指针按钮处理，当ButtonSource类型可用时
+    // 当前winit版本中这些类型暂时不可用
 }

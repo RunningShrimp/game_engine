@@ -1,28 +1,29 @@
-//! 事件类型注册系统
+//  事件类型注册系统
 
 use super::{DomainEvent, EventError};
 use bevy_ecs::prelude::*;
+use bincode;
 use serde::{Deserialize, Serialize};
 use std::any::TypeId;
 use std::collections::HashMap;
 use std::sync::Arc;
-use bincode::{Encode, Decode};
+// bincode 2.0 uses encode/decode API
 
 /// 事件工厂 trait
 pub trait EventFactory: Send + Sync + 'static {
     /// 创建事件实例
     fn create_event(&self, data: &[u8]) -> Result<Box<dyn DomainEvent>, EventError>;
-    
+
     /// 获取事件类型名称
     fn event_type_name(&self) -> &'static str;
 }
 
 /// 泛型事件工厂实现
-struct GenericEventFactory<E: DomainEvent + Serialize + for<'de> Deserialize<'de> + Encode + Decode<bincode::config::Standard>> {
+struct GenericEventFactory<E: DomainEvent + Serialize + for<'de> Deserialize<'de>> {
     _phantom: std::marker::PhantomData<E>,
 }
 
-impl<E: DomainEvent + Serialize + for<'de> Deserialize<'de> + Encode + Decode<bincode::config::Standard>> GenericEventFactory<E> {
+impl<E: DomainEvent + Serialize + for<'de> Deserialize<'de>> GenericEventFactory<E> {
     fn new() -> Self {
         Self {
             _phantom: std::marker::PhantomData,
@@ -30,20 +31,29 @@ impl<E: DomainEvent + Serialize + for<'de> Deserialize<'de> + Encode + Decode<bi
     }
 }
 
-impl<E: DomainEvent + Serialize + for<'de> Deserialize<'de> + Encode + Decode> EventFactory for GenericEventFactory<E> {
+impl<E: DomainEvent + Serialize + for<'de> Deserialize<'de> + std::default::Default> EventFactory
+    for GenericEventFactory<E>
+{
     fn create_event(&self, data: &[u8]) -> Result<Box<dyn DomainEvent>, EventError> {
-        bincode::decode_from_slice(data, bincode::config::standard())
-            .map(|(event, _)| Box::new(event) as Box<dyn DomainEvent>)
+        bincode::deserialize::<E>(data)
+            .map(|event| Box::new(event) as Box<dyn DomainEvent>)
             .map_err(|e| EventError::SerializationError(e.to_string()))
     }
-    
+
     fn event_type_name(&self) -> &'static str {
         E::event_type(&E::default())
     }
 }
 
+impl std::fmt::Debug for EventTypeRegistry {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("EventTypeRegistry")
+            .field("registered_types", &self.type_name_to_factory.keys().collect::<Vec<_>>())
+            .finish()
+    }
+}
+
 /// 事件类型注册表
-#[derive(Default)]
 pub struct EventTypeRegistry {
     /// 事件类型名称 -> 事件工厂
     type_name_to_factory: HashMap<String, Arc<dyn EventFactory>>,
@@ -51,38 +61,60 @@ pub struct EventTypeRegistry {
     type_id_to_name: HashMap<TypeId, String>,
 }
 
+impl Default for EventTypeRegistry {
+    fn default() -> Self {
+        Self {
+            type_name_to_factory: HashMap::new(),
+            type_id_to_name: HashMap::new(),
+        }
+    }
+}
+
 impl EventTypeRegistry {
     /// 创建新的事件类型注册表
     pub fn new() -> Self {
         Self::default()
     }
-    
+
     /// 注册事件类型
-    pub fn register_event_type<E: DomainEvent + Serialize + for<'de> Deserialize<'de> + Default>(&mut self) -> Result<(), EventError> {
+    pub fn register_event_type<
+        E: DomainEvent + Serialize + for<'de> Deserialize<'de> + Default + Serialize,
+    >(
+        &mut self,
+    ) -> Result<(), EventError> {
         let event_factory = Arc::new(GenericEventFactory::<E>::new());
         let event_type_name = E::event_type(&E::default());
         let type_id = TypeId::of::<E>();
-        
+
         // 检查是否已经注册过该类型
         if self.type_name_to_factory.contains_key(event_type_name) {
             return Ok(()); // 已注册，忽略
         }
-        
-        self.type_name_to_factory.insert(event_type_name.to_string(), event_factory);
-        self.type_id_to_name.insert(type_id, event_type_name.to_string());
-        
+
+        self.type_name_to_factory
+            .insert(event_type_name.to_string(), event_factory);
+        self.type_id_to_name
+            .insert(type_id, event_type_name.to_string());
+
         Ok(())
     }
-    
+
     /// 根据事件类型名称创建事件实例
-    pub fn create_event(&self, event_type: &str, data: &[u8]) -> Result<Box<dyn DomainEvent>, EventError> {
+    pub fn create_event(
+        &self,
+        event_type: &str,
+        data: &[u8],
+    ) -> Result<Box<dyn DomainEvent>, EventError> {
         if let Some(factory) = self.type_name_to_factory.get(event_type) {
             factory.create_event(data)
         } else {
-            Err(EventError::SerializationError(format!("Unknown event type: {}", event_type)))
+            Err(EventError::SerializationError(format!(
+                "Unknown event type: {}",
+                event_type
+            )))
         }
     }
-    
+
     /// 根据事件类型ID获取事件类型名称
     pub fn get_event_type_name(&self, type_id: TypeId) -> Option<&str> {
         self.type_id_to_name.get(&type_id).map(|s| s.as_str())
@@ -98,13 +130,16 @@ macro_rules! register_event {
             fn default() -> Self {
                 // 这里需要根据具体事件类型调整
                 // 如果事件类型没有合理的Default实现，需要手动实现
-                unimplemented!("Default implementation required for event type: {}", stringify!($event_type));
+                unimplemented!(
+                    "Default implementation required for event type: {}",
+                    stringify!($event_type)
+                );
             }
         }
-        
+
         // 注册事件类型到全局注册表
         struct EventRegister;
-        
+
         impl EventRegister {
             #[ctor::ctor]
             fn register() {
@@ -118,31 +153,31 @@ macro_rules! register_event {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     // 测试事件类型
     #[derive(Debug, Clone, Serialize, Deserialize)]
     struct TestEvent {
         data: String,
     }
-    
+
     impl DomainEvent for TestEvent {
         fn event_type(&self) -> &'static str {
             "TestEvent"
         }
-        
+
         fn apply(&self, _world: &mut World) -> Result<(), EventError> {
             Ok(())
         }
-        
+
         fn revert(&self, _world: &mut World) -> Result<(), EventError> {
             Ok(())
         }
-        
+
         fn as_any(&self) -> &dyn std::any::Any {
             self
         }
     }
-    
+
     // 手动实现Default
     impl Default for TestEvent {
         fn default() -> Self {
@@ -151,20 +186,22 @@ mod tests {
             }
         }
     }
-    
+
     #[test]
     fn test_event_registry() {
         let mut registry = EventTypeRegistry::new();
         registry.register_event_type::<TestEvent>().unwrap();
-        
+
         // 测试创建事件
-        let test_data = TestEvent { data: "test".to_string() };
-        let serialized = bincode::encode_to_vec(&test_data, bincode::config::standard()).unwrap();
-        
+        let test_data = TestEvent {
+            data: "test".to_string(),
+        };
+        let serialized = bincode::serialize(&test_data).unwrap();
+
         let created_event = registry.create_event("TestEvent", &serialized).unwrap();
         assert_eq!(created_event.event_type(), "TestEvent");
     }
-    
+
     #[test]
     #[should_panic]
     fn test_unknown_event_type() {

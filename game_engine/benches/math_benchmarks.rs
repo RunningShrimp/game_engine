@@ -1,15 +1,14 @@
-//! 数学运算性能基准测试
-//!
-//! 测试向量、矩阵、四元数等数学运算的性能
-//! 包含SIMD优化版本的性能对比
+//  数学运算性能基准测试
+// 
+//  测试向量、矩阵、四元数等数学运算的性能
+//  包含SIMD优化版本的性能对比
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
-use glam::{Mat4, Quat, Vec3, Vec4};
+use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
 use game_engine_simd::{
-    Vec3Simd, Vec4Simd, Mat4Simd, QuatSimd,
-    MatrixBatchOps, VectorBatchOps, GeometryOps, BoundingVolumeOps,
-    SimdBackend, detect_cpu_features
+    BoundingVolumeOps, GeometryOps, Mat4Simd, MatrixBatchOps, QuatSimd, SimdBackend, Vec3Simd,
+    Vec4Simd, VectorBatchOps, VectorOps, detect_cpu_features,
 };
+use glam::{Mat4, Quat, Vec3, Vec4};
 
 fn bench_vec3_operations(c: &mut Criterion) {
     let mut group = c.benchmark_group("vec3_operations");
@@ -159,7 +158,9 @@ fn bench_simd_math(c: &mut Criterion) {
         &vectors,
         |b, vecs| {
             b.iter(|| {
-                black_box(MatrixBatchOps::batch_transform_vec3_optimized(&matrix, vecs))
+                black_box(MatrixBatchOps::batch_mul_vec3_simd(
+                    &matrix, vecs,
+                ))
             });
         },
     );
@@ -169,29 +170,32 @@ fn bench_simd_math(c: &mut Criterion) {
         BenchmarkId::new("simd_bounding_volume", count),
         &vectors,
         |b, vecs| {
-            b.iter(|| {
-                black_box(BoundingVolumeOps::batch_compute_aabb(vecs))
-            });
+            b.iter(|| black_box(BoundingVolumeOps::batch_compute_aabb(vecs)));
         },
     );
 
     // SIMD后端性能对比
     let backend = SimdBackend::best_available();
     println!("SIMD Backend: {:?}", backend);
-    
+
     group.finish();
 }
 
 /// 测试不同SIMD后端的性能差异
 fn bench_simd_backends(c: &mut Criterion) {
     let mut group = c.benchmark_group("simd_backends");
-    
+
     let vectors: Vec<Vec3> = (0..1000)
         .map(|i| Vec3::new(i as f32, i as f32 * 2.0, i as f32 * 3.0))
         .collect();
-    
+
     // 测试不同后端的向量操作
-    for &backend in &[SimdBackend::Scalar, SimdBackend::Sse2, SimdBackend::Avx2, SimdBackend::Neon] {
+    for &backend in &[
+        SimdBackend::Scalar,
+        SimdBackend::Sse2,
+        SimdBackend::Avx2,
+        SimdBackend::Neon,
+    ] {
         if cfg!(target_arch = "x86_64") || matches!(backend, SimdBackend::Scalar) {
             group.bench_with_input(
                 BenchmarkId::new(format!("{:?}_vector_ops", backend), vectors.len()),
@@ -210,7 +214,7 @@ fn bench_simd_backends(c: &mut Criterion) {
             );
         }
     }
-    
+
     group.finish();
 }
 

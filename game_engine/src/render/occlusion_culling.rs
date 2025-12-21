@@ -1,12 +1,12 @@
-//! 遮挡剔除模块
-//!
-//! 实现基于层次Z缓冲（Hi-Z）的GPU端遮挡剔除，提供高性能的遮挡检测。
+//  遮挡剔除模块
+// 
+//  实现基于层次Z缓冲（Hi-Z）的GPU端遮挡剔除，提供高性能的遮挡检测。
 
+use bytemuck;
 use glam::Vec3;
+use thiserror::Error;
 use wgpu;
 use wgpu::util::DeviceExt;
-use thiserror::Error;
-use bytemuck;
 
 /// 遮挡剔除错误类型
 #[derive(Error, Debug)]
@@ -174,73 +174,75 @@ impl HierarchicalZCulling {
         });
 
         // 创建Hi-Z构建绑定组布局
-        let build_bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("Hi-Z Build Bind Group Layout"),
-            entries: &[
-                // 输入深度缓冲（mip 0）
-                wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Texture {
-                        sample_type: wgpu::TextureSampleType::Float { filterable: false },
-                        view_dimension: wgpu::TextureViewDimension::D2,
-                        multisampled: false,
+        let build_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("Hi-Z Build Bind Group Layout"),
+                entries: &[
+                    // 输入深度缓冲（mip 0）
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Texture {
+                            sample_type: wgpu::TextureSampleType::Float { filterable: false },
+                            view_dimension: wgpu::TextureViewDimension::D2,
+                            multisampled: false,
+                        },
+                        count: None,
                     },
-                    count: None,
-                },
-                // Hi-Z输出（所有mip级别）
-                wgpu::BindGroupLayoutEntry {
-                    binding: 1,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::StorageTexture {
-                        access: wgpu::StorageTextureAccess::WriteOnly,
-                        format: wgpu::TextureFormat::R32Float,
-                        view_dimension: wgpu::TextureViewDimension::D2,
+                    // Hi-Z输出（所有mip级别）
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::StorageTexture {
+                            access: wgpu::StorageTextureAccess::WriteOnly,
+                            format: wgpu::TextureFormat::R32Float,
+                            view_dimension: wgpu::TextureViewDimension::D2,
+                        },
+                        count: None,
                     },
-                    count: None,
-                },
-            ],
-        });
+                ],
+            });
 
         // 创建遮挡查询绑定组布局
-        let query_bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("Occlusion Query Bind Group Layout"),
-            entries: &[
-                // Hi-Z纹理（用于查询）
-                wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Texture {
-                        sample_type: wgpu::TextureSampleType::Float { filterable: false },
-                        view_dimension: wgpu::TextureViewDimension::D2,
-                        multisampled: false,
+        let query_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("Occlusion Query Bind Group Layout"),
+                entries: &[
+                    // Hi-Z纹理（用于查询）
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Texture {
+                            sample_type: wgpu::TextureSampleType::Float { filterable: false },
+                            view_dimension: wgpu::TextureViewDimension::D2,
+                            multisampled: false,
+                        },
+                        count: None,
                     },
-                    count: None,
-                },
-                // 查询缓冲区
-                wgpu::BindGroupLayoutEntry {
-                    binding: 1,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: false },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
+                    // 查询缓冲区
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: false },
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
                     },
-                    count: None,
-                },
-                // 统一缓冲区（视图投影矩阵等）
-                wgpu::BindGroupLayoutEntry {
-                    binding: 2,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Uniform,
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
+                    // 统一缓冲区（视图投影矩阵等）
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 2,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Uniform,
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
                     },
-                    count: None,
-                },
-            ],
-        });
+                ],
+            });
 
         // 创建Hi-Z构建计算着色器
         let build_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
@@ -343,38 +345,43 @@ impl HierarchicalZCulling {
             return Err(OcclusionError::NotInitialized);
         }
 
-        let build_pipeline = self.build_pipeline.as_ref()
+        let build_pipeline = self
+            .build_pipeline
+            .as_ref()
             .ok_or_else(|| OcclusionError::NotInitialized)?;
-        let hi_z_texture = self.hi_z_texture.as_ref()
+        let hi_z_texture = self
+            .hi_z_texture
+            .as_ref()
             .ok_or_else(|| OcclusionError::NotInitialized)?;
-        
+
         // 重新创建构建绑定组布局（因为我们需要在build_hi_z中使用）
         // 理想情况下应该存储build_bind_group_layout，但为了简化，我们在这里重新创建
-        let build_bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("Hi-Z Build Bind Group Layout"),
-            entries: &[
-                wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Texture {
-                        sample_type: wgpu::TextureSampleType::Float { filterable: false },
-                        view_dimension: wgpu::TextureViewDimension::D2,
-                        multisampled: false,
+        let build_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("Hi-Z Build Bind Group Layout"),
+                entries: &[
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Texture {
+                            sample_type: wgpu::TextureSampleType::Float { filterable: false },
+                            view_dimension: wgpu::TextureViewDimension::D2,
+                            multisampled: false,
+                        },
+                        count: None,
                     },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 1,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::StorageTexture {
-                        access: wgpu::StorageTextureAccess::WriteOnly,
-                        format: wgpu::TextureFormat::R32Float,
-                        view_dimension: wgpu::TextureViewDimension::D2,
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::StorageTexture {
+                            access: wgpu::StorageTextureAccess::WriteOnly,
+                            format: wgpu::TextureFormat::R32Float,
+                            view_dimension: wgpu::TextureViewDimension::D2,
+                        },
+                        count: None,
                     },
-                    count: None,
-                },
-            ],
-        });
+                ],
+            });
 
         // 创建深度缓冲视图（用于第一级）
         let depth_view = depth_texture.create_view(&wgpu::TextureViewDescriptor {
@@ -535,11 +542,17 @@ impl HierarchicalZCulling {
             return Err(OcclusionError::NotInitialized);
         }
 
-        let query_pipeline = self.query_pipeline.as_ref()
+        let query_pipeline = self
+            .query_pipeline
+            .as_ref()
             .ok_or_else(|| OcclusionError::NotInitialized)?;
-        let query_bind_group_layout = self.query_bind_group_layout.as_ref()
+        let query_bind_group_layout = self
+            .query_bind_group_layout
+            .as_ref()
             .ok_or_else(|| OcclusionError::NotInitialized)?;
-        let hi_z_view = self.hi_z_view.as_ref()
+        let hi_z_view = self
+            .hi_z_view
+            .as_ref()
             .ok_or_else(|| OcclusionError::NotInitialized)?;
 
         let query_count = queries.len() as u32;
@@ -567,7 +580,9 @@ impl HierarchicalZCulling {
         let query_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Occlusion Query Buffer"),
             contents: bytemuck::cast_slice(&query_data),
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC | wgpu::BufferUsages::COPY_DST,
+            usage: wgpu::BufferUsages::STORAGE
+                | wgpu::BufferUsages::COPY_SRC
+                | wgpu::BufferUsages::COPY_DST,
         });
 
         // 创建统一缓冲区
@@ -632,7 +647,7 @@ impl HierarchicalZCulling {
 
             cpass.set_pipeline(query_pipeline);
             cpass.set_bind_group(0, &bind_group, &[]);
-            
+
             let workgroup_count = (query_count + 63) / 64; // 64个线程每个workgroup
             cpass.dispatch_workgroups(workgroup_count, 1, 1);
         }
@@ -656,15 +671,15 @@ impl HierarchicalZCulling {
         // 读取映射的数据
         let data = buffer_slice.get_mapped_range();
         let results: &[OcclusionQuery] = bytemuck::cast_slice(&data);
-        
+
         let mut visibility = Vec::with_capacity(queries.len());
         for query in results {
             visibility.push(query.visible != 0);
         }
-        
+
         drop(data);
         result_buffer.unmap();
-        
+
         Ok(visibility)
     }
 
@@ -700,11 +715,17 @@ impl HierarchicalZCulling {
             return Err(OcclusionError::NotInitialized);
         }
 
-        let query_pipeline = self.query_pipeline.as_ref()
+        let query_pipeline = self
+            .query_pipeline
+            .as_ref()
             .ok_or_else(|| OcclusionError::NotInitialized)?;
-        let query_bind_group_layout = self.query_bind_group_layout.as_ref()
+        let query_bind_group_layout = self
+            .query_bind_group_layout
+            .as_ref()
             .ok_or_else(|| OcclusionError::NotInitialized)?;
-        let hi_z_view = self.hi_z_view.as_ref()
+        let hi_z_view = self
+            .hi_z_view
+            .as_ref()
             .ok_or_else(|| OcclusionError::NotInitialized)?;
 
         let query_count = queries.len() as u32;
@@ -798,19 +819,13 @@ impl HierarchicalZCulling {
 
             cpass.set_pipeline(query_pipeline);
             cpass.set_bind_group(0, &bind_group, &[]);
-            
+
             let workgroup_count = (query_count + 63) / 64;
             cpass.dispatch_workgroups(workgroup_count, 1, 1);
         }
 
         // 复制结果到读取缓冲区
-        encoder.copy_buffer_to_buffer(
-            &query_buffer,
-            0,
-            &result_buffer,
-            0,
-            buffer_size,
-        );
+        encoder.copy_buffer_to_buffer(&query_buffer, 0, &result_buffer, 0, buffer_size);
 
         // 存储结果缓冲区（双缓冲）
         self.async_result_buffers[self.current_buffer_index] = Some(result_buffer);
@@ -848,12 +863,12 @@ impl HierarchicalZCulling {
 
         // 获取上一个缓冲区的索引
         let prev_buffer_index = (self.current_buffer_index + 1) % 2;
-        
+
         let result_buffer = self.async_result_buffers[prev_buffer_index].as_ref()?;
 
         // 检查缓冲区是否已映射
         let buffer_slice = result_buffer.slice(..);
-        
+
         // 使用device创建临时缓冲区用于验证结果
         let _temp_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("Occlusion Query Temp Buffer"),
@@ -861,14 +876,14 @@ impl HierarchicalZCulling {
             usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
             mapped_at_creation: false,
         });
-        
+
         // 提交所有待处理的命令，确保查询结果已完成
         queue.submit([]);
-        
+
         // 尝试映射缓冲区（非阻塞）
         // 注意：map_async是异步的，需要先调用poll检查状态
         buffer_slice.map_async(wgpu::MapMode::Read, |_| {});
-        
+
         // 检查是否已映射
         // 注意：wgpu的map_async是异步的，我们需要等待映射完成
         // 这里简化处理：如果映射未完成，返回None
@@ -877,7 +892,7 @@ impl HierarchicalZCulling {
 
         // 读取结果
         let data = buffer_slice.get_mapped_range();
-        
+
         #[repr(C)]
         #[derive(bytemuck::Pod, bytemuck::Zeroable, Copy, Clone)]
         struct OcclusionQuery {
@@ -888,15 +903,15 @@ impl HierarchicalZCulling {
         }
 
         let results: &[OcclusionQuery] = bytemuck::cast_slice(&data);
-        
+
         let mut visibility = Vec::with_capacity(results.len());
         for query in results {
             visibility.push(query.visible != 0);
         }
-        
+
         drop(data);
         result_buffer.unmap();
-        
+
         // 清理缓冲区
         self.async_result_buffers[prev_buffer_index] = None;
         self.async_query_pending = false;

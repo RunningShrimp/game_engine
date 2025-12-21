@@ -1,8 +1,8 @@
-//! 错误报告系统
-//!
-//! 提供ECS系统来定期报告错误统计信息
+//  错误报告系统
+// 
+//  提供ECS系统来定期报告错误统计信息
 
-use crate::core::error_aggregator::ErrorAggregator;
+use crate::crate::error_aggregator::ErrorAggregator;
 use crate::ecs::Time;
 use bevy_ecs::prelude::*;
 

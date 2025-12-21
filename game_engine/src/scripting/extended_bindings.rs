@@ -220,7 +220,7 @@ impl ExtendedEcsBindings {
             if let Some(ScriptValue::Int(entity_id)) = args.first() {
                 let world = safe_lock(&world, "ExtendedEcsBindings.world").unwrap();
                 let entity = Entity::from_bits(*entity_id as u64);
-                
+
                 if let Some(camera) = world.get::<Camera>(entity) {
                     let info = match camera.projection {
                         Projection::Perspective { fov, aspect, near, far } => {

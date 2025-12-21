@@ -3,28 +3,28 @@ use std::collections::VecDeque;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
-/// 高性能同步原语集合
+//  高性能同步原语集合
 ///
-/// 注意：虽然名为synchronized，但这些实现仍然使用锁机制。
-/// 对于真正的无锁需求，请考虑使用crossbeam或lockfree库。
+//  注意：虽然名为synchronized，但这些实现仍然使用锁机制。
+//  对于真正的无锁需求，请考虑使用crossbeam或lockfree库。
 ///
-/// 这个模块包含：
-/// - 原子操作计数器和标志（真正的无锁）
-/// - 基于RwLock的同步队列和包装器（带有锁竞争监控）
+//  这个模块包含：
+//  - 原子操作计数器和标志（真正的无锁）
+//  - 基于RwLock的同步队列和包装器（带有锁竞争监控）
 
-/// 锁竞争监控
+//  锁竞争监控
 #[derive(Default)]
 pub struct LockMetrics {
     contention_count: AtomicU64,
     wait_time_ns: AtomicU64,
 }
 
-/// 真正的无锁计数器（使用原子操作）
+//  真正的无锁计数器（使用原子操作）
 pub struct LockFreeCounter {
     value: AtomicU64,
 }
 
-/// 真正的无锁标志（使用原子操作）
+//  真正的无锁标志（使用原子操作）
 pub struct LockFreeFlag {
     value: AtomicBool,
 }
@@ -44,7 +44,7 @@ impl LockMetrics {
     }
 }
 
-/// 原子计数器（真正的无锁实现）
+//  原子计数器（真正的无锁实现）
 pub struct AtomicCounter {
     value: AtomicU64,
 }
@@ -105,7 +105,7 @@ impl LockFreeCounter {
     }
 }
 
-/// 原子标志（真正的无锁实现）
+//  原子标志（真正的无锁实现）
 pub struct AtomicFlag {
     value: AtomicBool,
 }
@@ -156,10 +156,10 @@ impl LockFreeFlag {
     }
 }
 
-/// 读写锁包装器（带锁竞争监控）
+//  读写锁包装器（带锁竞争监控）
 ///
-/// 注意：这是一个基于RwLock的包装器，包含锁竞争监控功能。
-/// 如果锁竞争成为瓶颈，考虑使用真正的无锁数据结构。
+//  注意：这是一个基于RwLock的包装器，包含锁竞争监控功能。
+//  如果锁竞争成为瓶颈，考虑使用真正的无锁数据结构。
 pub struct RwLockWrapper<T> {
     inner: Arc<RwLock<T>>,
     metrics: LockMetrics,
@@ -232,9 +232,9 @@ impl<T: Default> Default for RwLockWrapper<T> {
     }
 }
 
-/// 同步队列（基于无锁队列实现）
+//  同步队列（基于无锁队列实现）
 ///
-/// 使用 `crossbeam-channel` 实现无锁队列，减少锁竞争。
+//  使用 `crossbeam-channel` 实现无锁队列，减少锁竞争。
 pub struct SynchronizedQueue<T> {
     sender: Sender<T>,
     receiver: Receiver<T>,

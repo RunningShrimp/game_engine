@@ -1,12 +1,8 @@
-//! 错误聚合和报告模块
-//!
-//! 提供错误统计、聚合和可视化功能。
+//  错误聚合和报告模块
+// 
+//  提供错误统计、聚合和可视化功能。
 
-use crate::{
-    core::error::EngineError,
-    impl_default,
-    error::safe_lock,
-};
+use crate::{error::{EngineError, safe_lock}, impl_default};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -42,6 +38,20 @@ impl Default for ErrorStats {
 }
 
 impl ErrorStats {
+    /// 创建新的错误统计信息
+    ///
+    /// # 返回
+    ///
+    /// 返回初始化的错误统计信息实例，所有计数器都设置为0。
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// use game_engine::core::ErrorStats;
+    ///
+    /// let stats = ErrorStats::new();
+    /// assert_eq!(stats.total_count, 0);
+    /// ```
     pub fn new() -> Self {
         Self::default()
     }
@@ -51,16 +61,43 @@ impl ErrorStats {
     }
 
     /// 获取最常见的错误类型
+    ///
+    /// # 返回
+    ///
+    /// 返回最常见的错误类型及其计数，如果没有错误则返回`None`。
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// use game_engine::core::ErrorStats;
+    ///
+    /// let stats = ErrorStats::new();
+    /// if let Some((error_type, count)) = stats.most_common_error_type() {
+    ///     println!("最常见的错误类型: {} ({}次)", error_type, count);
+    /// }
+    /// ```
     pub fn most_common_error_type(&self) -> Option<(&String, &u64)> {
         self.by_type.iter().max_by_key(|(_, count)| *count)
     }
 
     /// 获取最常见的错误来源
+    ///
+    /// # 返回
+    ///
+    /// 返回最常见的错误来源（模块名）及其计数，如果没有错误则返回`None`。
     pub fn most_common_error_source(&self) -> Option<(&String, &u64)> {
         self.by_source.iter().max_by_key(|(_, count)| *count)
     }
 
     /// 获取错误趋势（最近N秒内的错误数）
+    ///
+    /// # 参数
+    ///
+    /// * `seconds` - 时间窗口（秒）
+    ///
+    /// # 返回
+    ///
+    /// 返回指定时间窗口内的错误数量。
     pub fn error_trend(&self, seconds: u64) -> u64 {
         let cutoff = Self::current_timestamp().saturating_sub(seconds);
         self.recent_errors
@@ -86,6 +123,17 @@ pub struct ErrorRecord {
 }
 
 impl ErrorRecord {
+    /// 创建新的错误记录
+    ///
+    /// # 参数
+    ///
+    /// * `error_type` - 错误类型名称
+    /// * `source` - 错误来源（模块名）
+    /// * `message` - 错误消息
+    ///
+    /// # 返回
+    ///
+    /// 返回新创建的错误记录，时间戳自动设置为当前时间。
     pub fn new(
         error_type: impl Into<String>,
         source: impl Into<String>,
@@ -100,6 +148,15 @@ impl ErrorRecord {
         }
     }
 
+    /// 添加错误详情
+    ///
+    /// # 参数
+    ///
+    /// * `details` - 错误详情信息
+    ///
+    /// # 返回
+    ///
+    /// 返回更新后的错误记录。
     pub fn with_details(mut self, details: impl Into<String>) -> Self {
         self.details = Some(details.into());
         self
@@ -137,6 +194,24 @@ impl ErrorAggregator {
     }
 
     /// 创建带配置的错误聚合器
+    ///
+    /// # 参数
+    ///
+    /// * `max_recent_errors` - 最大保留的错误记录数
+    /// * `error_rate_window` - 错误率计算窗口（秒）
+    ///
+    /// # 返回
+    ///
+    /// 返回配置好的错误聚合器实例。
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// use game_engine::core::ErrorAggregator;
+    ///
+    /// // 创建保留500条错误记录、60秒窗口的聚合器
+    /// let aggregator = ErrorAggregator::with_config(500, 60);
+    /// ```
     pub fn with_config(max_recent_errors: usize, error_rate_window: u64) -> Self {
         Self {
             stats: Arc::new(Mutex::new(ErrorStats::default())),
@@ -146,6 +221,24 @@ impl ErrorAggregator {
     }
 
     /// 记录错误
+    ///
+    /// 将错误记录到聚合器中，更新统计信息。
+    ///
+    /// # 参数
+    ///
+    /// * `error` - 要记录的错误
+    /// * `source` - 错误来源（模块名）
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// use game_engine::core::ErrorAggregator;
+    /// use game_engine::error::EngineError;
+    ///
+    /// let aggregator = ErrorAggregator::new();
+    /// let error = EngineError::general("Test error");
+    /// aggregator.record_error(&error, "test_module");
+    /// ```
     pub fn record_error(&self, error: &EngineError, source: impl Into<String>) {
         let source_str = source.into();
         let error_type = self.error_type_name(error);
@@ -174,6 +267,29 @@ impl ErrorAggregator {
     }
 
     /// 记录自定义错误
+    ///
+    /// 记录一个自定义错误，不依赖于`EngineError`类型。
+    ///
+    /// # 参数
+    ///
+    /// * `error_type` - 错误类型名称
+    /// * `source` - 错误来源（模块名）
+    /// * `message` - 错误消息
+    /// * `details` - 可选的错误详情
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// use game_engine::core::ErrorAggregator;
+    ///
+    /// let aggregator = ErrorAggregator::new();
+    /// aggregator.record_custom_error(
+    ///     "CustomError",
+    ///     "my_module",
+    ///     "Something went wrong",
+    ///     Some("Additional details".to_string())
+    /// );
+    /// ```
     pub fn record_custom_error(
         &self,
         error_type: impl Into<String>,
@@ -190,7 +306,10 @@ impl ErrorAggregator {
             record = record.with_details(d);
         }
 
-        let stats = &mut self.stats.lock().unwrap();
+        let Ok(mut stats) = safe_lock(&self.stats, "ErrorAggregator.stats") else {
+            tracing::error!("Failed to acquire stats lock in record_custom_error");
+            return;
+        };
         stats.total_count += 1;
 
         *stats.by_type.entry(error_type_str.clone()).or_insert(0) += 1;
@@ -206,8 +325,29 @@ impl ErrorAggregator {
     }
 
     /// 获取错误统计
+    ///
+    /// 获取当前的错误统计信息快照。
+    ///
+    /// # 返回
+    ///
+    /// 返回错误统计信息的克隆副本。
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// use game_engine::core::ErrorAggregator;
+    /// use game_engine::error::EngineError;
+    ///
+    /// let aggregator = ErrorAggregator::new();
+    /// aggregator.record_error(&EngineError::general("Test"), "module");
+    ///
+    /// let stats = aggregator.get_stats();
+    /// assert_eq!(stats.total_count, 1);
+    /// ```
     pub fn get_stats(&self) -> ErrorStats {
-        safe_lock(&self.stats, "ErrorAggregator.stats").unwrap().clone()
+        safe_lock(&self.stats, "ErrorAggregator.stats")
+            .unwrap()
+            .clone()
     }
 
     /// 获取错误摘要
@@ -227,7 +367,10 @@ impl ErrorAggregator {
 
     /// 清除所有统计
     pub fn clear(&self) {
-        let stats = &mut self.stats.lock().unwrap();
+        let Ok(mut stats) = safe_lock(&self.stats, "ErrorAggregator.stats") else {
+            tracing::error!("Failed to acquire stats lock in clear");
+            return;
+        };
         *stats = ErrorStats::default();
     }
 
@@ -251,18 +394,15 @@ impl ErrorAggregator {
     /// 获取错误类型名称
     fn error_type_name(&self, error: &EngineError) -> String {
         match error {
-            EngineError::Init(_) => "Init".to_string(),
             EngineError::Render(_) => "Render".to_string(),
-            EngineError::Asset(_) => "Asset".to_string(),
             EngineError::Physics(_) => "Physics".to_string(),
             EngineError::Audio(_) => "Audio".to_string(),
-            EngineError::Script(_) => "Script".to_string(),
-            EngineError::Platform(_) => "Platform".to_string(),
-            EngineError::Window(_) => "Window".to_string(),
-            EngineError::RenderInit(_) => "RenderInit".to_string(),
-            EngineError::EventLoop(_) => "EventLoop".to_string(),
-            EngineError::Io(_) => "Io".to_string(),
-            EngineError::General(_) => "General".to_string(),
+            EngineError::Resource(_) => "Resource".to_string(),
+            EngineError::Input(_) => "Input".to_string(),
+            EngineError::System(_) => "System".to_string(),
+            EngineError::General { .. } => "General".to_string(),
+            EngineError::Multiple { .. } => "Multiple".to_string(),
+            EngineError::Chain { .. } => "Chain".to_string(),
         }
     }
 
@@ -326,20 +466,25 @@ impl ErrorSummary {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::error::{AssetError, RenderError};
+    use crate::error::{RenderError, ResourceError, ErrorSeverity};
 
     #[test]
     fn test_error_aggregator() {
         let aggregator = ErrorAggregator::new();
 
         // 记录一些错误
-        let render_err = EngineError::Render(RenderError::NoAdapter);
+        let render_err = EngineError::Render(RenderError::Adapter {
+            message: "No adapter found".to_string(),
+            severity: crate::error::ErrorSeverity::Critical,
+        });
         aggregator.record_error(&render_err, "render_system");
 
-        let asset_err = EngineError::Asset(AssetError::NotFound {
+        // Note: AssetError doesn't exist, using a different error for testing
+        let resource_err = EngineError::Resource(crate::error::resource_error::ResourceError::NotFound {
             path: "test.png".to_string(),
+            severity: ErrorSeverity::Error,
         });
-        aggregator.record_error(&asset_err, "asset_manager");
+        aggregator.record_error(&resource_err, "asset_manager");
 
         // 获取统计
         let stats = aggregator.get_stats();

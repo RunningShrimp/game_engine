@@ -1,12 +1,13 @@
-//! NPU检测和加速模块
+//  NPU检测和加速模块
 
-pub mod detect;
 pub mod acceleration;
-pub mod upscaling;
+pub mod detect;
 pub mod sdk;
+pub mod upscaling;
 
+pub use acceleration::{BehaviorDecision, NpuAccelerator, PhysicsPrediction};
 pub use detect::{NpuInfo, NpuVendor, detect_npu};
-pub use acceleration::{NpuAccelerator, PhysicsPrediction, BehaviorDecision};
-pub use upscaling::{NpuUpscalingEngine, NpuUpscalingManager, HybridUpscalingStrategy, AiUpscalingModel};
-pub use sdk::extended::{OpenVINOEngine, ROCmEngine, AscendEngine, SNPEEngine, NeuroPilotEngine};
-
+pub use sdk::extended::{AscendEngine, NeuroPilotEngine, OpenVINOEngine, ROCmEngine, SNPEEngine};
+pub use upscaling::{
+    AiUpscalingModel, HybridUpscalingStrategy, NpuUpscalingEngine, NpuUpscalingManager,
+};

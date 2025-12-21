@@ -6,6 +6,9 @@ use glam::{Quat, Vec3};
 pub mod soa_layout;
 pub use soa_layout::{SoALayoutManager, SoAStats, SoATransformStorage, SoAVelocityStorage};
 
+pub mod dirty_tracking;
+pub use dirty_tracking::{ComponentDirty, DirtyFlags, DirtyTrackingConfig, DirtyTrackingResource};
+
 #[derive(Component, Clone, Copy, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Transform {
     pub pos: Vec3,
@@ -34,7 +37,7 @@ impl Velocity {
 
 // 注意：Velocity已经使用#[derive(Default)]，new()方法调用default()是正确的模式
 
-#[derive(Component, Clone, Debug)]
+#[derive(Component, Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Sprite {
     pub color: [f32; 4],
     pub tex_index: u32,
@@ -54,6 +57,11 @@ impl_default_and_new!(Sprite {
 });
 
 #[derive(Component, Clone, Debug)]
+pub struct TextureHandle {
+    pub handle: crate::resources::manager::Handle<u32>,
+}
+
+#[derive(Component, Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct PointLight {
     pub color: [f32; 3],
     pub intensity: f32,
@@ -68,7 +76,7 @@ impl_default_and_new!(PointLight {
     falloff: 1.0,
 });
 
-#[derive(Clone, Copy, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug)]
 pub enum Projection {
     Orthographic {
         scale: f32,
@@ -100,7 +108,7 @@ impl Projection {
     }
 }
 
-#[derive(Component, Clone, Debug)]
+#[derive(Component, Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Camera {
     pub is_active: bool,
     pub projection: Projection,

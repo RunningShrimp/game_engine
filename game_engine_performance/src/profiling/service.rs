@@ -1,6 +1,6 @@
-//! 性能监控服务
-//!
-//! 提供统一的性能监控入口，整合指标收集、数据存储、告警和可视化功能。
+//  性能监控服务
+// 
+//  提供统一的性能监控入口，整合指标收集、数据存储、告警和可视化功能。
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -18,7 +18,7 @@ use crate::profiling::ProfilingResult;
 // 性能监控服务
 // ============================================================================
 
-/// 性能监控服务配置
+//  性能监控服务配置
 #[derive(Debug, Clone)]
 pub struct ProfilingServiceConfig {
     /// 指标收集器配置
@@ -48,7 +48,7 @@ impl Default for ProfilingServiceConfig {
     }
 }
 
-/// 性能监控服务
+//  性能监控服务
 pub struct ProfilingService {
     /// 服务配置
     config: ProfilingServiceConfig,
@@ -66,7 +66,7 @@ pub struct ProfilingService {
     start_time: Instant,
 }
 
-/// 服务状态
+//  服务状态
 #[derive(Debug, Clone)]
 pub struct ServiceState {
     /// 是否正在运行
@@ -588,7 +588,7 @@ impl ProfilingService {
     }
 }
 
-/// 维护报告
+//  维护报告
 #[derive(Debug, Clone)]
 pub struct MaintenanceReport {
     /// 报告时间戳
@@ -605,7 +605,7 @@ pub struct MaintenanceReport {
 // 便利宏
 // ============================================================================
 
-/// 记录性能指标的宏
+//  记录性能指标的宏
 #[macro_export]
 macro_rules! profile_metric {
     ($service:expr, $name:expr, $value:expr) => {
@@ -620,7 +620,7 @@ macro_rules! profile_metric {
     };
 }
 
-/// 记录性能时间的宏
+//  记录性能时间的宏
 #[macro_export]
 macro_rules! profile_scope {
     ($service:expr, $name:expr, $code:block) => {
@@ -631,7 +631,7 @@ macro_rules! profile_scope {
     };
 }
 
-/// 记录函数执行时间的宏
+//  记录函数执行时间的宏
 #[macro_export]
 macro_rules! profile_function {
     ($service:expr, $name:expr, $func:expr) => {

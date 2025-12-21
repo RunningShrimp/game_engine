@@ -1,6 +1,6 @@
+use crate::impl_default;
 use glam::{Vec3, Vec4};
 use serde::{Deserialize, Serialize};
-use crate::impl_default;
 
 /// 粒子发射器类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

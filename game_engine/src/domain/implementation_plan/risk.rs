@@ -1,9 +1,9 @@
-//! 风险管理领域对象
-//!
-//! 该模块实现了风险管理的核心业务逻辑，包括风险的识别、
-//! 状态跟踪和缓解措施管理。
+//  风险管理领域对象
+// 
+//  该模块实现了风险管理的核心业务逻辑，包括风险的识别、
+//  状态跟踪和缓解措施管理。
 
-use crate::domain::implementation_plan::errors::{RiskError, ImplementationPlanError};
+use crate::domain::implementation_plan::errors::{ImplementationPlanError, RiskError};
 use serde::{Deserialize, Serialize};
 
 /// 风险唯一标识符
@@ -190,7 +190,11 @@ pub struct Risk {
 
 impl Risk {
     /// 创建新风险
-    pub fn new(id: RiskId, name: impl Into<String>, description: impl Into<String>) -> Result<Self, ImplementationPlanError> {
+    pub fn new(
+        id: RiskId,
+        name: impl Into<String>,
+        description: impl Into<String>,
+    ) -> Result<Self, ImplementationPlanError> {
         let name = name.into();
         let description = description.into();
 
@@ -235,7 +239,10 @@ impl Risk {
     }
 
     /// 添加缓解措施
-    pub fn add_mitigation_measure(&mut self, measure: MitigationMeasure) -> Result<(), ImplementationPlanError> {
+    pub fn add_mitigation_measure(
+        &mut self,
+        measure: MitigationMeasure,
+    ) -> Result<(), ImplementationPlanError> {
         if measure.description.trim().is_empty() {
             return Err(ImplementationPlanError::Risk(RiskError::InvalidParameter(
                 "Mitigation measure description cannot be empty".to_string(),
@@ -248,8 +255,15 @@ impl Risk {
     }
 
     /// 移除缓解措施
-    pub fn remove_mitigation_measure(&mut self, measure_id: &str) -> Result<(), ImplementationPlanError> {
-        if let Some(pos) = self.mitigation_measures.iter().position(|m| m.id == measure_id) {
+    pub fn remove_mitigation_measure(
+        &mut self,
+        measure_id: &str,
+    ) -> Result<(), ImplementationPlanError> {
+        if let Some(pos) = self
+            .mitigation_measures
+            .iter()
+            .position(|m| m.id == measure_id)
+        {
             self.mitigation_measures.remove(pos);
             self.updated_at = Self::current_timestamp();
             Ok(())
@@ -269,14 +283,18 @@ impl Risk {
                 Ok(())
             }
             RiskStatus::Mitigating => Ok(()), // 已经是缓解中状态
-            RiskStatus::Mitigated => Err(ImplementationPlanError::Risk(RiskError::InvalidStatusTransition {
-                from: RiskStatus::Mitigated.to_string(),
-                to: RiskStatus::Mitigating.to_string(),
-            })),
-            RiskStatus::Occurred => Err(ImplementationPlanError::Risk(RiskError::InvalidStatusTransition {
-                from: RiskStatus::Occurred.to_string(),
-                to: RiskStatus::Mitigating.to_string(),
-            })),
+            RiskStatus::Mitigated => Err(ImplementationPlanError::Risk(
+                RiskError::InvalidStatusTransition {
+                    from: RiskStatus::Mitigated.to_string(),
+                    to: RiskStatus::Mitigating.to_string(),
+                },
+            )),
+            RiskStatus::Occurred => Err(ImplementationPlanError::Risk(
+                RiskError::InvalidStatusTransition {
+                    from: RiskStatus::Occurred.to_string(),
+                    to: RiskStatus::Mitigating.to_string(),
+                },
+            )),
         }
     }
 
@@ -289,10 +307,12 @@ impl Risk {
                 Ok(())
             }
             RiskStatus::Mitigated => Ok(()), // 已经是已缓解状态
-            RiskStatus::Occurred => Err(ImplementationPlanError::Risk(RiskError::InvalidStatusTransition {
-                from: RiskStatus::Occurred.to_string(),
-                to: RiskStatus::Mitigated.to_string(),
-            })),
+            RiskStatus::Occurred => Err(ImplementationPlanError::Risk(
+                RiskError::InvalidStatusTransition {
+                    from: RiskStatus::Occurred.to_string(),
+                    to: RiskStatus::Mitigated.to_string(),
+                },
+            )),
         }
     }
 
@@ -304,10 +324,12 @@ impl Risk {
                 self.updated_at = Self::current_timestamp();
                 Ok(())
             }
-            RiskStatus::Mitigated => Err(ImplementationPlanError::Risk(RiskError::InvalidStatusTransition {
-                from: RiskStatus::Mitigated.to_string(),
-                to: RiskStatus::Occurred.to_string(),
-            })),
+            RiskStatus::Mitigated => Err(ImplementationPlanError::Risk(
+                RiskError::InvalidStatusTransition {
+                    from: RiskStatus::Mitigated.to_string(),
+                    to: RiskStatus::Occurred.to_string(),
+                },
+            )),
             RiskStatus::Occurred => Ok(()), // 已经是已发生状态
         }
     }
@@ -315,10 +337,16 @@ impl Risk {
     /// 计算缓解进度（0.0 到 1.0）
     pub fn calculate_mitigation_progress(&self) -> f32 {
         if self.mitigation_measures.is_empty() {
-            return if self.status == RiskStatus::Mitigated { 1.0 } else { 0.0 };
+            return if self.status == RiskStatus::Mitigated {
+                1.0
+            } else {
+                0.0
+            };
         }
 
-        let completed_count = self.mitigation_measures.iter()
+        let completed_count = self
+            .mitigation_measures
+            .iter()
             .filter(|measure| measure.completed)
             .count();
 
@@ -327,12 +355,16 @@ impl Risk {
 
     /// 检查是否可以完成缓解（所有措施已完成）
     pub fn can_complete_mitigation(&self) -> bool {
-        self.mitigation_measures.iter().all(|measure| measure.completed)
+        self.mitigation_measures
+            .iter()
+            .all(|measure| measure.completed)
     }
 
     /// 检查是否有过期的缓解措施
     pub fn has_overdue_measures(&self) -> bool {
-        self.mitigation_measures.iter().any(|measure| measure.is_overdue())
+        self.mitigation_measures
+            .iter()
+            .any(|measure| measure.is_overdue())
     }
 
     /// 获取当前时间戳
@@ -357,7 +389,11 @@ impl RiskManager {
     }
 
     /// 创建风险
-    pub fn create_risk(&mut self, name: impl Into<String>, description: impl Into<String>) -> Result<RiskId, ImplementationPlanError> {
+    pub fn create_risk(
+        &mut self,
+        name: impl Into<String>,
+        description: impl Into<String>,
+    ) -> Result<RiskId, ImplementationPlanError> {
         let id = RiskId::new(self.next_id);
         self.next_id += 1;
 
@@ -385,7 +421,9 @@ impl RiskManager {
         if self.risks.remove(id).is_some() {
             Ok(())
         } else {
-            Err(ImplementationPlanError::Risk(RiskError::RiskNotFound(format!("{}", id))))
+            Err(ImplementationPlanError::Risk(RiskError::RiskNotFound(
+                format!("{}", id),
+            )))
         }
     }
 
@@ -396,24 +434,32 @@ impl RiskManager {
 
     /// 获取按状态过滤的风险
     pub fn get_risks_by_status(&self, status: RiskStatus) -> Vec<&Risk> {
-        self.risks.values().filter(|risk| risk.status == status).collect()
+        self.risks
+            .values()
+            .filter(|risk| risk.status == status)
+            .collect()
     }
 
     /// 获取按级别过滤的风险
     pub fn get_risks_by_level(&self, level: RiskLevel) -> Vec<&Risk> {
-        self.risks.values().filter(|risk| risk.level == level).collect()
+        self.risks
+            .values()
+            .filter(|risk| risk.level == level)
+            .collect()
     }
 
     /// 获取高风险项目
     pub fn get_high_priority_risks(&self) -> Vec<&Risk> {
-        self.risks.values()
+        self.risks
+            .values()
             .filter(|risk| risk.level == RiskLevel::High && risk.status != RiskStatus::Mitigated)
             .collect()
     }
 
     /// 获取有过期缓解措施的风险
     pub fn get_risks_with_overdue_measures(&self) -> Vec<&Risk> {
-        self.risks.values()
+        self.risks
+            .values()
             .filter(|risk| risk.has_overdue_measures())
             .collect()
     }
@@ -424,7 +470,9 @@ impl RiskManager {
             return 1.0; // 没有风险，进度为100%
         }
 
-        let total_progress: f32 = self.risks.values()
+        let total_progress: f32 = self
+            .risks
+            .values()
             .map(|risk| risk.calculate_mitigation_progress())
             .sum();
 
@@ -455,13 +503,23 @@ mod tests {
     #[test]
     fn test_risk_creation_empty_name() {
         let result = Risk::new(RiskId(1), "", "Test description");
-        assert!(matches!(result, Err(ImplementationPlanError::Risk(RiskError::InvalidParameter(_)))));
+        assert!(matches!(
+            result,
+            Err(ImplementationPlanError::Risk(RiskError::InvalidParameter(
+                _
+            )))
+        ));
     }
 
     #[test]
     fn test_risk_creation_empty_description() {
         let result = Risk::new(RiskId(1), "Test Risk", "");
-        assert!(matches!(result, Err(ImplementationPlanError::Risk(RiskError::InvalidParameter(_)))));
+        assert!(matches!(
+            result,
+            Err(ImplementationPlanError::Risk(RiskError::InvalidParameter(
+                _
+            )))
+        ));
     }
 
     #[test]
@@ -495,7 +553,12 @@ mod tests {
         let measure = MitigationMeasure::new("");
 
         let result = risk.add_mitigation_measure(measure);
-        assert!(matches!(result, Err(ImplementationPlanError::Risk(RiskError::InvalidParameter(_)))));
+        assert!(matches!(
+            result,
+            Err(ImplementationPlanError::Risk(RiskError::InvalidParameter(
+                _
+            )))
+        ));
     }
 
     #[test]
@@ -592,15 +655,13 @@ mod tests {
 
     #[test]
     fn test_mitigation_measure_with_owner() {
-        let measure = MitigationMeasure::new("Test measure")
-            .with_owner("John Doe");
+        let measure = MitigationMeasure::new("Test measure").with_owner("John Doe");
         assert_eq!(measure.owner, Some("John Doe".to_string()));
     }
 
     #[test]
     fn test_mitigation_measure_with_due_date() {
-        let measure = MitigationMeasure::new("Test measure")
-            .with_due_date(1234567890);
+        let measure = MitigationMeasure::new("Test measure").with_due_date(1234567890);
         assert_eq!(measure.due_date, Some(1234567890));
     }
 
@@ -615,7 +676,9 @@ mod tests {
     fn test_risk_manager_create_risk() {
         let mut manager = RiskManager::new();
 
-        let id = manager.create_risk("Test Risk", "Test description").unwrap();
+        let id = manager
+            .create_risk("Test Risk", "Test description")
+            .unwrap();
         let risk = manager.get_risk(&id).unwrap();
         assert_eq!(risk.name, "Test Risk");
     }
@@ -627,7 +690,11 @@ mod tests {
         let id1 = manager.create_risk("Risk 1", "Description 1").unwrap();
         let id2 = manager.create_risk("Risk 2", "Description 2").unwrap();
 
-        manager.get_risk_mut(&id1).unwrap().start_mitigation().unwrap();
+        manager
+            .get_risk_mut(&id1)
+            .unwrap()
+            .start_mitigation()
+            .unwrap();
 
         let identified = manager.get_risks_by_status(RiskStatus::Identified);
         let mitigating = manager.get_risks_by_status(RiskStatus::Mitigating);
@@ -662,10 +729,18 @@ mod tests {
         let id1 = manager.create_risk("Risk 1", "Description 1").unwrap();
         let id2 = manager.create_risk("Risk 2", "Description 2").unwrap();
 
+        // 验证两个风险都已创建
+        assert!(manager.get_risk(&id1).is_ok());
+        assert!(manager.get_risk(&id2).is_ok());
+
         // 添加缓解措施并完成一个
         let mut measure = MitigationMeasure::new("Measure");
         measure.complete();
-        manager.get_risk_mut(&id1).unwrap().add_mitigation_measure(measure).unwrap();
+        manager
+            .get_risk_mut(&id1)
+            .unwrap()
+            .add_mitigation_measure(measure)
+            .unwrap();
 
         assert_eq!(manager.calculate_overall_mitigation_progress(), 0.5); // (1.0 + 0.0) / 2
     }

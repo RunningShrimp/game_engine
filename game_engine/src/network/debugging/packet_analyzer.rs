@@ -1,15 +1,15 @@
-//! 网络数据包分析模块
-//!
-//! 实现网络数据包捕获、解析、过滤和可视化分析功能。
-//!
-//! ## 功能特性
-//!
-//! - 实时数据包捕获
-//! - 多协议数据包解析
-//! - 数据包内容可视化
-//! - 数据包过滤和搜索
-//! - 数据包时间线分析
-//! - 自定义数据包处理器
+//  网络数据包分析模块
+// 
+//  实现网络数据包捕获、解析、过滤和可视化分析功能。
+// 
+//  ## 功能特性
+// 
+//  - 实时数据包捕获
+//  - 多协议数据包解析
+//  - 数据包内容可视化
+//  - 数据包过滤和搜索
+//  - 数据包时间线分析
+//  - 自定义数据包处理器
 
 use crate::core::utils::current_timestamp_ms;
 use crate::network::{NetworkMessage, NetworkError};
@@ -594,7 +594,7 @@ impl NetworkPacketAnalyzer {
         direction: PacketDirection,
     ) -> Result<AnalyzedPacket, NetworkError> {
         // 序列化消息
-        let data = bincode::encode_to_vec(message, bincode::config::standard())
+        let data = bincode::serialize(message)
             .map_err(|e| NetworkError::SerializationError(e.to_string()))?;
 
         self.analyze_packet(&data, source_address, destination_address, direction)
@@ -715,7 +715,7 @@ impl NetworkPacketAnalyzer {
         }
 
         // 检查是否是网络消息
-        if let Ok(_) = bincode::decode_from_slice::<NetworkMessage, _>(data, bincode::config::standard()) {
+        if let Ok(_) = bincode::deserialize(data) {
             return PacketProtocol::Custom;
         }
 
@@ -993,7 +993,7 @@ impl NetworkMessageParser {
 
 impl PacketParser for NetworkMessageParser {
     fn parse(&self, data: &[u8]) -> Result<ParsedContent, String> {
-        match bincode::decode_from_slice::<NetworkMessage, _>(data, bincode::config::standard()).map(|(msg, _)| msg) {
+        match bincode::deserialize(data).map(|(msg, _)| msg) {
             Ok(message) => {
                 let mut fields = HashMap::new();
                 let message_type = match &message {
@@ -1485,7 +1485,7 @@ mod tests {
     fn test_network_message_parsing() {
         let parser = NetworkMessageParser::new();
         let message = NetworkMessage::Heartbeat { timestamp: 12345 };
-        let data = bincode::encode_to_vec(&message, bincode::config::standard()).unwrap();
+        let data = bincode::serialize(&message).unwrap();
         
         let result = parser.parse(&data);
         assert!(result.is_ok());

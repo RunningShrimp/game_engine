@@ -1,7 +1,7 @@
+use crate::impl_default;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use crate::impl_default;
 
 /// 构建目标平台
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

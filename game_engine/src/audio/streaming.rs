@@ -1,35 +1,35 @@
-//! 音频流式加载模块
-//!
-//! 实现音频流式解码和缓冲区管理，支持大音频文件的分块加载和播放。
-//!
-//! ## 功能特性
-//!
-//! - 流式音频解码
-//! - 双缓冲或三缓冲管理
-//! - 自动预加载
-//! - 内存使用优化
-//! - 支持多种音频格式（WAV, MP3, OGG等）
-//!
-//! ## 使用示例
-//!
-//! ```rust
-//! use crate::audio::streaming::*;
-//!
-//! // 创建流式音频加载器
-//! let mut stream_loader = AudioStreamLoader::new();
-//!
-//! // 开始流式加载音频
-//! let stream_id = stream_loader.start_streaming("assets/music.mp3", StreamConfig::default())?;
-//!
-//! // 获取音频流
-//! if let Some(stream) = stream_loader.get_stream(stream_id) {
-//!     // 播放流式音频
-//!     stream.play()?;
-//! }
-//! ```
+//  音频流式加载模块
+// 
+//  实现音频流式解码和缓冲区管理，支持大音频文件的分块加载和播放。
+// 
+//  ## 功能特性
+// 
+//  - 流式音频解码
+//  - 双缓冲或三缓冲管理
+//  - 自动预加载
+//  - 内存使用优化
+//  - 支持多种音频格式（WAV, MP3, OGG等）
+// 
+//  ## 使用示例
+// 
+//  ```rust
+//  use crate::audio::streaming::*;
+// 
+//  // 创建流式音频加载器
+//  let mut stream_loader = AudioStreamLoader::new();
+// 
+//  // 开始流式加载音频
+//  let stream_id = stream_loader.start_streaming("assets/music.mp3", StreamConfig::default())?;
+// 
+//  // 获取音频流
+//  if let Some(stream) = stream_loader.get_stream(stream_id) {
+//      // 播放流式音频
+//      stream.play()?;
+//  }
+//  ```
 
-use crate::impl_default;
 use crate::core::utils::current_timestamp_ms;
+use crate::impl_default;
 use std::collections::HashMap;
 // 移除未使用的导入，如果将来需要可以重新导入
 use std::path::{Path, PathBuf};
@@ -53,6 +53,8 @@ pub enum StreamingError {
     BufferOverflow,
     #[error("Stream ended")]
     StreamEnded,
+    #[error("Decoder already initialized")]
+    AlreadyInitialized,
 }
 
 /// 音频流ID
@@ -220,7 +222,13 @@ impl AudioStream {
         // 3. 读取音频格式信息（采样率、声道数）
         // 4. 预加载初始缓冲区
 
-        // 占位实现
+        // 检查是否已初始化
+        if self.decoder_handle.is_some() {
+            return Err(StreamingError::AlreadyInitialized);
+        }
+
+        // 占位实现 - 设置解码器句柄
+        self.decoder_handle = Some(()); // 实际应为真正的解码器
         self.sample_rate = self.config.sample_rate.unwrap_or(44100);
         self.channels = self.config.channels.unwrap_or(2);
 
@@ -232,6 +240,11 @@ impl AudioStream {
 
         self.state = StreamState::Loading;
         Ok(())
+    }
+
+    /// 检查解码器是否已初始化，形成逻辑闭环
+    pub fn is_decoder_initialized(&self) -> bool {
+        self.decoder_handle.is_some()
     }
 
     /// 更新流（填充缓冲区）

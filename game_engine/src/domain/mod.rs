@@ -1,13 +1,19 @@
-//! 领域层模块
-//! 实现富领域对象设计模式，将业务逻辑封装到领域对象中
+//  领域层模块
+//  实现富领域对象设计模式，将业务逻辑封装到领域对象中
 
 pub mod actor;
 pub mod audio;
 pub mod entity;
+pub mod event_registry;
+pub mod event_sourcing;
+pub mod events;
 #[cfg(test)]
 mod error_handling_tests;
 pub mod errors;
 pub mod implementation_plan;
+
+#[cfg(test)]
+mod aggregate_invariants_tests;
 pub mod physics;
 #[cfg(test)]
 mod property_tests;
@@ -35,3 +41,6 @@ pub use services::{
 pub use value_objects::{
     Duration, Mass, Position, Rotation, Scale, Transform as DomainTransform, Velocity, Volume,
 };
+
+// Re-export event registry
+pub use event_registry::{EventRegistry, global_registry, register_event_type, deserialize_event};

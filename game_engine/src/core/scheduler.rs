@@ -1,17 +1,17 @@
-//! 任务调度系统
-//!
-//! 提供统一的任务调度和管理，替代分散的线程管理。
-//!
-//! ## 功能特性
-//!
-//! - 后台任务执行
-//! - 主线程回调
-//! - 任务优先级
-//! - 任务取消
+//  任务调度系统
+// 
+//  提供统一的任务调度和管理，替代分散的线程管理。
+// 
+//  ## 功能特性
+// 
+//  - 后台任务执行
+//  - 主线程回调
+//  - 任务优先级
+//  - 任务取消
 
 // 移除未使用的impl_default导入，如果将来需要可以重新导入
 use bevy_ecs::prelude::*;
-use crossbeam_channel::{unbounded, Receiver, Sender};
+use crossbeam_channel::{Receiver, Sender, unbounded};
 use std::future::Future;
 use std::sync::{Arc, Mutex};
 use tokio::sync::oneshot;
@@ -414,11 +414,13 @@ impl TaskScheduler {
     /// });
     /// assert_eq!(result, 42);
     /// ```
-    pub fn block_on<F: Future>(&self, future: F) -> F::Output {
+    pub fn block_on<F: Future + Send + 'static>(&self, future: F) -> F::Output 
+    where
+        F::Output: Send,
+    {
         self.runtime.block_on(future)
     }
 }
-
 
 /// 任务调度器资源 (ECS Resource)
 #[derive(Resource)]

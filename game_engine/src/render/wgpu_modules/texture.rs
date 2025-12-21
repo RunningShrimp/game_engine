@@ -1,11 +1,9 @@
-//! WGPU 纹理管理
-//!
-//! 包含纹理加载、创建和管理功能。
-//! 支持压缩纹理格式（ASTC、BC等）的加载和解码。
+//  WGPU 纹理管理
+// 
+//  包含纹理加载、创建和管理功能。
+//  支持压缩纹理格式（ASTC、BC等）的加载和解码。
 
-use crate::render::texture_compression::{
-    CompressedTextureFormat, TextureFormatDetector,
-};
+use crate::render::texture_compression::{CompressedTextureFormat, TextureFormatDetector};
 
 /// 纹理管理器
 ///

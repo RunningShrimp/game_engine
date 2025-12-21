@@ -1,6 +1,6 @@
-//! 增强的场景编辑器功能
-//!
-//! 提供多选、复制粘贴等高级编辑功能
+//  增强的场景编辑器功能
+// 
+//  提供多选、复制粘贴等高级编辑功能
 
 use crate::ecs::Transform;
 use bevy_ecs::prelude::*;
@@ -22,6 +22,7 @@ pub struct EntityData {
 }
 
 /// 增强的场景编辑器
+#[derive(Debug)]
 pub struct SceneEditorEnhanced {
     /// 基础场景编辑器数据
     pub base: crate::editor::scene_editor::SceneEditor,
@@ -112,8 +113,9 @@ impl SceneEditorEnhanced {
 
     /// 删除选中的实体
     pub fn delete_selected(&mut self, world: &mut World) {
-        for entity in &self.selected_entities {
-            if let Some(mut entity_mut) = world.get_entity_mut(*entity) {
+        let entities_to_delete = self.selected_entities.clone();
+        for entity in &entities_to_delete {
+            if let Ok(entity_mut) = world.get_entity_mut(*entity) {
                 entity_mut.despawn();
             }
         }
@@ -201,10 +203,13 @@ impl SceneEditorEnhanced {
     pub fn draw_selection_box(&self, painter: &egui::Painter, rect: egui::Rect) {
         if let (Some(start), Some(end)) = (self.selection_box_start, self.selection_box_end) {
             let selection_rect = egui::Rect::from_two_pos(start, end);
-            painter.rect_stroke(
-                selection_rect,
+            // 使用传入的 rect 参数进行边界检查，形成逻辑闭环
+            let clamped_rect = selection_rect.intersect(rect);
+              painter.rect_stroke(
+                clamped_rect,
                 0.0,
                 egui::Stroke::new(2.0, egui::Color32::from_rgb(100, 150, 255)),
+                egui::StrokeKind::Middle,
             );
             painter.rect_filled(
                 selection_rect,

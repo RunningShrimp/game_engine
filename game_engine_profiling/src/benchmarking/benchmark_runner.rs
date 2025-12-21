@@ -1,10 +1,10 @@
-//! 综合基准测试运行器
-//!
-//! 运行所有性能基准测试并生成报告
-//! - 基准测试执行
-//! - 结果收集
-//! - 报告生成
-//! - 基线对比
+//  综合基准测试运行器
+// 
+//  运行所有性能基准测试并生成报告
+//  - 基准测试执行
+//  - 结果收集
+//  - 报告生成
+//  - 基线对比
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -12,7 +12,7 @@ use std::fs;
 use std::path::Path;
 use std::time::SystemTime;
 
-/// 基准测试套件
+//  基准测试套件
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BenchmarkSuite {
     /// 套件名称
@@ -25,7 +25,7 @@ pub struct BenchmarkSuite {
     pub timestamp: String,
 }
 
-/// 基准测试结果
+//  基准测试结果
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BenchmarkResult {
     /// 测试名称
@@ -66,12 +66,18 @@ impl BenchmarkResult {
     }
 }
 
-/// 基准测试运行器
+//  基准测试运行器
 pub struct BenchmarkRunner {
     /// 当前运行的基准测试结果
     pub results: Vec<BenchmarkResult>,
     /// 基线数据
     baselines: HashMap<String, BenchmarkResult>,
+}
+
+impl Default for BenchmarkRunner {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl BenchmarkRunner {
@@ -245,7 +251,7 @@ impl BenchmarkRunner {
     }
 }
 
-/// 基准测试统计
+//  基准测试统计
 #[derive(Debug, Clone)]
 pub struct BenchmarkStatistics {
     /// 总基准测试数

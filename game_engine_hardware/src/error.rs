@@ -1,10 +1,9 @@
-/// 硬件优化系统错误处理
-/// 
-/// 提供详细的错误类型和错误处理机制
-
+//! 硬件优化系统错误处理
+//!
+//! 提供详细的错误类型和错误处理机制
 use thiserror::Error;
 
-/// 硬件优化系统错误类型
+//  硬件优化系统错误类型
 #[derive(Error, Debug, Clone)]
 pub enum HardwareError {
     /// GPU检测失败
@@ -13,75 +12,47 @@ pub enum HardwareError {
         reason: String,
         attempted_methods: Vec<String>,
     },
-    
+
     /// NPU检测失败
     #[error("NPU检测失败: {reason}")]
-    NpuDetectionFailed {
-        reason: String,
-    },
-    
+    NpuDetectionFailed { reason: String },
+
     /// SoC检测失败
     #[error("SoC检测失败: {reason}")]
-    SocDetectionFailed {
-        reason: String,
-    },
-    
+    SocDetectionFailed { reason: String },
+
     /// 缓存操作失败
     #[error("缓存操作失败 ({operation}): {reason}")]
-    CacheError {
-        operation: String,
-        reason: String,
-    },
-    
+    CacheError { operation: String, reason: String },
+
     /// 配置错误
     #[error("配置错误 (字段: {field}): {reason}")]
-    ConfigError {
-        field: String,
-        reason: String,
-    },
-    
+    ConfigError { field: String, reason: String },
+
     /// NPU加速错误
     #[error("NPU加速错误 ({operation}): {reason}")]
-    NpuAccelerationError {
-        operation: String,
-        reason: String,
-    },
-    
+    NpuAccelerationError { operation: String, reason: String },
+
     /// 超分辨率错误
     #[error("超分辨率错误 ({technology}): {reason}")]
-    UpscalingError {
-        technology: String,
-        reason: String,
-    },
-    
+    UpscalingError { technology: String, reason: String },
+
     /// 性能监控错误
     #[error("性能监控错误 (指标: {metric}): {reason}")]
-    PerformanceMonitoringError {
-        metric: String,
-        reason: String,
-    },
-    
+    PerformanceMonitoringError { metric: String, reason: String },
+
     /// 不支持的平台
     #[error("平台 {platform} 不支持功能: {feature}")]
-    UnsupportedPlatform {
-        platform: String,
-        feature: String,
-    },
-    
+    UnsupportedPlatform { platform: String, feature: String },
+
     /// 不支持的硬件
     #[error("硬件 {hardware} 不支持功能: {feature}")]
-    UnsupportedHardware {
-        hardware: String,
-        feature: String,
-    },
-    
+    UnsupportedHardware { hardware: String, feature: String },
+
     /// SDK初始化失败
     #[error("SDK初始化失败 ({sdk_name}): {reason}")]
-    SdkInitializationFailed {
-        sdk_name: String,
-        reason: String,
-    },
-    
+    SdkInitializationFailed { sdk_name: String, reason: String },
+
     /// 资源不足
     #[error("资源不足 ({resource}): 需要 {required}, 可用 {available}")]
     InsufficientResources {
@@ -89,27 +60,24 @@ pub enum HardwareError {
         required: String,
         available: String,
     },
-    
+
     /// 超时
     #[error("操作超时 ({operation}): {timeout_ms}ms")]
-    Timeout {
-        operation: String,
-        timeout_ms: u64,
-    },
-    
+    Timeout { operation: String, timeout_ms: u64 },
+
     /// 其他错误
     #[error("硬件优化错误: {0}")]
     Other(String),
 }
 
-/// 硬件优化结果类型
+//  硬件优化结果类型
 pub type HardwareResult<T> = Result<T, HardwareError>;
 
-/// 错误上下文扩展
+//  错误上下文扩展
 pub trait ErrorContext<T> {
     /// 添加上下文信息
     fn context(self, context: &str) -> HardwareResult<T>;
-    
+
     /// 添加带格式化的上下文信息
     fn with_context<F>(self, f: F) -> HardwareResult<T>
     where
@@ -118,24 +86,18 @@ pub trait ErrorContext<T> {
 
 impl<T, E: std::error::Error + 'static> ErrorContext<T> for Result<T, E> {
     fn context(self, context: &str) -> HardwareResult<T> {
-        self.map_err(|e| {
-            HardwareError::Other(format!("{}: {}", context, e))
-        })
+        self.map_err(|e| HardwareError::Other(format!("{}: {}", context, e)))
     }
 
     fn with_context<F>(self, f: F) -> HardwareResult<T>
     where
         F: FnOnce() -> String,
     {
-        self.map_err(|e| {
-            HardwareError::Other(format!("{}: {}", f(), e))
-        })
+        self.map_err(|e| HardwareError::Other(format!("{}: {}", f(), e)))
     }
 }
 
-
-
-/// 错误恢复策略
+//  错误恢复策略
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RecoveryStrategy {
     /// 使用默认值
@@ -150,7 +112,7 @@ pub enum RecoveryStrategy {
     Fail,
 }
 
-/// 错误处理器
+//  错误处理器
 pub struct ErrorHandler {
     /// 是否记录错误
     log_errors: bool,
@@ -166,23 +128,23 @@ impl ErrorHandler {
             default_strategy: RecoveryStrategy::UseDefault,
         }
     }
-    
+
     /// 设置是否记录错误
     pub fn set_log_errors(&mut self, log: bool) {
         self.log_errors = log;
     }
-    
+
     /// 设置默认恢复策略
     pub fn set_default_strategy(&mut self, strategy: RecoveryStrategy) {
         self.default_strategy = strategy;
     }
-    
+
     /// 处理错误
     pub fn handle(&self, error: &HardwareError) -> RecoveryStrategy {
         if self.log_errors {
             tracing::error!(target: "hardware", "[硬件优化错误] {}", error);
         }
-        
+
         // 根据错误类型选择恢复策略
         match error {
             HardwareError::GpuDetectionFailed { .. } => RecoveryStrategy::UseDefault,
@@ -201,11 +163,11 @@ impl ErrorHandler {
             HardwareError::Other(_) => self.default_strategy,
         }
     }
-    
+
     /// 处理错误并返回建议
     pub fn handle_with_suggestion(&self, error: &HardwareError) -> (RecoveryStrategy, String) {
         let strategy = self.handle(error);
-        
+
         let suggestion = match error {
             HardwareError::GpuDetectionFailed { .. } => {
                 "将使用默认GPU配置。请检查显卡驱动是否正确安装。".to_string()
@@ -239,7 +201,7 @@ impl ErrorHandler {
             }
             _ => "将尝试使用默认配置继续运行。".to_string(),
         };
-        
+
         (strategy, suggestion)
     }
 }
@@ -260,36 +222,36 @@ mod tests {
             reason: "wgpu初始化失败".to_string(),
             attempted_methods: vec!["wgpu".to_string(), "系统API".to_string()],
         };
-        
-            tracing::info!(target: "hardware", "{}", error);
+
+        tracing::info!(target: "hardware", "{}", error);
         assert!(error.to_string().contains("GPU检测失败"));
     }
-    
+
     #[test]
     fn test_error_handler() {
         let handler = ErrorHandler::new();
-        
+
         let error = HardwareError::NpuDetectionFailed {
             reason: "未找到NPU设备".to_string(),
         };
-        
+
         let (strategy, suggestion) = handler.handle_with_suggestion(&error);
-        
+
         tracing::info!(target: "hardware", "恢复策略: {:?}", strategy);
         tracing::info!(target: "hardware", "建议: {}", suggestion);
-        
+
         assert_eq!(strategy, RecoveryStrategy::Skip);
     }
-    
+
     #[test]
     fn test_error_context() {
         let result: Result<(), std::io::Error> = Err(std::io::Error::new(
             std::io::ErrorKind::NotFound,
             "文件不存在",
         ));
-        
+
         let hardware_result = result.context("读取配置文件");
-        
+
         assert!(hardware_result.is_err());
         if let Err(e) = hardware_result {
             tracing::info!(target: "hardware", "错误: {}", e);

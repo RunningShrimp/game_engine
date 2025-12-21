@@ -1,15 +1,15 @@
-//! 系统性能监控器
-//!
-//! 实时性能监控和数据收集
-//! - 帧率监控
-//! - 内存跟踪
-//! - CPU 使用率
-//! - 性能统计
+//  系统性能监控器
+// 
+//  实时性能监控和数据收集
+//  - 帧率监控
+//  - 内存跟踪
+//  - CPU 使用率
+//  - 性能统计
 
 use std::collections::VecDeque;
 use std::time::{Duration, Instant};
 
-/// 性能指标
+//  性能指标
 #[derive(Debug, Clone, Copy)]
 pub struct PerformanceMetrics {
     /// 帧率 (FPS)
@@ -24,7 +24,7 @@ pub struct PerformanceMetrics {
     pub gpu_usage_percent: f32,
 }
 
-/// 帧时间采样器
+//  帧时间采样器
 pub struct FrameTimeSampler {
     /// 采样缓冲区
     samples: VecDeque<Duration>,
@@ -107,7 +107,7 @@ impl FrameTimeSampler {
     }
 }
 
-/// 内存监控器
+//  内存监控器
 pub struct MemoryMonitor {
     /// 采样历史
     history: VecDeque<u64>,
@@ -161,7 +161,7 @@ impl MemoryMonitor {
     }
 }
 
-/// CPU 监控器
+//  CPU 监控器
 pub struct CPUMonitor {
     /// 采样历史 (%)
     history: VecDeque<f32>,
@@ -202,7 +202,7 @@ impl CPUMonitor {
     }
 }
 
-/// 综合性能监控器
+//  综合性能监控器
 pub struct SystemPerformanceMonitor {
     /// 帧时间采样器
     pub frame_sampler: FrameTimeSampler,
@@ -283,7 +283,7 @@ impl SystemPerformanceMonitor {
     }
 }
 
-/// 性能报告
+//  性能报告
 #[derive(Debug, Clone)]
 pub struct PerformanceReport {
     /// 当前 FPS

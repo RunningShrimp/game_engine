@@ -1,22 +1,22 @@
-//! 性能监控仪表板后端服务
-//!
-//! 提供 REST API 和 WebSocket 接口，供前端仪表板获取性能数据。
-//! 支持实时指标、历史数据和告警信息。
-//!
-//! ## API 端点
-//!
-//! - `GET /api/metrics` - 获取当前性能指标
-//! - `GET /api/chart-data` - 获取图表数据
-//! - `GET /api/alerts` - 获取告警信息
-//! - `WS /ws` - WebSocket 实时数据推送
-//!
-//! ## 使用示例
-//!
-//! ```ignore
-//! // 启动仪表板服务
-//! let dashboard = DashboardService::new(profiling_service);
-//! dashboard.start_server("127.0.0.1:8080").await?;
-//! ```
+//  性能监控仪表板后端服务
+// 
+//  提供 REST API 和 WebSocket 接口，供前端仪表板获取性能数据。
+//  支持实时指标、历史数据和告警信息。
+// 
+//  ## API 端点
+// 
+//  - `GET /api/metrics` - 获取当前性能指标
+//  - `GET /api/chart-data` - 获取图表数据
+//  - `GET /api/alerts` - 获取告警信息
+//  - `WS /ws` - WebSocket 实时数据推送
+// 
+//  ## 使用示例
+// 
+//  ```ignore
+//  // 启动仪表板服务
+//  let dashboard = DashboardService::new(profiling_service);
+//  dashboard.start_server("127.0.0.1:8080").await?;
+//  ```
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -29,7 +29,7 @@ use tokio::time::interval;
 
 use super::{ProfilingService, MetricId, MetricValue, Alert, AlertSeverity};
 
-/// 实时指标数据结构
+//  实时指标数据结构
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct RealtimeMetrics {
     /// 时间戳（毫秒）
@@ -74,7 +74,7 @@ impl Default for RealtimeMetrics {
     }
 }
 
-/// 告警信息
+//  告警信息
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct AlertInfo {
     /// 告警ID
@@ -93,7 +93,7 @@ pub struct AlertInfo {
     pub threshold: Option<f64>,
 }
 
-/// 性能趋势数据点
+//  性能趋势数据点
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct TrendDataPoint {
     /// 时间戳
@@ -110,7 +110,7 @@ pub struct TrendDataPoint {
     pub p99: f64,
 }
 
-/// 性能趋势数据
+//  性能趋势数据
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct TrendData {
     /// 指标名称
@@ -123,7 +123,7 @@ pub struct TrendData {
     pub time_range_seconds: u64,
 }
 
-/// 仪表板配置
+//  仪表板配置
 #[derive(Debug, Clone)]
 pub struct DashboardConfig {
     /// 服务器地址
@@ -153,7 +153,7 @@ impl Default for DashboardConfig {
     }
 }
 
-/// 告警阈值配置
+//  告警阈值配置
 #[derive(Debug, Clone)]
 pub struct AlertThresholds {
     /// 低帧率阈值（FPS）
@@ -180,7 +180,7 @@ impl Default for AlertThresholds {
     }
 }
 
-/// 性能指标响应
+//  性能指标响应
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct MetricsResponse {
     /// 渲染指标
@@ -195,7 +195,7 @@ pub struct MetricsResponse {
     pub alerts: Vec<AlertInfo>,
 }
 
-/// 渲染指标
+//  渲染指标
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct RenderMetrics {
     /// 帧率
@@ -212,7 +212,7 @@ pub struct RenderMetrics {
     pub texture_load_failures: u64,
 }
 
-/// 内存指标
+//  内存指标
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct MemoryMetrics {
     /// 使用率（%）
@@ -225,7 +225,7 @@ pub struct MemoryMetrics {
     pub texture_count: u64,
 }
 
-/// 物理指标
+//  物理指标
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct PhysicsMetrics {
     /// 计算时间
@@ -238,7 +238,7 @@ pub struct PhysicsMetrics {
     pub sleeping_skipped: u64,
 }
 
-/// 系统指标
+//  系统指标
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct SystemMetrics {
     /// CPU使用率（%）
@@ -249,7 +249,7 @@ pub struct SystemMetrics {
     pub thread_count: u32,
 }
 
-/// 告警信息
+//  告警信息
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct AlertInfo {
     /// 告警严重性
@@ -260,7 +260,7 @@ pub struct AlertInfo {
     pub timestamp: u64,
 }
 
-/// 图表数据响应
+//  图表数据响应
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct ChartDataResponse {
     /// 时间标签
@@ -269,7 +269,7 @@ pub struct ChartDataResponse {
     pub values: Vec<f64>,
 }
 
-/// 仪表板服务
+//  仪表板服务
 pub struct DashboardService {
     /// 性能监控服务
     profiling_service: Arc<ProfilingService>,
@@ -281,7 +281,7 @@ pub struct DashboardService {
     websocket_connections: Arc<Mutex<Vec<WebSocketSender>>>,
 }
 
-/// WebSocket发送器包装
+//  WebSocket发送器包装
 #[derive(Debug, Clone)]
 pub struct WebSocketSender {
     /// 发送器
@@ -677,13 +677,13 @@ impl DashboardService {
     }
 }
 
-/// 添加数据点到历史数据
+//  添加数据点到历史数据
 fn add_data_point(data: &mut HashMap<String, Vec<(Instant, f64)>>, key: &str, value: f64) {
     let values = data.entry(key.to_string()).or_insert_with(Vec::new);
     values.push((Instant::now(), value));
 }
 
-/// 获取当前时间戳
+//  获取当前时间戳
 fn current_timestamp() -> u64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -691,28 +691,28 @@ fn current_timestamp() -> u64 {
         .as_secs()
 }
 
-/// Warp过滤器：注入性能监控服务
+//  Warp过滤器：注入性能监控服务
 fn with_profiling_service(
     service: Arc<ProfilingService>,
 ) -> impl Filter<Extract = (Arc<ProfilingService>,), Error = Rejection> + Clone {
     warp::any().map(move || service.clone())
 }
 
-/// Warp过滤器：注入历史数据
+//  Warp过滤器：注入历史数据
 fn with_historical_data(
     data: Arc<RwLock<HashMap<String, Vec<(Instant, f64)>>>>,
 ) -> impl Filter<Extract = (Arc<RwLock<HashMap<String, Vec<(Instant, f64)>>>>,), Error = Rejection> + Clone {
     warp::any().map(move || data.clone())
 }
 
-/// Warp过滤器：注入配置
+//  Warp过滤器：注入配置
 fn with_config(
     config: DashboardConfig,
 ) -> impl Filter<Extract = (DashboardConfig,), Error = Rejection> + Clone {
     warp::any().map(move || config.clone())
 }
 
-/// API处理器：获取当前性能指标
+//  API处理器：获取当前性能指标
 async fn get_metrics(
     service: Arc<ProfilingService>,
     historical_data: Arc<RwLock<HashMap<String, Vec<(Instant, f64)>>>>,
@@ -727,7 +727,7 @@ async fn get_metrics(
     Ok(warp::reply::json(&metrics))
 }
 
-/// API处理器：获取图表数据
+//  API处理器：获取图表数据
 async fn get_chart_data(
     params: HashMap<String, String>,
     historical_data: Arc<RwLock<HashMap<String, Vec<(Instant, f64)>>>>,
@@ -766,7 +766,7 @@ async fn get_chart_data(
     Ok(warp::reply::json(&response))
 }
 
-/// API处理器：获取告警信息
+//  API处理器：获取告警信息
 async fn get_alerts(
     service: Arc<ProfilingService>,
 ) -> Result<impl Reply, Rejection> {
@@ -776,14 +776,14 @@ async fn get_alerts(
     Ok(warp::reply::json(&metrics.alerts))
 }
 
-/// Warp过滤器：注入WebSocket连接列表
+//  Warp过滤器：注入WebSocket连接列表
 fn with_websocket_connections(
     connections: Arc<Mutex<Vec<WebSocketSender>>>,
 ) -> impl Filter<Extract = (Arc<Mutex<Vec<WebSocketSender>>>,), Error = Rejection> + Clone {
     warp::any().map(move || connections.clone())
 }
 
-/// WebSocket处理器
+//  WebSocket处理器
 async fn ws_handler(
     ws: warp::ws::Ws,
     _params: (),
@@ -793,7 +793,7 @@ async fn ws_handler(
     Ok(ws.on_upgrade(move |socket| handle_websocket_connection(socket, service, connections)))
 }
 
-/// 处理WebSocket连接
+//  处理WebSocket连接
 async fn handle_websocket_connection(
     websocket: WebSocket,
     _service: Arc<ProfilingService>,
@@ -860,7 +860,7 @@ async fn handle_websocket_connection(
     }
 }
 
-/// 处理客户端消息
+//  处理客户端消息
 async fn handle_client_message(message: &str, connection_id: &str) {
     if let Ok(msg) = serde_json::from_str::<serde_json::Value>(message) {
         match msg.get("type").and_then(|v| v.as_str()) {
@@ -894,7 +894,7 @@ async fn handle_client_message(message: &str, connection_id: &str) {
     }
 }
 
-/// 收集实时指标数据
+//  收集实时指标数据
 async fn collect_realtime_metrics(service: &ProfilingService) -> RealtimeMetrics {
     let timestamp = SystemTime::now()
         .duration_since(UNIX_EPOCH)

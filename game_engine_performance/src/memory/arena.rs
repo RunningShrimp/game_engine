@@ -5,7 +5,7 @@ use std::ptr::NonNull;
 use std::time::Duration;
 use thiserror::Error;
 
-/// Arena 分配器错误类型
+//  Arena 分配器错误类型
 #[derive(Error, Debug)]
 pub enum ArenaError {
     #[error("Memory allocation failed: size={size}, align={align}")]
@@ -15,7 +15,7 @@ pub enum ArenaError {
     OutOfMemory,
 }
 
-/// Arena分配器
+//  Arena分配器
 pub struct Arena {
     /// 内存块
     chunks: RefCell<Vec<Chunk>>,
@@ -207,25 +207,25 @@ impl Drop for Chunk {
     }
 }
 
-/// 类型化Arena分配器
+//  类型化Arena分配器
 ///
-/// 提供类型安全的Arena分配，适用于需要大量分配同类型对象的场景。
+//  提供类型安全的Arena分配，适用于需要大量分配同类型对象的场景。
 ///
-/// # 注意
+//  # 注意
 ///
-/// - `reset()` 不会调用已分配对象的析构函数
-/// - 对于实现了 `Drop` 的类型，请使用 `TypedArenaWithDrop`
-/// - 适用于 POD 类型或生命周期与 Arena 一致的类型
+//  - `reset()` 不会调用已分配对象的析构函数
+//  - 对于实现了 `Drop` 的类型，请使用 `TypedArenaWithDrop`
+//  - 适用于 POD 类型或生命周期与 Arena 一致的类型
 ///
-/// # 示例
+//  # 示例
 ///
-/// ```
-/// use game_engine::performance::arena::TypedArena;
+//  ```
+//  use game_engine::performance::arena::TypedArena;
 ///
-/// let arena = TypedArena::<i32>::new();
-/// let val = arena.alloc(42).unwrap();
-/// assert_eq!(*val, 42);
-/// ```
+//  let arena = TypedArena::<i32>::new();
+//  let val = arena.alloc(42).unwrap();
+//  assert_eq!(*val, 42);
+//  ```
 pub struct TypedArena<T> {
     arena: Arena,
     /// 已分配对象计数（用于调试）
@@ -307,19 +307,19 @@ impl<T> Default for TypedArena<T> {
 // TypedArenaWithDrop - 支持析构的类型化Arena
 // ============================================================================
 
-/// 支持析构的类型化Arena分配器
+//  支持析构的类型化Arena分配器
 ///
-/// 与 `TypedArena` 不同，此分配器会在 `Drop` 时调用所有已分配对象的析构函数。
+//  与 `TypedArena` 不同，此分配器会在 `Drop` 时调用所有已分配对象的析构函数。
 ///
-/// # 示例
+//  # 示例
 ///
-/// ```
-/// use game_engine::performance::arena::TypedArenaWithDrop;
+//  ```
+//  use game_engine::performance::arena::TypedArenaWithDrop;
 ///
-/// let arena = TypedArenaWithDrop::<String>::new();
-/// let s = arena.alloc(String::from("Hello")).unwrap();
-/// // 当 arena 被 drop 时，String 的析构函数会被调用
-/// ```
+//  let arena = TypedArenaWithDrop::<String>::new();
+//  let s = arena.alloc(String::from("Hello")).unwrap();
+//  // 当 arena 被 drop 时，String 的析构函数会被调用
+//  ```
 pub struct TypedArenaWithDrop<T> {
     arena: Arena,
     /// 存储已分配对象的指针，用于析构
@@ -387,7 +387,7 @@ impl<T> Drop for TypedArenaWithDrop<T> {
     }
 }
 
-/// 内存池
+//  内存池
 pub struct MemoryPool<T> {
     /// 空闲对象列表
     free_list: RefCell<Vec<Box<T>>>,
@@ -427,30 +427,30 @@ impl<T: Default> MemoryPool<T> {
     }
 }
 
-/// 内存池预分配管理器
+//  内存池预分配管理器
 ///
-/// 管理常用大小的内存池，在启动时预分配以减少运行时分配开销。
+//  管理常用大小的内存池，在启动时预分配以减少运行时分配开销。
 ///
-/// # 使用场景
+//  # 使用场景
 ///
-/// - 游戏启动时预分配常用大小的内存池
-/// - 减少运行时内存分配延迟
-/// - 提高内存分配的可预测性
+//  - 游戏启动时预分配常用大小的内存池
+//  - 减少运行时内存分配延迟
+//  - 提高内存分配的可预测性
 ///
-/// # 示例
+//  # 示例
 ///
-/// ```
-/// use game_engine::performance::arena::MemoryPoolPreallocator;
+//  ```
+//  use game_engine::performance::arena::MemoryPoolPreallocator;
 ///
-/// // 创建预分配管理器
-/// let mut preallocator = MemoryPoolPreallocator::new();
+//  // 创建预分配管理器
+//  let mut preallocator = MemoryPoolPreallocator::new();
 ///
-/// // 预分配常用大小
-/// preallocator.preallocate_common_sizes();
+//  // 预分配常用大小
+//  preallocator.preallocate_common_sizes();
 ///
-/// // 获取预分配的Arena
-/// let arena = preallocator.get_arena(4096).unwrap();
-/// ```
+//  // 获取预分配的Arena
+//  let arena = preallocator.get_arena(4096).unwrap();
+//  ```
 pub struct MemoryPoolPreallocator {
     /// 预分配的Arena池，按块大小索引
     pools: RefCell<std::collections::HashMap<usize, Vec<Arena>>>,
@@ -581,7 +581,7 @@ impl MemoryPoolPreallocator {
     }
 }
 
-/// 预分配统计信息
+//  预分配统计信息
 #[derive(Debug, Clone, Copy)]
 pub struct PreallocStats {
     /// 池的数量

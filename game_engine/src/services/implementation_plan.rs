@@ -1,15 +1,15 @@
-//! 实施计划服务层
-//!
-//! 该模块提供实施计划执行系统的高层服务接口，协调任务管理、
-//! 里程碑管理和风险管理等功能。
+//  实施计划服务层
+// 
+//  该模块提供实施计划执行系统的高层服务接口，协调任务管理、
+//  里程碑管理和风险管理等功能。
 
-use crate::domain::implementation_plan::{
-    ImplementationPlanError, TaskId, TaskStatus, TaskManager, MilestoneId, MilestoneManager,
-    RiskId, RiskManager, ImplementationReport, ReportGenerator,
-};
-use crate::domain::implementation_plan::task::{Task, TaskPriority};
 use crate::domain::implementation_plan::milestone::Milestone;
-use crate::domain::implementation_plan::risk::{Risk, MitigationMeasure};
+use crate::domain::implementation_plan::risk::{MitigationMeasure, Risk};
+use crate::domain::implementation_plan::task::{Task, TaskPriority};
+use crate::domain::implementation_plan::{
+    ImplementationPlanError, ImplementationReport, MilestoneId, MilestoneManager, ReportGenerator,
+    RiskId, RiskManager, TaskId, TaskManager, TaskStatus,
+};
 
 /// 实施计划服务
 ///
@@ -33,7 +33,10 @@ impl ImplementationPlanService {
     }
 
     /// 创建任务
-    pub fn create_task(&mut self, name: impl Into<String>) -> Result<TaskId, ImplementationPlanError> {
+    pub fn create_task(
+        &mut self,
+        name: impl Into<String>,
+    ) -> Result<TaskId, ImplementationPlanError> {
         self.task_manager.create_task(name)
     }
 
@@ -43,7 +46,11 @@ impl ImplementationPlanService {
     }
 
     /// 更新任务状态
-    pub fn update_task_status(&mut self, id: &TaskId, status: TaskStatus) -> Result<(), ImplementationPlanError> {
+    pub fn update_task_status(
+        &mut self,
+        id: &TaskId,
+        status: TaskStatus,
+    ) -> Result<(), ImplementationPlanError> {
         let task = self.task_manager.get_task_mut(id)?;
         match status {
             TaskStatus::Todo => Ok(()), // 已经是待办状态
@@ -96,7 +103,11 @@ impl ImplementationPlanService {
     }
 
     /// 添加任务依赖
-    pub fn add_task_dependency(&mut self, task_id: TaskId, dependency_id: TaskId) -> Result<(), ImplementationPlanError> {
+    pub fn add_task_dependency(
+        &mut self,
+        task_id: TaskId,
+        dependency_id: TaskId,
+    ) -> Result<(), ImplementationPlanError> {
         let task = self.task_manager.get_task_mut(&task_id)?;
         task.add_dependency(dependency_id)
     }
@@ -107,7 +118,10 @@ impl ImplementationPlanService {
     }
 
     /// 创建里程碑
-    pub fn create_milestone(&mut self, name: impl Into<String>) -> Result<MilestoneId, ImplementationPlanError> {
+    pub fn create_milestone(
+        &mut self,
+        name: impl Into<String>,
+    ) -> Result<MilestoneId, ImplementationPlanError> {
         self.milestone_manager.create_milestone(name)
     }
 
@@ -117,7 +131,11 @@ impl ImplementationPlanService {
     }
 
     /// 更新里程碑状态
-    pub fn update_milestone_status(&mut self, id: &MilestoneId, start: bool) -> Result<(), ImplementationPlanError> {
+    pub fn update_milestone_status(
+        &mut self,
+        id: &MilestoneId,
+        start: bool,
+    ) -> Result<(), ImplementationPlanError> {
         let milestone = self.milestone_manager.get_milestone_mut(id)?;
         if start {
             milestone.start()
@@ -127,13 +145,21 @@ impl ImplementationPlanService {
     }
 
     /// 向里程碑添加任务
-    pub fn add_task_to_milestone(&mut self, milestone_id: MilestoneId, task_id: TaskId) -> Result<(), ImplementationPlanError> {
+    pub fn add_task_to_milestone(
+        &mut self,
+        milestone_id: MilestoneId,
+        task_id: TaskId,
+    ) -> Result<(), ImplementationPlanError> {
         let milestone = self.milestone_manager.get_milestone_mut(&milestone_id)?;
         milestone.add_task(task_id)
     }
 
     /// 从里程碑移除任务
-    pub fn remove_task_from_milestone(&mut self, milestone_id: &MilestoneId, task_id: &TaskId) -> Result<(), ImplementationPlanError> {
+    pub fn remove_task_from_milestone(
+        &mut self,
+        milestone_id: &MilestoneId,
+        task_id: &TaskId,
+    ) -> Result<(), ImplementationPlanError> {
         let milestone = self.milestone_manager.get_milestone_mut(milestone_id)?;
         milestone.remove_task(task_id)
     }
@@ -141,11 +167,16 @@ impl ImplementationPlanService {
     /// 获取可以完成的里程碑
     pub fn get_completable_milestones(&self) -> Vec<&Milestone> {
         let task_statuses = self.build_task_status_map();
-        self.milestone_manager.get_completable_milestones(&task_statuses)
+        self.milestone_manager
+            .get_completable_milestones(&task_statuses)
     }
 
     /// 创建风险
-    pub fn create_risk(&mut self, name: impl Into<String>, description: impl Into<String>) -> Result<RiskId, ImplementationPlanError> {
+    pub fn create_risk(
+        &mut self,
+        name: impl Into<String>,
+        description: impl Into<String>,
+    ) -> Result<RiskId, ImplementationPlanError> {
         self.risk_manager.create_risk(name, description)
     }
 
@@ -155,7 +186,11 @@ impl ImplementationPlanService {
     }
 
     /// 更新风险状态
-    pub fn update_risk_status(&mut self, id: &RiskId, start_mitigation: bool) -> Result<(), ImplementationPlanError> {
+    pub fn update_risk_status(
+        &mut self,
+        id: &RiskId,
+        start_mitigation: bool,
+    ) -> Result<(), ImplementationPlanError> {
         let risk = self.risk_manager.get_risk_mut(id)?;
         if start_mitigation {
             risk.start_mitigation()
@@ -165,24 +200,39 @@ impl ImplementationPlanService {
     }
 
     /// 向风险添加缓解措施
-    pub fn add_mitigation_measure(&mut self, risk_id: RiskId, description: impl Into<String>) -> Result<(), ImplementationPlanError> {
+    pub fn add_mitigation_measure(
+        &mut self,
+        risk_id: RiskId,
+        description: impl Into<String>,
+    ) -> Result<(), ImplementationPlanError> {
         let risk = self.risk_manager.get_risk_mut(&risk_id)?;
         let measure = MitigationMeasure::new(description);
         risk.add_mitigation_measure(measure)
     }
 
     /// 完成缓解措施
-    pub fn complete_mitigation_measure(&mut self, risk_id: &RiskId, measure_id: &str) -> Result<(), ImplementationPlanError> {
+    pub fn complete_mitigation_measure(
+        &mut self,
+        risk_id: &RiskId,
+        measure_id: &str,
+    ) -> Result<(), ImplementationPlanError> {
         // 这里需要找到对应的缓解措施并标记完成
         // 简化实现，实际应用中可能需要更复杂的逻辑
         let risk = self.risk_manager.get_risk_mut(risk_id)?;
-        if let Some(measure) = risk.mitigation_measures.iter_mut().find(|m| m.id == measure_id) {
+        if let Some(measure) = risk
+            .mitigation_measures
+            .iter_mut()
+            .find(|m| m.id == measure_id)
+        {
             measure.complete();
             Ok(())
         } else {
-            Err(ImplementationPlanError::Risk(crate::domain::implementation_plan::errors::RiskError::InvalidParameter(
-                format!("Mitigation measure {} not found", measure_id),
-            )))
+            Err(ImplementationPlanError::Risk(
+                crate::domain::implementation_plan::errors::RiskError::InvalidParameter(format!(
+                    "Mitigation measure {} not found",
+                    measure_id
+                )),
+            ))
         }
     }
 
@@ -192,7 +242,10 @@ impl ImplementationPlanService {
     }
 
     /// 生成实施报告
-    pub fn generate_report(&self, title: impl Into<String>) -> Result<ImplementationReport, ImplementationPlanError> {
+    pub fn generate_report(
+        &self,
+        title: impl Into<String>,
+    ) -> Result<ImplementationReport, ImplementationPlanError> {
         self.report_generator.generate_report(
             title,
             &self.task_manager,
@@ -208,14 +261,18 @@ impl ImplementationPlanService {
             if tasks.is_empty() {
                 0.0
             } else {
-                let done_count = tasks.iter().filter(|t| t.status == TaskStatus::Done).count();
+                let done_count = tasks
+                    .iter()
+                    .filter(|t| t.status == TaskStatus::Done)
+                    .count();
                 done_count as f32 / tasks.len() as f32
             }
         };
 
         let milestone_progress = {
             let task_statuses = self.build_task_status_map();
-            self.milestone_manager.calculate_overall_progress(&task_statuses)
+            self.milestone_manager
+                .calculate_overall_progress(&task_statuses)
         };
 
         let risk_progress = self.risk_manager.calculate_overall_mitigation_progress();
@@ -263,12 +320,16 @@ mod tests {
         assert_eq!(task.status, TaskStatus::Todo);
 
         // 开始任务
-        service.update_task_status(&task_id, TaskStatus::InProgress).unwrap();
+        service
+            .update_task_status(&task_id, TaskStatus::InProgress)
+            .unwrap();
         let task = service.get_task(&task_id).unwrap();
         assert_eq!(task.status, TaskStatus::InProgress);
 
         // 完成任务
-        service.update_task_status(&task_id, TaskStatus::Done).unwrap();
+        service
+            .update_task_status(&task_id, TaskStatus::Done)
+            .unwrap();
         let task = service.get_task(&task_id).unwrap();
         assert_eq!(task.status, TaskStatus::Done);
     }
@@ -286,7 +347,9 @@ mod tests {
 
         // 创建任务并添加到里程碑
         let task_id = service.create_task("Milestone Task").unwrap();
-        service.add_task_to_milestone(milestone_id, task_id).unwrap();
+        service
+            .add_task_to_milestone(milestone_id, task_id)
+            .unwrap();
 
         // 验证任务已添加到里程碑
         let milestone = service.get_milestone(&milestone_id).unwrap();
@@ -298,14 +361,18 @@ mod tests {
         let mut service = ImplementationPlanService::new();
 
         // 创建风险
-        let risk_id = service.create_risk("Test Risk", "Test description").unwrap();
+        let risk_id = service
+            .create_risk("Test Risk", "Test description")
+            .unwrap();
 
         // 获取风险
         let risk = service.get_risk(&risk_id).unwrap();
         assert_eq!(risk.name, "Test Risk");
 
         // 添加缓解措施
-        service.add_mitigation_measure(risk_id, "Test mitigation").unwrap();
+        service
+            .add_mitigation_measure(risk_id, "Test mitigation")
+            .unwrap();
 
         // 验证缓解措施已添加
         let risk = service.get_risk(&risk_id).unwrap();

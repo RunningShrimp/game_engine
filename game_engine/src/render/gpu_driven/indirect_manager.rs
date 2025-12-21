@@ -1,19 +1,19 @@
-//! GPU间接绘制管理器模块
-//!
-//! 统一管理GPU间接绘制流程，协调剔除和命令生成。
-//!
-//! ## 设计要点
-//!
-//! - 统一管理剔除和间接绘制
-//! - 支持多种剔除策略（视锥、遮挡、LOD）
-//! - 自动回退到CPU间接绘制
-//! - 性能监控和自适应优化
+//  GPU间接绘制管理器模块
+// 
+//  统一管理GPU间接绘制流程，协调剔除和命令生成。
+// 
+//  ## 设计要点
+// 
+//  - 统一管理剔除和间接绘制
+//  - 支持多种剔除策略（视锥、遮挡、LOD）
+//  - 自动回退到CPU间接绘制
+//  - 性能监控和自适应优化
 
+use crate::render::gpu_driven::command_generator::GpuCommandGenerator;
+use crate::render::gpu_driven::culling::GpuCuller;
 use crate::render::gpu_driven::culling::GpuInstance;
 use crate::render::gpu_driven::indirect::{IndirectDrawBuffer, IndirectDrawError};
 use crate::render::gpu_driven::instance_pool::InstanceDataPool;
-use crate::render::gpu_driven::command_generator::GpuCommandGenerator;
-use crate::render::gpu_driven::culling::GpuCuller;
 use wgpu::{Buffer, CommandEncoder, Device, Queue};
 
 /// GPU间接绘制配置
@@ -312,4 +312,3 @@ mod tests {
         assert!(config.gpu_command_generation);
     }
 }
-

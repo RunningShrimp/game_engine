@@ -1,8 +1,7 @@
-use crate::impl_default;
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
-/// 性能指标
+//  性能指标
 #[derive(Debug, Clone)]
 pub struct PerformanceMetrics {
     /// 帧时间 (毫秒)
@@ -34,7 +33,7 @@ impl_default!(PerformanceMetrics {
     triangle_count: 0,
 });
 
-/// 高级性能分析器
+//  高级性能分析器
 pub struct AdvancedProfiler {
     /// 性能指标历史记录
     metrics_history: Vec<PerformanceMetrics>,
@@ -244,7 +243,7 @@ mod tests {
         let mut profiler = AdvancedProfiler::new(10);
 
         // 模拟几帧
-        for i in 0..5 {
+        for _i in 0..5 {
             profiler.begin_frame();
 
             profiler.begin_scope("render");

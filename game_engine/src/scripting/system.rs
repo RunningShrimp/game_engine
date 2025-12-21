@@ -1,8 +1,7 @@
 use std::collections::HashMap;
-use std::sync::{mpsc, Arc, Mutex};
+use std::sync::{Arc, Mutex, mpsc};
 
 use crate::error::safe_lock;
-
 
 use std::thread;
 
@@ -157,6 +156,16 @@ pub struct JavaScriptContext {
 }
 
 impl JavaScriptContext {
+    /// 获取全局变量缓存（用于调试）
+    pub fn globals_cache(&self) -> &Arc<Mutex<HashMap<String, ScriptValue>>> {
+        &self.globals_cache
+    }
+
+    /// 关闭JavaScript上下文
+    pub fn shutdown(&self) {
+        let _ = self.sender.send(JsCommand::Shutdown);
+    }
+
     pub fn new() -> Self {
         let (tx, rx) = mpsc::channel::<JsCommand>();
         let globals_cache = Arc::new(Mutex::new(HashMap::new()));
@@ -318,15 +327,22 @@ impl JavaScriptContext {
                         });
 
                         // 更新本地缓存
-                        safe_lock(&globals_clone, "JavaScriptContext.globals_cache").unwrap().insert(name, value);
+                        safe_lock(&globals_clone, "JavaScriptContext.globals_cache")
+                            .unwrap()
+                            .insert(name, value);
                         let _ = response.send(result);
                     }
                     JsCommand::GetGlobal(name, response) => {
-                        let value = safe_lock(&globals_clone, "JavaScriptContext.globals_cache").unwrap().get(&name).cloned();
+                        let value = safe_lock(&globals_clone, "JavaScriptContext.globals_cache")
+                            .unwrap()
+                            .get(&name)
+                            .cloned();
                         let _ = response.send(value);
                     }
                     JsCommand::Reset(response) => {
-                        safe_lock(&globals_clone, "JavaScriptContext.globals_cache").unwrap().clear();
+                        safe_lock(&globals_clone, "JavaScriptContext.globals_cache")
+                            .unwrap()
+                            .clear();
                         let _ = response.send(());
                     }
                     JsCommand::Shutdown => break,
@@ -385,7 +401,16 @@ impl ScriptContext for JavaScriptContext {
     }
 
     fn get_global(&self, name: &str) -> Option<ScriptValue> {
-        safe_lock(&self.globals_cache, "JavaScriptContext.globals_cache").unwrap().get(name).cloned()
+        let (tx, rx) = mpsc::channel();
+        if self
+            .sender
+            .send(JsCommand::GetGlobal(name.to_string(), tx))
+            .is_ok()
+        {
+            rx.recv().ok().flatten()
+        } else {
+            None
+        }
     }
 
     fn reset(&mut self) {
@@ -437,7 +462,6 @@ impl ScriptContext for PythonContext {
         self.globals.clear();
     }
 }
-
 
 #[cfg(test)]
 mod tests {

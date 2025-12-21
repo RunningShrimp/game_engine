@@ -1,3 +1,43 @@
+# Rust build artifacts
 /target
 **/target/**
+Cargo.lock
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Temporary files
+*.tmp
+*.bak
+*.backup
+*.log
+
+# Coverage reports
+coverage/
+*.gcda
+*.gcno
+*.profdata
+
+# Performance profiling data
+*.perf
+*.pdata
+
+# Test artifacts
+proptest-regressions/
+
+# Documentation build artifacts
+*.aux
+*.fdb_latexmk
+*.fls
+*.synctex.gz
+
+# Legacy/duplicate modules (to be removed)
 game_engine_profiling/
+
+# OS files
+Thumbs.db

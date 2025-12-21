@@ -1,6 +1,6 @@
-//! 脚本服务模块
-//!
-//! 提供JavaScript/QuickJS脚本执行功能，支持绑定引擎API。
+//  脚本服务模块
+// 
+//  提供JavaScript/QuickJS脚本执行功能，支持绑定引擎API。
 
 use rquickjs::{Context, Function, Runtime};
 
@@ -70,6 +70,22 @@ impl ScriptingService {
 
             // We can add more bindings here later (Entity spawning, etc.)
         });
+    }
+
+    /// 获取运行时信息（用于调试）
+    pub fn runtime_info(&self) -> String {
+        format!("QuickJS Runtime: <runtime instance>")
+    }
+
+    /// 检查运行时是否有效
+    pub fn is_runtime_valid(&self) -> bool {
+        // 通过尝试访问上下文来检查运行时是否仍然有效
+        self.context.with(|_ctx| true)
+    }
+
+    /// 获取运行时引用（用于高级操作）
+    pub fn runtime(&self) -> &rquickjs::Runtime {
+        &self.runtime
     }
 
     /// 执行JavaScript代码

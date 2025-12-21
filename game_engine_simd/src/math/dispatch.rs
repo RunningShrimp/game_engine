@@ -1,9 +1,8 @@
-/// 运行时动态分发系统
-/// 
-/// 根据CPU特性自动选择最优的SIMD实现
-
-use super::scalar::*;
 use super::VectorOps;
+/// 运行时动态分发系统
+///
+/// 根据CPU特性自动选择最优的SIMD实现
+use super::scalar::*;
 use crate::SimdBackend;
 
 #[cfg(target_arch = "x86_64")]
@@ -22,49 +21,51 @@ impl Vec4Simd {
     pub fn new(x: f32, y: f32, z: f32, w: f32) -> Self {
         Self { data: [x, y, z, w] }
     }
-    
+
     pub fn zero() -> Self {
         Self { data: [0.0; 4] }
     }
-    
-    pub fn x(&self) -> f32 { self.data[0] }
-    pub fn y(&self) -> f32 { self.data[1] }
-    pub fn z(&self) -> f32 { self.data[2] }
-    pub fn w(&self) -> f32 { self.data[3] }
+
+    pub fn x(&self) -> f32 {
+        self.data[0]
+    }
+    pub fn y(&self) -> f32 {
+        self.data[1]
+    }
+    pub fn z(&self) -> f32 {
+        self.data[2]
+    }
+    pub fn w(&self) -> f32 {
+        self.data[3]
+    }
 }
 
 impl VectorOps for Vec4Simd {
     fn dot(&self, other: &Self) -> f32 {
         let backend = SimdBackend::best_available();
-        
+
         #[cfg(target_arch = "x86_64")]
         {
             match backend {
-                SimdBackend::Avx512 | SimdBackend::Avx2 | SimdBackend::Avx => {
-                    unsafe {
-                        if is_x86_feature_detected!("sse4.1") {
-                            return dot_product_sse41(&self.data, &other.data);
-                        }
+                SimdBackend::Avx512 | SimdBackend::Avx2 | SimdBackend::Avx => unsafe {
+                    if is_x86_feature_detected!("sse4.1") {
+                        return dot_product_sse41(&self.data, &other.data);
                     }
-                }
-                SimdBackend::Sse41 => {
-                    unsafe {
-                        if is_x86_feature_detected!("sse4.1") {
-                            return dot_product_sse41(&self.data, &other.data);
-                        }
+                },
+                SimdBackend::Sse41 => unsafe {
+                    if is_x86_feature_detected!("sse4.1") {
+                        return dot_product_sse41(&self.data, &other.data);
                     }
-                }
-                SimdBackend::Sse2 => {
-                    unsafe {
-                        if is_x86_feature_detected!("sse2") {
-                            return dot_product_sse2(&self.data, &other.data);
-                        }
+                },
+                SimdBackend::Sse2 => unsafe {
+                    if is_x86_feature_detected!("sse2") {
+                        return dot_product_sse2(&self.data, &other.data);
                     }
-                }
+                },
                 _ => {}
             }
         }
-        
+
         #[cfg(target_arch = "aarch64")]
         {
             if backend == SimdBackend::Neon || backend == SimdBackend::Sve {
@@ -73,15 +74,15 @@ impl VectorOps for Vec4Simd {
                 }
             }
         }
-        
+
         // 标量回退
         dot_product_scalar(&self.data, &other.data)
     }
-    
+
     #[allow(unreachable_code)]
     fn add(&self, other: &Self) -> Self {
         let mut result = Self::zero();
-        
+
         #[cfg(target_arch = "x86_64")]
         {
             if is_x86_feature_detected!("sse2") {
@@ -95,7 +96,7 @@ impl VectorOps for Vec4Simd {
                 }
             }
         }
-        
+
         #[cfg(target_arch = "aarch64")]
         {
             unsafe {
@@ -103,16 +104,16 @@ impl VectorOps for Vec4Simd {
                 return result;
             }
         }
-        
+
         #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
         add_vec4_scalar(&self.data, &other.data, &mut result.data);
         result
     }
-    
+
     #[allow(unreachable_code)]
     fn sub(&self, other: &Self) -> Self {
         let mut result = Self::zero();
-        
+
         #[cfg(target_arch = "x86_64")]
         {
             if is_x86_feature_detected!("sse2") {
@@ -126,7 +127,7 @@ impl VectorOps for Vec4Simd {
                 }
             }
         }
-        
+
         #[cfg(target_arch = "aarch64")]
         {
             unsafe {
@@ -134,16 +135,16 @@ impl VectorOps for Vec4Simd {
                 return result;
             }
         }
-        
+
         #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
         sub_vec4_scalar(&self.data, &other.data, &mut result.data);
         result
     }
-    
+
     #[allow(unreachable_code)]
     fn mul(&self, scalar: f32) -> Self {
         let mut result = Self::zero();
-        
+
         #[cfg(target_arch = "x86_64")]
         {
             if is_x86_feature_detected!("sse2") {
@@ -157,7 +158,7 @@ impl VectorOps for Vec4Simd {
                 }
             }
         }
-        
+
         #[cfg(target_arch = "aarch64")]
         {
             unsafe {
@@ -169,16 +170,16 @@ impl VectorOps for Vec4Simd {
                 return result;
             }
         }
-        
+
         #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
         mul_vec4_scalar(&self.data, scalar, &mut result.data);
         result
     }
-    
+
     fn length(&self) -> f32 {
         self.dot(self).sqrt()
     }
-    
+
     fn normalize(&self) -> Self {
         let len = self.length();
         if len > 1e-6 {
@@ -199,11 +200,11 @@ impl Vec3Simd {
     pub fn new(x: f32, y: f32, z: f32) -> Self {
         Self { data: [x, y, z] }
     }
-    
+
     pub fn zero() -> Self {
         Self { data: [0.0; 3] }
     }
-    
+
     #[allow(unreachable_code)]
     pub fn cross(&self, other: &Self) -> Self {
         let mut result = Self::zero();
@@ -214,7 +215,7 @@ impl Vec3Simd {
                 return result;
             }
         }
-        
+
         // 标量实现
         #[cfg(not(target_arch = "aarch64"))]
         {
@@ -223,12 +224,68 @@ impl Vec3Simd {
             result.data[2] = self.data[0] * other.data[1] - self.data[1] * other.data[0];
         }
         result
-
     }
-    
-    pub fn x(&self) -> f32 { self.data[0] }
-    pub fn y(&self) -> f32 { self.data[1] }
-    pub fn z(&self) -> f32 { self.data[2] }
+
+    pub fn x(&self) -> f32 {
+        self.data[0]
+    }
+    pub fn y(&self) -> f32 {
+        self.data[1]
+    }
+    pub fn z(&self) -> f32 {
+        self.data[2]
+    }
+}
+
+impl VectorOps for Vec3Simd {
+    fn dot(&self, other: &Self) -> f32 {
+        self.data[0] * other.data[0] +
+        self.data[1] * other.data[1] +
+        self.data[2] * other.data[2]
+    }
+
+    fn add(&self, other: &Self) -> Self {
+        Self {
+            data: [
+                self.data[0] + other.data[0],
+                self.data[1] + other.data[1],
+                self.data[2] + other.data[2],
+            ],
+        }
+    }
+
+    fn sub(&self, other: &Self) -> Self {
+        Self {
+            data: [
+                self.data[0] - other.data[0],
+                self.data[1] - other.data[1],
+                self.data[2] - other.data[2],
+            ],
+        }
+    }
+
+    fn mul(&self, scalar: f32) -> Self {
+        Self {
+            data: [
+                self.data[0] * scalar,
+                self.data[1] * scalar,
+                self.data[2] * scalar,
+            ],
+        }
+    }
+
+    fn length(&self) -> f32 {
+        (self.dot(self)).sqrt()
+    }
+
+    fn normalize(&self) -> Self {
+        let len = self.length();
+        if len > 0.0 {
+            self.mul(1.0 / len)
+        } else {
+            *self
+        }
+    }
 }
 
 /// 4x4矩阵（自动SIMD优化）
@@ -248,17 +305,17 @@ impl Mat4Simd {
             ],
         }
     }
-    
+
     pub fn zero() -> Self {
         Self {
             data: [[0.0; 4]; 4],
         }
     }
-    
+
     #[allow(unreachable_code)]
     pub fn mul(&self, other: &Self) -> Self {
         let mut result = Self::zero();
-        
+
         #[cfg(target_arch = "x86_64")]
         {
             if is_x86_feature_detected!("avx") {
@@ -274,7 +331,7 @@ impl Mat4Simd {
                 }
             }
         }
-        
+
         #[cfg(target_arch = "aarch64")]
         {
             unsafe {
@@ -282,16 +339,16 @@ impl Mat4Simd {
                 return result;
             }
         }
-        
+
         #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
         mat4_mul_scalar(&self.data, &other.data, &mut result.data);
         result
     }
-    
+
     #[allow(unreachable_code)]
     pub fn transform(&self, vec: &Vec4Simd) -> Vec4Simd {
         let result = Vec4Simd::zero();
-        
+
         #[cfg(target_arch = "x86_64")]
         {
             if is_x86_feature_detected!("sse2") {
@@ -301,7 +358,7 @@ impl Mat4Simd {
                 }
             }
         }
-        
+
         #[cfg(target_arch = "aarch64")]
         {
             unsafe {
@@ -309,14 +366,14 @@ impl Mat4Simd {
                 return result;
             }
         }
-        
+
         // 标量实现
         #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
         for i in 0..4 {
             result.data[i] = self.data[i][0] * vec.data[0]
-                           + self.data[i][1] * vec.data[1]
-                           + self.data[i][2] * vec.data[2]
-                           + self.data[i][3] * vec.data[3];
+                + self.data[i][1] * vec.data[1]
+                + self.data[i][2] * vec.data[2]
+                + self.data[i][3] * vec.data[3];
         }
         result
     }
@@ -330,17 +387,19 @@ pub struct QuatSimd {
 
 impl QuatSimd {
     pub fn identity() -> Self {
-        Self { data: [1.0, 0.0, 0.0, 0.0] }
+        Self {
+            data: [1.0, 0.0, 0.0, 0.0],
+        }
     }
-    
+
     pub fn new(w: f32, x: f32, y: f32, z: f32) -> Self {
         Self { data: [w, x, y, z] }
     }
-    
+
     #[allow(unreachable_code)]
     pub fn mul(&self, other: &Self) -> Self {
         let mut result = Self::identity();
-        
+
         #[cfg(target_arch = "aarch64")]
         {
             unsafe {
@@ -351,14 +410,20 @@ impl QuatSimd {
         // 标量实现
         #[cfg(not(target_arch = "aarch64"))]
         {
-            result.data[0] = self.data[0]*other.data[0] - self.data[1]*other.data[1]
-                           - self.data[2]*other.data[2] - self.data[3]*other.data[3];
-            result.data[1] = self.data[0]*other.data[1] + self.data[1]*other.data[0]
-                           + self.data[2]*other.data[3] - self.data[3]*other.data[2];
-            result.data[2] = self.data[0]*other.data[2] - self.data[1]*other.data[3]
-                           + self.data[2]*other.data[0] + self.data[3]*other.data[1];
-            result.data[3] = self.data[0]*other.data[3] + self.data[1]*other.data[2]
-                           - self.data[2]*other.data[1] + self.data[3]*other.data[0];
+            result.data[0] = self.data[0] * other.data[0]
+                - self.data[1] * other.data[1]
+                - self.data[2] * other.data[2]
+                - self.data[3] * other.data[3];
+            result.data[1] = self.data[0] * other.data[1]
+                + self.data[1] * other.data[0]
+                + self.data[2] * other.data[3]
+                - self.data[3] * other.data[2];
+            result.data[2] = self.data[0] * other.data[2] - self.data[1] * other.data[3]
+                + self.data[2] * other.data[0]
+                + self.data[3] * other.data[1];
+            result.data[3] = self.data[0] * other.data[3] + self.data[1] * other.data[2]
+                - self.data[2] * other.data[1]
+                + self.data[3] * other.data[0];
         }
 
         result
@@ -373,10 +438,10 @@ mod tests {
     fn test_vec4_dispatch() {
         let a = Vec4Simd::new(1.0, 2.0, 3.0, 4.0);
         let b = Vec4Simd::new(5.0, 6.0, 7.0, 8.0);
-        
+
         let dot = a.dot(&b);
         assert!((dot - 70.0).abs() < 1e-5);
-        
+
         let sum = a.add(&b);
         assert!((sum.x() - 6.0).abs() < 1e-5);
         assert!((sum.y() - 8.0).abs() < 1e-5);
@@ -387,7 +452,7 @@ mod tests {
         let m1 = Mat4Simd::identity();
         let m2 = Mat4Simd::identity();
         let result = m1.mul(&m2);
-        
+
         assert!((result.data[0][0] - 1.0).abs() < 1e-5);
         assert!((result.data[1][1] - 1.0).abs() < 1e-5);
     }

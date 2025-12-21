@@ -2,8 +2,8 @@
 use super::{Filesystem, FsError};
 use std::future::Future;
 use std::pin::Pin;
-use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
+use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{Request, RequestInit, RequestMode, Response, Window};
 

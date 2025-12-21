@@ -1,12 +1,12 @@
-//! Tonemap（色调映射）后处理效果
-//!
-//! 将 HDR 颜色映射到 SDR 显示范围，支持多种色调映射算法。
-//!
-//! ## 支持的算法
-//! - None: 无色调映射（直接裁剪）
-//! - Reinhard: 简单的 Reinhard 算法
-//! - ACES: Academy Color Encoding System，电影级色调映射
-//! - Filmic: 类似胶片的色调映射
+//  Tonemap（色调映射）后处理效果
+// 
+//  将 HDR 颜色映射到 SDR 显示范围，支持多种色调映射算法。
+// 
+//  ## 支持的算法
+//  - None: 无色调映射（直接裁剪）
+//  - Reinhard: 简单的 Reinhard 算法
+//  - ACES: Academy Color Encoding System，电影级色调映射
+//  - Filmic: 类似胶片的色调映射
 
 /// 色调映射算法
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]

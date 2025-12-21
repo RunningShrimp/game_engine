@@ -1,14 +1,14 @@
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
-/// 性能分析器 - 测量和记录性能指标
+//  性能分析器 - 测量和记录性能指标
 #[derive(Default)]
 pub struct Profiler {
     scopes: HashMap<String, ScopeStats>,
     current_scope: Option<(String, Instant)>,
 }
 
-/// 作用域统计信息
+//  作用域统计信息
 #[derive(Debug, Clone)]
 pub struct ScopeStats {
     pub name: String,
@@ -105,7 +105,7 @@ impl Profiler {
     }
 }
 
-/// 性能测量作用域守卫 - 使用RAII自动测量
+//  性能测量作用域守卫 - 使用RAII自动测量
 pub struct ProfileScope<'a> {
     profiler: &'a mut Profiler,
 }

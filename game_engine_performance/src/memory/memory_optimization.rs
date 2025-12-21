@@ -1,17 +1,17 @@
-/// 内存优化和缓存对齐
+//  内存优化和缓存对齐
 ///
-/// 提供内存优化技术：
-/// - 缓存行对齐
-/// - 对象池优化
-/// - 内存碎片检测
-/// - NUMA 感知内存分配
+//  提供内存优化技术：
+//  - 缓存行对齐
+//  - 对象池优化
+//  - 内存碎片检测
+//  - NUMA 感知内存分配
 use std::alloc::{GlobalAlloc, Layout};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-/// CPU 缓存行大小（大多数现代 CPU 为 64 字节）
+//  CPU 缓存行大小（大多数现代 CPU 为 64 字节）
 pub const CACHE_LINE_SIZE: usize = 64;
 
-/// 缓存行对齐的 Data 包装器
+//  缓存行对齐的 Data 包装器
 #[repr(align(64))]
 pub struct CacheLineAligned<T: Sized> {
     pub data: T,
@@ -27,7 +27,7 @@ impl<T> CacheLineAligned<T> {
     }
 }
 
-/// 内存分配统计
+//  内存分配统计
 #[derive(Debug, Clone, Default)]
 pub struct MemoryStats {
     pub allocated_bytes: usize,
@@ -51,7 +51,7 @@ impl MemoryStats {
     }
 }
 
-/// 追踪内存分配的全局分配器
+//  追踪内存分配的全局分配器
 pub struct TrackingAllocator;
 
 static ALLOCATED: AtomicUsize = AtomicUsize::new(0);
@@ -90,7 +90,7 @@ unsafe impl GlobalAlloc for TrackingAllocator {
     }
 }
 
-/// 内存对齐优化工具
+//  内存对齐优化工具
 pub struct AlignmentOptimizer;
 
 impl AlignmentOptimizer {
@@ -121,7 +121,7 @@ impl AlignmentOptimizer {
     }
 }
 
-/// 内存碎片分析
+//  内存碎片分析
 #[derive(Debug, Clone)]
 pub struct FragmentationAnalysis {
     pub free_blocks: Vec<usize>,
@@ -183,7 +183,7 @@ impl FragmentationAnalysis {
     }
 }
 
-/// 内存分配模式检测
+//  内存分配模式检测
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AllocationPattern {
     /// 线性分配（单调递增）
@@ -266,7 +266,7 @@ impl Default for AllocationPatternDetector {
     }
 }
 
-/// 内存预分配优化
+//  内存预分配优化
 pub struct MemoryPreallocationStrategy {
     pub initial_capacity: usize,
     pub growth_factor: f32,

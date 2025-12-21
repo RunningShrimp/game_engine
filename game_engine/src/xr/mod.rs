@@ -187,15 +187,19 @@ pub struct XrProjectionView {
     pub image_rect: [i32; 4], // x, y, width, height
 }
 
-/// XR 错误
+/// XR 相关错误类型
 #[derive(Error, Debug)]
 pub enum XrError {
+    /// XR 功能不受支持
     #[error("XR not supported")]
     NotSupported,
+    /// XR 会话未就绪
     #[error("XR session not ready")]
     SessionNotReady,
+    /// XR 帧被丢弃
     #[error("XR frame discarded")]
     FrameDiscarded,
+    /// XR 运行时失败
     #[error("XR runtime failure: {0}")]
     RuntimeFailure(String),
 }
@@ -204,12 +208,17 @@ pub enum XrError {
 // 交换链 (Swapchain)
 // ============================================================================
 
-/// XR 交换链 trait
+/// XR 交换链 trait，定义XR交换链所需的所有操作
 pub trait XrSwapchain: Send + Sync {
+    /// 获取下一个可用的图像索引
     fn acquire_image(&mut self) -> Result<u32, XrError>;
+    /// 等待指定的图像可用于渲染
     fn wait_image(&mut self, timeout_ns: i64) -> Result<(), XrError>;
+    /// 释放已渲染完成的图像
     fn release_image(&mut self) -> Result<(), XrError>;
+    /// 获取指定索引的纹理视图
     fn get_texture_view(&self, index: u32) -> Arc<wgpu::TextureView>;
+    /// 获取交换链的分辨率
     fn resolution(&self) -> (u32, u32);
 }
 
@@ -220,39 +229,59 @@ pub trait XrSwapchain: Send + Sync {
 /// 控制器手柄
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Hand {
+    /// 左手
     Left,
+    /// 右手
     Right,
 }
 
 /// 控制器状态
 #[derive(Debug, Clone, Default)]
 pub struct ControllerState {
+    /// 控制器的世界位置和旋转
     pub pose: Pose,
+    /// 瞄准姿态（通常指向光线方向）
     pub aim_pose: Pose,
+    /// 握持姿态（手指握住的位置）
     pub grip_pose: Pose,
+    /// 扳机按压值 (0.0 - 1.0)
     pub trigger: f32,
+    /// 挤压按压值 (0.0 - 1.0)
     pub squeeze: f32,
+    /// 摇杆输入 [x, y]
     pub thumbstick: [f32; 2],
+    /// 按钮状态
     pub buttons: ControllerButtons,
 }
 
 /// 控制器按钮
 #[derive(Debug, Clone, Copy, Default)]
 pub struct ControllerButtons {
+    /// A 按钮（右手）/ X 按钮（左手）
     pub a: bool,
+    /// B 按钮（右手）/ Y 按钮（左手）
     pub b: bool,
+    /// X 按钮（左手）
     pub x: bool,
+    /// Y 按钮（左手）
     pub y: bool,
+    /// 菜单按钮
     pub menu: bool,
+    /// 扳机点击
     pub trigger_click: bool,
+    /// 挤压点击
     pub squeeze_click: bool,
+    /// 摇杆点击
     pub thumbstick_click: bool,
 }
 
-/// XR 输入 trait
+/// XR 输入 trait，定义XR输入系统所需的所有操作
 pub trait XrInput: Send + Sync {
+    /// 获取指定手柄的控制器状态
     fn get_controller(&self, hand: Hand) -> Option<&ControllerState>;
+    /// 获取头部（HMD）的当前姿态
     fn get_head_pose(&self) -> Pose;
+    /// 对指定手柄施加震动反馈
     fn vibrate(&mut self, hand: Hand, amplitude: f32, duration_ns: i64);
 }
 
@@ -260,7 +289,7 @@ pub trait XrInput: Send + Sync {
 // 平台特定实现 (OpenXR)
 // ============================================================================
 
-// OpenXR 实现
+/// OpenXR 实现模块
 #[cfg(not(target_arch = "wasm32"))]
 pub mod openxr_impl;
 
@@ -268,37 +297,37 @@ pub mod openxr_impl;
 #[cfg(not(target_arch = "wasm32"))]
 pub use openxr_impl::{OpenXrBackend, OpenXrError, OpenXrSwapchain};
 
-// XR 渲染器
+/// XR 渲染器模块
 pub mod renderer;
 pub use renderer::XrRenderer;
 
-// XR 输入系统
+/// XR 输入系统模块
 pub mod input;
 pub use input::{
     ControllerButton, HandJoint, HandJointType, HandTrackingData, HapticFeedback, XrInputEvent,
     XrInputEventHandler, XrInputEventQueue, XrInputManager,
 };
-
-// XR 手部追踪
+/// XR 手部追踪模块
 pub mod hand_tracking;
 pub use hand_tracking::{Finger, HandJoints, HandTracker, HandTrackingConfig, HandTrackingState};
 
-// XR 空间锚点
+/// XR 空间锚点模块
 pub mod spatial_anchors;
 pub use spatial_anchors::{AnchorId, SpatialAnchor, SpatialAnchorManager};
 
-// ============================================================================
-// 异步时间扭曲 (ATW - Asynchronous Time Warp)
-// ============================================================================
-
+/// 异步时间扭曲 (ATW - Asynchronous Time Warp) 模块
 pub mod atw {
     use super::*;
 
-    /// ATW 重投影数据
+    /// ATW 重投影数据，包含渲染和当前的姿态以及纹理
     pub struct AtwReprojectionData {
+        /// 渲染时的头部姿态
         pub rendered_pose: Pose,
+        /// 当前的头部姿态
         pub current_pose: Pose,
+        /// 上一帧渲染的纹理视图
         pub rendered_frame: wgpu::TextureView,
+        /// 可选的深度缓冲区
         pub depth_buffer: Option<wgpu::TextureView>,
     }
 

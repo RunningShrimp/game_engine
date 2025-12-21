@@ -1,10 +1,10 @@
-//! 性能分析和报告生成工具
-//!
-//! 分析性能数据并生成详细报告
-//! - 性能分析
-//! - 瓶颈检测
-//! - HTML 报告生成
-//! - 对标对比
+//  性能分析和报告生成工具
+// 
+//  分析性能数据并生成详细报告
+//  - 性能分析
+//  - 瓶颈检测
+//  - HTML 报告生成
+//  - 对标对比
 
 use std::collections::HashMap;
 use std::fs;
@@ -306,7 +306,7 @@ impl PerformanceAnalyzer {
         ));
 
         // 添加每个分析
-        for (_, analysis) in &self.analyses {
+        for analysis in self.analyses.values() {
             html.push_str(&format!(
                 "    <div class=\"analysis\">\n        <h2>{}</h2>\n",
                 analysis.name

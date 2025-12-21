@@ -1,6 +1,6 @@
-//! 核心资源类型
-//!
-//! 定义引擎运行时使用的ECS资源
+//  核心资源类型
+// 
+//  定义引擎运行时使用的ECS资源
 
 use bevy_ecs::prelude::*;
 use std::collections::VecDeque;
@@ -72,6 +72,18 @@ pub struct AssetMetrics {
     pub textures_loaded: u32,
     /// 已加载图集数量
     pub atlases_loaded: u32,
+    /// 已加载模型数量
+    pub models_loaded: u32,
+    /// 纹理加载错误数量
+    pub texture_errors: u32,
+    /// 图集加载错误数量
+    pub atlas_errors: u32,
+    /// 模型加载错误数量
+    pub model_errors: u32,
+    /// 缓存清理次数
+    pub cache_cleanups: u32,
+    /// 上次清理的资源数量
+    pub last_cleanup_count: u32,
 }
 
 /// 日志事件缓冲

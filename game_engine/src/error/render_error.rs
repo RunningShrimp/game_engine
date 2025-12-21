@@ -1,8 +1,8 @@
-//! 渲染系统错误类型
-//!
-//! 定义了渲染系统相关的所有错误类型，包括GPU操作、着色器编译、纹理创建等。
+//  渲染系统错误类型
+// 
+//  定义了渲染系统相关的所有错误类型，包括GPU操作、着色器编译、纹理创建等。
 
-use crate::error::{ErrorSeverity, ErrorCategory};
+use crate::error::{ErrorCategory, ErrorSeverity};
 use thiserror::Error;
 
 /// 渲染系统错误
@@ -267,10 +267,7 @@ impl RenderError {
     }
 
     /// 创建着色器编译错误
-    pub fn shader_compilation(
-        shader: impl Into<String>,
-        message: impl Into<String>,
-    ) -> Self {
+    pub fn shader_compilation(shader: impl Into<String>, message: impl Into<String>) -> Self {
         Self::ShaderCompilation {
             shader: shader.into(),
             message: message.into(),
@@ -287,10 +284,7 @@ impl RenderError {
     }
 
     /// 创建纹理创建错误
-    pub fn texture_creation(
-        texture: impl Into<String>,
-        message: impl Into<String>,
-    ) -> Self {
+    pub fn texture_creation(texture: impl Into<String>, message: impl Into<String>) -> Self {
         Self::TextureCreation {
             texture: texture.into(),
             message: message.into(),
@@ -355,10 +349,7 @@ impl RenderError {
     }
 
     /// 创建带有严重级别的通用渲染错误
-    pub fn general_with_severity(
-        message: impl Into<String>,
-        severity: ErrorSeverity,
-    ) -> Self {
+    pub fn general_with_severity(message: impl Into<String>, severity: ErrorSeverity) -> Self {
         Self::General {
             message: message.into(),
             severity,
@@ -460,9 +451,7 @@ impl RenderError {
 impl From<wgpu::Error> for RenderError {
     fn from(err: wgpu::Error) -> Self {
         match err {
-            wgpu::Error::OutOfMemory { .. } => {
-                RenderError::out_of_memory(err.to_string())
-            }
+            wgpu::Error::OutOfMemory { .. } => RenderError::out_of_memory(err.to_string()),
             wgpu::Error::Validation { .. } => {
                 RenderError::general_with_severity(err.to_string(), ErrorSeverity::Error)
             }
@@ -514,7 +503,7 @@ mod tests {
             source: Box::new(std::io::Error::new(std::io::ErrorKind::OutOfMemory, "OOM")),
         };
         let render_err: RenderError = wgpu_err.into();
-        
+
         assert!(matches!(render_err, RenderError::OutOfMemory { .. }));
         assert_eq!(render_err.severity(), ErrorSeverity::Critical);
     }

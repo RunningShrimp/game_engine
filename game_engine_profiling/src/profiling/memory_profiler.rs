@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::time::Instant;
 
-/// 内存分配记录
+//  内存分配记录
 #[derive(Debug, Clone)]
 pub struct AllocationRecord {
     pub size: usize,
@@ -9,7 +9,7 @@ pub struct AllocationRecord {
     pub tag: String,
 }
 
-/// 内存分析器
+//  内存分析器
 #[derive(Default)]
 pub struct MemoryProfiler {
     /// 当前分配记录
@@ -135,7 +135,7 @@ impl MemoryProfiler {
         report.push_str("Allocation Statistics by Tag:\n");
         let stats = self.get_allocation_stats();
         let mut sorted_stats: Vec<_> = stats.iter().collect();
-        sorted_stats.sort_by(|a, b| b.1 .1.cmp(&a.1 .1));
+        sorted_stats.sort_by(|a, b| b.1.1.cmp(&a.1.1));
 
         for (tag, (count, size)) in sorted_stats {
             report.push_str(&format!(
@@ -179,7 +179,7 @@ impl MemoryProfiler {
     }
 }
 
-/// GPU性能分析器
+//  GPU性能分析器
 #[derive(Default)]
 pub struct GpuProfiler {
     /// GPU查询结果 (查询名称 -> 时间(ms))

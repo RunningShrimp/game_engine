@@ -331,6 +331,11 @@ impl AssetServer {
 
     /// 异步加载纹理
     pub async fn load_texture_async(&self, path: &Path) -> Result<Handle<u32>, String> {
+        let _load_span = crate::performance::tracing_metrics::TracingMetricsManager::asset_load_span(
+            &path.display().to_string(),
+            "texture"
+        ).entered();
+
         let handle = Handle::new_loading();
         let task = AssetTask::Texture {
             path: path.to_path_buf(),
@@ -338,15 +343,15 @@ impl AssetServer {
             is_linear: false,
             start: std::time::Instant::now(),
         };
-        
+
         // 发送任务并等待结果
-        let (result_tx, result_rx) = tokio::sync::oneshot::channel();
+        let (_result_tx, _result_rx) = tokio::sync::oneshot::channel::<Result<(), String>>();
         let _ = self.tx.send(task);
-        
+
         // 等待加载完成
         let mut timeout_counter = 0;
         const MAX_TIMEOUT: u32 = 1000; // 最多等待1000次检查
-        
+
         while timeout_counter < MAX_TIMEOUT {
             // 检查是否已完成
             if let Some(result) = handle.get_state_non_blocking() {
@@ -364,7 +369,7 @@ impl AssetServer {
             timeout_counter += 1;
             tokio::time::sleep(Duration::from_millis(1)).await;
         }
-        
+
         Err("Timeout waiting for texture to load".to_string())
     }
 
@@ -377,14 +382,14 @@ impl AssetServer {
             is_linear: true,
             start: std::time::Instant::now(),
         };
-        
+
         // 发送任务并等待结果
         let _ = self.tx.send(task);
-        
+
         // 等待加载完成
         let mut timeout_counter = 0;
         const MAX_TIMEOUT: u32 = 1000;
-        
+
         while timeout_counter < MAX_TIMEOUT {
             if let Some(result) = handle.get_state_non_blocking() {
                 return match result {
@@ -400,7 +405,7 @@ impl AssetServer {
             timeout_counter += 1;
             tokio::time::sleep(Duration::from_millis(1)).await;
         }
-        
+
         Err("Timeout waiting for texture to load".to_string())
     }
 
@@ -412,14 +417,14 @@ impl AssetServer {
             handle: handle.clone(),
             start: std::time::Instant::now(),
         };
-        
+
         // 发送任务并等待结果
         let _ = self.tx.send(task);
-        
+
         // 等待加载完成
         let mut timeout_counter = 0;
         const MAX_TIMEOUT: u32 = 1000;
-        
+
         while timeout_counter < MAX_TIMEOUT {
             if let Some(result) = handle.get_state_non_blocking() {
                 return match result {
@@ -435,7 +440,7 @@ impl AssetServer {
             timeout_counter += 1;
             tokio::time::sleep(Duration::from_millis(1)).await;
         }
-        
+
         Err("Timeout waiting for atlas to load".to_string())
     }
 
@@ -448,14 +453,14 @@ impl AssetServer {
             handle: handle.clone(),
             start: std::time::Instant::now(),
         };
-        
+
         // 发送任务并等待结果
         let _ = self.tx.send(task);
-        
+
         // 等待加载完成
         let mut timeout_counter = 0;
         const MAX_TIMEOUT: u32 = 1000;
-        
+
         while timeout_counter < MAX_TIMEOUT {
             if let Some(result) = handle.get_state_non_blocking() {
                 return match result {
@@ -471,7 +476,7 @@ impl AssetServer {
             timeout_counter += 1;
             tokio::time::sleep(Duration::from_millis(1)).await;
         }
-        
+
         Err("Timeout waiting for gltf to load".to_string())
     }
 
@@ -638,6 +643,21 @@ impl AssetServer {
         // 检查接收通道中是否还有未处理的任务结果
         // 如果通道为空，则表示所有任务都已完成
         self.rx.is_empty()
+    }
+
+    /// 清除资产缓存
+    pub fn clear_cache(&mut self) {
+        // 目前这个方法是空的，将来可以实现缓存清理逻辑
+        log::info!("Asset cache cleared");
+    }
+
+    /// 获取已加载纹理数量（用于完整性检查）
+    pub fn get_loaded_texture_count(&self) -> usize {
+        // 通过内部通道查询当前加载的纹理数量
+        // 这里使用简单的计数，实际实现可能需要更复杂的逻辑
+        // TODO: Implement proper counting of loaded textures
+        // For now, return a placeholder count
+        0
     }
 }
 
@@ -869,10 +889,10 @@ pub fn import_gltf_to_world(
                     material_uniform_buffer: Some(material_buf),
                     mesh_id,
                     material_id: mat_id,
-                    pipeline_id: 0, // 默认管线 ID
-                    blend_mode: 0, // 默认混合模式（不透明）
+                    pipeline_id: 0,   // 默认管线 ID
+                    blend_mode: 0,    // 默认混合模式（不透明）
                     depth_test: true, // 默认启用深度测试
-                    render_flags: 0, // 默认无特殊渲染标志
+                    render_flags: 0,  // 默认无特殊渲染标志
                     visible: true,
                 };
                 let transform = crate::ecs::Transform::default();

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
-/// 性能指标
+//  性能指标
 #[derive(Debug, Clone)]
 pub struct PerformanceMetrics {
     /// 帧时间 (毫秒)
@@ -33,7 +33,7 @@ impl_default!(PerformanceMetrics {
     triangle_count: 0,
 });
 
-/// 高级性能分析器
+//  高级性能分析器
 pub struct AdvancedProfiler {
     /// 性能指标历史记录
     metrics_history: Vec<PerformanceMetrics>,
@@ -252,7 +252,7 @@ mod tests {
 
             let metrics = PerformanceMetrics {
                 frame_time: 16.0 + (i as f32 * 2.0), // 每帧增加一些时间
-                fps: 60.0 - (i as f32 * 2.0), // 每帧降低一些FPS
+                fps: 60.0 - (i as f32 * 2.0),        // 每帧降低一些FPS
                 render_time: profiler.get_timing("render").unwrap_or(0.0),
                 update_time: 2.0 + (i as f32 * 0.5),
                 physics_time: 1.0 + (i as f32 * 0.2),

@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 
-/// 图表类型
+//  图表类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ChartType {
     #[default]
@@ -11,7 +11,7 @@ pub enum ChartType {
     HeatmapChart,
 }
 
-/// 单个数据点（用于图表）
+//  单个数据点（用于图表）
 #[derive(Debug, Clone)]
 pub struct DataPoint {
     pub label: String,
@@ -36,7 +36,7 @@ impl DataPoint {
     }
 }
 
-/// 简单图表组件
+//  简单图表组件
 #[derive(Debug, Clone)]
 pub struct Chart {
     pub name: String,
@@ -133,7 +133,7 @@ impl Chart {
     }
 }
 
-/// 仪表板视图配置
+//  仪表板视图配置
 #[derive(Debug, Clone)]
 pub struct DashboardLayout {
     pub title: String,
@@ -166,7 +166,7 @@ impl DashboardLayout {
     }
 }
 
-/// 性能仪表板 - 可视化面板
+//  性能仪表板 - 可视化面板
 pub struct VisualizationDashboard {
     layout: DashboardLayout,
     charts: Vec<Chart>,
@@ -260,19 +260,15 @@ impl VisualizationDashboard {
 
     /// 渲染为ASCII表格（用于调试）
     pub fn render_ascii(&self) -> String {
-        let mut output = format!("╔════════════════════════════════════════════════╗\n");
+        let mut output = "╔════════════════════════════════════════════════╗\n".to_string();
         output.push_str(&format!("║ {} │\n", self.layout.title));
-        output.push_str(&format!(
-            "╠════════════════════════════════════════════════╣\n"
-        ));
+        output.push_str("╠════════════════════════════════════════════════╣\n");
 
         for (name, value) in &self.gauge_values {
             output.push_str(&format!("║ {:<30} │ {:>12.2} ║\n", name, value));
         }
 
-        output.push_str(&format!(
-            "╚════════════════════════════════════════════════╝\n"
-        ));
+        output.push_str("╚════════════════════════════════════════════════╝\n");
 
         for chart in &self.charts {
             output.push_str(&format!(
@@ -326,7 +322,7 @@ impl VisualizationDashboard {
     }
 }
 
-/// 仪表板统计摘要
+//  仪表板统计摘要
 #[derive(Debug, Clone, Default)]
 pub struct DashboardSummary {
     pub total_charts: usize,
@@ -335,7 +331,7 @@ pub struct DashboardSummary {
     pub gauge_count: usize,
 }
 
-/// 单个图表的统计信息
+//  单个图表的统计信息
 #[derive(Debug, Clone, Default)]
 pub struct ChartStatistics {
     pub index: usize,

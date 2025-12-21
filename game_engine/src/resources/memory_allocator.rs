@@ -1,36 +1,37 @@
-//! 内存分配器模块
-//!
-//! 基于环形缓冲区池的智能内存分配器，提供高性能的GPU内存管理。
-//!
-//! ## 分配策略
-//!
-//! ```text
-//! ┌─────────────────────────────────────────────────────────┐
-//! │                  Memory Allocator                      │
-//! ├─────────────────────────────────────────────────────────┤
-//! │  1. 智能大小选择                                        │
-//! │     - 小数据 (<64KB): 使用小块池                        │
-//! │     - 中数据 (64KB-1MB): 使用中块池                     │
-//! │     - 大数据 (>1MB): 使用大块池或直接分配                  │
-//! │                                                          │
-//! │  2. 最佳适配算法                                        │
-//! │     - 优先选择大小最匹配的块                             │
-//! │     - 避免内存碎片                                     │
-//! │     - 支持块合并                                       │
-//! │                                                          │
-//! │  3. 动态扩展机制                                        │
-//! │     - 空间不足时自动扩展                               │
-//! │     - 预留空间管理                                     │
-//! │     - 内存压力检测                                     │
-//! └─────────────────────────────────────────────────────────┘
-//! ```
+//  内存分配器模块
+// 
+//  基于环形缓冲区池的智能内存分配器，提供高性能的GPU内存管理。
+// 
+//  ## 分配策略
+// 
+//  ```text
+//  ┌─────────────────────────────────────────────────────────┐
+//  │                  Memory Allocator                      │
+//  ├─────────────────────────────────────────────────────────┤
+//  │  1. 智能大小选择                                        │
+//  │     - 小数据 (<64KB): 使用小块池                        │
+//  │     - 中数据 (64KB-1MB): 使用中块池                     │
+//  │     - 大数据 (>1MB): 使用大块池或直接分配                  │
+//  │                                                          │
+//  │  2. 最佳适配算法                                        │
+//  │     - 优先选择大小最匹配的块                             │
+//  │     - 避免内存碎片                                     │
+//  │     - 支持块合并                                       │
+//  │                                                          │
+//  │  3. 动态扩展机制                                        │
+//  │     - 空间不足时自动扩展                               │
+//  │     - 预留空间管理                                     │
+//  │     - 内存压力检测                                     │
+//  └─────────────────────────────────────────────────────────┘
+//  ```
 
 use std::sync::Arc;
 
 use parking_lot::Mutex;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 use super::ring_buffer_pool::{MemoryBlock, RingBufferPool, align_to};
+use crate::core::current_timestamp_ms;
 
 // ============================================================================
 // 常量配置
@@ -276,7 +277,11 @@ pub struct MemoryPressureEvent {
 
 impl MemoryPressureEvent {
     /// 创建新的内存压力事件
-    pub fn new(pressure: MemoryPressure, utilization: f32, recommendation: PressureRecommendation) -> Self {
+    pub fn new(
+        pressure: MemoryPressure,
+        utilization: f32,
+        recommendation: PressureRecommendation,
+    ) -> Self {
         use std::time::{SystemTime, UNIX_EPOCH};
         let timestamp_ms = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -310,7 +315,7 @@ pub enum PressureRecommendation {
 // ============================================================================
 
 /// 智能内存分配器
-/// 
+///
 /// 基于环形缓冲区池的高性能内存分配器，支持多种分配策略和自动扩展。
 #[derive(Debug)]
 pub struct SmartMemoryAllocator {
@@ -336,12 +341,14 @@ impl SmartMemoryAllocator {
     /// 创建新的智能内存分配器
     pub fn new(device: Arc<wgpu::Device>, config: AllocatorConfig) -> Self {
         let initial_pool = RingBufferPool::new(device.clone(), config.initial_buffer_size);
-        
+
         Self {
             ring_pools: vec![initial_pool],
             current_pool_index: 0,
             config,
-            allocation_stats: Arc::new(Mutex::new(super::ring_buffer_pool::AllocationStats::default())),
+            allocation_stats: Arc::new(Mutex::new(
+                super::ring_buffer_pool::AllocationStats::default(),
+            )),
             pressure_history: Arc::new(Mutex::new(Vec::new())),
             expansion_count: Arc::new(Mutex::new(0)),
             device,
@@ -350,59 +357,83 @@ impl SmartMemoryAllocator {
     }
 
     /// 分配内存
-    /// 
+    ///
     /// # 参数
     /// - `request`: 分配请求
-    /// 
+    ///
     /// # 返回
     /// 返回分配结果，如果分配失败则返回None
     pub fn allocate(&mut self, request: AllocationRequest) -> Option<AllocationResult> {
         let start_time = std::time::Instant::now();
-        
+
+        // 根据分配大小选择策略
+        if request.size > LARGE_DATA_THRESHOLD {
+            // 超大对象分配
+            if let Some(result) = self.allocate_large_object(&request) {
+                let latency = start_time.elapsed().as_micros() as f32;
+                let mut final_result = result;
+                final_result.allocation_latency_us = latency;
+                self.update_allocation_stats(&final_result);
+                return Some(final_result);
+            }
+        } else if request.size > MEDIUM_DATA_THRESHOLD {
+            // 大对象使用中等池
+            // 这里可以添加专门的中等对象分配逻辑
+        } else if request.size > SMALL_DATA_THRESHOLD {
+            // 中等对象使用标准池
+            // 这里可以添加中等对象的优化逻辑
+        } else {
+            // 小对象使用快速分配
+            // 这里可以添加小对象的优化逻辑
+        }
+
         // 检查内存压力
         let pressure = self.check_memory_pressure();
         if pressure == MemoryPressure::Critical && request.priority < AllocationPriority::High {
             // 临界压力下，只允许高优先级分配
             return None;
         }
-        
+
         // 尝试在当前池中分配
         if let Some(result) = self.try_allocate_in_current_pool(&request) {
             let latency = start_time.elapsed().as_micros() as f32;
             let mut final_result = result;
             final_result.allocation_latency_us = latency;
-            
+
             // 更新统计信息
             self.update_allocation_stats(&final_result);
-            
+
             return Some(final_result);
         }
-        
+
         // 当前池分配失败，尝试扩展
         if self.config.enable_auto_expansion {
             if let Some(result) = self.try_expand_and_allocate(&request) {
                 let latency = start_time.elapsed().as_micros() as f32;
                 let mut final_result = result;
                 final_result.allocation_latency_us = latency;
-                
+
                 // 更新统计信息
                 self.update_allocation_stats(&final_result);
-                
+
                 return Some(final_result);
             }
         }
-        
+
         // 所有分配尝试都失败
         None
     }
 
     /// 在当前池中尝试分配
-    fn try_allocate_in_current_pool(&mut self, request: &AllocationRequest) -> Option<AllocationResult> {
+    fn try_allocate_in_current_pool(
+        &mut self,
+        request: &AllocationRequest,
+    ) -> Option<AllocationResult> {
         let current_pool = &mut self.ring_pools[self.current_pool_index];
-        
+
         // 根据请求大小选择合适的分配策略
         let aligned_size = align_to(request.size, request.alignment);
-        
+
         if let Some(block) = current_pool.allocate(aligned_size, request.alignment) {
             let allocated_size = block.size;
             Some(AllocationResult::new(block, allocated_size, 0.0))
@@ -414,43 +445,42 @@ impl SmartMemoryAllocator {
     /// 尝试扩展池并分配
     fn try_expand_and_allocate(&mut self, request: &AllocationRequest) -> Option<AllocationResult> {
         let mut expansion_count = self.expansion_count.lock();
-        
+
         if *expansion_count >= self.config.max_expansions {
             return None; // 达到最大扩展次数
         }
-        
+
         // 检查是否需要扩展
         let current_utilization = self.calculate_utilization();
         if current_utilization < self.config.memory_pressure_threshold {
             return None; // 使用率不高，不需要扩展
         }
-        
+
         // 创建新的扩展池
         let new_size = (self.get_current_total_size() as f32 * self.config.expansion_factor) as u64;
         let new_size = new_size.min(self.config.max_buffer_size);
-        
+
         if new_size <= self.get_current_total_size() {
             return None; // 无法进一步扩展
         }
-        
+
         // 创建新的环形缓冲区池
         let new_pool = RingBufferPool::new(self.device.clone(), new_size);
         self.ring_pools.push(new_pool);
         self.current_pool_index = self.ring_pools.len() - 1;
         *expansion_count += 1;
-        
+
         // 在新池中分配
-        if let Some(block) = self.ring_pools[self.current_pool_index].allocate(
-            align_to(request.size, request.alignment),
-            request.alignment,
-        ) {
+        if let Some(block) = self.ring_pools[self.current_pool_index]
+            .allocate(align_to(request.size, request.alignment), request.alignment)
+        {
             let allocated_size = block.size;
             let mut result = AllocationResult::new(block, allocated_size, 0.0);
             result.from_expanded = true;
-            
+
             // 记录扩展事件
             self.log_expansion_event(new_size, current_utilization);
-            
+
             Some(result)
         } else {
             None
@@ -460,7 +490,7 @@ impl SmartMemoryAllocator {
     /// 释放内存
     pub fn deallocate(&mut self, block: MemoryBlock) {
         let block_size = block.size;
-        
+
         // 找到对应的池并释放
         for pool in &mut self.ring_pools {
             if block.offset < pool.total_capacity() {
@@ -468,7 +498,7 @@ impl SmartMemoryAllocator {
                 break;
             }
         }
-        
+
         // 更新统计信息
         {
             let mut stats = self.allocation_stats.lock();
@@ -489,17 +519,22 @@ impl SmartMemoryAllocator {
         if total_capacity == 0 {
             return 0.0;
         }
-        
-        let total_active = self.ring_pools.iter()
+
+        let total_active = self
+            .ring_pools
+            .iter()
             .map(|pool| pool.stats().active_bytes)
             .sum::<u64>();
-        
+
         total_active as f32 / total_capacity as f32
     }
 
     /// 获取当前总容量
     fn get_current_total_size(&self) -> u64 {
-        self.ring_pools.iter().map(|pool| pool.total_capacity()).sum()
+        self.ring_pools
+            .iter()
+            .map(|pool| pool.total_capacity())
+            .sum()
     }
 
     /// 更新分配统计信息
@@ -510,7 +545,7 @@ impl SmartMemoryAllocator {
         stats.active_allocations += 1;
         stats.active_bytes += result.allocated_size;
         stats.update_peak();
-        
+
         if result.from_expanded {
             // 记录扩展分配
             tracing::debug!(
@@ -530,19 +565,19 @@ impl SmartMemoryAllocator {
         } else {
             PressureRecommendation::ExpandPool
         };
-        
+
         let event = MemoryPressureEvent::new(pressure, utilization, recommendation);
-        
+
         {
             let mut history = self.pressure_history.lock();
             history.push(event);
-            
+
             // 保持历史记录在合理范围内
             if history.len() > 100 {
                 history.remove(0);
             }
         }
-        
+
         tracing::info!(
             target: "memory_allocator",
             "Memory pool expanded to {} bytes (utilization: {:.1}%)",
@@ -557,12 +592,12 @@ impl SmartMemoryAllocator {
             let mut frame = self.current_frame.lock();
             *frame += 1;
         }
-        
+
         // 更新所有池
         for pool in &mut self.ring_pools {
             pool.end_frame();
         }
-        
+
         // 检查内存压力
         let pressure = self.check_memory_pressure();
         if pressure == MemoryPressure::High || pressure == MemoryPressure::Critical {
@@ -578,18 +613,18 @@ impl SmartMemoryAllocator {
             MemoryPressure::Critical => PressureRecommendation::CleanupAndExpand,
             _ => PressureRecommendation::None,
         };
-        
+
         let event = MemoryPressureEvent::new(pressure, utilization, recommendation);
-        
+
         {
             let mut history = self.pressure_history.lock();
             history.push(event);
-            
+
             if history.len() > 100 {
                 history.remove(0);
             }
         }
-        
+
         tracing::warn!(
             target: "memory_allocator",
             "Memory pressure detected: {} (utilization: {:.1}%)",
@@ -607,7 +642,7 @@ impl SmartMemoryAllocator {
     pub fn reset_stats(&mut self) {
         let mut stats = self.allocation_stats.lock();
         *stats = super::ring_buffer_pool::AllocationStats::default();
-        
+
         // 重置所有池的统计
         for pool in &mut self.ring_pools {
             pool.reset_stats();
@@ -639,18 +674,39 @@ impl SmartMemoryAllocator {
         *self.expansion_count.lock()
     }
 
+    /// 为大对象分配专用内存
+    fn allocate_large_object(&mut self, request: &AllocationRequest) -> Option<AllocationResult> {
+        // 为大对象创建专门的环形缓冲池
+        let pool_size = (request.size * 2).max(8 * 1024 * 1024); // 至少8MB
+
+        // 创建新的环形缓冲池用于大对象
+        let mut new_pool = RingBufferPool::new(self.device.clone(), pool_size);
+
+        // 在新池中尝试分配
+        if let Some(block) = new_pool.allocate(request.size, request.alignment) {
+            // 将新池添加到池列表中
+            self.ring_pools.push(new_pool);
+
+            // 创建分配结果
+            let result = AllocationResult::new(block, request.size, current_timestamp_ms() as f32);
+            return Some(result);
+        }
+
+        None
+    }
+
     /// 强制垃圾回收
     pub fn force_gc(&mut self) {
         let mut total_pools = 0usize;
         // 检查所有池的空闲块
         for _pool in &mut self.ring_pools {
             total_pools += 1;
-            
+
             // 这里可以添加更复杂的GC逻辑
             // 例如：合并碎片、释放未使用的池等
             // 目前只是遍历所有池，确保它们被检查
         }
-        
+
         tracing::debug!(target: "memory_allocator", "Forced garbage collection completed, checked {} pools", total_pools);
     }
 }
@@ -669,7 +725,7 @@ pub fn create_high_performance_allocator(device: Arc<wgpu::Device>) -> SmartMemo
     let config = AllocatorConfig::new(32 * 1024 * 1024, 128 * 1024 * 1024) // 32MB-128MB
         .with_auto_expansion(true)
         .with_pressure_threshold(0.8);
-    
+
     SmartMemoryAllocator::new(device, config)
 }
 
@@ -678,7 +734,7 @@ pub fn create_low_memory_allocator(device: Arc<wgpu::Device>) -> SmartMemoryAllo
     let config = AllocatorConfig::new(8 * 1024 * 1024, 32 * 1024 * 1024) // 8MB-32MB
         .with_auto_expansion(false)
         .with_pressure_threshold(0.95);
-    
+
     SmartMemoryAllocator::new(device, config)
 }
 
@@ -705,7 +761,7 @@ mod tests {
             .with_alignment(256)
             .with_type(AllocationType::ShortTerm)
             .with_priority(AllocationPriority::High);
-        
+
         assert_eq!(request.size, 1024);
         assert_eq!(request.alignment, 256);
         assert_eq!(request.allocation_type, AllocationType::ShortTerm);
@@ -715,9 +771,15 @@ mod tests {
     #[test]
     fn test_memory_pressure_levels() {
         assert_eq!(MemoryPressure::from_utilization(0.3), MemoryPressure::Low);
-        assert_eq!(MemoryPressure::from_utilization(0.6), MemoryPressure::Medium);
+        assert_eq!(
+            MemoryPressure::from_utilization(0.6),
+            MemoryPressure::Medium
+        );
         assert_eq!(MemoryPressure::from_utilization(0.8), MemoryPressure::High);
-        assert_eq!(MemoryPressure::from_utilization(0.95), MemoryPressure::Critical);
+        assert_eq!(
+            MemoryPressure::from_utilization(0.95),
+            MemoryPressure::Critical
+        );
     }
 
     #[test]
@@ -725,7 +787,7 @@ mod tests {
         let block = MemoryBlock::new(1, 1024, 0, 256, 10);
         let mut result = AllocationResult::new(block, 1024, 50.0);
         assert!(!result.from_expanded);
-        
+
         result = result.from_expanded();
         assert!(result.from_expanded);
     }

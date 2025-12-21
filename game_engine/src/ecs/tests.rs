@@ -7,7 +7,7 @@ mod tests {
     fn test_entity_creation() {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
-        assert!(world.get_entity(entity).is_some());
+        assert!(world.get_entity(entity).is_ok());
     }
 
     #[test]

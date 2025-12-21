@@ -1,41 +1,41 @@
-//! 着色器编译缓存系统
-//!
-//! 提供着色器二进制缓存功能，减少启动时间和重复编译开销。
-//!
-//! ## 设计原则
-//!
-//! 1. **缓存键生成**: 基于着色器源码的SHA256哈希
-//! 2. **存储格式**: 文件系统缓存（跨平台路径管理）
-//! 3. **失效策略**: 源码变更时自动失效（hash不匹配）
-//! 4. **验证机制**: 缓存验证（hash匹配、格式兼容性检查）
-//!
-//! ## 架构设计
-//!
-//! ```text
-//! ┌─────────────────────────────────────────────────────────┐
-//! │              Shader Cache Architecture                  │
-//! ├─────────────────────────────────────────────────────────┤
-//! │  1. Cache Key Generation (SHA256 hash of source)        │
-//! │     - Input: Shader source code                         │
-//! │     - Output: 64-character hex string                   │
-//! │                                                          │
-//! │  2. Cache Storage (File System)                         │
-//! │     - Path: {cache_dir}/shaders/{hash}.spv              │
-//! │     - Format: Binary SPIR-V (or platform-specific)      │
-//! │                                                          │
-//! │  3. Cache Validation                                    │
-//! │     - Hash verification                                 │
-//! │     - Format compatibility check                        │
-//! │     - Version check                                     │
-//! │                                                          │
-//! │  4. Cache Invalidation                                  │
-//! │     - Source code changed (hash mismatch)               │
-//! │     - Cache format version mismatch                      │
-//! │     - Manual invalidation                                │
-//! └─────────────────────────────────────────────────────────┘
-//! ```
+//  着色器编译缓存系统
+// 
+//  提供着色器二进制缓存功能，减少启动时间和重复编译开销。
+// 
+//  ## 设计原则
+// 
+//  1. **缓存键生成**: 基于着色器源码的SHA256哈希
+//  2. **存储格式**: 文件系统缓存（跨平台路径管理）
+//  3. **失效策略**: 源码变更时自动失效（hash不匹配）
+//  4. **验证机制**: 缓存验证（hash匹配、格式兼容性检查）
+// 
+//  ## 架构设计
+// 
+//  ```text
+//  ┌─────────────────────────────────────────────────────────┐
+//  │              Shader Cache Architecture                  │
+//  ├─────────────────────────────────────────────────────────┤
+//  │  1. Cache Key Generation (SHA256 hash of source)        │
+//  │     - Input: Shader source code                         │
+//  │     - Output: 64-character hex string                   │
+//  │                                                          │
+//  │  2. Cache Storage (File System)                         │
+//  │     - Path: {cache_dir}/shaders/{hash}.spv              │
+//  │     - Format: Binary SPIR-V (or platform-specific)      │
+//  │                                                          │
+//  │  3. Cache Validation                                    │
+//  │     - Hash verification                                 │
+//  │     - Format compatibility check                        │
+//  │     - Version check                                     │
+//  │                                                          │
+//  │  4. Cache Invalidation                                  │
+//  │     - Source code changed (hash mismatch)               │
+//  │     - Cache format version mismatch                      │
+//  │     - Manual invalidation                                │
+//  └─────────────────────────────────────────────────────────┘
+//  ```
 
-use crate::core::error::RenderError;
+use crate::error::RenderError;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::fs;
@@ -218,7 +218,10 @@ impl ShaderCache {
         // 确保缓存目录存在
         if config.enabled {
             fs::create_dir_all(&config.cache_dir).map_err(|e| {
-                RenderError::InvalidState(format!("Failed to create shader cache directory: {}", e))
+                RenderError::InvalidState {
+                    message: format!("Failed to create shader cache directory: {}", e),
+                    severity: crate::error::ErrorSeverity::Error
+                }
             })?;
         }
 
@@ -311,7 +314,10 @@ impl ShaderCache {
         // 读取缓存文件
         // 注意：当前缓存的是WGSL源码（用于验证），未来可以缓存SPIR-V二进制
         let cached_data = fs::read(&cache_path).map_err(|e| {
-            RenderError::InvalidState(format!("Failed to read shader cache file: {}", e))
+            RenderError::InvalidState {
+                message: format!("Failed to read shader cache file: {}", e),
+                severity: crate::error::ErrorSeverity::Error
+            }
         })?;
 
         // 更新访问时间
@@ -352,7 +358,10 @@ impl ShaderCache {
         // 注意：当前实现存储WGSL源码，未来可以编译为SPIR-V并缓存二进制
         // 未来优化：集成naga库，编译WGSL到SPIR-V，减少运行时编译开销
         fs::write(&cache_path, source_code.as_bytes()).map_err(|e| {
-            RenderError::InvalidState(format!("Failed to write shader cache file: {}", e))
+            RenderError::InvalidState {
+                message: format!("Failed to write shader cache file: {}", e),
+                severity: crate::error::ErrorSeverity::Error
+            }
         })?;
 
         // 写入元数据
@@ -388,7 +397,10 @@ impl ShaderCache {
 
         // 写入二进制数据
         fs::write(&cache_path, binary_data).map_err(|e| {
-            RenderError::InvalidState(format!("Failed to write shader cache file: {}", e))
+            RenderError::InvalidState {
+                message: format!("Failed to write shader cache file: {}", e),
+                severity: crate::error::ErrorSeverity::Error
+            }
         })?;
 
         // 写入元数据
@@ -410,10 +422,16 @@ impl ShaderCache {
     /// 加载元数据
     fn load_metadata(&self, path: &Path) -> Result<CacheMetadata, RenderError> {
         let data = fs::read(path)
-            .map_err(|e| RenderError::InvalidState(format!("Failed to read metadata: {}", e)))?;
+            .map_err(|e| RenderError::InvalidState {
+                message: format!("Failed to read metadata: {}", e),
+                severity: crate::error::ErrorSeverity::Error
+            })?;
 
         let metadata: CacheMetadata = toml::from_slice(&data)
-            .map_err(|e| RenderError::InvalidState(format!("Failed to parse metadata: {}", e)))?;
+            .map_err(|e| RenderError::InvalidState {
+                message: format!("Failed to parse metadata: {}", e),
+                severity: crate::error::ErrorSeverity::Error
+            })?;
 
         Ok(metadata)
     }
@@ -421,11 +439,17 @@ impl ShaderCache {
     /// 保存元数据
     fn save_metadata(&self, path: &Path, metadata: &CacheMetadata) -> Result<(), RenderError> {
         let data = toml::to_string(metadata).map_err(|e| {
-            RenderError::InvalidState(format!("Failed to serialize metadata: {}", e))
+            RenderError::InvalidState {
+                message: format!("Failed to serialize metadata: {}", e),
+                severity: crate::error::ErrorSeverity::Error
+            }
         })?;
 
         fs::write(path, data)
-            .map_err(|e| RenderError::InvalidState(format!("Failed to write metadata: {}", e)))?;
+            .map_err(|e| RenderError::InvalidState {
+                message: format!("Failed to write metadata: {}", e),
+                severity: crate::error::ErrorSeverity::Error
+            })?;
 
         Ok(())
     }
@@ -704,7 +728,9 @@ mod tests {
 
         // 存储缓存
         let source_code = "fn main() {}";
-        cache.put_source(&key, source_code).expect("Failed to put source to cache");
+        cache
+            .put_source(&key, source_code)
+            .expect("Failed to put source to cache");
 
         // 再次获取应该命中
         let result = cache.get(&key).expect("Failed to get shader from cache");
@@ -731,7 +757,9 @@ mod tests {
         let source_code = "fn main() {}";
 
         // 存储缓存
-        cache.put_source(&key1, source_code).expect("Failed to put source to cache");
+        cache
+            .put_source(&key1, source_code)
+            .expect("Failed to put source to cache");
 
         // 使用不同的源码创建新键（应该失效）
         let key2 = ShaderCacheKey::from_source("fn main() { }", "");
@@ -758,7 +786,9 @@ mod tests {
         let key = ShaderCacheKey::from_source("test", "");
 
         // 存储一些数据
-        cache.put_source(&key, "test").expect("Failed to put source to cache");
+        cache
+            .put_source(&key, "test")
+            .expect("Failed to put source to cache");
 
         let stats = cache.stats();
         assert!(stats.cache_size_bytes > 0);

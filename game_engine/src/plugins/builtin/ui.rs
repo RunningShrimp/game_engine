@@ -1,6 +1,6 @@
-//! UI插件
-//!
-//! 提供基于wgpu的UI框架，支持现代UI组件和布局。
+//  UI插件
+// 
+//  提供基于wgpu的UI框架，支持现代UI组件和布局。
 
 use crate::impl_default;
 use crate::plugins::{EnginePlugin, App, PluginVersion, PluginDependency};

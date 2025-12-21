@@ -1,15 +1,15 @@
-//! GPU vs CPU 性能对比工具
-//!
-//! 量化 GPU 加速的性能收益
-//! - CPU 基准测试
-//! - GPU 模拟执行
-//! - 性能对比分析
-//! - 优化建议
+//  GPU vs CPU 性能对比工具
+// 
+//  量化 GPU 加速的性能收益
+//  - CPU 基准测试
+//  - GPU 模拟执行
+//  - 性能对比分析
+//  - 优化建议
 
 use glam::{Mat4, Vec3, Vec4};
 use std::time::Instant;
 
-/// 性能对比框架
+//  性能对比框架
 pub struct PerformanceBenchmark {
     /// 基准名称
     pub name: String,
@@ -78,9 +78,8 @@ impl PerformanceBenchmark {
         for _ in 0..self.iterations {
             for i in 0..self.data_size {
                 let pos_i = positions[i];
-                for j in (i + 1)..self.data_size {
-                    let pos_j = positions[j];
-                    let delta = pos_i - pos_j;
+                for pos_j in &positions[(i + 1)..] {
+                    let delta = pos_i - *pos_j;
                     if delta.length() < collision_radius {
                         let _ = true; // Collision detected
                     }
@@ -189,7 +188,7 @@ impl PerformanceBenchmark {
 
         for _ in 0..self.iterations {
             for _ in 0..self.data_size {
-                result = result * m;
+                result *= m;
             }
         }
 
@@ -210,7 +209,7 @@ impl PerformanceBenchmark {
     }
 }
 
-/// CPU 基准结果
+//  CPU 基准结果
 #[derive(Debug, Clone)]
 pub struct CPUBenchmarkResult {
     /// 基准名称
@@ -223,7 +222,7 @@ pub struct CPUBenchmarkResult {
     pub ops_per_sec: f64,
 }
 
-/// GPU 模拟执行结果
+//  GPU 模拟执行结果
 #[derive(Debug, Clone)]
 pub struct GPUSimulationResult {
     /// 基准名称
@@ -271,7 +270,7 @@ impl GPUSimulationResult {
     }
 }
 
-/// 性能对比分析
+//  性能对比分析
 #[derive(Debug, Clone)]
 pub struct PerformanceAnalysis {
     /// 操作名称
@@ -317,10 +316,16 @@ impl PerformanceAnalysis {
     }
 }
 
-/// 完整的 GPU 对比套件
+//  完整的 GPU 对比套件
 pub struct GPUComparativeBenchmarkSuite {
     /// 所有分析
     pub analyses: Vec<PerformanceAnalysis>,
+}
+
+impl Default for GPUComparativeBenchmarkSuite {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl GPUComparativeBenchmarkSuite {
@@ -475,7 +480,7 @@ mod tests {
         let analysis = PerformanceAnalysis::new(cpu, gpu);
 
         assert!(analysis.speedup > 0.0);
-        assert!(analysis.improvement_percent > 0.0 || analysis.improvement_percent == 0.0);
+        assert!(analysis.improvement_percent >= 0.0);
     }
 
     #[test]
@@ -483,7 +488,7 @@ mod tests {
         let mut suite = GPUComparativeBenchmarkSuite::new();
         suite.run_all();
 
-        assert!(suite.analyses.len() > 0);
+        assert!(!suite.analyses.is_empty());
         let report = suite.generate_report();
         assert!(report.contains("加速比"));
     }

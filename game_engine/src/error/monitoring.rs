@@ -1,12 +1,12 @@
-//! 错误监控和报告机制
-//!
-//! 提供错误统计收集、分析和报告功能，支持实时监控和历史追踪。
+//  错误监控和报告机制
+// 
+//  提供错误统计收集、分析和报告功能，支持实时监控和历史追踪。
 
-use crate::error::{EngineError, ErrorSeverity, ErrorCategory, safe_lock};
+use crate::error::{EngineError, ErrorCategory, ErrorSeverity, safe_lock};
+use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, Mutex};
 use std::thread;
-use serde::{Serialize, Deserialize};
 use std::time::Duration;
 
 /// 错误统计信息
@@ -48,21 +48,24 @@ impl ErrorStats {
     /// 记录错误
     pub fn record_error(&mut self, error: &EngineError) {
         self.total_errors += 1;
-        
+
         // 按严重级别统计
         *self.errors_by_severity.entry(error.severity()).or_insert(0) += 1;
-        
+
         // 按分类统计
         *self.errors_by_category.entry(error.category()).or_insert(0) += 1;
-        
+
         // 按小时统计
         let now = std::time::SystemTime::now();
-        let hour_key = format!("{:02}:00", now.elapsed().unwrap_or_default().as_secs() / 3600 % 24);
+        let hour_key = format!(
+            "{:02}:00",
+            now.elapsed().unwrap_or_default().as_secs() / 3600 % 24
+        );
         *self.errors_by_hour.entry(hour_key).or_insert(0) += 1;
-        
+
         // 更新最后时间
         self.last_updated = now;
-        
+
         // 计算错误率
         self.update_error_rate();
     }
@@ -76,7 +79,7 @@ impl ErrorStats {
 
         let total_hourly_errors: u64 = self.errors_by_hour.values().sum();
         let hours_with_data = self.errors_by_hour.len() as f64;
-        
+
         if hours_with_data > 0.0 {
             self.error_rate_per_hour = total_hourly_errors as f64 / hours_with_data;
         }
@@ -91,11 +94,12 @@ impl ErrorStats {
                 if let Some((hours, _)) = hour.split_once(':') {
                     if let Ok(h) = hours.parse::<u32>() {
                         let hour_timestamp = h as u64 * 3600;
-                        let current_timestamp = self.last_updated
+                        let current_timestamp = self
+                            .last_updated
                             .duration_since(std::time::UNIX_EPOCH)
                             .unwrap_or_default()
                             .as_secs();
-                        
+
                         // 检查是否在时间范围内
                         current_timestamp.saturating_sub(duration.as_secs()) <= hour_timestamp
                     } else {
@@ -249,8 +253,8 @@ pub struct ErrorThresholds {
 impl Default for ErrorThresholds {
     fn default() -> Self {
         Self {
-            error_rate_threshold: 1.0, // 1个错误/分钟
-            critical_error_threshold: 5,   // 5个严重错误
+            error_rate_threshold: 1.0,   // 1个错误/分钟
+            critical_error_threshold: 5, // 5个严重错误
             total_error_threshold: 100,  // 100个总错误
             time_window_minutes: 5,      // 5分钟窗口
         }
@@ -282,7 +286,8 @@ impl ErrorReportGenerator for DefaultReportGenerator {
         let insights = monitor.generate_insights(&stats, &trends);
 
         ErrorReport {
-            id: format!("report_{}", 
+            id: format!(
+                "report_{}",
                 std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
                     .unwrap_or_default()
@@ -321,7 +326,8 @@ impl ErrorMonitor {
     /// 记录错误
     pub fn record_error(&self, error: EngineError) {
         let error_detail = ErrorDetail {
-            id: format!("error_{}", 
+            id: format!(
+                "error_{}",
                 std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
                     .unwrap_or_default()
@@ -339,9 +345,10 @@ impl ErrorMonitor {
 
         // 添加到历史记录
         {
-            let history = &mut safe_lock(&self.error_history, "ErrorMonitor.error_history").unwrap();
+            let history =
+                &mut safe_lock(&self.error_history, "ErrorMonitor.error_history").unwrap();
             history.push_front(error_detail);
-            
+
             // 限制历史记录大小
             while history.len() > self.config.max_history_size {
                 history.pop_back();
@@ -359,13 +366,10 @@ impl ErrorMonitor {
     }
 
     /// 记录带上下文的错误
-    pub fn record_error_with_context(
-        &self,
-        error: EngineError,
-        context: HashMap<String, String>,
-    ) {
+    pub fn record_error_with_context(&self, error: EngineError, context: HashMap<String, String>) {
         let error_detail = ErrorDetail {
-            id: format!("error_{}", 
+            id: format!(
+                "error_{}",
                 std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
                     .unwrap_or_default()
@@ -383,9 +387,10 @@ impl ErrorMonitor {
 
         // 添加到历史记录
         {
-            let history = &mut safe_lock(&self.error_history, "ErrorMonitor.error_history").unwrap();
+            let history =
+                &mut safe_lock(&self.error_history, "ErrorMonitor.error_history").unwrap();
             history.push_front(error_detail);
-            
+
             // 限制历史记录大小
             while history.len() > self.config.max_history_size {
                 history.pop_back();
@@ -394,7 +399,10 @@ impl ErrorMonitor {
 
         // 更新统计
         {
-            let stats = &mut self.stats.lock().unwrap();
+            let Ok(mut stats) = safe_lock(&self.stats, "ErrorMonitor.stats") else {
+                tracing::error!("Failed to acquire stats lock in record_error");
+                return;
+            };
             stats.record_error(&error);
         }
 
@@ -426,7 +434,10 @@ impl ErrorMonitor {
 
     /// 更新错误详情
     fn update_error_detail(&self, error_detail: ErrorDetail) {
-        let history = &mut self.error_history.lock().unwrap();
+        let Ok(mut history) = safe_lock(&self.error_history, "ErrorMonitor.error_history") else {
+            tracing::error!("Failed to acquire error_history lock in update_error_detail");
+            return;
+        };
         if let Some(pos) = history.iter().position(|e| e.id == error_detail.id) {
             history[pos] = error_detail;
         }
@@ -434,7 +445,9 @@ impl ErrorMonitor {
 
     /// 获取错误统计
     pub fn get_stats(&self) -> ErrorStats {
-        safe_lock(&self.stats, "ErrorMonitor.stats").unwrap().clone()
+        safe_lock(&self.stats, "ErrorMonitor.stats")
+            .unwrap()
+            .clone()
     }
 
     /// 获取最近的错误
@@ -450,15 +463,18 @@ impl ErrorMonitor {
 
         // 分析错误率趋势
         if stats.errors_by_hour.len() > 1 {
-            let error_rates: Vec<f64> = stats.errors_by_hour
+            let error_rates: Vec<f64> = stats
+                .errors_by_hour
                 .iter()
                 .map(|(_, &count)| count as f64)
                 .collect();
-            
+
             let avg_rate = error_rates.iter().sum::<f64>() / error_rates.len() as f64;
-            let variance = error_rates.iter()
+            let variance = error_rates
+                .iter()
                 .map(|rate| (rate - avg_rate).powi(2))
-                .sum::<f64>() / error_rates.len() as f64;
+                .sum::<f64>()
+                / error_rates.len() as f64;
             let std_dev = variance.sqrt();
 
             // 简单趋势分析
@@ -541,7 +557,7 @@ impl ErrorMonitor {
     /// 检查阈值
     fn check_thresholds(&self, error: &EngineError) {
         let thresholds = &self.config.thresholds;
-        
+
         // 检查严重错误阈值
         if error.severity() >= ErrorSeverity::Critical {
             let critical_count = &safe_lock(&self.stats, "ErrorMonitor.stats")
@@ -550,24 +566,24 @@ impl ErrorMonitor {
                 .get(&ErrorSeverity::Critical)
                 .copied()
                 .unwrap_or(0);
-            
+
             if *critical_count >= thresholds.critical_error_threshold as u64 {
                 self.trigger_alert(format!(
                     "Critical error threshold exceeded: {} >= {}",
-                    critical_count,
-                    thresholds.critical_error_threshold
+                    critical_count, thresholds.critical_error_threshold
                 ));
             }
         }
 
         // 检查总错误数阈值
-        let total_errors = &safe_lock(&self.stats, "ErrorMonitor.stats").unwrap().total_errors;
+        let total_errors = &safe_lock(&self.stats, "ErrorMonitor.stats")
+            .unwrap()
+            .total_errors;
         if *total_errors >= thresholds.total_error_threshold as u64 {
             self.trigger_alert(format!(
                 "Total error threshold exceeded: {} >= {}",
-                total_errors,
-                thresholds.total_error_threshold
-                ));
+                total_errors, thresholds.total_error_threshold
+            ));
         }
     }
 
@@ -575,7 +591,7 @@ impl ErrorMonitor {
     fn trigger_alert(&self, message: String) {
         // 这里可以实现告警逻辑，如发送到监控系统、日志记录等
         eprintln!("ERROR ALERT: {}", message);
-        
+
         // 可以扩展为实际的告警系统
         // 例如：发送到监控系统、邮件通知、Slack等
     }
@@ -583,11 +599,11 @@ impl ErrorMonitor {
     /// 生成报告
     pub fn generate_report(&self) -> ErrorReport {
         let mut reports = Vec::new();
-        
+
         for generator in &self.report_generators {
             reports.push(generator.generate_report(self));
         }
-        
+
         // 合并多个报告生成器的结果
         if reports.len() == 1 {
             reports.into_iter().next().unwrap()
@@ -624,15 +640,15 @@ impl ErrorMonitor {
 
         let config = self.config.clone();
         let stats = self.stats.clone(); // 克隆stats以在线程中使用
-        
+
         thread::spawn(move || {
             loop {
                 thread::sleep(config.stats_update_interval);
-                
+
                 // 定期更新统计
                 {
                     let mut stats = safe_lock(&stats, "ErrorMonitor.stats").unwrap();
-                    
+
                     // 这里可以定期重新计算错误率
                     stats.update_error_rate();
                 }
@@ -648,31 +664,37 @@ mod tests {
     #[test]
     fn test_error_stats() {
         let mut stats = ErrorStats::new();
-        
+
         let error1 = EngineError::general("Test error 1");
         let error2 = EngineError::general("Test error 2");
         let error3 = EngineError::general_with_severity("Critical error", ErrorSeverity::Critical);
-        
+
         stats.record_error(&error1);
         stats.record_error(&error2);
         stats.record_error(&error3);
-        
+
         assert_eq!(stats.total_errors, 3);
-        assert_eq!(stats.errors_by_severity.get(&ErrorSeverity::Error), Some(&2));
-        assert_eq!(stats.errors_by_severity.get(&ErrorSeverity::Critical), Some(&1));
+        assert_eq!(
+            stats.errors_by_severity.get(&ErrorSeverity::Error),
+            Some(&2)
+        );
+        assert_eq!(
+            stats.errors_by_severity.get(&ErrorSeverity::Critical),
+            Some(&1)
+        );
         assert_eq!(stats.most_frequent_severity(), Some(ErrorSeverity::Error));
     }
 
     #[test]
     fn test_error_monitor() {
         let monitor = ErrorMonitor::new();
-        
+
         let error = EngineError::general("Test error");
         monitor.record_error(error.clone());
-        
+
         let stats = monitor.get_stats();
         assert_eq!(stats.total_errors, 1);
-        
+
         let recent_errors = monitor.get_recent_errors(1);
         assert_eq!(recent_errors.len(), 1);
         assert_eq!(recent_errors[0].message, "Test error");
@@ -687,29 +709,35 @@ mod tests {
             },
             ..Default::default()
         };
-        
+
         let monitor = ErrorMonitor::with_config(config);
-        
+
         // 记录临界错误
         for _ in 0..3 {
-            monitor.record_error(EngineError::general_with_severity("Critical error", ErrorSeverity::Critical));
+            monitor.record_error(EngineError::general_with_severity(
+                "Critical error",
+                ErrorSeverity::Critical,
+            ));
         }
-        
+
         let stats = monitor.get_stats();
-        assert_eq!(stats.errors_by_severity.get(&ErrorSeverity::Critical), Some(&3));
+        assert_eq!(
+            stats.errors_by_severity.get(&ErrorSeverity::Critical),
+            Some(&3)
+        );
     }
 
     #[test]
     fn test_error_trends() {
         let monitor = ErrorMonitor::new();
-        
+
         // 模拟不同时间的错误
         let error1 = EngineError::general("Error 1");
         let error2 = EngineError::general("Error 2");
-        
+
         monitor.record_error(error1);
         monitor.record_error(error2);
-        
+
         let trends = monitor.analyze_trends();
         assert!(!trends.is_empty());
     }
@@ -717,16 +745,16 @@ mod tests {
     #[test]
     fn test_error_insights() {
         let monitor = ErrorMonitor::new();
-        
+
         // 模拟高错误率
         for i in 0..20 {
             monitor.record_error(EngineError::general(format!("Error {}", i)));
         }
-        
+
         let stats = monitor.get_stats();
         let trends = monitor.analyze_trends();
         let insights = monitor.generate_insights(&stats, &trends);
-        
+
         assert!(!insights.is_empty());
         assert!(insights.iter().any(|i| i.contains("High error rate")));
     }

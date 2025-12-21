@@ -440,10 +440,30 @@ impl PreallocationManager {
                 stats.preallocation_misses += 1;
                 stats.update_hit_rate();
             }
-            
+
             Some(block)
         } else {
-            None
+            // 环形缓冲池分配失败，尝试扩展池
+            if self.expand_preallocation_pool(block_size) {
+                // 扩展成功后重试分配
+                if let Some(block) = self.ring_pool.allocate(
+                    align_to(request.size, request.alignment),
+                    request.alignment,
+                ) {
+                    // 更新统计信息
+                    {
+                        let mut stats = self.stats.lock();
+                        stats.preallocation_misses += 1;
+                        stats.update_hit_rate();
+                    }
+
+                    Some(block)
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
         }
     }
 
@@ -691,6 +711,42 @@ impl PreallocationManager {
             let mut stats = self.stats.lock();
             stats.current_preallocated_blocks = 0;
         }
+    }
+
+    /// 获取设备引用（用于调试和扩展）
+    pub fn device(&self) -> &Arc<wgpu::Device> {
+        &self.device
+    }
+
+    /// 扩展预分配池（当现有池容量不足时）
+    fn expand_preallocation_pool(&mut self, block_size: BlockSize) -> bool {
+        if !self.config.enable_dynamic_preallocation {
+            return false;
+        }
+
+        // 计算扩展大小
+        let expand_size = match block_size {
+            BlockSize::Small => 1024 * 1024,    // 1MB
+            BlockSize::Medium => 4 * 1024 * 1024, // 4MB
+            BlockSize::Large => 16 * 1024 * 1024, // 16MB
+            BlockSize::Custom(size) => size * 2, // 自定义大小的两倍
+        };
+
+        // 创建新的更大的环形缓冲池
+        let new_pool = RingBufferPool::new(self.device.clone(), expand_size);
+
+        // 替换现有的环形缓冲池
+        self.ring_pool = new_pool;
+
+        // 记录扩展操作
+        tracing::debug!(
+            target: "preallocation_manager",
+            "Expanded preallocation pool for {:?} blocks by {} bytes",
+            block_size,
+            expand_size
+        );
+
+        true
     }
 }
 

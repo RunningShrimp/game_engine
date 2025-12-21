@@ -1,6 +1,6 @@
-//! 性能数据存储模块
-//!
-//! 提供内存中环形缓冲区、持久化存储、数据压缩和查询功能。
+//  性能数据存储模块
+// 
+//  提供内存中环形缓冲区、持久化存储、数据压缩和查询功能。
 
 use std::collections::{HashMap, VecDeque};
 use std::path::{Path, PathBuf};
@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 use tokio::fs::{File, OpenOptions};
 use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt, BufReader, BufWriter};
 
+use crate::platform::run_sync;
 use crate::profiling::metrics::*;
 use crate::profiling::ProfilingResult;
 
@@ -395,6 +396,8 @@ pub struct PersistentStorage {
     total_written: usize,
 }
 
+use crate::platform::run_sync;
+
 impl PersistentStorage {
     /// 创建新的持久化存储
     pub async fn new(config: StorageConfig) -> ProfilingResult<Self> {
@@ -422,9 +425,7 @@ impl PersistentStorage {
 
     /// 创建新的持久化存储（同步版本，用于向后兼容）
     pub fn new_sync(config: StorageConfig) -> ProfilingResult<Self> {
-        tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current().block_on(Self::new(config))
-        })
+        run_sync(Self::new(config))
     }
 
     /// 存储数据点
@@ -466,9 +467,7 @@ impl PersistentStorage {
 
     /// 刷新写入缓存（同步版本，用于向后兼容）
     pub fn flush_cache_sync(&mut self) -> ProfilingResult<()> {
-        tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current().block_on(self.flush_cache())
-        })
+        run_sync(self.flush_cache())
     }
 
     /// 写入单个数据点
@@ -662,16 +661,15 @@ impl PersistentStorage {
 
     /// 获取存储统计信息（同步版本，用于向后兼容）
     pub fn get_storage_stats_sync(&self) -> ProfilingResult<StorageStats> {
-        tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current().block_on(self.get_storage_stats())
-        })
+        run_sync(self.get_storage_stats())
     }
 }
 
 impl Drop for PersistentStorage {
     fn drop(&mut self) {
-        let _ = self.flush_cache();
-        let _ = self.close_current_file();
+        // Ensure pending writes are flushed during drop using a sync helper
+        let _ = run_sync(self.flush_cache());
+        let _ = run_sync(self.close_current_file());
     }
 }
 
@@ -801,9 +799,7 @@ impl DataQueryer {
 
     /// 执行查询（同步版本，用于向后兼容）
     pub fn query_sync(&self, condition: &QueryCondition) -> ProfilingResult<QueryResult> {
-        tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current().block_on(self.query(condition))
-        })
+        run_sync(self.query(condition))
     }
 
     /// 读取单个文件
@@ -1022,5 +1018,42 @@ mod tests {
         assert_eq!(result.data_points[1].metric_name, "metric1");
         assert_eq!(result.data_points[0].value, 10.0);
         assert_eq!(result.data_points[1].value, 15.0);
+    }
+
+    #[test]
+    fn test_persistent_storage_sync_io() {
+        use tempfile::tempdir;
+        use std::fs;
+
+        let dir = tempdir().unwrap();
+        let mut cfg = StorageConfig::default();
+        cfg.data_dir = dir.path().to_path_buf();
+        cfg.file_prefix = "test_metrics".to_string();
+        cfg.enable_write_cache = true;
+        cfg.cache_size = 2; // flush after 2
+
+        // Create storage synchronously
+        let mut storage = PersistentStorage::new_sync(cfg).expect("new_sync failed");
+
+        // Store two points to trigger flush
+        storage.store(DataPoint::new("m1", 1.0, MetricCategory::CPU)).unwrap();
+        storage.store(DataPoint::new("m2", 2.0, MetricCategory::Memory)).unwrap();
+
+        // flush cache sync
+        storage.flush_cache_sync().expect("flush_cache_sync failed");
+
+        // stats
+        let stats = storage.get_storage_stats_sync().expect("get_storage_stats_sync failed");
+        assert!(stats.total_files >= 1);
+        assert!(stats.current_file_size > 0 || stats.total_size > 0);
+
+        // query sync via DataQueryer
+        let q = QueryCondition { metric_names: None, categories: None, start_time: None, end_time: None, tags: None, limit: None, order_by: None };
+        let queryer = DataQueryer::new(&dir.path(), "test_metrics");
+        let res = queryer.query_sync(&q).expect("query_sync failed");
+        assert!(res.total_count >= 2);
+
+        // cleanup
+        fs::remove_dir_all(dir.path()).ok();
     }
 }

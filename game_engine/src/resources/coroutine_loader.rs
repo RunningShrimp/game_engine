@@ -1,39 +1,36 @@
-//! 协程优化的异步资源加载系统
-//!
-//! 使用 Rust async/await 协程实现高效的资源加载：
-//! - 并发加载多个资源
-//! - 优先级队列
-//! - 加载进度追踪
-//! - 取消支持
-//! - 批量加载优化
-//!
-//! ## 设计原则
-//!
-//! ```text
-//! ┌─────────────────────────────────────────────────────────┐
-//! │              Coroutine Asset Loading Pipeline            │
-//! ├─────────────────────────────────────────────────────────┤
-//! │  1. Request Queue (Priority Sorted)                      │
-//! │     - Critical: 立即需要的资源                            │
-//! │     - High: 可见物体的资源                                │
-//! │     - Normal: 预加载资源                                  │
-//! │     - Low: 后台缓存资源                                   │
-//! │                                                          │
-//! │  2. Concurrent Loading (Semaphore Limited)               │
-//! │     - 限制并发数避免 IO 饱和                              │
-//! │     - 自动重试失败的加载                                  │
-//! │                                                          │
-//! │  3. Processing Pipeline                                  │
-//! │     - IO Read (async)                                    │
-//! │     - Decode (spawn_blocking)                            │
-//! │     - GPU Upload (main thread)                           │
-//! └─────────────────────────────────────────────────────────┘
-//! ```
+//  协程优化的异步资源加载系统
+// 
+//  使用 Rust async/await 协程实现高效的资源加载：
+//  - 并发加载多个资源
+//  - 优先级队列
+//  - 加载进度追踪
+//  - 取消支持
+//  - 批量加载优化
+// 
+//  ## 设计原则
+// 
+//  ```text
+//  ┌─────────────────────────────────────────────────────────┐
+//  │              Coroutine Asset Loading Pipeline            │
+//  ├─────────────────────────────────────────────────────────┤
+//  │  1. Request Queue (Priority Sorted)                      │
+//  │     - Critical: 立即需要的资源                            │
+//  │     - High: 可见物体的资源                                │
+//  │     - Normal: 预加载资源                                  │
+//  │     - Low: 后台缓存资源                                   │
+//  │                                                          │
+//  │  2. Concurrent Loading (Semaphore Limited)               │
+//  │     - 限制并发数避免 IO 饱和                              │
+//  │     - 自动重试失败的加载                                  │
+//  │                                                          │
+//  │  3. Processing Pipeline                                  │
+//  │     - IO Read (async)                                    │
+//  │     - Decode (spawn_blocking)                            │
+//  │     - GPU Upload (main thread)                           │
+//  └─────────────────────────────────────────────────────────┘
+//  ```
 
-use crate::{
-    impl_default,
-    error::safe_lock,
-};
+use crate::error::safe_lock;
 use std::cmp::Ordering as CmpOrdering;
 use std::collections::BinaryHeap;
 use std::path::{Path, PathBuf};
@@ -42,7 +39,8 @@ use std::sync::{Arc, Mutex};
 use thiserror::Error;
 
 use bevy_ecs::prelude::*;
-use tokio::sync::{mpsc, oneshot, Semaphore};
+use tokio::sync::{Semaphore, mpsc, oneshot};
+use num_cpus;
 
 use super::runtime::global_runtime;
 
@@ -202,6 +200,8 @@ pub enum LoadError {
 pub struct CoroutineLoaderConfig {
     /// 最大并发加载数
     pub max_concurrent_loads: usize,
+    /// spawn_blocking最大并发数 (0表示无限制)
+    pub max_spawn_blocking: usize,
     /// 单个资源超时时间 (毫秒)
     pub load_timeout_ms: u64,
     /// 失败重试次数
@@ -210,12 +210,49 @@ pub struct CoroutineLoaderConfig {
     pub retry_delay_ms: u64,
 }
 
-impl_default!(CoroutineLoaderConfig {
-    max_concurrent_loads: 8,
-    load_timeout_ms: 30_000,
-    max_retries: 2,
-    retry_delay_ms: 100,
-});
+impl CoroutineLoaderConfig {
+    /// 创建自定义配置
+    pub fn new(
+        max_concurrent_loads: usize,
+        max_spawn_blocking: usize,
+        load_timeout_ms: u64,
+        max_retries: u32,
+        retry_delay_ms: u64,
+    ) -> Self {
+        Self {
+            max_concurrent_loads,
+            max_spawn_blocking,
+            load_timeout_ms,
+            max_retries,
+            retry_delay_ms,
+        }
+    }
+
+    /// 创建基于CPU核数的推荐配置
+    pub fn with_cpu_aware_defaults() -> Self {
+        let cpu_count = num_cpus::get();
+        Self {
+            max_concurrent_loads: (cpu_count * 2).max(4).min(16), // 2倍CPU核数，最小4，最大16
+            max_spawn_blocking: cpu_count.max(2).min(8), // CPU核数，最小2，最大8
+            load_timeout_ms: 30_000,
+            max_retries: 2,
+            retry_delay_ms: 100,
+        }
+    }
+}
+
+impl Default for CoroutineLoaderConfig {
+    fn default() -> Self {
+        let cpu_count = num_cpus::get();
+        Self {
+            max_concurrent_loads: (cpu_count * 2).max(4).min(16), // 2倍CPU核数，最小4，最大16
+            max_spawn_blocking: cpu_count.max(2).min(8), // CPU核数，最小2，最大8
+            load_timeout_ms: 30_000,
+            max_retries: 2,
+            retry_delay_ms: 100,
+        }
+    }
+}
 
 /// 协程资源加载器
 #[derive(Resource)]
@@ -227,18 +264,37 @@ pub struct CoroutineAssetLoader {
     request_tx: mpsc::UnboundedSender<LoadRequest>,
     /// 完成接收器
     complete_rx: Mutex<mpsc::UnboundedReceiver<LoadComplete>>,
+    /// 完成通知发送器
+    completion_notify_tx: mpsc::UnboundedSender<()>,
+    /// 完成通知接收器
+    completion_notify_rx: Mutex<mpsc::UnboundedReceiver<()>>,
+    /// spawn_blocking并发控制
+    spawn_blocking_semaphore: Arc<Semaphore>,
     /// 下一个请求 ID
     next_id: AtomicU64,
     /// 活跃加载数
     active_loads: AtomicUsize,
+    /// 队列长度（共享引用，由loader_task更新）
+    queue_length: Arc<AtomicUsize>,
     /// 总加载请求数
     total_requests: AtomicU64,
     /// 总完成数
     total_completed: AtomicU64,
     /// 总失败数
     total_failed: AtomicU64,
+    /// 等待时间统计
+    wait_time_stats: Arc<Mutex<WaitTimeStats>>,
     /// 取消信号发送器映射
     cancel_senders: Arc<Mutex<std::collections::HashMap<u64, oneshot::Sender<()>>>>,
+}
+
+/// 等待时间统计
+#[derive(Debug, Clone, Default)]
+struct WaitTimeStats {
+    total_wait_time_ms: f64,
+    max_wait_time_ms: f64,
+    min_wait_time_ms: f64,
+    sample_count: u64,
 }
 
 impl CoroutineAssetLoader {
@@ -246,31 +302,56 @@ impl CoroutineAssetLoader {
     pub fn new(config: CoroutineLoaderConfig) -> Self {
         let (request_tx, request_rx) = mpsc::unbounded_channel::<LoadRequest>();
         let (complete_tx, complete_rx) = mpsc::unbounded_channel::<LoadComplete>();
+        let (completion_notify_tx, completion_notify_rx) = mpsc::unbounded_channel::<()>();
+
+        // 创建spawn_blocking信号量
+        let spawn_blocking_limit = if config.max_spawn_blocking == 0 {
+            usize::MAX // 无限制
+        } else {
+            config.max_spawn_blocking
+        };
+        let spawn_blocking_semaphore = Arc::new(Semaphore::new(spawn_blocking_limit));
 
         let max_concurrent = config.max_concurrent_loads;
         let load_timeout = config.load_timeout_ms;
         let max_retries = config.max_retries;
         let retry_delay = config.retry_delay_ms;
 
+        let wait_stats_arc = Arc::new(Mutex::new(WaitTimeStats::default()));
+        let wait_stats_clone = Arc::clone(&wait_stats_arc);
+        let queue_length_arc = Arc::new(AtomicUsize::new(0));
+        let queue_length_clone = Arc::clone(&queue_length_arc);
+
         // 启动后台加载协程
+        let notify_tx_clone = completion_notify_tx.clone();
+        let spawn_blocking_sem_clone = Arc::clone(&spawn_blocking_semaphore);
         global_runtime().spawn(Self::loader_task(
             request_rx,
             complete_tx,
+            notify_tx_clone,
             max_concurrent,
             load_timeout,
             max_retries,
             retry_delay,
+            wait_stats_clone,
+            spawn_blocking_sem_clone,
+            queue_length_clone,
         ));
 
         Self {
             config,
             request_tx,
             complete_rx: Mutex::new(complete_rx),
+            completion_notify_tx,
+            completion_notify_rx: Mutex::new(completion_notify_rx),
+            spawn_blocking_semaphore,
             next_id: AtomicU64::new(1),
             active_loads: AtomicUsize::new(0),
+            queue_length: queue_length_arc,
             total_requests: AtomicU64::new(0),
             total_completed: AtomicU64::new(0),
             total_failed: AtomicU64::new(0),
+            wait_time_stats: wait_stats_arc,
             cancel_senders: Arc::new(Mutex::new(std::collections::HashMap::new())),
         }
     }
@@ -279,10 +360,14 @@ impl CoroutineAssetLoader {
     async fn loader_task(
         mut request_rx: mpsc::UnboundedReceiver<LoadRequest>,
         complete_tx: mpsc::UnboundedSender<LoadComplete>,
+        completion_notify_tx: mpsc::UnboundedSender<()>,
         max_concurrent: usize,
         load_timeout_ms: u64,
         max_retries: u32,
         retry_delay_ms: u64,
+        wait_time_stats: Arc<Mutex<WaitTimeStats>>,
+        spawn_blocking_semaphore: Arc<Semaphore>,
+        queue_length: Arc<AtomicUsize>,
     ) {
         // 使用 Semaphore 限制并发数
         let semaphore = Arc::new(Semaphore::new(max_concurrent));
@@ -302,8 +387,9 @@ impl CoroutineAssetLoader {
                 Some(request) = request_rx.recv() => {
                     // 添加到优先级队列（在独立作用域中持有锁）
                     {
-                        let mut queue = &safe_lock(&priority_queue, "CoroutineAssetLoader.priority_queue").unwrap_or_default();
+                        let mut queue = safe_lock(&priority_queue, "CoroutineAssetLoader.priority_queue").unwrap();
                         queue.push(request);
+                        queue_length.store(queue.len(), Ordering::Relaxed);
                     } // MutexGuard 在这里释放
 
                     // 尝试处理队列中的请求
@@ -311,9 +397,13 @@ impl CoroutineAssetLoader {
                         queue_clone.clone(),
                         sem_clone.clone(),
                         tx_clone.clone(),
+                        completion_notify_tx.clone(),
                         load_timeout_ms,
                         max_retries,
                         retry_delay_ms,
+                        wait_time_stats.clone(),
+                        spawn_blocking_semaphore.clone(),
+                        queue_length.clone(),
                     ).await;
                 }
                 else => break,
@@ -326,22 +416,48 @@ impl CoroutineAssetLoader {
         queue: Arc<Mutex<BinaryHeap<LoadRequest>>>,
         semaphore: Arc<Semaphore>,
         complete_tx: mpsc::UnboundedSender<LoadComplete>,
+        completion_notify_tx: mpsc::UnboundedSender<()>,
         load_timeout_ms: u64,
         max_retries: u32,
         retry_delay_ms: u64,
+        wait_time_stats: Arc<Mutex<WaitTimeStats>>,
+        spawn_blocking_semaphore: Arc<Semaphore>,
+        queue_length: Arc<AtomicUsize>,
     ) {
         // 尝试获取 semaphore 许可
         if let Ok(permit) = semaphore.clone().try_acquire_owned() {
             // 从队列取出最高优先级的请求
             let request = {
-                let mut q = &safe_lock(&queue, "CoroutineAssetLoader.queue").unwrap_or_default();
-                q.pop()
+                let mut q = safe_lock(&queue, "CoroutineAssetLoader.queue").unwrap();
+                let req = q.pop();
+                queue_length.store(q.len(), Ordering::Relaxed);
+                req
             };
 
             if let Some(request) = request {
                 let tx = complete_tx.clone();
+                let wait_stats_clone = Arc::clone(&wait_time_stats);
+
+                // 计算等待时间
+                let wait_time_ms = request.created_at.elapsed().as_secs_f64() * 1000.0;
+
+                // 更新等待时间统计
+                {
+                    if let Ok(mut stats) = safe_lock(&wait_stats_clone, "wait_time_stats") {
+                        stats.total_wait_time_ms += wait_time_ms;
+                        stats.max_wait_time_ms = stats.max_wait_time_ms.max(wait_time_ms);
+                        if stats.min_wait_time_ms == 0.0 || wait_time_ms < stats.min_wait_time_ms {
+                            stats.min_wait_time_ms = wait_time_ms;
+                        }
+                        stats.sample_count += 1;
+                    } else {
+                        tracing::error!("Failed to acquire wait_time_stats lock, skipping statistics update");
+                    }
+                }
 
                 // 在新任务中执行加载
+                let spawn_blocking_sem_clone = Arc::clone(&spawn_blocking_semaphore);
+                let notify_tx_clone = completion_notify_tx.clone();
                 tokio::spawn(async move {
                     let start = std::time::Instant::now();
                     let request_id = request.id;
@@ -354,6 +470,7 @@ impl CoroutineAssetLoader {
                         load_timeout_ms,
                         max_retries,
                         retry_delay_ms,
+                        spawn_blocking_sem_clone,
                     )
                     .await;
 
@@ -368,6 +485,9 @@ impl CoroutineAssetLoader {
                         load_time_ms,
                     });
 
+                    // 发送完成通知
+                    let _ = notify_tx_clone.send(());
+
                     // 许可会在 drop 时自动释放
                     drop(permit);
                 });
@@ -377,9 +497,13 @@ impl CoroutineAssetLoader {
                     queue,
                     semaphore,
                     complete_tx,
+                    completion_notify_tx,
                     load_timeout_ms,
                     max_retries,
                     retry_delay_ms,
+                    wait_time_stats,
+                    spawn_blocking_semaphore,
+                    queue_length,
                 ))
                 .await;
             }
@@ -392,6 +516,7 @@ impl CoroutineAssetLoader {
         timeout_ms: u64,
         max_retries: u32,
         retry_delay_ms: u64,
+        spawn_blocking_semaphore: Arc<Semaphore>,
     ) -> Result<LoadResult, LoadError> {
         let mut last_error = LoadError::IoError("Unknown error".to_string());
 
@@ -401,7 +526,7 @@ impl CoroutineAssetLoader {
             }
 
             // 带超时的加载
-            let load_future = Self::load_asset(request);
+            let load_future = Self::load_asset(request, spawn_blocking_semaphore.clone());
             let timeout = std::time::Duration::from_millis(timeout_ms);
 
             match tokio::time::timeout(timeout, load_future).await {
@@ -423,7 +548,10 @@ impl CoroutineAssetLoader {
     }
 
     /// 加载单个资源
-    async fn load_asset(request: &LoadRequest) -> Result<LoadResult, LoadError> {
+    async fn load_asset(
+        request: &LoadRequest,
+        spawn_blocking_semaphore: Arc<Semaphore>,
+    ) -> Result<LoadResult, LoadError> {
         let path = &request.path;
 
         // 读取文件
@@ -440,14 +568,15 @@ impl CoroutineAssetLoader {
             AssetType::Texture | AssetType::TextureLinear => {
                 let is_linear = request.asset_type == AssetType::TextureLinear;
 
-                // 在阻塞任务中解码图像
+                // 在阻塞任务中解码图像（带并发限制）
+                let permit = spawn_blocking_semaphore.acquire().await.unwrap();
                 let image = tokio::task::spawn_blocking(move || {
-                    image::load_from_memory(&bytes)
+                    let result = image::load_from_memory(&bytes)
                         .map(|img| img.to_rgba8())
-                        .map_err(|e| LoadError::DecodeError(e.to_string()))
-                })
-                .await
-                .map_err(|e| LoadError::IoError(e.to_string()))??;
+                        .map_err(|e| LoadError::DecodeError(e.to_string()));
+                    result
+                    // 许可将在函数结束时自动释放
+                }).await.unwrap()?;
 
                 Ok(LoadResult::Texture { image, is_linear })
             }
@@ -516,7 +645,9 @@ impl CoroutineAssetLoader {
         };
 
         // 保存取消发送器
-        safe_lock(&self.cancel_senders, "CoroutineAssetLoader.cancel_senders").unwrap().insert(id, cancel_tx);
+        safe_lock(&self.cancel_senders, "CoroutineAssetLoader.cancel_senders")
+            .unwrap()
+            .insert(id, cancel_tx);
 
         // 发送请求
         let _ = self.request_tx.send(request);
@@ -539,14 +670,65 @@ impl CoroutineAssetLoader {
             .collect()
     }
 
-    /// 处理完成的加载请求（在主线程调用）
+    /// 异步等待完成的加载请求
+    pub async fn wait_for_completed(&self) -> Vec<LoadComplete> {
+        // 等待完成通知
+        let mut rx = match safe_lock(&self.completion_notify_rx, "completion_notify_rx") {
+            Ok(guard) => guard,
+            Err(e) => {
+                tracing::error!("Failed to acquire completion_notify_rx lock: {}", e);
+                return Vec::new(); // 无法获取锁，返回空结果
+            }
+        };
+        let _ = rx.recv().await;
+
+        // 收集所有可用的完成结果
+        let mut completed = Vec::new();
+        let mut rx = match safe_lock(&self.complete_rx, "CoroutineAssetLoader.complete_rx") {
+            Ok(guard) => guard,
+            Err(e) => {
+                tracing::error!("Failed to acquire complete_rx lock: {}", e);
+                return Vec::new();
+            }
+        };
+
+        while let Ok(complete) = rx.try_recv() {
+            // 清理取消发送器
+            if let Ok(mut cancel_senders) = safe_lock(&self.cancel_senders, "CoroutineAssetLoader.cancel_senders") {
+                cancel_senders.remove(&complete.request_id);
+            } else {
+                tracing::warn!("Failed to acquire cancel_senders lock, skipping cleanup");
+            }
+
+            // 更新统计
+            if complete.result.is_ok() {
+                self.total_completed.fetch_add(1, Ordering::Relaxed);
+            } else {
+                self.total_failed.fetch_add(1, Ordering::Relaxed);
+            }
+
+            completed.push(complete);
+        }
+
+        completed
+    }
+
+    /// 处理完成的加载请求（在主线程调用，兼容旧API）
+    /// 
+    /// # 注意
+    /// 此方法使用轮询方式检查完成结果，可能造成CPU浪费。
+    /// 优先使用 `wait_for_completed()` 异步方法，它使用通知机制，更高效。
+    /// 
+    /// 仅在无法使用异步上下文的同步代码中使用此方法。
     pub fn poll_completed(&self) -> Vec<LoadComplete> {
         let mut completed = Vec::new();
         let mut rx = safe_lock(&self.complete_rx, "CoroutineAssetLoader.complete_rx").unwrap();
 
         while let Ok(complete) = rx.try_recv() {
             // 清理取消发送器
-            safe_lock(&self.cancel_senders, "CoroutineAssetLoader.cancel_senders").unwrap().remove(&complete.request_id);
+            safe_lock(&self.cancel_senders, "CoroutineAssetLoader.cancel_senders")
+                .unwrap()
+                .remove(&complete.request_id);
 
             // 更新统计
             if complete.result.is_ok() {
@@ -563,11 +745,27 @@ impl CoroutineAssetLoader {
 
     /// 获取加载统计
     pub fn stats(&self) -> LoaderStats {
+        let wait_stats = safe_lock(&self.wait_time_stats, "wait_time_stats").unwrap();
+        let sample_count = wait_stats.sample_count;
+
         LoaderStats {
             active_loads: self.active_loads.load(Ordering::Relaxed),
+            queue_length: self.queue_length.load(Ordering::Relaxed),
             total_requests: self.total_requests.load(Ordering::Relaxed),
             total_completed: self.total_completed.load(Ordering::Relaxed),
             total_failed: self.total_failed.load(Ordering::Relaxed),
+            avg_wait_time_ms: if sample_count > 0 {
+                wait_stats.total_wait_time_ms / sample_count as f64
+            } else {
+                0.0
+            },
+            max_wait_time_ms: wait_stats.max_wait_time_ms,
+            min_wait_time_ms: if sample_count > 0 {
+                wait_stats.min_wait_time_ms
+            } else {
+                0.0
+            },
+            wait_time_samples: sample_count,
         }
     }
 }
@@ -594,7 +792,10 @@ pub struct LoadHandle {
 impl LoadHandle {
     /// 取消加载请求
     pub fn cancel(&self) {
-        if let Some(tx) = safe_lock(&self.cancel_senders, "LoadHandle.cancel_senders").unwrap().remove(&self.id) {
+        if let Some(tx) = safe_lock(&self.cancel_senders, "LoadHandle.cancel_senders")
+            .unwrap()
+            .remove(&self.id)
+        {
             let _ = tx.send(());
         }
     }
@@ -605,16 +806,26 @@ impl LoadHandle {
 // ============================================================================
 
 /// 加载器统计
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct LoaderStats {
     /// 活跃加载数
     pub active_loads: usize,
+    /// 队列长度
+    pub queue_length: usize,
     /// 总请求数
     pub total_requests: u64,
     /// 总完成数
     pub total_completed: u64,
     /// 总失败数
     pub total_failed: u64,
+    /// 平均等待时间（毫秒）
+    pub avg_wait_time_ms: f64,
+    /// 最大等待时间（毫秒）
+    pub max_wait_time_ms: f64,
+    /// 最小等待时间（毫秒）
+    pub min_wait_time_ms: f64,
+    /// 等待时间样本数
+    pub wait_time_samples: u64,
 }
 
 // ============================================================================

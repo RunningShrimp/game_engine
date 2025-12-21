@@ -1,6 +1,6 @@
-//! 蒙皮网格组件
-//!
-//! 定义支持骨骼动画的蒙皮网格。
+//  蒙皮网格组件
+// 
+//  定义支持骨骼动画的蒙皮网格。
 
 use bevy_ecs::prelude::*;
 use std::sync::Arc;
@@ -237,6 +237,7 @@ impl SkinnedMeshPipeline {
             }),
             multisample: wgpu::MultisampleState::default(),
             multiview: None,
+            cache: None,
         });
 
         Self {

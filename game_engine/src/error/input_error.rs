@@ -1,8 +1,8 @@
-//! 输入系统错误类型
-//!
-//! 定义了输入系统相关的所有错误类型，包括键盘、鼠标、触摸、游戏手柄等。
+//  输入系统错误类型
+// 
+//  定义了输入系统相关的所有错误类型，包括键盘、鼠标、触摸、游戏手柄等。
 
-use crate::error::{ErrorSeverity, ErrorCategory};
+use crate::error::{ErrorCategory, ErrorSeverity};
 use thiserror::Error;
 
 /// 输入系统错误
@@ -19,7 +19,6 @@ pub enum InputError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -29,7 +28,6 @@ pub enum InputError {
         /// 设备ID
         device_id: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -39,7 +37,6 @@ pub enum InputError {
         /// 设备ID
         device_id: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -51,7 +48,6 @@ pub enum InputError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -63,7 +59,6 @@ pub enum InputError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -75,7 +70,6 @@ pub enum InputError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -87,7 +81,6 @@ pub enum InputError {
         /// 现有绑定
         existing: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -99,7 +92,6 @@ pub enum InputError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -109,7 +101,6 @@ pub enum InputError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -119,7 +110,6 @@ pub enum InputError {
         /// 队列类型
         queue_type: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -129,7 +119,6 @@ pub enum InputError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -139,7 +128,6 @@ pub enum InputError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -151,7 +139,6 @@ pub enum InputError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -161,7 +148,6 @@ pub enum InputError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -171,7 +157,6 @@ pub enum InputError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -183,7 +168,6 @@ pub enum InputError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -195,7 +179,6 @@ pub enum InputError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -205,7 +188,6 @@ pub enum InputError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -217,7 +199,6 @@ pub enum InputError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -229,7 +210,6 @@ pub enum InputError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -239,7 +219,6 @@ pub enum InputError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -251,7 +230,6 @@ pub enum InputError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -261,7 +239,6 @@ pub enum InputError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -271,7 +248,6 @@ pub enum InputError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -283,7 +259,6 @@ pub enum InputError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -293,7 +268,6 @@ pub enum InputError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -303,7 +277,6 @@ pub enum InputError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -313,7 +286,6 @@ pub enum InputError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -323,7 +295,6 @@ pub enum InputError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -333,7 +304,6 @@ pub enum InputError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 
@@ -343,7 +313,6 @@ pub enum InputError {
         /// 错误消息
         message: String,
         /// 错误严重级别
-
         severity: ErrorSeverity,
     },
 }
@@ -378,10 +347,7 @@ impl InputError {
     }
 
     /// 创建设备访问错误
-    pub fn device_access(
-        device_id: impl Into<String>,
-        message: impl Into<String>,
-    ) -> Self {
+    pub fn device_access(device_id: impl Into<String>, message: impl Into<String>) -> Self {
         Self::DeviceAccess {
             device_id: device_id.into(),
             message: message.into(),
@@ -390,10 +356,7 @@ impl InputError {
     }
 
     /// 创建设备配置错误
-    pub fn device_configuration(
-        device_id: impl Into<String>,
-        message: impl Into<String>,
-    ) -> Self {
+    pub fn device_configuration(device_id: impl Into<String>, message: impl Into<String>) -> Self {
         Self::DeviceConfiguration {
             device_id: device_id.into(),
             message: message.into(),
@@ -402,10 +365,7 @@ impl InputError {
     }
 
     /// 创建映射错误
-    pub fn mapping(
-        mapping: impl Into<String>,
-        message: impl Into<String>,
-    ) -> Self {
+    pub fn mapping(mapping: impl Into<String>, message: impl Into<String>) -> Self {
         Self::Mapping {
             mapping: mapping.into(),
             message: message.into(),
@@ -414,10 +374,7 @@ impl InputError {
     }
 
     /// 创建绑定冲突错误
-    pub fn binding_conflict(
-        action: impl Into<String>,
-        existing: impl Into<String>,
-    ) -> Self {
+    pub fn binding_conflict(action: impl Into<String>, existing: impl Into<String>) -> Self {
         Self::BindingConflict {
             action: action.into(),
             existing: existing.into(),
@@ -426,10 +383,7 @@ impl InputError {
     }
 
     /// 创建无效绑定错误
-    pub fn invalid_binding(
-        binding: impl Into<String>,
-        message: impl Into<String>,
-    ) -> Self {
+    pub fn invalid_binding(binding: impl Into<String>, message: impl Into<String>) -> Self {
         Self::InvalidBinding {
             binding: binding.into(),
             message: message.into(),
@@ -470,10 +424,7 @@ impl InputError {
     }
 
     /// 创建驱动错误
-    pub fn driver(
-        driver: impl Into<String>,
-        message: impl Into<String>,
-    ) -> Self {
+    pub fn driver(driver: impl Into<String>, message: impl Into<String>) -> Self {
         Self::Driver {
             driver: driver.into(),
             message: message.into(),
@@ -498,10 +449,7 @@ impl InputError {
     }
 
     /// 创建配置加载错误
-    pub fn configuration_loading(
-        config: impl Into<String>,
-        message: impl Into<String>,
-    ) -> Self {
+    pub fn configuration_loading(config: impl Into<String>, message: impl Into<String>) -> Self {
         Self::ConfigurationLoading {
             config: config.into(),
             message: message.into(),
@@ -510,10 +458,7 @@ impl InputError {
     }
 
     /// 创建配置保存错误
-    pub fn configuration_saving(
-        config: impl Into<String>,
-        message: impl Into<String>,
-    ) -> Self {
+    pub fn configuration_saving(config: impl Into<String>, message: impl Into<String>) -> Self {
         Self::ConfigurationSaving {
             config: config.into(),
             message: message.into(),
@@ -530,10 +475,7 @@ impl InputError {
     }
 
     /// 创建手柄振动错误
-    pub fn gamepad_vibration(
-        gamepad_id: impl Into<String>,
-        message: impl Into<String>,
-    ) -> Self {
+    pub fn gamepad_vibration(gamepad_id: impl Into<String>, message: impl Into<String>) -> Self {
         Self::GamepadVibration {
             gamepad_id: gamepad_id.into(),
             message: message.into(),
@@ -550,10 +492,7 @@ impl InputError {
     }
 
     /// 创建手势识别错误
-    pub fn gesture_recognition(
-        gesture: impl Into<String>,
-        message: impl Into<String>,
-    ) -> Self {
+    pub fn gesture_recognition(gesture: impl Into<String>, message: impl Into<String>) -> Self {
         Self::GestureRecognition {
             gesture: gesture.into(),
             message: message.into(),
@@ -578,10 +517,7 @@ impl InputError {
     }
 
     /// 创建过滤器错误
-    pub fn filter(
-        filter: impl Into<String>,
-        message: impl Into<String>,
-    ) -> Self {
+    pub fn filter(filter: impl Into<String>, message: impl Into<String>) -> Self {
         Self::Filter {
             filter: filter.into(),
             message: message.into(),
@@ -630,10 +566,7 @@ impl InputError {
     }
 
     /// 创建带有严重级别的通用输入错误
-    pub fn general_with_severity(
-        message: impl Into<String>,
-        severity: ErrorSeverity,
-    ) -> Self {
+    pub fn general_with_severity(message: impl Into<String>, severity: ErrorSeverity) -> Self {
         Self::General {
             message: message.into(),
             severity,
@@ -682,7 +615,9 @@ impl InputError {
         match self {
             // 严重错误通常不可恢复
             InputError::Driver { severity, .. }
-            | InputError::SystemInitialization { severity, .. } => *severity < ErrorSeverity::Critical,
+            | InputError::SystemInitialization { severity, .. } => {
+                *severity < ErrorSeverity::Critical
+            }
 
             // 设备断开连接通常可恢复（可以重新连接）
             InputError::DeviceDisconnected { .. } => true,
@@ -759,10 +694,7 @@ impl InputError {
 
     /// 检查是否为文本输入相关错误
     pub fn is_text_input_related(&self) -> bool {
-        matches!(
-            self,
-            InputError::TextInput { .. } | InputError::Ime { .. }
-        )
+        matches!(self, InputError::TextInput { .. } | InputError::Ime { .. })
     }
 }
 
@@ -813,7 +745,9 @@ mod tests {
     #[test]
     fn test_binding_conflict_error() {
         let err = InputError::binding_conflict("jump", "space");
-        assert!(matches!(err, InputError::BindingConflict { ref action, ref existing, .. } if action.as_str() == "jump" && existing.as_str() == "space"));
+        assert!(
+            matches!(err, InputError::BindingConflict { ref action, ref existing, .. } if action.as_str() == "jump" && existing.as_str() == "space")
+        );
         assert_eq!(err.severity(), ErrorSeverity::Error);
         assert!(err.is_mapping_related());
         assert!(err.is_recoverable());

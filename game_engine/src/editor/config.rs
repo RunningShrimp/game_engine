@@ -1,11 +1,11 @@
-//! 编辑器配置管理
-//!
-//! 提供编辑器设置的持久化存储和加载
+//  编辑器配置管理
+// 
+//  提供编辑器设置的持久化存储和加载
 
+use crate::impl_default;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
-use crate::impl_default;
 
 /// 编辑器配置
 #[derive(Debug, Clone, Serialize, Deserialize)]

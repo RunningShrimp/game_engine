@@ -38,6 +38,7 @@ pub enum TransformAxis {
 }
 
 /// 变换工具
+#[derive(Debug)]
 pub struct TransformGizmo {
     /// 当前模式
     pub mode: GizmoMode,
@@ -52,6 +53,28 @@ pub struct TransformGizmo {
 impl TransformGizmo {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// 开始拖拽操作，形成逻辑闭环
+    pub fn start_drag(&mut self, start_pos: egui::Pos2, start_value: Vec3) {
+        self.drag_start = Some(start_pos);
+        self.drag_start_value = Some(start_value);
+    }
+
+    /// 结束拖拽操作
+    pub fn end_drag(&mut self) {
+        self.drag_start = None;
+        self.drag_start_value = None;
+    }
+
+    /// 获取拖拽偏移量
+    pub fn get_drag_offset(&self, current_pos: egui::Pos2) -> Option<egui::Vec2> {
+        self.drag_start.map(|start| current_pos - start)
+    }
+
+    /// 检查是否正在拖拽
+    pub fn is_dragging(&self) -> bool {
+        self.drag_start.is_some()
     }
 
     /// 渲染变换工具UI

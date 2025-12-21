@@ -1,5 +1,5 @@
-use std::collections::VecDeque;
 use crate::impl_default;
+use std::collections::VecDeque;
 
 /// 日志级别
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -84,6 +84,23 @@ impl EditorConsole {
     /// 清空日志
     pub fn clear_logs(&mut self) {
         self.logs.clear();
+    }
+
+    /// 获取当前输入，形成逻辑闭环
+    pub fn current_input(&self) -> &str {
+        &self.current_input
+    }
+
+    /// 设置当前输入
+    pub fn set_current_input(&mut self, input: String) {
+        self.current_input = input;
+    }
+
+    /// 提交当前输入作为命令
+    pub fn submit_current_input(&mut self) -> Result<String, String> {
+        let command = self.current_input.clone();
+        self.current_input.clear();
+        self.execute_command(&command)
     }
 
     /// 执行命令

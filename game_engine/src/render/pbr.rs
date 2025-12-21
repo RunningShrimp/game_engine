@@ -1,8 +1,9 @@
+use bevy_ecs::prelude::Component;
 use crate::impl_default;
 use glam::{Vec3, Vec4};
 
 /// PBR材质参数
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Component)]
 pub struct PbrMaterial {
     /// 基础颜色 (RGB + Alpha)
     pub base_color: Vec4,
@@ -49,7 +50,7 @@ impl_default!(PbrMaterial {
 });
 
 /// PBR纹理集
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, Component)]
 pub struct PbrTextures {
     /// 基础颜色贴图
     pub base_color_texture: Option<u32>,
@@ -64,14 +65,14 @@ pub struct PbrTextures {
 }
 
 /// 完整的PBR材质,包含参数和纹理
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, Component)]
 pub struct PbrMaterialFull {
     pub material: PbrMaterial,
     pub textures: PbrTextures,
 }
 
 /// 点光源
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Component)]
 pub struct PointLight3D {
     pub position: Vec3,
     pub color: Vec3,
@@ -87,7 +88,7 @@ impl_default!(PointLight3D {
 });
 
 /// 方向光
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Component)]
 pub struct DirectionalLight {
     pub direction: Vec3,
     pub color: Vec3,
@@ -101,7 +102,7 @@ impl_default!(DirectionalLight {
 });
 
 /// 聚光灯
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Component)]
 pub struct SpotLight {
     pub position: Vec3,
     pub direction: Vec3,

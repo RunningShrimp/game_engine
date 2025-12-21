@@ -1,6 +1,6 @@
-//! 渲染插件
-//!
-//! 提供基于wgpu的渲染功能，支持2D/3D渲染、PBR材质、阴影等。
+//  渲染插件
+// 
+//  提供基于wgpu的渲染功能，支持2D/3D渲染、PBR材质、阴影等。
 
 use crate::impl_default;
 use crate::plugins::{EnginePlugin, App, PluginVersion, PluginDependency};

@@ -1,26 +1,26 @@
-//! LOD (Level of Detail) 系统
-//!
-//! 提供完整的多级细节管理，包括：
-//! - 距离自动选择
-//! - 平滑过渡 (Crossfade/Dithering)
-//! - 屏幕覆盖率选择
-//! - 性能预算控制
-//!
-//! # 示例
-//!
-//! ```ignore
-//! // 创建 LOD 配置
-//! let config = LodConfig::builder()
-//!     .add_level(0.0, 20.0, LodQuality::High)
-//!     .add_level(20.0, 50.0, LodQuality::Medium)
-//!     .add_level(50.0, 100.0, LodQuality::Low)
-//!     .with_transition(LodTransition::Crossfade { duration: 0.3 })
-//!     .build();
-//!
-//! // 使用 LOD 选择器
-//! let selector = LodSelector::new(config);
-//! let lod_level = selector.select(distance, screen_size);
-//! ```
+//  LOD (Level of Detail) 系统
+// 
+//  提供完整的多级细节管理，包括：
+//  - 距离自动选择
+//  - 平滑过渡 (Crossfade/Dithering)
+//  - 屏幕覆盖率选择
+//  - 性能预算控制
+// 
+//  # 示例
+// 
+//  ```ignore
+//  // 创建 LOD 配置
+//  let config = LodConfig::builder()
+//      .add_level(0.0, 20.0, LodQuality::High)
+//      .add_level(20.0, 50.0, LodQuality::Medium)
+//      .add_level(50.0, 100.0, LodQuality::Low)
+//      .with_transition(LodTransition::Crossfade { duration: 0.3 })
+//      .build();
+// 
+//  // 使用 LOD 选择器
+//  let selector = LodSelector::new(config);
+//  let lod_level = selector.select(distance, screen_size);
+//  ```
 
 use crate::impl_default;
 use glam::Mat4;
@@ -354,7 +354,13 @@ impl AdaptiveLodConfig {
         let recent_count = 10.min(self.frame_time_history.len());
         let mut weighted_sum = 0.0;
         let mut weight_sum = 0.0;
-        for (i, &frame_time) in self.frame_time_history.iter().rev().take(recent_count).enumerate() {
+        for (i, &frame_time) in self
+            .frame_time_history
+            .iter()
+            .rev()
+            .take(recent_count)
+            .enumerate()
+        {
             let weight = (i + 1) as f32; // 越近的帧权重越大
             weighted_sum += frame_time * weight;
             weight_sum += weight;

@@ -1,6 +1,6 @@
-//! OpenXR 实现
-//!
-//! 完整的OpenXR集成，包括实例创建、会话管理、交换链等
+//  OpenXR 实现
+// 
+//  完整的OpenXR集成，包括实例创建、会话管理、交换链等
 
 use super::*;
 use openxr as xr;
@@ -8,17 +8,24 @@ use std::sync::Arc;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
+/// OpenXR 相关的错误类型
 pub enum OpenXrError {
+    /// OpenXR 初始化失败
     #[error("OpenXR initialization failed: {0}")]
     InitializationFailed(String),
+    /// 没有找到 XR 运行时
     #[error("No XR runtime found")]
     NoRuntime,
+    /// 系统未找到
     #[error("System not found: {0}")]
     SystemNotFound(String),
+    /// 会话创建失败
     #[error("Session creation failed: {0}")]
     SessionCreationFailed(String),
+    /// 交换链创建失败
     #[error("Swapchain creation failed: {0}")]
     SwapchainCreationFailed(String),
+    /// 参考空间创建失败
     #[error("Reference space creation failed: {0}")]
     ReferenceSpaceFailed(String),
 }
@@ -54,8 +61,9 @@ impl OpenXrBackend {
     /// 创建新的OpenXR后端
     pub fn new(config: XrConfig) -> Result<Self, OpenXrError> {
         // 1. 创建OpenXR实例
-        let entry = unsafe { xr::Entry::load() }
-            .map_err(|e| OpenXrError::InitializationFailed(format!("Failed to load OpenXR: {}", e)))?;
+        let entry = unsafe { xr::Entry::load() }.map_err(|e| {
+            OpenXrError::InitializationFailed(format!("Failed to load OpenXR: {}", e))
+        })?;
 
         // 创建OpenXR 0.18版本的ApplicationInfo
         // 注意：在新版本中，直接使用&str而不是CString
@@ -76,17 +84,21 @@ impl OpenXrBackend {
                 &extension_set,
                 &[], // 配置层数组
             )
-            .map_err(|e| OpenXrError::InitializationFailed(format!("Failed to create instance: {:?}", e)))?;
+            .map_err(|e| {
+                OpenXrError::InitializationFailed(format!("Failed to create instance: {:?}", e))
+            })?;
 
         // 2. 获取系统（HMD）
         let system = instance
             .system(xr::FormFactor::HEAD_MOUNTED_DISPLAY)
-            .map_err(|e| OpenXrError::InitializationFailed(format!("System query failed: {:?}", e)))?;
+            .map_err(|e| {
+                OpenXrError::InitializationFailed(format!("System query failed: {:?}", e))
+            })?;
 
         // 3. 检查系统属性
-        let system_properties = instance
-            .system_properties(system)
-            .map_err(|e| OpenXrError::InitializationFailed(format!("Failed to get system properties: {:?}", e)))?;
+        let system_properties = instance.system_properties(system).map_err(|e| {
+            OpenXrError::InitializationFailed(format!("Failed to get system properties: {:?}", e))
+        })?;
 
         tracing::info!("OpenXR System: {}", system_properties.system_name);
         tracing::info!("Vendor ID: {}", system_properties.vendor_id);
@@ -97,7 +109,9 @@ impl OpenXrBackend {
             .map_err(|e| OpenXrError::SystemNotFound(format!("无法获取视图配置: {}", e)))?;
 
         if view_configs.is_empty() {
-            return Err(OpenXrError::SystemNotFound("No view configurations available".to_string()));
+            return Err(OpenXrError::SystemNotFound(
+                "No view configurations available".to_string(),
+            ));
         }
 
         // 使用第一个支持的视图配置（通常是立体）
@@ -135,9 +149,40 @@ impl OpenXrBackend {
         Ok(())
     }
 
+    /// 获取实例信息（用于调试）
+    pub fn instance_info(&self) -> Result<xr::InstanceProperties, OpenXrError> {
+        self.instance
+            .properties()
+            .map_err(|e| OpenXrError::InitializationFailed(format!("Failed to get instance properties: {:?}", e)))
+    }
+
+    /// 获取系统信息（用于调试）
+    pub fn system_info(&self) -> Result<xr::SystemProperties, OpenXrError> {
+        self.instance
+            .system_properties(self.system)
+            .map_err(|e| OpenXrError::InitializationFailed(format!("Failed to get system properties: {:?}", e)))
+    }
+
+    /// 检查视图空间是否可用
+    pub fn has_view_space(&self) -> bool {
+        self.view_space.is_some()
+    }
+
+    /// 获取交换链数量
+    pub fn swapchain_count(&self) -> usize {
+        self.swapchains.len()
+    }
+
+    /// 获取交换链分辨率
+    pub fn swapchain_resolution(&self, index: usize) -> Option<(u32, u32)> {
+        self.swapchains.get(index).map(|s| s.resolution)
+    }
+
     /// 创建参考空间
     pub fn create_reference_space(&mut self) -> Result<(), OpenXrError> {
-        let session = self.session.as_ref()
+        let session = self
+            .session
+            .as_ref()
             .ok_or(OpenXrError::SessionCreationFailed(
                 "Session not created".to_string(),
             ))?;
@@ -155,11 +200,13 @@ impl OpenXrBackend {
 
         // 创建参考空间
         let reference_space = session
-            .create_reference_space(
-                reference_space_type,
-                xr::Posef::IDENTITY,
-            )
-            .map_err(|e| OpenXrError::ReferenceSpaceFailed(format!("Failed to create reference space: {:?}", e)))?;
+            .create_reference_space(reference_space_type, xr::Posef::IDENTITY)
+            .map_err(|e| {
+                OpenXrError::ReferenceSpaceFailed(format!(
+                    "Failed to create reference space: {:?}",
+                    e
+                ))
+            })?;
 
         self.reference_space = Some(reference_space);
 
@@ -180,8 +227,12 @@ impl OpenXrBackend {
         }
 
         // 使用宽度和高度创建交换链记录
-        tracing::debug!("Creating XR swapchains with resolution {}x{}", width, height);
-        
+        tracing::debug!(
+            "Creating XR swapchains with resolution {}x{}",
+            width,
+            height
+        );
+
         // 创建交换链占位符
         self.swapchains.push(OpenXrSwapchain {
             swapchain: None,
@@ -189,6 +240,12 @@ impl OpenXrBackend {
             current_image_index: 0,
             resolution: (width, height),
         });
+
+        // 记录创建的交换链数量
+        tracing::debug!(
+            "Created swapchain, total count: {}",
+            self.swapchain_count()
+        );
 
         Ok(())
     }
@@ -201,7 +258,7 @@ impl OpenXrBackend {
 
         // 使用时间戳更新视图状态
         tracing::debug!("Updating XR views at time: {}ns", time.as_nanos());
-        
+
         // 定位视图（需要实际的会话和空间）
         // 暂时使用默认视图
         self.views = vec![
@@ -285,7 +342,7 @@ impl XrSession for OpenXrBackend {
 
         // 记录合成层信息
         tracing::debug!("Ending XR frame with {} composition layers", layers.len());
-        
+
         // 提交合成层（需要实际的会话）
         // 暂时仅验证层数据
 
@@ -302,15 +359,28 @@ impl XrSession for OpenXrBackend {
     }
 }
 
-/// OpenXR 交换链实现
+/// OpenXR 交换链实现，负责管理XR会话中的图像资源
 pub struct OpenXrSwapchain {
+    /// OpenXR 交换链对象
     swapchain: Option<xr::Swapchain<xr::Vulkan>>,
+    /// 交换链中的纹理视图列表
     images: Vec<Arc<wgpu::TextureView>>,
+    /// 当前活动的图像索引
     current_image_index: u32,
+    /// 交换链分辨率 (宽度, 高度)
     resolution: (u32, u32),
 }
 
 impl OpenXrSwapchain {
+    /// 创建一个新的OpenXR交换链
+    /// 
+    /// # 参数
+    /// * `_session` - OpenXR会话引用
+    /// * `width` - 交换链宽度（像素）
+    /// * `height` - 交换链高度（像素）
+    /// 
+    /// # 返回
+    /// 返回初始化成功的交换链实例，或OpenXrError错误
     pub fn new(
         _session: &xr::Session<xr::Vulkan>,
         width: u32,
@@ -326,32 +396,64 @@ impl OpenXrSwapchain {
             resolution: (width, height),
         })
     }
+
+    /// 检查交换链是否已初始化
+    pub fn is_initialized(&self) -> bool {
+        self.swapchain.is_some()
+    }
 }
 
 impl XrSwapchain for OpenXrSwapchain {
     fn acquire_image(&mut self) -> Result<u32, XrError> {
         // 获取交换链图像索引
+        // 验证索引在有效范围内
+        if self.images.is_empty() {
+            return Err(XrError::RuntimeFailure(
+                "No swapchain images available".to_string(),
+            ));
+        }
+        
+        self.current_image_index = (self.current_image_index + 1) % self.images.len() as u32;
         Ok(self.current_image_index)
     }
 
     fn wait_image(&mut self, _timeout_ns: i64) -> Result<(), XrError> {
         // 等待图像可用
-        Ok(())
+        // 对于占位实现，直接返回成功
+        if self.images.is_empty() {
+            Err(XrError::RuntimeFailure(
+                "Swapchain not initialized".to_string(),
+            ))
+        } else {
+            Ok(())
+        }
     }
 
     fn release_image(&mut self) -> Result<(), XrError> {
         // 释放图像
-        Ok(())
+        // 对于占位实现，验证交换链有效性
+        if self.images.is_empty() {
+            Err(XrError::RuntimeFailure(
+                "Swapchain not initialized".to_string(),
+            ))
+        } else {
+            Ok(())
+        }
     }
 
     fn get_texture_view(&self, index: u32) -> Arc<wgpu::TextureView> {
         // 获取纹理视图
-        // 暂时返回占位视图
+        // 返回已有的图像或克隆现有图像作为占位符
         if let Some(view) = self.images.get(index as usize) {
             view.clone()
+        } else if !self.images.is_empty() {
+            // 如果索引超出范围但有图像，返回第一个图像
+            // 这确保不会使用未初始化的内存
+            self.images[0].clone()
         } else {
-            // 返回默认视图（实际应该创建）
-            Arc::new(unsafe { std::mem::zeroed() }) // 占位
+            // 这种情况表示swapchain未正确初始化
+            // 调用者应该先检查is_initialized()
+            panic!("Swapchain not initialized: call acquire_image first");
         }
     }
 

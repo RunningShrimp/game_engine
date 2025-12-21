@@ -1,25 +1,25 @@
-//! 批次构建器模块
-//!
-//! 提供便捷的批次构建 API，简化实例化渲染的使用流程。
-//!
-//! ## 设计目标
-//!
-//! - 流式 API 构建批次
-//! - 支持静态/动态批次
-//! - 自动 LOD 选择
-//! - 与 GPU Driven 剔除集成
-//!
-//! ## 使用示例
-//!
-//! ```ignore
-//! let batch = BatchBuilder::new()
-//!     .mesh(mesh_handle)
-//!     .material(material_handle)
-//!     .add_instance(transform1)
-//!     .add_instance(transform2)
-//!     .static_batch(true)
-//!     .build(&mut batch_manager);
-//! ```
+//  批次构建器模块
+// 
+//  提供便捷的批次构建 API，简化实例化渲染的使用流程。
+// 
+//  ## 设计目标
+// 
+//  - 流式 API 构建批次
+//  - 支持静态/动态批次
+//  - 自动 LOD 选择
+//  - 与 GPU Driven 剔除集成
+// 
+//  ## 使用示例
+// 
+//  ```ignore
+//  let batch = BatchBuilder::new()
+//      .mesh(mesh_handle)
+//      .material(material_handle)
+//      .add_instance(transform1)
+//      .add_instance(transform2)
+//      .static_batch(true)
+//      .build(&mut batch_manager);
+//  ```
 
 use crate::impl_default;
 use glam::{Mat4, Quat, Vec3};

@@ -1,6 +1,6 @@
-//! 完整游戏示例
-//!
-//! 展示如何组合使用引擎的各种功能创建一个简单的游戏
+//  完整游戏示例
+// 
+//  展示如何组合使用引擎的各种功能创建一个简单的游戏
 
 use bevy_ecs::prelude::*;
 use game_engine::animation::{AnimationClip, AnimationPlayer, InterpolationMode, KeyframeTrack};

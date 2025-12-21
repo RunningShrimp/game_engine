@@ -1,11 +1,10 @@
-/// 真实超分辨率SDK集成框架
-/// 
-/// 提供对主流超分辨率技术的统一接口
-
+//  真实超分辨率SDK集成框架
+///
+//  提供对主流超分辨率技术的统一接口
 use crate::error::{HardwareError, HardwareResult};
 use crate::gpu::detect::{GpuInfo, GpuVendor};
 
-/// 超分辨率技术
+//  超分辨率技术
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UpscalingTechnology {
     /// NVIDIA DLSS
@@ -22,7 +21,7 @@ pub enum UpscalingTechnology {
     None,
 }
 
-/// 超分辨率质量模式
+//  超分辨率质量模式
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UpscalingQuality {
     /// 性能模式（最低质量，最高性能）
@@ -39,58 +38,62 @@ impl UpscalingQuality {
     /// 获取渲染分辨率缩放比例
     pub fn render_scale(&self) -> f32 {
         match self {
-            UpscalingQuality::Performance => 0.5,      // 50%
-            UpscalingQuality::Balanced => 0.67,        // 67%
-            UpscalingQuality::Quality => 0.75,         // 75%
-            UpscalingQuality::UltraQuality => 0.85,    // 85%
+            UpscalingQuality::Performance => 0.5,   // 50%
+            UpscalingQuality::Balanced => 0.67,     // 67%
+            UpscalingQuality::Quality => 0.75,      // 75%
+            UpscalingQuality::UltraQuality => 0.85, // 85%
         }
     }
-    
+
     /// 获取性能提升估算
     pub fn performance_gain(&self) -> f32 {
         match self {
-            UpscalingQuality::Performance => 3.0,      // 3倍
-            UpscalingQuality::Balanced => 2.2,         // 2.2倍
-            UpscalingQuality::Quality => 1.7,          // 1.7倍
-            UpscalingQuality::UltraQuality => 1.4,     // 1.4倍
+            UpscalingQuality::Performance => 3.0,  // 3倍
+            UpscalingQuality::Balanced => 2.2,     // 2.2倍
+            UpscalingQuality::Quality => 1.7,      // 1.7倍
+            UpscalingQuality::UltraQuality => 1.4, // 1.4倍
         }
     }
 }
 
-/// 超分辨率引擎接口
+//  超分辨率引擎接口
 pub trait UpscalingEngine: Send + Sync {
     /// 初始化引擎
     fn initialize(&mut self, display_width: u32, display_height: u32) -> HardwareResult<()>;
-    
+
     /// 执行超分辨率
-    fn upscale(&self, input_texture: TextureHandle, output_texture: TextureHandle) -> HardwareResult<()>;
-    
+    fn upscale(
+        &self,
+        input_texture: TextureHandle,
+        output_texture: TextureHandle,
+    ) -> HardwareResult<()>;
+
     /// 设置质量模式
     fn set_quality(&mut self, quality: UpscalingQuality) -> HardwareResult<()>;
-    
+
     /// 获取渲染分辨率
     fn render_resolution(&self) -> (u32, u32);
-    
+
     /// 获取显示分辨率
     fn display_resolution(&self) -> (u32, u32);
-    
+
     /// 获取技术类型
     fn technology(&self) -> UpscalingTechnology;
-    
+
     /// 是否支持运动矢量
     fn supports_motion_vectors(&self) -> bool;
-    
+
     /// 是否支持深度缓冲
     fn supports_depth_buffer(&self) -> bool;
 }
 
-/// 纹理句柄（简化实现）
+//  纹理句柄（简化实现）
 #[derive(Debug, Clone, Copy)]
 pub struct TextureHandle {
     pub id: u64,
 }
 
-/// 超分辨率SDK管理器
+//  超分辨率SDK管理器
 pub struct UpscalingSdkManager {
     available_technologies: Vec<UpscalingTechnology>,
     preferred_technology: Option<UpscalingTechnology>,
@@ -105,11 +108,11 @@ impl UpscalingSdkManager {
             preferred_technology: None,
             gpu_info,
         };
-        
+
         manager.detect_available_technologies();
         manager
     }
-    
+
     /// 检测可用的超分辨率技术
     fn detect_available_technologies(&mut self) {
         // 根据GPU厂商和特性检测
@@ -138,7 +141,8 @@ impl UpscalingSdkManager {
                 // Apple平台使用MetalFX
                 #[cfg(any(target_os = "macos", target_os = "ios"))]
                 {
-                    self.available_technologies.push(UpscalingTechnology::MetalFX);
+                    self.available_technologies
+                        .push(UpscalingTechnology::MetalFX);
                 }
             }
             _ => {
@@ -146,26 +150,26 @@ impl UpscalingSdkManager {
                 self.available_technologies.push(UpscalingTechnology::FSR);
             }
         }
-        
+
         // TAA作为通用回退
         self.available_technologies.push(UpscalingTechnology::TAA);
-        
+
         // 设置首选技术
         self.preferred_technology = self.available_technologies.first().copied();
     }
-    
+
     /// 获取可用技术
     pub fn available_technologies(&self) -> &[UpscalingTechnology] {
         &self.available_technologies
     }
-    
+
     /// 设置首选技术
     pub fn set_preferred_technology(&mut self, tech: UpscalingTechnology) {
         if self.available_technologies.contains(&tech) {
             self.preferred_technology = Some(tech);
         }
     }
-    
+
     /// 创建超分辨率引擎
     pub fn create_engine(
         &self,
@@ -174,22 +178,17 @@ impl UpscalingSdkManager {
         display_height: u32,
         quality: UpscalingQuality,
     ) -> HardwareResult<Box<dyn UpscalingEngine>> {
-        let tech = technology.or(self.preferred_technology)
-            .ok_or_else(|| HardwareError::UpscalingError {
+        let tech = technology.or(self.preferred_technology).ok_or_else(|| {
+            HardwareError::UpscalingError {
                 technology: "Unknown".to_string(),
                 reason: "没有可用的超分辨率技术".to_string(),
-            })?;
-        
+            }
+        })?;
+
         let mut engine: Box<dyn UpscalingEngine> = match tech {
-            UpscalingTechnology::DLSS => {
-                Box::new(DLSSEngine::new()?)
-            }
-            UpscalingTechnology::FSR => {
-                Box::new(FSREngine::new()?)
-            }
-            UpscalingTechnology::XeSS => {
-                Box::new(XeSSEngine::new()?)
-            }
+            UpscalingTechnology::DLSS => Box::new(DLSSEngine::new()?),
+            UpscalingTechnology::FSR => Box::new(FSREngine::new()?),
+            UpscalingTechnology::XeSS => Box::new(XeSSEngine::new()?),
             UpscalingTechnology::MetalFX => {
                 #[cfg(any(target_os = "macos", target_os = "ios"))]
                 {
@@ -203,9 +202,7 @@ impl UpscalingSdkManager {
                     });
                 }
             }
-            UpscalingTechnology::TAA => {
-                Box::new(TAAEngine::new())
-            }
+            UpscalingTechnology::TAA => Box::new(TAAEngine::new()),
             UpscalingTechnology::None => {
                 return Err(HardwareError::UpscalingError {
                     technology: "None".to_string(),
@@ -213,22 +210,23 @@ impl UpscalingSdkManager {
                 });
             }
         };
-        
+
         engine.initialize(display_width, display_height)?;
         engine.set_quality(quality)?;
-        
+
         Ok(engine)
     }
-    
+
     /// 获取推荐技术
     pub fn recommend_technology(&self) -> UpscalingTechnology {
-        self.preferred_technology.unwrap_or(UpscalingTechnology::TAA)
+        self.preferred_technology
+            .unwrap_or(UpscalingTechnology::TAA)
     }
-    
+
     /// 获取推荐质量模式
     pub fn recommend_quality(&self) -> UpscalingQuality {
         use crate::gpu::detect::GpuTier;
-        
+
         match self.gpu_info.tier {
             GpuTier::Flagship | GpuTier::High => UpscalingQuality::Quality,
             GpuTier::MediumHigh | GpuTier::Medium => UpscalingQuality::Balanced,
@@ -241,7 +239,7 @@ impl UpscalingSdkManager {
 // 各个技术的实现（简化版本，实际需要调用真实SDK）
 // ============================================================================
 
-/// DLSS引擎
+//  DLSS引擎
 struct DLSSEngine {
     display_width: u32,
     display_height: u32,
@@ -267,18 +265,22 @@ impl UpscalingEngine for DLSSEngine {
         // 实际实现：初始化DLSS上下文
         Ok(())
     }
-    
-    fn upscale(&self, _input_texture: TextureHandle, _output_texture: TextureHandle) -> HardwareResult<()> {
+
+    fn upscale(
+        &self,
+        _input_texture: TextureHandle,
+        _output_texture: TextureHandle,
+    ) -> HardwareResult<()> {
         // 实际实现：调用DLSS执行超分辨率
         // 需要传递运动矢量、深度缓冲等
         Ok(())
     }
-    
+
     fn set_quality(&mut self, quality: UpscalingQuality) -> HardwareResult<()> {
         self.quality = quality;
         Ok(())
     }
-    
+
     fn render_resolution(&self) -> (u32, u32) {
         let scale = self.quality.render_scale();
         (
@@ -286,25 +288,25 @@ impl UpscalingEngine for DLSSEngine {
             (self.display_height as f32 * scale) as u32,
         )
     }
-    
+
     fn display_resolution(&self) -> (u32, u32) {
         (self.display_width, self.display_height)
     }
-    
+
     fn technology(&self) -> UpscalingTechnology {
         UpscalingTechnology::DLSS
     }
-    
+
     fn supports_motion_vectors(&self) -> bool {
         true
     }
-    
+
     fn supports_depth_buffer(&self) -> bool {
         true
     }
 }
 
-/// FSR引擎
+//  FSR引擎
 struct FSREngine {
     display_width: u32,
     display_height: u32,
@@ -328,17 +330,21 @@ impl UpscalingEngine for FSREngine {
         self.display_height = display_height;
         Ok(())
     }
-    
-    fn upscale(&self, _input_texture: TextureHandle, _output_texture: TextureHandle) -> HardwareResult<()> {
+
+    fn upscale(
+        &self,
+        _input_texture: TextureHandle,
+        _output_texture: TextureHandle,
+    ) -> HardwareResult<()> {
         // 实际实现：调用FSR着色器
         Ok(())
     }
-    
+
     fn set_quality(&mut self, quality: UpscalingQuality) -> HardwareResult<()> {
         self.quality = quality;
         Ok(())
     }
-    
+
     fn render_resolution(&self) -> (u32, u32) {
         let scale = self.quality.render_scale();
         (
@@ -346,25 +352,25 @@ impl UpscalingEngine for FSREngine {
             (self.display_height as f32 * scale) as u32,
         )
     }
-    
+
     fn display_resolution(&self) -> (u32, u32) {
         (self.display_width, self.display_height)
     }
-    
+
     fn technology(&self) -> UpscalingTechnology {
         UpscalingTechnology::FSR
     }
-    
+
     fn supports_motion_vectors(&self) -> bool {
         false // FSR 1.0不需要运动矢量，FSR 2.0需要
     }
-    
+
     fn supports_depth_buffer(&self) -> bool {
         false
     }
 }
 
-/// XeSS引擎
+//  XeSS引擎
 struct XeSSEngine {
     display_width: u32,
     display_height: u32,
@@ -388,17 +394,21 @@ impl UpscalingEngine for XeSSEngine {
         self.display_height = display_height;
         Ok(())
     }
-    
-    fn upscale(&self, _input_texture: TextureHandle, _output_texture: TextureHandle) -> HardwareResult<()> {
+
+    fn upscale(
+        &self,
+        _input_texture: TextureHandle,
+        _output_texture: TextureHandle,
+    ) -> HardwareResult<()> {
         // 实际实现：调用XeSS执行超分辨率
         Ok(())
     }
-    
+
     fn set_quality(&mut self, quality: UpscalingQuality) -> HardwareResult<()> {
         self.quality = quality;
         Ok(())
     }
-    
+
     fn render_resolution(&self) -> (u32, u32) {
         let scale = self.quality.render_scale();
         (
@@ -406,25 +416,25 @@ impl UpscalingEngine for XeSSEngine {
             (self.display_height as f32 * scale) as u32,
         )
     }
-    
+
     fn display_resolution(&self) -> (u32, u32) {
         (self.display_width, self.display_height)
     }
-    
+
     fn technology(&self) -> UpscalingTechnology {
         UpscalingTechnology::XeSS
     }
-    
+
     fn supports_motion_vectors(&self) -> bool {
         true
     }
-    
+
     fn supports_depth_buffer(&self) -> bool {
         true
     }
 }
 
-/// MetalFX引擎
+//  MetalFX引擎
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 struct MetalFXEngine {
     display_width: u32,
@@ -451,17 +461,21 @@ impl UpscalingEngine for MetalFXEngine {
         self.display_height = display_height;
         Ok(())
     }
-    
-    fn upscale(&self, _input_texture: TextureHandle, _output_texture: TextureHandle) -> HardwareResult<()> {
+
+    fn upscale(
+        &self,
+        _input_texture: TextureHandle,
+        _output_texture: TextureHandle,
+    ) -> HardwareResult<()> {
         // 实际实现：调用MetalFX执行超分辨率
         Ok(())
     }
-    
+
     fn set_quality(&mut self, quality: UpscalingQuality) -> HardwareResult<()> {
         self.quality = quality;
         Ok(())
     }
-    
+
     fn render_resolution(&self) -> (u32, u32) {
         let scale = self.quality.render_scale();
         (
@@ -469,25 +483,25 @@ impl UpscalingEngine for MetalFXEngine {
             (self.display_height as f32 * scale) as u32,
         )
     }
-    
+
     fn display_resolution(&self) -> (u32, u32) {
         (self.display_width, self.display_height)
     }
-    
+
     fn technology(&self) -> UpscalingTechnology {
         UpscalingTechnology::MetalFX
     }
-    
+
     fn supports_motion_vectors(&self) -> bool {
         true
     }
-    
+
     fn supports_depth_buffer(&self) -> bool {
         true
     }
 }
 
-/// TAA引擎（回退）
+//  TAA引擎（回退）
 struct TAAEngine {
     display_width: u32,
     display_height: u32,
@@ -510,17 +524,21 @@ impl UpscalingEngine for TAAEngine {
         self.display_height = display_height;
         Ok(())
     }
-    
-    fn upscale(&self, _input_texture: TextureHandle, _output_texture: TextureHandle) -> HardwareResult<()> {
+
+    fn upscale(
+        &self,
+        _input_texture: TextureHandle,
+        _output_texture: TextureHandle,
+    ) -> HardwareResult<()> {
         // TAA通常在渲染管线中实现
         Ok(())
     }
-    
+
     fn set_quality(&mut self, quality: UpscalingQuality) -> HardwareResult<()> {
         self.quality = quality;
         Ok(())
     }
-    
+
     fn render_resolution(&self) -> (u32, u32) {
         // TAA通常使用稍低的分辨率
         let scale = self.quality.render_scale();
@@ -529,19 +547,19 @@ impl UpscalingEngine for TAAEngine {
             (self.display_height as f32 * scale) as u32,
         )
     }
-    
+
     fn display_resolution(&self) -> (u32, u32) {
         (self.display_width, self.display_height)
     }
-    
+
     fn technology(&self) -> UpscalingTechnology {
         UpscalingTechnology::TAA
     }
-    
+
     fn supports_motion_vectors(&self) -> bool {
         true
     }
-    
+
     fn supports_depth_buffer(&self) -> bool {
         false
     }
@@ -556,18 +574,18 @@ mod tests {
     fn test_upscaling_sdk_manager() {
         let gpu = detect_gpu();
         let manager = UpscalingSdkManager::new(gpu);
-        
+
         println!("可用超分辨率技术:");
         for tech in manager.available_technologies() {
             println!("  - {:?}", tech);
         }
-        
+
         println!("推荐技术: {:?}", manager.recommend_technology());
         println!("推荐质量: {:?}", manager.recommend_quality());
-        
+
         assert!(!manager.available_technologies().is_empty());
     }
-    
+
     #[test]
     fn test_quality_modes() {
         for quality in [
@@ -581,18 +599,13 @@ mod tests {
             println!("  性能提升: {:.1}x", quality.performance_gain());
         }
     }
-    
+
     #[test]
     fn test_create_engine() {
         let gpu = detect_gpu();
         let manager = UpscalingSdkManager::new(gpu);
-        
-        if let Ok(engine) = manager.create_engine(
-            None,
-            1920,
-            1080,
-            UpscalingQuality::Balanced,
-        ) {
+
+        if let Ok(engine) = manager.create_engine(None, 1920, 1080, UpscalingQuality::Balanced) {
             println!("成功创建引擎: {:?}", engine.technology());
             println!("显示分辨率: {:?}", engine.display_resolution());
             println!("渲染分辨率: {:?}", engine.render_resolution());

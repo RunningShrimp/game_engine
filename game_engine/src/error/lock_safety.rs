@@ -1,6 +1,6 @@
-//! 锁安全性工具模块
-//!
-//! 提供安全的锁获取和死锁预防机制。
+//  锁安全性工具模块
+// 
+//  提供安全的锁获取和死锁预防机制。
 
 use std::sync::{Mutex, MutexGuard, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use tracing;
@@ -34,7 +34,10 @@ impl std::error::Error for LockError {}
 /// 安全获取Mutex锁
 ///
 /// 使用Result替代panic!，优雅处理锁污染情况
-pub fn safe_lock<'a, T>(mutex: &'a Mutex<T>, name: &str) -> Result<MutexGuard<'a, T>, LockError> {
+pub fn safe_lock<'a, T: ?Sized>(
+    mutex: &'a Mutex<T>,
+    name: &str,
+) -> Result<MutexGuard<'a, T>, LockError> {
     match mutex.lock() {
         Ok(guard) => Ok(guard),
         Err(poison_error) => {
@@ -58,16 +61,18 @@ pub fn try_lock<'a, T>(mutex: &'a Mutex<T>, name: &str) -> Result<MutexGuard<'a,
             let guard = poison_error.into_inner();
             Ok(guard)
         }
-        Err(std::sync::TryLockError::WouldBlock) => {
-            Err(LockError::WriteLockTimeout(
-                format!("Cannot acquire lock: {}", name)
-            ))
-        }
+        Err(std::sync::TryLockError::WouldBlock) => Err(LockError::WriteLockTimeout(format!(
+            "Cannot acquire lock: {}",
+            name
+        ))),
     }
 }
 
 /// 安全获取RwLock读锁
-pub fn safe_read<'a, T>(rw_lock: &'a RwLock<T>, name: &str) -> Result<RwLockReadGuard<'a, T>, LockError> {
+pub fn safe_read<'a, T>(
+    rw_lock: &'a RwLock<T>,
+    name: &str,
+) -> Result<RwLockReadGuard<'a, T>, LockError> {
     match rw_lock.read() {
         Ok(guard) => Ok(guard),
         Err(poison_error) => {
@@ -83,7 +88,10 @@ pub fn safe_read<'a, T>(rw_lock: &'a RwLock<T>, name: &str) -> Result<RwLockRead
 }
 
 /// 安全获取RwLock写锁
-pub fn safe_write<'a, T>(rw_lock: &'a RwLock<T>, name: &str) -> Result<RwLockWriteGuard<'a, T>, LockError> {
+pub fn safe_write<'a, T>(
+    rw_lock: &'a RwLock<T>,
+    name: &str,
+) -> Result<RwLockWriteGuard<'a, T>, LockError> {
     match rw_lock.write() {
         Ok(guard) => Ok(guard),
         Err(poison_error) => {
@@ -99,7 +107,10 @@ pub fn safe_write<'a, T>(rw_lock: &'a RwLock<T>, name: &str) -> Result<RwLockWri
 }
 
 /// 尝试获取RwLock读锁（非阻塞）
-pub fn try_read<'a, T>(rw_lock: &'a RwLock<T>, name: &str) -> Result<RwLockReadGuard<'a, T>, LockError> {
+pub fn try_read<'a, T>(
+    rw_lock: &'a RwLock<T>,
+    name: &str,
+) -> Result<RwLockReadGuard<'a, T>, LockError> {
     match rw_lock.try_read() {
         Ok(guard) => Ok(guard),
         Err(std::sync::TryLockError::Poisoned(poison_error)) => {
@@ -111,16 +122,18 @@ pub fn try_read<'a, T>(rw_lock: &'a RwLock<T>, name: &str) -> Result<RwLockReadG
             );
             Ok(guard)
         }
-        Err(std::sync::TryLockError::WouldBlock) => {
-            Err(LockError::ReadLockTimeout(
-                format!("Cannot acquire read lock: {}", name)
-            ))
-        }
+        Err(std::sync::TryLockError::WouldBlock) => Err(LockError::ReadLockTimeout(format!(
+            "Cannot acquire read lock: {}",
+            name
+        ))),
     }
 }
 
 /// 尝试获取RwLock写锁（非阻塞）
-pub fn try_write<'a, T>(rw_lock: &'a RwLock<T>, name: &str) -> Result<RwLockWriteGuard<'a, T>, LockError> {
+pub fn try_write<'a, T>(
+    rw_lock: &'a RwLock<T>,
+    name: &str,
+) -> Result<RwLockWriteGuard<'a, T>, LockError> {
     match rw_lock.try_write() {
         Ok(guard) => Ok(guard),
         Err(std::sync::TryLockError::Poisoned(poison_error)) => {
@@ -132,11 +145,10 @@ pub fn try_write<'a, T>(rw_lock: &'a RwLock<T>, name: &str) -> Result<RwLockWrit
             );
             Ok(guard)
         }
-        Err(std::sync::TryLockError::WouldBlock) => {
-            Err(LockError::WriteLockTimeout(
-                format!("Cannot acquire write lock: {}", name)
-            ))
-        }
+        Err(std::sync::TryLockError::WouldBlock) => Err(LockError::WriteLockTimeout(format!(
+            "Cannot acquire write lock: {}",
+            name
+        ))),
     }
 }
 

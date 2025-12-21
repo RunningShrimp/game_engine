@@ -1,10 +1,10 @@
-/// 性能监测和报告系统
+//  性能监测和报告系统
 ///
-/// 统一收集、分析和报告性能数据
+//  统一收集、分析和报告性能数据
 use std::collections::HashMap;
 use std::time::Instant;
 
-/// 性能指标类型
+//  性能指标类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum MetricType {
     // CPU 指标
@@ -33,7 +33,7 @@ pub enum MetricType {
     PathfindingTime,
 }
 
-/// 单个性能指标
+//  单个性能指标
 #[derive(Debug, Clone)]
 pub struct Metric {
     pub metric_type: MetricType,
@@ -53,7 +53,7 @@ impl Metric {
     }
 }
 
-/// 性能统计（一段时间内的聚合统计）
+//  性能统计（一段时间内的聚合统计）
 #[derive(Debug, Clone)]
 pub struct MetricStats {
     pub metric_type: MetricType,
@@ -106,7 +106,7 @@ impl MetricStats {
     }
 }
 
-/// 性能监测器
+//  性能监测器
 pub struct PerformanceMonitor {
     metrics: HashMap<MetricType, Vec<f64>>,
     metric_history: Vec<Metric>,
@@ -177,7 +177,7 @@ impl Default for PerformanceMonitor {
     }
 }
 
-/// 性能报告
+//  性能报告
 pub struct PerformanceReport {
     pub stats: HashMap<MetricType, MetricStats>,
     pub timestamp: Instant,
@@ -270,31 +270,31 @@ impl PerformanceReport {
         }
 
         // 检测 Draw Call 问题
-        if let Some(stats) = self.stats.get(&MetricType::DrawCalls) {
-            if stats.avg > 1000.0 {
-                issues.push(PerformanceIssue {
-                    severity: IssueSeverity::Medium,
-                    message: format!("High draw call count: {:.0}", stats.avg),
-                });
-            }
+        if let Some(stats) = self.stats.get(&MetricType::DrawCalls)
+            && stats.avg > 1000.0
+        {
+            issues.push(PerformanceIssue {
+                severity: IssueSeverity::Medium,
+                message: format!("High draw call count: {:.0}", stats.avg),
+            });
         }
 
         // 检测内存问题
-        if let Some(stats) = self.stats.get(&MetricType::RamUsage) {
-            if stats.max > 2048.0 {
-                // 超过 2GB
-                issues.push(PerformanceIssue {
-                    severity: IssueSeverity::High,
-                    message: format!("High RAM usage: {:.0}MB", stats.max),
-                });
-            }
+        if let Some(stats) = self.stats.get(&MetricType::RamUsage)
+            && stats.max > 2048.0
+        {
+            // 超过 2GB
+            issues.push(PerformanceIssue {
+                severity: IssueSeverity::High,
+                message: format!("High RAM usage: {:.0}MB", stats.max),
+            });
         }
 
         issues
     }
 }
 
-/// 性能问题严重级别
+//  性能问题严重级别
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum IssueSeverity {
     Low,
@@ -303,14 +303,14 @@ pub enum IssueSeverity {
     Critical,
 }
 
-/// 性能问题
+//  性能问题
 #[derive(Debug, Clone)]
 pub struct PerformanceIssue {
     pub severity: IssueSeverity,
     pub message: String,
 }
 
-/// 性能优化建议
+//  性能优化建议
 #[derive(Debug, Clone)]
 pub struct OptimizationRecommendation {
     pub area: String,
@@ -324,41 +324,41 @@ impl OptimizationRecommendation {
         let mut recommendations = Vec::new();
 
         // 检测 Draw Call 过多
-        if let Some(stats) = report.stats.get(&MetricType::DrawCalls) {
-            if stats.avg > 500.0 {
-                recommendations.push(Self {
-                    area: "Rendering".to_string(),
-                    issue: "Too many draw calls".to_string(),
-                    recommendation: "Enable draw call batching and implement LOD system"
-                        .to_string(),
-                    expected_improvement: "30-50% reduction in draw calls".to_string(),
-                });
-            }
+        if let Some(stats) = report.stats.get(&MetricType::DrawCalls)
+            && stats.avg > 500.0
+        {
+            recommendations.push(Self {
+                area: "Rendering".to_string(),
+                issue: "Too many draw calls".to_string(),
+                recommendation: "Enable draw call batching and implement LOD system"
+                    .to_string(),
+                expected_improvement: "30-50% reduction in draw calls".to_string(),
+            });
         }
 
         // 检测 CPU 时间过长
-        if let Some(update_stats) = report.stats.get(&MetricType::UpdateTime) {
-            if update_stats.avg > 10.0 {
-                recommendations.push(Self {
-                    area: "CPU".to_string(),
-                    issue: "High update time".to_string(),
-                    recommendation: "Profile and optimize hot paths, consider using SIMD"
-                        .to_string(),
-                    expected_improvement: "20-40% improvement in update performance".to_string(),
-                });
-            }
+        if let Some(update_stats) = report.stats.get(&MetricType::UpdateTime)
+            && update_stats.avg > 10.0
+        {
+            recommendations.push(Self {
+                area: "CPU".to_string(),
+                issue: "High update time".to_string(),
+                recommendation: "Profile and optimize hot paths, consider using SIMD"
+                    .to_string(),
+                expected_improvement: "20-40% improvement in update performance".to_string(),
+            });
         }
 
         // 检测内存使用
-        if let Some(ram_stats) = report.stats.get(&MetricType::RamUsage) {
-            if ram_stats.avg > 1024.0 {
-                recommendations.push(Self {
-                    area: "Memory".to_string(),
-                    issue: "High RAM usage".to_string(),
-                    recommendation: "Use Arena allocator and object pooling".to_string(),
-                    expected_improvement: "20-30% reduction in memory usage".to_string(),
-                });
-            }
+        if let Some(ram_stats) = report.stats.get(&MetricType::RamUsage)
+            && ram_stats.avg > 1024.0
+        {
+            recommendations.push(Self {
+                area: "Memory".to_string(),
+                issue: "High RAM usage".to_string(),
+                recommendation: "Use Arena allocator and object pooling".to_string(),
+                expected_improvement: "20-30% reduction in memory usage".to_string(),
+            });
         }
 
         recommendations

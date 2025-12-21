@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use super::system::{ScriptContext, ScriptResult, ScriptValue};
+use std::collections::HashMap;
 
 /// Lua脚本上下文 (简化版)
 pub struct LuaContext {
@@ -80,7 +80,6 @@ impl LuaContext {
     }
 }
 
-
 /// Lua脚本引擎
 pub struct LuaEngine {
     /// Lua上下文
@@ -153,7 +152,9 @@ impl LuaEngine {
 impl ScriptContext for LuaContext {
     fn execute(&mut self, code: &str) -> ScriptResult {
         match self.execute("script", code) {
-            Ok(value) => ScriptResult::Success(script_value_to_string(&lua_value_to_script_value(&value))),
+            Ok(value) => {
+                ScriptResult::Success(script_value_to_string(&lua_value_to_script_value(&value)))
+            }
             Err(e) => ScriptResult::Error(e),
         }
     }
@@ -161,7 +162,9 @@ impl ScriptContext for LuaContext {
     fn call_function(&mut self, name: &str, args: &[ScriptValue]) -> ScriptResult {
         let lua_args: Vec<LuaValue> = args.iter().map(script_value_to_lua_value).collect();
         match LuaContext::call_function(self, name, lua_args) {
-            Ok(value) => ScriptResult::Success(script_value_to_string(&lua_value_to_script_value(&value))),
+            Ok(value) => {
+                ScriptResult::Success(script_value_to_string(&lua_value_to_script_value(&value)))
+            }
             Err(e) => ScriptResult::Error(e),
         }
     }
@@ -189,7 +192,8 @@ pub fn lua_value_to_script_value(value: &LuaValue) -> ScriptValue {
         LuaValue::Number(n) => ScriptValue::Float(*n),
         LuaValue::String(s) => ScriptValue::String(s.clone()),
         LuaValue::Table(t) => {
-            let obj: HashMap<String, ScriptValue> = t.iter()
+            let obj: HashMap<String, ScriptValue> = t
+                .iter()
                 .map(|(k, v)| (k.clone(), lua_value_to_script_value(v)))
                 .collect();
             ScriptValue::Object(obj)
@@ -206,14 +210,16 @@ fn script_value_to_lua_value(value: &ScriptValue) -> LuaValue {
         ScriptValue::Float(f) => LuaValue::Number(*f),
         ScriptValue::String(s) => LuaValue::String(s.clone()),
         ScriptValue::Array(arr) => {
-            let table: HashMap<String, LuaValue> = arr.iter()
+            let table: HashMap<String, LuaValue> = arr
+                .iter()
                 .enumerate()
                 .map(|(i, v)| (i.to_string(), script_value_to_lua_value(v)))
                 .collect();
             LuaValue::Table(table)
         }
         ScriptValue::Object(obj) => {
-            let table: HashMap<String, LuaValue> = obj.iter()
+            let table: HashMap<String, LuaValue> = obj
+                .iter()
                 .map(|(k, v)| (k.clone(), script_value_to_lua_value(v)))
                 .collect();
             LuaValue::Table(table)
@@ -232,7 +238,6 @@ fn script_value_to_string(value: &ScriptValue) -> String {
         ScriptValue::Array(_) | ScriptValue::Object(_) => format!("{:?}", value),
     }
 }
-
 
 #[cfg(test)]
 mod tests {

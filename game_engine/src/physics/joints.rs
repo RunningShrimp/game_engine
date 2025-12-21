@@ -146,8 +146,8 @@ mod tests {
     #[test]
     fn test_joint_desc() {
         let joint_desc = JointDesc::Fixed {
-            entity_a: Entity::from_raw(0),
-            entity_b: Entity::from_raw(1),
+            entity_a: Entity::from_raw_u32(0).unwrap(),
+            entity_b: Entity::from_raw_u32(1).unwrap(),
             anchor_a: Vec3::ZERO,
             anchor_b: Vec3::new(1.0, 0.0, 0.0),
         };

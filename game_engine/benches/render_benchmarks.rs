@@ -1,8 +1,8 @@
-//! 渲染系统性能基准测试
-//!
-//! 测试视锥剔除、LOD计算、批渲染等操作的性能
+//  渲染系统性能基准测试
+// 
+//  测试视锥剔除、LOD计算、批渲染等操作的性能
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
 use glam::{Mat4, Vec3};
 
 fn bench_frustum_culling(c: &mut Criterion) {
@@ -238,8 +238,8 @@ fn bench_batch_grouping(c: &mut Criterion) {
 
 /// GPU驱动剔除基准测试
 fn bench_gpu_culling(c: &mut Criterion) {
-    use game_engine::render::gpu_driven::culling::{GpuCuller, GpuInstance};
     use game_engine::render::gpu_driven::GpuDrivenConfig;
+    use game_engine::render::gpu_driven::culling::{GpuCuller, GpuInstance};
     use pollster::FutureExt;
     use wgpu::util::DeviceExt;
 
@@ -308,11 +308,12 @@ fn bench_gpu_culling(c: &mut Criterion) {
 
                 // 创建缓冲区
                 let instance_size = std::mem::size_of::<GpuInstance>() as wgpu::BufferAddress;
-                let instance_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("Instance Buffer"),
-                    contents: bytemuck::cast_slice(&instances),
-                    usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-                });
+                let instance_buffer =
+                    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                        label: Some("Instance Buffer"),
+                        contents: bytemuck::cast_slice(&instances),
+                        usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+                    });
 
                 let visible_buffer = device.create_buffer(&wgpu::BufferDescriptor {
                     label: Some("Visible Instances"),

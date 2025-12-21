@@ -1,107 +1,82 @@
-//! # game_engine_simd
-//!
-//! 高性能SIMD优化库，为游戏引擎提供跨平台的向量化数学运算和CPU特性检测。
-//!
-//! ## 特性
-//!
-//! - **跨平台支持**: x86_64 (SSE2/SSE4.1/AVX/AVX2/AVX-512) 和 aarch64 (NEON/SVE)
-//! - **自动检测**: 运行时检测CPU特性，选择最优SIMD后端
-//! - **批量处理**: 优化的批量变换、蒙皮、粒子系统处理
-//! - **零成本抽象**: 提供高级API，自动选择最优实现
-//!
-//! ## 快速开始
-//!
-//! ```rust
-//! use game_engine_simd::{detect_cpu_features, Vec4Simd, SimdBackend};
-//!
-//! // 检测CPU特性
-//! let features = detect_cpu_features();
-//! println!("AVX2支持: {}", features.avx2);
-//!
-//! // 使用SIMD向量运算
-//! let a = Vec4Simd::new(1.0, 2.0, 3.0, 4.0);
-//! let b = Vec4Simd::new(5.0, 6.0, 7.0, 8.0);
-//! let dot = a.dot(&b);
-//!
-//! // 获取最优后端
-//! let backend = SimdBackend::best_available();
-//! println!("使用后端: {:?}", backend);
-//! ```
-//!
-//! ## 模块
-//!
-//! - [`cpu_detect`]: CPU特性检测
-//! - [`math`]: SIMD数学运算（Vec3/Vec4/Mat4/Quat）
-//! - [`batch`]: 批量处理优化（变换、蒙皮、粒子）
-//!
-//! ## 性能
-//!
-//! 相比标量实现，典型性能提升：
-//! - 向量运算: 2-4x
-//! - 矩阵运算: 3-6x
-//! - 批量变换: 4-8x
-//!
-//! ## 示例
-//!
-//! ### CPU特性检测
-//!
-//! ```rust
-//! use game_engine_simd::{detect_cpu_features, print_cpu_info};
-//!
-//! // 检测CPU特性
-//! let features = detect_cpu_features();
-//! println!("CPU厂商: {:?}", features.vendor);
-//! println!("AVX2支持: {}", features.avx2);
-//!
-//! // 打印详细信息
-//! print_cpu_info();
-//! ```
-//!
-//! ### SIMD向量运算
-//!
-//! ```rust
-//! use game_engine_simd::Vec4Simd;
-//!
-//! let a = Vec4Simd::new(1.0, 2.0, 3.0, 4.0);
-//! let b = Vec4Simd::new(5.0, 6.0, 7.0, 8.0);
-//!
-//! // 点积
-//! let dot = a.dot(&b);
-//!
-//! // 向量加法
-//! let sum = a.add(&b);
-//!
-//! // 归一化
-//! let normalized = a.normalize();
-//! ```
-//!
-//! ### 批量处理
-//!
-//! ```rust
-//! use game_engine_simd::{BatchConfig, batch::BatchTransform};
-//!
-//! let config = BatchConfig::default();
-//! let mut batch_transform = BatchTransform::new(config);
-//!
-//! // 批量变换顶点
-//! let mut vertices = vec![[0.0f32; 3]; 1000];
-//! let matrices = vec![[[1.0f32; 4]; 4]; 1000];
-//! let stats = batch_transform.transform_vertices(&mut vertices, &matrices);
-//!
-//! println!("处理了 {} 个顶点", stats.elements_processed);
-//! println!("吞吐量: {:.2} 顶点/秒", stats.throughput());
-//! ```
+//  # game_engine_simd
+//  高性能SIMD优化库，为游戏引擎提供跨平台的向量化数学运算和CPU特性检测。
+//  ## 特性
+//  - **跨平台支持**: x86_64 (SSE2/SSE4.1/AVX/AVX2/AVX-512) 和 aarch64 (NEON/SVE)
+//  - **自动检测**: 运行时检测CPU特性，选择最优SIMD后端
+//  - **批量处理**: 优化的批量变换、蒙皮、粒子系统处理
+//  - **零成本抽象**: 提供高级API，自动选择最优实现
+//  ## 快速开始
+//  ```rust
+//  use game_engine_simd::{detect_cpu_features, Vec4Simd, SimdBackend};
+//  // 检测CPU特性
+//  let features = detect_cpu_features();
+//  println!("AVX2支持: {}", features.avx2);
+//  // 使用SIMD向量运算
+//  let a = Vec4Simd::new(1.0, 2.0, 3.0, 4.0);
+//  let b = Vec4Simd::new(5.0, 6.0, 7.0, 8.0);
+//  let dot = a.dot(&b);
+//  // 获取最优后端
+//  let backend = SimdBackend::best_available();
+//  println!("使用后端: {:?}", backend);
+//  ```
+//  ## 模块
+//  - [`cpu_detect`][]: CPU特性检测
+//  - [`math`][]: SIMD数学运算（Vec3/Vec4/Mat4/Quat）
+//  - [`batch`][]: 批量处理优化（变换、蒙皮、粒子）
+//  ## 性能
+//  相比标量实现，典型性能提升：
+//  - 向量运算: 2-4x
+//  - 矩阵运算: 3-6x
+//  - 批量变换: 4-8x
+//  ## 示例
+//  ### CPU特性检测
+//  ```rust
+//  use game_engine_simd::{detect_cpu_features, print_cpu_info};
+//  // 检测CPU特性
+//  let features = detect_cpu_features();
+//  println!("CPU厂商: {:?}", features.vendor);
+//  println!("AVX2支持: {}", features.avx2);
+//  // 打印详细信息
+//  print_cpu_info();
+//  ```
+//  ### SIMD向量运算
+//  ```rust
+//  use game_engine_simd::Vec4Simd;
+//  let a = Vec4Simd::new(1.0, 2.0, 3.0, 4.0);
+//  let b = Vec4Simd::new(5.0, 6.0, 7.0, 8.0);
+//  // 点积
+//  let dot = a.dot(&b);
+//  // 向量加法
+//  let sum = a.add(&b);
+//  // 归一化
+//  let normalized = a.normalize();
+//  ```
+//  ### 批量处理
+//  ```rust
+//  use game_engine_simd::{BatchConfig, batch::BatchTransform};
+//  let config = BatchConfig::default();
+//  let mut batch_transform = BatchTransform::new(config);
+//  // 批量变换顶点
+//  let mut vertices = vec![[0.0f32; 3]; 1000];
+//  let matrices = vec![[[1.0f32; 4]; 4]; 1000];
+//  let stats = batch_transform.transform_vertices(&mut vertices, &matrices);
+//  println!("处理了 {} 个顶点", stats.elements_processed);
+//  println!("吞吐量: {:.2} 顶点/秒", stats.throughput());
+//  ```
 
+pub mod audio;
+pub mod batch;
 pub mod cpu_detect;
 pub mod math;
-pub mod batch;
-pub mod audio;
 
 // 重新导出主要类型
-pub use cpu_detect::{CpuFeatures, CpuVendor, detect_cpu_features, print_cpu_info};
-pub use math::{Vec3Simd, Vec4Simd, Mat4Simd, QuatSimd, MatrixBatchOps, VectorBatchOps, GeometryOps, TransformOps, PerformanceTest, VectorBatchResult, BoundingVolumeOps};
+pub use audio::{AudioDSPOps, AudioDSPResult, AudioSpatialOps, AudioSpatialResult, DistanceModel};
 pub use batch::{BatchConfig, BatchStats};
-pub use audio::{AudioSpatialOps, AudioDSPOps, AudioSpatialResult, AudioDSPResult, DistanceModel};
+pub use cpu_detect::{CpuFeatures, CpuVendor, detect_cpu_features, print_cpu_info};
+pub use math::{
+    BoundingVolumeOps, GeometryOps, Mat4Simd, MatrixBatchOps, PerformanceTest, QuatSimd,
+    TransformOps, Vec3Simd, Vec4Simd, VectorBatchOps, VectorBatchResult, VectorOps,
+};
 
 /// SIMD向量宽度
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -156,7 +131,7 @@ impl SimdBackend {
     /// ```
     pub fn best_available() -> Self {
         let features = detect_cpu_features();
-        
+
         #[cfg(target_arch = "x86_64")]
         {
             if features.avx512f {
@@ -175,7 +150,7 @@ impl SimdBackend {
                 return Self::Sse2;
             }
         }
-        
+
         #[cfg(target_arch = "aarch64")]
         {
             if features.sve {
@@ -185,10 +160,10 @@ impl SimdBackend {
                 return Self::Neon;
             }
         }
-        
+
         Self::Scalar
     }
-    
+
     /// 获取SIMD向量宽度
     ///
     /// # 返回
@@ -201,7 +176,7 @@ impl SimdBackend {
             Self::Avx512 | Self::Sve => SimdWidth::W512,
         }
     }
-    
+
     /// 获取可以并行处理的f32数量
     ///
     /// # 返回

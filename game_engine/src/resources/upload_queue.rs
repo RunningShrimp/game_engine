@@ -1,36 +1,31 @@
-//! 异步上传队列模块
-//!
-//! 管理 CPU→GPU 数据传输，支持纹理、缓冲区等资源的异步上传。
-//!
-//! ## 使用示例
-//!
-//! ```ignore
-//! let mut upload_queue = UploadQueue::new();
-//!
-//! // 队列纹理上传
-//! upload_queue.queue_texture(
-//!     &texture_data,
-//!     &gpu_texture,
-//!     TextureUploadInfo { width: 512, height: 512, format: TextureFormat::Rgba8Unorm },
-//! );
-//!
-//! // 队列缓冲区上传
-//! upload_queue.queue_buffer(&vertex_data, &gpu_buffer, 0);
-//!
-//! // 在渲染循环中刷新
-//! upload_queue.flush(device, queue, encoder);
-//! ```
+//  异步上传队列模块
+// 
+//  管理 CPU→GPU 数据传输，支持纹理、缓冲区等资源的异步上传。
+// 
+//  ## 使用示例
+// 
+//  ```ignore
+//  let mut upload_queue = UploadQueue::new();
+// 
+//  // 队列纹理上传
+//  upload_queue.queue_texture(
+//      &texture_data,
+//      &gpu_texture,
+//      TextureUploadInfo { width: 512, height: 512, format: TextureFormat::Rgba8Unorm },
+//  );
+// 
+//  // 队列缓冲区上传
+//  upload_queue.queue_buffer(&vertex_data, &gpu_buffer, 0);
+// 
+//  // 在渲染循环中刷新
+//  upload_queue.flush(device, queue, encoder);
+//  ```
 
 use super::staging_buffer::StagingBufferPool;
 
 // 性能监控集成
 #[cfg(feature = "profiling")]
-use crate::profiling::{
-    ScopedTimer,
-    record_counter,
-    record_timing,
-    prelude::*,
-};
+use crate::profiling::{ScopedTimer, prelude::*, record_counter, record_timing};
 
 // ============================================================================
 // 上传请求
@@ -166,7 +161,7 @@ impl UploadQueue {
     pub fn queue_texture(&mut self, data: &[u8], target: wgpu::Texture, info: TextureUploadInfo) {
         #[cfg(feature = "profiling")]
         let _timer = ScopedTimer::new("upload_queue_texture");
-        
+
         #[cfg(feature = "profiling")]
         record_counter!(upload.queue_texture_requests, 1);
         #[cfg(feature = "profiling")]
@@ -224,7 +219,7 @@ impl UploadQueue {
     ) {
         #[cfg(feature = "profiling")]
         let _timer = ScopedTimer::new("upload_flush");
-        
+
         #[cfg(feature = "profiling")]
         record_counter!(upload.flush_operations, 1);
         if self.pending.is_empty() {
@@ -395,7 +390,7 @@ impl UploadQueue {
     pub fn end_frame(&mut self, device: &wgpu::Device) {
         #[cfg(feature = "profiling")]
         let _timer = ScopedTimer::new("upload_end_frame");
-        
+
         #[cfg(feature = "profiling")]
         record_counter!(upload.frame_ends, 1);
         self.staging_pool.end_frame(device);
