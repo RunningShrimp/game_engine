@@ -13,16 +13,23 @@
 //  ## 安全说明
 //
 //  默认使用X25519椭圆曲线Diffie-Hellman进行密钥交换，提供前向安全性。
+//  密钥派生使用HKDF (RFC 5869) 确保安全性。
 //  可通过feature flag切换到简化实现（仅用于测试）。
+//
+//  ## 特性标志
+//
+//  - `secure_key_exchange` (默认): 使用X25519 ECDH和HKDF进行安全的密钥交换
+//  - `insecure_key_exchange`: 使用SHA256的简化实现（仅用于测试，不应用于生产环境）
 
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 #[cfg(feature = "secure_key_exchange")]
-#[allow(unused_imports)]
 use {
     x25519_dalek_ng::{PublicKey, StaticSecret},
+    hkdf::Hkdf,
+    sha2::Sha256 as HkdfSha256,
 };
 
 #[cfg(not(any(feature = "secure_key_exchange", feature = "insecure_key_exchange")))]
@@ -62,9 +69,31 @@ impl KeyPair {
     /// 生成安全的X25519密钥对
     #[cfg(feature = "secure_key_exchange")]
     fn generate_secure() -> Self {
-        // TODO: Implement secure X25519 ECDH key exchange
-        // Currently disabled due to rand version conflicts
-        unimplemented!("Secure key exchange not yet implemented due to dependency conflicts")
+        // 生成随机私钥
+        // 使用 ThreadRng 生成随机字节，然后创建 StaticSecret
+        use rand::RngCore;
+        let mut rng = rand::thread_rng();
+        let mut private_key_bytes = [0u8; 32];
+        rng.fill_bytes(&mut private_key_bytes);
+        
+        // 创建 StaticSecret 和对应的 PublicKey
+        let static_secret = StaticSecret::from(private_key_bytes);
+        let public_key = PublicKey::from(&static_secret);
+
+        // 转换为字节数组
+        let private_key_bytes = static_secret.to_bytes();
+        let public_key_bytes = public_key.to_bytes();
+
+        let created_at = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+
+        Self {
+            public_key: public_key_bytes,
+            private_key: private_key_bytes,
+            created_at,
+        }
     }
 
     /// 生成不安全的简化密钥对（仅用于测试）
@@ -176,29 +205,52 @@ pub struct SharedSecret {
 
 impl SharedSecret {
     /// 从共享密钥派生出加密密钥和认证密钥
-    /// 注意：当前使用SHA256进行简单派生，在生产环境中应使用HKDF
+    /// 使用HKDF (RFC 5869) 进行安全的密钥派生
     pub fn derive(shared_secret: [u8; 32]) -> Self {
-        // 简化实现：使用SHA256进行密钥派生
-        // 在生产环境中应使用HKDF (RFC 5869)
+        #[cfg(feature = "secure_key_exchange")]
+        {
+            // 使用HKDF进行密钥派生
+            let hk = Hkdf::<HkdfSha256>::new(None, &shared_secret);
+            
+            // 派生加密密钥
+            let mut encryption_key = [0u8; 32];
+            hk.expand(b"encryption", &mut encryption_key)
+                .expect("HKDF expansion should not fail for 32-byte output");
 
-        // 派生加密密钥
-        let mut hasher = Sha256::new();
-        hasher.update(&shared_secret);
-        hasher.update(b"encryption");
-        let mut encryption_key = [0u8; 32];
-        encryption_key.copy_from_slice(&hasher.finalize()[..32]);
+            // 派生认证密钥
+            let mut authentication_key = [0u8; 32];
+            hk.expand(b"authentication", &mut authentication_key)
+                .expect("HKDF expansion should not fail for 32-byte output");
 
-        // 派生认证密钥
-        let mut hasher = Sha256::new();
-        hasher.update(&shared_secret);
-        hasher.update(b"authentication");
-        let mut authentication_key = [0u8; 32];
-        authentication_key.copy_from_slice(&hasher.finalize()[..32]);
+            Self {
+                shared_secret,
+                encryption_key,
+                authentication_key,
+            }
+        }
 
-        Self {
-            shared_secret,
-            encryption_key,
-            authentication_key,
+        #[cfg(not(feature = "secure_key_exchange"))]
+        {
+            // 向后兼容：使用SHA256进行简单派生（仅用于测试）
+            // 派生加密密钥
+            let mut hasher = Sha256::new();
+            hasher.update(&shared_secret);
+            hasher.update(b"encryption");
+            let mut encryption_key = [0u8; 32];
+            encryption_key.copy_from_slice(&hasher.finalize()[..32]);
+
+            // 派生认证密钥
+            let mut hasher = Sha256::new();
+            hasher.update(&shared_secret);
+            hasher.update(b"authentication");
+            let mut authentication_key = [0u8; 32];
+            authentication_key.copy_from_slice(&hasher.finalize()[..32]);
+
+            Self {
+                shared_secret,
+                encryption_key,
+                authentication_key,
+            }
         }
     }
 }
@@ -222,19 +274,36 @@ impl KeyExchange {
     }
 
     /// 执行密钥交换（从对方公钥和本地私钥计算共享密钥）
-    /// 注意：当前实现使用SHA256，不是真正的ECDH
+    /// 使用X25519 ECDH进行安全的密钥交换
     pub fn compute_shared_secret(&self, peer_public_key: [u8; 32]) -> SharedSecret {
-        eprintln!("WARNING: Using simplified key exchange computation! Replace with proper ECDH in production.");
+        #[cfg(feature = "secure_key_exchange")]
+        {
+            // 使用真正的X25519 ECDH计算共享密钥
+            let static_secret = StaticSecret::from(self.local_keypair.private_key);
+            let peer_public = PublicKey::from(peer_public_key);
+            
+            // 执行ECDH密钥交换
+            let shared_secret_bytes = static_secret.diffie_hellman(&peer_public);
+            let shared_secret = shared_secret_bytes.to_bytes();
 
-        let mut hasher = Sha256::new();
-        hasher.update(&self.local_keypair.private_key);
-        hasher.update(&peer_public_key);
-        let digest = hasher.finalize();
+            SharedSecret::derive(shared_secret)
+        }
 
-        let mut shared_secret = [0u8; 32];
-        shared_secret.copy_from_slice(&digest[..32]);
+        #[cfg(not(feature = "secure_key_exchange"))]
+        {
+            // 向后兼容：使用SHA256的简化实现（仅用于测试）
+            eprintln!("WARNING: Using simplified key exchange computation! Replace with proper ECDH in production.");
 
-        SharedSecret::derive(shared_secret)
+            let mut hasher = Sha256::new();
+            hasher.update(&self.local_keypair.private_key);
+            hasher.update(&peer_public_key);
+            let digest = hasher.finalize();
+
+            let mut shared_secret = [0u8; 32];
+            shared_secret.copy_from_slice(&digest[..32]);
+
+            SharedSecret::derive(shared_secret)
+        }
     }
 
     /// 获取本地密钥对
@@ -300,12 +369,22 @@ mod tests {
         // 服务器用客户端公钥和自己私钥计算共享密钥
         let server_shared = server_ke.compute_shared_secret(client_ke.public_key());
 
-        // 虽然简化实现不能保证完全相同，但加密密钥应该根据相同的算法派生
-        // 实际X25519实现会保证两边相同
-        assert_eq!(
-            client_shared.encryption_key.len(),
-            server_shared.encryption_key.len()
-        );
+        #[cfg(feature = "secure_key_exchange")]
+        {
+            // X25519 ECDH保证双方生成相同的共享密钥
+            assert_eq!(client_shared.shared_secret, server_shared.shared_secret);
+            assert_eq!(client_shared.encryption_key, server_shared.encryption_key);
+            assert_eq!(client_shared.authentication_key, server_shared.authentication_key);
+        }
+
+        #[cfg(not(feature = "secure_key_exchange"))]
+        {
+            // 简化实现不能保证完全相同，但加密密钥应该根据相同的算法派生
+            assert_eq!(
+                client_shared.encryption_key.len(),
+                server_shared.encryption_key.len()
+            );
+        }
     }
 
     #[test]
@@ -320,5 +399,38 @@ mod tests {
         assert_eq!(shared1.shared_secret, shared2.shared_secret);
         assert_eq!(shared1.encryption_key, shared2.encryption_key);
         assert_eq!(shared1.authentication_key, shared2.authentication_key);
+    }
+
+    #[cfg(feature = "secure_key_exchange")]
+    #[test]
+    fn test_secure_key_exchange_properties() {
+        // 测试安全密钥交换的基本属性
+        let keypair1 = KeyPair::generate();
+        let keypair2 = KeyPair::generate();
+
+        // 公钥应该不同（除非极小的概率）
+        assert_ne!(keypair1.public_key, keypair2.public_key);
+        assert_ne!(keypair1.private_key, keypair2.private_key);
+
+        // 密钥对应该有效
+        assert!(keypair1.is_valid());
+        assert!(keypair2.is_valid());
+    }
+
+    #[cfg(feature = "secure_key_exchange")]
+    #[test]
+    fn test_hkdf_derivation() {
+        // 测试HKDF密钥派生的一致性
+        let secret = [42u8; 32];
+        let shared1 = SharedSecret::derive(secret);
+        let shared2 = SharedSecret::derive(secret);
+
+        // 相同输入应生成相同输出
+        assert_eq!(shared1.shared_secret, shared2.shared_secret);
+        assert_eq!(shared1.encryption_key, shared2.encryption_key);
+        assert_eq!(shared1.authentication_key, shared2.authentication_key);
+
+        // 加密密钥和认证密钥应该不同
+        assert_ne!(shared1.encryption_key, shared1.authentication_key);
     }
 }

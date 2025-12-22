@@ -37,6 +37,11 @@ impl Arena {
     /// 带重试机制的内存分配函数
     pub fn alloc_with_retry(layout: Layout, max_retries: usize) -> Result<NonNull<u8>, ArenaError> {
         for attempt in 0..max_retries {
+            // SAFETY: alloc() 是标准库提供的全局分配器函数。
+            // - layout 参数已通过调用者验证，size > 0 且 align 是 2 的幂
+            // - 如果分配成功，返回的指针是有效的、对齐的、非空的
+            // - 如果分配失败，返回 null，我们会在下面检查
+            // - 分配的内存必须通过对应的 dealloc() 释放
             let ptr = unsafe { alloc(layout) };
             if !ptr.is_null() {
                 return NonNull::new(ptr).ok_or(ArenaError::OutOfMemory);
@@ -202,6 +207,11 @@ impl Chunk {
 impl Drop for Chunk {
     fn drop(&mut self) {
         let layout = Layout::from_size_align(self.size, 8).unwrap();
+        // SAFETY: 
+        // - self.ptr 是通过 alloc() 分配的，且从未被修改或释放
+        // - layout 与分配时使用的 layout 匹配（size 和 align 都是 8 的倍数）
+        // - 这是 Drop 实现，确保每个分配都有对应的释放
+        // - 在 Drop 后，self.ptr 不再被使用
         unsafe { dealloc(self.ptr.as_ptr(), layout) };
     }
 }

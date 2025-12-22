@@ -61,6 +61,9 @@ impl OpenXrBackend {
     /// 创建新的OpenXR后端
     pub fn new(config: XrConfig) -> Result<Self, OpenXrError> {
         // 1. 创建OpenXR实例
+        // SAFETY: xr::Entry::load() 是 FFI 调用，需要 unsafe。
+        // OpenXR 库保证在成功返回时 Entry 是有效的，失败时返回错误。
+        // 这是 OpenXR API 的标准用法，符合库的设计。
         let entry = unsafe { xr::Entry::load() }.map_err(|e| {
             OpenXrError::InitializationFailed(format!("Failed to load OpenXR: {}", e))
         })?;

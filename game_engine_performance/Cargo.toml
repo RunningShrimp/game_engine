@@ -19,6 +19,3 @@ thiserror = "2.0"
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["full"] }
-
-# Dev dependency on workspace crate to make doc tests and examples resolve the engine types
-game_engine = { path = "../game_engine", package = "game_engine" }

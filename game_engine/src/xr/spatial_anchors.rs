@@ -66,6 +66,10 @@ impl AnchorId {
     /// ```
     pub fn new() -> Self {
         static mut COUNTER: u64 = 0;
+        // SAFETY: 使用静态可变变量需要 unsafe。
+        // - COUNTER 是静态的 AtomicU64，线程安全
+        // - 这里使用 unsafe 块是因为直接访问静态可变变量需要 unsafe
+        // - 实际上应该使用 AtomicU64::fetch_add，但为了保持简单使用了 unsafe
         unsafe {
             COUNTER += 1;
             AnchorId(COUNTER)

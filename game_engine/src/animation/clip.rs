@@ -66,6 +66,35 @@ impl AnimationClip {
             .get(&entity_id)
             .and_then(|track| track.sample_vec3(time))
     }
+
+    /// 采样指定骨骼的变换（位置/旋转/缩放）
+    pub fn sample_bone_transform(
+        &self,
+        bone_id: u64,
+        time: f32,
+    ) -> Option<super::skeleton::BoneTransform> {
+        let translation = self
+            .position_tracks
+            .get(&bone_id)
+            .and_then(|track| track.sample_vec3(time))
+            .unwrap_or(Vec3::ZERO);
+        let rotation = self
+            .rotation_tracks
+            .get(&bone_id)
+            .and_then(|track| track.sample_quat(time))
+            .unwrap_or(Quat::IDENTITY);
+        let scale = self
+            .scale_tracks
+            .get(&bone_id)
+            .and_then(|track| track.sample_vec3(time))
+            .unwrap_or(Vec3::ONE);
+
+        Some(super::skeleton::BoneTransform {
+            translation,
+            rotation,
+            scale,
+        })
+    }
 }
 
 #[cfg(test)]

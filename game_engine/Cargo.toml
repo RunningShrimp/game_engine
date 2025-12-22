@@ -98,6 +98,8 @@ dirs = "6.0.0"
 ort = { version = "2.0.0-rc.10", features = ["download-binaries"] }
 toml = "0.9.10"
 fastrand = "2.3.0"
+# Web framework for profiling dashboard
+warp = { version = "0.3", optional = true }
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -110,18 +112,28 @@ web-sys = { version = "0.3.83", features = ["Window", "Response", "Headers", "St
 base64 = "0.22.1"
 
 [features]
+# 使用 Bevy ECS（默认使用）
 use_bevy_ecs = []
-async_assets = []  # 已弃用：异步资源加载现在是默认行为
+# 已弃用：异步资源加载现在是默认行为
+async_assets = []
+# 启用2D物理引擎支持（Rapier2D）
 physics_2d = []
+# 启用XR（VR/AR）支持，需要OpenXR
 xr = []
+# 启用GLTF模型加载支持
 gltf = ["dep:gltf"]
+# 启用WebAssembly运行时支持
 wasm = ["dep:wasmtime"]
-simd = []  # 添加simd特性
-profiling = []  # 添加profiling特性
-secure_key_exchange = ["x25519-dalek-ng", "hkdf"]  # 安全的密钥交换
-insecure_key_exchange = []  # 不安全的密钥交换（仅用于测试）
-default = ["physics_2d", "gltf", "async_assets", "secure_key_exchange"]  # 默认启用安全密钥交换
-wgpu_perf = []
+# 启用SIMD优化（数学运算加速）
+simd = []
+# 启用性能分析工具
+profiling = ["dep:warp"]
+# 使用安全的密钥交换协议（ECDH + HKDF）
+secure_key_exchange = ["x25519-dalek-ng", "hkdf"]
+# 使用不安全的密钥交换（仅用于测试，生产环境不应使用）
+insecure_key_exchange = []
+# 默认特性：包含2D物理、GLTF支持、异步资源加载和安全密钥交换
+default = ["physics_2d", "gltf", "async_assets", "secure_key_exchange"]
 
 [dev-dependencies]
 anyhow = "1.0.100"

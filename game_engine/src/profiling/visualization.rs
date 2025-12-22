@@ -6,11 +6,13 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
+use std::time::Duration;
+use pollster::block_on;
 
 use serde::{Deserialize, Serialize};
 
-use crate::profiling::storage::*;
-use crate::profiling::ProfilingResult;
+use super::storage::*;
+use super::ProfilingResult;
 
 // ============================================================================
 // 图表数据结构
@@ -240,7 +242,7 @@ impl TrendAnalyzer {
     /// 分析指标趋势
     pub fn analyze_trend(&self, data_points: &[DataPoint]) -> ProfilingResult<TrendAnalysis> {
         if data_points.len() < 3 {
-            return Err(crate::profiling::ProfilingError::ProcessingError(
+            return Err(super::ProfilingError::ProcessingError(
                 "数据点不足，无法进行趋势分析".to_string(),
             ));
         }
@@ -533,7 +535,7 @@ impl DataExporter {
         };
 
         // 执行查询
-        let result = self.queryer.query(&condition)?;
+        let result = block_on(self.queryer.query(&condition))?;
         
         // 根据格式导出
         match config.format {
@@ -697,11 +699,11 @@ mod tests {
         
         // 创建测试数据点
         let data_points = vec![
-            DataPoint::new("test_metric", 10.0, crate::profiling::metrics::MetricCategory::Render),
-            DataPoint::new("test_metric", 12.0, crate::profiling::metrics::MetricCategory::Render),
-            DataPoint::new("test_metric", 15.0, crate::profiling::metrics::MetricCategory::Render),
-            DataPoint::new("test_metric", 18.0, crate::profiling::metrics::MetricCategory::Render),
-            DataPoint::new("test_metric", 20.0, crate::profiling::metrics::MetricCategory::Render),
+            DataPoint::new("test_metric", 10.0, super::metrics::MetricCategory::Render),
+            DataPoint::new("test_metric", 12.0, super::metrics::MetricCategory::Render),
+            DataPoint::new("test_metric", 15.0, super::metrics::MetricCategory::Render),
+            DataPoint::new("test_metric", 18.0, super::metrics::MetricCategory::Render),
+            DataPoint::new("test_metric", 20.0, super::metrics::MetricCategory::Render),
         ];
         
         let analysis = analyzer.analyze_trend(&data_points).unwrap();

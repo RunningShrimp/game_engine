@@ -40,42 +40,118 @@ pub struct DrawCommand {
     pub index_offset: u32,
 }
 
+/// 渲染状态缓存
+#[derive(Default)]
+pub struct RenderStateCache {
+    /// 状态到批次的映射
+    state_to_batch: HashMap<RenderStateKey, usize>,
+    /// 状态访问频率统计
+    state_frequency: HashMap<RenderStateKey, u32>,
+    /// 最大缓存大小
+    max_cache_size: usize,
+}
+
+impl RenderStateCache {
+    /// 创建新的状态缓存
+    pub fn new(max_cache_size: usize) -> Self {
+        Self {
+            state_to_batch: HashMap::with_capacity(max_cache_size),
+            state_frequency: HashMap::new(),
+            max_cache_size,
+        }
+    }
+
+    /// 获取状态对应的批次索引
+    pub fn get_batch_index(&self, state: &RenderStateKey) -> Option<usize> {
+        self.state_to_batch.get(state).copied()
+    }
+
+    /// 注册状态到批次映射
+    pub fn register_state(&mut self, state: RenderStateKey, batch_index: usize) {
+        // 更新访问频率
+        *self.state_frequency.entry(state).or_insert(0) += 1;
+        
+        // 如果缓存未满，直接添加
+        if self.state_to_batch.len() < self.max_cache_size {
+            self.state_to_batch.insert(state, batch_index);
+        } else {
+            // 缓存已满，使用LRU策略：移除最少使用的状态
+            if let Some(least_used) = self.find_least_used_state() {
+                self.state_to_batch.remove(&least_used);
+                self.state_frequency.remove(&least_used);
+                self.state_to_batch.insert(state, batch_index);
+            }
+        }
+    }
+
+    /// 查找最少使用的状态
+    fn find_least_used_state(&self) -> Option<RenderStateKey> {
+        self.state_frequency
+            .iter()
+            .min_by_key(|(_, &freq)| freq)
+            .map(|(state, _)| *state)
+    }
+
+    /// 清除缓存
+    pub fn clear(&mut self) {
+        self.state_to_batch.clear();
+        self.state_frequency.clear();
+    }
+
+    /// 获取缓存命中率（需要外部跟踪）
+    pub fn get_cache_stats(&self) -> (usize, usize) {
+        (self.state_to_batch.len(), self.max_cache_size)
+    }
+}
+
 /// 绘制调用优化器
 #[derive(Default)]
 pub struct DrawCallOptimizer {
-    state_cache: HashMap<RenderStateKey, u32>,
+    state_cache: RenderStateCache,
     command_batches: Vec<Vec<DrawCommand>>,
     current_state: Option<RenderStateKey>,
     state_changes: u32,
+    /// 原始绘制调用数（用于计算优化率）
+    original_draw_calls: u32,
 }
 
 impl DrawCallOptimizer {
     pub fn new() -> Self {
-        Self::default()
+        Self {
+            state_cache: RenderStateCache::new(256),
+            command_batches: Vec::new(),
+            current_state: None,
+            state_changes: 0,
+            original_draw_calls: 0,
+        }
     }
 
     /// 添加绘制命令到批次
     pub fn add_command(&mut self, command: DrawCommand, state: RenderStateKey) {
+        self.original_draw_calls += 1;
+        
+        // 检查状态缓存
+        let batch_index = if let Some(idx) = self.state_cache.get_batch_index(&state) {
+            // 缓存命中，使用现有批次
+            idx
+        } else {
+            // 缓存未命中，创建新批次
+            let new_index = self.command_batches.len();
+            self.command_batches.push(Vec::new());
+            self.state_cache.register_state(state, new_index);
+            new_index
+        };
+
         // 检查状态是否改变
         if self.current_state != Some(state) {
-            if !self.command_batches.is_empty() && self.command_batches.last().unwrap().is_empty() {
-                // 新建批次
-            } else if self.command_batches.is_empty() {
-                self.command_batches.push(Vec::new());
-            } else {
-                self.command_batches.push(Vec::new());
-            }
             self.current_state = Some(state);
             self.state_changes += 1;
         }
 
-        if let Some(batch) = self.command_batches.last_mut() {
+        // 添加命令到对应批次
+        if let Some(batch) = self.command_batches.get_mut(batch_index) {
             batch.push(command);
-        } else {
-            self.command_batches.push(vec![command]);
         }
-
-        self.state_cache.insert(state, self.state_changes);
     }
 
     /// 获取优化后的批次数
@@ -89,12 +165,27 @@ impl DrawCallOptimizer {
     }
 
     /// 计算优化比率（原始vs优化后的批次数）
-    pub fn get_optimization_ratio(&self, original_count: u32) -> f32 {
-        if original_count == 0 {
+    pub fn get_optimization_ratio(&self) -> f32 {
+        if self.original_draw_calls == 0 {
             0.0
         } else {
-            1.0 - (self.command_batches.len() as f32) / (original_count as f32)
+            1.0 - (self.command_batches.len() as f32) / (self.original_draw_calls as f32)
         }
+    }
+
+    /// 获取原始绘制调用数
+    pub fn get_original_draw_calls(&self) -> u32 {
+        self.original_draw_calls
+    }
+
+    /// 获取优化后的批次数
+    pub fn get_optimized_batch_count(&self) -> usize {
+        self.command_batches.len()
+    }
+
+    /// 获取状态缓存统计
+    pub fn get_state_cache_stats(&self) -> (usize, usize) {
+        self.state_cache.get_cache_stats()
     }
 
     pub fn clear(&mut self) {
@@ -102,6 +193,7 @@ impl DrawCallOptimizer {
         self.command_batches.clear();
         self.current_state = None;
         self.state_changes = 0;
+        self.original_draw_calls = 0;
     }
 }
 
@@ -198,6 +290,41 @@ impl_default!(RenderPipelineOptimization {
     max_batch_size: 1000,
     max_state_changes_per_frame: 100,
 });
+
+impl RenderPipelineOptimization {
+    /// 创建延迟渲染配置
+    pub fn deferred_rendering() -> Self {
+        Self {
+            enable_draw_call_batching: true,
+            enable_state_caching: true,
+            enable_deferred_rendering: true,
+            max_batch_size: 2000,
+            max_state_changes_per_frame: 200,
+        }
+    }
+
+    /// 创建高性能配置（最大化批处理）
+    pub fn high_performance() -> Self {
+        Self {
+            enable_draw_call_batching: true,
+            enable_state_caching: true,
+            enable_deferred_rendering: false,
+            max_batch_size: 5000,
+            max_state_changes_per_frame: 50,
+        }
+    }
+
+    /// 创建低延迟配置（最小化状态切换）
+    pub fn low_latency() -> Self {
+        Self {
+            enable_draw_call_batching: true,
+            enable_state_caching: true,
+            enable_deferred_rendering: false,
+            max_batch_size: 500,
+            max_state_changes_per_frame: 20,
+        }
+    }
+}
 
 /// GPU 栅栏管理
 pub struct GPUFence {

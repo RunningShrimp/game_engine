@@ -51,6 +51,8 @@ pub mod benchmarking;
 pub mod cicd;
 pub mod memory;
 pub mod monitoring;
+// 注意：profiling 模块已迁移到 game_engine::profiling
+// 保留此模块仅用于向后兼容，但不再重新导出
 pub mod profiling;
 pub mod rendering;
 pub mod visualization;
@@ -60,6 +62,6 @@ pub use benchmarking::*;
 pub use cicd::*;
 pub use memory::*;
 pub use monitoring::*;
-pub use profiling::*;
+// profiling 不再重新导出，使用 game_engine::profiling 代替
 pub use rendering::*;
 pub use visualization::*;

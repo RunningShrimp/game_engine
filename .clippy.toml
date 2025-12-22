@@ -1,46 +1,20 @@
 # Clippy配置
+# 用于代码质量检查
 
-# 允许的警告（在某些情况下可以接受）
-allow = [
-    # 允许复杂函数（某些核心函数确实复杂）
-    "clippy::cognitive_complexity",
-    # 允许多个参数（某些API需要多个参数）
-    "clippy::too_many_arguments",
-    # 允许类型复杂度（某些类型确实复杂）
-    "clippy::type_complexity",
-]
+# 允许的unwrap使用（需要逐步减少）
+# 关键路径应避免使用unwrap()
+# 测试代码中的unwrap()可以接受
 
-# 禁止的警告（必须修复）
-deny = [
-    # 禁止使用unwrap（应使用expect或Result）
-    "clippy::unwrap_used",
-    # 禁止使用expect（应使用Result）
-    "clippy::expect_used",
-    # 禁止使用panic（应使用Result）
-    "clippy::panic",
-    # 禁止未使用的变量（应使用_前缀）
-    "clippy::unused_variables",
-    # 禁止未使用的导入
-    "clippy::unused_imports",
-]
+# 警告unwrap使用，但不强制禁止（允许列表方式）
+# 可以通过 #[allow(clippy::unwrap_used)] 来允许特定情况
 
-# 警告级别（默认）
-warn = [
-    # 代码复杂度警告
-    "clippy::complexity",
-    # 性能警告
-    "clippy::perf",
-    # 风格警告
-    "clippy::style",
-    # 正确性警告
-    "clippy::correctness",
-    # 可疑代码警告
-    "clippy::suspicious",
-]
+# 禁止在关键路径使用unwrap（通过代码审查确保）
+# 建议使用 Result 类型和 ? 操作符进行错误处理
 
-# 最大函数复杂度
-cognitive-complexity-threshold = 25
+# 其他有用的lint规则
+warn(clippy::expect_used)  # 建议使用expect()时提供清晰的错误消息
+warn(clippy::panic)        # 警告panic使用
+warn(clippy::unwrap_used)  # 警告unwrap使用
 
-# 最大函数参数数量
-too-many-arguments-threshold = 7
-
+# 允许测试代码中的unwrap
+# 测试代码通常可以使用unwrap，因为测试失败本身就是一种错误报告

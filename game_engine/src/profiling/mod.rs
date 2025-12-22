@@ -42,23 +42,41 @@
 pub mod metrics;
 pub mod collector;
 pub mod storage;
+#[cfg(feature = "profiling")]
 pub mod dashboard;
 pub mod visualization;
 pub mod alerting;
 pub mod service;
 
+// 高级分析工具（已从 game_engine_performance 迁移）
+pub mod advanced_profiler;
+pub mod bottleneck_detector;
+pub mod continuous_profiler;
+pub mod frame_analyzer;
+pub mod memory_profiler;
+pub mod performance_analyzer;
+pub mod profiler;
+
 // 重新导出公共API
 pub use metrics::*;
-pub use collector::*;
+pub use collector::{HighPrecisionTimer, MetricCollector, *};
 pub use storage::*;
+#[cfg(feature = "profiling")]
 pub use dashboard::*;
 pub use visualization::*;
 pub use alerting::*;
 pub use service::*;
 
-// 注意：高级分析工具（advanced_profiler, bottleneck_detector等）位于
-// game_engine_performance crate 中，可以通过 game_engine_performance::profiling 访问。
-// 为了向后兼容，game_engine::performance::profiling 也提供了这些工具的简化版本。
+// 重新导出高级分析工具
+pub use advanced_profiler::{AdvancedProfiler, PerformanceMetrics as AdvancedPerfMetrics};
+pub use bottleneck_detector::{
+    BottleneckDetector, BottleneckDiagnosis, BottleneckSeverity, BottleneckType,
+};
+pub use continuous_profiler::ContinuousProfiler;
+pub use frame_analyzer::{FrameAnalyzer, FrameSnapshot, PhaseMetrics};
+pub use memory_profiler::{GpuProfiler, MemoryProfiler};
+pub use performance_analyzer::{Bottleneck, PerformanceAnalysis, PerformanceAnalyzer};
+pub use profiler::Profiler;
 
 /// 性能监控版本
 pub const PROFILING_VERSION: &str = "1.0.0";
@@ -101,6 +119,9 @@ pub enum ProfilingError {
     
     #[error("序列化错误: {0}")]
     SerializationError(#[from] serde_json::Error),
+
+    #[error("系统时间错误: {0}")]
+    SystemTimeError(#[from] std::time::SystemTimeError),
 }
 
 /// 性能监控结果类型

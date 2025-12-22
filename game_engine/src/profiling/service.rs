@@ -6,13 +6,62 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use crate::profiling::metrics::*;
-use crate::profiling::collector::*;
-use crate::profiling::storage::*;
-use crate::profiling::dashboard::*;
-use crate::profiling::alerting::*;
-use crate::profiling::dashboard::*;
-use crate::profiling::ProfilingResult;
+use super::metrics::*;
+use super::collector::*;
+use super::storage::*;
+use super::alerting::*;
+use super::ProfilingResult;
+use super::visualization::{DataExporter, ExportConfig};
+
+// Dashboard 相关类型只在 dashboard 模块中定义。
+// ProfilingService 不再直接依赖 Dashboard，以避免循环依赖。
+#[cfg(feature = "profiling")]
+use super::dashboard::{DashboardConfig, RealtimeMetrics};
+
+/// 当未启用 `profiling` feature 时的 Dashboard 配置占位类型。
+#[cfg(not(feature = "profiling"))]
+#[derive(Debug, Clone, Default)]
+pub struct DashboardConfig {
+    /// 是否启用实时仪表盘（占位字段，仅用于保持配置结构兼容）
+    pub enable_realtime: bool,
+    /// 是否启用 WebSocket（占位字段）
+    pub enable_websocket: bool,
+    /// 绑定地址（占位字段）
+    pub bind_address: String,
+    /// 是否启用 CORS（占位字段）
+    pub enable_cors: bool,
+}
+
+/// 当未启用 `profiling` feature 时的实时指标占位类型。
+#[cfg(not(feature = "profiling"))]
+#[derive(Debug, Clone, Default)]
+pub struct RealtimeMetrics {
+    pub timestamp: u64,
+    pub fps: f64,
+    pub frame_time: f64,
+    pub cpu_usage: f64,
+    pub memory_usage: f64,
+    pub gpu_usage: f64,
+    pub draw_calls: u64,
+    pub triangle_count: u64,
+    pub physics_time: f64,
+    pub audio_latency: f64,
+}
+
+/// 历史数据点
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct HistoricalDataPoint {
+    /// 时间戳
+    pub timestamp: u64,
+    /// 指标值
+    pub value: f64,
+    /// 最小值
+    pub min: f64,
+    /// 最大值
+    pub max: f64,
+    /// 平均值
+    pub avg: f64,
+}
 
 // ============================================================================
 // 性能监控服务
@@ -56,8 +105,6 @@ pub struct ProfilingService {
     collector: Arc<Mutex<MetricCollector>>,
     /// 持久化存储
     storage: Arc<Mutex<PersistentStorage>>,
-    /// 仪表板服务器
-    dashboard: Arc<Mutex<Option<DashboardServer>>>,
     /// 告警引擎
     alerting_engine: Arc<Mutex<AlertingEngine>>,
     /// 服务状态
@@ -104,10 +151,9 @@ impl ProfilingService {
             MetricCollector::new(config.collector_config.clone())?
         ));
 
-        // 创建持久化存储
-        let storage = Arc::new(Mutex::new(
-            PersistentStorage::new(config.storage_config.clone())?
-        ));
+        // 创建持久化存储（同步包装异步初始化）
+        let storage_instance = pollster::block_on(PersistentStorage::new(config.storage_config.clone()))?;
+        let storage = Arc::new(Mutex::new(storage_instance));
 
         // 创建告警引擎
         let alerting_engine = Arc::new(Mutex::new(
@@ -118,7 +164,6 @@ impl ProfilingService {
             config,
             collector,
             storage,
-            dashboard: Arc::new(Mutex::new(None)),
             alerting_engine,
             state: Arc::new(Mutex::new(ServiceState::default())),
             start_time: Instant::now(),
@@ -133,20 +178,17 @@ impl ProfilingService {
     /// 启动服务
     pub fn start(&mut self) -> ProfilingResult<()> {
         if self.is_running() {
-            return Err(crate::profiling::ProfilingError::ConfigurationError(
+            return Err(super::ProfilingError::ConfigurationError(
                 "服务已在运行".to_string(),
             ));
         }
 
-        // 启动仪表板服务器
-        if self.config.dashboard_config.enable_realtime {
-            self.start_dashboard_server()?;
-        }
+        // 启动仪表板服务器（已解耦到独立的 DashboardService，由外部负责组合）
 
         // 设置运行状态
         {
-            let mut state = crate::error::&self.state.lock()
-                .map_err(|e| crate::profiling::ProfilingError::ConfigurationError(e.to_string()))?;
+            let mut state = self.state.lock()
+                .map_err(|e| super::ProfilingError::ConfigurationError(e.to_string()))?;
             state.is_running = true;
         }
 
@@ -164,13 +206,12 @@ impl ProfilingService {
             return Ok(());
         }
 
-        // 停止仪表板服务器
-        self.stop_dashboard_server()?;
+        // 停止仪表板服务器（已解耦到独立的 DashboardService，由外部负责组合）
 
         // 设置运行状态
         {
-            let mut state = crate::error::&self.state.lock()
-                .map_err(|e| crate::profiling::ProfilingError::ConfigurationError(e.to_string()))?;
+            let mut state = self.state.lock()
+                .map_err(|e| super::ProfilingError::ConfigurationError(e.to_string()))?;
             state.is_running = false;
         }
 
@@ -190,15 +231,15 @@ impl ProfilingService {
 
         // 更新收集器
         {
-            let mut collector = crate::error::&self.collector.lock()
-                .map_err(|e| crate::profiling::ProfilingError::ConfigurationError(e.to_string()))?;
+            let mut collector = self.collector.lock()
+                .map_err(|e| super::ProfilingError::ConfigurationError(e.to_string()))?;
             collector.record_value(name, value);
         }
 
         // 更新告警检查
         {
-            let mut alerting_engine = crate::error::&self.alerting_engine.lock()
-                .map_err(|e| crate::profiling::ProfilingError::ConfigurationError(e.to_string()))?;
+            let mut alerting_engine = self.alerting_engine.lock()
+                .map_err(|e| super::ProfilingError::ConfigurationError(e.to_string()))?;
             alerting_engine.update_metric(name, value);
         }
 
@@ -226,20 +267,20 @@ impl ProfilingService {
     /// 获取实时指标
     pub fn get_realtime_metrics(&self) -> ProfilingResult<RealtimeMetrics> {
         if !self.is_running() {
-            return Err(crate::profiling::ProfilingError::CollectionError(
+            return Err(super::ProfilingError::CollectionError(
                 "服务未运行".to_string(),
             ));
         }
 
         let collector_stats = {
-            let collector = crate::error::&self.collector.lock()
-                .map_err(|e| crate::profiling::ProfilingError::ConfigurationError(e.to_string()))?;
+            let collector = self.collector.lock()
+                .map_err(|e| super::ProfilingError::ConfigurationError(e.to_string()))?;
             collector.get_collector_stats()
         };
 
         let current_values = {
-            let collector = crate::error::&self.collector.lock()
-                .map_err(|e| crate::profiling::ProfilingError::ConfigurationError(e.to_string()))?;
+            let collector = self.collector.lock()
+                .map_err(|e| super::ProfilingError::ConfigurationError(e.to_string()))?;
             collector.get_current_values()
         };
 
@@ -248,15 +289,15 @@ impl ProfilingService {
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap()
                 .as_millis() as u64,
-            fps: current_values.get("render.fps").unwrap_or(&0) as f64,
-            frame_time: current_values.get("render.frame_time").unwrap_or(&0) as f64,
-            cpu_usage: current_values.get("system.cpu_usage").unwrap_or(&0) as f64,
-            memory_usage: current_values.get("memory.usage_mb").unwrap_or(&0) as f64,
-            gpu_usage: current_values.get("render.gpu_utilization").unwrap_or(&0) as f64,
+            fps: *current_values.get("render.fps").unwrap_or(&0) as f64,
+            frame_time: *current_values.get("render.frame_time").unwrap_or(&0) as f64,
+            cpu_usage: *current_values.get("system.cpu_usage").unwrap_or(&0) as f64,
+            memory_usage: *current_values.get("memory.usage_mb").unwrap_or(&0) as f64,
+            gpu_usage: *current_values.get("render.gpu_utilization").unwrap_or(&0) as f64,
             draw_calls: *current_values.get("render.draw_calls").unwrap_or(&0),
             triangle_count: *current_values.get("render.triangle_count").unwrap_or(&0),
-            physics_time: current_values.get("physics.step_time").unwrap_or(&0) as f64,
-            audio_latency: current_values.get("audio.latency").unwrap_or(&0) as f64,
+            physics_time: *current_values.get("physics.step_time").unwrap_or(&0) as f64,
+            audio_latency: *current_values.get("audio.latency").unwrap_or(&0) as f64,
         };
 
         Ok(metrics)
@@ -265,14 +306,14 @@ impl ProfilingService {
     /// 获取历史数据
     pub fn get_metric_history(&self, metric_name: &str, limit: Option<usize>) -> ProfilingResult<Vec<HistoricalDataPoint>> {
         if !self.is_running() {
-            return Err(crate::profiling::ProfilingError::CollectionError(
+            return Err(super::ProfilingError::CollectionError(
                 "服务未运行".to_string(),
             ));
         }
 
         // 查询存储数据
-        let storage = crate::error::&self.storage.lock()
-            .map_err(|e| crate::profiling::ProfilingError::ConfigurationError(e.to_string()))?;
+        let storage = self.storage.lock()
+            .map_err(|e| super::ProfilingError::ConfigurationError(e.to_string()))?;
         let query_condition = QueryCondition {
             metric_names: Some(vec![metric_name.to_string()]),
             categories: None,
@@ -288,7 +329,7 @@ impl ProfilingService {
             &self.config.storage_config.file_prefix,
         );
 
-        let result = queryer.query(&query_condition)?;
+        let result = pollster::block_on(queryer.query(&query_condition))?;
         
         // 转换为历史数据点
         let mut data_points = Vec::new();
@@ -307,8 +348,8 @@ impl ProfilingService {
 
     /// 获取服务状态
     pub fn get_service_state(&self) -> ProfilingResult<ServiceState> {
-        let state = crate::error::&self.state.lock()
-            .map_err(|e| crate::profiling::ProfilingError::ConfigurationError(e.to_string()))?;
+        let state = self.state.lock()
+            .map_err(|e| super::ProfilingError::ConfigurationError(e.to_string()))?;
         Ok(state.clone())
     }
 
@@ -318,8 +359,8 @@ impl ProfilingService {
             return Ok(Vec::new());
         }
 
-        let alerting_engine = crate::error::&self.alerting_engine.lock()
-            .map_err(|e| crate::profiling::ProfilingError::ConfigurationError(e.to_string()))?;
+        let alerting_engine = self.alerting_engine.lock()
+            .map_err(|e| super::ProfilingError::ConfigurationError(e.to_string()))?;
         Ok(alerting_engine.get_active_alerts())
     }
 
@@ -329,28 +370,28 @@ impl ProfilingService {
             return Ok(false);
         }
 
-        let mut alerting_engine = crate::error::&self.alerting_engine.lock()
-            .map_err(|e| crate::profiling::ProfilingError::ConfigurationError(e.to_string()))?;
+        let mut alerting_engine = self.alerting_engine.lock()
+            .map_err(|e| super::ProfilingError::ConfigurationError(e.to_string()))?;
         Ok(alerting_engine.acknowledge_alert(alert_id))
     }
 
     /// 导出数据
     pub fn export_data(&self, config: &ExportConfig, output_path: &std::path::Path) -> ProfilingResult<()> {
         if !self.is_running() {
-            return Err(crate::profiling::ProfilingError::CollectionError(
+            return Err(super::ProfilingError::CollectionError(
                 "服务未运行".to_string(),
             ));
         }
 
-        let storage = crate::error::&self.storage.lock()
-            .map_err(|e| crate::profiling::ProfilingError::ConfigurationError(e.to_string()))?;
+        let storage = self.storage.lock()
+            .map_err(|e| super::ProfilingError::ConfigurationError(e.to_string()))?;
         let exporter = DataExporter::new(
             &self.config.storage_config.data_dir,
             &self.config.storage_config.file_prefix,
         );
 
         // 先刷新缓存
-        storage.flush_cache()?;
+        pollster::block_on(storage.flush_cache())?;
 
         // 导出数据
         exporter.export(config, output_path)?;
@@ -367,7 +408,7 @@ impl ProfilingService {
     /// 执行服务维护
     pub fn perform_maintenance(&self) -> ProfilingResult<MaintenanceReport> {
         if !self.is_running() {
-            return Err(crate::profiling::ProfilingError::CollectionError(
+            return Err(super::ProfilingError::CollectionError(
                 "服务未运行".to_string(),
             ));
         }
@@ -384,7 +425,7 @@ impl ProfilingService {
 
         // 清理过期数据
         if let Ok(storage) = self.storage.lock() {
-            if let Ok(storage_stats) = storage.get_storage_stats() {
+            if let Ok(storage_stats) = pollster::block_on(storage.get_storage_stats()) {
                 report.operations.push(format!("清理存储文件，当前文件数: {}", storage_stats.total_files));
                 
                 if storage_stats.total_files > self.config.storage_config.retain_files {
@@ -396,16 +437,16 @@ impl ProfilingService {
 
         // 重置计数器
         {
-            let mut collector = crate::error::&self.collector.lock()
-                .map_err(|e| crate::profiling::ProfilingError::ConfigurationError(e.to_string()))?;
+            let mut collector = self.collector.lock()
+                .map_err(|e| super::ProfilingError::ConfigurationError(e.to_string()))?;
             collector.reset();
             report.operations.push("重置指标收集器".to_string());
         }
 
         // 检查告警状态
         {
-            let alerting_engine = crate::error::&self.alerting_engine.lock()
-                .map_err(|e| crate::profiling::ProfilingError::ConfigurationError(e.to_string()))?;
+            let alerting_engine = self.alerting_engine.lock()
+                .map_err(|e| super::ProfilingError::ConfigurationError(e.to_string()))?;
             let active_alerts = alerting_engine.get_active_alerts();
             if active_alerts.len() > self.config.alerting_config.max_active_alerts / 2 {
                 report.warnings.push(format!("活跃告警数较多: {}", active_alerts.len()));
@@ -425,49 +466,10 @@ impl ProfilingService {
         self.start_time.elapsed()
     }
 
-    /// 启动仪表板服务器
-    fn start_dashboard_server(&mut self) -> ProfilingResult<()> {
-        if let Ok(dashboard) = self.dashboard.lock() {
-            if dashboard.is_some() {
-                return Ok(());
-            }
-        }
-
-        let collector = Arc::clone(&self.collector);
-        let storage = {
-            let storage = crate::error::&self.storage.lock()
-                .map_err(|e| crate::profiling::ProfilingError::ConfigurationError(e.to_string()))?;
-            // 创建一个新的存储实例用于仪表板
-            PersistentStorage::new(self.config.storage_config.clone())?
-        };
-
-        let dashboard_server = DashboardServer::new(
-            self.config.dashboard_config.clone(),
-            collector,
-            storage,
-        )?;
-
-        {
-            let mut dashboard = crate::error::&self.dashboard.lock()
-                .map_err(|e| crate::profiling::ProfilingError::ConfigurationError(e.to_string()))?;
-            *dashboard = Some(dashboard_server);
-        }
-
-        Ok(())
-    }
-
-    /// 停止仪表板服务器
-    fn stop_dashboard_server(&mut self) -> ProfilingResult<()> {
-        let mut dashboard = crate::error::&self.dashboard.lock()
-            .map_err(|e| crate::profiling::ProfilingError::ConfigurationError(e.to_string()))?;
-        *dashboard = None;
-        Ok(())
-    }
-
     /// 添加默认告警规则
     fn add_default_alert_rules(&self) -> ProfilingResult<()> {
-        let mut alerting_engine = crate::error::&self.alerting_engine.lock()
-            .map_err(|e| crate::profiling::ProfilingError::ConfigurationError(e.to_string()))?;
+        let mut alerting_engine = self.alerting_engine.lock()
+            .map_err(|e| super::ProfilingError::ConfigurationError(e.to_string()))?;
 
         // FPS告警
         alerting_engine.add_strategy("render.fps", AlertStrategy::Threshold(ThresholdAlertStrategy {
@@ -534,7 +536,7 @@ impl ProfilingService {
     /// 获取性能报告
     pub fn generate_performance_report(&self) -> ProfilingResult<String> {
         if !self.is_running() {
-            return Err(crate::profiling::ProfilingError::CollectionError(
+            return Err(super::ProfilingError::CollectionError(
                 "服务未运行".to_string(),
             ));
         }
@@ -576,6 +578,7 @@ impl ProfilingService {
                     report.push_str(&format!(
                         "[{}] {}: {}\n",
                         alert.level.as_str(),
+                        alert.metric_name,
                         alert.message
                     ));
                 }

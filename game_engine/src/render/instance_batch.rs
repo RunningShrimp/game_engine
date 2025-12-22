@@ -397,9 +397,9 @@ pub struct InstanceBatch {
     pub bounding_radius: f32,
     /// 额外材质绑定组（用于多绑定组支持，按管线布局顺序）
     pub extra_material_bind_groups: Vec<Arc<wgpu::BindGroup>>,
-    #[cfg(feature = "wgpu_perf")]
+    /// 间接绘制缓冲区（性能优化，默认启用）
     pub indirect_buffer: Option<wgpu::Buffer>,
-    #[cfg(feature = "wgpu_perf")]
+    /// 间接绘制命令数量
     pub indirect_count: u32,
     /// 性能统计：总更新次数
     pub update_count: u64,
@@ -432,9 +432,7 @@ impl InstanceBatch {
             bounding_center: [0.0; 3],
             bounding_radius: 0.0,
             extra_material_bind_groups: Vec::new(),
-            #[cfg(feature = "wgpu_perf")]
             indirect_buffer: None,
-            #[cfg(feature = "wgpu_perf")]
             indirect_count: 0,
             update_count: 0,
             total_uploaded_instances: 0,
@@ -606,10 +604,8 @@ impl InstanceBatch {
                 dirty_ranges.len()
             );
         }
-        #[cfg(feature = "wgpu_perf")]
-        {
-            self.update_indirect(device, queue);
-        }
+        // 更新间接绘制缓冲区（性能优化，默认启用）
+        self.update_indirect(device, queue);
     }
 
     /// 获取性能统计信息
@@ -635,7 +631,7 @@ impl InstanceBatch {
         }
     }
 
-    #[cfg(feature = "wgpu_perf")]
+    /// 更新间接绘制缓冲区（性能优化，默认启用）
     pub fn update_indirect(&mut self, device: &wgpu::Device, queue: &wgpu::Queue) {
         let cmd = DrawIndexedIndirect {
             index_count: self.mesh.index_count,
@@ -659,8 +655,7 @@ impl InstanceBatch {
         }
     }
 
-    #[cfg(feature = "wgpu_perf")]
-    /// 写入间接绘制命令（优化版本）
+    /// 写入间接绘制命令（优化版本，默认启用）
     ///
     /// # 性能优化
     /// - 复用缓冲区，避免每帧重建
@@ -1576,8 +1571,7 @@ impl BatchManager {
     /// 应用GPU剔除的可见实例ID到批次管理器（间接绘制版本）
     ///
     /// 将GPU剔除结果应用到批次管理器，并生成间接绘制命令。
-    /// 这个方法需要 `wgpu_perf` 特性，用于间接绘制优化（T3.1.2）。
-    #[cfg(feature = "wgpu_perf")]
+    /// 间接绘制优化默认启用，用于提升渲染性能。
     pub fn apply_visible_ids_segments(
         &mut self,
         device: &wgpu::Device,
@@ -1792,7 +1786,7 @@ impl BatchManager {
 // 渲染辅助函数
 // ============================================================================
 
-#[cfg(feature = "wgpu_perf")]
+/// 间接绘制命令结构（性能优化，默认启用）
 #[repr(C)]
 #[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct DrawIndexedIndirect {
@@ -1824,20 +1818,13 @@ pub fn render_batches<'a>(render_pass: &mut wgpu::RenderPass<'a>, batch_manager:
             render_pass.set_bind_group(3, &**bg, &[]);
         }
 
-        // 实例化绘制
-        #[cfg(feature = "wgpu_perf")]
-        {
-            if let Some(ib) = &batch.indirect_buffer {
-                let stride = std::mem::size_of::<DrawIndexedIndirect>() as wgpu::BufferAddress;
-                for i in 0..batch.indirect_count {
-                    render_pass.draw_indexed_indirect(ib, i as wgpu::BufferAddress * stride);
-                }
-            } else {
-                render_pass.draw_indexed(0..batch.mesh.index_count, 0, 0..batch.instance_count());
+        // 实例化绘制（使用间接绘制优化，默认启用）
+        if let Some(ib) = &batch.indirect_buffer {
+            let stride = std::mem::size_of::<DrawIndexedIndirect>() as wgpu::BufferAddress;
+            for i in 0..batch.indirect_count {
+                render_pass.draw_indexed_indirect(ib, i as wgpu::BufferAddress * stride);
             }
-        }
-        #[cfg(not(feature = "wgpu_perf"))]
-        {
+        } else {
             render_pass.draw_indexed(0..batch.mesh.index_count, 0, 0..batch.instance_count());
         }
     }
@@ -1857,32 +1844,26 @@ pub fn render_small_batches<'a>(
         if let Some(bg) = batch.extra_material_bind_groups.get(0) {
             render_pass.set_bind_group(3, &**bg, &[]);
         }
-        #[cfg(feature = "wgpu_perf")]
-        {
-            if let Some(ib) = &batch.indirect_buffer {
-                if batch.indirect_count > 1 {
-                    // 多个间接绘制命令：使用循环（优化版本）
-                    let stride = std::mem::size_of::<DrawIndexedIndirect>() as wgpu::BufferAddress;
-                    for i in 0..batch.indirect_count {
-                        render_pass.draw_indexed_indirect(ib, i as wgpu::BufferAddress * stride);
-                    }
-                } else if batch.indirect_count == 1 {
-                    // 单个间接绘制命令：直接调用
-                    render_pass.draw_indexed_indirect(ib, 0);
-                } else {
-                    // 回退到直接绘制
-                    render_pass.draw_indexed(
-                        0..batch.mesh.index_count,
-                        0,
-                        0..batch.instance_count(),
-                    );
+        // 使用间接绘制优化（默认启用）
+        if let Some(ib) = &batch.indirect_buffer {
+            if batch.indirect_count > 1 {
+                // 多个间接绘制命令：使用循环（优化版本）
+                let stride = std::mem::size_of::<DrawIndexedIndirect>() as wgpu::BufferAddress;
+                for i in 0..batch.indirect_count {
+                    render_pass.draw_indexed_indirect(ib, i as wgpu::BufferAddress * stride);
                 }
+            } else if batch.indirect_count == 1 {
+                // 单个间接绘制命令：直接调用
+                render_pass.draw_indexed_indirect(ib, 0);
             } else {
-                render_pass.draw_indexed(0..batch.mesh.index_count, 0, 0..batch.instance_count());
+                // 回退到直接绘制
+                render_pass.draw_indexed(
+                    0..batch.mesh.index_count,
+                    0,
+                    0..batch.instance_count(),
+                );
             }
-        }
-        #[cfg(not(feature = "wgpu_perf"))]
-        {
+        } else {
             render_pass.draw_indexed(0..batch.mesh.index_count, 0, 0..batch.instance_count());
         }
     }

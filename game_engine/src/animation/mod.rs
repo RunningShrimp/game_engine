@@ -59,6 +59,9 @@ pub mod service;
 pub mod skeleton;
 /// 皮肤网格 - 支持骨骼蒙皮的网格系统
 pub mod skinned_mesh;
+/// 并行动画系统 - 并行处理多个动画实体
+/// 并行功能默认启用，使用rayon进行并行处理
+pub mod parallel;
 
 pub use clip::AnimationClip;
 pub use keyframe::{InterpolationMode, Keyframe, KeyframeTrack};

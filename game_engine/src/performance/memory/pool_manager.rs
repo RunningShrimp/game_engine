@@ -14,6 +14,7 @@ use glam::{Mat4, Vec3};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tracing;
+use crate::core::utils::current_timestamp_ms;
 
 /// 对象池管理器
 ///
@@ -33,6 +34,8 @@ pub struct PoolManager {
     hashmap_string_pool: Arc<SyncObjectPool<HashMap<String, String>>>,
     /// Vec<u32> 对象池（用于索引数组）
     vec_u32_pool: Arc<SyncObjectPool<Vec<u32>>>,
+    /// Vec<Vec3> 对象池（扩展，用于位置数组等）
+    vec_vec3_pool_extended: Arc<SyncObjectPool<Vec<Vec3>>>,
 }
 
 impl PoolManager {
@@ -71,6 +74,11 @@ impl PoolManager {
             )),
             vec_u32_pool: Arc::new(SyncObjectPool::new(
                 || Vec::<u32>::new(),
+                32,
+                256,
+            )),
+            vec_vec3_pool_extended: Arc::new(SyncObjectPool::new(
+                || Vec::<Vec3>::new(),
                 32,
                 256,
             )),
@@ -115,6 +123,11 @@ impl PoolManager {
                 config.vec_u32_initial,
                 config.vec_u32_max,
             )),
+            vec_vec3_pool_extended: Arc::new(SyncObjectPool::new(
+                || Vec::<Vec3>::new(),
+                config.vec_vec3_extended_initial,
+                config.vec_vec3_extended_max,
+            )),
         }
     }
 
@@ -153,6 +166,11 @@ impl PoolManager {
         self.vec_u32_pool.clone()
     }
 
+    /// 获取扩展的 Vec<Vec3> 对象池（用于位置数组等）
+    pub fn vec_vec3_pool_extended(&self) -> Arc<SyncObjectPool<Vec<Vec3>>> {
+        self.vec_vec3_pool_extended.clone()
+    }
+
     /// 获取所有池的统计信息
     pub fn stats(&self) -> PoolManagerStats {
         PoolManagerStats {
@@ -163,6 +181,7 @@ impl PoolManager {
             string: self.string_pool.stats(),
             hashmap_string: self.hashmap_string_pool.stats(),
             vec_u32: self.vec_u32_pool.stats(),
+            vec_vec3_extended: self.vec_vec3_pool_extended.stats(),
         }
     }
 
@@ -175,6 +194,7 @@ impl PoolManager {
         self.string_pool.warm_up(32);
         self.hashmap_string_pool.warm_up(16);
         self.vec_u32_pool.warm_up(32);
+        self.vec_vec3_pool_extended.warm_up(32);
     }
 
     /// 清空所有池
@@ -186,6 +206,7 @@ impl PoolManager {
         self.string_pool.clear();
         self.hashmap_string_pool.clear();
         self.vec_u32_pool.clear();
+        self.vec_vec3_pool_extended.clear();
     }
 }
 
@@ -212,6 +233,8 @@ pub struct PoolConfig {
     pub hashmap_max: usize,
     pub vec_u32_initial: usize,
     pub vec_u32_max: usize,
+    pub vec_vec3_extended_initial: usize,
+    pub vec_vec3_extended_max: usize,
 }
 
 impl Default for PoolConfig {
@@ -231,6 +254,8 @@ impl Default for PoolConfig {
             hashmap_max: 128,
             vec_u32_initial: 32,
             vec_u32_max: 256,
+            vec_vec3_extended_initial: 32,
+            vec_vec3_extended_max: 256,
         }
     }
 }
@@ -245,6 +270,7 @@ pub struct PoolManagerStats {
     pub string: PoolStats,
     pub hashmap_string: PoolStats,
     pub vec_u32: PoolStats,
+    pub vec_vec3_extended: PoolStats,
 }
 
 impl PoolManagerStats {
@@ -256,7 +282,8 @@ impl PoolManagerStats {
             + self.vec_mat4.allocations
             + self.string.allocations
             + self.hashmap_string.allocations
-            + self.vec_u32.allocations;
+            + self.vec_u32.allocations
+            + self.vec_vec3_extended.allocations;
 
         let total_hits = self.vec_u8.cache_hits
             + self.vec_f32.cache_hits
@@ -264,7 +291,8 @@ impl PoolManagerStats {
             + self.vec_mat4.cache_hits
             + self.string.cache_hits
             + self.hashmap_string.cache_hits
-            + self.vec_u32.cache_hits;
+            + self.vec_u32.cache_hits
+            + self.vec_vec3_extended.cache_hits;
 
         if total_allocations == 0 {
             0.0
@@ -321,6 +349,12 @@ impl PoolManagerStats {
             "  Vec<u32>: {} allocations, {:.2}% hit rate",
             self.vec_u32.allocations,
             self.vec_u32.hit_rate() * 100.0
+        );
+        tracing::info!(
+            target: "memory",
+            "  Vec<Vec3> (extended): {} allocations, {:.2}% hit rate",
+            self.vec_vec3_extended.allocations,
+            self.vec_vec3_extended.hit_rate() * 100.0
         );
     }
 }

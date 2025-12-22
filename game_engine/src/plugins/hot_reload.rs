@@ -123,6 +123,11 @@ impl HotReloadManager {
             .map_err(|e| HotReloadError::FileSystemError(e.to_string()))?;
         
         // 加载动态库
+        // SAFETY: 动态库加载和符号解析需要 unsafe。
+        // - Library::new() 加载动态库，库文件路径已验证存在
+        // - get() 获取符号，符号名称 "create_plugin" 是约定的标准名称
+        // - create_plugin() 返回的指针由插件库分配，我们负责释放
+        // - Box::from_raw() 将原始指针转换为 Box，确保正确释放
         unsafe {
             let library = Library::new(plugin_path)
                 .map_err(|e| HotReloadError::LoadError(format!("Failed to load library: {}", e)))?;
@@ -139,6 +144,7 @@ impl HotReloadManager {
                 return Err(HotReloadError::LoadError("create_plugin returned null".to_string()));
             }
             
+            // SAFETY: plugin_ptr 由 create_plugin() 返回，非空且指向有效的 EnginePlugin 实例
             let plugin = unsafe { Box::from_raw(plugin_ptr) };
             let plugin_name = plugin.name().to_string();
             
@@ -158,6 +164,7 @@ impl HotReloadManager {
                 let _ = registry.remove_plugin(&plugin_name);
                 return Err(HotReloadError::LoadError("Failed to create plugin instance for storage".to_string()));
             }
+            // SAFETY: plugin_ptr2 由 create_plugin() 返回，非空且指向有效的 EnginePlugin 实例
             let plugin2 = unsafe { Box::from_raw(plugin_ptr2) };
             
             // 存储句柄

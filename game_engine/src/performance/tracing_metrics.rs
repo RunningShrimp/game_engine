@@ -8,13 +8,14 @@
 
 use std::time::{Duration, Instant};
 use crate::performance::monitoring::system_monitor::SystemPerformanceMonitor;
+use crate::performance::{Bottleneck, ContinuousProfiler, PerformanceAnalysis};
 
 /// 统一的tracing和metrics管理器
 #[derive(Debug)]
 pub struct TracingMetricsManager {
     system_monitor: SystemPerformanceMonitor,
     start_time: Instant,
-    continuous_profiler: Option<game_engine_performance::ContinuousProfiler>,
+    continuous_profiler: Option<ContinuousProfiler>,
 }
 
 impl TracingMetricsManager {
@@ -23,7 +24,7 @@ impl TracingMetricsManager {
         Self {
             system_monitor: SystemPerformanceMonitor::new(),
             start_time: Instant::now(),
-            continuous_profiler: Some(game_engine_performance::ContinuousProfiler::new(300)),
+            continuous_profiler: Some(ContinuousProfiler::new(300)),
         }
     }
 
@@ -80,7 +81,7 @@ impl TracingMetricsManager {
     }
 
     /// 获取continuous profiler数据
-    pub fn get_continuous_profile_data(&self) -> Option<game_engine_performance::PerformanceAnalysis> {
+    pub fn get_continuous_profile_data(&self) -> Option<PerformanceAnalysis> {
         if let Some(ref profiler) = self.continuous_profiler {
             // 获取profiler的统计数据并转换为PerformanceAnalysis
             let samples = profiler.get_samples();
@@ -98,7 +99,7 @@ impl TracingMetricsManager {
             metrics.insert("sample_count".to_string(), samples.len() as f64);
 
             let bottlenecks = anomalies.into_iter().map(|anomaly| {
-                game_engine_performance::Bottleneck {
+                Bottleneck {
                     name: "Performance Anomaly".to_string(),
                     severity: 50,
                     description: format!("Performance anomaly detected: {:?}", anomaly),
@@ -106,7 +107,7 @@ impl TracingMetricsManager {
                 }
             }).collect();
 
-            Some(game_engine_performance::PerformanceAnalysis {
+            Some(PerformanceAnalysis {
                 name: "engine_runtime".to_string(),
                 metrics,
                 bottlenecks,

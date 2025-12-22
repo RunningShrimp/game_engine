@@ -64,6 +64,7 @@ pub mod error_handler;
 
 // Serde imports for serialization/deserialization
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 
 // 重新导出所有错误类型
 pub use audio_error::AudioError;
@@ -73,6 +74,10 @@ pub use physics_error::PhysicsError;
 pub use render_error::RenderError;
 pub use resource_error::ResourceError;
 pub use system_error::SystemError;
+/// 脚本相关错误
+pub use script_error::ScriptError;
+/// 平台相关错误
+pub use platform_error::PlatformError;
 
 // 重新导出错误处理策略
 pub use lock_safety::{
@@ -207,6 +212,70 @@ pub type ResourceResult<T> = Result<T, ResourceError>;
 pub type InputResult<T> = Result<T, InputError>;
 /// 系统级别的结果类型
 pub type SystemResult<T> = Result<T, SystemError>;
+/// 脚本系统的结果类型
+pub type ScriptResult<T> = Result<T, ScriptError>;
+/// 平台相关的结果类型
+pub type PlatformResult<T> = Result<T, PlatformError>;
+
+/// 脚本错误类型（占位实现，供 CommonScriptError 转换使用）
+pub mod script_error {
+    use super::ErrorSeverity;
+    use thiserror::Error;
+
+    #[derive(Debug, Error, Clone)]
+    pub enum ScriptError {
+        #[error("Script compilation failed: {0}")]
+        Compilation(String),
+        #[error("Script runtime error: {0}")]
+        Runtime(String),
+        #[error("Script not found: {0}")]
+        NotFound(String),
+        #[error("Invalid binding: {0}")]
+        InvalidBinding(String),
+        #[error("Script timeout: {0} ms")]
+        Timeout(u64),
+    }
+
+    impl ScriptError {
+        pub fn severity(&self) -> ErrorSeverity {
+            match self {
+                ScriptError::Compilation(_) | ScriptError::Runtime(_) => ErrorSeverity::Error,
+                ScriptError::Timeout(_) => ErrorSeverity::Warning,
+                ScriptError::NotFound(_) | ScriptError::InvalidBinding(_) => ErrorSeverity::Info,
+            }
+        }
+    }
+}
+
+/// 平台错误类型（占位实现，供 CommonPlatformError 转换使用）
+pub mod platform_error {
+    use super::ErrorSeverity;
+    use thiserror::Error;
+
+    #[derive(Debug, Error, Clone)]
+    pub enum PlatformError {
+        #[error("Window creation failed: {0}")]
+        WindowCreation(String),
+        #[error("Event loop error: {0}")]
+        EventLoop(String),
+        #[error("Input device error: {0}")]
+        InputDevice(String),
+        #[error("Filesystem error: {0}")]
+        Filesystem(String),
+        #[error("Platform not supported: {0}")]
+        NotSupported(String),
+    }
+
+    impl PlatformError {
+        pub fn severity(&self) -> ErrorSeverity {
+            match self {
+                PlatformError::WindowCreation(_) | PlatformError::EventLoop(_) => ErrorSeverity::Error,
+                PlatformError::InputDevice(_) | PlatformError::Filesystem(_) => ErrorSeverity::Warning,
+                PlatformError::NotSupported(_) => ErrorSeverity::Info,
+            }
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests {

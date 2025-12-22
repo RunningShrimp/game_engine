@@ -208,6 +208,10 @@ pub struct CoroutineLoaderConfig {
     pub max_retries: u32,
     /// 重试延迟 (毫秒)
     pub retry_delay_ms: u64,
+    /// 最大队列长度 (0表示无限制)
+    pub max_queue_length: usize,
+    /// 队列长度告警阈值（超过此值会记录警告）
+    pub queue_warning_threshold: usize,
 }
 
 impl CoroutineLoaderConfig {
@@ -218,6 +222,8 @@ impl CoroutineLoaderConfig {
         load_timeout_ms: u64,
         max_retries: u32,
         retry_delay_ms: u64,
+        max_queue_length: usize,
+        queue_warning_threshold: usize,
     ) -> Self {
         Self {
             max_concurrent_loads,
@@ -225,6 +231,8 @@ impl CoroutineLoaderConfig {
             load_timeout_ms,
             max_retries,
             retry_delay_ms,
+            max_queue_length,
+            queue_warning_threshold,
         }
     }
 
@@ -237,20 +245,15 @@ impl CoroutineLoaderConfig {
             load_timeout_ms: 30_000,
             max_retries: 2,
             retry_delay_ms: 100,
+            max_queue_length: 1000, // 默认最大队列长度1000
+            queue_warning_threshold: 500, // 超过500时警告
         }
     }
 }
 
 impl Default for CoroutineLoaderConfig {
     fn default() -> Self {
-        let cpu_count = num_cpus::get();
-        Self {
-            max_concurrent_loads: (cpu_count * 2).max(4).min(16), // 2倍CPU核数，最小4，最大16
-            max_spawn_blocking: cpu_count.max(2).min(8), // CPU核数，最小2，最大8
-            load_timeout_ms: 30_000,
-            max_retries: 2,
-            retry_delay_ms: 100,
-        }
+        Self::with_cpu_aware_defaults()
     }
 }
 
@@ -316,6 +319,8 @@ impl CoroutineAssetLoader {
         let load_timeout = config.load_timeout_ms;
         let max_retries = config.max_retries;
         let retry_delay = config.retry_delay_ms;
+        let max_queue_length = config.max_queue_length;
+        let queue_warning_threshold = config.queue_warning_threshold;
 
         let wait_stats_arc = Arc::new(Mutex::new(WaitTimeStats::default()));
         let wait_stats_clone = Arc::clone(&wait_stats_arc);
@@ -336,6 +341,8 @@ impl CoroutineAssetLoader {
             wait_stats_clone,
             spawn_blocking_sem_clone,
             queue_length_clone,
+            max_queue_length,
+            queue_warning_threshold,
         ));
 
         Self {
@@ -368,6 +375,8 @@ impl CoroutineAssetLoader {
         wait_time_stats: Arc<Mutex<WaitTimeStats>>,
         spawn_blocking_semaphore: Arc<Semaphore>,
         queue_length: Arc<AtomicUsize>,
+        max_queue_length: usize,
+        queue_warning_threshold: usize,
     ) {
         // 使用 Semaphore 限制并发数
         let semaphore = Arc::new(Semaphore::new(max_concurrent));
@@ -388,8 +397,44 @@ impl CoroutineAssetLoader {
                     // 添加到优先级队列（在独立作用域中持有锁）
                     {
                         let mut queue = safe_lock(&priority_queue, "CoroutineAssetLoader.priority_queue").unwrap();
-                        queue.push(request);
-                        queue_length.store(queue.len(), Ordering::Relaxed);
+                        let current_len = queue.len();
+                        
+                        // 检查队列长度限制
+                        if max_queue_length > 0 && current_len >= max_queue_length {
+                            tracing::warn!(
+                                "Resource load queue is full ({} >= {}), dropping low priority request: {}",
+                                current_len,
+                                max_queue_length,
+                                request.path.display()
+                            );
+                            // 如果队列已满，尝试移除最低优先级的请求
+                            if request.priority == LoadPriority::Low {
+                                // 丢弃低优先级请求
+                                continue;
+                            } else {
+                                // 对于高优先级请求，移除一个低优先级请求
+                                let mut temp_vec: Vec<_> = queue.drain().collect();
+                                temp_vec.retain(|r| r.priority != LoadPriority::Low);
+                                for r in temp_vec {
+                                    queue.push(r);
+                                }
+                                queue.push(request);
+                            }
+                        } else {
+                            queue.push(request);
+                        }
+                        
+                        let new_len = queue.len();
+                        queue_length.store(new_len, Ordering::Relaxed);
+                        
+                        // 检查警告阈值
+                        if new_len >= queue_warning_threshold {
+                            tracing::warn!(
+                                "Resource load queue length ({}) exceeds warning threshold ({})",
+                                new_len,
+                                queue_warning_threshold
+                            );
+                        }
                     } // MutexGuard 在这里释放
 
                     // 尝试处理队列中的请求
@@ -670,6 +715,36 @@ impl CoroutineAssetLoader {
             .collect()
     }
 
+    /// 预加载资源（使用低优先级）
+    /// 
+    /// 用于在后台预加载资源，避免阻塞关键路径。
+    /// 预加载的资源使用 Low 优先级，在队列满时可能被丢弃。
+    pub fn preload(&self, path: impl AsRef<Path>, asset_type: AssetType) -> LoadHandle {
+        self.load_with_priority(path, asset_type, LoadPriority::Low)
+    }
+
+    /// 批量预加载资源
+    pub fn preload_batch(
+        &self,
+        requests: impl IntoIterator<Item = (PathBuf, AssetType)>,
+    ) -> Vec<LoadHandle> {
+        requests
+            .into_iter()
+            .map(|(path, asset_type)| self.preload(path, asset_type))
+            .collect()
+    }
+
+    /// 获取队列统计信息
+    pub fn queue_stats(&self) -> QueueStats {
+        QueueStats {
+            current_length: self.queue_length.load(Ordering::Relaxed),
+            active_loads: self.active_loads.load(Ordering::Relaxed),
+            total_requests: self.total_requests.load(Ordering::Relaxed),
+            total_completed: self.total_completed.load(Ordering::Relaxed),
+            total_failed: self.total_failed.load(Ordering::Relaxed),
+        }
+    }
+
     /// 异步等待完成的加载请求
     pub async fn wait_for_completed(&self) -> Vec<LoadComplete> {
         // 等待完成通知
@@ -826,6 +901,21 @@ pub struct LoaderStats {
     pub min_wait_time_ms: f64,
     /// 等待时间样本数
     pub wait_time_samples: u64,
+}
+
+/// 队列统计信息
+#[derive(Debug, Clone, Default)]
+pub struct QueueStats {
+    /// 当前队列长度
+    pub current_length: usize,
+    /// 活跃加载数
+    pub active_loads: usize,
+    /// 总请求数
+    pub total_requests: u64,
+    /// 总完成数
+    pub total_completed: u64,
+    /// 总失败数
+    pub total_failed: u64,
 }
 
 // ============================================================================

@@ -44,6 +44,7 @@ impl PerformanceMonitor {
             fps: 1.0 / delta_time.as_secs_f32(),
             render_time: 0.0,
             update_time: 0.0,
+            physics_time: 0.0,
             memory_usage: self.memory_profiler.get_current_memory_usage() as f32 / 1024.0 / 1024.0,
             draw_calls: 0,
             triangle_count: 0,

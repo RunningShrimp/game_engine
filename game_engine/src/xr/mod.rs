@@ -202,6 +202,9 @@ pub enum XrError {
     /// XR 运行时失败
     #[error("XR runtime failure: {0}")]
     RuntimeFailure(String),
+    /// 功能不受支持
+    #[error("Feature not supported: {0}")]
+    FeatureNotSupported(String),
 }
 
 // ============================================================================
@@ -297,6 +300,219 @@ pub mod openxr_impl;
 #[cfg(not(target_arch = "wasm32"))]
 pub use openxr_impl::{OpenXrBackend, OpenXrError, OpenXrSwapchain};
 
+// ============================================================================
+// 手势识别
+// ============================================================================
+
+/// 手势识别器
+///
+/// 基于手部追踪数据识别常见手势
+pub struct GestureRecognizer {
+    /// 手势历史记录
+    gesture_history: std::collections::VecDeque<GestureEvent>,
+    /// 手势识别阈值
+    recognition_threshold: f32,
+}
+
+impl GestureRecognizer {
+    /// 创建新的手势识别器
+    pub fn new() -> Self {
+        Self {
+            gesture_history: std::collections::VecDeque::with_capacity(10),
+            recognition_threshold: 0.7, // 70%置信度
+        }
+    }
+
+    /// 识别手势
+    ///
+    /// # 参数
+    /// - `hand_joints`: 手部关节数据
+    /// - `hand`: 手部（左手或右手）
+    ///
+    /// # 返回
+    /// 如果识别到手势，返回手势事件
+    pub fn recognize(&mut self, hand_joints: &hand_tracking::HandJoints, hand: Hand) -> Option<GestureEvent> {
+        if let Some(gesture) = hand_joints.detect_gesture() {
+            let confidence = hand_joints.confidence();
+            let position = hand_joints.get_palm_position().unwrap_or(Vec3::ZERO);
+            let timestamp = crate::core::utils::current_timestamp_ms();
+
+            let event = GestureEvent {
+                gesture,
+                hand,
+                confidence,
+                position,
+                timestamp,
+            };
+
+            // 记录到历史
+            self.gesture_history.push_back(event.clone());
+            if self.gesture_history.len() > 10 {
+                self.gesture_history.pop_front();
+            }
+
+            // 如果置信度足够高，返回事件
+            if confidence >= self.recognition_threshold {
+                Some(event)
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+
+    /// 设置识别阈值
+    pub fn set_threshold(&mut self, threshold: f32) {
+        self.recognition_threshold = threshold.clamp(0.0, 1.0);
+    }
+}
+
+impl Default for GestureRecognizer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+// ============================================================================
+// 眼动追踪
+// ============================================================================
+
+/// 眼动追踪接口（如果硬件支持）
+///
+/// 提供眼动追踪功能，用于注视点渲染等优化
+#[cfg(feature = "xr")]
+pub trait EyeTracking {
+    /// 获取左眼注视点（归一化坐标，范围[-1, 1]）
+    fn left_eye_gaze(&self) -> Option<(f32, f32)>;
+
+    /// 获取右眼注视点（归一化坐标，范围[-1, 1]）
+    fn right_eye_gaze(&self) -> Option<(f32, f32)>;
+
+    /// 获取双眼注视点（归一化坐标，范围[-1, 1]）
+    fn combined_gaze(&self) -> Option<(f32, f32)>;
+
+    /// 检查眼动追踪是否可用
+    fn is_available(&self) -> bool;
+
+    /// 获取眼动追踪置信度（0.0-1.0）
+    fn confidence(&self) -> f32;
+}
+
+/// 眼动追踪数据
+#[derive(Debug, Clone)]
+pub struct EyeTrackingData {
+    /// 左眼注视点（归一化坐标）
+    pub left_gaze: Option<(f32, f32)>,
+    /// 右眼注视点（归一化坐标）
+    pub right_gaze: Option<(f32, f32)>,
+    /// 双眼注视点（归一化坐标）
+    pub combined_gaze: Option<(f32, f32)>,
+    /// 追踪置信度（0.0-1.0）
+    pub confidence: f32,
+    /// 是否可用
+    pub available: bool,
+    /// 时间戳（毫秒）
+    pub timestamp: u64,
+}
+
+impl Default for EyeTrackingData {
+    fn default() -> Self {
+        Self {
+            left_gaze: None,
+            right_gaze: None,
+            combined_gaze: None,
+            confidence: 0.0,
+            available: false,
+            timestamp: crate::core::utils::current_timestamp_ms(),
+        }
+    }
+}
+
+/// 眼动追踪事件
+#[derive(Debug, Clone)]
+pub struct EyeTrackingEvent {
+    /// 眼动追踪数据
+    pub data: EyeTrackingData,
+    /// 事件类型
+    pub event_type: EyeTrackingEventType,
+}
+
+/// 眼动追踪事件类型
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EyeTrackingEventType {
+    /// 注视点变化
+    GazeChanged,
+    /// 眼动追踪开始
+    TrackingStarted,
+    /// 眼动追踪停止
+    TrackingStopped,
+    /// 眼动追踪丢失
+    TrackingLost,
+}
+
+/// 眼动追踪管理器（占位实现）
+///
+/// 实际实现需要硬件支持（如Varjo、Pico等支持眼动追踪的VR头显）
+pub struct EyeTrackingManager {
+    /// 当前眼动追踪数据
+    current_data: EyeTrackingData,
+    /// 是否启用
+    enabled: bool,
+}
+
+impl EyeTrackingManager {
+    /// 创建新的眼动追踪管理器
+    pub fn new() -> Self {
+        Self {
+            current_data: EyeTrackingData::default(),
+            enabled: false,
+        }
+    }
+
+    /// 检查是否支持眼动追踪
+    pub fn is_supported(&self) -> bool {
+        // 占位实现：实际应该检查硬件支持
+        false
+    }
+
+    /// 启用眼动追踪
+    pub fn enable(&mut self) -> Result<(), XrError> {
+        if !self.is_supported() {
+            return Err(XrError::FeatureNotSupported("Eye tracking not supported".to_string()));
+        }
+        self.enabled = true;
+        Ok(())
+    }
+
+    /// 禁用眼动追踪
+    pub fn disable(&mut self) {
+        self.enabled = false;
+    }
+
+    /// 更新眼动追踪数据
+    pub fn update(&mut self) -> Option<EyeTrackingEvent> {
+        if !self.enabled || !self.is_supported() {
+            return None;
+        }
+
+        // 占位实现：实际应该从硬件获取数据
+        // 这里返回None表示数据不可用
+        None
+    }
+
+    /// 获取当前眼动追踪数据
+    pub fn get_data(&self) -> &EyeTrackingData {
+        &self.current_data
+    }
+}
+
+impl Default for EyeTrackingManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// XR 渲染器模块
 pub mod renderer;
 pub use renderer::XrRenderer;
@@ -314,6 +530,18 @@ pub use hand_tracking::{Finger, HandJoints, HandTracker, HandTrackingConfig, Han
 /// XR 空间锚点模块
 pub mod spatial_anchors;
 pub use spatial_anchors::{AnchorId, SpatialAnchor, SpatialAnchorManager};
+
+/// XR 空间映射模块
+pub mod spatial_mapping;
+pub use spatial_mapping::{
+    DetectedPlane, MeshId, MeshTriangle, MeshVertex, PlaneId, PlaneType, SpatialMappingConfig,
+    SpatialMappingManager, SpatialMesh,
+};
+
+// 重新导出手势识别和眼动追踪
+pub use hand_tracking::{Gesture, GestureEvent};
+// GestureRecognizer 已在上面定义，无需重新导出
+// EyeTrackingData, EyeTrackingEvent, EyeTrackingEventType, EyeTrackingManager 已在上面定义，无需重新导出
 
 /// 异步时间扭曲 (ATW - Asynchronous Time Warp) 模块
 pub mod atw {

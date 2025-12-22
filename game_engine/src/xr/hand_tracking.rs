@@ -32,6 +32,7 @@ use super::*;
 use crate::core::utils::current_timestamp_ms;
 use crate::impl_default;
 use std::collections::HashMap;
+use glam::Vec3;
 
 /// 手部追踪器 - 管理OpenXR手部追踪扩展，提供双手关节追踪功能
 pub struct HandTracker {
@@ -138,6 +139,65 @@ impl HandJoints {
     /// 如果手掌关节有效则返回其位置，否则返回None
     pub fn get_palm_position(&self) -> Option<Vec3> {
         self.get_joint(HandJointType::Palm).map(|j| j.pose.position)
+    }
+
+    /// 简单的手势识别（占位实现）
+    pub fn detect_gesture(&self) -> Option<HandGesture> {
+        let curl_threshold = 0.7;
+        let extended_threshold = 0.3;
+
+        let index_curl = self.get_finger_curl(Finger::Index).unwrap_or(0.0);
+        let middle_curl = self.get_finger_curl(Finger::Middle).unwrap_or(0.0);
+        let ring_curl = self.get_finger_curl(Finger::Ring).unwrap_or(0.0);
+        let little_curl = self.get_finger_curl(Finger::Little).unwrap_or(0.0);
+
+        let all_curled = index_curl > curl_threshold
+            && middle_curl > curl_threshold
+            && ring_curl > curl_threshold
+            && little_curl > curl_threshold;
+
+        let all_extended = index_curl < extended_threshold
+            && middle_curl < extended_threshold
+            && ring_curl < extended_threshold
+            && little_curl < extended_threshold;
+
+        if all_curled {
+            Some(HandGesture::Fist)
+        } else if all_extended {
+            Some(HandGesture::OpenHand)
+        } else {
+            None
+        }
+    }
+
+    /// 简单的手势识别（占位实现）
+    pub fn detect_gesture(&self) -> Option<HandGesture> {
+        // 使用各手指弯曲度进行粗略判断
+        let curl_threshold = 0.7;
+        let extended_threshold = 0.3;
+
+        let index_curl = self.get_finger_curl(Finger::Index);
+        let middle_curl = self.get_finger_curl(Finger::Middle);
+        let ring_curl = self.get_finger_curl(Finger::Ring);
+        let little_curl = self.get_finger_curl(Finger::Little);
+
+        let all_curled = index_curl > curl_threshold
+            && middle_curl > curl_threshold
+            && ring_curl > curl_threshold
+            && little_curl > curl_threshold;
+
+        let all_extended = index_curl < extended_threshold
+            && middle_curl < extended_threshold
+            && ring_curl < extended_threshold
+            && little_curl < extended_threshold;
+
+        if all_curled {
+            Some(HandGesture::Fist)
+        } else if all_extended {
+            Some(HandGesture::OpenHand)
+        } else {
+            None
+        }
     }
 
     /// 获取手腕位置（如果可用）
@@ -250,6 +310,51 @@ impl HandJoints {
             None
         }
     }
+}
+
+/// 手势类型 - 识别的手势
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Gesture {
+    /// 抓取手势（手指弯曲成拳）
+    Grasp,
+    /// 指向手势（食指伸直）
+    Point,
+    /// 挥手手势（手部快速移动）
+    Wave,
+    /// 捏取手势（拇指和食指靠近）
+    Pinch,
+    /// 张开手势（手指全部伸直）
+    Open,
+    /// 握拳手势（所有手指弯曲）
+    Fist,
+    /// 点赞手势（拇指向上）
+    ThumbsUp,
+    /// OK手势（拇指和食指形成圆圈）
+    Ok,
+}
+
+/// 手势事件
+#[derive(Debug, Clone)]
+pub struct GestureEvent {
+    /// 手势类型
+    pub gesture: Gesture,
+    /// 手部（左手或右手）
+    pub hand: Hand,
+    /// 手势置信度（0.0-1.0）
+    pub confidence: f32,
+    /// 手势位置（手部中心位置）
+    pub position: Vec3,
+    /// 时间戳（毫秒）
+    pub timestamp: u64,
+}
+
+/// 简单的高层手势枚举，供 XR 模块使用
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum HandGesture {
+    /// 握拳
+    Fist,
+    /// 张开手
+    OpenHand,
 }
 
 /// 手指类型 - 表示手部的五根手指

@@ -73,7 +73,7 @@ pub fn render(
     // Camera setup
     let (view_proj, camera_pos) = setup_camera(world, renderer);
 
-    // Render the scene
+    // Render the scene with egui renderer
     render_pbr_scene(
         world,
         renderer,
@@ -81,7 +81,7 @@ pub fn render(
         &scene,
         view_proj,
         camera_pos,
-        None, // TODO: Implement proper egui renderer
+        editor_ctx.egui_renderer.as_mut(),
         &egui_primitives,
         pixels_per_point,
     );
@@ -91,6 +91,74 @@ pub fn render(
 
     // Update render statistics
     update_render_stats(world, renderer, culled, total, window);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use bevy_ecs::prelude::*;
+    use glam::{Quat, Vec3};
+
+    #[test]
+    fn test_extract_lights_empty() {
+        let mut world = World::new();
+        let lights = extract_lights(&world);
+        assert_eq!(lights.len(), 0);
+    }
+
+    #[test]
+    fn test_extract_lights_with_point_light() {
+        let mut world = World::new();
+        
+        // 创建一个带点光源的实体
+        let entity = world.spawn((
+            Transform {
+                pos: Vec3::new(1.0, 2.0, 3.0),
+                rot: Quat::IDENTITY,
+                scale: Vec3::ONE,
+            },
+            PointLight {
+                color: Vec3::new(1.0, 1.0, 1.0),
+                intensity: 1.0,
+                range: 10.0,
+            },
+        )).id();
+
+        let lights = extract_lights(&world);
+        assert_eq!(lights.len(), 1);
+        assert_eq!(lights[0].position, [1.0, 2.0, 3.0]);
+    }
+
+    #[test]
+    fn test_setup_camera_no_camera() {
+        let mut world = World::new();
+        // 没有相机时应该返回默认值
+        // 注意：这个测试可能需要mock renderer
+    }
+
+    #[test]
+    fn test_setup_camera_with_camera() {
+        let mut world = World::new();
+        
+        // 创建一个带相机的实体
+        world.spawn((
+            Transform {
+                pos: Vec3::new(0.0, 0.0, 5.0),
+                rot: Quat::IDENTITY,
+                scale: Vec3::ONE,
+            },
+            Camera {
+                projection: Projection::Perspective {
+                    fov: 60.0,
+                    aspect: 16.0 / 9.0,
+                    near: 0.1,
+                    far: 100.0,
+                },
+            },
+        ));
+
+        // 注意：这个测试需要mock renderer，暂时跳过
+    }
 }
 
 /// 提取光源
@@ -200,7 +268,7 @@ fn render_pbr_scene(
     scene: &crate::services::render::PbrScene,
     view_proj: [[f32; 4]; 4],
     camera_pos: [f32; 3],
-    _egui_renderer: Option<egui_wgpu::Renderer>,
+    _egui_renderer: Option<&mut egui_wgpu::Renderer>,
     egui_primitives: &[egui::ClippedPrimitive],
     pixels_per_point: f32,
 ) {

@@ -84,6 +84,11 @@ impl Bone {
             inverse_bind_matrix: Mat4::IDENTITY,
         }
     }
+
+    /// 设置骨骼的局部变换
+    pub fn set_local_transform(&mut self, transform: BoneTransform) {
+        self.local_transform = transform;
+    }
 }
 
 // ============================================================================
@@ -91,7 +96,7 @@ impl Bone {
 // ============================================================================
 
 /// 骨骼层级组件
-#[derive(Component)]
+#[derive(Component, Clone)]
 pub struct Skeleton {
     /// 所有骨骼
     pub bones: Vec<Bone>,

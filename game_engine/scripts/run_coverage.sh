@@ -13,10 +13,3 @@ cargo tarpaulin --out Html --output-dir coverage --exclude-files '*/tests/*' --e
 
 echo "Coverage report generated in coverage/ directory"
 echo "Open coverage/tarpaulin-report.html to view the report"
-
-
-
-<<<<<<< HEAD
-=======
-
->>>>>>> 50b9493 (feat: Complete service layer testing with 43 comprehensive tests)

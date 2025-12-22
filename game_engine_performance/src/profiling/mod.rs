@@ -1,24 +1,15 @@
 // 性能分析模块
 // 
-// 注意：基础profiling功能（metrics, collector, storage等）已统一到 game_engine::profiling 模块。
-// 此模块保留高级分析工具，这些工具可以独立使用或与主模块配合使用。
+// 注意：所有profiling功能已统一到 game_engine::profiling 模块。
+// 此模块已废弃，仅保留用于向后兼容。
+// 
+// 新代码应直接从 game_engine::profiling 导入：
+// ```rust
+// use game_engine::profiling::{AdvancedProfiler, BottleneckDetector, ...};
+// ```
+//
+// 为了保持向后兼容，此模块提供空的重新导出。
+// 实际类型定义在 game_engine::profiling 中。
 
-// 高级分析工具模块
-pub mod advanced_profiler;
-pub mod bottleneck_detector;
-pub mod continuous_profiler;
-pub mod frame_analyzer;
-pub mod memory_profiler;
-pub mod performance_analyzer;
-pub mod profiler;
-
-// 重新导出高级分析工具
-pub use advanced_profiler::{AdvancedProfiler, PerformanceMetrics as AdvancedPerfMetrics};
-pub use bottleneck_detector::{
-    BottleneckDetector, BottleneckDiagnosis, BottleneckSeverity, BottleneckType,
-};
-pub use continuous_profiler::ContinuousProfiler;
-pub use frame_analyzer::{FrameAnalyzer, FrameSnapshot, PhaseMetrics};
-pub use memory_profiler::{GpuProfiler, MemoryProfiler};
-pub use performance_analyzer::{Bottleneck, PerformanceAnalysis, PerformanceAnalyzer};
-pub use profiler::Profiler;
+// 空模块 - 所有功能已迁移到 game_engine::profiling
+// 使用此模块的代码需要更新导入路径

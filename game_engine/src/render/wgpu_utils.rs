@@ -4,15 +4,8 @@ use wgpu::util::DeviceExt;
 use crate::error::RenderError;
 use crate::render::mesh::Vertex3D;
 
-// 性能监控集成
-#[cfg(feature = "profiling")]
-use crate::profiling::{
-    ProfilingService,
-    ScopedTimer,
-    record_counter,
-    record_timing,
-    prelude::*,
-};
+// 性能监控集成 - 使用 tracing 系统
+use tracing::{instrument, span, Level, info};
 
 #[repr(C)]
 #[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
@@ -579,9 +572,8 @@ impl DoubleBufferedInstances {
 }
 
 impl WgpuRenderer {
+    #[instrument(skip(window), name = "wgpu_renderer_init")]
     pub async fn new(window: std::sync::Arc<winit::window::Window>) -> Result<Self, RenderError> {
-        #[cfg(feature = "profiling")]
-        let _timer = ScopedTimer::new("wgpu_renderer_init");
         let size = window.outer_size();
         let instance = wgpu::Instance::default();
         let surface = instance.create_surface(window.clone());
@@ -596,35 +588,36 @@ impl WgpuRenderer {
                 force_fallback_adapter: false,
             })
             .await
-            .expect("No suitable graphics adapter found");
+            .map_err(|e| RenderError::Adapter {
+                message: format!("No suitable graphics adapter found: {}", e),
+                severity: crate::error::ErrorSeverity::Critical,
+            })?;
         let supported = adapter.features();
         let desired = {
-            let features = wgpu::Features::empty();
+            let mut features = wgpu::Features::empty();
 
             // GPU驱动剔除现在是默认功能，需要计算着色器支持（所有现代GPU都支持）
-            // 间接绘制相关特性（可选，用于T3.1.2优化）
-            #[cfg(feature = "wgpu_perf")]
-            {
-                features |= wgpu::Features::TIMESTAMP_QUERY
-                    | wgpu::Features::PIPELINE_STATISTICS_QUERY
-                    | wgpu::Features::MULTI_DRAW_INDIRECT
-                    | wgpu::Features::MULTI_DRAW_INDIRECT_COUNT
-                    | wgpu::Features::INDIRECT_FIRST_INSTANCE
-                    | wgpu::Features::PUSH_CONSTANTS
-                    | wgpu::Features::VERTEX_WRITABLE_STORAGE;
-            }
+            // 性能优化特性（默认启用）
+            // 注意：间接绘制通过 draw_indexed_indirect 方法实现，不需要额外的特性标志
+            features |= wgpu::Features::TIMESTAMP_QUERY
+                | wgpu::Features::PIPELINE_STATISTICS_QUERY
+                | wgpu::Features::PUSH_CONSTANTS
+                | wgpu::Features::VERTEX_WRITABLE_STORAGE;
+            
             features
         };
         let required_features = supported & desired;
         let (device, queue) = adapter
-            .request_device(&wgpu::DeviceDescriptor {
-                required_features,
-                required_limits: wgpu::Limits::default(),
-                label: None,
-                memory_hints: Default::default(),
-                trace: wgpu::Trace::Off,
-                experimental_features: Default::default(),
-            })
+            .request_device(
+                &wgpu::DeviceDescriptor {
+                    required_features,
+                    required_limits: wgpu::Limits::default(),
+                    label: None,
+                    memory_hints: Default::default(),
+                    trace: wgpu::Trace::Off,
+                    experimental_features: Default::default(),
+                },
+            )
             .await
             .map_err(|e| RenderError::DeviceCreation {
                 message: format!("Failed to request device: {}", e),
@@ -1503,6 +1496,11 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         }
     }
 
+    /// 获取当前表面格式
+    pub fn surface_format(&self) -> wgpu::TextureFormat {
+        self.config.format
+    }
+
     pub fn render(
         &mut self,
         instances: &[Instance],
@@ -1512,17 +1510,12 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         egui_shapes: &[egui::ClippedPrimitive],
         egui_pixels_per_point: f32,
     ) {
-        #[cfg(feature = "profiling")]
-        let frame_timer = ScopedTimer::new("frame_render");
+        let _frame_span = span!(Level::DEBUG, "frame_render").entered();
         
-        #[cfg(feature = "profiling")]
-        record_counter!(render.frame_count, 1);
+        info!(frame_count = 1, "Frame rendered");
+        info!(instance_count = instances.len(), "Instances updated");
+        info!(mesh_count = meshes.len(), "Meshes rendered");
         
-        #[cfg(feature = "profiling")]
-        record_counter!(render.instance_count, instances.len() as u64);
-        
-        #[cfg(feature = "profiling")]
-        record_counter!(render.mesh_count, meshes.len() as u64);
         self.update_instances_grouped(&mut instances.to_vec());
 
         // Update 3D uniforms
@@ -1559,15 +1552,12 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
             );
         }
 
-        #[cfg(feature = "profiling")]
-        let _acquire_timer = ScopedTimer::new("acquire_frame_texture");
+        let _acquire_span = span!(Level::DEBUG, "acquire_frame_texture").entered();
         
         let frame = match self.surface.get_current_texture() {
             Ok(frame) => frame,
             Err(e) => {
-                #[cfg(feature = "profiling")]
-                record_counter!(render.texture_acquire_errors, 1);
-                
+                info!(texture_acquire_errors = 1, "Texture acquire error");
                 self.surface.configure(&self.device, &self.config);
                 match self.surface.get_current_texture() {
                     Ok(frame) => frame,
@@ -1581,8 +1571,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         let view = frame
             .texture
             .create_view(&wgpu::TextureViewDescriptor::default());
-        #[cfg(feature = "profiling")]
-        let _encoder_timer = ScopedTimer::new("create_command_encoder");
+        let _encoder_span = span!(Level::DEBUG, "create_command_encoder").entered();
         
         let mut encoder = self
             .device
@@ -1747,8 +1736,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
             }
         }
 
-        #[cfg(feature = "profiling")]
-        let _submit_timer = ScopedTimer::new("submit_commands");
+        let _submit_span = span!(Level::DEBUG, "submit_commands").entered();
         
         // Submit main rendering command
         self.queue.submit(std::iter::once(encoder.finish()));
@@ -1792,22 +1780,17 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         //     self.queue.submit(std::iter::once(command_buffer));
         // }
         
-        #[cfg(feature = "profiling")]
-        let _present_timer = ScopedTimer::new("present_frame");
+        let _present_span = span!(Level::DEBUG, "present_frame").entered();
         
         frame.present();
         
-        #[cfg(feature = "profiling")]
-        {
-            // 记录帧渲染时间
-            if let Ok(duration) = frame_timer.elapsed() {
-                record_timing!(render.frame_time_ms, duration.as_millis() as f64);
-            }
-            
-            // 记录Draw Call数量
-            let (draws, _) = self.draw_stats();
-            record_counter!(render.draw_calls, draws as u64);
-        }
+        // 记录帧渲染时间和Draw Call数量
+        let (draws, _) = self.draw_stats();
+        info!(
+            frame_time_ms = ?_frame_span.elapsed(),
+            draw_calls = draws,
+            "Frame rendered"
+        );
     }
 
     pub fn set_lights(&mut self, lights: Vec<GpuPointLight>) {
@@ -1846,11 +1829,8 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     }
 
     pub fn update_instances(&mut self, instances: &[Instance]) {
-        #[cfg(feature = "profiling")]
-        let _timer = ScopedTimer::new("update_instances");
-        
-        #[cfg(feature = "profiling")]
-        record_counter!(render.instance_updates, 1);
+        let _update_span = span!(Level::DEBUG, "update_instances").entered();
+        info!(instance_updates = 1, "Instances updated");
         
         self.instance_count = instances.len() as u32;
         self.layer_ranges.clear();
@@ -1879,11 +1859,8 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     /// # 返回
     /// 返回更新的脏范围数量
     pub fn update_instances_incremental(&mut self, instances: &[Instance]) -> usize {
-        #[cfg(feature = "profiling")]
-        let _timer = ScopedTimer::new("update_instances_incremental");
-        
-        #[cfg(feature = "profiling")]
-        record_counter!(render.incremental_updates, 1);
+        let _incremental_span = span!(Level::DEBUG, "update_instances_incremental").entered();
+        info!(incremental_updates = 1, "Incremental instances updated");
         
         self.instance_count = instances.len() as u32;
         self.layer_ranges.clear();
@@ -1918,11 +1895,11 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         self.group_cache.clear();
         self.groups_dirty = false;
 
-        #[cfg(feature = "profiling")]
-        {
-            record_counter!(render.dirty_ranges, range_count as u64);
-            record_counter!(render.dirty_instances, self.dirty_tracker.dirty_instance_count() as u64);
-        }
+        info!(
+            dirty_ranges = range_count,
+            dirty_instances = self.dirty_tracker.dirty_instance_count(),
+            "Dirty ranges updated"
+        );
         
         range_count
     }
@@ -2072,16 +2049,10 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         self.groups_dirty = true;
     }
 
+    #[instrument(skip(self), name = "load_texture_file")]
     pub fn load_texture_file(&mut self, path: &std::path::Path) -> Option<u32> {
-        #[cfg(feature = "profiling")]
-        let _timer = ScopedTimer::new("load_texture_file");
-        
-        #[cfg(feature = "profiling")]
-        let start_time = std::time::Instant::now();
-        
         if let Ok(img) = image::open(path) {
-            #[cfg(feature = "profiling")]
-            record_counter!(render.texture_load_attempts, 1);
+            info!(texture_load_attempts = 1, "Texture load attempted");
             let rgba = img.to_rgba8();
             let (w, h) = rgba.dimensions();
             let texture = self.device.create_texture(&wgpu::TextureDescriptor {
@@ -2139,22 +2110,16 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
             self.texture_bind_groups.push(bg);
             self.textures_size.push([w, h]);
             
-            #[cfg(feature = "profiling")]
-            {
-                record_counter!(render.texture_load_success, 1);
-                record_counter!(render.loaded_textures, 1);
-                record_counter!(render.total_texture_memory, (w * h * 4) as u64);
-                
-                if let Ok(duration) = start_time.elapsed() {
-                    record_timing!(render.texture_load_time_ms, duration.as_millis() as f64);
-                }
-            }
+            info!(
+                texture_load_success = 1,
+                loaded_textures = 1,
+                total_texture_memory = w * h * 4,
+                "Texture loaded successfully"
+            );
             
             Some(idx)
         } else {
-            #[cfg(feature = "profiling")]
-            record_counter!(render.texture_load_failures, 1);
-            
+            info!(texture_load_failures = 1, "Texture load failed");
             None
         }
     }
@@ -3280,6 +3245,34 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                     rpass.draw_indexed(0..batch.mesh.index_count, 0, 0..batch.count);
                 }
             }
+        }
+
+        // 渲染egui UI（在PBR渲染之后）
+        if let Some(renderer) = egui_renderer.as_mut() {
+            let screen_desc = egui_wgpu::ScreenDescriptor {
+                size_in_pixels: [self.config.width, self.config.height],
+                pixels_per_point: egui_pixels_per_point,
+            };
+            
+            let render_pass_desc = wgpu::RenderPassDescriptor {
+                label: Some("egui render pass"),
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    view: &view,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Load, // 加载现有内容（在3D渲染之上）
+                        store: wgpu::StoreOp::Store,
+                    },
+                    depth_slice: None,
+                })],
+                depth_stencil_attachment: None,
+                occlusion_query_set: None,
+                timestamp_writes: None,
+            };
+
+            let mut egui_render_pass = encoder.begin_render_pass(&render_pass_desc);
+            renderer.render(&mut egui_render_pass, egui_shapes, &screen_desc);
+            drop(egui_render_pass); // 显式释放借用
         }
 
         self.queue.submit(std::iter::once(encoder.finish()));

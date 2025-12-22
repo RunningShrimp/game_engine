@@ -86,6 +86,8 @@ pub mod audio;
 pub mod bindings;
 /// Configuration system
 pub mod config;
+/// Common error types
+pub mod common_errors;
 /// Core engine functionality including the main engine loop and initialization
 pub mod core;
 /// Domain layer with rich domain objects

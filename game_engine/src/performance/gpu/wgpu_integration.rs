@@ -440,6 +440,286 @@ impl GPUExecutionResult {
     }
 }
 
+/// GPU性能指标
+#[derive(Debug, Clone)]
+pub struct GPUPerformanceMetrics {
+    /// GPU利用率（0.0-1.0）
+    pub utilization: f32,
+    /// Draw call数量
+    pub draw_calls: u32,
+    /// 三角形数量
+    pub triangles: u64,
+    /// 顶点数量
+    pub vertices: u64,
+    /// GPU内存使用（字节）
+    pub memory_used: u64,
+    /// GPU内存总量（字节）
+    pub memory_total: u64,
+    /// 帧时间（毫秒）
+    pub frame_time_ms: f32,
+    /// GPU时间（毫秒）
+    pub gpu_time_ms: f32,
+    /// 渲染管线瓶颈
+    pub pipeline_bottleneck: PipelineBottleneck,
+}
+
+impl Default for GPUPerformanceMetrics {
+    fn default() -> Self {
+        Self {
+            utilization: 0.0,
+            draw_calls: 0,
+            triangles: 0,
+            vertices: 0,
+            memory_used: 0,
+            memory_total: 0,
+            frame_time_ms: 0.0,
+            gpu_time_ms: 0.0,
+            pipeline_bottleneck: PipelineBottleneck::None,
+        }
+    }
+}
+
+/// 渲染管线瓶颈
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PipelineBottleneck {
+    /// 无瓶颈
+    None,
+    /// 顶点处理瓶颈
+    VertexProcessing,
+    /// 片段处理瓶颈
+    FragmentProcessing,
+    /// 内存带宽瓶颈
+    MemoryBandwidth,
+    /// 几何处理瓶颈
+    GeometryProcessing,
+    /// 计算着色器瓶颈
+    ComputeShader,
+}
+
+/// GPU时间查询器
+///
+/// 使用wgpu的TIMESTAMP_QUERY特性查询GPU时间戳
+pub struct GPUTimeQuery {
+    /// 查询集合名称
+    pub name: String,
+    /// 开始时间戳（纳秒）
+    pub start_timestamp_ns: Option<u64>,
+    /// 结束时间戳（纳秒）
+    pub end_timestamp_ns: Option<u64>,
+    /// 历史时间记录
+    pub history: Vec<f32>, // 毫秒
+}
+
+impl GPUTimeQuery {
+    /// 创建新的GPU时间查询器
+    pub fn new(name: String) -> Self {
+        Self {
+            name,
+            start_timestamp_ns: None,
+            end_timestamp_ns: None,
+            history: Vec::with_capacity(100),
+        }
+    }
+
+    /// 记录开始时间戳
+    pub fn record_start(&mut self, timestamp_ns: u64) {
+        self.start_timestamp_ns = Some(timestamp_ns);
+    }
+
+    /// 记录结束时间戳
+    pub fn record_end(&mut self, timestamp_ns: u64) {
+        self.end_timestamp_ns = Some(timestamp_ns);
+        
+        // 计算时间差并记录
+        if let Some(start) = self.start_timestamp_ns {
+            let duration_ns = timestamp_ns.saturating_sub(start);
+            let duration_ms = duration_ns as f32 / 1_000_000.0;
+            
+            self.history.push(duration_ms);
+            
+            // 保持历史记录在合理大小
+            if self.history.len() > 100 {
+                self.history.remove(0);
+            }
+        }
+    }
+
+    /// 获取平均时间（毫秒）
+    pub fn average_time_ms(&self) -> f32 {
+        if self.history.is_empty() {
+            return 0.0;
+        }
+        self.history.iter().sum::<f32>() / self.history.len() as f32
+    }
+
+    /// 获取最小时间（毫秒）
+    pub fn min_time_ms(&self) -> f32 {
+        self.history.iter().copied().fold(f32::INFINITY, f32::min)
+    }
+
+    /// 获取最大时间（毫秒）
+    pub fn max_time_ms(&self) -> f32 {
+        self.history.iter().copied().fold(0.0, f32::max)
+    }
+
+    /// 获取最后时间（毫秒）
+    pub fn last_time_ms(&self) -> Option<f32> {
+        self.history.last().copied()
+    }
+
+    /// 重置查询器
+    pub fn reset(&mut self) {
+        self.start_timestamp_ns = None;
+        self.end_timestamp_ns = None;
+        self.history.clear();
+    }
+}
+
+/// GPU性能分析器
+///
+/// 收集和分析GPU性能指标
+pub struct GPUProfiler {
+    /// 时间查询器映射
+    time_queries: std::collections::HashMap<String, GPUTimeQuery>,
+    /// 当前性能指标
+    metrics: GPUPerformanceMetrics,
+    /// Draw call统计
+    draw_call_count: u32,
+    /// 三角形统计
+    triangle_count: u64,
+    /// 顶点统计
+    vertex_count: u64,
+}
+
+impl GPUProfiler {
+    /// 创建新的GPU性能分析器
+    pub fn new() -> Self {
+        Self {
+            time_queries: std::collections::HashMap::new(),
+            metrics: GPUPerformanceMetrics::default(),
+            draw_call_count: 0,
+            triangle_count: 0,
+            vertex_count: 0,
+        }
+    }
+
+    /// 开始时间查询
+    pub fn start_query(&mut self, name: &str) {
+        // 在实际实现中，这里应该调用wgpu的timestamp query
+        // 这里使用占位实现
+        let query = self.time_queries
+            .entry(name.to_string())
+            .or_insert_with(|| GPUTimeQuery::new(name.to_string()));
+        
+        // 模拟时间戳（实际应该从GPU获取）
+        let timestamp_ns = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos() as u64;
+        query.record_start(timestamp_ns);
+    }
+
+    /// 结束时间查询
+    pub fn end_query(&mut self, name: &str) {
+        if let Some(query) = self.time_queries.get_mut(name) {
+            let timestamp_ns = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos() as u64;
+            query.record_end(timestamp_ns);
+        }
+    }
+
+    /// 记录draw call
+    pub fn record_draw_call(&mut self, count: u32) {
+        self.draw_call_count += count;
+    }
+
+    /// 记录三角形
+    pub fn record_triangles(&mut self, count: u64) {
+        self.triangle_count += count;
+    }
+
+    /// 记录顶点
+    pub fn record_vertices(&mut self, count: u64) {
+        self.vertex_count += count;
+    }
+
+    /// 更新性能指标
+    pub fn update_metrics(&mut self) {
+        // 计算GPU利用率（简化实现）
+        let gpu_time = self.time_queries
+            .values()
+            .filter_map(|q| q.last_time_ms())
+            .sum::<f32>();
+        
+        self.metrics.gpu_time_ms = gpu_time;
+        self.metrics.draw_calls = self.draw_call_count;
+        self.metrics.triangles = self.triangle_count;
+        self.metrics.vertices = self.vertex_count;
+        
+        // 估算利用率（简化实现）
+        if self.metrics.frame_time_ms > 0.0 {
+            self.metrics.utilization = (self.metrics.gpu_time_ms / self.metrics.frame_time_ms).min(1.0);
+        }
+        
+        // 检测瓶颈
+        self.metrics.pipeline_bottleneck = self.detect_bottleneck();
+    }
+
+    /// 检测渲染管线瓶颈
+    fn detect_bottleneck(&self) -> PipelineBottleneck {
+        // 简化实现：基于时间查询检测瓶颈
+        // 实际实现应该分析各个阶段的GPU时间
+        
+        if let Some(vertex_time) = self.time_queries.get("vertex_processing") {
+            if let Some(time) = vertex_time.last_time_ms() {
+                if time > 5.0 {
+                    return PipelineBottleneck::VertexProcessing;
+                }
+            }
+        }
+        
+        if let Some(fragment_time) = self.time_queries.get("fragment_processing") {
+            if let Some(time) = fragment_time.last_time_ms() {
+                if time > 5.0 {
+                    return PipelineBottleneck::FragmentProcessing;
+                }
+            }
+        }
+        
+        PipelineBottleneck::None
+    }
+
+    /// 获取性能指标
+    pub fn get_metrics(&self) -> &GPUPerformanceMetrics {
+        &self.metrics
+    }
+
+    /// 获取时间查询结果
+    pub fn get_query_result(&self, name: &str) -> Option<&GPUTimeQuery> {
+        self.time_queries.get(name)
+    }
+
+    /// 重置统计
+    pub fn reset_frame(&mut self) {
+        self.draw_call_count = 0;
+        self.triangle_count = 0;
+        self.vertex_count = 0;
+    }
+
+    /// 设置帧时间
+    pub fn set_frame_time(&mut self, frame_time_ms: f32) {
+        self.metrics.frame_time_ms = frame_time_ms;
+    }
+}
+
+impl Default for GPUProfiler {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// 性能对比结果
 #[derive(Debug, Clone)]
 pub struct PerformanceComparison {

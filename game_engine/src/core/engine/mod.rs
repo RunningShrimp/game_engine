@@ -5,7 +5,10 @@
 pub mod asset_processor;
 pub mod demo_scene;
 pub mod engine;
+#[cfg(test)]
+mod engine_tests;
 pub mod game_loop;
+pub mod game_loop_fixed;
 pub mod initialization;
 pub mod input_handler;
 pub mod renderer;

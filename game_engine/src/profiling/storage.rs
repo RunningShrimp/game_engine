@@ -11,8 +11,8 @@ use tokio::fs::{File, OpenOptions};
 use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt, BufReader, BufWriter};
 
 use crate::platform::run_sync;
-use crate::profiling::metrics::*;
-use crate::profiling::ProfilingResult;
+use super::metrics::*;
+use super::ProfilingResult;
 
 // ============================================================================
 // 环形缓冲区
@@ -38,8 +38,10 @@ pub struct RingBuffer<T> {
 impl<T> RingBuffer<T> {
     /// 创建新的环形缓冲区
     pub fn new(capacity: usize) -> Self {
+        let mut buffer = Vec::with_capacity(capacity);
+        buffer.resize_with(capacity, || None);
         Self {
-            buffer: vec![None; capacity],
+            buffer,
             write_pos: 0,
             read_pos: 0,
             count: 0,
@@ -396,14 +398,12 @@ pub struct PersistentStorage {
     total_written: usize,
 }
 
-use crate::platform::run_sync;
-
 impl PersistentStorage {
     /// 创建新的持久化存储
     pub async fn new(config: StorageConfig) -> ProfilingResult<Self> {
         // 确保数据目录存在
         tokio::fs::create_dir_all(&config.data_dir).await
-            .map_err(|e| crate::profiling::ProfilingError::IoError(e.to_string()))?;
+            .map_err(super::ProfilingError::IoError)?;
 
         let compressor = DataCompressor::new(config.compression.clone());
         
@@ -435,10 +435,17 @@ impl PersistentStorage {
             
             // 缓存满时刷新
             if self.write_cache.len() >= self.config.cache_size {
-                self.flush_cache()?;
+                // 使用同步版本的 flush_cache
+                self.flush_cache_sync()?;
             }
         } else {
-            self.write_data_point(&data_point)?;
+            // write_data_point 是异步函数，需要使用 run_sync 包装
+            let data_point_clone = data_point.clone();
+            let mut self_clone = self; // 需要创建一个可移动的副本
+            let result = run_sync(async move {
+                self_clone.write_data_point(&data_point_clone).await
+            });
+            result?;
         }
         
         Ok(())
@@ -579,18 +586,18 @@ impl PersistentStorage {
         
         // 扫描目录中的文件
         let mut entries = tokio::fs::read_dir(&self.config.data_dir).await?;
-        while let Some(entry) = entries.next_entry().await.map_err(|e| crate::profiling::ProfilingError::IoError(e.to_string()))? {
+        while let Some(entry) = entries.next_entry().await.map_err(super::ProfilingError::IoError)? {
             let path = entry.path();
             
             // 检查文件名是否匹配前缀
             if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
                 if name.starts_with(&self.config.file_prefix) && name.ends_with(".dat") {
                     let metadata = tokio::fs::metadata(&path).await
-                        .map_err(|e| crate::profiling::ProfilingError::IoError(e.to_string()))?;
+                        .map_err(super::ProfilingError::IoError)?;
                     let created_at = metadata.created().unwrap_or(SystemTime::now());
                     
                     files.push(FileInfo {
-                        path,
+                        path: path.clone(),
                         size: metadata.len() as usize,
                         created_at,
                         is_compressed: name.ends_with(".gz"),
@@ -632,15 +639,15 @@ impl PersistentStorage {
         let mut compressed_files = 0;
         
         let mut entries = tokio::fs::read_dir(&self.config.data_dir).await
-            .map_err(|e| crate::profiling::ProfilingError::IoError(e.to_string()))?;
+            .map_err(super::ProfilingError::IoError)?;
         while let Some(entry) = entries.next_entry().await
-            .map_err(|e| crate::profiling::ProfilingError::IoError(e.to_string()))? {
+            .map_err(super::ProfilingError::IoError)? {
             let path = entry.path();
             
             if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
                 if name.starts_with(&self.config.file_prefix) && name.ends_with(".dat") {
                     let metadata = tokio::fs::metadata(&path).await
-                        .map_err(|e| crate::profiling::ProfilingError::IoError(e.to_string()))?;
+                        .map_err(super::ProfilingError::IoError)?;
                     total_files += 1;
                     total_size += metadata.len();
                     if name.ends_with(".gz") {
@@ -760,9 +767,9 @@ impl DataQueryer {
 
         // 扫描所有文件
         let mut entries = tokio::fs::read_dir(&self.storage_dir).await
-            .map_err(|e| crate::profiling::ProfilingError::IoError(e.to_string()))?;
+            .map_err(super::ProfilingError::IoError)?;
         while let Some(entry) = entries.next_entry().await
-            .map_err(|e| crate::profiling::ProfilingError::IoError(e.to_string()))? {
+            .map_err(super::ProfilingError::IoError)? {
             let path = entry.path();
             
             if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
@@ -805,7 +812,7 @@ impl DataQueryer {
     /// 读取单个文件
     async fn read_file(&self, path: &Path, condition: &QueryCondition) -> ProfilingResult<Vec<DataPoint>> {
         let file = tokio::fs::File::open(path).await
-            .map_err(|e| crate::profiling::ProfilingError::IoError(e.to_string()))?;
+            .map_err(super::ProfilingError::IoError)?;
         let mut reader = tokio::io::BufReader::new(file);
         let mut data_points = Vec::new();
 

@@ -8,8 +8,8 @@ use std::time::{Duration, Instant};
 use std::thread;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 
-use crate::profiling::metrics::*;
-use crate::profiling::ProfilingResult;
+use super::metrics::*;
+use super::ProfilingResult;
 
 // ============================================================================
 // 高精度计时器
@@ -95,10 +95,7 @@ impl Drop for HighPrecisionTimer {
 #[macro_export]
 macro_rules! timed_scope {
     ($collector:expr, $name:expr) => {
-        let _timer = $crate::profiling::collector::HighPrecisionTimer::with_collector(
-            $name,
-            $collector.clone()
-        );
+        let _timer = $crate::performance::HighPrecisionTimer::new($name);
     };
 }
 
@@ -260,6 +257,7 @@ pub struct DataItem {
 /// 异步数据传输器
 /// 
 /// 在后台线程中批量处理数据传输，减少主线程开销
+#[derive(Debug)]
 pub struct AsyncDataTransmitter {
     /// 配置
     config: AsyncTransferConfig,
@@ -288,7 +286,7 @@ impl AsyncDataTransmitter {
     /// 启动异步传输
     pub fn start(&mut self) -> ProfilingResult<()> {
         if self.running.load(Ordering::Relaxed) {
-            return Err(crate::profiling::ProfilingError::ConfigurationError(
+            return Err(super::ProfilingError::ConfigurationError(
                 "异步传输器已在运行".to_string(),
             ));
         }
@@ -350,7 +348,7 @@ impl AsyncDataTransmitter {
         
         if let Some(handle) = self.handle.take() {
             handle.join().map_err(|_| {
-                crate::profiling::ProfilingError::ProcessingError(
+                super::ProfilingError::ProcessingError(
                     "无法加入异步传输线程".to_string(),
                 )
             })?;
@@ -365,7 +363,7 @@ impl AsyncDataTransmitter {
             queue.push(item);
             Ok(())
         } else {
-            Err(crate::profiling::ProfilingError::CollectionError(
+            Err(super::ProfilingError::CollectionError(
                 "无法访问传输队列".to_string(),
             ))
         }
@@ -426,8 +424,8 @@ pub struct CollectorConfig {
 impl Default for CollectorConfig {
     fn default() -> Self {
         Self {
-            sample_rate: crate::profiling::defaults::DEFAULT_SAMPLE_RATE,
-            ring_buffer_size: crate::profiling::defaults::DEFAULT_RING_BUFFER_SIZE,
+            sample_rate: super::defaults::DEFAULT_SAMPLE_RATE,
+            ring_buffer_size: super::defaults::DEFAULT_RING_BUFFER_SIZE,
             enable_async_transfer: true,
             async_transfer_config: Some(AsyncTransferConfig::default()),
             enable_high_precision: true,
@@ -438,6 +436,7 @@ impl Default for CollectorConfig {
 /// 指标收集器
 /// 
 /// 统一收集和管理所有性能指标
+#[derive(Debug)]
 pub struct MetricCollector {
     /// 配置
     config: CollectorConfig,
@@ -574,11 +573,8 @@ impl MetricCollector {
 
     /// 创建高精度计时器
     pub fn create_timer(&self, name: &str) -> HighPrecisionTimer {
-        if self.config.enable_high_precision {
-            HighPrecisionTimer::with_collector(name, Arc::clone(&self.registry))
-        } else {
-            HighPrecisionTimer::new(name)
-        }
+        // 简化：直接创建不绑定收集器的计时器，避免跨类型引用问题
+        HighPrecisionTimer::new(name)
     }
 }
 

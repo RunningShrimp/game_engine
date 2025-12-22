@@ -9,8 +9,9 @@ use std::thread;
 
 use serde::{Deserialize, Serialize};
 
-use crate::profiling::metrics::*;
-use crate::profiling::ProfilingResult;
+use super::metrics::*;
+use super::ProfilingResult;
+use super::visualization::TrendDirection;
 
 // ============================================================================
 // 告警配置
@@ -122,21 +123,67 @@ impl LogLevel {
 // 告警策略
 // ============================================================================
 
+/// 告警级别
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub enum AlertLevel {
+    /// 信息
+    Info,
+    /// 警告
+    Warning,
+    /// 错误
+    Error,
+    /// 严重
+    Critical,
+}
+
+/// 告警操作符
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum AlertOperator {
+    /// 大于
+    GreaterThan,
+    /// 小于
+    LessThan,
+    /// 等于
+    Equal,
+    /// 不等于
+    NotEqual,
+    /// 大于等于
+    GreaterThanOrEqual,
+    /// 小于等于
+    LessThanOrEqual,
+}
+
+impl AlertOperator {
+    /// 评估操作符
+    pub fn evaluate(&self, value: f64, threshold: f64) -> bool {
+        match self {
+            AlertOperator::GreaterThan => value > threshold,
+            AlertOperator::LessThan => value < threshold,
+            AlertOperator::Equal => (value - threshold).abs() < f64::EPSILON,
+            AlertOperator::NotEqual => (value - threshold).abs() >= f64::EPSILON,
+            AlertOperator::GreaterThanOrEqual => value >= threshold,
+            AlertOperator::LessThanOrEqual => value <= threshold,
+        }
+    }
+}
+
+// TrendDirection 从 visualization 模块导入
+
 /// 告警策略类型
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum AlertStrategy {
     /// 阈值告警
-    Threshold,
+    Threshold(ThresholdAlertStrategy),
     /// 趋势告警
-    Trend,
+    Trend(TrendAlertStrategy),
     /// 异常检测告警
-    Anomaly,
+    Anomaly(AnomalyAlertStrategy),
     /// 复合告警
-    Composite,
+    Composite(CompositeAlertStrategy),
 }
 
 /// 阈值告警策略
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ThresholdAlertStrategy {
     /// 告警级别
     pub level: AlertLevel,
@@ -151,7 +198,7 @@ pub struct ThresholdAlertStrategy {
 }
 
 /// 趋势告警策略
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TrendAlertStrategy {
     /// 告警级别
     pub level: AlertLevel,
@@ -166,7 +213,7 @@ pub struct TrendAlertStrategy {
 }
 
 /// 异常检测告警策略
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AnomalyAlertStrategy {
     /// 告警级别
     pub level: AlertLevel,
@@ -179,7 +226,7 @@ pub struct AnomalyAlertStrategy {
 }
 
 /// 异常检测算法
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum AnomalyAlgorithm {
     /// Z-Score检测
     ZScore,
@@ -192,7 +239,7 @@ pub enum AnomalyAlgorithm {
 }
 
 /// 异常敏感度
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum AnomalySensitivity {
     Low,
     Medium,
@@ -212,10 +259,10 @@ impl AnomalySensitivity {
 }
 
 /// 复合告警策略
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompositeAlertStrategy {
-    /// 子策略列表
-    pub sub_strategies: Vec<AlertStrategy>,
+    /// 子策略列表（使用Box避免递归类型大小问题）
+    pub sub_strategies: Vec<Box<AlertStrategy>>,
     /// 逻辑操作符
     pub operator: CompositeOperator,
     /// 子策略满足数量
@@ -223,7 +270,7 @@ pub struct CompositeAlertStrategy {
 }
 
 /// 复合操作符
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum CompositeOperator {
     /// 所有条件都满足
     All,
@@ -1037,8 +1084,8 @@ impl NotificationSender {
         let log_level = match alert.level {
             AlertLevel::Info => LogLevel::Info,
             AlertLevel::Warning => LogLevel::Warning,
-            AlertLevel::Critical => LogLevel::Error,
-            AlertLevel::Fatal => LogLevel::Critical,
+            AlertLevel::Error => LogLevel::Error,
+            AlertLevel::Critical => LogLevel::Critical,
         };
 
         if log_level as u8 >= self.config.log_level as u8 {

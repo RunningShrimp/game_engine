@@ -32,6 +32,9 @@ pub mod prediction;
 pub mod security;
 pub mod server;
 pub mod synchronization;
+/// 并行网络消息处理
+/// 并行功能默认启用，使用线程池进行并行消息处理
+pub mod parallel;
 
 use crate::impl_default;
 use bevy_ecs::prelude::*;

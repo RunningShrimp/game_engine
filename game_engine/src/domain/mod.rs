@@ -10,7 +10,6 @@ pub mod events;
 #[cfg(test)]
 mod error_handling_tests;
 pub mod errors;
-pub mod implementation_plan;
 
 #[cfg(test)]
 mod aggregate_invariants_tests;

@@ -18,13 +18,21 @@
 //  dashboard.start_server("127.0.0.1:8080").await?;
 //  ```
 
+#[cfg(feature = "profiling")]
 use std::collections::HashMap;
+#[cfg(feature = "profiling")]
 use std::sync::Arc;
+#[cfg(feature = "profiling")]
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+#[cfg(feature = "profiling")]
 use tokio::sync::{RwLock, Mutex};
+#[cfg(feature = "profiling")]
 use warp::{Filter, Rejection, Reply};
+#[cfg(feature = "profiling")]
 use warp::ws::{Message, WebSocket};
+#[cfg(feature = "profiling")]
 use futures::{SinkExt, StreamExt};
+#[cfg(feature = "profiling")]
 use tokio::time::interval;
 
 use super::{ProfilingService, MetricId, MetricValue, Alert, AlertSeverity};
@@ -249,16 +257,7 @@ pub struct SystemMetrics {
     pub thread_count: u32,
 }
 
-/// 告警信息
-#[derive(Debug, Clone, serde::Serialize)]
-pub struct AlertInfo {
-    /// 告警严重性
-    pub severity: String,
-    /// 告警消息
-    pub message: String,
-    /// 告警时间戳
-    pub timestamp: u64,
-}
+// AlertInfo 已在上面定义，这里移除重复定义
 
 /// 图表数据响应
 #[derive(Debug, Clone, serde::Serialize)]
@@ -361,9 +360,12 @@ impl DashboardService {
             routes
         };
 
-        let routes = routes
-            .with(warp::cors().if(self.config.enable_cors))
-            .with(warp::log("dashboard"));
+        let routes = if self.config.enable_cors {
+            routes.with(warp::cors())
+        } else {
+            routes
+        };
+        let routes = routes.with(warp::log("dashboard"));
 
         // 启动实时数据推送任务
         if config.enable_websocket {

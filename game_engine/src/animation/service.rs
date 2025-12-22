@@ -6,108 +6,80 @@ use super::clip::AnimationClip;
 use super::player::AnimationPlayer;
 use crate::ecs::Transform;
 
-/// 动画服务 - 封装动画业务逻辑
+/// 动画服务 - 协调层（用于复杂业务场景）
 ///
-/// 遵循贫血模型设计原则：
-/// - AnimationPlayer (Component): 纯数据结构
-/// - AnimationService (Service): 封装业务逻辑
+/// 遵循富领域模型设计原则：
+/// - AnimationPlayer (Component): 包含业务逻辑的领域对象
+/// - AnimationService (Service): 协调层，用于复杂业务场景（如动画混合、队列管理等）
 /// - animation_system (System): 调度编排
+///
+/// 注意：大部分业务逻辑已移至 `AnimationPlayer`，此服务主要用于：
+/// - 动画混合（blending）
+/// - 动画队列管理
+/// - 跨实体的动画协调
 pub struct AnimationService;
 
 impl AnimationService {
-    /// 播放动画片段
+    /// 播放动画片段（委托给AnimationPlayer）
+    ///
+    /// 此方法保留用于向后兼容，建议直接使用 `player.play(clip)`
+    #[deprecated(since = "0.3.0", note = "请直接使用 AnimationPlayer::play()")]
     pub fn play(player: &mut AnimationPlayer, clip: AnimationClip) {
-        player.current_clip = Some(clip);
-        player.current_time = 0.0;
-        player.playing = true;
+        player.play(clip);
     }
 
-    /// 暂停播放
+    /// 暂停播放（委托给AnimationPlayer）
+    #[deprecated(since = "0.3.0", note = "请直接使用 AnimationPlayer::pause()")]
     pub fn pause(player: &mut AnimationPlayer) {
-        player.playing = false;
+        player.pause();
     }
 
-    /// 恢复播放
+    /// 恢复播放（委托给AnimationPlayer）
+    #[deprecated(since = "0.3.0", note = "请直接使用 AnimationPlayer::resume()")]
     pub fn resume(player: &mut AnimationPlayer) {
-        player.playing = true;
+        player.resume();
     }
 
-    /// 停止播放并重置
+    /// 停止播放（委托给AnimationPlayer）
+    #[deprecated(since = "0.3.0", note = "请直接使用 AnimationPlayer::stop()")]
     pub fn stop(player: &mut AnimationPlayer) {
-        player.playing = false;
-        player.current_time = 0.0;
+        player.stop();
     }
 
-    /// 设置播放速度
+    /// 设置播放速度（委托给AnimationPlayer）
+    #[deprecated(since = "0.3.0", note = "请直接使用 AnimationPlayer::set_speed()")]
     pub fn set_speed(player: &mut AnimationPlayer, speed: f32) {
-        player.speed = speed;
+        player.set_speed(speed);
     }
 
-    /// 跳转到指定时间
+    /// 跳转到指定时间（委托给AnimationPlayer）
+    #[deprecated(since = "0.3.0", note = "请直接使用 AnimationPlayer::seek()")]
     pub fn seek(player: &mut AnimationPlayer, time: f32) {
-        player.current_time = time.max(0.0);
-        if let Some(clip) = &player.current_clip {
-            if player.current_time > clip.duration {
-                player.current_time = clip.duration;
-            }
-        }
+        player.seek(time);
     }
 
-    /// 更新动画状态
+    /// 更新动画状态（委托给AnimationPlayer）
+    #[deprecated(since = "0.3.0", note = "请直接使用 AnimationPlayer::update()")]
     pub fn update(player: &mut AnimationPlayer, delta_time: f32) {
-        if !player.playing {
-            return;
-        }
-
-        if let Some(clip) = &player.current_clip {
-            player.current_time += delta_time * player.speed;
-
-            if player.current_time >= clip.duration {
-                if clip.looping {
-                    player.current_time %= clip.duration;
-                } else {
-                    player.current_time = clip.duration;
-                    player.playing = false;
-                }
-            }
-        }
+        player.update(delta_time);
     }
 
-    /// 应用动画到Transform组件
+    /// 应用动画到Transform组件（委托给AnimationPlayer）
+    #[deprecated(since = "0.3.0", note = "请直接使用 AnimationPlayer::apply_to_transform()")]
     pub fn apply_to_transform(player: &AnimationPlayer, entity_id: u64, transform: &mut Transform) {
-        if let Some(clip) = &player.current_clip {
-            if let Some(position) = clip.sample_position(entity_id, player.current_time) {
-                transform.pos = position;
-            }
-
-            if let Some(rotation) = clip.sample_rotation(entity_id, player.current_time) {
-                transform.rot = rotation;
-            }
-
-            if let Some(scale) = clip.sample_scale(entity_id, player.current_time) {
-                transform.scale = scale;
-            }
-        }
+        player.apply_to_transform(entity_id, transform);
     }
 
-    /// 获取当前播放进度 (0.0 - 1.0)
+    /// 获取当前播放进度（委托给AnimationPlayer）
+    #[deprecated(since = "0.3.0", note = "请直接使用 AnimationPlayer::progress()")]
     pub fn progress(player: &AnimationPlayer) -> f32 {
-        if let Some(clip) = &player.current_clip {
-            if clip.duration > 0.0 {
-                return player.current_time / clip.duration;
-            }
-        }
-        0.0
+        player.progress()
     }
 
-    /// 检查动画是否播放完成
+    /// 检查动画是否播放完成（委托给AnimationPlayer）
+    #[deprecated(since = "0.3.0", note = "请直接使用 AnimationPlayer::is_finished()")]
     pub fn is_finished(player: &AnimationPlayer) -> bool {
-        if let Some(clip) = &player.current_clip {
-            if !clip.looping && player.current_time >= clip.duration {
-                return true;
-            }
-        }
-        false
+        player.is_finished()
     }
 
     /// 混合两个动画 (线性插值)

@@ -2,7 +2,6 @@
 // 
 //  提供高性能的GPU资源管理，包括Staging Buffer、内存分配和上传队列。
 
-pub mod r#async;
 pub mod atlas;
 pub mod coroutine_loader;
 pub mod dependency_manager;

@@ -60,7 +60,7 @@ impl EditorState {
 pub struct EditorContext {
     pub context: GuiContext,
     pub state: egui_winit::State,
-    pub renderer: Option<crate::render::wgpu_utils::WgpuRenderer>,
+    pub egui_renderer: Option<egui_wgpu::Renderer>,
 }
 
 impl EditorContext {
@@ -83,12 +83,17 @@ impl EditorContext {
             None,
             None,
         );
-        // TODO: Fix renderer creation - temporarily disabled
-        let renderer = None;
+        // 创建egui渲染器
+        let egui_renderer = egui_wgpu::Renderer::new(
+            device,
+            format,
+            egui_wgpu::RendererOptions::default(),
+        );
+        
         Self {
             context,
             state,
-            renderer,
+            egui_renderer: Some(egui_renderer),
         }
     }
 

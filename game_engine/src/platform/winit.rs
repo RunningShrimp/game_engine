@@ -46,6 +46,13 @@ impl WinitWindow {
     pub fn outer_size(&self) -> winit::dpi::PhysicalSize<u32> {
         self.window.outer_size()
     }
+
+    /// 从Arc<Window>创建WinitWindow
+    ///
+    /// 用于在事件循环中从已存在的窗口创建WinitWindow包装器
+    pub fn from_arc(window: Arc<Window>) -> Self {
+        Self { window }
+    }
 }
 
 impl crate::platform::Window for WinitWindow {

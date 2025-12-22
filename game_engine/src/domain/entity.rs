@@ -194,6 +194,132 @@ impl GameEntity {
         self.state == EntityState::Active
     }
 
+    /// 获取实体ID（不可变）
+    pub fn id(&self) -> EntityId {
+        self.id
+    }
+
+    /// 获取实体名称
+    pub fn name(&self) -> Option<&str> {
+        self.name.as_deref()
+    }
+
+    /// 设置实体名称
+    pub fn set_name(&mut self, name: impl Into<String>) {
+        self.name = Some(name.into());
+        self.last_modified = Self::current_timestamp();
+    }
+
+    /// 获取实体状态
+    pub fn state(&self) -> EntityState {
+        self.state
+    }
+
+    /// 获取变换组件（只读）
+    pub fn transform(&self) -> Option<&Transform> {
+        self.transform.as_ref()
+    }
+
+    /// 获取变换组件（可变）
+    pub fn transform_mut(&mut self) -> Option<&mut Transform> {
+        self.last_modified = Self::current_timestamp();
+        self.transform.as_mut()
+    }
+
+    /// 设置变换组件
+    pub fn set_transform(&mut self, transform: Transform) {
+        self.transform = Some(transform);
+        self.last_modified = Self::current_timestamp();
+    }
+
+    /// 获取精灵组件（只读）
+    pub fn sprite(&self) -> Option<&Sprite> {
+        self.sprite.as_ref()
+    }
+
+    /// 获取精灵组件（可变）
+    pub fn sprite_mut(&mut self) -> Option<&mut Sprite> {
+        self.last_modified = Self::current_timestamp();
+        self.sprite.as_mut()
+    }
+
+    /// 设置精灵组件
+    pub fn set_sprite(&mut self, sprite: Sprite) -> Result<(), DomainError> {
+        // 业务规则：实体不能同时拥有Sprite和Camera组件
+        if self.camera.is_some() {
+            return Err(DomainError::General(
+                "Entity cannot have both Sprite and Camera components".to_string(),
+            ));
+        }
+        self.sprite = Some(sprite);
+        self.last_modified = Self::current_timestamp();
+        Ok(())
+    }
+
+    /// 移除精灵组件
+    pub fn remove_sprite(&mut self) {
+        self.sprite = None;
+        self.last_modified = Self::current_timestamp();
+    }
+
+    /// 获取相机组件（只读）
+    pub fn camera(&self) -> Option<&Camera> {
+        self.camera.as_ref()
+    }
+
+    /// 获取相机组件（可变）
+    pub fn camera_mut(&mut self) -> Option<&mut Camera> {
+        self.last_modified = Self::current_timestamp();
+        self.camera.as_mut()
+    }
+
+    /// 设置相机组件
+    pub fn set_camera(&mut self, camera: Camera) -> Result<(), DomainError> {
+        // 业务规则：实体不能同时拥有Sprite和Camera组件
+        if self.sprite.is_some() {
+            return Err(DomainError::General(
+                "Entity cannot have both Sprite and Camera components".to_string(),
+            ));
+        }
+        self.camera = Some(camera);
+        self.last_modified = Self::current_timestamp();
+        Ok(())
+    }
+
+    /// 移除相机组件
+    pub fn remove_camera(&mut self) {
+        self.camera = None;
+        self.last_modified = Self::current_timestamp();
+    }
+
+    /// 获取点光源组件（只读）
+    pub fn point_light(&self) -> Option<&PointLight> {
+        self.point_light.as_ref()
+    }
+
+    /// 获取点光源组件（可变）
+    pub fn point_light_mut(&mut self) -> Option<&mut PointLight> {
+        self.last_modified = Self::current_timestamp();
+        self.point_light.as_mut()
+    }
+
+    /// 设置点光源组件
+    pub fn set_point_light(&mut self, light: PointLight) {
+        self.point_light = Some(light);
+        self.last_modified = Self::current_timestamp();
+    }
+
+    /// 移除点光源组件
+    pub fn remove_point_light(&mut self) {
+        self.point_light = None;
+        self.last_modified = Self::current_timestamp();
+    }
+
+    /// 获取最后修改时间戳
+    pub fn last_modified(&self) -> u64 {
+        self.last_modified
+    }
+
     /// 获取实体位置（如果有变换组件）
     pub fn position(&self) -> Option<glam::Vec3> {
         self.transform.as_ref().map(|t| t.pos)

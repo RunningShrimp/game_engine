@@ -23,9 +23,8 @@
 
 use super::staging_buffer::StagingBufferPool;
 
-// 性能监控集成
-#[cfg(feature = "profiling")]
-use crate::profiling::{ScopedTimer, prelude::*, record_counter, record_timing};
+// 性能监控集成 - 使用 tracing 系统
+use tracing::{instrument, span, Level, info};
 
 // ============================================================================
 // 上传请求
@@ -159,13 +158,12 @@ impl UploadQueue {
     /// - `target`: 目标纹理
     /// - `info`: 上传配置信息
     pub fn queue_texture(&mut self, data: &[u8], target: wgpu::Texture, info: TextureUploadInfo) {
-        #[cfg(feature = "profiling")]
-        let _timer = ScopedTimer::new("upload_queue_texture");
-
-        #[cfg(feature = "profiling")]
-        record_counter!(upload.queue_texture_requests, 1);
-        #[cfg(feature = "profiling")]
-        record_counter!(upload.bytes_queued, data.len() as u64);
+        let _queue_span = span!(Level::DEBUG, "upload_queue_texture").entered();
+        info!(
+            queue_texture_requests = 1,
+            bytes_queued = data.len(),
+            "Texture upload queued"
+        );
         self.pending
             .push(UploadRequest::Texture(TextureUploadRequest {
                 data: data.to_vec(),
@@ -217,11 +215,8 @@ impl UploadQueue {
         _queue: &wgpu::Queue,
         encoder: &mut wgpu::CommandEncoder,
     ) {
-        #[cfg(feature = "profiling")]
-        let _timer = ScopedTimer::new("upload_flush");
-
-        #[cfg(feature = "profiling")]
-        record_counter!(upload.flush_operations, 1);
+        let _flush_span = span!(Level::DEBUG, "upload_flush").entered();
+        info!(flush_operations = 1, "Upload queue flushed");
         if self.pending.is_empty() {
             return;
         }
@@ -388,11 +383,8 @@ impl UploadQueue {
 
     /// 帧结束时调用，回收资源
     pub fn end_frame(&mut self, device: &wgpu::Device) {
-        #[cfg(feature = "profiling")]
-        let _timer = ScopedTimer::new("upload_end_frame");
-
-        #[cfg(feature = "profiling")]
-        record_counter!(upload.frame_ends, 1);
+        let _end_frame_span = span!(Level::DEBUG, "upload_end_frame").entered();
+        info!(frame_ends = 1, "Upload queue frame ended");
         self.staging_pool.end_frame(device);
 
         // 重置本帧统计

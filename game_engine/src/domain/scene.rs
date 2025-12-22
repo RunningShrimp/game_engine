@@ -249,6 +249,63 @@ impl Scene {
         })
     }
 
+    /// 获取场景ID（不可变）
+    pub fn id(&self) -> SceneId {
+        self.id
+    }
+
+    /// 获取场景名称（不可变）
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    /// 获取场景状态（只读）
+    pub fn state(&self) -> SceneState {
+        self.state
+    }
+
+    /// 获取场景元数据（只读）
+    pub fn metadata(&self) -> &SceneMetadata {
+        &self.metadata
+    }
+
+    /// 获取场景元数据（可变）
+    pub fn metadata_mut(&mut self) -> &mut SceneMetadata {
+        self.last_modified = Self::current_timestamp();
+        &mut self.metadata
+    }
+
+    /// 获取最后修改时间戳
+    pub fn last_modified(&self) -> u64 {
+        self.last_modified
+    }
+
+    /// 获取错误恢复策略（只读）
+    pub fn recovery_strategy(&self) -> &RecoveryStrategy {
+        &self.recovery_strategy
+    }
+
+    /// 设置错误恢复策略
+    pub fn set_recovery_strategy(&mut self, strategy: RecoveryStrategy) {
+        self.recovery_strategy = strategy;
+        self.last_modified = Self::current_timestamp();
+    }
+
+    /// 获取实体集合的只读迭代器
+    pub fn entities_iter(&self) -> impl Iterator<Item = (&EntityId, &GameEntity)> {
+        self.entities.iter()
+    }
+
+    /// 获取实体集合的可变迭代器
+    pub fn entities_iter_mut(&mut self) -> impl Iterator<Item = (&EntityId, &mut GameEntity)> {
+        self.entities.iter_mut()
+    }
+
+    /// 检查场景是否包含实体
+    pub fn contains_entity(&self, entity_id: EntityId) -> bool {
+        self.entities.contains_key(&entity_id)
+    }
+
     /// 获取未提交的事件数量
     pub fn uncommitted_event_count(&self) -> usize {
         self.event_queue.uncommitted_count()

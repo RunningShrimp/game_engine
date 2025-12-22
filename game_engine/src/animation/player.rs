@@ -1,21 +1,21 @@
 use super::clip::AnimationClip;
 
-/// 动画播放器组件 (贫血模型 - 纯数据结构)
+/// 动画播放器组件 (富领域模型)
 ///
-/// 遵循DDD贫血模型设计原则：
-/// - AnimationPlayer (Component): 纯数据结构 ← 本文件
-/// - AnimationService (Service): 业务逻辑封装 → service.rs
+/// 遵循DDD富领域模型设计原则：
+/// - AnimationPlayer (Component): 包含业务逻辑的领域对象
+/// - AnimationService (Service): 协调层（可选，用于复杂业务场景）
 /// - animation_system (System): 系统调度编排
 ///
-/// 业务逻辑已移至 `AnimationService`，请使用：
+/// 业务逻辑封装在 `AnimationPlayer` 中，可以直接使用：
 /// ```rust
-/// use crate::animation::{AnimationPlayer, AnimationService};
+/// use crate::animation::AnimationPlayer;
 ///
 /// let mut player = AnimationPlayer::default();
-/// AnimationService::play(&mut player, clip);
-/// AnimationService::update(&mut player, delta_time);
+/// player.play(clip);
+/// player.update(delta_time);
 /// ```
-#[derive(Component, Default)]
+#[derive(Component, Default, Clone)]
 pub struct AnimationPlayer {
     /// 当前播放的动画片段
     pub current_clip: Option<AnimationClip>,
@@ -32,48 +32,138 @@ impl AnimationPlayer {
         Self::default()
     }
 
-    // ==========================================
-    // 以下方法保留用于向后兼容，建议使用 AnimationService
-    // ==========================================
-
     /// 播放动画片段
     ///
-    /// **建议使用**: `AnimationService::play()`
-    #[deprecated(since = "0.2.0", note = "请使用 AnimationService::play() 代替")]
+    /// # 参数
+    /// - `clip`: 要播放的动画片段
+    ///
+    /// # 示例
+    /// ```rust
+    /// let mut player = AnimationPlayer::new();
+    /// player.play(clip);
+    /// ```
     pub fn play(&mut self, clip: AnimationClip) {
-        super::service::AnimationService::play(self, clip);
+        self.current_clip = Some(clip);
+        self.current_time = 0.0;
+        self.playing = true;
     }
 
     /// 暂停播放
     ///
-    /// **建议使用**: `AnimationService::pause()`
-    #[deprecated(since = "0.2.0", note = "请使用 AnimationService::pause() 代替")]
+    /// 暂停当前播放的动画，保持当前时间位置。
     pub fn pause(&mut self) {
-        super::service::AnimationService::pause(self);
+        self.playing = false;
     }
 
     /// 恢复播放
     ///
-    /// **建议使用**: `AnimationService::resume()`
-    #[deprecated(since = "0.2.0", note = "请使用 AnimationService::resume() 代替")]
+    /// 从暂停位置恢复播放。
     pub fn resume(&mut self) {
-        super::service::AnimationService::resume(self);
+        self.playing = true;
     }
 
-    /// 停止播放
+    /// 停止播放并重置
     ///
-    /// **建议使用**: `AnimationService::stop()`
-    #[deprecated(since = "0.2.0", note = "请使用 AnimationService::stop() 代替")]
+    /// 停止播放并将时间重置为0。
     pub fn stop(&mut self) {
-        super::service::AnimationService::stop(self);
+        self.playing = false;
+        self.current_time = 0.0;
     }
 
-    /// 更新动画 (每帧调用)
+    /// 更新动画状态 (每帧调用)
     ///
-    /// **建议使用**: `AnimationService::update()`
-    #[deprecated(since = "0.2.0", note = "请使用 AnimationService::update() 代替")]
+    /// # 参数
+    /// - `delta_time`: 帧时间（秒）
+    ///
+    /// # 示例
+    /// ```rust
+    /// player.update(0.016); // 更新一帧（60 FPS）
+    /// ```
     pub fn update(&mut self, delta_time: f32) {
-        super::service::AnimationService::update(self, delta_time);
+        if !self.playing {
+            return;
+        }
+
+        if let Some(clip) = &self.current_clip {
+            self.current_time += delta_time * self.speed;
+
+            if self.current_time >= clip.duration {
+                if clip.looping {
+                    self.current_time %= clip.duration;
+                } else {
+                    self.current_time = clip.duration;
+                    self.playing = false;
+                }
+            }
+        }
+    }
+
+    /// 设置播放速度
+    ///
+    /// # 参数
+    /// - `speed`: 播放速度（1.0 = 正常速度，2.0 = 2倍速，0.5 = 半速）
+    pub fn set_speed(&mut self, speed: f32) {
+        self.speed = speed;
+    }
+
+    /// 跳转到指定时间
+    ///
+    /// # 参数
+    /// - `time`: 目标时间（秒）
+    pub fn seek(&mut self, time: f32) {
+        self.current_time = time.max(0.0);
+        if let Some(clip) = &self.current_clip {
+            if self.current_time > clip.duration {
+                self.current_time = clip.duration;
+            }
+        }
+    }
+
+    /// 获取当前播放进度 (0.0 - 1.0)
+    ///
+    /// # 返回
+    /// 播放进度，范围 [0.0, 1.0]
+    pub fn progress(&self) -> f32 {
+        if let Some(clip) = &self.current_clip {
+            if clip.duration > 0.0 {
+                return self.current_time / clip.duration;
+            }
+        }
+        0.0
+    }
+
+    /// 检查动画是否播放完成
+    ///
+    /// # 返回
+    /// 如果动画已播放完成（非循环动画）返回 `true`
+    pub fn is_finished(&self) -> bool {
+        if let Some(clip) = &self.current_clip {
+            if !clip.looping && self.current_time >= clip.duration {
+                return true;
+            }
+        }
+        false
+    }
+
+    /// 应用动画到Transform组件
+    ///
+    /// # 参数
+    /// - `entity_id`: 实体ID
+    /// - `transform`: 要更新的变换组件
+    pub fn apply_to_transform(&self, entity_id: u64, transform: &mut Transform) {
+        if let Some(clip) = &self.current_clip {
+            if let Some(position) = clip.sample_position(entity_id, self.current_time) {
+                transform.pos = position;
+            }
+
+            if let Some(rotation) = clip.sample_rotation(entity_id, self.current_time) {
+                transform.rot = rotation;
+            }
+
+            if let Some(scale) = clip.sample_scale(entity_id, self.current_time) {
+                transform.scale = scale;
+            }
+        }
     }
 }
 
@@ -82,18 +172,14 @@ use bevy_ecs::prelude::*;
 
 /// 动画系统 - 更新所有动画播放器
 ///
-/// 使用 AnimationService 执行业务逻辑
+/// 直接使用 AnimationPlayer 的业务方法
 pub fn animation_system(
     time: Res<crate::ecs::Time>,
     mut query: Query<(Entity, &mut AnimationPlayer, &mut Transform)>,
 ) {
     for (entity, mut player, mut transform) in query.iter_mut() {
-        super::service::AnimationService::update(&mut player, time.delta_seconds);
-        super::service::AnimationService::apply_to_transform(
-            &player,
-            entity.to_bits(),
-            &mut transform,
-        );
+        player.update(time.delta_seconds);
+        player.apply_to_transform(entity.to_bits(), &mut transform);
     }
 }
 
@@ -102,7 +188,7 @@ pub fn animation_system(
 // ============================================================================
 
 /// 骨骼动画播放器组件
-#[derive(Component)]
+#[derive(Component, Clone)]
 pub struct SkeletonAnimationPlayer {
     /// 当前播放的动画片段
     pub current_clip: Option<super::clip::AnimationClip>,

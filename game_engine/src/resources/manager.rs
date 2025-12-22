@@ -207,12 +207,36 @@ pub enum AssetResult {
     Gltf(GltfScene),
 }
 
+/// 资源统计信息
+#[derive(Debug, Default, Clone)]
+pub struct AssetStats {
+    /// 已加载的纹理数量
+    pub loaded_textures: usize,
+    /// 已加载的图集数量
+    pub loaded_atlases: usize,
+    /// 已加载的GLTF场景数量
+    #[cfg(feature = "gltf")]
+    pub loaded_gltf_scenes: usize,
+    /// 失败的纹理加载次数
+    pub failed_textures: usize,
+    /// 失败的图集加载次数
+    pub failed_atlases: usize,
+    /// 总内存使用（字节）
+    pub total_memory_bytes: usize,
+    /// 平均加载时间（毫秒）
+    pub average_load_time_ms: f64,
+}
+
 #[derive(Resource)]
 pub struct AssetServer {
     tx: mpsc::UnboundedSender<AssetTask>,
     rx: mpsc::UnboundedReceiver<(AssetTask, Result<AssetResult, String>)>,
     worker_handle: Option<std::thread::JoinHandle<()>>,
     shutdown_tx: Option<oneshot::Sender<()>>,
+    /// 已加载纹理数量统计（原子操作，用于快速查询）
+    texture_count: std::sync::atomic::AtomicUsize,
+    /// 资源统计信息（详细统计）
+    stats: std::sync::RwLock<AssetStats>,
 }
 
 #[derive(Clone, Debug)]
@@ -236,10 +260,18 @@ impl AssetServer {
         let worker_handle = std::thread::Builder::new()
             .name("asset-loader".to_string())
             .spawn(move || {
-                let rt = tokio::runtime::Builder::new_current_thread()
+                let rt = match tokio::runtime::Builder::new_current_thread()
                     .enable_all()
                     .build()
-                    .expect("Failed to create asset loader runtime");
+                {
+                    Ok(rt) => rt,
+                    Err(e) => {
+                        log::error!("Failed to create asset loader runtime: {}", e);
+                        // 如果无法创建runtime，线程将退出，AssetServer将无法工作
+                        // 这是一个严重的初始化错误，应该被上层代码检测到
+                        return;
+                    }
+                };
 
                 rt.block_on(async move {
                     let mut shutdown_rx = shutdown_rx;
@@ -319,13 +351,20 @@ impl AssetServer {
                     }
                 });
             })
-            .expect("Failed to spawn asset loader thread");
+            .unwrap_or_else(|e| {
+                // 如果无法创建线程，这是一个严重的初始化错误
+                // 记录错误并panic，因为AssetServer无法在没有工作线程的情况下工作
+                log::error!("Failed to spawn asset loader thread: {}", e);
+                panic!("Failed to spawn asset loader thread: {}", e);
+            });
 
         Self {
             tx: task_tx,
             rx: done_rx,
             worker_handle: Some(worker_handle),
             shutdown_tx: Some(shutdown_tx),
+            texture_count: std::sync::atomic::AtomicUsize::new(0),
+            stats: std::sync::RwLock::new(AssetStats::default()),
         }
     }
 
@@ -545,15 +584,37 @@ impl AssetServer {
                         .duration_since(start)
                         .as_secs_f32()
                         * 1000.0;
-                    if let Some(tex_id) = renderer.load_texture_from_image(img, is_linear) {
+                    if let Some(tex_id) = renderer.load_texture_from_image(img.clone(), is_linear) {
                         if let Ok(mut state) = handle.container.state.write() {
                             *state = LoadState::Loaded(tex_id);
                         } // ✅ 处理锁中毒情况，忽略更新失败
+                        
+                        // 更新统计信息
+                        self.texture_count.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                        if let Ok(mut stats) = self.stats.write() {
+                            stats.loaded_textures += 1;
+                            stats.total_memory_bytes += img.len() * 4; // RGBA = 4 bytes per pixel
+                            // 更新平均加载时间
+                            let total_loads = stats.loaded_textures + stats.failed_textures;
+                            if total_loads > 0 {
+                                stats.average_load_time_ms = 
+                                    (stats.average_load_time_ms * (total_loads - 1) as f64 + ms) / total_loads as f64;
+                            } else {
+                                stats.average_load_time_ms = ms;
+                            }
+                        }
+                        
                         events.push(AssetEvent::TextureLoaded(handle.clone(), ms));
                     } else {
                         if let Ok(mut state) = handle.container.state.write() {
                             *state = LoadState::Failed("Failed to create texture".to_string());
                         } // ✅ 处理锁中毒情况，忽略更新失败
+                        
+                        // 更新失败统计
+                        if let Ok(mut stats) = self.stats.write() {
+                            stats.failed_textures += 1;
+                        }
+                        
                         events.push(AssetEvent::TextureFailed(
                             handle.clone(),
                             "Failed to create texture".to_string(),
@@ -570,11 +631,24 @@ impl AssetServer {
                             if let Ok(mut state) = handle.container.state.write() {
                                 *state = LoadState::Loaded(atlas);
                             } // ✅ 处理锁中毒情况，忽略更新失败
+                            
+                            // 更新统计信息
+                            if let Ok(mut stats) = self.stats.write() {
+                                stats.loaded_atlases += 1;
+                                stats.total_memory_bytes += bytes.len();
+                            }
+                            
                             events.push(AssetEvent::AtlasLoaded(handle.clone(), ms));
                         } else {
                             if let Ok(mut state) = handle.container.state.write() {
                                 *state = LoadState::Failed("Invalid Atlas JSON".to_string());
                             } // ✅ 处理锁中毒情况，忽略更新失败
+                            
+                            // 更新统计信息
+                            if let Ok(mut stats) = self.stats.write() {
+                                stats.failed_atlases += 1;
+                            }
+                            
                             events.push(AssetEvent::AtlasFailed(
                                 handle.clone(),
                                 "Invalid Atlas JSON".to_string(),
@@ -599,18 +673,36 @@ impl AssetServer {
                     if let Ok(mut state) = handle.container.state.write() {
                         *state = LoadState::Loaded(scene);
                     } // ✅ 处理锁中毒情况，忽略更新失败
+                    
+                    // 更新统计信息
+                    if let Ok(mut stats) = self.stats.write() {
+                        stats.loaded_gltf_scenes += 1;
+                    }
+                    
                     events.push(AssetEvent::GltfLoaded(handle.clone(), ms));
                 }
                 (AssetTask::Texture { handle, .. }, Err(e)) => {
                     if let Ok(mut state) = handle.container.state.write() {
                         *state = LoadState::Failed(e.clone());
                     } // ✅ 处理锁中毒情况，忽略更新失败
+                    
+                    // 更新失败统计
+                    if let Ok(mut stats) = self.stats.write() {
+                        stats.failed_textures += 1;
+                    }
+                    
                     events.push(AssetEvent::TextureFailed(handle.clone(), e));
                 }
                 (AssetTask::Atlas { handle, .. }, Err(e)) => {
                     if let Ok(mut state) = handle.container.state.write() {
                         *state = LoadState::Failed(e.clone());
                     } // ✅ 处理锁中毒情况，忽略更新失败
+                    
+                    // 更新失败统计
+                    if let Ok(mut stats) = self.stats.write() {
+                        stats.failed_atlases += 1;
+                    }
+                    
                     events.push(AssetEvent::AtlasFailed(handle.clone(), e));
                 }
                 #[cfg(feature = "gltf")]
@@ -652,12 +744,83 @@ impl AssetServer {
     }
 
     /// 获取已加载纹理数量（用于完整性检查）
+    ///
+    /// 返回当前已成功加载的纹理数量。
+    ///
+    /// # 返回
+    ///
+    /// 已加载的纹理数量
     pub fn get_loaded_texture_count(&self) -> usize {
-        // 通过内部通道查询当前加载的纹理数量
-        // 这里使用简单的计数，实际实现可能需要更复杂的逻辑
-        // TODO: Implement proper counting of loaded textures
-        // For now, return a placeholder count
-        0
+        self.texture_count.load(std::sync::atomic::Ordering::Relaxed)
+    }
+
+    /// 获取资源统计信息
+    ///
+    /// 返回详细的资源统计信息，包括加载数量、内存使用等。
+    ///
+    /// # 返回
+    ///
+    /// 资源统计信息的副本
+    pub fn get_stats(&self) -> AssetStats {
+        self.stats.read()
+            .map(|s| s.clone())
+            .unwrap_or_default()
+    }
+
+    /// 重置统计信息
+    ///
+    /// 将所有统计计数器重置为0。
+    pub fn reset_stats(&self) {
+        self.texture_count.store(0, std::sync::atomic::Ordering::Relaxed);
+        if let Ok(mut stats) = self.stats.write() {
+            *stats = AssetStats::default();
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_asset_stats_default() {
+        let stats = AssetStats::default();
+        assert_eq!(stats.loaded_textures, 0);
+        assert_eq!(stats.loaded_atlases, 0);
+        assert_eq!(stats.failed_textures, 0);
+        assert_eq!(stats.failed_atlases, 0);
+        assert_eq!(stats.total_memory_bytes, 0);
+        assert_eq!(stats.average_load_time_ms, 0.0);
+    }
+
+    #[test]
+    fn test_asset_server_creation() {
+        let server = AssetServer::new();
+        assert_eq!(server.get_loaded_texture_count(), 0);
+        
+        let stats = server.get_stats();
+        assert_eq!(stats.loaded_textures, 0);
+    }
+
+    #[test]
+    fn test_asset_stats_clone() {
+        let mut stats = AssetStats::default();
+        stats.loaded_textures = 5;
+        stats.total_memory_bytes = 1024;
+        
+        let cloned = stats.clone();
+        assert_eq!(cloned.loaded_textures, 5);
+        assert_eq!(cloned.total_memory_bytes, 1024);
+    }
+
+    #[test]
+    fn test_asset_server_reset_stats() {
+        let server = AssetServer::new();
+        server.reset_stats();
+        
+        let stats = server.get_stats();
+        assert_eq!(stats.loaded_textures, 0);
+        assert_eq!(server.get_loaded_texture_count(), 0);
     }
 }
 
@@ -748,8 +911,9 @@ pub fn import_gltf_to_world(
                 let gpu_mesh = renderer.create_gpu_mesh(&vertices, &indices);
 
                 // 构建纹理绑定组（五贴图）并持久化纹理
-                let default_img =
-                    image::RgbaImage::from_raw(1, 1, vec![255, 255, 255, 255]).unwrap();
+                // 创建1x1白色默认纹理（固定参数，不会失败）
+                let default_img = image::RgbaImage::from_raw(1, 1, vec![255, 255, 255, 255])
+                    .expect("Failed to create default 1x1 white image - this should never happen");
                 let mr = primitive.material().pbr_metallic_roughness();
                 let bc_img = mr
                     .base_color_texture()
@@ -923,7 +1087,16 @@ fn to_rgba(data: &gltf::image::Data) -> image::RgbaImage {
                     255,
                 ]);
             }
-            image::RgbaImage::from_raw(data.width, data.height, rgba).unwrap()
+            image::RgbaImage::from_raw(data.width, data.height, rgba)
+                .unwrap_or_else(|| {
+                    // 如果无法创建图像（通常是因为尺寸不匹配），创建一个默认图像
+                    log::warn!(
+                        "Failed to create image from raw data ({}x{}), using default",
+                        data.width,
+                        data.height
+                    );
+                    image::RgbaImage::new(data.width.max(1), data.height.max(1))
+                })
         }
         _ => image::RgbaImage::new(data.width, data.height),
     }
