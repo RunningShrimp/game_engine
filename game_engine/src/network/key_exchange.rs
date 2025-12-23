@@ -22,7 +22,10 @@
 //  - `insecure_key_exchange`: 使用SHA256的简化实现（仅用于测试，不应用于生产环境）
 
 use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
+#[cfg(feature = "insecure_key_exchange")]
+use sha2::Digest;
+#[cfg(feature = "insecure_key_exchange")]
+use sha2::Sha256;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 #[cfg(feature = "secure_key_exchange")]
@@ -72,7 +75,7 @@ impl KeyPair {
         // 生成随机私钥
         // 使用 ThreadRng 生成随机字节，然后创建 StaticSecret
         use rand::RngCore;
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rngs::ThreadRng::default();
         let mut private_key_bytes = [0u8; 32];
         rng.fill_bytes(&mut private_key_bytes);
         

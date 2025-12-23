@@ -84,7 +84,7 @@ impl ParallelMessageProcessor {
     fn process_message(
         &self,
         message: &NetworkMessage,
-        state: &NetworkState,
+        _state: &NetworkState,
         compressor: Option<&Arc<NetworkCompressor>>,
     ) -> MessageProcessResult {
         match message {

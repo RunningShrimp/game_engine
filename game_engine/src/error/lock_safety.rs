@@ -158,14 +158,17 @@ pub struct ScopedLock<T> {
 }
 
 impl<T> ScopedLock<T> {
+    /// Creates a new ScopedLock with the provided data
     pub fn new(data: T) -> Self {
         Self { data }
     }
 
+    /// Gets an immutable reference to the contained data
     pub fn get(&self) -> &T {
         &self.data
     }
 
+    /// Gets a mutable reference to the contained data
     pub fn get_mut(&mut self) -> &mut T {
         &mut self.data
     }

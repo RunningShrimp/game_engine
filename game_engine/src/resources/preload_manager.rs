@@ -267,7 +267,7 @@ impl PreloadManager {
     /// # 参数
     ///
     /// * `loader` - 资源加载器
-    pub fn update(&self, loader: &mut CoroutineAssetLoader) {
+    pub fn update(&self, _loader: &mut CoroutineAssetLoader) {
         let mut queue = self.request_queue.write().unwrap();
         let mut loading_set = self.loading_set.write().unwrap();
         let mut status_map = self.status_map.write().unwrap();

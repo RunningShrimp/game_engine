@@ -27,12 +27,16 @@ pub struct Bone {
 /// 骨骼变换
 #[derive(Clone, Copy, Debug, Default)]
 pub struct BoneTransform {
+    /// 平移分量
     pub translation: Vec3,
+    /// 旋转分量
     pub rotation: Quat,
+    /// 缩放分量
     pub scale: Vec3,
 }
 
 impl BoneTransform {
+    /// 创建新的骨骼变换
     pub fn new(translation: Vec3, rotation: Quat, scale: Vec3) -> Self {
         Self {
             translation,
@@ -41,6 +45,7 @@ impl BoneTransform {
         }
     }
 
+    /// 创建单位骨骼变换
     pub fn identity() -> Self {
         Self {
             translation: Vec3::ZERO,
@@ -75,6 +80,7 @@ impl BoneTransform {
 }
 
 impl Bone {
+    /// 创建新的骨骼节点
     pub fn new(name: impl Into<String>, parent_index: Option<usize>) -> Self {
         Self {
             name: name.into(),

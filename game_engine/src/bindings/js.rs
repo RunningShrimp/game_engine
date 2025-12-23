@@ -24,6 +24,9 @@ impl CommandQueue {
     }
 }
 
+/// JavaScript 绑定适配器
+///
+/// 使用 QuickJS 引擎提供 JavaScript 脚本支持
 pub struct JsBindingAdapter {
     #[allow(dead_code)]
     runtime: Runtime,

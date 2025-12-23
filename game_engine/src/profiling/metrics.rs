@@ -231,6 +231,16 @@ impl PerformanceCounter {
         let nanos = self.last_updated.load(Ordering::Relaxed);
         Instant::now() - Duration::from_nanos(nanos)
     }
+
+    /// 获取创建时间
+    pub fn created_at(&self) -> Instant {
+        self.created_at
+    }
+
+    /// 获取计数器运行时间
+    pub fn uptime(&self) -> Duration {
+        self.created_at.elapsed()
+    }
 }
 
 // ============================================================================
@@ -239,8 +249,6 @@ impl PerformanceCounter {
 
 /// 渲染指标
 pub mod render {
-    use super::*;
-
     pub const FRAME_TIME: &str = "render.frame_time";
     pub const FPS: &str = "render.fps";
     pub const GPU_UTILIZATION: &str = "render.gpu_utilization";
@@ -255,8 +263,6 @@ pub mod render {
 
 /// 内存指标
 pub mod memory {
-    use super::*;
-
     pub const ALLOCATION_COUNT: &str = "memory.allocation_count";
     pub const DEALLOCATION_COUNT: &str = "memory.deallocation_count";
     pub const USAGE_BYTES: &str = "memory.usage_bytes";
@@ -270,8 +276,6 @@ pub mod memory {
 
 /// 物理指标
 pub mod physics {
-    use super::*;
-
     pub const STEP_TIME: &str = "physics.step_time";
     pub const COLLISION_DETECTION_TIME: &str = "physics.collision_detection_time";
     pub const CONSTRAINT_SOLVING_TIME: &str = "physics.constraint_solving_time";
@@ -284,8 +288,6 @@ pub mod physics {
 
 /// 音频指标
 pub mod audio {
-    use super::*;
-
     pub const LATENCY: &str = "audio.latency";
     pub const BUFFER_USAGE: &str = "audio.buffer_usage";
     pub const PROCESSING_TIME: &str = "audio.processing_time";
@@ -298,8 +300,6 @@ pub mod audio {
 
 /// 系统指标
 pub mod system {
-    use super::*;
-
     pub const CPU_USAGE: &str = "system.cpu_usage";
     pub const MEMORY_USAGE: &str = "system.memory_usage";
     pub const TASK_SCHEDULER_LATENCY: &str = "system.task_scheduler_latency";
@@ -536,7 +536,7 @@ mod tests {
         let mut registry = MetricRegistry::new();
         
         // 测试获取预定义指标
-        let frame_time_counter = registry.get_counter(render::FRAME_TIME);
+        let frame_time_counter = registry.get_counter("render.frame_time");
         assert!(frame_time_counter.is_some());
         
         // 测试注册新指标

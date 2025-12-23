@@ -9,12 +9,11 @@
 //! 3. **性能监控**：跟踪池的使用情况和性能指标
 //! 4. **线程安全**：所有池都是线程安全的
 
-use game_engine_performance::memory::object_pool::{Resettable, SyncObjectPool, PoolStats};
+use game_engine_performance::memory::object_pool::{SyncObjectPool, PoolStats};
 use glam::{Mat4, Vec3};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tracing;
-use crate::core::utils::current_timestamp_ms;
 
 /// 对象池管理器
 ///

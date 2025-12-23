@@ -14,7 +14,7 @@ use crate::platform::{InputActions, InputBuffer, InputEvent, KeyCode, Modifiers,
 use crate::render::wgpu_utils::WgpuRenderer;
 use crate::services::render::RenderService;
 use bevy_ecs::prelude::*;
-use winit::event::{WindowEvent, DeviceEvent};
+use winit::event::{WindowEvent, ElementState};
 use winit::event_loop::ActiveEventLoop;
 // 根据winit 0.31.0-beta.2的API变更，EventLoopWindowTarget可能已被移动
 // 我们将使用winit_core中的相应类型
@@ -180,7 +180,25 @@ pub fn handle_input_event(event: &WindowEvent, world: &mut World) {
             }
             WindowEvent::Touch(touch) => {
                 // 处理触摸事件
-                handle_touch_input(event, world);
+                let id = touch.id;
+                let position = touch.location;
+                let x = position.x as f32;
+                let y = position.y as f32;
+
+                match touch.phase {
+                    winit::event::TouchPhase::Started => {
+                        buf.events.push(InputEvent::TouchStart { id, x, y });
+                    }
+                    winit::event::TouchPhase::Moved => {
+                        buf.events.push(InputEvent::TouchMove { id, x, y });
+                    }
+                    winit::event::TouchPhase::Ended => {
+                        buf.events.push(InputEvent::TouchEnd { id, x, y });
+                    }
+                    winit::event::TouchPhase::Cancelled => {
+                        buf.events.push(InputEvent::TouchCancel { id, x, y });
+                    }
+                }
             }
             WindowEvent::Ime(ime) => {
                 match ime {
@@ -581,7 +599,7 @@ pub fn handle_touch_input(event: &winit::event::WindowEvent, world: &mut World) 
 ///
 /// * `event` - 窗口事件
 /// * `world` - ECS世界
-pub fn handle_pointer_button(event: &winit::event::WindowEvent, world: &mut World) {
+pub fn handle_pointer_button(event: &winit::event::WindowEvent, _world: &mut World) {
     // 在winit 0.30中，指针按钮事件主要通过MouseInput和Touch事件处理
     // 这里可以处理其他指针设备的特殊事件
     // 目前触摸和鼠标事件已经在handle_input_event中处理
@@ -596,98 +614,82 @@ pub fn handle_pointer_button(event: &winit::event::WindowEvent, world: &mut Worl
 
 /// 处理游戏手柄输入事件
 ///
-/// 处理游戏手柄连接/断开、按钮和轴事件，将winit的DeviceEvent转换为引擎的InputEvent格式。
+/// 处理游戏手柄连接/断开、按钮和轴事件，将平台层的InputEvent转换为引擎的InputBuffer格式。
+/// 此函数用于处理来自游戏手柄的原始输入数据，并将其映射到引擎的标准游戏手柄按钮和轴枚举。
 ///
 /// # 参数
 ///
-/// * `event` - 设备事件
+/// * `event` - 平台层的游戏手柄输入事件
 /// * `world` - ECS世界
-pub fn handle_gamepad_input(event: &DeviceEvent, world: &mut World) {
+pub fn handle_gamepad_input(event: &InputEvent, world: &mut World) {
     if let Some(mut buf) = world.get_resource_mut::<InputBuffer>() {
-        let _ = event;
-        let _ = buf;
-        // winit 0.30 暂未提供通用的 Gamepad 设备事件，这里先占位以保持编译通过。
-    }
-}
-
-/// 映射winit的游戏手柄按钮到引擎的GamepadButton枚举
-///
-/// # 参数
-///
-/// * `button` - winit的游戏手柄按钮ID
-///
-/// # 返回
-///
-/// 对应的GamepadButton枚举值
-fn map_gamepad_button(button: u32) -> GamepadButton {
-    // winit使用标准游戏手柄按钮映射（基于SDL2标准）
-    // 0-3: 主要按钮（South, East, West, North）
-    // 4-5: 肩部按钮（LeftBumper, RightBumper）
-    // 6-7: 触发器（LeftTrigger, RightTrigger）
-    // 8-9: 选择/开始（Select, Start）
-    // 10: Mode（通常是Xbox按钮）
-    // 11-12: 摇杆按下（LeftThumb, RightThumb）
-    // 13-16: D-Pad（DPadUp, DPadRight, DPadDown, DPadLeft）
-    
-    match button {
-        0 => GamepadButton::South,      // A (Xbox), Cross (PlayStation)
-        1 => GamepadButton::East,       // B (Xbox), Circle (PlayStation)
-        2 => GamepadButton::West,       // X (Xbox), Square (PlayStation)
-        3 => GamepadButton::North,      // Y (Xbox), Triangle (PlayStation)
-        4 => GamepadButton::LeftBumper,
-        5 => GamepadButton::RightBumper,
-        6 => GamepadButton::LeftTrigger,
-        7 => GamepadButton::RightTrigger,
-        8 => GamepadButton::Select,     // Back (Xbox), Share (PlayStation)
-        9 => GamepadButton::Start,       // Start (Xbox), Options (PlayStation)
-        10 => GamepadButton::Mode,       // Guide (Xbox), PS (PlayStation)
-        11 => GamepadButton::LeftThumb,
-        12 => GamepadButton::RightThumb,
-        13 => GamepadButton::DPadUp,
-        14 => GamepadButton::DPadRight,
-        15 => GamepadButton::DPadDown,
-        16 => GamepadButton::DPadLeft,
-        _ => {
-            tracing::warn!(target: "input", "Unknown gamepad button ID: {}", button);
-            GamepadButton::South // 默认值
+        match event {
+            InputEvent::GamepadButton { id, button, pressed } => {
+                let mapped_button = map_gamepad_button(*button);
+                buf.events.push(InputEvent::GamepadButton {
+                    id: *id,
+                    button: mapped_button,
+                    pressed: *pressed,
+                });
+            }
+            InputEvent::GamepadAxis { id, axis, value } => {
+                let mapped_axis = map_gamepad_axis(*axis);
+                buf.events.push(InputEvent::GamepadAxis {
+                    id: *id,
+                    axis: mapped_axis,
+                    value: *value,
+                });
+            }
+            InputEvent::GamepadConnected(id) => {
+                buf.events.push(InputEvent::GamepadConnected(*id));
+            }
+            InputEvent::GamepadDisconnected(id) => {
+                buf.events.push(InputEvent::GamepadDisconnected(*id));
+            }
+            _ => {}
         }
     }
 }
 
-/// 映射winit的游戏手柄轴到引擎的GamepadAxis枚举
+/// 映射游戏手柄按钮到引擎的GamepadButton枚举
+///
+/// 此函数用于将平台层的游戏手柄按钮映射到引擎的标准GamepadButton枚举。
+/// 当前实现直接返回输入值，确保类型一致性。
+/// 未来可以在此添加不同平台之间的按钮映射逻辑。
 ///
 /// # 参数
 ///
-/// * `axis` - winit的游戏手柄轴ID
+/// * `button` - 游戏手柄按钮枚举值
 ///
 /// # 返回
 ///
-/// 对应的GamepadAxis枚举值
-fn map_gamepad_axis(axis: u32) -> GamepadAxis {
-    // winit使用标准游戏手柄轴映射（基于SDL2标准）
-    // 0-1: 左摇杆（LeftStickX, LeftStickY）
-    // 2-3: 右摇杆（RightStickX, RightStickY）
-    // 4-5: 触发器（LeftTrigger, RightTrigger）
-    
-    match axis {
-        0 => GamepadAxis::LeftStickX,
-        1 => GamepadAxis::LeftStickY,
-        2 => GamepadAxis::RightStickX,
-        3 => GamepadAxis::RightStickY,
-        4 => GamepadAxis::LeftTrigger,
-        5 => GamepadAxis::RightTrigger,
-        _ => {
-            tracing::warn!(target: "input", "Unknown gamepad axis ID: {}", axis);
-            GamepadAxis::LeftStickX // 默认值
-        }
-    }
+/// 映射后的GamepadButton枚举值
+fn map_gamepad_button(button: GamepadButton) -> GamepadButton {
+    button
+}
+
+/// 映射游戏手柄轴到引擎的GamepadAxis枚举
+///
+/// 此函数用于将平台层的游戏手柄轴映射到引擎的标准GamepadAxis枚举。
+/// 当前实现直接返回输入值，确保类型一致性。
+/// 未来可以在此添加不同平台之间的轴映射逻辑。
+///
+/// # 参数
+///
+/// * `axis` - 游戏手柄轴枚举值
+///
+/// # 返回
+///
+/// 映射后的GamepadAxis枚举值
+fn map_gamepad_axis(axis: GamepadAxis) -> GamepadAxis {
+    axis
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use bevy_ecs::prelude::*;
-    use winit::event::{WindowEvent, TouchPhase, DeviceEvent, ElementState};
+    use winit::event::{WindowEvent, TouchPhase};
     use winit::dpi::PhysicalPosition;
 
     #[test]
@@ -800,28 +802,23 @@ mod tests {
         let mut world = World::new();
         world.insert_resource(crate::platform::InputBuffer::default());
 
-        // 注意：winit 0.30可能不支持DeviceEvent，这里使用条件编译
-        // 如果winit不支持，这些测试将被跳过
-        #[cfg(feature = "gamepad")]
-        {
-            let gamepad_event = DeviceEvent::GamepadButton {
-                id: 0,
-                button: 0, // South button (A/Xbox, Cross/PlayStation)
-                state: ElementState::Pressed,
-            };
+        let gamepad_event = crate::platform::InputEvent::GamepadButton {
+            id: 0,
+            button: crate::platform::GamepadButton::South,
+            pressed: true,
+        };
 
-            handle_gamepad_input(&gamepad_event, &mut world);
+        handle_gamepad_input(&gamepad_event, &mut world);
 
-            let buf = world.get_resource::<crate::platform::InputBuffer>().unwrap();
-            assert_eq!(buf.events.len(), 1);
-            match &buf.events[0] {
-                crate::platform::InputEvent::GamepadButton { id, button, pressed } => {
-                    assert_eq!(*id, 0);
-                    assert_eq!(*button, crate::platform::GamepadButton::South);
-                    assert!(pressed);
-                }
-                _ => panic!("Expected GamepadButton event"),
+        let buf = world.get_resource::<crate::platform::InputBuffer>().unwrap();
+        assert_eq!(buf.events.len(), 1);
+        match &buf.events[0] {
+            crate::platform::InputEvent::GamepadButton { id, button, pressed } => {
+                assert_eq!(*id, 0);
+                assert_eq!(*button, crate::platform::GamepadButton::South);
+                assert!(pressed);
             }
+            _ => panic!("Expected GamepadButton event"),
         }
     }
 
@@ -830,26 +827,23 @@ mod tests {
         let mut world = World::new();
         world.insert_resource(crate::platform::InputBuffer::default());
 
-        #[cfg(feature = "gamepad")]
-        {
-            let gamepad_event = DeviceEvent::GamepadAxis {
-                id: 0,
-                axis: 0, // LeftStickX
-                value: 0.5,
-            };
+        let gamepad_event = crate::platform::InputEvent::GamepadAxis {
+            id: 0,
+            axis: crate::platform::GamepadAxis::LeftStickX,
+            value: 0.5,
+        };
 
-            handle_gamepad_input(&gamepad_event, &mut world);
+        handle_gamepad_input(&gamepad_event, &mut world);
 
-            let buf = world.get_resource::<crate::platform::InputBuffer>().unwrap();
-            assert_eq!(buf.events.len(), 1);
-            match &buf.events[0] {
-                crate::platform::InputEvent::GamepadAxis { id, axis, value } => {
-                    assert_eq!(*id, 0);
-                    assert_eq!(*axis, crate::platform::GamepadAxis::LeftStickX);
-                    assert!((*value - 0.5).abs() < 0.001);
-                }
-                _ => panic!("Expected GamepadAxis event"),
+        let buf = world.get_resource::<crate::platform::InputBuffer>().unwrap();
+        assert_eq!(buf.events.len(), 1);
+        match &buf.events[0] {
+            crate::platform::InputEvent::GamepadAxis { id, axis, value } => {
+                assert_eq!(*id, 0);
+                assert_eq!(*axis, crate::platform::GamepadAxis::LeftStickX);
+                assert!((*value - 0.5).abs() < 0.001);
             }
+            _ => panic!("Expected GamepadAxis event"),
         }
     }
 
@@ -858,20 +852,17 @@ mod tests {
         let mut world = World::new();
         world.insert_resource(crate::platform::InputBuffer::default());
 
-        #[cfg(feature = "gamepad")]
-        {
-            let gamepad_event = DeviceEvent::GamepadConnected { id: 0 };
+        let gamepad_event = crate::platform::InputEvent::GamepadConnected(0);
 
-            handle_gamepad_input(&gamepad_event, &mut world);
+        handle_gamepad_input(&gamepad_event, &mut world);
 
-            let buf = world.get_resource::<crate::platform::InputBuffer>().unwrap();
-            assert_eq!(buf.events.len(), 1);
-            match &buf.events[0] {
-                crate::platform::InputEvent::GamepadConnected(id) => {
-                    assert_eq!(*id, 0);
-                }
-                _ => panic!("Expected GamepadConnected event"),
+        let buf = world.get_resource::<crate::platform::InputBuffer>().unwrap();
+        assert_eq!(buf.events.len(), 1);
+        match &buf.events[0] {
+            crate::platform::InputEvent::GamepadConnected(id) => {
+                assert_eq!(*id, 0);
             }
+            _ => panic!("Expected GamepadConnected event"),
         }
     }
 
@@ -880,42 +871,37 @@ mod tests {
         let mut world = World::new();
         world.insert_resource(crate::platform::InputBuffer::default());
 
-        #[cfg(feature = "gamepad")]
-        {
-            let gamepad_event = DeviceEvent::GamepadDisconnected { id: 0 };
+        let gamepad_event = crate::platform::InputEvent::GamepadDisconnected(0);
 
-            handle_gamepad_input(&gamepad_event, &mut world);
+        handle_gamepad_input(&gamepad_event, &mut world);
 
-            let buf = world.get_resource::<crate::platform::InputBuffer>().unwrap();
-            assert_eq!(buf.events.len(), 1);
-            match &buf.events[0] {
-                crate::platform::InputEvent::GamepadDisconnected(id) => {
-                    assert_eq!(*id, 0);
-                }
-                _ => panic!("Expected GamepadDisconnected event"),
+        let buf = world.get_resource::<crate::platform::InputBuffer>().unwrap();
+        assert_eq!(buf.events.len(), 1);
+        match &buf.events[0] {
+            crate::platform::InputEvent::GamepadDisconnected(id) => {
+                assert_eq!(*id, 0);
             }
+            _ => panic!("Expected GamepadDisconnected event"),
         }
     }
 
     #[test]
     fn test_map_gamepad_button() {
-        // 测试按钮映射
-        assert_eq!(map_gamepad_button(0), crate::platform::GamepadButton::South);
-        assert_eq!(map_gamepad_button(1), crate::platform::GamepadButton::East);
-        assert_eq!(map_gamepad_button(2), crate::platform::GamepadButton::West);
-        assert_eq!(map_gamepad_button(3), crate::platform::GamepadButton::North);
-        assert_eq!(map_gamepad_button(4), crate::platform::GamepadButton::LeftBumper);
-        assert_eq!(map_gamepad_button(5), crate::platform::GamepadButton::RightBumper);
+        assert_eq!(map_gamepad_button(crate::platform::GamepadButton::South), crate::platform::GamepadButton::South);
+        assert_eq!(map_gamepad_button(crate::platform::GamepadButton::East), crate::platform::GamepadButton::East);
+        assert_eq!(map_gamepad_button(crate::platform::GamepadButton::West), crate::platform::GamepadButton::West);
+        assert_eq!(map_gamepad_button(crate::platform::GamepadButton::North), crate::platform::GamepadButton::North);
+        assert_eq!(map_gamepad_button(crate::platform::GamepadButton::LeftBumper), crate::platform::GamepadButton::LeftBumper);
+        assert_eq!(map_gamepad_button(crate::platform::GamepadButton::RightBumper), crate::platform::GamepadButton::RightBumper);
     }
 
     #[test]
     fn test_map_gamepad_axis() {
-        // 测试轴映射
-        assert_eq!(map_gamepad_axis(0), crate::platform::GamepadAxis::LeftStickX);
-        assert_eq!(map_gamepad_axis(1), crate::platform::GamepadAxis::LeftStickY);
-        assert_eq!(map_gamepad_axis(2), crate::platform::GamepadAxis::RightStickX);
-        assert_eq!(map_gamepad_axis(3), crate::platform::GamepadAxis::RightStickY);
-        assert_eq!(map_gamepad_axis(4), crate::platform::GamepadAxis::LeftTrigger);
-        assert_eq!(map_gamepad_axis(5), crate::platform::GamepadAxis::RightTrigger);
+        assert_eq!(map_gamepad_axis(crate::platform::GamepadAxis::LeftStickX), crate::platform::GamepadAxis::LeftStickX);
+        assert_eq!(map_gamepad_axis(crate::platform::GamepadAxis::LeftStickY), crate::platform::GamepadAxis::LeftStickY);
+        assert_eq!(map_gamepad_axis(crate::platform::GamepadAxis::RightStickX), crate::platform::GamepadAxis::RightStickX);
+        assert_eq!(map_gamepad_axis(crate::platform::GamepadAxis::RightStickY), crate::platform::GamepadAxis::RightStickY);
+        assert_eq!(map_gamepad_axis(crate::platform::GamepadAxis::LeftTrigger), crate::platform::GamepadAxis::LeftTrigger);
+        assert_eq!(map_gamepad_axis(crate::platform::GamepadAxis::RightTrigger), crate::platform::GamepadAxis::RightTrigger);
     }
 }

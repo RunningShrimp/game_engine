@@ -93,6 +93,11 @@ pub enum InputEvent {
         x: f32,
         y: f32,
     },
+    TouchCancel {
+        id: u64,
+        x: f32,
+        y: f32,
+    },
 
     // Gamepad
     GamepadConnected(u32),

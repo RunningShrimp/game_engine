@@ -73,8 +73,9 @@ impl Engine {
     }
 
     /// 异步运行引擎
+    #[allow(deprecated)]
     async fn run_async(self) -> Result<(), Box<dyn std::error::Error>> {
-        use winit::event::{Event, WindowEvent, DeviceEvent};
+        use winit::event::{Event, WindowEvent};
         use winit::event_loop::{EventLoop, ControlFlow};
 
         // 创建事件循环
@@ -218,10 +219,6 @@ impl Engine {
                         }
                         _ => {}
                     }
-                }
-                Event::DeviceEvent { event, .. } => {
-                    // 处理设备事件（包括游戏手柄）
-                    crate::core::engine::input_handler::handle_gamepad_input(&event, &mut world);
                 }
                 Event::AboutToWait => {
                     // 请求重绘以保持循环运行

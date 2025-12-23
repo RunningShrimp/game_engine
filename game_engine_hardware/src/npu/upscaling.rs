@@ -1,5 +1,4 @@
 //  基于NPU的AI超分辨率
-///
 //  使用神经网络模型进行图像超分辨率处理
 use crate::error::HardwareResult;
 use crate::npu::sdk::{NpuBackend, NpuInferenceEngine, NpuSdkManager};
@@ -267,7 +266,6 @@ impl NpuUpscalingManager {
 }
 
 //  混合超分辨率策略
-///
 //  根据场景自动选择传统超分或AI超分
 pub struct HybridUpscalingStrategy {
     traditional_engine: Option<Box<dyn UpscalingEngine>>,

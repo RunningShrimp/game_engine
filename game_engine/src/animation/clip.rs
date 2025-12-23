@@ -20,6 +20,7 @@ pub struct AnimationClip {
 }
 
 impl AnimationClip {
+    /// 创建新的动画片段
     pub fn new(name: impl Into<String>, duration: f32) -> Self {
         Self {
             name: name.into(),

@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 use std::fmt;
-//  性能基准测试框架
+/// 性能基准测试框架
 ///
-//  提供统一的基准测试接口，用于测量关键路径的执行性能
-//  支持多种测试场景和硬件条件
+/// 提供统一的基准测试接口，用于测量关键路径的执行性能
+/// 支持多种测试场景和硬件条件
 use std::time::{Duration, Instant};
 
 //  基准测试结果
@@ -102,7 +102,7 @@ impl Benchmark {
     /// 打印所有结果
     pub fn print_results(&self) {
         println!("\n=== Benchmark Results ===\n");
-        for (_, result) in &self.results {
+        for result in self.results.values() {
             println!("{}\n", result);
         }
     }

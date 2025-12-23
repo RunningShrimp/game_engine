@@ -8,18 +8,26 @@ use std::thread;
 /// 脚本语言类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ScriptLanguage {
+    /// JavaScript语言
     JavaScript,
+    /// Python语言
     Python,
+    /// Lua语言
     Lua,
+    /// C#语言
     CSharp,
+    /// Rust语言
     Rust,
 }
 
 /// 脚本执行结果
 #[derive(Debug, Clone)]
 pub enum ScriptResult {
+    /// 执行成功，包含返回值
     Success(String),
+    /// 执行失败，包含错误信息
     Error(String),
+    /// 执行成功但无返回值
     Void,
 }
 
@@ -44,12 +52,19 @@ pub trait ScriptContext: Send + Sync {
 /// 脚本值 - 跨语言的通用数据类型
 #[derive(Debug, Clone, PartialEq)]
 pub enum ScriptValue {
+    /// 空值
     Null,
+    /// 布尔值
     Bool(bool),
+    /// 整数值
     Int(i64),
+    /// 浮点数值
     Float(f64),
+    /// 字符串值
     String(String),
+    /// 数组值
     Array(Vec<ScriptValue>),
+    /// 对象值
     Object(HashMap<String, ScriptValue>),
 }
 
@@ -59,6 +74,7 @@ pub struct ScriptSystem {
 }
 
 impl ScriptSystem {
+    /// 创建新的脚本系统
     pub fn new() -> Self {
         Self {
             contexts: Arc::new(Mutex::new(HashMap::new())),
@@ -166,6 +182,7 @@ impl JavaScriptContext {
         let _ = self.sender.send(JsCommand::Shutdown);
     }
 
+    /// 创建新的JavaScript上下文
     pub fn new() -> Self {
         let (tx, rx) = mpsc::channel::<JsCommand>();
         let globals_cache = Arc::new(Mutex::new(HashMap::new()));
@@ -434,6 +451,7 @@ pub struct PythonContext {
 }
 
 impl PythonContext {
+    /// 创建新的Python上下文
     pub fn new() -> Self {
         Self::default()
     }

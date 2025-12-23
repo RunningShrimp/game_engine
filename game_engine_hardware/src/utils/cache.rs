@@ -1,5 +1,4 @@
 //  硬件检测结果缓存
-///
 //  将硬件检测结果持久化到本地文件，避免每次启动都重新检测
 use crate::{GpuInfo, NpuInfo, SocInfo};
 use serde::{Deserialize, Serialize};

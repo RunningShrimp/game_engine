@@ -1,5 +1,4 @@
 //  扩展的NPU SDK实现
-///
 //  Intel OpenVINO, AMD ROCm, 华为昇腾, 高通SNPE, 联发科NeuroPilot
 use super::super::sdk::{InferenceHandle, NpuBackend, NpuInferenceEngine};
 use crate::error::{HardwareError, HardwareResult};
@@ -10,7 +9,6 @@ use std::path::Path;
 // ============================================================================
 
 //  Intel OpenVINO推理引擎
-///
 //  OpenVINO是Intel的跨平台推理工具包，支持CPU、GPU、VPU等多种硬件
 pub struct OpenVINOEngine {
     input_shape: Vec<usize>,
@@ -118,7 +116,6 @@ impl NpuInferenceEngine for OpenVINOEngine {
 // ============================================================================
 
 //  AMD ROCm推理引擎
-///
 //  ROCm是AMD的开源GPU计算平台，支持CDNA/RDNA架构
 pub struct ROCmEngine {
     input_shape: Vec<usize>,
@@ -219,7 +216,6 @@ impl NpuInferenceEngine for ROCmEngine {
 // ============================================================================
 
 //  华为昇腾CANN推理引擎
-///
 //  CANN (Compute Architecture for Neural Networks) 是华为昇腾AI处理器的软件栈
 pub struct AscendEngine {
     input_shape: Vec<usize>,
@@ -315,7 +311,6 @@ impl NpuInferenceEngine for AscendEngine {
 // ============================================================================
 
 //  高通SNPE推理引擎
-///
 //  SNPE (Snapdragon Neural Processing Engine) 支持Hexagon DSP和Adreno GPU
 pub struct SNPEEngine {
     input_shape: Vec<usize>,
@@ -419,7 +414,6 @@ impl NpuInferenceEngine for SNPEEngine {
 // ============================================================================
 
 //  联发科NeuroPilot推理引擎
-///
 //  NeuroPilot是联发科的AI平台，支持APU (AI Processing Unit)
 pub struct NeuroPilotEngine {
     input_shape: Vec<usize>,

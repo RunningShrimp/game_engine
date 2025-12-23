@@ -259,6 +259,12 @@ pub struct PerformanceDashboard {
     global_alerts: Vec<PerformanceAlert>,
 }
 
+impl Default for PerformanceDashboard {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PerformanceDashboard {
     /// 创建新仪表板
     pub fn new() -> Self {

@@ -9,6 +9,9 @@ pub use soa_layout::{SoALayoutManager, SoAStats, SoATransformStorage, SoAVelocit
 pub mod dirty_tracking;
 pub use dirty_tracking::{ComponentDirty, DirtyFlags, DirtyTrackingConfig, DirtyTrackingResource};
 
+/// 变换组件
+///
+/// 存储实体的位置、旋转和缩放信息
 #[derive(Component, Clone, Copy, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Transform {
     pub pos: Vec3,
@@ -22,6 +25,9 @@ impl_default_and_new!(Transform {
     scale: Vec3::ONE,
 });
 
+/// 速度组件
+///
+/// 存储实体的线速度和角速度
 #[derive(Component, Clone, Copy, Debug, Default)]
 pub struct Velocity {
     pub lin: Vec3,
@@ -37,6 +43,9 @@ impl Velocity {
 
 // 注意：Velocity已经使用#[derive(Default)]，new()方法调用default()是正确的模式
 
+/// 精灵组件
+///
+/// 存储精灵的渲染信息，包括颜色、纹理索引、UV坐标等
 #[derive(Component, Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Sprite {
     pub color: [f32; 4],
@@ -56,11 +65,17 @@ impl_default_and_new!(Sprite {
     layer: 0.0,
 });
 
+/// 纹理句柄组件
+///
+/// 存储纹理资源的句柄，用于渲染系统引用纹理
 #[derive(Component, Clone, Debug)]
 pub struct TextureHandle {
     pub handle: crate::resources::manager::Handle<u32>,
 }
 
+/// 点光源组件
+///
+/// 存储点光源的颜色、强度、半径和衰减参数
 #[derive(Component, Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct PointLight {
     pub color: [f32; 3],
@@ -76,6 +91,9 @@ impl_default_and_new!(PointLight {
     falloff: 1.0,
 });
 
+/// 投影类型枚举
+///
+/// 定义正交投影和透视投影两种相机投影方式
 #[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug)]
 pub enum Projection {
     Orthographic {
@@ -108,6 +126,9 @@ impl Projection {
     }
 }
 
+/// 相机组件
+///
+/// 存储相机的激活状态和投影参数
 #[derive(Component, Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Camera {
     pub is_active: bool,
@@ -119,11 +140,17 @@ impl_default_and_new!(Camera {
     projection: Projection::default(),
 });
 
+/// 网格组件
+///
+/// 存储网格资源的句柄，用于渲染系统引用网格
 #[derive(Component, Clone, Debug)]
 pub struct Mesh {
     pub handle: crate::resources::manager::Handle<crate::render::mesh::GpuMesh>,
 }
 
+/// 材质组件
+///
+/// 存储基础材质参数，包括颜色、金属度和粗糙度
 #[derive(Component, Clone, Debug)]
 pub struct Material {
     pub color: [f32; 4],
@@ -164,6 +191,8 @@ impl_default_and_new!(PbrMaterialComp {
 });
 
 /// 3D点光源组件
+///
+/// 存储3D点光源的颜色、强度和半径参数
 #[derive(Component, Clone, Debug)]
 pub struct PointLight3D {
     pub color: [f32; 3],
@@ -178,6 +207,8 @@ impl_default_and_new!(PointLight3D {
 });
 
 /// 方向光组件 (太阳光等)
+///
+/// 存储方向光的方向、颜色和强度参数
 #[derive(Component, Clone, Debug)]
 pub struct DirectionalLightComp {
     pub direction: [f32; 3],
@@ -191,6 +222,9 @@ impl_default_and_new!(DirectionalLightComp {
     intensity: 1.0,
 });
 
+/// 时间资源
+///
+/// 存储引擎的时间信息，包括帧时间、总运行时间等
 #[derive(Resource)]
 pub struct Time {
     pub delta_seconds: f32,
@@ -206,6 +240,9 @@ impl_default!(Time {
     alpha: 0.0,
 });
 
+/// 前一帧变换组件
+///
+/// 存储实体前一帧的变换信息，用于插值计算
 #[derive(Component, Clone, Copy, Debug)]
 pub struct PreviousTransform {
     pub pos: Vec3,
@@ -213,22 +250,34 @@ pub struct PreviousTransform {
     pub scale: Vec3,
 }
 
+/// 瓦片集资源
+///
+/// 存储瓦片集的瓦片定义，包括UV偏移和缩放信息
 #[derive(Resource, Clone, Debug, Default)]
 pub struct TileSet {
     pub tiles: std::collections::HashMap<String, ([f32; 2], [f32; 2])>,
 }
 
+/// 视口资源
+///
+/// 存储当前视口的宽度和高度
 #[derive(Resource, Clone, Copy, Debug, Default)]
 pub struct Viewport {
     pub width: u32,
     pub height: u32,
 }
 
+/// 瓦片块配置资源
+///
+/// 存储瓦片块的尺寸配置
 #[derive(Resource, Clone, Copy, Debug, Default)]
 pub struct TileChunkConfig {
     pub size: [u32; 2],
 }
 
+/// 瓦片地图组件
+///
+/// 存储瓦片地图的配置和瓦片数据，支持分块渲染
 #[derive(Component, Clone, Debug)]
 pub struct TileMap {
     pub width: u32,
@@ -305,11 +354,17 @@ pub fn tilemap_build_system(
     }
 }
 
+/// 瓦片块组件
+///
+/// 存储当前可见的瓦片块坐标集合
 #[derive(Component, Clone, Debug, Default)]
 pub struct TileChunks {
     pub visible: std::collections::HashSet<(i32, i32)>,
 }
 
+/// 瓦片实体池资源
+///
+/// 管理瓦片地图的实体复用，减少频繁创建和销毁实体的开销
 #[derive(Resource)]
 pub struct TileEntityPool {
     unused: Vec<Entity>,
@@ -354,6 +409,9 @@ impl TileEntityPool {
     }
 }
 
+/// 瓦片块标签组件
+///
+/// 标识瓦片块所属的地图和其坐标位置
 #[derive(Component, Clone, Debug)]
 pub struct ChunkTag {
     pub map: Entity,
@@ -491,6 +549,9 @@ impl_default_and_new!(PreviousTransform {
     rot: Quat::IDENTITY,
     scale: Vec3::ONE,
 });
+/// 翻转帧
+///
+/// 存储动画帧的UV偏移、缩放和持续时间
 #[derive(Clone, Debug)]
 pub struct FlipFrame {
     pub uv_off: [f32; 2],

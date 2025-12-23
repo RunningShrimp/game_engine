@@ -11,10 +11,8 @@
 
 use bevy_ecs::prelude::*;
 use rayon::prelude::*;
-use std::sync::Arc;
 
 use super::player::{AnimationPlayer, SkeletonAnimationPlayer};
-use super::service::AnimationService;
 use crate::ecs::{Time, Transform};
 
 /// 并行动画更新系统
@@ -58,14 +56,10 @@ pub fn parallel_animation_system(
         .into_par_iter()
         .map(|(entity, mut player, mut transform)| {
             // 更新动画
-            AnimationService::update(&mut player, delta);
+            player.update(delta);
             
             // 应用动画到Transform
-            AnimationService::apply_to_transform(
-                &player,
-                entity.to_bits(),
-                &mut transform,
-            );
+            player.apply_to_transform(entity.to_bits(), &mut transform);
             
             (entity, player, transform)
         })

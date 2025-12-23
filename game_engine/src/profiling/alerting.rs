@@ -4,12 +4,10 @@
 
 use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
-use std::thread;
+use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
 
-use super::metrics::*;
 use super::ProfilingResult;
 use super::visualization::TrendDirection;
 
@@ -134,6 +132,17 @@ pub enum AlertLevel {
     Error,
     /// 严重
     Critical,
+}
+
+impl AlertLevel {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            AlertLevel::Info => "Info",
+            AlertLevel::Warning => "Warning",
+            AlertLevel::Error => "Error",
+            AlertLevel::Critical => "Critical",
+        }
+    }
 }
 
 /// 告警操作符
@@ -729,15 +738,19 @@ impl AlertingEngine {
             return;
         }
         
+        // 添加到历史记录（在移动alert之前）
+        self.alert_history.push_back(alert.clone());
+        
         // 添加新告警
         self.active_alerts.insert(alert_id, alert);
         
-        // 添加到历史记录
-        self.alert_history.push_back(alert.clone());
-        
         // 限制历史记录大小
-        while self.alert_history.len() > self.config.alert_history_size {
-            self.alert_history.pop_front();
+        while self.active_alerts.len() > self.config.alert_history_size {
+            if let Some(key) = self.active_alerts.keys().next().cloned() {
+                self.active_alerts.remove(&key);
+            } else {
+                break;
+            }
         }
     }
 
@@ -745,20 +758,28 @@ impl AlertingEngine {
     fn check_resolved_alerts(&mut self) {
         let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
         
-        for (alert_id, alert) in &mut self.active_alerts {
+        let mut alerts_to_resolve = Vec::new();
+        
+        for (alert_id, alert) in &self.active_alerts {
             if alert.status == AlertStatus::Active {
                 // 重新评估告警条件
                 if let Some(historical_values) = self.metric_values.get(&alert.metric_name) {
                     if let Some(&current_value) = historical_values.back() {
                         if let Ok(should_resolve) = self.should_resolve_alert(alert, current_value, historical_values) {
                             if should_resolve {
-                                alert.status = AlertStatus::Resolved;
-                                alert.resolved_at = Some(now);
-                                alert.updated_at = now;
+                                alerts_to_resolve.push((alert_id.clone(), now));
                             }
                         }
                     }
                 }
+            }
+        }
+        
+        for (alert_id, resolved_time) in alerts_to_resolve {
+            if let Some(alert) = self.active_alerts.get_mut(&alert_id) {
+                alert.status = AlertStatus::Resolved;
+                alert.resolved_at = Some(resolved_time);
+                alert.updated_at = resolved_time;
             }
         }
     }
@@ -800,7 +821,7 @@ impl AlertingEngine {
     fn cleanup_expired_alerts(&mut self) {
         let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
         
-        self.active_alerts.retain(|(_, alert)| {
+        self.active_alerts.retain(|_, alert| {
             // 移除超过最大活跃时间的告警
             let alert_age = now - alert.created_at;
             let max_age = 24 * 60 * 60; // 24小时
@@ -833,7 +854,7 @@ impl AlertingEngine {
 
         if let Ok(mut sender) = self.notification_sender.lock() {
             for alert in alerts {
-                sender.send_alert(alert)?;
+                let _: ProfilingResult<()> = sender.send_alert(alert);
             }
         }
         
@@ -1056,7 +1077,7 @@ impl NotificationSender {
     }
 
     /// 发送邮件通知
-    fn send_email_notification(&self, alert: &AlertInstance, config: &EmailConfig) -> ProfilingResult<()> {
+    fn send_email_notification(&self, alert: &AlertInstance, _config: &EmailConfig) -> ProfilingResult<()> {
         // 简化实现，实际应使用SMTP库
         tracing::info!(
             target: "profiling",

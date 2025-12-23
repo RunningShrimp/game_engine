@@ -122,6 +122,9 @@ pub enum ProfilingError {
 
     #[error("系统时间错误: {0}")]
     SystemTimeError(#[from] std::time::SystemTimeError),
+    
+    #[error("其他错误: {0}")]
+    Other(String),
 }
 
 /// 性能监控结果类型

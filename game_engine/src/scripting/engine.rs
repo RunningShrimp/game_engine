@@ -13,11 +13,14 @@ use std::collections::HashMap;
 /// 这个类型保留用于向后兼容
 #[derive(Component, Default)]
 pub struct Script {
+    /// 脚本源代码
     pub source: String,
+    /// 是否启用脚本
     pub enabled: bool,
 }
 
 impl Script {
+    /// 创建新的脚本组件
     pub fn new(source: impl Into<String>) -> Self {
         Self {
             source: source.into(),
@@ -29,7 +32,9 @@ impl Script {
 /// 脚本资源句柄
 #[derive(Component)]
 pub struct ScriptAsset {
+    /// 脚本路径
     pub path: String,
+    /// 是否启用热重载
     pub hot_reload: bool,
 }
 

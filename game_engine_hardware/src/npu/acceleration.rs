@@ -1,5 +1,5 @@
 //  NPU加速应用模块
-///
+//
 //  使用NPU进行AI推理和游戏逻辑加速
 use super::detect::NpuInfo;
 use std::sync::{Arc, Mutex};

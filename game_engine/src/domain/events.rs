@@ -59,18 +59,20 @@ struct TypedEventHandler<E: DomainEvent> {
     handler: Arc<Mutex<Box<dyn FnMut(&E) + Send + Sync + 'static>>>,
 }
 
-impl<E: DomainEvent> TypedEventHandler<E> {
-    fn new(handler: Box<dyn FnMut(&E) + Send + Sync + 'static>) -> Self {
-        Self {
-            handler: Arc::new(Mutex::new(handler)),
-        }
-    }
-
+impl<E: DomainEvent> TypedEventHandlerTrait<E> for TypedEventHandler<E> {
     fn handle(&self, event: &E) {
         if let Ok(mut handler) = self.handler.lock() {
             handler(event);
         } else {
             tracing::error!("Failed to acquire handler lock");
+        }
+    }
+}
+
+impl<E: DomainEvent> TypedEventHandler<E> {
+    fn new(handler: Box<dyn FnMut(&E) + Send + Sync + 'static>) -> Self {
+        Self {
+            handler: Arc::new(Mutex::new(handler)),
         }
     }
 }
@@ -122,7 +124,8 @@ impl<E: DomainEvent + Serialize + for<'de> Deserialize<'de>> TypedEventHandlerWr
 impl<E: DomainEvent + Serialize + for<'de> Deserialize<'de>> EventHandlerWrapper for TypedEventHandlerWrapper<E> {
     fn handle_by_type_id(&self, type_id: TypeId, event_data: &[u8]) -> Result<(), EventError> {
         // 类型检查：确保类型ID匹配
-        if type_id != TypeId::of::<E>() {
+        let handler_type_id = self.event_type_id();
+        if type_id != handler_type_id {
             return Ok(()); // 类型不匹配，忽略（由调用者过滤）
         }
 
@@ -208,6 +211,11 @@ impl SafeEventBus {
         // 分发事件（无锁，并行处理）
         if let Some(handlers) = handlers {
             for handler in handlers {
+                // 使用event_type_id方法获取处理器的事件类型ID
+                let handler_type_id = handler.event_type_id();
+                if handler_type_id != type_id {
+                    continue; // 类型不匹配，跳过
+                }
                 if let Err(e) = handler.handle_by_type_id(type_id, &event_data) {
                     tracing::error!("Failed to handle event {}: {}", event_type, e);
                 }
@@ -215,7 +223,7 @@ impl SafeEventBus {
         }
 
         // 如果启用了异步分发，发送到异步通道
-        if let Some(ref tx) = self.async_tx {
+        if let Some(ref _tx) = self.async_tx {
             // 注意：这里需要克隆事件，但DomainEvent trait没有Clone
             // 实际使用中，应该通过序列化/反序列化来创建新实例
             // 或者使用Arc<dyn DomainEvent>来共享

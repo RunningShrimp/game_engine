@@ -12,6 +12,7 @@ pub struct EcsScriptBindings {
 }
 
 impl EcsScriptBindings {
+    /// 创建新的ECS脚本绑定
     pub fn new(world: Arc<Mutex<World>>) -> Self {
         Self { world }
     }

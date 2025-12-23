@@ -385,7 +385,7 @@ pub fn init_logger(config: LoggingConfig) {
 /// 记录日志（全局函数）
 pub fn log(level: LogLevel, message: impl Into<String>) {
     if let Some(logger_arc) = GLOBAL_LOGGER.get() {
-        if let Ok(mut logger) = logger_arc.lock() {
+        if let Ok(logger) = logger_arc.lock() {
             if let Some(ref logger) = *logger {
                 match level {
                     LogLevel::Trace => logger.trace(message),
@@ -402,7 +402,7 @@ pub fn log(level: LogLevel, message: impl Into<String>) {
 /// 记录错误（全局函数）
 pub fn log_error(error: &EngineError, message: Option<String>) {
     if let Some(logger_arc) = GLOBAL_LOGGER.get() {
-        if let Ok(mut logger) = logger_arc.lock() {
+        if let Ok(logger) = logger_arc.lock() {
             if let Some(ref logger) = *logger {
                 logger.log_error(error, message);
             }

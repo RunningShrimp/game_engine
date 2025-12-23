@@ -4,9 +4,8 @@
 // ============================================================================
 
 use super::*;
-use glam::{Vec3, Quat, Mat4};
+use glam::{Vec3, Mat4};
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
 
 /// 空间网格顶点
 #[derive(Debug, Clone, Copy)]
@@ -502,9 +501,9 @@ impl SpatialMappingManager {
     /// ```
     pub fn query_occlusion(
         &self,
-        origin: Vec3,
-        direction: Vec3,
-        max_distance: f32,
+        _origin: Vec3,
+        _direction: Vec3,
+        _max_distance: f32,
     ) -> Option<Vec3> {
         // 占位实现：实际应该进行射线-三角形相交测试
         // 遍历所有网格，对每个网格的三角形进行相交测试

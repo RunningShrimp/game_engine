@@ -273,9 +273,12 @@ mod render_service_tests {
     fn test_render_service_render_strategy_selection() {
         let service = RenderService::new();
 
-        // 创建一个mock的RenderObject用于测试
-        // 注意：实际需要GpuMesh，这里只测试逻辑
-        // 实际的RenderObject创建需要GPU上下文
+        // 测试渲染策略选择
+        let strategy = service.select_render_strategy(10.0);
+        assert_eq!(strategy, RenderStrategy::Forward);
+        
+        let strategy_distant = service.select_render_strategy(1000.0);
+        assert_eq!(strategy_distant, RenderStrategy::Forward);
     }
 
     #[test]
@@ -788,7 +791,6 @@ mod render_service_tests {
 
         // 验证配置已更新（通过行为验证）
         // 注意：由于lod_selector是私有的，我们通过update_scene来验证LOD是否工作
-        let mut world = bevy_ecs::prelude::World::new();
         let result = service.update_scene(0.016, glam::Vec3::ZERO);
         assert!(result.is_ok());
     }
@@ -1196,9 +1198,10 @@ mod domain_service_tests {
         assert!(service.update_body(&updated_body).is_ok());
 
         let force = Vec3::new(10.0, 0.0, 0.0);
-        // apply_force不会失败，只是不执行
-        // Update force is applied on the RigidBody struct directly, not on PhysicsWorld
-        // This test demonstrates that a non-existent body cannot be used
+        // 应用到存在的刚体上应该成功
+        assert!(service.apply_force(RigidBodyId(1), force).is_ok());
+        // 应用到不存在的刚体上应该失败
+        assert!(service.apply_force(RigidBodyId(999), force).is_err());
     }
 
     #[test]
@@ -1220,7 +1223,7 @@ mod domain_service_tests {
 
         // 应用极端力值
         let extreme_force = Vec3::new(1e10, -1e10, 1e10);
-        // force is applied on the RigidBody struct directly, not on PhysicsWorld
+        assert!(service.apply_force(RigidBodyId(1), extreme_force).is_ok());
     }
 
     #[test]

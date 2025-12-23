@@ -430,7 +430,7 @@ impl AsyncShaderCompiler {
                     } else {
                         // 缓存未命中，执行编译
                         // 注意：wgpu的create_shader_module是同步的，需要在阻塞任务中执行
-                        let permit = spawn_blocking_semaphore.acquire().await.unwrap();
+                        let _permit = spawn_blocking_semaphore.acquire().await.unwrap();
                         let compile_future = tokio::task::spawn_blocking(move || {
                             // 许可将在函数结束时自动释放
                             // 这里只是验证和预处理源码

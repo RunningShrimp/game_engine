@@ -58,9 +58,9 @@ impl<T> ObjectPool<T> {
 // 线程安全对象池
 // ============================================================================
 
-//  线程安全对象池（使用无锁队列）
+/// 线程安全对象池（使用无锁队列）
 ///
-//  支持多线程并发获取和归还对象，使用无锁队列减少锁竞争。
+/// 支持多线程并发获取和归还对象，使用无锁队列减少锁竞争。
 pub struct SyncObjectPool<T: Send> {
     /// 可用对象队列（无锁）
     available_sender: Sender<T>,
@@ -132,10 +132,9 @@ impl<T: Send> SyncObjectPool<T> {
         let current = self.current_size.load(Ordering::Relaxed);
 
         // 检查池是否已满
-        if current < max_size {
-            if self.available_sender.send(obj).is_ok() {
-                self.current_size.fetch_add(1, Ordering::Relaxed);
-            }
+        if current < max_size
+            && self.available_sender.send(obj).is_ok() {
+            self.current_size.fetch_add(1, Ordering::Relaxed);
         }
         // 如果池已满，对象将被丢弃
     }
@@ -232,9 +231,9 @@ pub trait Resettable {
     fn reset(&mut self);
 }
 
-//  可重置对象池
+/// 可重置对象池
 ///
-//  在归还对象时自动调用 reset() 方法
+/// 在归还对象时自动调用 reset() 方法
 pub struct ResettablePool<T: Resettable> {
     available: VecDeque<T>,
     factory: Box<dyn Fn() -> T>,
@@ -284,9 +283,9 @@ impl<T: Resettable> ResettablePool<T> {
 // RAII 池化对象
 // ============================================================================
 
-//  RAII 池化对象包装器
+/// RAII 池化对象包装器
 ///
-//  当对象离开作用域时自动归还到池中
+/// 当对象离开作用域时自动归还到池中
 pub struct Pooled<T: Send + 'static> {
     value: Option<T>,
     pool: Arc<SyncObjectPool<T>>,
@@ -344,9 +343,9 @@ impl<T: Send + 'static> std::ops::DerefMut for Pooled<T> {
 // 分类对象池
 // ============================================================================
 
-//  分类对象池
+/// 分类对象池
 ///
-//  根据大小或类型自动选择不同的池
+/// 根据大小或类型自动选择不同的池
 pub struct SizedPool<T: Send> {
     small: SyncObjectPool<T>,
     medium: SyncObjectPool<T>,
@@ -479,7 +478,7 @@ mod tests {
 
     #[test]
     fn test_object_pool() {
-        let mut pool = ObjectPool::new(|| Vec::<i32>::new(), 10, 20);
+        let mut pool = ObjectPool::new(Vec::<i32>::new, 10, 20);
 
         assert_eq!(pool.available_count(), 10);
 

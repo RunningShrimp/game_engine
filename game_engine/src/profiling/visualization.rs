@@ -2,7 +2,6 @@
 // 
 //  提供性能趋势分析、图表生成和数据导出功能。
 
-use std::collections::HashMap;
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
@@ -524,7 +523,7 @@ impl DataExporter {
     /// 导出数据
     pub fn export(&self, config: &ExportConfig, output_path: &Path) -> ProfilingResult<()> {
         // 构建查询条件
-        let mut condition = QueryCondition {
+        let condition = QueryCondition {
             metric_names: config.metric_filter.clone(),
             categories: None,
             start_time: config.start_time,

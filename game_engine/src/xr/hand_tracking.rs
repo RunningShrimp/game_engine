@@ -170,35 +170,7 @@ impl HandJoints {
         }
     }
 
-    /// 简单的手势识别（占位实现）
-    pub fn detect_gesture(&self) -> Option<HandGesture> {
-        // 使用各手指弯曲度进行粗略判断
-        let curl_threshold = 0.7;
-        let extended_threshold = 0.3;
 
-        let index_curl = self.get_finger_curl(Finger::Index);
-        let middle_curl = self.get_finger_curl(Finger::Middle);
-        let ring_curl = self.get_finger_curl(Finger::Ring);
-        let little_curl = self.get_finger_curl(Finger::Little);
-
-        let all_curled = index_curl > curl_threshold
-            && middle_curl > curl_threshold
-            && ring_curl > curl_threshold
-            && little_curl > curl_threshold;
-
-        let all_extended = index_curl < extended_threshold
-            && middle_curl < extended_threshold
-            && ring_curl < extended_threshold
-            && little_curl < extended_threshold;
-
-        if all_curled {
-            Some(HandGesture::Fist)
-        } else if all_extended {
-            Some(HandGesture::OpenHand)
-        } else {
-            None
-        }
-    }
 
     /// 获取手腕位置（如果可用）
     /// 

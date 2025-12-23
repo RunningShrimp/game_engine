@@ -278,6 +278,18 @@ pub enum PhysicsDomainError {
     /// 关节创建失败
     #[error("Joint creation failed: {0}")]
     JointCreationFailed(String),
+
+    /// 无效形状
+    #[error("Invalid shape: {0}")]
+    InvalidShape(String),
+
+    /// 形状创建错误
+    #[error("Shape creation error: {0}")]
+    ShapeCreationError(String),
+
+    /// 锁错误
+    #[error("Lock error: {0}")]
+    LockError(String),
 }
 
 /// 场景领域错误
@@ -399,6 +411,9 @@ impl From<crate::domain::errors::PhysicsError> for PhysicsDomainError {
             crate::domain::errors::PhysicsError::InvalidParameter(msg) => Self::InvalidParameter(msg),
             crate::domain::errors::PhysicsError::WorldNotInitialized => Self::WorldNotInitialized,
             crate::domain::errors::PhysicsError::JointCreationFailed(msg) => Self::JointCreationFailed(msg),
+            crate::domain::errors::PhysicsError::InvalidShape(msg) => Self::InvalidShape(msg),
+            crate::domain::errors::PhysicsError::ShapeCreationError(msg) => Self::ShapeCreationError(msg),
+            crate::domain::errors::PhysicsError::LockError(msg) => Self::LockError(msg),
         }
     }
 }
@@ -411,7 +426,6 @@ impl From<crate::domain::errors::SceneError> for SceneDomainError {
             crate::domain::errors::SceneError::ComponentNotFound(msg) => Self::ComponentNotFound(msg),
             crate::domain::errors::SceneError::SerializationFailed(msg) => Self::SerializationFailed(msg),
             crate::domain::errors::SceneError::DeserializationFailed(msg) => Self::DeserializationFailed(msg),
-            _ => Self::InvalidName(format!("{:?}", error)),
         }
     }
 }

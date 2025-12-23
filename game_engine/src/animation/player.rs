@@ -28,6 +28,7 @@ pub struct AnimationPlayer {
 }
 
 impl AnimationPlayer {
+    /// 创建新的动画播放器
     pub fn new() -> Self {
         Self::default()
     }
@@ -215,6 +216,7 @@ impl Default for SkeletonAnimationPlayer {
 }
 
 impl SkeletonAnimationPlayer {
+    /// 创建新的骨骼动画播放器
     pub fn new() -> Self {
         Self::default()
     }

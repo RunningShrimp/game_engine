@@ -273,6 +273,7 @@ pub trait ErrorReportGenerator {
 pub struct DefaultReportGenerator;
 
 impl DefaultReportGenerator {
+    /// Creates a new instance of the default error report generator
     pub fn new() -> Self {
         Self
     }

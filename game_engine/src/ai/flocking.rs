@@ -36,8 +36,10 @@ use thiserror::Error;
 /// 群体行为错误
 #[derive(Error, Debug)]
 pub enum FlockingError {
+    /// 代理未找到
     #[error("Agent not found: {0}")]
     AgentNotFound(u32),
+    /// 无效配置
     #[error("Invalid configuration: {0}")]
     InvalidConfig(String),
 }
@@ -47,6 +49,7 @@ pub enum FlockingError {
 pub struct AgentId(pub u32);
 
 impl AgentId {
+    /// 创建新的代理ID
     pub fn new(id: u32) -> Self {
         Self(id)
     }

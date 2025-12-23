@@ -124,7 +124,7 @@ impl ClientConnection {
 
     /// 异步发送消息
     pub async fn send_message(&mut self, message: &NetworkMessage) -> Result<(), NetworkError> {
-        let data = bincode::serialize(message)
+        let data = Self::serialize_message(message)
             .map_err(|e| NetworkError::SerializationError(e.to_string()))?;
 
         self.stream.write_all(&data).await
@@ -975,7 +975,7 @@ impl GameServer {
         client_id: u64,
         _message: &NetworkMessage,
     ) -> Result<(), NetworkError> {
-        let mut clients_guard = self
+        let clients_guard = self
             .clients
             .try_lock()
             .map_err(|e| NetworkError::SendError(format!("Lock error: {}", e)))?;
@@ -997,8 +997,6 @@ impl GameServer {
         return Err(NetworkError::SyncOperationInRuntime(
             "Use send_to_client async method for async clients.".to_string()
         ));
-
-        Ok(())
     }
 
     /// 同步版本的发送消息方法（专用于SyncClientConnection）

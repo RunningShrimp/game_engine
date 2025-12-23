@@ -2,11 +2,9 @@
 // 
 //  提供统一的性能监控入口，整合指标收集、数据存储、告警和可视化功能。
 
-use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use super::metrics::*;
 use super::collector::*;
 use super::storage::*;
 use super::alerting::*;
@@ -272,7 +270,7 @@ impl ProfilingService {
             ));
         }
 
-        let collector_stats = {
+        let _collector_stats = {
             let collector = self.collector.lock()
                 .map_err(|e| super::ProfilingError::ConfigurationError(e.to_string()))?;
             collector.get_collector_stats()
@@ -312,7 +310,7 @@ impl ProfilingService {
         }
 
         // 查询存储数据
-        let storage = self.storage.lock()
+        let _storage = self.storage.lock()
             .map_err(|e| super::ProfilingError::ConfigurationError(e.to_string()))?;
         let query_condition = QueryCondition {
             metric_names: Some(vec![metric_name.to_string()]),
@@ -329,7 +327,8 @@ impl ProfilingService {
             &self.config.storage_config.file_prefix,
         );
 
-        let result = pollster::block_on(queryer.query(&query_condition))?;
+        // 使用同步方式查询数据
+        let result = queryer.query_sync(&query_condition)?;
         
         // 转换为历史数据点
         let mut data_points = Vec::new();
@@ -361,7 +360,11 @@ impl ProfilingService {
 
         let alerting_engine = self.alerting_engine.lock()
             .map_err(|e| super::ProfilingError::ConfigurationError(e.to_string()))?;
-        Ok(alerting_engine.get_active_alerts())
+        let active_alerts: Vec<AlertInstance> = alerting_engine.get_active_alerts()
+            .into_iter()
+            .cloned()
+            .collect();
+        Ok(active_alerts)
     }
 
     /// 确认告警
@@ -383,15 +386,15 @@ impl ProfilingService {
             ));
         }
 
-        let storage = self.storage.lock()
+        let mut storage = self.storage.lock()
             .map_err(|e| super::ProfilingError::ConfigurationError(e.to_string()))?;
         let exporter = DataExporter::new(
             &self.config.storage_config.data_dir,
             &self.config.storage_config.file_prefix,
         );
 
-        // 先刷新缓存
-        pollster::block_on(storage.flush_cache())?;
+        // 先刷新缓存（使用同步方式）
+        storage.flush_cache_sync()?;
 
         // 导出数据
         exporter.export(config, output_path)?;
@@ -425,7 +428,8 @@ impl ProfilingService {
 
         // 清理过期数据
         if let Ok(storage) = self.storage.lock() {
-            if let Ok(storage_stats) = pollster::block_on(storage.get_storage_stats()) {
+            // 使用同步方法获取存储统计信息
+            if let Ok(storage_stats) = storage.get_storage_stats_sync() {
                 report.operations.push(format!("清理存储文件，当前文件数: {}", storage_stats.total_files));
                 
                 if storage_stats.total_files > self.config.storage_config.retain_files {
@@ -526,7 +530,7 @@ impl ProfilingService {
             }
 
             if let Ok(storage) = self.storage.lock() {
-                if let Ok(storage_stats) = storage.get_storage_stats() {
+                if let Ok(storage_stats) = storage.get_storage_stats_sync() {
                     state.storage_files_count = storage_stats.total_files;
                 }
             }

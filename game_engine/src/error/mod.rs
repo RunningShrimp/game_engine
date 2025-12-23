@@ -64,7 +64,6 @@ pub mod error_handler;
 
 // Serde imports for serialization/deserialization
 use serde::{Deserialize, Serialize};
-use thiserror::Error;
 
 // 重新导出所有错误类型
 pub use audio_error::AudioError;
@@ -222,21 +221,28 @@ pub mod script_error {
     use super::ErrorSeverity;
     use thiserror::Error;
 
+    /// Errors that can occur during script execution
     #[derive(Debug, Error, Clone)]
     pub enum ScriptError {
+        /// Script compilation failed
         #[error("Script compilation failed: {0}")]
         Compilation(String),
+        /// Script runtime error occurred
         #[error("Script runtime error: {0}")]
         Runtime(String),
+        /// Script not found
         #[error("Script not found: {0}")]
         NotFound(String),
+        /// Invalid binding error
         #[error("Invalid binding: {0}")]
         InvalidBinding(String),
+        /// Script timeout error
         #[error("Script timeout: {0} ms")]
         Timeout(u64),
     }
 
     impl ScriptError {
+        /// Gets the severity level of this script error
         pub fn severity(&self) -> ErrorSeverity {
             match self {
                 ScriptError::Compilation(_) | ScriptError::Runtime(_) => ErrorSeverity::Error,
@@ -252,21 +258,28 @@ pub mod platform_error {
     use super::ErrorSeverity;
     use thiserror::Error;
 
+    /// Errors that can occur during platform operations
     #[derive(Debug, Error, Clone)]
     pub enum PlatformError {
+        /// Window creation failed
         #[error("Window creation failed: {0}")]
         WindowCreation(String),
+        /// Event loop error occurred
         #[error("Event loop error: {0}")]
         EventLoop(String),
+        /// Input device error occurred
         #[error("Input device error: {0}")]
         InputDevice(String),
+        /// Filesystem error occurred
         #[error("Filesystem error: {0}")]
         Filesystem(String),
+        /// Platform not supported error
         #[error("Platform not supported: {0}")]
         NotSupported(String),
     }
 
     impl PlatformError {
+        /// Gets the severity level of this platform error
         pub fn severity(&self) -> ErrorSeverity {
             match self {
                 PlatformError::WindowCreation(_) | PlatformError::EventLoop(_) => ErrorSeverity::Error,

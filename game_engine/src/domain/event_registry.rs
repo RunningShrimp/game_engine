@@ -343,7 +343,7 @@ pub fn register_event_type<E: DomainEvent + Serialize + for<'de> Deserialize<'de
     version: u32,
 ) -> Result<(), EventError> {
     let registry = global_registry();
-    let mut registry_guard = registry.write()
+    let registry_guard = registry.write()
         .map_err(|e| EventError::SerializationError(format!("Failed to acquire lock: {}", e)))?;
     registry_guard.register::<E>(name, version)
 }

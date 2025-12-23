@@ -258,7 +258,7 @@ impl ParallelSystemExecutor {
         // 实际实现需要根据系统依赖关系进行更精细的控制
         if systems.len() > 4 {
             // 并行执行（需要确保系统之间没有数据竞争）
-            systems.par_iter().for_each(|system| {
+            systems.par_iter().for_each(|_system| {
                 // 注意：这里需要确保系统可以安全并行执行
                 // 实际实现需要使用World的并行查询API
                 // system(world); // 需要修改为支持并行的版本

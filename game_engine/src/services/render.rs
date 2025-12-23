@@ -282,6 +282,7 @@ impl RenderService {
         tracing::debug!(target: "render", "Viewport updated to {}x{}", width, height);
     }
 
+    /// 获取可渲染对象迭代器
     pub fn get_renderable_objects(&self) -> impl Iterator<Item = &DomainRenderObject> {
         self.render_scene.renderable_objects()
     }

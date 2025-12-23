@@ -1,10 +1,10 @@
-//  内存优化和缓存对齐
-///
-//  提供内存优化技术：
-//  - 缓存行对齐
-//  - 对象池优化
-//  - 内存碎片检测
-//  - NUMA 感知内存分配
+//! 内存优化和缓存对齐
+//!
+//! 提供内存优化技术：
+//! - 缓存行对齐
+//! - 对象池优化
+//! - 内存碎片检测
+//! - NUMA 感知内存分配
 use std::alloc::{GlobalAlloc, Layout};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -60,7 +60,7 @@ static PEAK: AtomicUsize = AtomicUsize::new(0);
 
 unsafe impl GlobalAlloc for TrackingAllocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        let ret = std::alloc::System.alloc(layout);
+        let ret = unsafe { std::alloc::System.alloc(layout) };
 
         if !ret.is_null() {
             let size = layout.size();
@@ -85,7 +85,7 @@ unsafe impl GlobalAlloc for TrackingAllocator {
     }
 
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
-        std::alloc::System.dealloc(ptr, layout);
+        unsafe { std::alloc::System.dealloc(ptr, layout) };
         DEALLOCATED.fetch_add(layout.size(), Ordering::Relaxed);
     }
 }
@@ -106,7 +106,7 @@ impl AlignmentOptimizer {
 
     /// 检测是否需要内存对齐
     pub fn needs_alignment(ptr: *const u8, alignment: usize) -> bool {
-        (ptr as usize) % alignment != 0
+        !((ptr as usize).is_multiple_of(alignment))
     }
 
     /// 获取对齐所需的填充字节数

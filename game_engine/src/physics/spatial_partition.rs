@@ -371,22 +371,22 @@ impl BVHTree {
 
         // 递归查询子节点
         let mut closest: Option<(ColliderHandle, f32)> = None;
-        let mut closest_toi = max_toi;
+        let mut _closest_toi = max_toi;
 
         if let Some(left_index) = node.left {
             if let Some(result) = self.raycast_node(left_index, ray, max_toi, collider_set) {
-                if result.1 < closest_toi {
+                if result.1 < _closest_toi {
                     closest = Some(result);
-                    closest_toi = result.1;
+                    _closest_toi = result.1;
                 }
             }
         }
 
         if let Some(right_index) = node.right {
             if let Some(result) = self.raycast_node(right_index, ray, max_toi, collider_set) {
-                if result.1 < closest_toi {
+                if result.1 < _closest_toi {
                     closest = Some(result);
-                    closest_toi = result.1;
+                    _closest_toi = result.1;
                 }
             }
         }
@@ -581,7 +581,7 @@ impl Octree {
         // 分割为8个子节点
         let center = aabb.center();
         let extents = aabb.extents();
-        let half_extents = extents * 0.5;
+        let _half_extents = extents * 0.5;
 
         let mut children_indices = [usize::MAX; 8];
         let child_aabbs = [
@@ -827,7 +827,7 @@ impl SpatialPartitionManager {
         };
         
         let elapsed = start.elapsed();
-        let elapsed_us = elapsed.as_micros() as f64;
+        let _elapsed_us = elapsed.as_micros() as f64;
         
         // 更新性能统计（注意：这里需要&mut self，但为了保持API不变，我们使用内部可变性）
         // 实际实现中可以使用Arc<Mutex<>>或AtomicU64来记录统计

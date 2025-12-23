@@ -447,37 +447,50 @@ pub enum ControllerButton {
 #[derive(Debug, Clone)]
 pub enum XrInputEvent {
     /// 按钮按下事件
-    /// - hand: 按下按钮的手部
-    /// - button: 被按下的按钮
     ButtonPressed {
+        /// 按下按钮的手部
         hand: Hand,
+        /// 被按下的按钮
         button: ControllerButton,
     },
     /// 按钮释放事件
-    /// - hand: 释放按钮的手部
-    /// - button: 被释放的按钮
     ButtonReleased {
+        /// 释放按钮的手部
         hand: Hand,
+        /// 被释放的按钮
         button: ControllerButton,
     },
     /// 触发器值变化事件（0.0-1.0）
-    /// - hand: 触发器所在的手部
-    /// - value: 新的触发器值
-    TriggerChanged { hand: Hand, value: f32 },
+    TriggerChanged { 
+        /// 触发器所在的手部
+        hand: Hand, 
+        /// 新的触发器值
+        value: f32 
+    },
     /// 握力值变化事件（0.0-1.0）
-    /// - hand: 握力传感器所在的手部
-    /// - value: 新的握力值
-    SqueezeChanged { hand: Hand, value: f32 },
+    SqueezeChanged { 
+        /// 握力传感器所在的手部
+        hand: Hand, 
+        /// 新的握力值
+        value: f32 
+    },
     /// 摇杆值变化事件
-    /// - hand: 摇杆所在的手部
-    /// - value: 摇杆的[x, y]值范围-1.0到1.0
-    ThumbstickChanged { hand: Hand, value: [f32; 2] },
+    ThumbstickChanged { 
+        /// 摇杆所在的手部
+        hand: Hand, 
+        /// 摇杆的[x, y]值范围-1.0到1.0
+        value: [f32; 2] 
+    },
     /// 控制器连接事件
-    /// - hand: 连接的控制器手部
-    ControllerConnected { hand: Hand },
+    ControllerConnected { 
+        /// 连接的控制器手部
+        hand: Hand 
+    },
     /// 控制器断开连接事件
-    /// - hand: 断开的控制器手部
-    ControllerDisconnected { hand: Hand },
+    ControllerDisconnected { 
+        /// 断开的控制器手部
+        hand: Hand 
+    },
     /// 手部追踪开始事件
     HandTrackingStarted,
     /// 手部追踪停止事件

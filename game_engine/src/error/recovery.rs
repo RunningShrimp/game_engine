@@ -133,6 +133,7 @@ pub trait ErrorRecovery {
 pub struct DefaultErrorRecovery;
 
 impl DefaultErrorRecovery {
+    /// Creates a new instance of the default error recovery handler
     pub fn new() -> Self {
         Self
     }
@@ -217,6 +218,7 @@ impl ErrorRecovery for DefaultErrorRecovery {
 pub struct RenderErrorRecovery;
 
 impl RenderErrorRecovery {
+    /// Creates a new instance of the render error recovery handler
     pub fn new() -> Self {
         Self
     }
@@ -301,6 +303,7 @@ impl ErrorRecovery for RenderErrorRecovery {
 pub struct AudioErrorRecovery;
 
 impl AudioErrorRecovery {
+    /// Creates a new instance of the audio error recovery handler
     pub fn new() -> Self {
         Self
     }
@@ -379,6 +382,7 @@ impl ErrorRecovery for AudioErrorRecovery {
 pub struct PhysicsErrorRecovery;
 
 impl PhysicsErrorRecovery {
+    /// Creates a new instance of the physics error recovery handler
     pub fn new() -> Self {
         Self
     }
@@ -443,6 +447,7 @@ impl ErrorRecovery for PhysicsErrorRecovery {
 pub struct ResourceErrorRecovery;
 
 impl ResourceErrorRecovery {
+    /// Creates a new instance of the resource error recovery handler
     pub fn new() -> Self {
         Self
     }
@@ -522,6 +527,7 @@ impl ErrorRecovery for ResourceErrorRecovery {
 pub struct InputErrorRecovery;
 
 impl InputErrorRecovery {
+    /// Creates a new instance of the input error recovery handler
     pub fn new() -> Self {
         Self
     }
@@ -609,6 +615,7 @@ impl ErrorRecovery for InputErrorRecovery {
 pub struct SystemErrorRecovery;
 
 impl SystemErrorRecovery {
+    /// Creates a new instance of the system error recovery handler
     pub fn new() -> Self {
         Self
     }

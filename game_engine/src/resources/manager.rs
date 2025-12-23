@@ -1,4 +1,5 @@
 use bevy_ecs::prelude::*;
+use bevy_ecs::world::World;
 use std::{
     path::{Path, PathBuf},
     sync::{Arc, RwLock},
@@ -582,7 +583,7 @@ impl AssetServer {
                 ) => {
                     let ms = std::time::Instant::now()
                         .duration_since(start)
-                        .as_secs_f32()
+                        .as_secs_f64()
                         * 1000.0;
                     if let Some(tex_id) = renderer.load_texture_from_image(img.clone(), is_linear) {
                         if let Ok(mut state) = handle.container.state.write() {
@@ -604,7 +605,7 @@ impl AssetServer {
                             }
                         }
                         
-                        events.push(AssetEvent::TextureLoaded(handle.clone(), ms));
+                        events.push(AssetEvent::TextureLoaded(handle.clone(), ms as f32));
                     } else {
                         if let Ok(mut state) = handle.container.state.write() {
                             *state = LoadState::Failed("Failed to create texture".to_string());
@@ -622,9 +623,10 @@ impl AssetServer {
                     }
                 }
                 (AssetTask::Atlas { handle, start, .. }, Ok(AssetResult::Bytes(bytes))) => {
+                    let bytes_len = bytes.len();
                     let ms = std::time::Instant::now()
                         .duration_since(start)
-                        .as_secs_f32()
+                        .as_secs_f64()
                         * 1000.0;
                     if let Ok(json_str) = String::from_utf8(bytes) {
                         if let Some(atlas) = Atlas::from_json(&json_str) {
@@ -635,10 +637,10 @@ impl AssetServer {
                             // 更新统计信息
                             if let Ok(mut stats) = self.stats.write() {
                                 stats.loaded_atlases += 1;
-                                stats.total_memory_bytes += bytes.len();
+                                stats.total_memory_bytes += bytes_len;
                             }
                             
-                            events.push(AssetEvent::AtlasLoaded(handle.clone(), ms));
+                            events.push(AssetEvent::AtlasLoaded(handle.clone(), ms as f32));
                         } else {
                             if let Ok(mut state) = handle.container.state.write() {
                                 *state = LoadState::Failed("Invalid Atlas JSON".to_string());
@@ -668,7 +670,7 @@ impl AssetServer {
                 (AssetTask::Gltf { handle, start, .. }, Ok(AssetResult::Gltf(scene))) => {
                     let ms = std::time::Instant::now()
                         .duration_since(start)
-                        .as_secs_f32()
+                        .as_secs_f64()
                         * 1000.0;
                     if let Ok(mut state) = handle.container.state.write() {
                         *state = LoadState::Loaded(scene);
@@ -679,7 +681,7 @@ impl AssetServer {
                         stats.loaded_gltf_scenes += 1;
                     }
                     
-                    events.push(AssetEvent::GltfLoaded(handle.clone(), ms));
+                    events.push(AssetEvent::GltfLoaded(handle.clone(), ms as f32));
                 }
                 (AssetTask::Texture { handle, .. }, Err(e)) => {
                     if let Ok(mut state) = handle.container.state.write() {
@@ -841,20 +843,22 @@ impl Drop for AssetServer {
 // 将GLTF场景导入为引擎批次，可选生成切线与纹理绑定组
 #[cfg(feature = "gltf")]
 pub fn import_gltf_to_world(
-    world: &mut bevy_ecs::world::World,
+    world: &mut World,
     renderer: &mut WgpuRenderer,
     handle: &Handle<GltfScene>,
 ) {
     // use gltf::Primitive;
     if let Some(scene) = handle.get() {
         let (doc, buffers, images) = &*scene.data;
-        let pbr = match &renderer.pbr_renderer {
-            Some(p) => p,
-            None => return,
-        };
-        let _sampler = renderer.create_sampler();
-        // sampler用于纹理采样，在创建材质绑定组时使用（当前通过pbr内部管理）
-
+        
+        // Check if pbr renderer exists first to avoid borrowing conflicts
+        if renderer.pbr_renderer.is_none() {
+            return;
+        }
+        
+        // Process all primitives to collect mesh data and material info separately
+        let mut primitive_data = Vec::new();
+        
         for mesh in doc.meshes() {
             for primitive in mesh.primitives() {
                 let reader = primitive.reader(|buf| Some(&buffers[buf.index()]));
@@ -908,50 +912,9 @@ pub fn import_gltf_to_world(
                         tangent: tangents[i],
                     });
                 }
-                let gpu_mesh = renderer.create_gpu_mesh(&vertices, &indices);
-
-                // 构建纹理绑定组（五贴图）并持久化纹理
-                // 创建1x1白色默认纹理（固定参数，不会失败）
-                let default_img = image::RgbaImage::from_raw(1, 1, vec![255, 255, 255, 255])
-                    .expect("Failed to create default 1x1 white image - this should never happen");
-                let mr = primitive.material().pbr_metallic_roughness();
-                let bc_img = mr
-                    .base_color_texture()
-                    .map(|info| &images[info.texture().source().index()])
-                    .map(to_rgba)
-                    .unwrap_or(default_img.clone());
-                let mr_img = mr
-                    .metallic_roughness_texture()
-                    .map(|info| &images[info.texture().source().index()])
-                    .map(to_rgba)
-                    .unwrap_or(default_img.clone());
-                let n_img = primitive
-                    .material()
-                    .normal_texture()
-                    .map(|info| &images[info.texture().source().index()])
-                    .map(to_rgba)
-                    .unwrap_or(default_img.clone());
-                let ao_img = primitive
-                    .material()
-                    .occlusion_texture()
-                    .map(|info| &images[info.texture().source().index()])
-                    .map(to_rgba)
-                    .unwrap_or(default_img.clone());
-                let em_img = primitive
-                    .material()
-                    .emissive_texture()
-                    .map(|info| &images[info.texture().source().index()])
-                    .map(to_rgba)
-                    .unwrap_or(default_img.clone());
-                let tex_set = pbr.create_texture_set_from_images(
-                    renderer.device(),
-                    renderer.queue(),
-                    [bc_img, mr_img, n_img, ao_img, em_img],
-                    [true, false, false, false, true],
-                );
-                let tex_bg = std::sync::Arc::new(tex_set.bind_group);
-
+                
                 // GLTF 材质参数映射
+                let mr = primitive.material().pbr_metallic_roughness();
                 let mut mat = crate::render::pbr::PbrMaterial::default();
                 let base = mr.base_color_factor();
                 mat.base_color = glam::Vec4::from_array(base);
@@ -968,13 +931,16 @@ pub fn import_gltf_to_world(
                     .occlusion_texture()
                     .map(|o| o.strength())
                     .unwrap_or(1.0);
+                
                 // KHR_texture_transform（UV变换）解析（仅 .gltf JSON 可用）
+                let reader = primitive.reader(|buf| Some(&buffers[buf.index()]));
+                let mut final_vertices = vertices;
                 if let Some(ref json) = scene.json {
                     if let Some(materials) = json.get("materials").and_then(|v| v.as_array()) {
                         if let Some(mi) = primitive.material().index() {
                             if let Some(mj) = materials.get(mi) {
-                                if let Some(pbr) = mj.get("pbrMetallicRoughness") {
-                                    if let Some(bct) = pbr.get("baseColorTexture") {
+                                if let Some(pbr_json) = mj.get("pbrMetallicRoughness") {
+                                    if let Some(bct) = pbr_json.get("baseColorTexture") {
                                         if let Some(ext) = bct.get("extensions") {
                                             if let Some(tt) = ext.get("KHR_texture_transform") {
                                                 if let Some(off) =
@@ -1010,10 +976,32 @@ pub fn import_gltf_to_world(
                                                         .read_tex_coords(tc_i)
                                                         .and_then(|tc| Some(tc.into_f32()))
                                                         .map(|it| it.collect())
-                                                        .unwrap_or_else(|| uvs.clone());
+                                                        .unwrap_or_else(|| {
+                                                            // Get original UVs if the alternate set doesn't exist
+                                                            let mut texcoord_index = 0u32;
+                                                            let mt = primitive.material();
+                                                            if let Some(info) = mt.pbr_metallic_roughness().base_color_texture() {
+                                                                texcoord_index = info.tex_coord();
+                                                            } else if let Some(info) = mt.pbr_metallic_roughness().metallic_roughness_texture() {
+                                                                texcoord_index = info.tex_coord();
+                                                            } else if let Some(info) = mt.normal_texture() {
+                                                                texcoord_index = info.tex_coord();
+                                                            } else if let Some(info) = mt.occlusion_texture() {
+                                                                texcoord_index = info.tex_coord();
+                                                            } else if let Some(info) = mt.emissive_texture() {
+                                                                texcoord_index = info.tex_coord();
+                                                            }
+                                                            reader
+                                                                .read_tex_coords(texcoord_index)
+                                                                .and_then(|tc| Some(tc.into_f32()))
+                                                                .map(|it| it.collect())
+                                                                .unwrap_or_else(|| vec![[0.0, 0.0]; positions.len()])
+                                                        });
                                                     // 用新版 UV 替换
-                                                    for i in 0..positions.len() {
-                                                        vertices[i].uv = uvs2[i];
+                                                    for i in 0..final_vertices.len() {
+                                                        if i < uvs2.len() {
+                                                            final_vertices[i].uv = uvs2[i];
+                                                        }
                                                     }
                                                 }
                                             }
@@ -1024,44 +1012,97 @@ pub fn import_gltf_to_world(
                         }
                     }
                 }
-
-                // 材质注册与复用
-                let mat_id = primitive.material().index().unwrap_or(0) as u64;
-                let mut registry =
-                    world.get_resource_or_insert_with::<MaterialRegistry>(Default::default);
-                let (material_bg, material_buf) = if let Some((bg, buf, tex)) =
-                    registry.materials.get(&mat_id)
-                {
-                    // 使用已注册的材质，tex用于纹理绑定
-                    let _tex_ref = tex;
-                    (bg.clone(), buf.clone())
-                } else {
-                    let (bg, buf) =
-                        pbr.create_material_bind_group(renderer.device(), renderer.queue(), &mat);
-                    // 登记材质，包括纹理绑定组
-                    registry
-                        .materials
-                        .insert(mat_id, (bg.clone(), buf.clone(), tex_bg.clone()));
-                    (bg, buf)
-                };
-
+                
+                // Store the vertex and index data for later processing
                 let mesh_id = mesh.index() as u64;
-                let comp = crate::render::instance_batch::Mesh3DRenderer {
-                    mesh: gpu_mesh,
-                    material_bind_group: material_bg,
-                    textures_bind_group: Some(tex_bg),
-                    material_uniform_buffer: Some(material_buf),
-                    mesh_id,
-                    material_id: mat_id,
-                    pipeline_id: 0,   // 默认管线 ID
-                    blend_mode: 0,    // 默认混合模式（不透明）
-                    depth_test: true, // 默认启用深度测试
-                    render_flags: 0,  // 默认无特殊渲染标志
-                    visible: true,
-                };
-                let transform = crate::ecs::Transform::default();
-                world.spawn((comp, transform));
+                let mat_id = primitive.material().index().unwrap_or(0) as u64;
+                
+                // Store primitive data for later processing to avoid borrowing conflicts
+                primitive_data.push((final_vertices, indices, mat, mat_id, mesh_id, primitive.material().index().unwrap_or(0)));
             }
+        }
+        
+        // Now process the collected data using the renderer
+        for (vertices, indices, mat, mat_id, mesh_id, material_index) in primitive_data {
+            // Create GPU mesh (this requires mutable access to renderer)
+            let gpu_mesh = renderer.create_gpu_mesh(&vertices, &indices);
+            
+            // Now we can safely use the pbr renderer (immutable access) with device and queue
+            let pbr = renderer.pbr_renderer.as_ref().unwrap();
+            let device = renderer.device();
+            let queue = renderer.queue();
+            
+            // 构建纹理绑定组（五贴图）并持久化纹理
+            // 创建1x1白色默认纹理（固定参数，不会失败）
+            let default_img = image::RgbaImage::from_raw(1, 1, vec![255, 255, 255, 255])
+                .expect("Failed to create default 1x1 white image - this should never happen");
+            let materials: Vec<gltf::Material> = scene.data.0.materials().collect();
+            let material = &materials[material_index];
+            let mr = material.pbr_metallic_roughness();
+            let bc_img = mr
+                .base_color_texture()
+                .map(|info| &images[info.texture().source().index()])
+                .map(to_rgba)
+                .unwrap_or(default_img.clone());
+            let mr_img = mr
+                .metallic_roughness_texture()
+                .map(|info| &images[info.texture().source().index()])
+                .map(to_rgba)
+                .unwrap_or(default_img.clone());
+            let n_img = material
+                .normal_texture()
+                .map(|info| &images[info.texture().source().index()])
+                .map(to_rgba)
+                .unwrap_or(default_img.clone());
+            let ao_img = material
+                .occlusion_texture()
+                .map(|info| &images[info.texture().source().index()])
+                .map(to_rgba)
+                .unwrap_or(default_img.clone());
+            let em_img = material
+                .emissive_texture()
+                .map(|info| &images[info.texture().source().index()])
+                .map(to_rgba)
+                .unwrap_or(default_img.clone());
+            let tex_set = pbr.create_texture_set_from_images(
+                device,
+                queue,
+                [bc_img, mr_img, n_img, ao_img, em_img],
+                [true, false, false, false, true],
+            );
+            let tex_bg = std::sync::Arc::new(tex_set.bind_group);
+
+            // 材质注册与复用
+            let mut registry =
+                world.get_resource_or_insert_with::<MaterialRegistry>(Default::default);
+            let (material_bg, material_buf): (std::sync::Arc<wgpu::BindGroup>, std::sync::Arc<wgpu::Buffer>) = if let Some(triple) = registry.materials.get(&mat_id) {
+                // 使用已注册的材质
+                (triple.0.clone(), triple.1.clone())
+            } else {
+                let (bg, buf): (std::sync::Arc<wgpu::BindGroup>, std::sync::Arc<wgpu::Buffer>) =
+                    pbr.create_material_bind_group(device, queue, &mat);
+                // 登记材质，包括纹理绑定组
+                registry
+                    .materials
+                    .insert(mat_id, (bg.clone(), buf.clone(), tex_bg.clone()));
+                (bg, buf)
+            };
+
+            let comp = crate::render::instance_batch::Mesh3DRenderer {
+                mesh: gpu_mesh,
+                material_bind_group: material_bg,
+                textures_bind_group: Some(tex_bg),
+                material_uniform_buffer: Some(material_buf),
+                mesh_id,
+                material_id: mat_id,
+                pipeline_id: 0,   // 默认管线 ID
+                blend_mode: 0,    // 默认混合模式（不透明）
+                depth_test: true, // 默认启用深度测试
+                render_flags: 0,  // 默认无特殊渲染标志
+                visible: true,
+            };
+            let transform = crate::ecs::Transform::default();
+            world.spawn((comp, transform));
         }
     }
 }

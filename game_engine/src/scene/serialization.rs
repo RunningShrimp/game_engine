@@ -124,15 +124,24 @@ pub enum SerializedComponent {
 /// 序列化的投影类型
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SerializedProjection {
+    /// 正交投影
     Orthographic {
+        /// 缩放比例
         scale: f32,
+        /// 近裁剪面距离
         near: f32,
+        /// 远裁剪面距离
         far: f32,
     },
+    /// 透视投影
     Perspective {
+        /// 视野角度
         fov: f32,
+        /// 宽高比
         aspect: f32,
+        /// 近裁剪面距离
         near: f32,
+        /// 远裁剪面距离
         far: f32,
     },
 }
@@ -140,16 +149,22 @@ pub enum SerializedProjection {
 /// 序列化的刚体类型
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SerializedRigidBodyType {
+    /// 动态刚体，受物理影响
     Dynamic,
+    /// 固定刚体，不受物理影响
     Fixed,
+    /// 基于位置的运动学刚体
     KinematicPositionBased,
+    /// 基于速度的运动学刚体
     KinematicVelocityBased,
 }
 
 /// 序列化的形状类型
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SerializedShapeType {
+    /// 立方体形状
     Cuboid,
+    /// 球体形状
     Ball,
 }
 
@@ -157,6 +172,7 @@ impl SerializedScene {
     /// 当前序列化版本
     pub const CURRENT_VERSION: u32 = 1;
 
+    /// 创建新的序列化场景
     pub fn new(name: impl Into<String>) -> Self {
         Self {
             name: name.into(),

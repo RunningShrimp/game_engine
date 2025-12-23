@@ -1563,6 +1563,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                     Ok(frame) => frame,
                     Err(e2) => {
                         tracing::error!("Failed to get texture after reconfigure. Original: {}, Retry: {}", e, e2);
+                        // Return early without error since function has no return type
                         return;
                     }
                 }
@@ -1698,7 +1699,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                                 rpass.set_vertex_buffer(1, self.instance_buffer.slice(..));
                                 let mut use_scissor = scissor.clone();
                                 if use_scissor.is_none() && target_id == 0 {
-                                    use_scissor = compute_scissor(
+                                    use_scissor = Self::compute_scissor(
                                         instances,
                                         *start,
                                         *end,
@@ -1741,44 +1742,26 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         // Submit main rendering command
         self.queue.submit(std::iter::once(encoder.finish()));
         
-        // TODO: Fix egui rendering lifetime issues
-        // Temporarily disabled egui rendering to fix compilation
-        // Handle egui rendering in a separate scope to avoid lifetime issues
-        // let egui_command_buffer = if let (Some(renderer), Some(mut egui_encoder)) = (egui_renderer.as_mut(), egui_encoder) {
-        //     let screen_desc = egui_wgpu::ScreenDescriptor {
-        //         size_in_pixels: [self.config.width, self.config.height],
-        //         pixels_per_point: egui_pixels_per_point,
-        //     };
-        //
-        //     let render_pass_desc = wgpu::RenderPassDescriptor {
-        //         label: Some("egui render pass"),
-        //         color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-        //             view: &view,
-        //             resolve_target: None,
-        //             ops: wgpu::Operations {
-        //                 load: wgpu::LoadOp::Load,
-        //                 store: wgpu::StoreOp::Store,
-        //             },
-        //             depth_slice: None,
-        //         })],
-        //         depth_stencil_attachment: None,
-        //         occlusion_query_set: None,
-        //         timestamp_writes: None,
-        //     };
-        //
-        //     let mut egui_render_pass = egui_encoder.begin_render_pass(&render_pass_desc);
-        //     renderer.render(&mut egui_render_pass, egui_shapes, &screen_desc);
-        //     drop(egui_render_pass); // Explicitly drop to release borrow
-        //
-        //     Some(egui_encoder.finish())
-        // } else {
-        //     None
-        // };
-        //
-        // // Submit egui commands if any
-        // if let Some(command_buffer) = egui_command_buffer {
-        //     self.queue.submit(std::iter::once(command_buffer));
-        // }
+        // Handle egui rendering - create a separate encoder to avoid borrowing issues
+        if let Some(renderer) = egui_renderer {
+            if !egui_shapes.is_empty() {
+                let screen_desc = egui_wgpu::ScreenDescriptor {
+                    size_in_pixels: [self.config.width, self.config.height],
+                    pixels_per_point: egui_pixels_per_point,
+                };
+
+                // Create a new encoder for egui to avoid borrowing conflicts
+                let mut egui_cmd_encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                    label: Some("egui render pass encoder"),
+                });
+                
+                // Update buffers and render egui content
+                renderer.update_buffers(&self.device, &self.queue, &mut egui_cmd_encoder, egui_shapes, &screen_desc);
+                
+                let cmd_buffer = egui_cmd_encoder.finish();
+                self.queue.submit(std::iter::once(cmd_buffer));
+            }
+        }
         
         let _present_span = span!(Level::DEBUG, "present_frame").entered();
         
@@ -1787,7 +1770,6 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         // 记录帧渲染时间和Draw Call数量
         let (draws, _) = self.draw_stats();
         info!(
-            frame_time_ms = ?_frame_span.elapsed(),
             draw_calls = draws,
             "Frame rendered"
         );
@@ -1999,7 +1981,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
             let (_, s, e) = chunk_runs[0];
             let slice = &instances[s as usize..e as usize];
             if !slice.is_empty() {
-                let h = hash_instances(slice);
+                let h = Self::hash_instances(slice);
                 let cid = instances[s as usize].chunk;
                 let prev = self.chunk_hashes.get(&cid).copied();
                 if prev != Some(h) {
@@ -2015,7 +1997,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                 if slice.is_empty() {
                     continue;
                 }
-                let h = hash_instances(slice);
+                let h = Self::hash_instances(slice);
                 let prev = self.chunk_hashes.get(&cid).copied();
                 if prev != Some(h) {
                     self.queue.write_buffer(
@@ -2860,6 +2842,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                     Ok(frame) => frame,
                     Err(e2) => {
                         tracing::error!("Failed to get texture after reconfigure. Original: {}, Retry: {}", e, e2);
+                        // Return early without error since function has no return type
                         return;
                     }
                 }
@@ -3038,7 +3021,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         mut egui_renderer: Option<&mut egui_wgpu::Renderer>,
         egui_shapes: &[egui::ClippedPrimitive],
         egui_pixels_per_point: f32,
-    ) {
+    ) -> Result<(), Box<dyn std::error::Error>> {
         // 更新相机
         self.update_pbr_camera(view_proj, camera_pos);
 
@@ -3053,7 +3036,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                     Ok(frame) => frame,
                     Err(e2) => {
                         tracing::error!("Failed to get texture after reconfigure. Original: {}, Retry: {}", e, e2);
-                        return;
+                        return Err(format!("Failed to get surface texture: {}", e2).into());
                     }
                 }
             }
@@ -3245,40 +3228,45 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                     rpass.draw_indexed(0..batch.mesh.index_count, 0, 0..batch.count);
                 }
             }
+            
+            // 结束PBR渲染通道
         }
 
         // 渲染egui UI（在PBR渲染之后）
-        if let Some(renderer) = egui_renderer.as_mut() {
+        let egui_cmd_buffer = if let Some(renderer) = egui_renderer {
             let screen_desc = egui_wgpu::ScreenDescriptor {
                 size_in_pixels: [self.config.width, self.config.height],
                 pixels_per_point: egui_pixels_per_point,
             };
             
-            let render_pass_desc = wgpu::RenderPassDescriptor {
-                label: Some("egui render pass"),
-                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                    view: &view,
-                    resolve_target: None,
-                    ops: wgpu::Operations {
-                        load: wgpu::LoadOp::Load, // 加载现有内容（在3D渲染之上）
-                        store: wgpu::StoreOp::Store,
-                    },
-                    depth_slice: None,
-                })],
-                depth_stencil_attachment: None,
-                occlusion_query_set: None,
-                timestamp_writes: None,
-            };
+            // Create a separate encoder for egui to avoid borrowing issues
+            let mut egui_encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("egui Encoder"),
+            });
+            
+            // Update buffers and render egui content
+            renderer.update_buffers(&self.device, &self.queue, &mut egui_encoder, egui_shapes, &screen_desc);
+            
+            let cmd_buffer = egui_encoder.finish();
 
-            let mut egui_render_pass = encoder.begin_render_pass(&render_pass_desc);
-            renderer.render(&mut egui_render_pass, egui_shapes, &screen_desc);
-            drop(egui_render_pass); // 显式释放借用
+            Some(cmd_buffer) // egui_encoder is finished here
+        } else {
+            // 如果没有egui渲染器，返回None
+            None
+        };
+        
+        // 提交所有命令缓冲区
+        let pbr_cmd_buffer = encoder.finish();
+        if let Some(egui_cmd_buffer) = egui_cmd_buffer {
+            self.queue.submit([pbr_cmd_buffer, egui_cmd_buffer]);
+        } else {
+            self.queue.submit([pbr_cmd_buffer]);
         }
-
-        self.queue.submit(std::iter::once(encoder.finish()));
+        
         frame.present();
+        Ok(())
     }
-
+    
     /// 获取PBR渲染器引用
     pub fn pbr_renderer(&self) -> Option<&crate::render::pbr_renderer::PbrRenderer> {
         self.pbr_renderer.as_ref()
@@ -3290,7 +3278,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     }
 
     pub fn create_gpu_mesh(
-        &self,
+        &mut self,
         vertices: &[crate::render::mesh::Vertex3D],
         indices: &[u32],
     ) -> std::sync::Arc<crate::render::mesh::GpuMesh> {
@@ -3356,89 +3344,135 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     pub fn device(&self) -> &wgpu::Device {
         &self.device
     }
+
     pub fn queue(&self) -> &wgpu::Queue {
         &self.queue
     }
-}
 
-fn compute_scissor(
-    insts: &[Instance],
-    start: u32,
-    end: u32,
-    screen_w: u32,
-    screen_h: u32,
-) -> Option<[u32; 4]> {
-    if end <= start {
-        return None;
+    /// 渲染egui UI
+    fn render_egui_ui<F>(
+        device: &wgpu::Device,
+        view: &wgpu::TextureView,
+        _config: &wgpu::SurfaceConfiguration,
+        _egui_pixels_per_point: f32,
+        render_fn: F,
+    ) -> wgpu::CommandBuffer
+    where
+        F: FnOnce(&mut wgpu::RenderPass),
+    {
+        // 创建新的命令编码器用于egui渲染
+        let mut egui_encoder = device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("egui Encoder"),
+            });
+            
+        let egui_render_pass = wgpu::RenderPassDescriptor {
+            label: Some("egui render pass"),
+            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                view: &view,
+                resolve_target: None,
+                ops: wgpu::Operations {
+                    load: wgpu::LoadOp::Load, // 加载现有内容（在3D渲染之上）
+                    store: wgpu::StoreOp::Store,
+                },
+                depth_slice: None,
+            })],
+            depth_stencil_attachment: None,
+            occlusion_query_set: None,
+            timestamp_writes: None,
+        };
+
+        {
+            let mut rpass = egui_encoder.begin_render_pass(&egui_render_pass);
+            render_fn(&mut rpass);
+        } // 确保render pass在此处结束
+        
+        // 完成egui命令编码器并返回命令缓冲区
+        egui_encoder.finish()
     }
-    let mut min_x = f32::INFINITY;
-    let mut min_y = f32::INFINITY;
-    let mut max_x = f32::NEG_INFINITY;
-    let mut max_y = f32::NEG_INFINITY;
-    let s = start as usize;
-    let e = end as usize;
-    for inst in &insts[s..e] {
-        let c = inst.rot.cos().abs();
-        let s0 = inst.rot.sin().abs();
-        let hx = inst.scale[0] * 0.5;
-        let hy = inst.scale[1] * 0.5;
-        let ex = c * hx + s0 * hy;
-        let ey = s0 * hx + c * hy;
-        let x0 = inst.pos[0] - ex;
-        let y0 = inst.pos[1] - ey;
-        let x1 = inst.pos[0] + ex;
-        let y1 = inst.pos[1] + ey;
-        if x0 < min_x {
-            min_x = x0;
+    
+    fn compute_scissor(
+        insts: &[Instance],
+        start: u32,
+        end: u32,
+        screen_w: u32,
+        screen_h: u32,
+    ) -> Option<[u32; 4]> {
+        if end <= start {
+            return None;
         }
-        if y0 < min_y {
-            min_y = y0;
+        let mut min_x = f32::INFINITY;
+        let mut min_y = f32::INFINITY;
+        let mut max_x = f32::NEG_INFINITY;
+        let mut max_y = f32::NEG_INFINITY;
+        let s = start as usize;
+        let e = end as usize;
+        for inst in &insts[s..e] {
+            let c = inst.rot.cos().abs();
+            let s0 = inst.rot.sin().abs();
+            let hx = inst.scale[0] * 0.5;
+            let hy = inst.scale[1] * 0.5;
+            let ex = c * hx + s0 * hy;
+            let ey = s0 * hx + c * hy;
+            let x0 = inst.pos[0] - ex;
+            let y0 = inst.pos[1] - ey;
+            let x1 = inst.pos[0] + ex;
+            let y1 = inst.pos[1] + ey;
+            if x0 < min_x {
+                min_x = x0;
+            }
+            if y0 < min_y {
+                min_y = y0;
+            }
+            if x1 > max_x {
+                max_x = x1;
+            }
+            if y1 > max_y {
+                max_y = y1;
+            }
         }
-        if x1 > max_x {
-            max_x = x1;
+        if !(min_x.is_finite() && min_y.is_finite() && max_x.is_finite() && max_y.is_finite()) {
+            return None;
         }
-        if y1 > max_y {
-            max_y = y1;
+        let mut x = min_x.max(0.0).floor() as u32;
+        let mut y = min_y.max(0.0).floor() as u32;
+        let mut w = (max_x.min(screen_w as f32).ceil() as i64 - x as i64).max(0) as u32;
+        let mut h = (max_y.min(screen_h as f32).ceil() as i64 - y as i64).max(0) as u32;
+        if w == 0 || h == 0 {
+            return None;
         }
+        if x >= screen_w {
+            x = screen_w - 1;
+        }
+        if y >= screen_h {
+            y = screen_h - 1;
+        }
+        if x + w > screen_w {
+            w = screen_w - x;
+        }
+        if y + h > screen_h {
+            h = screen_h - y;
+        }
+        Some([x, y, w, h])
     }
-    if !(min_x.is_finite() && min_y.is_finite() && max_x.is_finite() && max_y.is_finite()) {
-        return None;
+
+    /// 计算实例数据的哈希值，用于增量更新优化
+    pub fn hash_instances(slice: &[Instance]) -> u64 {
+        let mut h: u64 = 1469598103934665603;
+        for inst in slice {
+            let bytes: &[u8] = bytemuck::bytes_of(inst);
+            for &b in bytes {
+                h ^= b as u64;
+                h = h.wrapping_mul(1099511628211);
+            }
+        }
+        h
     }
-    let mut x = min_x.max(0.0).floor() as u32;
-    let mut y = min_y.max(0.0).floor() as u32;
-    let mut w = (max_x.min(screen_w as f32).ceil() as i64 - x as i64).max(0) as u32;
-    let mut h = (max_y.min(screen_h as f32).ceil() as i64 - y as i64).max(0) as u32;
-    if w == 0 || h == 0 {
-        return None;
-    }
-    if x >= screen_w {
-        x = screen_w - 1;
-    }
-    if y >= screen_h {
-        y = screen_h - 1;
-    }
-    if x + w > screen_w {
-        w = screen_w - x;
-    }
-    if y + h > screen_h {
-        h = screen_h - y;
-    }
-    Some([x, y, w, h])
+    
+
 }
 
 #[allow(dead_code)]
 fn inst_tex_index(inst: &Instance) -> usize {
     inst.tex_index as usize
-}
-
-fn hash_instances(slice: &[Instance]) -> u64 {
-    let mut h: u64 = 1469598103934665603;
-    for inst in slice {
-        let bytes: &[u8] = bytemuck::bytes_of(inst);
-        for &b in bytes {
-            h ^= b as u64;
-            h = h.wrapping_mul(1099511628211);
-        }
-    }
-    h
 }

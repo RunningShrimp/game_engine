@@ -1,6 +1,5 @@
 use super::super::sdk::{NpuBackend, NpuInferenceEngine};
 //  统一的SDK管理器
-///
 //  提供统一的接口来管理和使用各种NPU SDK
 use crate::error::{HardwareError, HardwareResult};
 use crate::gpu::detect::{GpuVendor, detect_gpu};
@@ -9,7 +8,6 @@ use crate::soc::detect::{SocVendor, detect_soc};
 use std::path::Path;
 
 //  SDK管理器
-///
 //  自动检测硬件并选择最优的SDK
 pub struct SdkManager {
     available_backends: Vec<NpuBackend>,
@@ -245,12 +243,12 @@ impl Default for SdkManager {
 }
 
 //  便捷函数：自动选择并创建推理引擎
-///
+
 //  # 示例
-///
+
 //  ```rust,ignore
 //  use crate::sdk_manager::auto_create_engine;
-///
+
 //  let mut engine = auto_create_engine()?;
 //  engine.load_model("model.onnx")?;
 //  let output = engine.infer(&input)?;
@@ -261,12 +259,12 @@ pub fn auto_create_engine() -> HardwareResult<Box<dyn NpuInferenceEngine>> {
 }
 
 //  便捷函数：加载模型并创建引擎
-///
+
 //  # 示例
-///
+
 //  ```rust,ignore
 //  use crate::sdk_manager::load_model;
-///
+
 //  let engine = load_model("model.onnx")?;
 //  let output = engine.infer(&input)?;
 //  ```

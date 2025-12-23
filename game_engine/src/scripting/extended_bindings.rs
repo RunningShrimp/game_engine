@@ -11,6 +11,7 @@ pub struct ExtendedEcsBindings {
 }
 
 impl ExtendedEcsBindings {
+    /// 创建新的扩展ECS绑定
     pub fn new(world: Arc<Mutex<World>>) -> Self {
         Self { world }
     }

@@ -123,7 +123,7 @@ impl BatchOptimizer {
 
         let mut merged = Vec::new();
         let mut current = batches[0].clone();
-        let mut state_switches = 0u32;
+        let mut _state_switches = 0u32;
 
         for batch in batches.iter().skip(1) {
             // 检查是否可以合并（相同状态且未超过最大实例数）
@@ -136,7 +136,7 @@ impl BatchOptimizer {
                 // 无法合并，保存当前批次，开始新批次
                 merged.push(current);
                 current = batch.clone();
-                state_switches += 1;
+                _state_switches += 1;
             }
         }
         

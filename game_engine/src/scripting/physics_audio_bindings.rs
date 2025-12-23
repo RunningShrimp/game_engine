@@ -12,6 +12,7 @@ pub struct PhysicsAudioBindings {
 }
 
 impl PhysicsAudioBindings {
+    /// 创建新的物理和音频绑定
     pub fn new(world: Arc<Mutex<World>>) -> Self {
         Self { world }
     }

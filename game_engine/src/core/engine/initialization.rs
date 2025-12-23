@@ -1,6 +1,8 @@
 use bevy_ecs::world::World;
 
-// 简化Schedule结构体，避免依赖问题
+/// 系统调度器
+///
+/// 管理和执行一系列系统，用于引擎的固定更新循环
 #[derive(Default)]
 pub struct Schedule {
     systems: Vec<Box<dyn FnMut(&mut World) + Send + Sync + 'static>>,

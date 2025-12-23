@@ -261,7 +261,6 @@ impl Default for CoroutineLoaderConfig {
 #[derive(Resource)]
 pub struct CoroutineAssetLoader {
     /// 配置
-    #[allow(dead_code)]
     config: CoroutineLoaderConfig,
     /// 请求发送器
     request_tx: mpsc::UnboundedSender<LoadRequest>,
@@ -614,7 +613,7 @@ impl CoroutineAssetLoader {
                 let is_linear = request.asset_type == AssetType::TextureLinear;
 
                 // 在阻塞任务中解码图像（带并发限制）
-                let permit = spawn_blocking_semaphore.acquire().await.unwrap();
+                let _permit = spawn_blocking_semaphore.acquire().await.unwrap();
                 let image = tokio::task::spawn_blocking(move || {
                     let result = image::load_from_memory(&bytes)
                         .map(|img| img.to_rgba8())

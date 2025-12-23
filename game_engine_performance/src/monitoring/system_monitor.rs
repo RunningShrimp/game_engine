@@ -107,6 +107,12 @@ impl FrameTimeSampler {
     }
 }
 
+impl Default for SystemPerformanceMonitor {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 //  内存监控器
 pub struct MemoryMonitor {
     /// 采样历史

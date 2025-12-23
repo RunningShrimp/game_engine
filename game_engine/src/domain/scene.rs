@@ -153,6 +153,9 @@ pub struct Scene {
     event_queue: AggregateEventQueue,
 }
 
+/// 场景元数据
+///
+/// 存储场景的元信息，包括作者、描述、创建时间等
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct SceneMetadata {
     /// 作者

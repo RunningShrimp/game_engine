@@ -78,9 +78,8 @@ impl PerformanceBenchmark {
         for _ in 0..self.iterations {
             for i in 0..self.data_size {
                 let pos_i = positions[i];
-                for j in (i + 1)..self.data_size {
-                    let pos_j = positions[j];
-                    let delta = pos_i - pos_j;
+                for pos_j in positions.iter().skip(i + 1) {
+                    let delta = pos_i - *pos_j;
                     if delta.length() < collision_radius {
                         let _ = true; // Collision detected
                     }
@@ -189,7 +188,7 @@ impl PerformanceBenchmark {
 
         for _ in 0..self.iterations {
             for _ in 0..self.data_size {
-                result = result * m;
+                result *= m;
             }
         }
 
@@ -441,6 +440,12 @@ impl GPUComparativeBenchmarkSuite {
     }
 }
 
+impl Default for GPUComparativeBenchmarkSuite {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -480,7 +485,7 @@ mod tests {
         let analysis = PerformanceAnalysis::new(cpu, gpu);
 
         assert!(analysis.speedup > 0.0);
-        assert!(analysis.improvement_percent > 0.0 || analysis.improvement_percent == 0.0);
+        assert!(analysis.improvement_percent >= 0.0);
     }
 
     #[test]
@@ -488,7 +493,7 @@ mod tests {
         let mut suite = GPUComparativeBenchmarkSuite::new();
         suite.run_all();
 
-        assert!(suite.analyses.len() > 0);
+        assert!(!suite.analyses.is_empty());
         let report = suite.generate_report();
         assert!(report.contains("加速比"));
     }

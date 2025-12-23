@@ -195,13 +195,13 @@ impl GpuInstancingRenderer {
     ///
     /// * `device` - WGPU设备
     /// * `queue` - WGPU命令队列
-    pub fn update_gpu(&mut self, device: &Device, queue: &Queue) {
+    pub fn update_gpu(&mut self, _device: &Device, queue: &Queue) {
         // 如果启用GPU驱动剔除，收集所有实例并更新
         if let Some(ref gpu_driven) = self.gpu_driven {
             let mut all_gpu_instances = Vec::new();
             let mut instance_id = 0u32;
             
-            for (key, instances) in &self.instances {
+            for (_key, instances) in &self.instances {
                 for instance_data in instances {
                     // 计算AABB（简化版本，实际应该从网格获取）
                     let aabb_min = instance_data.position - instance_data.scale * 0.5;
@@ -256,10 +256,26 @@ impl GpuInstancingRenderer {
     ///
     /// 优化后的批次键列表
     pub fn optimize_batches(&mut self) -> Vec<BatchKey> {
-        let mut batch_keys: Vec<BatchKey> = self.instances.keys().copied().collect();
+        // 创建优化批次
+        let mut optimized_batches: Vec<crate::render::batch_optimizer::OptimizedBatch> = Vec::new();
         
-        // 使用批处理优化器排序
-        batch_keys.sort();
+        for (key, instances) in &self.instances {
+            let batch = crate::render::batch_optimizer::OptimizedBatch {
+                key: *key,
+                instance_count: instances.len() as u32,
+                instances: (0..instances.len() as u32).collect(), // 简单的实例索引
+                vertex_offset: 0,
+                index_offset: 0,
+                index_count: 0,
+            };
+            optimized_batches.push(batch);
+        }
+        
+        // 使用批处理优化器进行优化
+        self.batch_optimizer.optimize_batches(&mut optimized_batches);
+        
+        // 提取优化后的批次键
+        let batch_keys: Vec<BatchKey> = optimized_batches.iter().map(|b| b.key).collect();
         
         // 更新统计
         self.stats.batch_count = batch_keys.len();

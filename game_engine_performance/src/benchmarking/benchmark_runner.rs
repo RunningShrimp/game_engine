@@ -245,6 +245,12 @@ impl BenchmarkRunner {
     }
 }
 
+impl Default for BenchmarkRunner {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 //  基准测试统计
 #[derive(Debug, Clone)]
 pub struct BenchmarkStatistics {

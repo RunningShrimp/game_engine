@@ -9,6 +9,7 @@ pub struct ScriptApi {
 }
 
 impl ScriptApi {
+    /// 创建新的脚本API
     pub fn new() -> Self {
         let mut api = Self {
             registered_functions: HashMap::new(),
@@ -81,18 +82,29 @@ impl ScriptApi {
 #[derive(Debug, Clone)]
 pub enum ExtendedScriptValue {
     // 基础类型
+    /// 空值
     Null,
+    /// 布尔值
     Bool(bool),
+    /// 整数值
     Int(i64),
+    /// 浮点数值
     Float(f64),
+    /// 字符串值
     String(String),
+    /// 数组值
     Array(Vec<ExtendedScriptValue>),
+    /// 对象值
     Object(HashMap<String, ExtendedScriptValue>),
 
     // 引擎类型
+    /// 二维向量
     Vec2(Vec2),
+    /// 三维向量
     Vec3(Vec3),
+    /// 四元数
     Quat(Quat),
+    /// 实体ID
     Entity(u64), // 实体ID
 }
 

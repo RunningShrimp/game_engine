@@ -69,7 +69,7 @@ impl HighPrecisionTimer {
     pub fn finish(self) -> Duration {
         let elapsed = self.elapsed();
         
-        if let Some(collector) = self.collector {
+        if let Some(ref collector) = self.collector {
             if let Ok(mut collector) = collector.lock() {
                 collector.record_timing(&self.name, elapsed);
             }
@@ -559,7 +559,7 @@ impl MetricCollector {
 
     /// 重置所有数据
     pub fn reset(&mut self) {
-        if let Ok(mut registry) = self.registry.lock() {
+        if let Ok(registry) = self.registry.lock() {
             registry.reset_all();
         }
         

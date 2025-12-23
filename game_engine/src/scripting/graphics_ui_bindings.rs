@@ -11,6 +11,7 @@ pub struct GraphicsUiBindings {
 }
 
 impl GraphicsUiBindings {
+    /// 创建新的图形和UI绑定
     pub fn new(world: Arc<Mutex<World>>) -> Self {
         Self { world }
     }

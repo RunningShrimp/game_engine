@@ -56,6 +56,7 @@ pub struct WalkingState {
 }
 
 impl WalkingState {
+    /// 创建新的行走状态
     pub fn new() -> Self {
         Self { steps: 0 }
     }

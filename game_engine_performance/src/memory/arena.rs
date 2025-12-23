@@ -1,4 +1,3 @@
-use crate::impl_default;
 use std::alloc::{alloc, dealloc, Layout};
 use std::cell::RefCell;
 use std::ptr::NonNull;
@@ -186,7 +185,7 @@ impl Chunk {
         );
         // 安全检查：验证对齐后的地址确实对齐
         debug_assert!(
-            aligned_addr % align == 0,
+            aligned_addr.is_multiple_of(align),
             "地址对齐失败：地址 {:#x} 未按 {} 字节对齐",
             aligned_addr,
             align
@@ -207,25 +206,25 @@ impl Drop for Chunk {
     }
 }
 
-//  类型化Arena分配器
+/// 类型化Arena分配器
 ///
-//  提供类型安全的Arena分配，适用于需要大量分配同类型对象的场景。
+/// 提供类型安全的Arena分配，适用于需要大量分配同类型对象的场景。
 ///
-//  # 注意
+/// # 注意
 ///
-//  - `reset()` 不会调用已分配对象的析构函数
-//  - 对于实现了 `Drop` 的类型，请使用 `TypedArenaWithDrop`
-//  - 适用于 POD 类型或生命周期与 Arena 一致的类型
+/// - `reset()` 不会调用已分配对象的析构函数
+/// - 对于实现了 `Drop` 的类型，请使用 `TypedArenaWithDrop`
+/// - 适用于 POD 类型或生命周期与 Arena 一致的类型
 ///
-//  # 示例
+/// # 示例
 ///
-//  ```
-//  use game_engine::performance::arena::TypedArena;
+/// ```
+/// use game_engine::performance::arena::TypedArena;
 ///
-//  let arena = TypedArena::<i32>::new();
-//  let val = arena.alloc(42).unwrap();
-//  assert_eq!(*val, 42);
-//  ```
+/// let mut arena = TypedArena::<i32>::new();
+/// let val = arena.alloc(42).unwrap();
+/// assert_eq!(*val, 42);
+/// ```
 pub struct TypedArena<T> {
     arena: Arena,
     /// 已分配对象计数（用于调试）
@@ -260,7 +259,8 @@ impl<T> TypedArena<T> {
     ///
     /// 返回的引用生命周期与 Arena 绑定。
     /// 调用 `reset()` 后，之前返回的引用将失效。
-    pub fn alloc(&self, value: T) -> Result<&mut T, ArenaError> {
+    #[allow(clippy::mut_from_ref)]
+    pub fn alloc(&mut self, value: T) -> Result<&mut T, ArenaError> {
         let ptr = self
             .arena
             .alloc(std::mem::size_of::<T>(), std::mem::align_of::<T>())?;
@@ -307,19 +307,19 @@ impl<T> Default for TypedArena<T> {
 // TypedArenaWithDrop - 支持析构的类型化Arena
 // ============================================================================
 
-//  支持析构的类型化Arena分配器
+/// 支持析构的类型化Arena分配器
 ///
-//  与 `TypedArena` 不同，此分配器会在 `Drop` 时调用所有已分配对象的析构函数。
+/// 与 `TypedArena` 不同，此分配器会在 `Drop` 时调用所有已分配对象的析构函数。
 ///
-//  # 示例
+/// # 示例
 ///
-//  ```
-//  use game_engine::performance::arena::TypedArenaWithDrop;
+/// ```
+/// use game_engine::performance::arena::TypedArenaWithDrop;
 ///
-//  let arena = TypedArenaWithDrop::<String>::new();
-//  let s = arena.alloc(String::from("Hello")).unwrap();
-//  // 当 arena 被 drop 时，String 的析构函数会被调用
-//  ```
+/// let mut arena = TypedArenaWithDrop::<String>::new();
+/// let s = arena.alloc(String::from("Hello")).unwrap();
+/// // 当 arena 被 drop 时，String 的析构函数会被调用
+/// ```
 pub struct TypedArenaWithDrop<T> {
     arena: Arena,
     /// 存储已分配对象的指针，用于析构
@@ -338,7 +338,8 @@ impl<T> TypedArenaWithDrop<T> {
     }
 
     /// 分配单个对象
-    pub fn alloc(&self, value: T) -> Result<&mut T, ArenaError> {
+    #[allow(clippy::mut_from_ref)]
+    pub fn alloc(&mut self, value: T) -> Result<&mut T, ArenaError> {
         let ptr = self
             .arena
             .alloc(std::mem::size_of::<T>(), std::mem::align_of::<T>())?;
@@ -427,26 +428,27 @@ impl<T: Default> MemoryPool<T> {
     }
 }
 
-//  内存池预分配管理器
+/// 内存池预分配管理器
 ///
-//  管理常用大小的内存池，在启动时预分配以减少运行时分配开销。
+/// 管理常用大小的内存池，在启动时预分配以减少运行时分配开销。
 ///
-//  # 使用场景
+/// # 使用场景
 ///
-//  - 游戏启动时预分配常用大小的内存池
-//  - 减少运行时内存分配延迟
-//  - 提高内存分配的可预测性
+/// - 游戏启动时预分配常用大小的内存池
+/// - 减少运行时内存分配延迟
+/// - 提高内存分配的可预测性
 ///
-//  # 示例
+/// # 示例
 ///
-//  ```
-//  use game_engine::performance::arena::MemoryPoolPreallocator;
+/// ```
+/// use game_engine::performance::arena::MemoryPoolPreallocator;
 ///
-//  // 创建预分配管理器
-//  let mut preallocator = MemoryPoolPreallocator::new();
+/// // 创建预分配管理器
+/// let mut preallocator = MemoryPoolPreallocator::new();
 ///
-//  // 预分配常用大小
-//  preallocator.preallocate_common_sizes();
+/// // 预分配常用大小
+/// preallocator.preallocate_common_sizes();
+/// ```
 ///
 //  // 获取预分配的Arena
 //  let arena = preallocator.get_arena(4096).unwrap();
@@ -531,10 +533,9 @@ impl MemoryPoolPreallocator {
         let mut pools = self.pools.borrow_mut();
 
         // 尝试从预分配池中获取
-        if let Some(arenas) = pools.get_mut(&chunk_size) {
-            if let Some(arena) = arenas.pop() {
-                return Ok(arena);
-            }
+        if let Some(arenas) = pools.get_mut(&chunk_size)
+            && let Some(arena) = arenas.pop() {
+            return Ok(arena);
         }
 
         // 预分配池中没有，创建新的
@@ -550,7 +551,7 @@ impl MemoryPoolPreallocator {
         let chunk_size = arena.chunk_size;
         let mut pools = self.pools.borrow_mut();
 
-        let arenas = pools.entry(chunk_size).or_insert_with(Vec::new);
+        let arenas = pools.entry(chunk_size).or_default();
 
         if arenas.len() < max_pool_size {
             // 重置Arena以便重用
@@ -645,18 +646,21 @@ mod tests {
 
     #[test]
     fn test_typed_arena() {
-        let arena = TypedArena::<i32>::new();
+        let mut arena = TypedArena::<i32>::new();
 
-        // 分配一些对象
+        // 分配第一个对象
         let val1 = arena.alloc(42).unwrap();
-        let val2 = arena.alloc(100).unwrap();
-
         assert_eq!(*val1, 42);
-        assert_eq!(*val2, 100);
 
-        // 修改值
+        // Modify the first value
         *val1 = 50;
         assert_eq!(*val1, 50);
+
+        // Allocate second object separately to avoid multiple mutable borrows
+        {
+            let val2 = arena.alloc(100).unwrap();
+            assert_eq!(*val2, 100);
+        }
     }
 
     #[test]

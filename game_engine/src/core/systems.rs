@@ -45,10 +45,12 @@ pub fn animation_system(mut query: Query<&mut Sprite>, time: Res<Time>) {
 }
 
 /// 保存上一次变换的系统
-pub fn save_previous_transform_system(mut query: Query<&mut Transform>) {
-    for mut transform in query.iter_mut() {
-        // 保存上一次的位置，用于插值计算
-        *transform = *transform;
+pub fn save_previous_transform_system(mut query: Query<(&mut Transform, &mut PreviousTransform)>) {
+    for (transform, mut prev_transform) in query.iter_mut() {
+        // 保存当前变换到上一次变换，用于插值计算
+        prev_transform.pos = transform.pos;
+        prev_transform.rot = transform.rot;
+        prev_transform.scale = transform.scale;
     }
 }
 

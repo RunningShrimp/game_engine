@@ -40,12 +40,16 @@ use thiserror::Error;
 /// 导航网格错误
 #[derive(Error, Debug)]
 pub enum NavMeshError {
+    /// 无效几何体
     #[error("Invalid geometry: {0}")]
     InvalidGeometry(String),
+    /// 未找到可通行区域
     #[error("No walkable area found")]
     NoWalkableArea,
+    /// 未找到路径
     #[error("Path not found")]
     PathNotFound,
+    /// 无效顶点索引
     #[error("Invalid vertex index")]
     InvalidVertexIndex,
 }

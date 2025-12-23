@@ -5,36 +5,65 @@ use std::thread;
 /// 脚本命令
 #[derive(Debug, Clone)]
 pub enum ScriptCommand {
-    /// 执行脚本
-    Execute { script_id: u64, code: String },
-    /// 调用函数
+    /// 执行脚本命令
+    Execute { 
+        /// 脚本ID
+        script_id: u64, 
+        /// 脚本代码
+        code: String 
+    },
+    /// 调用函数命令
     CallFunction {
+        /// 脚本ID
         script_id: u64,
+        /// 函数名称
         function_name: String,
+        /// 参数列表
         args: Vec<ScriptValue>,
     },
-    /// 停止脚本
-    Stop { script_id: u64 },
-    /// 关闭脚本系统
+    /// 停止脚本命令
+    Stop { 
+        /// 脚本ID
+        script_id: u64 
+    },
+    /// 关闭脚本系统命令
     Shutdown,
 }
 
 /// 脚本值
 #[derive(Debug, Clone, PartialEq)]
 pub enum ScriptValue {
+    /// 空值
     Null,
+    /// 布尔值
     Bool(bool),
+    /// 数值
     Number(f64),
+    /// 字符串值
     String(String),
+    /// 数组值
     Array(Vec<ScriptValue>),
+    /// 对象值
     Object(HashMap<String, ScriptValue>),
 }
 
 /// 脚本结果
 #[derive(Debug, Clone)]
 pub enum ScriptResult {
-    Success { script_id: u64, value: ScriptValue },
-    Error { script_id: u64, message: String },
+    /// 成功结果
+    Success { 
+        /// 脚本ID
+        script_id: u64, 
+        /// 返回值
+        value: ScriptValue 
+    },
+    /// 错误结果
+    Error { 
+        /// 脚本ID
+        script_id: u64, 
+        /// 错误消息
+        message: String 
+    },
 }
 
 /// 线程安全的脚本系统
@@ -48,6 +77,7 @@ pub struct ThreadSafeScriptSystem {
 }
 
 impl ThreadSafeScriptSystem {
+    /// 创建新的线程安全脚本系统
     pub fn new() -> Self {
         let (cmd_tx, cmd_rx) = channel::<ScriptCommand>();
         let (result_tx, result_rx) = channel::<ScriptResult>();

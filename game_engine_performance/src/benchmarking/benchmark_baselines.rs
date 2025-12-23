@@ -411,7 +411,7 @@ mod tests {
     #[test]
     fn test_critical_path_benchmarks() {
         let results = CriticalPathBenchmarks::run_all();
-        assert!(results.len() > 0);
+        assert!(!results.is_empty());
 
         // 验证每个基准都有结果
         for (name, baseline) in results {

@@ -9,8 +9,11 @@
 //  - 主题支持
 //  - 事件处理
 
+/// UI布局模块
 pub mod layout;
+/// UI主题模块
 pub mod theme;
+/// UI组件模块
 pub mod widgets;
 
 use crate::impl_default;
@@ -27,15 +30,24 @@ pub enum LayoutType {
     /// 相对布局
     Relative,
     /// 网格布局
-    Grid { rows: u32, cols: u32 },
+    Grid { 
+        /// 行数
+        rows: u32, 
+        /// 列数
+        cols: u32 
+    },
 }
 
 /// UI 根节点
 #[derive(Component)]
 pub struct UIRoot {
+    /// UI 宽度
     pub width: f32,
+    /// UI 高度
     pub height: f32,
+    /// 缩放因子
     pub scale_factor: f32,
+    /// 是否可见
     pub visible: bool,
 }
 
@@ -49,11 +61,17 @@ impl_default!(UIRoot {
 /// UI 组件
 #[derive(Component)]
 pub struct UIWidget {
+    /// 组件类型
     pub widget_type: WidgetType,
+    /// 组件位置
     pub position: Vec2,
+    /// 组件尺寸
     pub size: Vec2,
+    /// 是否可见
     pub visible: bool,
+    /// 是否启用
     pub enabled: bool,
+    /// Z轴索引
     pub z_index: i32,
 }
 
@@ -71,33 +89,56 @@ impl_default!(UIWidget {
 
 /// 组件类型枚举
 pub enum WidgetType {
+    /// 按钮组件
     Button {
+        /// 按钮文本
         text: String,
+        /// 点击回调函数
         on_click: Option<Box<dyn Fn() + Send + Sync>>,
+        /// 是否按下状态
         pressed: bool,
     },
+    /// 标签组件
     Label {
+        /// 标签文本
         text: String,
+        /// 字体大小
         font_size: f32,
+        /// 文本颜色 [r, g, b, a]
         color: [f32; 4],
     },
+    /// 输入框组件
     Input {
+        /// 占位符文本
         placeholder: String,
+        /// 当前值
         value: String,
+        /// 是否获得焦点
         focused: bool,
+        /// 最大长度限制
         max_length: Option<usize>,
     },
+    /// 容器组件
     Container {
+        /// 布局类型
         layout: LayoutType,
+        /// 子组件列表
         children: Vec<Entity>,
     },
+    /// 图像组件
     Image {
+        /// 纹理ID
         texture_id: u32,
     },
+    /// 滑块组件
     Slider {
+        /// 最小值
         min: f32,
+        /// 最大值
         max: f32,
+        /// 当前值
         value: f32,
+        /// 值改变回调函数
         on_change: Option<Box<dyn Fn(f32) + Send + Sync>>,
     },
 }
@@ -105,20 +146,30 @@ pub enum WidgetType {
 /// UI 状态资源
 #[derive(Resource, Default)]
 pub struct UIState {
+    /// 当前获得焦点的组件
     pub focused_widget: Option<Entity>,
+    /// 当前鼠标悬停的组件
     pub hovered_widget: Option<Entity>,
+    /// 当前拖拽目标组件
     pub drag_target: Option<Entity>,
+    /// 鼠标光标位置
     pub cursor_position: Vec2,
 }
 
 /// UI 主题
 #[derive(Resource)]
 pub struct UITheme {
+    /// 主要颜色 [r, g, b, a]
     pub primary_color: [f32; 4],
+    /// 次要颜色 [r, g, b, a]
     pub secondary_color: [f32; 4],
+    /// 背景颜色 [r, g, b, a]
     pub background_color: [f32; 4],
+    /// 文本颜色 [r, g, b, a]
     pub text_color: [f32; 4],
+    /// 字体大小
     pub font_size: f32,
+    /// 边框圆角半径
     pub border_radius: f32,
 }
 

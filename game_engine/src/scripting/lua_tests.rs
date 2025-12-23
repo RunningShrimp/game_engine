@@ -17,7 +17,7 @@ mod tests {
     fn test_lua_context_creation() {
         let context = create_test_lua_context();
         // 测试Lua上下文创建成功
-        assert!(true);
+        assert!(!context.is_null());
     }
 
     #[test]

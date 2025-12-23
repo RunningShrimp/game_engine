@@ -562,12 +562,16 @@ pub fn update_listener_system(
 /// Transform 组件 (如果尚未定义)
 #[derive(Component, Clone, Copy, Default)]
 pub struct Transform {
+    /// 平移分量
     pub translation: Vec3,
+    /// 旋转分量
     pub rotation: Quat,
+    /// 缩放分量
     pub scale: Vec3,
 }
 
 impl Transform {
+    /// 从平移向量创建Transform
     pub fn from_translation(translation: Vec3) -> Self {
         Self {
             translation,

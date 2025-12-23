@@ -25,7 +25,7 @@
 use std::collections::VecDeque;
 
 // 性能监控集成 - 使用 tracing 系统
-use tracing::{instrument, span, Level, info};
+use tracing::{span, Level, info};
 
 // ============================================================================
 // 常量配置

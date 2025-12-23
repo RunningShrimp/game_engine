@@ -21,14 +21,20 @@ impl Default for LuaContext {
 /// Lua值
 #[derive(Debug, Clone, PartialEq)]
 pub enum LuaValue {
+    /// 空值
     Nil,
+    /// 布尔值
     Boolean(bool),
+    /// 数值
     Number(f64),
+    /// 字符串值
     String(String),
+    /// 表值
     Table(HashMap<String, LuaValue>),
 }
 
 impl LuaContext {
+    /// 创建新的Lua上下文
     pub fn new() -> Self {
         Self {
             scripts: HashMap::new(),
@@ -87,6 +93,7 @@ pub struct LuaEngine {
 }
 
 impl LuaEngine {
+    /// 创建新的Lua引擎
     pub fn new() -> Self {
         Self {
             context: LuaContext::default(),

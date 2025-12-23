@@ -1,5 +1,4 @@
 //  SoC功耗管理和热节流优化
-///
 //  针对移动平台的功耗和热管理
 use super::detect::{SocInfo, SocVendor};
 use crate::utils::ring_buffer::RingBuffer;

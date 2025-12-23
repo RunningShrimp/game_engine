@@ -31,7 +31,7 @@ use bevy_ecs::prelude::*;
 use glam::{Quat, Vec3};
 
 // 性能监控集成 - 使用 tracing 系统
-use tracing::{instrument, span, Level, info};
+use tracing::{span, Level, info};
 
 // ============================================================================
 // 脏标记组件

@@ -295,6 +295,9 @@ mod tests {
         let ptr2 = bump.alloc(64, 16).unwrap();
         let addr2 = ptr2.as_ptr() as usize;
         
+        // 验证第一个分配的地址是有效的（对齐要求为1，所以任意地址都可以）
+        assert!(addr1 > 0); // Verify the address is valid
+        
         // 验证对齐
         assert_eq!(addr2 % 16, 0);
     }

@@ -1,6 +1,6 @@
-//  性能监测和报告系统
-///
-//  统一收集、分析和报告性能数据
+//! 性能监测和报告系统
+//!
+//! 统一收集、分析和报告性能数据
 use std::collections::HashMap;
 use std::time::Instant;
 
@@ -126,7 +126,7 @@ impl PerformanceMonitor {
     pub fn record(&mut self, metric_type: MetricType, value: f64, unit: &str) {
         self.metrics
             .entry(metric_type)
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(value);
 
         let metric = Metric::new(metric_type, value, unit.to_string());

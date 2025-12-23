@@ -88,7 +88,7 @@ impl RenderStateCache {
     fn find_least_used_state(&self) -> Option<RenderStateKey> {
         self.state_frequency
             .iter()
-            .min_by_key(|(_, &freq)| freq)
+            .min_by_key(|&(_, &freq)| freq)
             .map(|(state, _)| *state)
     }
 

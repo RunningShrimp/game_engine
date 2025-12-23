@@ -33,6 +33,7 @@ impl<T> KeyframeTrack<T>
 where
     T: Clone,
 {
+    /// 创建新的关键帧轨道
     pub fn new(interpolation: InterpolationMode) -> Self {
         Self {
             keyframes: Vec::new(),
@@ -92,6 +93,7 @@ where
 
 /// Vec3关键帧轨道的特化实现,支持线性插值
 impl KeyframeTrack<Vec3> {
+    /// 采样指定时间的Vec3值
     pub fn sample_vec3(&self, time: f32) -> Option<Vec3> {
         if self.keyframes.is_empty() {
             return None;
@@ -133,6 +135,7 @@ impl KeyframeTrack<Vec3> {
 
 /// Quat关键帧轨道的特化实现,支持球面线性插值
 impl KeyframeTrack<Quat> {
+    /// 采样指定时间的四元数值
     pub fn sample_quat(&self, time: f32) -> Option<Quat> {
         if self.keyframes.is_empty() {
             return None;

@@ -43,11 +43,10 @@ impl BatchRenderer {
         let batches = self.batches.entry(key).or_default();
 
         // 尝试合并到现有批次
-        if let Some(last_batch) = batches.last_mut() {
-            if last_batch.instance_count < self.max_instances_per_batch {
-                last_batch.instance_count += 1;
-                return;
-            }
+        if let Some(last_batch) = batches.last_mut()
+            && last_batch.instance_count < self.max_instances_per_batch {
+            last_batch.instance_count += 1;
+            return;
         }
 
         // 创建新批次

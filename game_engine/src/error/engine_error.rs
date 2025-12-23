@@ -404,7 +404,7 @@ impl From<crate::common_errors::GameEngineError> for EngineError {
                             severity: ErrorSeverity::Error,
                         })
                     }
-                    crate::common_errors::InfrastructureError::Physics(physics_err) => {
+                    crate::common_errors::InfrastructureError::Physics(_physics_err) => {
                         EngineError::Physics(PhysicsError::WorldNotInitialized {
                             severity: ErrorSeverity::Error,
                         })
@@ -450,7 +450,7 @@ impl From<crate::common_errors::GameEngineError> for EngineError {
                         })
                     }
                     crate::common_errors::DomainError::Physics(physics_err) => {
-                        EngineError::Physics(PhysicsError::BodyNotFound {
+                        EngineError::Physics(PhysicsError::RigidBodyNotFound {
                             body_id: format!("{:?}", physics_err),
                             severity: ErrorSeverity::Error,
                         })
@@ -478,7 +478,7 @@ impl From<crate::domain::errors::DomainError> for EngineError {
                 })
             }
             crate::domain::errors::DomainError::Physics(physics_err) => {
-                EngineError::Physics(PhysicsError::BodyNotFound {
+                EngineError::Physics(PhysicsError::RigidBodyNotFound {
                     body_id: format!("{:?}", physics_err),
                     severity: ErrorSeverity::Error,
                 })

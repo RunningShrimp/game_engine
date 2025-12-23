@@ -3,16 +3,27 @@
 //  提供Lua和Rust脚本集成，支持运行时脚本执行、热重载和跨语言互操作。
 
 use crate::impl_default;
+/// 脚本API模块
 pub mod api;
+/// ECS脚本绑定模块
 pub mod ecs_bindings;
+/// 脚本引擎模块
 pub mod engine;
+/// 扩展绑定模块
 pub mod extended_bindings;
+/// 图形UI绑定模块
 pub mod graphics_ui_bindings;
+/// Lua支持模块
 pub mod lua_support;
+/// 物理音频绑定模块
 pub mod physics_audio_bindings;
+/// Rust脚本模块
 pub mod rust_scripting;
+/// 脚本系统模块
 pub mod system;
+/// 线程安全模块
 pub mod thread_safe;
+/// WebAssembly支持模块
 pub mod wasm_support;
 
 #[cfg(test)]
@@ -58,9 +69,13 @@ impl_default!(ScriptingConfig {
 /// 脚本系统资源
 #[derive(Resource)]
 pub struct ScriptingResource {
+    /// 脚本系统
     pub system: ScriptSystem,
+    /// Lua引擎
     pub lua_engine: Option<LuaEngine>,
+    /// Rust脚本引擎
     pub rust_engine: Option<RustScriptEngine>,
+    /// 脚本系统配置
     pub config: ScriptingConfig,
 }
 
