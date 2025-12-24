@@ -3,8 +3,8 @@ pub mod benchmark_runner;
 pub mod benchmark_baselines;
 pub mod critical_path_benchmarks;
 pub mod gpu_comparative_benchmark;
+pub mod performance_regression_tests;
 pub mod regression_testing;
-pub mod optimization_validation;
 
 pub use benchmark::{
     Benchmark, BenchmarkResult as BenchResult, MemoryBenchmark, PerformanceRegression,
@@ -16,7 +16,6 @@ pub use benchmark_runner::{
 pub use benchmark_baselines::{
     BenchmarkBaseline, CriticalPathBenchmarks, RegressionDetector, RegressionReport,
 };
-// CriticalPathBenchmarks is already exported from benchmark_baselines
 pub use gpu_comparative_benchmark::{
     CPUBenchmarkResult, GPUComparativeBenchmarkSuite, GPUSimulationResult,
     PerformanceAnalysis as GPUPerformanceAnalysis, PerformanceBenchmark,
@@ -24,8 +23,11 @@ pub use gpu_comparative_benchmark::{
 pub use regression_testing::{
     BaselineType, PerformanceBaseline, RegressionSummary, RegressionTestResult, RegressionTestSuite,
 };
-pub use optimization_validation::{
+pub use game_engine_common::benchmarking::{
     CpuGpuComparison, OptimizationGoal, OptimizationResult, PerformanceValidationSuite,
     ValidationSummary,
+};
+pub use performance_regression_tests::{
+    PerformanceRegressionSuite, PerformanceThresholds, RegressionTestResult,
 };
 

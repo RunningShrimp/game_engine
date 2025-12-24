@@ -630,11 +630,13 @@ macro_rules! profile_metric {
 /// 记录性能时间的宏
 #[macro_export]
 macro_rules! profile_scope {
-    ($service:expr, $name:expr, $code:block) => {
-        let _timer = $service.create_timer($name);
-        let _result = $code;
-        drop(_timer);
-        _result
+    ($service:expr, $name:expr, $code:expr) => {
+        {
+            let _timer = $service.create_timer($name);
+            let _result = $code;
+            drop(_timer);
+            _result
+        }
     };
 }
 

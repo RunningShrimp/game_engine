@@ -930,11 +930,12 @@ pub struct SpatialPartitionStats {
 mod tests {
     use super::*;
     use rapier3d::prelude::*;
+    use rapier3d::na::Point3 as NaPoint3;
 
     #[test]
     fn test_bvh_build() {
         let mut collider_set = ColliderSet::new();
-        
+
         // 创建几个碰撞体
         for i in 0..10 {
             let shape = SharedShape::ball(0.5);
@@ -953,7 +954,7 @@ mod tests {
     #[test]
     fn test_bvh_query() {
         let mut collider_set = ColliderSet::new();
-        
+
         // 创建碰撞体
         for i in 0..10 {
             let shape = SharedShape::ball(0.5);
@@ -967,12 +968,12 @@ mod tests {
         bvh.build(&collider_set);
 
         // 查询AABB
-        let query_aabb = Aabb::new(
-            Point3::new(0.0, -1.0, -1.0),
-            Point3::new(5.0, 1.0, 1.0),
+        let query_aabb = rapier3d::parry::bounding_volume::Aabb::new(
+            NaPoint3::new(0.0, -1.0, -1.0),
+            NaPoint3::new(5.0, 1.0, 1.0),
         );
         let results = bvh.query_aabb(&query_aabb, &collider_set);
-        
+
         assert!(!results.is_empty());
     }
 
@@ -1012,12 +1013,12 @@ mod tests {
         spatial_hash.build(&collider_set);
 
         // 查询AABB
-        let query_aabb = Aabb::new(
-            Point3::new(0.0, -1.0, -1.0),
-            Point3::new(5.0, 1.0, 1.0),
+        let query_aabb = rapier3d::parry::bounding_volume::Aabb::new(
+            NaPoint3::new(0.0, -1.0, -1.0),
+            NaPoint3::new(5.0, 1.0, 1.0),
         );
         let results = spatial_hash.query_aabb(&query_aabb, &collider_set);
-        
+
         assert!(!results.is_empty());
     }
 }

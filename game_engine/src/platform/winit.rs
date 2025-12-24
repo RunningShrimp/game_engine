@@ -57,9 +57,8 @@ impl WinitWindow {
 
 impl crate::platform::Window for WinitWindow {
     fn size(&self) -> (u32, u32) {
-        // TODO: Fix this after winit API is updated
-        // For now, return a fixed size
-        (800, 600)
+        let size = self.window.inner_size();
+        (size.width, size.height)
     }
     fn scale_factor(&self) -> f64 {
         self.window.scale_factor()
@@ -72,7 +71,6 @@ impl crate::platform::Window for WinitWindow {
     }
     fn set_fullscreen(&self, fullscreen: bool) {
         if fullscreen {
-            // 根据错误提示，Fullscreen枚举是私有的，需要从monitor模块导入
             self.window
                 .set_fullscreen(Some(Fullscreen::Borderless(None)));
         } else {

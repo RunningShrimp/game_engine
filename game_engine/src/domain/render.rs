@@ -937,7 +937,7 @@ impl RenderObjectCompensation {
 /// let strategy = RenderStrategy::select_for_instances(15, true);
 /// assert!(matches!(strategy, RenderStrategy::Instanced));
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum RenderStrategy {
     /// 静态批次（不变的对象）
     StaticBatch,

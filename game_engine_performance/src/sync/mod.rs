@@ -1,4 +1,2 @@
-pub mod synchronized;
-
-pub use synchronized::*;
+pub use game_engine_common::sync::*;
 

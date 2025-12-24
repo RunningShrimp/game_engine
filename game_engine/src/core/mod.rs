@@ -13,6 +13,7 @@ pub mod engine;
 pub mod error;
 pub mod error_aggregator;
 pub mod event_sourcing;
+pub mod microkernel;
 pub mod resources;
 pub mod scheduler;
 pub mod system_scheduler;

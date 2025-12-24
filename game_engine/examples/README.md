@@ -55,6 +55,33 @@ cargo run --example multiplayer
 - 客户端预测
 - 服务器权威
 
+### world_inspector_example
+展示 World Inspector 功能：
+- 实时查看实体和组件
+- 筛选和搜索功能
+- 编辑组件属性
+
+### performance_benchmark_example
+展示性能基准测试：
+- 基础基准测试
+- 多次运行取平均
+- 自定义阈值配置
+- 性能改进检测
+
+### batch_sync_example
+展示物理-变换批量同步：
+- 批量数据收集
+- SoA 数据布局优化
+- SIMD 优化距离计算
+- 高频同步场景
+
+### async_upload_example
+展示 GPU 资源异步上传：
+- 异步上传队列
+- Staging buffer 批量传输
+- 不阻塞主线程
+- 内存池管理
+
 ## 完整游戏示例
 
 `examples/game/` 目录包含一个完整的游戏示例，展示如何组合使用引擎的各种功能。

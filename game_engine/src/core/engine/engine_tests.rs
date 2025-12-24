@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::core::engine::engine::Engine;
     use crate::config::EngineConfig;
 
     #[test]
@@ -22,7 +22,7 @@ mod tests {
         let config = EngineConfig::default();
         let engine = Engine::new(config);
         // 验证引擎已创建
-        assert!(true); // 基本断言
+        assert!(true);
     }
 }
 

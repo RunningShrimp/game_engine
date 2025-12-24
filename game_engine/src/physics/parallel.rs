@@ -42,9 +42,9 @@ use std::sync::{
 };
 use std::thread::{self, JoinHandle};
 
-#[cfg(feature = "physics_2d")]
+#[cfg(feature = "physics")]
 use rapier2d::prelude::DefaultBroadPhase;
-#[cfg(feature = "physics_2d")]
+#[cfg(feature = "physics")]
 use rapier2d::prelude::*;
 
 /// 物理命令枚举
@@ -143,7 +143,7 @@ impl DoubleBufferedPhysicsState {
 ///
 /// 将物理模拟放在独立线程中运行，使用双缓冲实现无锁读取。
 /// 支持物理岛屿并行处理和并行碰撞检测优化。
-#[cfg(feature = "physics_2d")]
+#[cfg(feature = "physics")]
 pub struct ParallelPhysicsWorld {
     /// 命令发送通道
     command_tx: Sender<PhysicsCommand>,
@@ -163,7 +163,7 @@ pub struct ParallelPhysicsWorld {
     parallel_enabled: bool,
 }
 
-#[cfg(feature = "physics_2d")]
+#[cfg(feature = "physics")]
 impl ParallelPhysicsWorld {
     /// 创建并行物理世界（默认启用并行优化）
     pub fn new() -> Self {
@@ -335,14 +335,14 @@ impl ParallelPhysicsWorld {
     }
 }
 
-#[cfg(feature = "physics_2d")]
+#[cfg(feature = "physics")]
 impl Default for ParallelPhysicsWorld {
     fn default() -> Self {
         Self::new_with_parallel(true)
     }
 }
 
-#[cfg(feature = "physics_2d")]
+#[cfg(feature = "physics")]
 impl Drop for ParallelPhysicsWorld {
     fn drop(&mut self) {
         self.shutdown();
@@ -350,10 +350,10 @@ impl Drop for ParallelPhysicsWorld {
 }
 
 /// 优化的物理线程运行器
-#[cfg(feature = "physics_2d")]
+#[cfg(feature = "physics")]
 struct PhysicsThreadRunner;
 
-#[cfg(feature = "physics_2d")]
+#[cfg(feature = "physics")]
 impl PhysicsThreadRunner {
     /// 运行物理线程（优化版本：支持并行岛屿处理和碰撞检测）
     fn run(
@@ -576,24 +576,24 @@ impl PhysicsThreadRunner {
 // ECS 集成
 // ============================================================================
 
-#[cfg(feature = "physics_2d")]
+#[cfg(feature = "physics")]
 use bevy_ecs::prelude::*;
 
 /// 并行物理世界资源
-#[cfg(feature = "physics_2d")]
+#[cfg(feature = "physics")]
 #[derive(Resource)]
 pub struct ParallelPhysicsResource {
     /// 并行物理世界
     pub world: ParallelPhysicsWorld,
 }
 
-#[cfg(feature = "physics_2d")]
+#[cfg(feature = "physics")]
 impl_default!(ParallelPhysicsResource {
     world: ParallelPhysicsWorld::new(),
 });
 
 /// 并行物理步进系统
-#[cfg(feature = "physics_2d")]
+#[cfg(feature = "physics")]
 pub fn parallel_physics_step_system(
     mut physics: ResMut<ParallelPhysicsResource>,
     time: Res<crate::ecs::Time>,
@@ -602,7 +602,7 @@ pub fn parallel_physics_step_system(
 }
 
 /// 从并行物理同步 Transform 系统
-#[cfg(feature = "physics_2d")]
+#[cfg(feature = "physics")]
 pub fn sync_parallel_physics_to_transform_system(
     physics: Res<ParallelPhysicsResource>,
     mut query: Query<(&super::RigidBodyComp, &mut crate::ecs::Transform)>,
@@ -627,7 +627,7 @@ pub fn sync_parallel_physics_to_transform_system(
 // ============================================================================
 
 #[cfg(test)]
-#[cfg(feature = "physics_2d")]
+#[cfg(feature = "physics")]
 mod tests {
     use super::*;
 

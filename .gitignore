@@ -3,6 +3,17 @@
 **/target/**
 Cargo.lock
 
+# Rust compilation artifacts
+*.d
+*.rlib
+*.o
+*.a
+*.rmeta
+*.so
+*.dylib
+*.dll
+*.exe
+
 # IDE and editor files
 .idea/
 .vscode/

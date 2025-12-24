@@ -211,7 +211,6 @@ impl_default!(PhysicsSyncConfig {
 /// 使用脏标记和休眠检测减少同步开销
 ///
 /// **注意**: 此系统已更新为使用富领域对象架构
-#[cfg(feature = "physics_2d")]
 pub fn optimized_physics_sync_system(
     physics_service: Res<super::PhysicsDomainService>,
     config: Res<PhysicsSyncConfig>,
@@ -293,7 +292,6 @@ pub fn optimized_physics_sync_system(
 /// 当 Transform 被外部修改时，同步到物理世界
 ///
 /// **注意**: 此系统已更新为使用富领域对象架构
-#[cfg(feature = "physics_2d")]
 pub fn transform_to_physics_sync_system(
     mut physics_service: ResMut<super::PhysicsDomainService>,
     query: Query<

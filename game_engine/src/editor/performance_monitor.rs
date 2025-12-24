@@ -1,4 +1,4 @@
-use crate::performance::{AdvancedPerfMetrics, AdvancedProfiler, GpuProfiler, MemoryProfiler};
+use crate::profiling::{AdvancedPerfMetrics, AdvancedProfiler, GpuProfiler, MemoryProfiler};
 use std::collections::VecDeque;
 use std::time::Duration;
 

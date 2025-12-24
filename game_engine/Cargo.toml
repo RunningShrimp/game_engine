@@ -59,6 +59,9 @@ game_engine_hardware = { path = "../game_engine_hardware", version = "0.1.0" }
 # Performance profiling and benchmarking (separated crate)
 game_engine_performance = { path = "../game_engine_performance", version = "0.1.0" }
 
+# Shared common utilities
+game_engine_common = { path = "../game_engine_common", version = "0.1.0" }
+
 # Physics
 rapier2d = "0.31"
 rapier3d = "0.31"
@@ -116,8 +119,8 @@ base64 = "0.22.1"
 use_bevy_ecs = []
 # 已弃用：异步资源加载现在是默认行为
 async_assets = []
-# 启用2D物理引擎支持（Rapier2D）
-physics_2d = []
+# 启用物理引擎支持（Rapier2D/3D）
+physics = []
 # 启用XR（VR/AR）支持，需要OpenXR
 xr = []
 # 启用GLTF模型加载支持
@@ -132,8 +135,8 @@ profiling = ["dep:warp"]
 secure_key_exchange = ["x25519-dalek-ng", "hkdf"]
 # 使用不安全的密钥交换（仅用于测试，生产环境不应使用）
 insecure_key_exchange = []
-# 默认特性：包含2D物理、GLTF支持、异步资源加载和安全密钥交换
-default = ["physics_2d", "gltf", "async_assets", "secure_key_exchange"]
+# 默认特性：包含物理、GLTF支持、异步资源加载和安全密钥交换
+default = ["physics", "gltf", "async_assets", "secure_key_exchange"]
 
 [dev-dependencies]
 anyhow = "1.0.100"

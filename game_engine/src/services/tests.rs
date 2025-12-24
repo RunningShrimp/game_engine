@@ -229,8 +229,11 @@ mod render_service_tests {
     use super::super::render::*;
     use crate::ecs::Transform;
     use crate::render::lod::LodConfig;
+    use crate::domain::RenderStrategy;
     use bevy_ecs::prelude::*;
     use glam::{Mat4, Quat, Vec3};
+    use std::sync::Arc;
+    use std::default::Default;
 
     #[test]
     fn test_render_service_creation() {
@@ -271,14 +274,28 @@ mod render_service_tests {
 
     #[test]
     fn test_render_service_render_strategy_selection() {
+        use crate::domain::render::{RenderObject, RenderObjectId};
+        use crate::render::mesh::GpuMesh;
+        use crate::ecs::Transform;
+
         let service = RenderService::new();
 
-        // 测试渲染策略选择
-        let strategy = service.select_render_strategy(10.0);
-        assert_eq!(strategy, RenderStrategy::Forward);
-        
-        let strategy_distant = service.select_render_strategy(1000.0);
-        assert_eq!(strategy_distant, RenderStrategy::Forward);
+        // 创建静态渲染对象
+        let static_transform = Transform::default();
+        let static_mesh = Arc::new(GpuMesh::default());
+        let static_obj = RenderObject::new(RenderObjectId::new(1), static_mesh, static_transform.clone());
+
+        // 测试静态对象策略选择
+        let strategy = service.select_render_strategy(&static_obj);
+        assert_eq!(strategy, RenderStrategy::StaticBatch);
+
+        // 创建动态渲染对象
+        let dynamic_mesh = Arc::new(GpuMesh::default());
+        let dynamic_obj = RenderObject::new(RenderObjectId::new(2), dynamic_mesh, static_transform);
+
+        // 测试动态对象策略选择
+        let strategy_distant = service.select_render_strategy(&dynamic_obj);
+        assert_eq!(strategy_distant, RenderStrategy::DynamicBatch);
     }
 
     #[test]

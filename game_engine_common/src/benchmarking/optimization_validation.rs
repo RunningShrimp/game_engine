@@ -1,11 +1,10 @@
 use std::time::{Duration, SystemTime};
 
-//  性能优化目标
 #[derive(Debug, Clone)]
 pub struct OptimizationGoal {
     pub metric_name: String,
     pub baseline_value: f64,
-    pub target_value: f64, // 目标性能
+    pub target_value: f64,
     pub unit: String,
 }
 
@@ -24,12 +23,10 @@ impl OptimizationGoal {
         }
     }
 
-    /// 计算达成百分比
     pub fn achievement_percentage(&self, current_value: f64) -> f64 {
         if self.baseline_value == self.target_value {
             100.0
         } else if self.baseline_value > self.target_value {
-            // 降低目标（如延迟）
             let improvement = self.baseline_value - current_value;
             let possible_improvement = self.baseline_value - self.target_value;
             if possible_improvement <= 0.0 {
@@ -38,7 +35,6 @@ impl OptimizationGoal {
                 (improvement / possible_improvement).min(1.0) * 100.0
             }
         } else {
-            // 提升目标（如FPS）
             let improvement = current_value - self.baseline_value;
             let possible_improvement = self.target_value - self.baseline_value;
             if possible_improvement <= 0.0 {
@@ -58,14 +54,13 @@ impl OptimizationGoal {
     }
 }
 
-//  CPU与GPU性能比较结果
 #[derive(Debug, Clone)]
 pub struct CpuGpuComparison {
     pub operation: String,
     pub data_size: usize,
     pub cpu_duration: Duration,
     pub gpu_duration: Duration,
-    pub gpu_overhead: Duration, // 数据传输开销
+    pub gpu_overhead: Duration,
     pub speedup: f64,
 }
 
@@ -96,7 +91,7 @@ impl CpuGpuComparison {
     }
 
     pub fn is_gpu_beneficial(&self) -> bool {
-        self.speedup > 1.5 // 需要至少 1.5x 加速才值得
+        self.speedup > 1.5
     }
 
     pub fn description(&self) -> String {
@@ -114,13 +109,12 @@ impl CpuGpuComparison {
     }
 }
 
-//  优化验证结果
 #[derive(Debug, Clone)]
 pub struct OptimizationResult {
     pub goal: OptimizationGoal,
     pub initial_value: f64,
     pub final_value: f64,
-    pub achievement: f64, // 百分比
+    pub achievement: f64,
     pub achieved: bool,
     pub timestamp: SystemTime,
 }
@@ -162,7 +156,6 @@ impl OptimizationResult {
     }
 }
 
-//  性能验证套件
 #[derive(Default)]
 pub struct PerformanceValidationSuite {
     goals: Vec<OptimizationGoal>,
@@ -175,33 +168,27 @@ impl PerformanceValidationSuite {
         Self::default()
     }
 
-    /// 添加优化目标
     pub fn add_goal(&mut self, goal: OptimizationGoal) {
         self.goals.push(goal);
     }
 
-    /// 记录优化结果
     pub fn record_result(&mut self, goal: OptimizationGoal, initial: f64, final_val: f64) {
         let result = OptimizationResult::new(goal, initial, final_val);
         self.results.push(result);
     }
 
-    /// 记录CPU/GPU比较
     pub fn record_comparison(&mut self, comparison: CpuGpuComparison) {
         self.comparisons.push(comparison);
     }
 
-    /// 获取达成的目标
     pub fn get_achieved_goals(&self) -> Vec<&OptimizationResult> {
         self.results.iter().filter(|r| r.achieved).collect()
     }
 
-    /// 获取未达成的目标
     pub fn get_unachieved_goals(&self) -> Vec<&OptimizationResult> {
         self.results.iter().filter(|r| !r.achieved).collect()
     }
 
-    /// 获取有益的GPU操作
     pub fn get_beneficial_gpu_ops(&self) -> Vec<&CpuGpuComparison> {
         self.comparisons
             .iter()
@@ -209,7 +196,6 @@ impl PerformanceValidationSuite {
             .collect()
     }
 
-    /// 获取不值得的GPU操作
     pub fn get_non_beneficial_gpu_ops(&self) -> Vec<&CpuGpuComparison> {
         self.comparisons
             .iter()
@@ -217,7 +203,6 @@ impl PerformanceValidationSuite {
             .collect()
     }
 
-    /// 获取验证摘要
     pub fn get_summary(&self) -> ValidationSummary {
         let total_goals = self.results.len();
         let achieved_goals = self.results.iter().filter(|r| r.achieved).count();
@@ -259,14 +244,13 @@ impl PerformanceValidationSuite {
         }
     }
 
-    /// 生成验证报告
     pub fn generate_report(&self) -> String {
         let summary = self.get_summary();
 
         let mut report = String::from(
-            "╔════════════════════════════════════════════════╗\n\
+            "╔══════════════════════════════════════════════╗\n\
              ║ Performance Optimization Validation Report\n\
-             ╠════════════════════════════════════════════════╣\n",
+             ╠══════════════════════════════════════════════╣\n",
         );
 
         report.push_str(&format!(
@@ -293,7 +277,7 @@ impl PerformanceValidationSuite {
             summary.average_speedup
         ));
 
-        report.push_str("╠════════════════════════════════════════════════╣\n");
+        report.push_str("╠══════════════════════════════════════════════╣\n");
 
         report.push_str("║ Detailed Results:\n");
         for result in &self.results {
@@ -307,7 +291,7 @@ impl PerformanceValidationSuite {
             report.push_str(&format!("║   {}\n", comparison.description()));
         }
 
-        report.push_str("╚════════════════════════════════════════════════╝\n");
+        report.push_str("╚══════════════════════════════════════════════╝\n");
         report
     }
 
@@ -320,7 +304,6 @@ impl PerformanceValidationSuite {
     }
 }
 
-//  验证摘要
 #[derive(Debug, Clone)]
 pub struct ValidationSummary {
     pub total_goals: usize,
@@ -339,18 +322,16 @@ mod tests {
 
     #[test]
     fn test_optimization_goal() {
-        // 降低延迟的目标
         let goal = OptimizationGoal::new("latency", 16.0, 8.0, "ms");
-        assert_eq!(goal.achievement_percentage(12.0), 50.0); // 中点
+        assert_eq!(goal.achievement_percentage(12.0), 50.0);
         assert!(goal.is_achieved(8.0));
         assert!(!goal.is_achieved(16.0));
     }
 
     #[test]
     fn test_fps_goal() {
-        // 提升FPS的目标
         let goal = OptimizationGoal::new("fps", 60.0, 120.0, "fps");
-        assert_eq!(goal.achievement_percentage(90.0), 50.0); // 中点
+        assert_eq!(goal.achievement_percentage(90.0), 50.0);
         assert!(goal.is_achieved(120.0));
         assert!(!goal.is_achieved(60.0));
     }

@@ -44,6 +44,7 @@
 //! - [`xr`]: VR/AR support via OpenXR
 //! - [`editor`]: Editor tools
 //! - [`performance`]: Performance profiling and optimization
+//! - [`profiling`]: Performance monitoring and analysis
 //! - [`plugins`]: Plugin system with hot-reload support
 //!
 //! ## Quick Start
@@ -100,6 +101,8 @@ pub mod editor;
 pub mod network;
 /// Performance profiling and optimization tools
 pub mod performance;
+/// Performance monitoring and analysis
+pub mod profiling;
 /// Physics simulation using Rapier
 pub mod physics;
 /// Platform abstraction layer for cross-platform support

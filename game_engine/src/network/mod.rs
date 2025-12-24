@@ -22,7 +22,7 @@
 //  ```
 
 pub mod authority;
-// pub mod client; // Temporarily disabled due to compilation issues
+pub mod client;
 pub mod compression;
 pub mod delay_compensation;
 pub mod delta_serialization;
@@ -37,6 +37,9 @@ pub mod synchronization;
 pub mod parallel;
 
 use crate::impl_default;
+
+// Re-export key exchange types
+pub use key_exchange::{KeyExchangeProtocol, KeyPair, KeyExchangeMessage, SharedSecret, KeyExchange};
 use bevy_ecs::prelude::*;
 use crossbeam_channel::{Receiver, Sender, unbounded};
 use serde::{Deserialize, Serialize};
@@ -526,23 +529,24 @@ impl_default!(NetworkSync {
 
 /// 网络更新系统
 pub fn network_update_system(mut state: ResMut<NetworkState>) {
-    // 增加 tick
     state.current_tick += 1;
 
-    // 处理接收到的消息
     let messages = NetworkService::receive(&state);
     for msg in messages {
         match msg {
+            NetworkMessage::Connect { client_id: _, name } => {
+                log::info!("Client connected: {}", name);
+            }
+            NetworkMessage::Disconnect { client_id } => {
+                log::info!("Client disconnected: {}", client_id);
+            }
             NetworkMessage::StateSync { tick, data } => {
-                // 如果数据被压缩，先解压缩
                 let decompressed_data = if let Some(ref compressor) = state.compressor {
                     compressor
                         .decompress_with_flag(&data)
                         .unwrap_or_else(|_| data.clone())
                 } else {
-                    // 尝试自动检测压缩标志
                     if !data.is_empty() && data[0] == 1 {
-                        // 数据被压缩，但没有压缩器，尝试创建临时压缩器
                         let temp_compressor = compression::NetworkCompressor::new();
                         temp_compressor
                             .decompress_with_flag(&data)
@@ -552,22 +556,29 @@ pub fn network_update_system(mut state: ResMut<NetworkState>) {
                     }
                 };
 
-                // 使用同步管理器处理状态同步
-                // NOTE: 实际实现中应该使用StateSyncManager处理
-                let _ = (tick, decompressed_data);
+                if let Ok(delta_packet) = bincode::deserialize::<delta_serialization::DeltaPacket>(&decompressed_data) {
+                    for delta in delta_packet.deltas {
+                        log::debug!("Received state update for entity {} at tick {}", delta.id, tick);
+                    }
+                }
+            }
+            NetworkMessage::Rpc { id, method, params } => {
+                log::debug!("RPC call: {} (id: {}), params: {:?}", method, id, params);
+            }
+            NetworkMessage::RpcResponse { id, result } => {
+                log::debug!("RPC response for id {}: {:?}", id, result);
             }
             NetworkMessage::Heartbeat { timestamp } => {
-                // 计算延迟
                 let now = crate::core::utils::current_timestamp_ms();
                 state.stats.latency_ms = (now - timestamp) as f32;
             }
+            NetworkMessage::Input { tick, inputs } => {
+                log::debug!("Received input for tick {}: {} bytes", tick, inputs.len());
+            }
             NetworkMessage::TimeSyncRequest { client_send_time } => {
-                // 处理时间同步请求（服务器端）
-                // NOTE: 实际实现中应该在服务器端处理
-                let _ = client_send_time;
+                log::debug!("Time sync request from client: {}", client_send_time);
             }
             NetworkMessage::TimeSyncResponse { mut sync } => {
-                // 处理时间同步响应（客户端）
                 if let Some(ref compensation) = state.delay_compensation {
                     if let Ok(mut guard) = compensation.lock() {
                         guard.process_time_sync(&mut sync);
@@ -575,11 +586,10 @@ pub fn network_update_system(mut state: ResMut<NetworkState>) {
                 }
             }
             NetworkMessage::EventSync { events } => {
-                // 处理事件同步
-                // NOTE: 事件同步逻辑在synchronization模块中实现
-                let _ = events;
+                for event in events {
+                    log::debug!("Received event: {:?} for entity: {:?}", event.event_type, event.entity_id);
+                }
             }
-            _ => {}
         }
     }
 }

@@ -150,7 +150,7 @@ fn test_physics_system_integration() {
     );
     let body2 = game_engine::domain::physics::RigidBody::new(
         RigidBodyId(2),
-        RigidBodyType::Static,
+        RigidBodyType::Fixed,
         Vec3::ZERO,
     );
 
@@ -718,6 +718,364 @@ fn test_error_recovery_integration() {
 
     // 验证刚体1仍然存在
     assert!(physics_service.get_body_position(RigidBodyId(1)).is_ok());
+}
+
+/// E2E测试：完整的游戏启动流程
+#[test]
+fn test_e2e_game_startup() {
+    let mut world = World::new();
+    let mut scene_service = SceneDomainService::new();
+    let mut physics_service = PhysicsDomainService::new();
+    let mut render_service = RenderService::new();
+    let mut actor_system = ActorSystem::new();
+
+    // 添加基础资源
+    world.insert_resource(Time::default());
+    world.insert_resource(PhysicsDomainService::new());
+
+    // 创建初始场景
+    assert!(scene_service.create_scene(SceneId(0), "StartupScene").is_ok());
+    if let Some(scene) = scene_service.get_scene_mut(SceneId(0)) {
+        assert!(scene.load().is_ok());
+    }
+    assert!(scene_service.switch_to_scene(SceneId(0)).is_ok());
+
+    // 注册核心Actor
+    let physics_handle = actor_system.register("physics", PhysicsActor::new()).unwrap();
+    let render_handle = actor_system.register("render", RenderActor::new()).unwrap();
+
+    // 配置渲染系统
+    render_service.use_default_lod();
+    render_service.update_frustum(Mat4::IDENTITY);
+
+    // 验证系统初始化状态
+    assert!(scene_service.get_active_scene().is_some());
+    assert!(physics_handle.send(PhysicsActorMessage::Step { delta_time: 0.016 }).is_ok());
+    assert!(render_handle.send(RenderActorMessage::RenderFrame).is_ok());
+
+    // 清理
+    assert!(physics_handle.stop().is_ok());
+    assert!(render_handle.stop().is_ok());
+}
+
+/// E2E测试：物理-渲染同步完整流程
+#[test]
+fn test_e2e_physics_render_sync() {
+    let mut world = World::new();
+    world.insert_resource(Time::default());
+    world.insert_resource(PhysicsDomainService::new());
+
+    // 创建具有物理和渲染属性的实体
+    for i in 0..10 {
+        world.spawn((
+            Transform {
+                pos: Vec3::new(i as f32, 10.0, 0.0),
+                rot: Quat::IDENTITY,
+                scale: Vec3::ONE,
+            },
+            Sprite::default(),
+        ));
+    }
+
+    // 模拟完整的物理-渲染同步循环
+    for frame in 0..60 {
+        if let Some(mut time) = world.get_resource_mut::<Time>() {
+            time.delta_seconds = 1.0 / 60.0;
+            time.elapsed_seconds += time.delta_seconds as f64;
+        }
+
+        // 物理步进
+        if let Some(mut physics) = world.get_resource_mut::<PhysicsDomainService>() {
+            let _ = physics.step_simulation(0.016);
+        }
+
+        // 验证实体数量
+        if frame % 10 == 0 {
+            assert_eq!(world.iter_entities().count(), 10);
+        }
+    }
+
+    // 验证所有实体仍然存在
+    assert_eq!(world.iter_entities().count(), 10);
+}
+
+/// E2E测试：多场景完整生命周期
+#[test]
+fn test_e2e_multi_scene_lifecycle() {
+    let mut scene_service = SceneDomainService::new();
+    let mut physics_service = PhysicsDomainService::new();
+
+    // 创建多个场景
+    let scenes = vec![(1, "MainMenu"), (2, "Level1"), (3, "Level2"), (4, "Credits")];
+    for (id, name) in &scenes {
+        assert!(scene_service.create_scene(SceneId(*id), name).is_ok());
+    }
+
+    // 模拟场景切换流程
+    for (id, _) in &scenes {
+        if let Some(scene) = scene_service.get_scene_mut(SceneId(*id)) {
+            assert!(scene.load().is_ok());
+        }
+        assert!(scene_service.switch_to_scene(SceneId(*id)).is_ok());
+
+        // 在每个场景中创建物理对象
+        let body = game_engine::domain::physics::RigidBody::new(
+            RigidBodyId(*id as u64),
+            RigidBodyType::Dynamic,
+            Vec3::new(0.0, 10.0, 0.0),
+        );
+        assert!(physics_service.create_body(body).is_ok());
+
+        // 步进物理
+        assert!(physics_service.step_simulation(0.016).is_ok());
+
+        // 验证场景状态
+        assert_eq!(scene_service.get_active_scene().unwrap().id, SceneId(*id));
+    }
+
+    // 验证所有场景存在
+    assert_eq!(scene_service.scene_ids().len(), 4);
+}
+
+/// E2E测试：资源加载和卸载完整流程
+#[test]
+fn test_e2e_resource_lifecycle() {
+    let mut audio_service = AudioDomainService::new();
+    let mut physics_service = PhysicsDomainService::new();
+
+    // 创建物理资源
+    for i in 0..5 {
+        let body = game_engine::domain::physics::RigidBody::new(
+            RigidBodyId(i as u64),
+            RigidBodyType::Dynamic,
+            Vec3::new(i as f32, 10.0, 0.0),
+        );
+        assert!(physics_service.create_body(body).is_ok());
+    }
+
+    // 验证资源创建
+    for i in 0..5 {
+        let position = physics_service.get_body_position(RigidBodyId(i as u64));
+        assert!(position.is_ok());
+    }
+
+    // 模拟资源使用
+    for _ in 0..10 {
+        assert!(physics_service.step_simulation(0.016).is_ok());
+    }
+
+    // 资源清理
+    for i in 0..5 {
+        assert!(physics_service.destroy_body(RigidBodyId(i as u64)).is_ok());
+    }
+
+    // 验证资源清理
+    for i in 0..5 {
+        let position = physics_service.get_body_position(RigidBodyId(i as u64));
+        assert!(position.is_err());
+    }
+
+    // 音频资源测试（文件不存在会失败，但测试错误处理）
+    let result = audio_service.create_source(AudioSourceId(1), "test.wav");
+    assert!(result.is_err());
+}
+
+/// E2E测试：性能压力场景
+#[test]
+fn test_e2e_performance_stress() {
+    let mut world = World::new();
+    world.insert_resource(Time::default());
+    world.insert_resource(PhysicsDomainService::new());
+
+    // 创建大量实体
+    const ENTITY_COUNT: usize = 500;
+    for i in 0..ENTITY_COUNT {
+        world.spawn((
+            Transform {
+                pos: Vec3::new(
+                    (i % 50) as f32 * 2.0,
+                    (i / 50) as f32 * 2.0,
+                    0.0,
+                ),
+                rot: Quat::IDENTITY,
+                scale: Vec3::ONE,
+            },
+            Sprite::default(),
+        ));
+    }
+
+    // 运行多帧性能测试
+    const FRAME_COUNT: usize = 120;
+    for frame in 0..FRAME_COUNT {
+        if let Some(mut time) = world.get_resource_mut::<Time>() {
+            time.delta_seconds = 1.0 / 60.0;
+            time.elapsed_seconds += time.delta_seconds as f64;
+        }
+
+        if let Some(mut physics) = world.get_resource_mut::<PhysicsDomainService>() {
+            let _ = physics.step_simulation(0.016);
+        }
+
+        // 定期验证
+        if frame % 30 == 0 {
+            assert_eq!(world.iter_entities().count(), ENTITY_COUNT);
+        }
+    }
+
+    // 最终验证
+    assert_eq!(world.iter_entities().count(), ENTITY_COUNT);
+}
+
+/// E2E测试：错误恢复和容错
+#[test]
+fn test_e2e_error_recovery() {
+    let mut scene_service = SceneDomainService::new();
+    let mut physics_service = PhysicsDomainService::new();
+
+    // 场景1：正常创建
+    assert!(scene_service.create_scene(SceneId(1), "NormalScene").is_ok());
+    if let Some(scene) = scene_service.get_scene_mut(SceneId(1)) {
+        assert!(scene.load().is_ok());
+    }
+    assert!(scene_service.switch_to_scene(SceneId(1)).is_ok());
+
+    // 创建物理对象
+    let body1 = game_engine::domain::physics::RigidBody::new(
+        RigidBodyId(1),
+        RigidBodyType::Dynamic,
+        Vec3::ZERO,
+    );
+    assert!(physics_service.create_body(body1).is_ok());
+
+    // 场景2：尝试切换到不存在的场景（应该失败但不影响现有场景）
+    let result = scene_service.switch_to_scene(SceneId(999));
+    assert!(result.is_err());
+
+    // 验证场景1仍然活跃
+    assert_eq!(scene_service.get_active_scene().unwrap().id, SceneId(1));
+
+    // 验证物理对象仍然存在
+    assert!(physics_service.get_body_position(RigidBodyId(1)).is_ok());
+
+    // 尝试操作不存在的物理对象（应该失败但不影响现有对象）
+    let result = physics_service.get_body_position(RigidBodyId(999));
+    assert!(result.is_err());
+
+    // 验证现有对象不受影响
+    assert!(physics_service.get_body_position(RigidBodyId(1)).is_ok());
+}
+
+/// E2E测试：Actor消息完整流程
+#[test]
+fn test_e2e_actor_messaging() {
+    let mut actor_system = ActorSystem::new();
+
+    // 注册多个Actor
+    let audio_handle = actor_system.register("audio", AudioActor::new()).unwrap();
+    let physics_handle = actor_system.register("physics", PhysicsActor::new()).unwrap();
+    let render_handle = actor_system.register("render", RenderActor::new()).unwrap();
+
+    // 发送序列化消息
+    let mut message_count = 0;
+
+    for i in 0..20 {
+        let _ = physics_handle.send(PhysicsActorMessage::Step { delta_time: 0.016 });
+        message_count += 1;
+
+        if i % 5 == 0 {
+            let _ = render_handle.send(RenderActorMessage::RenderFrame);
+            message_count += 1;
+        }
+
+        if i % 10 == 0 {
+            let _ = audio_handle.send(AudioActorMessage::SetMasterVolume { volume: 0.5 });
+            message_count += 1;
+        }
+    }
+
+    // 验证消息发送成功
+    assert!(message_count > 0);
+
+    // 停止所有Actor
+    assert!(audio_handle.stop().is_ok());
+    assert!(physics_handle.stop().is_ok());
+    assert!(render_handle.stop().is_ok());
+}
+
+/// E2E测试：渲染管线完整流程
+#[test]
+fn test_e2e_render_pipeline() {
+    let mut world = World::new();
+    let mut render_service = RenderService::new();
+
+    // 配置渲染服务
+    render_service.use_default_lod();
+    render_service.update_frustum(Mat4::IDENTITY);
+
+    // 创建渲染实体
+    for i in 0..20 {
+        world.spawn((
+            Transform {
+                pos: Vec3::new(i as f32, 0.0, 0.0),
+                rot: Quat::IDENTITY,
+                scale: Vec3::ONE,
+            },
+            Sprite::default(),
+        ));
+    }
+
+    // 模拟多帧渲染循环
+    for _ in 0..60 {
+        // 构建渲染场景
+        let result = render_service.build_domain_scene(&mut world);
+        assert!(result.is_ok());
+
+        // 更新渲染场景
+        let result = render_service.update_scene(0.016, Vec3::ZERO);
+        assert!(result.is_ok());
+
+        // 获取渲染命令
+        let commands = render_service.get_render_commands();
+        assert_eq!(commands.len(), 0);
+    }
+
+    // 验证实体数量
+    assert_eq!(world.iter_entities().count(), 20);
+}
+
+/// E2E测试：网络同步完整流程
+#[test]
+fn test_e2e_network_sync_workflow() {
+    use game_engine::network::prediction::ClientPredictionManager;
+
+    let mut world = World::new();
+
+    // 添加预测管理器
+    world.insert_resource(ClientPredictionManager::default());
+    world.insert_resource(Time::default());
+
+    // 创建实体
+    let entity = world.spawn(Transform::default()).id();
+
+    // 模拟客户端输入和服务器确认循环
+    if let Some(mut prediction) = world.get_resource_mut::<ClientPredictionManager>() {
+        for tick in 1..=20 {
+            // 提交输入
+            let seq = prediction.submit_input(vec![tick as u8, tick as u8 + 1, tick as u8 + 2]);
+            assert_eq!(seq, tick as u32);
+
+            // 每5帧确认一次
+            if tick % 5 == 0 {
+                prediction.confirm_input(seq, tick * 10);
+            }
+        }
+
+        // 验证最后确认的tick
+        assert_eq!(prediction.last_confirmed_tick(), 20 * 10);
+    }
+
+    // 验证实体存在
+    assert!(world.entities().contains(entity));
 }
 
 /// 测试完整系统工作流

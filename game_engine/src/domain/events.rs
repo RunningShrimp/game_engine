@@ -28,6 +28,9 @@ pub trait DomainEvent: Send + Sync + 'static {
 
     /// 撤销事件（反向操作）
     fn revert(&self, world: &mut World) -> Result<(), EventError>;
+
+    /// 将 trait object 转换为 Any，用于类型转换
+    fn as_any(&self) -> &dyn std::any::Any;
 }
 
 /// 事件错误
@@ -397,6 +400,10 @@ impl DomainEvent for SceneLoadedEvent {
     fn revert(&self, _world: &mut World) -> Result<(), EventError> {
         Ok(())
     }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
 }
 
 /// 场景激活事件
@@ -418,6 +425,10 @@ impl DomainEvent for SceneActivatedEvent {
     fn revert(&self, _world: &mut World) -> Result<(), EventError> {
         Ok(())
     }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
 }
 
 /// 实体添加事件
@@ -438,6 +449,10 @@ impl DomainEvent for EntityAddedEvent {
 
     fn revert(&self, _world: &mut World) -> Result<(), EventError> {
         Ok(())
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
     }
 }
 
@@ -461,6 +476,10 @@ mod tests {
 
         fn revert(&self, _world: &mut World) -> Result<(), EventError> {
             Ok(())
+        }
+
+        fn as_any(&self) -> &dyn std::any::Any {
+            self
         }
     }
 

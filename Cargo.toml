@@ -4,7 +4,8 @@ members = [
     "game_engine_hardware",
     "game_engine_performance",
     "game_engine_profiling",
-    "game_engine_simd"
+    "game_engine_simd",
+    "game_engine_common"
 ]
 
 resolver = "3"

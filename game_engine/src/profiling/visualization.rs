@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 
 use super::storage::*;
 use super::ProfilingResult;
+use super::metrics::MetricCategory;
 
 // ============================================================================
 // 图表数据结构
@@ -698,11 +699,11 @@ mod tests {
         
         // 创建测试数据点
         let data_points = vec![
-            DataPoint::new("test_metric", 10.0, super::metrics::MetricCategory::Render),
-            DataPoint::new("test_metric", 12.0, super::metrics::MetricCategory::Render),
-            DataPoint::new("test_metric", 15.0, super::metrics::MetricCategory::Render),
-            DataPoint::new("test_metric", 18.0, super::metrics::MetricCategory::Render),
-            DataPoint::new("test_metric", 20.0, super::metrics::MetricCategory::Render),
+            DataPoint::new("test_metric", 10.0, MetricCategory::Render),
+            DataPoint::new("test_metric", 12.0, MetricCategory::Render),
+            DataPoint::new("test_metric", 15.0, MetricCategory::Render),
+            DataPoint::new("test_metric", 18.0, MetricCategory::Render),
+            DataPoint::new("test_metric", 20.0, MetricCategory::Render),
         ];
         
         let analysis = analyzer.analyze_trend(&data_points).unwrap();

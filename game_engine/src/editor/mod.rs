@@ -24,11 +24,13 @@ pub mod shortcuts;
 pub mod terrain_editor;
 pub mod transform_gizmo;
 pub mod undo_redo;
+pub mod world_inspector;
 
 pub use config::{EditorConfig, EditorConfigManager, EditorTheme};
 pub use hierarchy::HierarchyView;
 pub use inspector::Inspector;
 pub use scene_editor_enhanced::SceneEditorEnhanced;
+pub use world_inspector::WorldInspector;
 pub use shortcuts::{Modifiers, ShortcutAction, ShortcutManager};
 pub use transform_gizmo::TransformGizmo;
 pub use undo_redo::{
@@ -48,6 +50,8 @@ pub struct EditorState {
     pub hierarchy_view: HierarchyView,
     /// 命令管理器（撤销/重做）
     pub command_manager: CommandManager,
+    /// 世界检查器
+    pub world_inspector: WorldInspector,
 }
 
 impl EditorState {

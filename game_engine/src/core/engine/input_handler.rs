@@ -14,7 +14,7 @@ use crate::platform::{InputActions, InputBuffer, InputEvent, KeyCode, Modifiers,
 use crate::render::wgpu_utils::WgpuRenderer;
 use crate::services::render::RenderService;
 use bevy_ecs::prelude::*;
-use winit::event::{WindowEvent, ElementState};
+use winit::event::WindowEvent;
 use winit::event_loop::ActiveEventLoop;
 // 根据winit 0.31.0-beta.2的API变更，EventLoopWindowTarget可能已被移动
 // 我们将使用winit_core中的相应类型
@@ -63,7 +63,10 @@ pub fn handle_window_event(
             renderer.resize(size);
         }
         WindowEvent::RedrawRequested => {
-            // TODO: 实现重绘请求处理
+            if let Some(mut buf) = world.get_resource_mut::<InputBuffer>() {
+                buf.events.push(InputEvent::RedrawRequested);
+                tracing::debug!(target: "input", "Redraw requested");
+            }
         }
         _ => {}
     }

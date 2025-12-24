@@ -6,9 +6,11 @@
 //! - Performance profiling integration
 //! - 集成 game_engine_performance crate
 
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 use crate::performance::monitoring::system_monitor::SystemPerformanceMonitor;
-use crate::performance::{Bottleneck, ContinuousProfiler, PerformanceAnalysis};
+use crate::profiling::{Bottleneck, ContinuousProfiler, PerformanceAnalysis};
+use crate::performance::metrics_storage::MetricsStorage;
 
 /// 统一的tracing和metrics管理器
 #[derive(Debug)]
@@ -16,6 +18,8 @@ pub struct TracingMetricsManager {
     system_monitor: SystemPerformanceMonitor,
     start_time: Instant,
     continuous_profiler: Option<ContinuousProfiler>,
+    /// Metrics存储系统
+    metrics_storage: Arc<MetricsStorage>,
 }
 
 impl TracingMetricsManager {
@@ -25,6 +29,7 @@ impl TracingMetricsManager {
             system_monitor: SystemPerformanceMonitor::new(),
             start_time: Instant::now(),
             continuous_profiler: Some(ContinuousProfiler::new(300)),
+            metrics_storage: Arc::new(MetricsStorage::new(1000)),
         }
     }
 
@@ -72,7 +77,8 @@ impl TracingMetricsManager {
     /// 记录性能指标
     pub fn record_metric(&self, name: &str, value: f64) {
         tracing::info!(target: "metrics", %name, value);
-        // TODO: 集成到metrics存储系统
+        // 集成到metrics存储系统
+        self.metrics_storage.record(name, value, None);
     }
 
     /// 获取系统性能快照
@@ -157,6 +163,60 @@ impl TracingMetricsManager {
     /// 获取运行时间
     pub fn uptime(&self) -> Duration {
         self.start_time.elapsed()
+    }
+
+    /// 获取metrics存储系统
+    pub fn metrics_storage(&self) -> Arc<MetricsStorage> {
+        Arc::clone(&self.metrics_storage)
+    }
+
+    /// 查询指定metric的数据
+    ///
+    /// # 参数
+    ///
+    /// * `name` - metric名称
+    ///
+    /// # 返回
+    ///
+    /// metric的所有数据点
+    pub fn query_metrics(&self, name: &str) -> Vec<crate::performance::metrics_storage::MetricDataPoint> {
+        self.metrics_storage.get_metrics(name)
+    }
+
+    /// 查询指定metric在时间窗口内的数据
+    ///
+    /// # 参数
+    ///
+    /// * `name` - metric名称
+    /// * `duration` - 时间范围
+    ///
+    /// # 返回
+    ///
+    /// 时间范围内的数据点
+    pub fn query_metrics_in_window(
+        &self,
+        name: &str,
+        duration: Duration,
+    ) -> Vec<crate::performance::metrics_storage::MetricDataPoint> {
+        self.metrics_storage.get_metrics_in_window(name, duration)
+    }
+
+    /// 获取metric的聚合统计
+    ///
+    /// # 参数
+    ///
+    /// * `name` - metric名称
+    /// * `duration` - 可选的时间范围
+    ///
+    /// # 返回
+    ///
+    /// 聚合统计
+    pub fn query_metric_aggregate(
+        &self,
+        name: &str,
+        duration: Option<Duration>,
+    ) -> Option<crate::performance::metrics_storage::MetricAggregate> {
+        self.metrics_storage.aggregate(name, duration)
     }
 }
 

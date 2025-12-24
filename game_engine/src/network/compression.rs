@@ -86,6 +86,7 @@ impl CompressionLevel {
 /// 网络数据压缩器
 ///
 /// 使用flate2（zlib/deflate）进行数据压缩
+#[derive(Debug, Clone)]
 pub struct NetworkCompressor {
     /// 压缩级别
     compression_level: CompressionLevel,

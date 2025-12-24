@@ -8,7 +8,6 @@ use crate::error::safe_lock;
 use glam::{Quat, Vec3};
 use rapier3d::na::{Point3, Quaternion, UnitQuaternion, Vector3};
 use rapier3d::prelude::*;
-// use rapier3d::pipeline::QueryPipeline; // Temporarily disabled
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Mutex;
@@ -498,8 +497,6 @@ pub struct PhysicsWorld {
     rigid_body_set: RigidBodySet,
     /// 碰撞体集
     collider_set: ColliderSet,
-    /// 查询流水线 (暂时禁用)
-    // query_pipeline: QueryPipeline,
     /// 刚体句柄映射
     pub(crate) body_handles: HashMap<RigidBodyId, RigidBodyHandle>,
     /// 碰撞体句柄映射
@@ -521,7 +518,6 @@ impl PhysicsWorld {
             ccd_solver: CCDSolver::new(),
             rigid_body_set: RigidBodySet::new(),
             collider_set: ColliderSet::new(),
-            // query_pipeline: QueryPipeline::new(), // Temporarily disabled
             body_handles: HashMap::new(),
             collider_handles: HashMap::new(),
         }
@@ -748,38 +744,31 @@ impl PhysicsWorld {
             Vector3::new(direction.x, direction.y, direction.z),
         );
 
-        // 简化的射线投射实现，遍历所有碰撞体进行相交测试
-        // 这是一个临时实现，直到 QueryPipeline 问题解决
-        let mut closest_hit: Option<(RigidBodyId, f32, Vec3)> = None;
-        let mut closest_distance = f32::INFINITY;
+        // 使用 QueryPipeline 进行高效的射线投射
+        let filter = rapier3d::prelude::QueryFilter::default();
+        let query_pipeline = self.broad_phase.as_query_pipeline(
+            self.narrow_phase.query_dispatcher(),
+            &self.rigid_body_set,
+            &self.collider_set,
+            filter,
+        );
 
-        // 遍历所有碰撞体进行相交测试
-        for (_collider_handle, collider) in self.collider_set.iter() {
-            if let Some(ball) = collider.shape().as_ball() {
-                let collider_pos = collider.position();
-                let ball_center = Point3::new(collider_pos.translation.x, collider_pos.translation.y, collider_pos.translation.z);
-                let distance_to_center = (ball_center - ray.origin).magnitude();
+        let max_toi = max_distance / direction.length();
 
-                if distance_to_center <= ball.radius + max_distance {
-                    let distance = distance_to_center - ball.radius;
-                    if distance >= 0.0 && distance < closest_distance && distance <= max_distance {
-                        // 通过句柄反查 RigidBodyId
-                        if let Some(parent_handle) = collider.parent() {
-                            for (id, &h) in self.body_handles.iter() {
-                                if h == parent_handle {
-                                    let hit_point = origin + direction * distance;
-                                    closest_hit = Some((*id, distance, hit_point));
-                                    closest_distance = distance;
-                                    break;
-                                }
-                            }
+        if let Some((collider_handle, toi)) = query_pipeline.cast_ray(&ray, max_toi, true) {
+            let hit_point = origin + direction * (toi * direction.length());
+            if let Some(collider) = self.collider_set.get(collider_handle) {
+                if let Some(parent_handle) = collider.parent() {
+                    for (id, &h) in self.body_handles.iter() {
+                        if h == parent_handle {
+                            return Some((*id, toi * direction.length(), hit_point));
                         }
                     }
                 }
             }
         }
 
-        closest_hit
+        None
     }
 
     /// 创建刚体（与add_body功能相同，为了兼容测试代码）

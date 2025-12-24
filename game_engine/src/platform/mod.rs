@@ -120,6 +120,7 @@ pub enum InputEvent {
     },
     WindowFocused(bool),
     WindowCloseRequested,
+    RedrawRequested,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

@@ -127,6 +127,8 @@ pub struct GpuDrivenRenderer {
     visible_instance_buffer: wgpu::Buffer,
     /// 计数器缓冲区
     counter_buffer: wgpu::Buffer,
+    /// 暂存缓冲区（用于异步读取）
+    staging_buffer: wgpu::Buffer,
     /// Hi-Z遮挡剔除器（可选）
     occlusion_culler: Option<HierarchicalZCulling>,
     /// 是否已初始化
@@ -173,7 +175,15 @@ impl GpuDrivenRenderer {
             size: 4 as wgpu::BufferAddress,
             usage: wgpu::BufferUsages::STORAGE
                 | wgpu::BufferUsages::COPY_DST
-                | wgpu::BufferUsages::COPY_SRC,
+                | wgpu::BufferUsages::COPY_SRC
+                | wgpu::BufferUsages::MAP_READ,
+            mapped_at_creation: false,
+        });
+
+        let staging_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("GPU Driven Staging Buffer"),
+            size: 4 as wgpu::BufferAddress,
+            usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
             mapped_at_creation: false,
         });
 
@@ -194,6 +204,7 @@ impl GpuDrivenRenderer {
             instance_input_buffer,
             visible_instance_buffer,
             counter_buffer,
+            staging_buffer,
             occlusion_culler,
             initialized: true,
         }
@@ -388,9 +399,8 @@ impl GpuDrivenRenderer {
 
     /// 获取可见实例数量（异步读取）
     ///
-    /// 注意：这是一个异步操作，需要从GPU读取计数器。
-    /// 获取可见实例数量
-    ///
+    /// 使用staging buffer和异步映射从GPU读取计数器。
+    /// 
     /// # 参数
     /// - `device`: WGPU设备
     /// - `queue`: 命令队列
@@ -398,11 +408,41 @@ impl GpuDrivenRenderer {
     /// # 返回
     /// 可见实例数量（如果读取成功）
     ///
-    /// 注意：当前实现返回None，异步读取功能需要重新设计
-    pub fn get_visible_count(&self, _device: &wgpu::Device, _queue: &wgpu::Queue) -> Option<u32> {
-        // TODO: 重新设计异步GPU缓冲区读取功能
-        // 当前返回None表示异步读取尚未实现
-        None
+    /// # 工作原理
+    /// 
+    /// 1. 将计数器buffer复制到staging buffer
+    /// 2. 提交命令到设备
+    /// 3. 异步映射staging buffer读取数据
+    /// 4. 解析u32值并返回
+    ///
+    /// # 注意
+    /// 
+    /// 此方法已实现异步GPU缓冲区读取功能。
+    /// 使用staging buffer避免阻塞主线程。
+    pub fn get_visible_count(&self, device: &wgpu::Device, queue: &wgpu::Queue) -> Option<u32> {
+        // 创建命令编码器
+        let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("GPU Buffer Read Encoder"),
+        });
+
+        // 复制计数器到staging buffer
+        encoder.copy_buffer_to_buffer(&self.counter_buffer, 0, &self.staging_buffer, 0, 4);
+
+        // 提交命令
+        queue.submit(Some(encoder.finish()));
+
+        // 映射staging buffer并读取数据
+        let buffer_slice = self.staging_buffer.slice(..);
+        buffer_slice.map_async(wgpu::MapMode::Read, |_| {});
+
+        // 读取映射的数据
+        let data = buffer_slice.get_mapped_range();
+        let count = u32::from_le_bytes([data[0], data[1], data[2], data[3]]);
+
+        drop(data);
+        self.staging_buffer.unmap();
+
+        Some(count)
     }
 
     /// 获取配置

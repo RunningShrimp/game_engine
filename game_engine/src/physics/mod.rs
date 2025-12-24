@@ -2,9 +2,70 @@
 // 
 //  提供物理模拟功能，基于富领域对象架构。
 //  使用 `crate::domain::physics` 模块中的富领域对象。
+//
+// # 使用示例
+//
+// ## 基础刚体创建
+//
+// ```rust
+// use game_engine::ecs::Transform;
+// use game_engine::physics::{RigidBodyComp, RigidBodyDesc};
+// use game_engine::domain::physics::{RigidBody, RigidBodyId, RigidBodyType};
+// use bevy_ecs::prelude::*;
+// use glam::{Vec3, Quat};
+//
+// fn spawn_physics_entity(mut commands: Commands) {
+//     let entity = commands.spawn((
+//         RigidBodyDesc {
+//             body_type: RigidBodyType::Dynamic,
+//             position: Vec3::new(0.0, 10.0, 0.0),
+//             rotation: Quat::IDENTITY,
+//         },
+//         Transform::default(),
+//     )).id();
+// }
+// ```
+//
+// ## 使用富领域对象
+//
+// ```rust
+// use game_engine::domain::services::PhysicsDomainService;
+// use game_engine::domain::physics::{RigidBody, RigidBodyId, RigidBodyType};
+// use glam::Vec3;
+//
+// fn create_physics_body() {
+//     let mut physics_service = PhysicsDomainService::new();
+//
+//     let body = RigidBody::new(
+//         RigidBodyId::new(1),
+//         RigidBodyType::Dynamic,
+//         Vec3::new(0.0, 10.0, 0.0),
+//     );
+//
+//     physics_service.create_body(body).unwrap();
+// }
+// ```
+//
+// ## 空间分区加速
+//
+// ```rust
+// use game_engine::physics::SpatialPartitionType;
+// use game_engine::physics::SpatialPartitionManager;
+// use glam::Vec3;
+//
+// fn setup_spatial_partition() {
+//     let manager = SpatialPartitionManager::new(SpatialPartitionType::SpatialHash {
+//         cell_size: 10.0,
+//     });
+//
+//     // 插入物体
+//     manager.insert(1, Vec3::new(5.0, 5.0, 5.0), 1.0);
+// }
+// ```
 
 use crate::impl_default;
 
+pub mod batch_sync;
 pub mod collision_performance;
 pub mod dirty_tracker;
 pub mod joints;
@@ -12,18 +73,21 @@ pub mod parallel;
 pub mod physics3d;
 pub mod spatial_partition;
 
+pub use batch_sync::{
+    batch_collect_physics_state_system, batch_physics_to_transform_system,
+    position_changed_simd, rotation_changed_simd, BatchSyncBuffer, BatchSyncManager,
+    BatchSyncResource,
+};
 pub use collision_performance::{
     CollisionPerformanceMonitor, CollisionPerformanceStats, CollisionProfiler,
 };
 pub use dirty_tracker::{
     BatchSyncData, CachedPhysicsState, PhysicsDirty, PhysicsSyncConfig, PhysicsSyncStats,
+    optimized_physics_sync_system, transform_to_physics_sync_system,
 };
 pub use spatial_partition::{
     BVHTree, SpatialHash, SpatialPartitionManager, SpatialPartitionType,
 };
-
-#[cfg(feature = "physics_2d")]
-pub use dirty_tracker::{optimized_physics_sync_system, transform_to_physics_sync_system};
 
 // 重新导出富领域对象（推荐使用）
 pub use crate::domain::physics::{

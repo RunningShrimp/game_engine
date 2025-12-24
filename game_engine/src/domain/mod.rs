@@ -4,6 +4,7 @@
 pub mod actor;
 pub mod audio;
 pub mod entity;
+pub mod event_bus;
 pub mod event_registry;
 pub mod event_sourcing;
 pub mod events;
@@ -39,6 +40,12 @@ pub use services::{
 };
 pub use value_objects::{
     Duration, Mass, Position, Rotation, Scale, Transform as DomainTransform, Velocity, Volume,
+};
+
+// 事件总线导出
+pub use event_bus::{
+    EnhancedEventBus, EventBusResource, EventBusStats, EventPriority,
+    EventQueue, EventSystemSet, event_publish_system, publish_event,
 };
 
 // Re-export event registry

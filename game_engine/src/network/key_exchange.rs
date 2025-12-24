@@ -38,6 +38,26 @@ use {
 #[cfg(not(any(feature = "secure_key_exchange", feature = "insecure_key_exchange")))]
 compile_error!("Either 'secure_key_exchange' or 'insecure_key_exchange' feature must be enabled");
 
+/// 统一的密钥交换 trait
+///
+/// 定义密钥交换协议的标准接口，允许使用不同的密钥交换算法实现。
+pub trait KeyExchangeProtocol {
+    /// 获取本地公钥（32字节）
+    fn public_key(&self) -> [u8; 32];
+
+    /// 从对方公钥和本地私钥计算共享密钥
+    ///
+    /// # 参数
+    /// - `peer_public_key`: 对方的公钥（32字节）
+    ///
+    /// # 返回
+    /// 包含共享密钥、加密密钥和认证密钥的 SharedSecret
+    fn compute_shared_secret(&self, peer_public_key: [u8; 32]) -> SharedSecret;
+
+    /// 获取本地密钥对的可选引用
+    fn keypair(&self) -> Option<&KeyPair>;
+}
+
 
 /// 密钥对
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -312,6 +332,47 @@ impl KeyExchange {
     /// 获取本地密钥对
     pub fn keypair(&self) -> &KeyPair {
         &self.local_keypair
+    }
+}
+
+impl KeyExchangeProtocol for KeyExchange {
+    fn public_key(&self) -> [u8; 32] {
+        self.local_keypair.public_key
+    }
+
+    fn compute_shared_secret(&self, peer_public_key: [u8; 32]) -> SharedSecret {
+        #[cfg(feature = "secure_key_exchange")]
+        {
+            // 使用真正的X25519 ECDH计算共享密钥
+            let static_secret = StaticSecret::from(self.local_keypair.private_key);
+            let peer_public = PublicKey::from(peer_public_key);
+            
+            // 执行ECDH密钥交换
+            let shared_secret_bytes = static_secret.diffie_hellman(&peer_public);
+            let shared_secret = shared_secret_bytes.to_bytes();
+
+            SharedSecret::derive(shared_secret)
+        }
+
+        #[cfg(not(feature = "secure_key_exchange"))]
+        {
+            // 向后兼容：使用SHA256的简化实现（仅用于测试）
+            eprintln!("WARNING: Using simplified key exchange computation! Replace with proper ECDH in production.");
+
+            let mut hasher = Sha256::new();
+            hasher.update(&self.local_keypair.private_key);
+            hasher.update(&peer_public_key);
+            let digest = hasher.finalize();
+
+            let mut shared_secret = [0u8; 32];
+            shared_secret.copy_from_slice(&digest[..32]);
+
+            SharedSecret::derive(shared_secret)
+        }
+    }
+
+    fn keypair(&self) -> Option<&KeyPair> {
+        Some(&self.local_keypair)
     }
 }
 

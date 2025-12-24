@@ -3,11 +3,13 @@
 //  提供高性能的GPU资源管理，包括Staging Buffer、内存分配和上传队列。
 
 pub mod atlas;
+pub mod async_upload;
 pub mod coroutine_loader;
 pub mod dependency_manager;
 pub mod enhanced_staging_buffer;
 pub mod events;
 pub mod font;
+pub mod gltf_loader;
 pub mod hot_reload;
 pub mod manager;
 pub mod preload_manager;
@@ -18,6 +20,7 @@ pub mod preallocation_manager;
 pub mod ring_buffer_pool;
 pub mod runtime;
 pub mod staging_buffer;
+pub mod texture_compression;
 #[cfg(test)]
 mod tests;
 pub mod upload_queue;
@@ -53,6 +56,11 @@ pub use ring_buffer_pool::{
 };
 pub use staging_buffer::{PoolStats, StagingBuffer, StagingBufferPool};
 pub use upload_queue::{TextureUploadBuilder, TextureUploadInfo, UploadQueue, UploadStats};
+pub use async_upload::{AsyncUploader, UploadTask};
+pub use texture_compression::{
+    CompressionError, CompressionFormat, CompressedTexture, BC1Format, BC2Format, BC3Format,
+    TextureCompressionManager, TextureCompression,
+};
 
 // Re-export Dependency Manager components
 pub use dependency_manager::{

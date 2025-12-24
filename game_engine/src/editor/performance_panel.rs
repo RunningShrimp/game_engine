@@ -1,4 +1,4 @@
-use crate::performance::profiling::Profiler;
+use crate::profiling::Profiler;
 use std::collections::VecDeque;
 
 /// 性能指标类型

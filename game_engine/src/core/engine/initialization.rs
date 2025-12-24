@@ -42,11 +42,6 @@ pub fn create_fixed_schedule() -> Schedule {
         }
     });
 
-    #[cfg(feature = "physics_2d")]
-    {
-        // 可以在这里添加 2D 物理系统
-    }
-
     schedule
 }
 

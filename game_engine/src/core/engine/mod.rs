@@ -9,6 +9,7 @@ pub mod engine;
 mod engine_tests;
 pub mod game_loop;
 pub mod game_loop_fixed;
+pub mod game_loop_coroutine;
 pub mod initialization;
 pub mod input_handler;
 pub mod renderer;

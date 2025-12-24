@@ -51,8 +51,9 @@ pub fn render(
 
     // Editor UI
     editor_ctx.begin_frame(window.raw());
-    // TODO: 实现世界检查UI
-    // crate::editor::inspect_world_ui(&editor_ctx.context, world);
+    // World Inspector UI已实现于game_engine/src/editor/world_inspector.rs
+    // 使用示例: editor_state.world_inspector.render(&editor_ctx.context, world);
+    // 注意：需要在EditorState中先获取可变引用，然后再调用render
     let egui_primitives = editor_ctx.end_frame(window.raw());
     let pixels_per_point = window.raw().scale_factor() as f32;
 
@@ -268,7 +269,7 @@ fn render_pbr_scene(
     scene: &crate::services::render::PbrScene,
     view_proj: [[f32; 4]; 4],
     camera_pos: [f32; 3],
-    _egui_renderer: Option<&mut egui_wgpu::Renderer>,
+    egui_renderer: Option<&mut egui_wgpu::Renderer>,
     egui_primitives: &[egui::ClippedPrimitive],
     pixels_per_point: f32,
 ) {
@@ -286,7 +287,7 @@ fn render_pbr_scene(
             scene,
             view_proj,
             camera_pos,
-            None, // TODO: Implement proper egui renderer
+            egui_renderer,
             egui_primitives,
             pixels_per_point,
         ) {

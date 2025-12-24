@@ -1,0 +1,289 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  # ============================================
+  # 代码质量检查
+  # ============================================
+  quality-check:
+    name: 代码质量检查
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout 代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Rust 工具链
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          components: rustfmt, clippy
+          override: true
+
+      - name: 缓存 Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: 代码格式检查
+        run: cargo fmt --all -- --check
+
+      - name: Clippy 检查
+        run: cargo clippy --workspace -- -D warnings
+
+      - name: 运行 Doc 测试
+        run: cargo doc --no-deps --workspace
+
+  # ============================================
+  # 测试任务
+  # ============================================
+  test:
+    name: 测试
+    needs: quality-check
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        rust: [stable]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout 代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Rust 工具链
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.rust }}
+          override: true
+
+      - name: 缓存 Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-${{ matrix.rust }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.rust }}-cargo-
+
+      - name: 运行单元测试
+        run: cargo test --workspace --lib
+
+      - name: 运行集成测试
+        run: cargo test --workspace --test '*'
+
+      - name: 上传测试结果
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.os }}
+          path: |
+            **/test-result.xml
+            target/debug/deps/
+
+  # ============================================
+  # 代码覆盖率
+  # ============================================
+  coverage:
+    name: 代码覆盖率
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout 代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Rust 工具链
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+
+      - name: 安装 tarpaulin
+        run: cargo install cargo-tarpaulin
+
+      - name: 生成覆盖率报告
+        run: |
+          cargo tarpaulin \
+            --workspace \
+            --out Lcov \
+            --output-dir target/coverage \
+            --exclude-files "*/tests/*" \
+            --exclude-files "*/benches/*" \
+            --exclude-files "*/examples/*"
+
+      - name: 上传覆盖率到 Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./target/coverage/lcov.info
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: true
+
+      - name: 上传覆盖率报告
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: target/coverage/
+
+  # ============================================
+  # 构建任务
+  # ============================================
+  build:
+    name: 构建
+    needs: test
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        target:
+          - x86_64-unknown-linux-gnu
+          - x86_64-apple-darwin
+          - x86_64-pc-windows-msvc
+        exclude:
+          - os: ubuntu-latest
+            target: x86_64-apple-darwin
+          - os: ubuntu-latest
+            target: x86_64-pc-windows-msvc
+          - os: macos-latest
+            target: x86_64-unknown-linux-gnu
+          - os: macos-latest
+            target: x86_64-pc-windows-msvc
+          - os: windows-latest
+            target: x86_64-unknown-linux-gnu
+          - os: windows-latest
+            target: x86_64-apple-darwin
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout 代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Rust 工具链
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          target: ${{ matrix.target }}
+          override: true
+
+      - name: 缓存 Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-${{ matrix.target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.target }}-cargo-
+
+      - name: 构建 Release
+        run: cargo build --workspace --release --target ${{ matrix.target }}
+
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: binary-${{ matrix.os }}-${{ matrix.target }}
+          path: target/${{ matrix.target }}/release/*.a
+          retention-days: 7
+
+  # ============================================
+  # 性能基准测试
+  # ============================================
+  benchmark:
+    name: 性能基准测试
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout 代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Rust 工具链
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+
+      - name: 缓存 Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-benchmark-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: 运行性能基准测试
+        run: |
+          cargo test --workspace --release --bench --test-threads=1 \
+            -- --nocapture --quiet 2>&1 | tee benchmark-results.txt
+
+      - name: 存储基准测试结果
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          tool: 'cargo'
+          output-file-path: benchmark-results.txt
+          alert-threshold: '120%'
+          comment-on-alert: true
+          fail-on-alert: false
+          alert-comment-cc-users: '@wangbiao'
+
+      - name: 上传基准测试结果
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: benchmark-results.txt
+
+  # ============================================
+  # 文档生成
+  # ============================================
+  docs:
+    name: 生成文档
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout 代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Rust 工具链
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+
+      - name: 生成文档
+        run: |
+          cargo doc --workspace --no-deps \
+            --document-private-items \
+            --enable-index-page
+
+      - name: 上传文档
+        uses: actions/upload-artifact@v4
+        with:
+          name: docs
+          path: target/doc/
+
+      - name: 部署文档到 GitHub Pages
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./target/doc
