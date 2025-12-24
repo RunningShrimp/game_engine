@@ -95,7 +95,7 @@ impl KeyPair {
         // 生成随机私钥
         // 使用 ThreadRng 生成随机字节，然后创建 StaticSecret
         use rand::RngCore;
-        let mut rng = rand::rngs::ThreadRng::default();
+        let mut rng = rand::thread_rng();
         let mut private_key_bytes = [0u8; 32];
         rng.fill_bytes(&mut private_key_bytes);
         
@@ -124,7 +124,8 @@ impl KeyPair {
     fn generate_insecure() -> Self {
         eprintln!("WARNING: Using INSECURE simplified key exchange implementation!");
 
-        let mut rng = rand::rngs::ThreadRng::default();
+        use rand::RngCore;
+        let mut rng = rand::thread_rng();
 
         // 生成私钥（32字节随机数）
         let mut private_key = [0u8; 32];

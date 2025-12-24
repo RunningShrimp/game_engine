@@ -29,6 +29,7 @@ pub mod rendering;
 pub mod sync;
 pub mod tracing_metrics;
 pub mod metrics_storage;
+pub mod alerting;
 
 // 重新导出引擎核心模块
 pub use benchmark::*;

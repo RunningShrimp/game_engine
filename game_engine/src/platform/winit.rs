@@ -8,7 +8,13 @@ use winit::{
 };
 
 pub struct WinitWindow {
-    window: Arc<Window>,
+    window: Option<Arc<Window>>,
+}
+
+impl Default for WinitWindow {
+    fn default() -> Self {
+        Self { window: None }
+    }
 }
 
 impl WinitWindow {
@@ -18,7 +24,7 @@ impl WinitWindow {
                 WindowAttributes::default().with_inner_size(PhysicalSize::new(size.0, size.1)),
             )
             .unwrap();
-        Self { window: Arc::new(win) }
+        Self { window: Some(Arc::new(win)) }
     }
 
     pub fn try_new(event_loop: &ActiveEventLoop, size: (u32, u32)) -> Option<Self> {
@@ -28,68 +34,82 @@ impl WinitWindow {
             )
             .ok()?;
         Some(Self {
-            window: Arc::new(win),
+            window: Some(Arc::new(win)),
         })
     }
     pub fn raw(&self) -> &Window {
-        &*self.window
+        self.window.as_ref().expect("Window not initialized")
     }
 
     pub fn id(&self) -> winit::window::WindowId {
-        self.window.id()
+        self.raw().id()
     }
 
     pub fn request_redraw(&self) {
-        self.window.request_redraw();
+        self.raw().request_redraw();
     }
 
     pub fn outer_size(&self) -> winit::dpi::PhysicalSize<u32> {
-        self.window.outer_size()
+        self.raw().outer_size()
     }
 
     /// 从Arc<Window>创建WinitWindow
     ///
     /// 用于在事件循环中从已存在的窗口创建WinitWindow包装器
     pub fn from_arc(window: Arc<Window>) -> Self {
-        Self { window }
+        Self { window: Some(window) }
     }
 }
 
 impl crate::platform::Window for WinitWindow {
     fn size(&self) -> (u32, u32) {
-        let size = self.window.inner_size();
+        if self.window.is_none() {
+            return (800, 600);
+        }
+        let size = self.raw().inner_size();
         (size.width, size.height)
     }
     fn scale_factor(&self) -> f64 {
-        self.window.scale_factor()
+        if self.window.is_none() {
+            return 1.0;
+        }
+        self.raw().scale_factor()
     }
     fn request_redraw(&self) {
-        self.window.request_redraw();
+        if self.window.is_some() {
+            self.raw().request_redraw();
+        }
     }
     fn set_title(&self, title: &str) {
-        self.window.set_title(title);
+        if self.window.is_some() {
+            self.raw().set_title(title);
+        }
     }
     fn set_fullscreen(&self, fullscreen: bool) {
-        if fullscreen {
-            self.window
-                .set_fullscreen(Some(Fullscreen::Borderless(None)));
-        } else {
-            self.window.set_fullscreen(None);
+        if self.window.is_some() {
+            if fullscreen {
+                self.raw()
+                    .set_fullscreen(Some(Fullscreen::Borderless(None)));
+            } else {
+                self.raw().set_fullscreen(None);
+            }
         }
     }
     fn set_cursor_visible(&self, visible: bool) {
-        self.window.set_cursor_visible(visible);
+        if self.window.is_some() {
+            self.raw().set_cursor_visible(visible);
+        }
     }
 
     #[cfg(not(target_arch = "wasm32"))]
     fn raw_window_handle(&self) -> raw_window_handle::RawWindowHandle {
         use raw_window_handle::HasWindowHandle;
-        self.window.window_handle().unwrap().as_raw()
+        self.raw().window_handle().unwrap().as_raw()
     }
 
     #[cfg(not(target_arch = "wasm32"))]
     fn raw_display_handle(&self) -> raw_window_handle::RawDisplayHandle {
         use raw_window_handle::HasDisplayHandle;
-        self.window.display_handle().unwrap().as_raw()
+        self.raw().display_handle().unwrap().as_raw()
     }
 }

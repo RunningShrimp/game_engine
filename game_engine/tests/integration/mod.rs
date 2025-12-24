@@ -18,4 +18,6 @@ mod performance_regression_test;
 mod instance_batch_performance_test;
 mod ecs_scheduling_performance_test;
 mod physics_spatial_partition_test;
+mod ecs_benchmark_test;
+mod physics_benchmark_test;
 

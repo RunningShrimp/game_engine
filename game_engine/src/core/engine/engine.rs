@@ -3,6 +3,7 @@
 //! 提供游戏引擎的主入口和运行循环。
 
 use crate::config::EngineConfig;
+use crate::core::engine::game_loop_coroutine::CoroutineGameLoop;
 
 /// 游戏引擎主结构
 ///
@@ -138,9 +139,25 @@ impl Engine {
 
         tracing::info!("Engine setup complete, starting event loop...");
 
+        // 初始化 Tokio 运行时（用于协程支持）
+        let runtime = tokio::runtime::Builder::new_multi_thread()
+            .worker_threads(4)
+            .enable_all()
+            .build()
+            .expect("Failed to create Tokio runtime");
+
+        let _guard = runtime.enter();
+
+        // 创建协程游戏循环
+        let mut coroutine_game_loop = CoroutineGameLoop::new(
+            std::time::Duration::from_secs_f64(1.0 / 60.0),
+        );
+
+        tracing::info!("Coroutine game loop initialized");
+
         // 时间管理 - 使用固定时间步长循环管理器
         let mut last_time = std::time::Instant::now();
-        let mut fixed_timestep_loop = crate::core::engine::game_loop_fixed::FixedTimestepLoop::new(
+        let _fixed_timestep_loop = crate::core::engine::game_loop_fixed::FixedTimestepLoop::new(
             std::time::Duration::from_secs_f64(1.0 / 60.0),
         );
 
@@ -178,11 +195,11 @@ impl Engine {
                         WindowEvent::RedrawRequested => {
                             // 计算帧时间
                             let current_time = std::time::Instant::now();
-                            let frame_time = current_time.duration_since(last_time);
+                            let _frame_time = current_time.duration_since(last_time);
                             last_time = current_time;
 
-                            // 使用固定时间步长循环管理器更新
-                            let alpha = fixed_timestep_loop.update(frame_time, |dt| {
+                            // 使用协程游戏循环更新固定时间步
+                            let alpha = coroutine_game_loop.update_fixed_step(&mut world, |world, dt| {
                                 // 更新固定时间步资源
                                 if let Some(mut time) = world.get_resource_mut::<crate::ecs::Time>() {
                                     time.delta_seconds = dt.as_secs_f32();
@@ -190,7 +207,7 @@ impl Engine {
                                 }
 
                                 // 运行固定时间步调度器
-                                fixed_schedule.run(&mut world);
+                                fixed_schedule.run(world);
                             });
 
                             // 更新插值因子（用于平滑渲染）
@@ -200,6 +217,20 @@ impl Engine {
 
                             // 运行可变时间步调度器
                             update_schedule.run(&mut world);
+
+                            // 示例：定期生成异步任务（每60帧生成一次）
+                            // 在实际游戏中，这里可以用于AI寻路、资源加载等异步任务
+                            if let Some(time) = world.get_resource::<crate::ecs::Time>() {
+                                let frame_count = (time.elapsed_seconds * 60.0) as u64;
+                                if frame_count % 60 == 0 {
+                                    let _world_ptr = &world as *const _ as *mut bevy_ecs::world::World;
+                                    let _ = runtime.spawn(async move {
+                                        tracing::debug!("Async task running in background");
+                                        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+                                        tracing::debug!("Async task completed");
+                                    });
+                                }
+                            }
 
                             // 创建WinitWindow包装器用于渲染
                             let winit_window = crate::platform::winit::WinitWindow::from_arc(winit_window_arc.clone());

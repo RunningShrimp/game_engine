@@ -173,7 +173,7 @@ mod tests {
 
         let scene = GltfScene::from_bytes(
             gltf_data.to_vec(),
-            serde_json::from_str(gltf_data).ok(),
+            serde_json::from_str(std::str::from_utf8(gltf_data).unwrap()).ok(),
         );
 
         assert_eq!(scene.scene_count(), 1);

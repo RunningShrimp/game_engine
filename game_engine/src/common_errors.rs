@@ -548,9 +548,9 @@ mod tests {
     #[test]
     fn test_legacy_error_conversion() {
         // 测试从旧的EngineError转换
-        let old_err = crate::error::EngineError::Init("test".to_string());
+        let old_err = crate::error::EngineError::general("test");
         let new_err: GameEngineError = old_err.into();
-        assert!(matches!(new_err, GameEngineError::Infrastructure(InfrastructureError::Init(_))));
+        assert!(matches!(new_err, GameEngineError::Infrastructure(InfrastructureError::General(_))));
 
         // 测试从旧的DomainError转换
         let old_domain_err = crate::domain::errors::DomainError::General("test".to_string());

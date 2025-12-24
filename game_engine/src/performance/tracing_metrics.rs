@@ -11,6 +11,7 @@ use std::time::{Duration, Instant};
 use crate::performance::monitoring::system_monitor::SystemPerformanceMonitor;
 use crate::profiling::{Bottleneck, ContinuousProfiler, PerformanceAnalysis};
 use crate::performance::metrics_storage::MetricsStorage;
+use crate::performance::alerting::PerformanceAlertSystem;
 
 /// 统一的tracing和metrics管理器
 #[derive(Debug)]
@@ -20,6 +21,8 @@ pub struct TracingMetricsManager {
     continuous_profiler: Option<ContinuousProfiler>,
     /// Metrics存储系统
     metrics_storage: Arc<MetricsStorage>,
+    /// 性能告警系统
+    alert_system: PerformanceAlertSystem,
 }
 
 impl TracingMetricsManager {
@@ -30,6 +33,7 @@ impl TracingMetricsManager {
             start_time: Instant::now(),
             continuous_profiler: Some(ContinuousProfiler::new(300)),
             metrics_storage: Arc::new(MetricsStorage::new(1000)),
+            alert_system: PerformanceAlertSystem::new(),
         }
     }
 
@@ -148,6 +152,32 @@ impl TracingMetricsManager {
         }
     }
 
+    /// 更新性能指标并检查告警
+    pub fn update_and_check_alerts(&mut self) {
+        let snapshot = self.get_performance_snapshot();
+        self.alert_system.update(&snapshot);
+    }
+
+    /// 获取告警系统
+    pub fn alert_system(&self) -> &PerformanceAlertSystem {
+        &self.alert_system
+    }
+
+    /// 获取可变告警系统
+    pub fn alert_system_mut(&mut self) -> &mut PerformanceAlertSystem {
+        &mut self.alert_system
+    }
+
+    /// 获取最近的告警事件
+    pub fn get_recent_alerts(&self, limit: usize) -> Vec<crate::performance::alerting::AlertEvent> {
+        self.alert_system.get_recent_alerts(limit)
+    }
+
+    /// 获取告警统计
+    pub fn get_alert_statistics(&self) -> crate::performance::alerting::AlertStatistics {
+        self.alert_system.get_statistics()
+    }
+
     /// 记录帧时间
     pub fn record_frame_time(&self, frame_time: Duration) {
         self.record_metric("frame_time", frame_time.as_secs_f64() * 1000.0);
@@ -227,11 +257,11 @@ impl Default for TracingMetricsManager {
 }
 
 /// 全局tracing/metrics管理器实例
-static TRACING_METRICS_MANAGER: std::sync::OnceLock<TracingMetricsManager> = std::sync::OnceLock::new();
+static TRACING_METRICS_MANAGER: std::sync::OnceLock<std::sync::Mutex<TracingMetricsManager>> = std::sync::OnceLock::new();
 
 /// 获取全局tracing/metrics管理器
-pub fn global_tracing_metrics() -> &'static TracingMetricsManager {
-    TRACING_METRICS_MANAGER.get_or_init(|| TracingMetricsManager::new())
+pub fn global_tracing_metrics() -> &'static std::sync::Mutex<TracingMetricsManager> {
+    TRACING_METRICS_MANAGER.get_or_init(|| std::sync::Mutex::new(TracingMetricsManager::new()))
 }
 
 /// 初始化全局tracing/metrics系统
@@ -265,7 +295,25 @@ mod tests {
     #[test]
     fn test_global_manager() {
         let manager = global_tracing_metrics();
-        let uptime = manager.uptime();
-        assert!(uptime >= Duration::from_secs(0));
+        if let Ok(m) = manager.lock() {
+            let uptime = m.uptime();
+            assert!(uptime >= Duration::from_secs(0));
+        }
+    }
+
+    #[test]
+    fn test_alert_system_integration() {
+        let mut manager = TracingMetricsManager::new();
+        
+        // 更新性能指标并检查告警
+        manager.update_and_check_alerts();
+        
+        // 获取告警统计
+        let stats = manager.get_alert_statistics();
+        assert_eq!(stats.total_alerts, 0);
+        
+        // 获取最近的告警
+        let alerts = manager.get_recent_alerts(10);
+        assert!(alerts.is_empty());
     }
 }

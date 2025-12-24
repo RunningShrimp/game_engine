@@ -719,7 +719,7 @@ mod tests {
     #[test]
     fn test_macros() {
         let config = ProfilingServiceConfig::default();
-        let service = ProfilingService::new(config).unwrap();
+        let mut service = ProfilingService::new(config).unwrap();
         service.start().unwrap();
 
         // 测试指标记录宏

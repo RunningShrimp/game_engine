@@ -22,11 +22,17 @@ pub mod antialiasing;
 pub mod bloom;
 pub mod ssao;
 pub mod tonemap;
+pub mod motion_blur;
+pub mod depth_of_field;
+pub mod color_correction;
 
 pub use antialiasing::{AntialiasingMode, FxaaPass, FxaaQuality, TaaPass};
 pub use bloom::BloomPass;
 pub use ssao::SsaoPass;
 pub use tonemap::{TonemapOperator, TonemapPass};
+pub use motion_blur::MotionBlurPass;
+pub use depth_of_field::DepthOfFieldPass;
+pub use color_correction::{ColorCorrectionPass, ColorCorrectionUniforms};
 
 use wgpu::TextureFormat;
 
@@ -64,6 +70,43 @@ pub struct PostProcessConfig {
     pub exposure: f32,
     /// Gamma 校正值
     pub gamma: f32,
+
+    /// 是否启用运动模糊
+    pub motion_blur_enabled: bool,
+    /// 运动模糊强度 (0.0 - 1.0)
+    pub motion_blur_intensity: f32,
+    /// 运动模糊最大采样数 (4 - 32)
+    pub motion_blur_max_samples: u32,
+
+    /// 是否启用景深
+    pub depth_of_field_enabled: bool,
+    /// 焦点距离 (0.0 - 100.0)
+    pub focus_distance: f32,
+    /// 光圈大小 (0.0 - 1.0)
+    pub aperture: f32,
+    /// 近景模糊强度 (0.0 - 10.0)
+    pub near_blur: f32,
+    /// 远景模糊强度 (0.0 - 10.0)
+    pub far_blur: f32,
+    /// 最大模糊半径 (0.0 - 20.0)
+    pub max_blur_radius: f32,
+
+    /// 是否启用色彩校正
+    pub color_correction_enabled: bool,
+    /// 亮度调整 (-1.0 到 1.0)
+    pub brightness: f32,
+    /// 对比度调整 (0.0 到 2.0)
+    pub contrast: f32,
+    /// 饱和度调整 (0.0 到 2.0)
+    pub saturation: f32,
+    /// 色调偏移 (-180.0 到 180.0 度)
+    pub hue_shift: f32,
+    /// 色差强度 (0.0 到 1.0)
+    pub chromatic_aberration: f32,
+    /// 暗角强度 (0.0 到 1.0)
+    pub vignette_intensity: f32,
+    /// 暗角圆度 (0.0 到 1.0)
+    pub vignette_roundness: f32,
 }
 
 impl_default!(PostProcessConfig {
@@ -81,6 +124,23 @@ impl_default!(PostProcessConfig {
     tonemap_operator: TonemapOperator::ACES,
     exposure: 1.0,
     gamma: 2.2,
+    motion_blur_enabled: false,
+    motion_blur_intensity: 0.3,
+    motion_blur_max_samples: 16,
+    depth_of_field_enabled: false,
+    focus_distance: 10.0,
+    aperture: 0.5,
+    near_blur: 1.0,
+    far_blur: 2.0,
+    max_blur_radius: 10.0,
+    color_correction_enabled: false,
+    brightness: 0.0,
+    contrast: 1.0,
+    saturation: 1.0,
+    hue_shift: 0.0,
+    chromatic_aberration: 0.0,
+    vignette_intensity: 0.0,
+    vignette_roundness: 0.5,
 });
 
 /// 后处理 Uniform 数据
@@ -118,6 +178,15 @@ pub struct PostProcessPipeline {
 
     /// Tonemap 通道
     tonemap_pass: TonemapPass,
+
+    /// 运动模糊通道
+    motion_blur_pass: MotionBlurPass,
+
+    /// 景深通道
+    depth_of_field_pass: DepthOfFieldPass,
+
+    /// 色彩校正通道
+    color_correction_pass: ColorCorrectionPass,
 
     /// Uniform 缓冲区
     uniform_buffer: wgpu::Buffer,
@@ -201,12 +270,18 @@ impl PostProcessPipeline {
         let bloom_pass = BloomPass::new(device, width, height);
         let ssao_pass = SsaoPass::new(device, width, height);
         let tonemap_pass = TonemapPass::new(device, output_format);
+        let motion_blur_pass = MotionBlurPass::new(device, output_format);
+        let depth_of_field_pass = DepthOfFieldPass::new(device, output_format);
+        let color_correction_pass = ColorCorrectionPass::new(device, output_format);
 
         Self {
             config: PostProcessConfig::default(),
             bloom_pass,
             ssao_pass,
             tonemap_pass,
+            motion_blur_pass,
+            depth_of_field_pass,
+            color_correction_pass,
             uniform_buffer,
             uniform_bind_group,
             hdr_texture,
@@ -273,7 +348,8 @@ impl PostProcessPipeline {
     /// - `device`: GPU 设备
     /// - `queue`: 命令队列
     /// - `scene_view`: 场景纹理视图（输入）
-    /// - `depth_view`: 深度纹理视图（用于 SSAO）
+    /// - `depth_view`: 深度纹理视图（用于 SSAO 和景深）
+    /// - `motion_vector_view`: 运动向量纹理视图（用于运动模糊）
     /// - `output_view`: 输出纹理视图
     pub fn render(
         &self,
@@ -282,6 +358,7 @@ impl PostProcessPipeline {
         queue: &wgpu::Queue,
         scene_view: &wgpu::TextureView,
         depth_view: Option<&wgpu::TextureView>,
+        motion_vector_view: Option<&wgpu::TextureView>,
         output_view: &wgpu::TextureView,
     ) {
         // 更新 uniforms
@@ -320,17 +397,74 @@ impl PostProcessPipeline {
             current_input = self.bloom_pass.output_view();
         }
 
-        // 3. Tonemap 通道（最终输出）
-        self.tonemap_pass.render(
-            encoder,
-            device,
-            queue,
-            current_input,
-            output_view,
-            self.config.exposure,
-            self.config.gamma,
-            self.config.tonemap_operator,
-        );
+        // 3. 运动模糊通道
+        if self.config.motion_blur_enabled {
+            if let Some(motion_vectors) = motion_vector_view {
+                self.motion_blur_pass.render(
+                    encoder,
+                    device,
+                    queue,
+                    current_input,
+                    motion_vectors,
+                    current_input,
+                    self.width,
+                    self.height,
+                    self.config.motion_blur_intensity,
+                    self.config.motion_blur_max_samples,
+                );
+            }
+        }
+
+        // 4. 景深通道
+        if self.config.depth_of_field_enabled {
+            if let Some(depth) = depth_view {
+                self.depth_of_field_pass.render(
+                    encoder,
+                    device,
+                    queue,
+                    current_input,
+                    depth,
+                    current_input,
+                    self.width,
+                    self.height,
+                    self.config.focus_distance,
+                    self.config.aperture,
+                    self.config.near_blur,
+                    self.config.far_blur,
+                    self.config.max_blur_radius,
+                );
+            }
+        }
+
+        // 5. 色彩校正通道
+        if self.config.color_correction_enabled {
+            self.color_correction_pass.render(
+                encoder,
+                device,
+                queue,
+                current_input,
+                output_view,
+                self.config.brightness,
+                self.config.contrast,
+                self.config.saturation,
+                self.config.hue_shift,
+                self.config.chromatic_aberration,
+                self.config.vignette_intensity,
+                self.config.vignette_roundness,
+            );
+        } else {
+            // 6. Tonemap 通道（最终输出）
+            self.tonemap_pass.render(
+                encoder,
+                device,
+                queue,
+                current_input,
+                output_view,
+                self.config.exposure,
+                self.config.gamma,
+                self.config.tonemap_operator,
+            );
+        }
     }
 
     /// 获取 HDR 纹理视图（用于渲染场景）
@@ -378,5 +512,86 @@ impl PostProcessPipeline {
     /// 设置 Gamma 值
     pub fn set_gamma(&mut self, gamma: f32) {
         self.config.gamma = gamma.clamp(1.0, 3.0);
+    }
+
+    /// 设置运动模糊启用状态
+    pub fn set_motion_blur_enabled(&mut self, enabled: bool) {
+        self.config.motion_blur_enabled = enabled;
+    }
+
+    /// 设置运动模糊强度
+    pub fn set_motion_blur_intensity(&mut self, intensity: f32) {
+        self.config.motion_blur_intensity = intensity.clamp(0.0, 1.0);
+    }
+
+    /// 设置运动模糊最大采样数
+    pub fn set_motion_blur_max_samples(&mut self, max_samples: u32) {
+        self.config.motion_blur_max_samples = max_samples.clamp(4, 32);
+    }
+
+    /// 设置景深启用状态
+    pub fn set_depth_of_field_enabled(&mut self, enabled: bool) {
+        self.config.depth_of_field_enabled = enabled;
+    }
+
+    /// 设置景深焦点距离
+    pub fn set_focus_distance(&mut self, distance: f32) {
+        self.config.focus_distance = distance.max(0.0);
+    }
+
+    /// 设置景深光圈大小
+    pub fn set_aperture(&mut self, aperture: f32) {
+        self.config.aperture = aperture.clamp(0.0, 1.0);
+    }
+
+    /// 设置景深模糊强度
+    pub fn set_depth_of_field_blur(&mut self, near_blur: f32, far_blur: f32) {
+        self.config.near_blur = near_blur.max(0.0);
+        self.config.far_blur = far_blur.max(0.0);
+    }
+
+    /// 设置最大模糊半径
+    pub fn set_max_blur_radius(&mut self, radius: f32) {
+        self.config.max_blur_radius = radius.clamp(0.0, 20.0);
+    }
+
+    /// 设置色彩校正启用状态
+    pub fn set_color_correction_enabled(&mut self, enabled: bool) {
+        self.config.color_correction_enabled = enabled;
+    }
+
+    /// 设置亮度
+    pub fn set_brightness(&mut self, brightness: f32) {
+        self.config.brightness = brightness.clamp(-1.0, 1.0);
+    }
+
+    /// 设置对比度
+    pub fn set_contrast(&mut self, contrast: f32) {
+        self.config.contrast = contrast.clamp(0.0, 2.0);
+    }
+
+    /// 设置饱和度
+    pub fn set_saturation(&mut self, saturation: f32) {
+        self.config.saturation = saturation.clamp(0.0, 2.0);
+    }
+
+    /// 设置色调偏移
+    pub fn set_hue_shift(&mut self, hue_shift: f32) {
+        self.config.hue_shift = hue_shift.clamp(-180.0, 180.0);
+    }
+
+    /// 设置色差强度
+    pub fn set_chromatic_aberration(&mut self, intensity: f32) {
+        self.config.chromatic_aberration = intensity.clamp(0.0, 1.0);
+    }
+
+    /// 设置暗角强度
+    pub fn set_vignette_intensity(&mut self, intensity: f32) {
+        self.config.vignette_intensity = intensity.clamp(0.0, 1.0);
+    }
+
+    /// 设置暗角圆度
+    pub fn set_vignette_roundness(&mut self, roundness: f32) {
+        self.config.vignette_roundness = roundness.clamp(0.0, 1.0);
     }
 }

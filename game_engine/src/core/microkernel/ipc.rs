@@ -135,7 +135,7 @@ impl IpcChannel {
     }
 
     pub async fn request(&self, message: Message) -> Result<Response, IpcError> {
-        let (request, receiver) = Request::new(message.clone());
+        let (_request, receiver) = Request::new(message.clone());
 
         self.sender
             .send(message)
@@ -154,7 +154,7 @@ impl IpcChannel {
         Ok(None)
     }
 
-    async fn receive_loop(mut channel: IpcChannel, mut receiver: mpsc::UnboundedReceiver<Message>) {
+    async fn receive_loop(channel: IpcChannel, mut receiver: mpsc::UnboundedReceiver<Message>) {
         while let Some(message) = receiver.recv().await {
             let message_id = message.id.clone();
 

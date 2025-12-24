@@ -1,6 +1,8 @@
 pub mod hardware_info;
 pub mod power_aware;
 pub mod winit;
+pub mod adapter;
+pub mod native_input;
 
 use thiserror::Error;
 

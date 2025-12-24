@@ -33,9 +33,11 @@ use warp::ws::{Message, WebSocket};
 #[cfg(feature = "profiling")]
 use futures::{SinkExt, StreamExt};
 #[cfg(feature = "profiling")]
+use futures::stream::SplitSink;
+#[cfg(feature = "profiling")]
 use tokio::time::interval;
 
-use super::{ProfilingService, MetricId, MetricValue, Alert, AlertSeverity};
+use super::ProfilingService;
 
 /// 实时指标数据结构
 #[derive(Debug, Clone, serde::Serialize)]
@@ -284,7 +286,7 @@ pub struct DashboardService {
 #[derive(Debug, Clone)]
 pub struct WebSocketSender {
     /// 发送器
-    sender: Arc<Mutex<futures::sink::SplitSink<warp::ws::WebSocket, Message>>>,
+    sender: Arc<Mutex<SplitSink<warp::ws::WebSocket, Message>>>,
     /// 连接ID
     id: String,
 }
@@ -314,18 +316,6 @@ impl DashboardService {
         let websocket_connections = self.websocket_connections.clone();
         let config = self.config.clone();
 
-        // WebSocket路由
-        let ws_route = if config.enable_websocket {
-            Some(warp::path("ws")
-                .and(warp::ws())
-                .and(warp::any())
-                .and(with_profiling_service(profiling_service.clone()))
-                .and(with_websocket_connections(websocket_connections.clone()))
-                .and(ws_handler))
-        } else {
-            None
-        };
-
         // REST API路由
         let metrics_route = warp::path("api")
             .and(warp::path("metrics"))
@@ -353,8 +343,17 @@ impl DashboardService {
             .or(chart_route)
             .or(alerts_route);
 
-        // 如果有WebSocket路由，添加到路由中
-        let routes = if let Some(ws_route) = ws_route {
+        // 如果启用WebSocket，添加WebSocket路由
+        let routes = if config.enable_websocket {
+            let profiling_service_clone = profiling_service.clone();
+            let connections_clone = websocket_connections.clone();
+            let ws_route = warp::path("ws")
+                .and(warp::ws())
+                .map(move |ws: warp::ws::Ws| {
+                    let service = profiling_service_clone.clone();
+                    let connections = connections_clone.clone();
+                    ws.on_upgrade(move |socket| handle_websocket_connection(socket, service, connections))
+                });
             routes.or(ws_route)
         } else {
             routes
@@ -476,96 +475,53 @@ impl DashboardService {
 
     /// 收集渲染指标
     async fn collect_render_metrics(&self, service: &ProfilingService) -> Option<RenderMetrics> {
-        let fps = service.get_counter_value("render.frame_count")
-            .and_then(|count| {
-                let elapsed = service.get_counter_value("render.frame_time_ms")
-                    .map(|time| time / 1000.0)?; // 转换为秒
-                if elapsed > 0.0 {
-                    Some(count / elapsed)
-                } else {
-                    None
-                }
-            });
+        let metrics = service.get_realtime_metrics().ok()?;
         
-        let frame_time = service.get_counter_value("render.frame_time_ms");
-        let draw_calls = service.get_counter_value("render.draw_calls");
-        let instance_count = service.get_counter_value("render.instance_count");
-        let texture_loads = service.get_counter_value("render.texture_load_success");
-        let texture_failures = service.get_counter_value("render.texture_load_failures");
-
-        if fps.is_none() && frame_time.is_none() && draw_calls.is_none() {
-            return None;
-        }
-
         Some(RenderMetrics {
-            fps: fps.unwrap_or(0.0),
-            frame_time: frame_time.unwrap_or(0.0),
-            draw_calls: draw_calls.unwrap_or(0),
-            instance_count: instance_count.unwrap_or(0),
-            texture_loads: texture_loads.unwrap_or(0),
-            texture_load_failures: texture_failures.unwrap_or(0),
+            fps: metrics.fps,
+            frame_time: metrics.frame_time,
+            draw_calls: metrics.draw_calls,
+            instance_count: 0,
+            texture_loads: 0,
+            texture_load_failures: 0,
         })
     }
 
     /// 收集内存指标
     async fn collect_memory_metrics(&self, service: &ProfilingService) -> Option<MemoryMetrics> {
-        let allocated_mb = service.get_counter_value("memory.allocated_bytes")
-            .map(|bytes| bytes / (1024.0 * 1024.0));
+        let metrics = service.get_realtime_metrics().ok()?;
         
-        let buffer_count = service.get_counter_value("memory.buffer_count");
-        let texture_count = service.get_counter_value("memory.texture_count");
-        
-        // 假设我们有总内存大小（实际实现中需要从系统获取）
-        let total_memory_mb = 4096.0; // 4GB
-        let usage_percent = allocated_mb.map(|allocated| (allocated / total_memory_mb) * 100.0);
-
-        if allocated_mb.is_none() && buffer_count.is_none() && texture_count.is_none() {
-            return None;
-        }
+        let total_memory_mb = 4096.0;
+        let usage_percent = (metrics.memory_usage / total_memory_mb) * 100.0;
 
         Some(MemoryMetrics {
-            usage_percent: usage_percent.unwrap_or(0.0),
-            allocated_mb: allocated_mb.unwrap_or(0.0),
-            buffer_count: buffer_count.unwrap_or(0),
-            texture_count: texture_count.unwrap_or(0),
+            usage_percent,
+            allocated_mb: metrics.memory_usage,
+            buffer_count: 0,
+            texture_count: 0,
         })
     }
 
     /// 收集物理指标
     async fn collect_physics_metrics(&self, service: &ProfilingService) -> Option<PhysicsMetrics> {
-        let calc_time = service.get_counter_value("physics.calc_time_ms");
-        let collision_count = service.get_counter_value("physics.collision_count");
-        let sync_count = service.get_counter_value("physics.sync_operations");
-        let sleeping_skipped = service.get_counter_value("physics.sleeping_skips");
-
-        if calc_time.is_none() && collision_count.is_none() && sync_count.is_none() {
-            return None;
-        }
+        let metrics = service.get_realtime_metrics().ok()?;
 
         Some(PhysicsMetrics {
-            calc_time: calc_time.unwrap_or(0.0),
-            collision_count: collision_count.unwrap_or(0),
-            sync_count: sync_count.unwrap_or(0),
-            sleeping_skipped: sleeping_skipped.unwrap_or(0),
+            calc_time: metrics.physics_time,
+            collision_count: 0,
+            sync_count: 0,
+            sleeping_skipped: 0,
         })
     }
 
     /// 收集系统指标
     async fn collect_system_metrics(&self, service: &ProfilingService) -> Option<SystemMetrics> {
-        // 在实际实现中，这些值需要从系统API获取
-        let cpu_usage = service.get_counter_value("system.cpu_usage");
-        let gpu_usage = service.get_counter_value("system.gpu_usage");
-        let thread_count = service.get_counter_value("system.thread_count")
-            .map(|count| count as u32);
-
-        if cpu_usage.is_none() && gpu_usage.is_none() && thread_count.is_none() {
-            return None;
-        }
+        let metrics = service.get_realtime_metrics().ok()?;
 
         Some(SystemMetrics {
-            cpu_usage: cpu_usage.unwrap_or(0.0),
-            gpu_usage: gpu_usage.unwrap_or(0.0),
-            thread_count: thread_count.unwrap_or(0),
+            cpu_usage: metrics.cpu_usage,
+            gpu_usage: metrics.gpu_usage,
+            thread_count: 0,
         })
     }
 
@@ -581,56 +537,76 @@ impl DashboardService {
         let thresholds = &self.config.alert_thresholds;
 
         // 检查低帧率
-        if let Some(ref render) = render {
+        if let Some(render) = render {
             if render.fps < thresholds.low_fps_threshold {
                 alerts.push(AlertInfo {
+                    id: format!("low_fps_{}", current_timestamp()),
                     severity: "warning".to_string(),
                     message: format!("低帧率: {:.1} FPS", render.fps),
                     timestamp: current_timestamp(),
+                    metric_name: Some("fps".to_string()),
+                    current_value: Some(render.fps),
+                    threshold: Some(thresholds.low_fps_threshold),
                 });
             }
         }
 
         // 检查高帧时间
-        if let Some(ref render) = render {
+        if let Some(render) = render {
             if render.frame_time > thresholds.high_frame_time_threshold {
                 alerts.push(AlertInfo {
+                    id: format!("high_frame_time_{}", current_timestamp()),
                     severity: "warning".to_string(),
                     message: format!("高帧时间: {:.2} ms", render.frame_time),
                     timestamp: current_timestamp(),
+                    metric_name: Some("frame_time".to_string()),
+                    current_value: Some(render.frame_time),
+                    threshold: Some(thresholds.high_frame_time_threshold),
                 });
             }
         }
 
         // 检查高内存使用率
-        if let Some(ref memory) = memory {
+        if let Some(memory) = memory {
             if memory.usage_percent > thresholds.high_memory_threshold {
                 alerts.push(AlertInfo {
+                    id: format!("high_memory_{}", current_timestamp()),
                     severity: "error".to_string(),
                     message: format!("高内存使用率: {:.1}%", memory.usage_percent),
                     timestamp: current_timestamp(),
+                    metric_name: Some("memory_usage".to_string()),
+                    current_value: Some(memory.usage_percent),
+                    threshold: Some(thresholds.high_memory_threshold),
                 });
             }
         }
 
         // 检查高CPU使用率
-        if let Some(ref system) = system {
+        if let Some(system) = system {
             if system.cpu_usage > thresholds.high_cpu_threshold {
                 alerts.push(AlertInfo {
+                    id: format!("high_cpu_{}", current_timestamp()),
                     severity: "error".to_string(),
                     message: format!("高CPU使用率: {:.1}%", system.cpu_usage),
                     timestamp: current_timestamp(),
+                    metric_name: Some("cpu_usage".to_string()),
+                    current_value: Some(system.cpu_usage),
+                    threshold: Some(thresholds.high_cpu_threshold),
                 });
             }
         }
 
         // 检查高GPU使用率
-        if let Some(ref system) = system {
+        if let Some(system) = system {
             if system.gpu_usage > thresholds.high_gpu_threshold {
                 alerts.push(AlertInfo {
+                    id: format!("high_gpu_{}", current_timestamp()),
                     severity: "error".to_string(),
                     message: format!("高GPU使用率: {:.1}%", system.gpu_usage),
                     timestamp: current_timestamp(),
+                    metric_name: Some("gpu_usage".to_string()),
+                    current_value: Some(system.gpu_usage),
+                    threshold: Some(thresholds.high_gpu_threshold),
                 });
             }
         }
@@ -643,33 +619,17 @@ impl DashboardService {
         let service = &self.profiling_service;
         let mut data = self.historical_data.write().await;
         
-        // 更新关键指标的历史数据
-        if let Some(fps) = service.get_counter_value("render.frame_count") {
-            if let Some(frame_time) = service.get_counter_value("render.frame_time_ms") {
-                if frame_time > 0.0 {
-                    let fps = fps / (frame_time / 1000.0);
-                    add_data_point(&mut data, "fps", fps);
-                }
-            }
-        }
+        let metrics = match service.get_realtime_metrics() {
+            Ok(m) => m,
+            Err(_) => return,
+        };
         
-        if let Some(frame_time) = service.get_counter_value("render.frame_time_ms") {
-            add_data_point(&mut data, "frame_time", frame_time);
-        }
+        add_data_point(&mut data, "fps", metrics.fps);
+        add_data_point(&mut data, "frame_time", metrics.frame_time);
+        add_data_point(&mut data, "draw_calls", metrics.draw_calls as f64);
+        add_data_point(&mut data, "memory_usage", metrics.memory_usage);
+        add_data_point(&mut data, "physics_time", metrics.physics_time);
         
-        if let Some(draw_calls) = service.get_counter_value("render.draw_calls") {
-            add_data_point(&mut data, "draw_calls", draw_calls as f64);
-        }
-        
-        if let Some(memory_usage) = service.get_counter_value("memory.usage_percent") {
-            add_data_point(&mut data, "memory_usage", memory_usage);
-        }
-        
-        if let Some(physics_time) = service.get_counter_value("physics.calc_time_ms") {
-            add_data_point(&mut data, "physics_time", physics_time);
-        }
-        
-        // 清理过期数据
         let retention = Duration::from_secs(self.config.data_retention_seconds);
         let cutoff = Instant::now() - retention;
         
@@ -696,21 +656,21 @@ fn current_timestamp() -> u64 {
 /// Warp过滤器：注入性能监控服务
 fn with_profiling_service(
     service: Arc<ProfilingService>,
-) -> impl Filter<Extract = (Arc<ProfilingService>,), Error = Rejection> + Clone {
+) -> impl Filter<Extract = (Arc<ProfilingService>,), Error = std::convert::Infallible> + Clone {
     warp::any().map(move || service.clone())
 }
 
 /// Warp过滤器：注入历史数据
 fn with_historical_data(
     data: Arc<RwLock<HashMap<String, Vec<(Instant, f64)>>>>,
-) -> impl Filter<Extract = (Arc<RwLock<HashMap<String, Vec<(Instant, f64)>>>>,), Error = Rejection> + Clone {
+) -> impl Filter<Extract = (Arc<RwLock<HashMap<String, Vec<(Instant, f64)>>>>,), Error = std::convert::Infallible> + Clone {
     warp::any().map(move || data.clone())
 }
 
 /// Warp过滤器：注入配置
 fn with_config(
     config: DashboardConfig,
-) -> impl Filter<Extract = (DashboardConfig,), Error = Rejection> + Clone {
+) -> impl Filter<Extract = (DashboardConfig,), Error = std::convert::Infallible> + Clone {
     warp::any().map(move || config.clone())
 }
 
@@ -776,23 +736,6 @@ async fn get_alerts(
     let metrics = dashboard.collect_metrics().await;
     
     Ok(warp::reply::json(&metrics.alerts))
-}
-
-/// Warp过滤器：注入WebSocket连接列表
-fn with_websocket_connections(
-    connections: Arc<Mutex<Vec<WebSocketSender>>>,
-) -> impl Filter<Extract = (Arc<Mutex<Vec<WebSocketSender>>>,), Error = Rejection> + Clone {
-    warp::any().map(move || connections.clone())
-}
-
-/// WebSocket处理器
-async fn ws_handler(
-    ws: warp::ws::Ws,
-    _params: (),
-    service: Arc<ProfilingService>,
-    connections: Arc<Mutex<Vec<WebSocketSender>>>,
-) -> Result<impl Reply, Rejection> {
-    Ok(ws.on_upgrade(move |socket| handle_websocket_connection(socket, service, connections)))
 }
 
 /// 处理WebSocket连接
@@ -898,53 +841,8 @@ async fn handle_client_message(message: &str, connection_id: &str) {
 
 /// 收集实时指标数据
 async fn collect_realtime_metrics(service: &ProfilingService) -> RealtimeMetrics {
-    let timestamp = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_millis() as u64;
-    
-    // 收集渲染指标
-    let fps = service.get_counter_value("render.frame_count")
-        .and_then(|count| {
-            let elapsed = service.get_counter_value("render.frame_time_ms")
-                .map(|time| time / 1000.0)?;
-            if elapsed > 0.0 {
-                Some(count / elapsed)
-            } else {
-                None
-            }
-        })
-        .unwrap_or(0.0);
-    
-    let frame_time = service.get_counter_value("render.frame_time_ms").unwrap_or(0.0);
-    let draw_calls = service.get_counter_value("render.draw_calls").unwrap_or(0);
-    let triangle_count = service.get_counter_value("render.triangle_count").unwrap_or(0);
-    
-    // 收集系统指标
-    let cpu_usage = service.get_counter_value("system.cpu_usage").unwrap_or(0.0);
-    let gpu_usage = service.get_counter_value("system.gpu_usage").unwrap_or(0.0);
-    
-    // 收集内存指标
-    let memory_usage = service.get_counter_value("memory.allocated_bytes")
-        .map(|bytes| bytes / (1024.0 * 1024.0))
-        .unwrap_or(0.0);
-    
-    // 收集物理指标
-    let physics_time = service.get_counter_value("physics.calc_time_ms").unwrap_or(0.0);
-    
-    // 收集音频指标
-    let audio_latency = service.get_counter_value("audio.latency_ms").unwrap_or(0.0);
-    
-    RealtimeMetrics {
-        timestamp,
-        fps,
-        frame_time,
-        cpu_usage,
-        memory_usage,
-        gpu_usage,
-        draw_calls,
-        triangle_count,
-        physics_time,
-        audio_latency,
+    match service.get_realtime_metrics() {
+        Ok(metrics) => metrics,
+        Err(_) => RealtimeMetrics::default(),
     }
 }

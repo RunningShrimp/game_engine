@@ -473,11 +473,11 @@ mod tests {
     #[test]
     fn test_resettable() {
         let mut vec: Vec<u8> = vec![1, 2, 3];
-        vec.reset();
+        vec.clear();
         assert_eq!(vec.len(), 0);
 
         let mut s = String::from("test");
-        s.reset();
+        s.clear();
         assert_eq!(s.len(), 0);
     }
 }

@@ -373,6 +373,10 @@ mod tests {
             "TestEvent"
         }
 
+        fn as_any(&self) -> &dyn std::any::Any {
+            self
+        }
+
         fn apply(&self, _world: &mut World) -> Result<(), EventError> {
             Ok(())
         }

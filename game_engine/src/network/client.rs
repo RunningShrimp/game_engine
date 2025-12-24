@@ -396,7 +396,7 @@ impl GameClient {
     }
 
     /// 处理预测逻辑
-    pub async fn process_prediction(&self, local_inputs: &[u8]) -> Result<(), NetworkError> {
+    pub async fn process_prediction(&self, _local_inputs: &[u8]) -> Result<(), NetworkError> {
         if self.config.enable_delay_compensation {
             let _dc = self.delay_compensation.lock().await;
         }

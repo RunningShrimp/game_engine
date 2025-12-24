@@ -274,28 +274,24 @@ mod render_service_tests {
 
     #[test]
     fn test_render_service_render_strategy_selection() {
-        use crate::domain::render::{RenderObject, RenderObjectId};
+        use crate::domain::render::{RenderObject, RenderObjectId, RenderStrategy};
         use crate::render::mesh::GpuMesh;
         use crate::ecs::Transform;
 
         let service = RenderService::new();
 
-        // 创建静态渲染对象
-        let static_transform = Transform::default();
-        let static_mesh = Arc::new(GpuMesh::default());
-        let static_obj = RenderObject::new(RenderObjectId::new(1), static_mesh, static_transform.clone());
+        // 由于 GpuMesh 需要真实的 wgpu Device，此测试验证服务的其他方面
+        // GpuMesh 相关的渲染策略选择在集成测试中完整测试
 
-        // 测试静态对象策略选择
-        let strategy = service.select_render_strategy(&static_obj);
-        assert_eq!(strategy, RenderStrategy::StaticBatch);
+        // 测试实例化策略选择（不需要 GpuMesh）
+        let instanced_strategy = service.select_strategy_for_instances(15, true);
+        assert!(matches!(instanced_strategy, RenderStrategy::Instanced));
 
-        // 创建动态渲染对象
-        let dynamic_mesh = Arc::new(GpuMesh::default());
-        let dynamic_obj = RenderObject::new(RenderObjectId::new(2), dynamic_mesh, static_transform);
+        let static_strategy = service.select_strategy_for_instances(5, true);
+        assert!(matches!(static_strategy, RenderStrategy::StaticBatch));
 
-        // 测试动态对象策略选择
-        let strategy_distant = service.select_render_strategy(&dynamic_obj);
-        assert_eq!(strategy_distant, RenderStrategy::DynamicBatch);
+        let dynamic_strategy = service.select_strategy_for_instances(5, false);
+        assert!(matches!(dynamic_strategy, RenderStrategy::DynamicBatch));
     }
 
     #[test]
@@ -1235,7 +1231,7 @@ mod domain_service_tests {
 
         // 设置极端位置值
         let extreme_pos = Vec3::new(1e6, -1e6, 1e6);
-        let mut body_at_extreme = RigidBody::dynamic(RigidBodyId(1), extreme_pos);
+        let  body_at_extreme = RigidBody::dynamic(RigidBodyId(1), extreme_pos);
         assert!(service.update_body(&body_at_extreme).is_ok());
 
         // 应用极端力值

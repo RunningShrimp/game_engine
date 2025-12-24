@@ -95,6 +95,128 @@ type TaskId = u64;
 
 type GameTaskResult<T> = Result<T, GameTaskError>;
 
+/// 协程任务管理器资源，供ECS系统提交异步任务
+#[derive(Resource, Clone)]
+pub struct CoroutineTaskManager {
+    runtime_handle: tokio::runtime::Handle,
+    task_queue_tx: mpsc::UnboundedSender<PendingTask>,
+    active_tasks: Arc<Mutex<std::collections::HashMap<TaskId, GameTask>>>,
+    next_task_id: Arc<std::sync::atomic::AtomicU64>,
+    stats: Arc<RwLock<LoopStats>>,
+}
+
+impl CoroutineTaskManager {
+    pub fn new(runtime_handle: tokio::runtime::Handle) -> Self {
+        let (task_queue_tx, task_queue_rx) = mpsc::unbounded_channel();
+        let active_tasks = Arc::new(Mutex::new(std::collections::HashMap::new()));
+        let active_tasks_clone = Arc::clone(&active_tasks);
+        let stats = Arc::new(RwLock::new(LoopStats::default()));
+        let stats_clone = Arc::clone(&stats);
+
+        runtime_handle.spawn(async move {
+            Self::task_processor(task_queue_rx, active_tasks_clone, stats_clone).await;
+        });
+
+        Self {
+            runtime_handle,
+            task_queue_tx,
+            active_tasks,
+            next_task_id: Arc::new(std::sync::atomic::AtomicU64::new(1)),
+            stats,
+        }
+    }
+
+    pub async fn spawn_task<F, Fut>(&self, name: String, priority: TaskPriority, f: F) -> TaskId
+    where
+        F: FnOnce() -> Fut + Send + 'static,
+        Fut: std::future::Future<Output = Result<(), GameTaskError>> + Send + 'static,
+    {
+        let id = self.next_task_id.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        let active_tasks = Arc::clone(&self.active_tasks);
+        let stats: Arc<RwLock<LoopStats>> = Arc::clone(&self.stats);
+        let task_name = name.clone();
+
+        let (cancel_tx, cancel_rx) = tokio::sync::oneshot::channel();
+
+        let handle = self.runtime_handle.spawn(async move {
+            tokio::select! {
+                result = f() => {
+                    match result {
+                        Ok(_) => {
+                            let mut stats = stats.write().await;
+                            stats.tasks_completed += 1;
+                        }
+                        Err(_) => {
+                            let mut stats = stats.write().await;
+                            stats.tasks_failed += 1;
+                        }
+                    }
+                }
+                _ = cancel_rx => {
+                    tracing::debug!("Task {} cancelled", task_name);
+                }
+            }
+        });
+
+        let task = GameTask {
+            id,
+            name,
+            priority,
+            handle,
+            cancel_tx,
+        };
+
+        active_tasks.lock().await.insert(id, task);
+        id
+    }
+
+    pub async fn cancel_task(&self, id: TaskId) -> bool {
+        let mut tasks = self.active_tasks.lock().await;
+        if let Some(task) = tasks.remove(&id) {
+            task.cancel();
+            true
+        } else {
+            false
+        }
+    }
+
+    pub async fn task_count(&self) -> usize {
+        self.active_tasks.lock().await.len()
+    }
+
+    pub async fn stats(&self) -> LoopStats {
+        self.stats.read().await.clone()
+    }
+
+    async fn task_processor(
+        mut rx: mpsc::UnboundedReceiver<PendingTask>,
+        active_tasks: Arc<Mutex<std::collections::HashMap<TaskId, GameTask>>>,
+        _stats: Arc<RwLock<LoopStats>>,
+    ) {
+        let semaphore = Arc::new(Semaphore::new(32));
+
+        while let Some(pending) = rx.recv().await {
+            let sem = Arc::clone(&semaphore);
+            let tasks = Arc::clone(&active_tasks);
+
+            tokio::spawn(async move {
+                let _permit = sem.acquire().await;
+
+                let handle = (pending.task)();
+                let task = GameTask {
+                    id: pending.id,
+                    name: pending.name,
+                    priority: pending.priority,
+                    handle,
+                    cancel_tx: tokio::sync::oneshot::channel().0,
+                };
+
+                tasks.lock().await.insert(pending.id, task);
+            });
+        }
+    }
+}
+
 #[derive(Debug, thiserror::Error)]
 pub enum GameTaskError {
     #[error("Task cancelled")]
@@ -140,11 +262,11 @@ impl GameTask {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum TaskPriority {
-    Critical = 0,
-    High = 1,
+    Critical = 4,
+    High = 3,
     Normal = 2,
-    Low = 3,
-    Background = 4,
+    Low = 1,
+    Background = 0,
 }
 
 impl Default for TaskPriority {
@@ -164,6 +286,9 @@ pub struct CoroutineGameLoop {
     max_accumulator: Duration,
     stats: Arc<RwLock<LoopStats>>,
 }
+
+unsafe impl Send for CoroutineGameLoop {}
+unsafe impl Sync for CoroutineGameLoop {}
 
 #[derive(Debug, Clone, Default)]
 pub struct LoopStats {

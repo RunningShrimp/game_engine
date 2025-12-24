@@ -113,7 +113,7 @@ impl BC1Format {
     }
 
     /// 从 BC1 格式解压缩到 RGBA 数据
-    pub fn decompress(data: &[u8], width: usize, height: usize) -> Result<Vec<u8>, CompressionError> {
+    pub fn decompress(data: &[u8], _width: usize, _height: usize) -> Result<Vec<u8>, CompressionError> {
         if data.len() % 8 != 0 {
             return Err(CompressionError::InvalidDataLength);
         }
@@ -154,7 +154,7 @@ impl BC2Format {
     }
 
     /// 从 BC2 格式解压缩到 RGBA 数据
-    pub fn decompress(data: &[u8], width: usize, height: usize) -> Result<Vec<u8>, CompressionError> {
+    pub fn decompress(data: &[u8], _width: usize, _height: usize) -> Result<Vec<u8>, CompressionError> {
         if data.len() % 16 != 0 {
             return Err(CompressionError::InvalidDataLength);
         }
@@ -195,7 +195,7 @@ impl BC3Format {
     }
 
     /// 从 BC3 格式解压缩到 RGBA 数据
-    pub fn decompress(data: &[u8], width: usize, height: usize) -> Result<Vec<u8>, CompressionError> {
+    pub fn decompress(data: &[u8], _width: usize, _height: usize) -> Result<Vec<u8>, CompressionError> {
         if data.len() % 16 != 0 {
             return Err(CompressionError::InvalidDataLength);
         }

@@ -323,6 +323,10 @@ mod event_bus_concurrency_tests {
             "TestEvent"
         }
 
+        fn as_any(&self) -> &dyn std::any::Any {
+            self
+        }
+
         fn apply(&self, _world: &mut World) -> Result<(), EventError> {
             Ok(())
         }
@@ -434,6 +438,10 @@ mod event_sourcing_concurrency_tests {
             "TestEvent"
         }
 
+        fn as_any(&self) -> &dyn std::any::Any {
+            self
+        }
+
         fn apply(&self, _world: &mut World) -> Result<(), EventError> {
             Ok(())
         }
@@ -453,7 +461,7 @@ mod event_sourcing_concurrency_tests {
 
         // 注册事件类型
         {
-            let mut registry = event_registry.write().unwrap();
+            let  registry = event_registry.write().unwrap();
             registry.register::<TestEvent>("TestEvent", 1).unwrap();
         }
 

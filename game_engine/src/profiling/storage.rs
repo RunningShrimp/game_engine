@@ -955,9 +955,9 @@ mod tests {
         assert_eq!(buffer.peek_oldest(), Some(&2));
         
         // 读取数据
-        assert_eq!(buffer.pop(), Some(&2));
-        assert_eq!(buffer.pop(), Some(&3));
-        assert_eq!(buffer.pop(), Some(&4));
+        assert_eq!(buffer.pop(), Some(2));
+        assert_eq!(buffer.pop(), Some(3));
+        assert_eq!(buffer.pop(), Some(4));
         assert_eq!(buffer.pop(), None);
     }
 
@@ -995,7 +995,9 @@ mod tests {
     #[test]
     fn test_data_queryer() {
         use std::fs;
+        use std::io::Write;
         use tempfile::TempDir;
+        use pollster::block_on;
         
         // 创建临时目录
         let temp_dir = TempDir::new().unwrap();
@@ -1032,7 +1034,7 @@ mod tests {
             order_by: Some(QueryOrder::TimestampAsc),
         };
         
-        let result = queryer.query(&condition).unwrap();
+        let result = block_on(queryer.query(&condition)).unwrap();
         
         assert_eq!(result.data_points.len(), 2);
         assert_eq!(result.data_points[0].metric_name, "metric1");
@@ -1057,7 +1059,7 @@ mod tests {
         let mut storage = PersistentStorage::new_sync(cfg).expect("new_sync failed");
 
         // Store two points to trigger flush
-        storage.store(DataPoint::new("m1", 1.0, MetricCategory::CPU)).unwrap();
+        storage.store(DataPoint::new("m1", 1.0, MetricCategory::System)).unwrap();
         storage.store(DataPoint::new("m2", 2.0, MetricCategory::Memory)).unwrap();
 
         // flush cache sync

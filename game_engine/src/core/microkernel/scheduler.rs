@@ -157,7 +157,7 @@ impl ServiceScheduler {
 
     pub async fn set_priority(&self, service_id: &ServiceId, priority: i8) -> Result<(), ServiceError> {
         let mut map = self.service_map.write().await;
-        if let Some(mut scheduled) = map.get_mut(service_id) {
+        if let Some(scheduled) = map.get_mut(service_id) {
             scheduled.priority = priority;
 
             let mut heap = self.scheduled_services.lock().await;
@@ -176,7 +176,7 @@ impl ServiceScheduler {
         interval: Duration,
     ) -> Result<(), ServiceError> {
         let mut map = self.service_map.write().await;
-        if let Some(mut scheduled) = map.get_mut(service_id) {
+        if let Some(scheduled) = map.get_mut(service_id) {
             scheduled.update_interval = interval;
 
             let mut heap = self.scheduled_services.lock().await;

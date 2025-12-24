@@ -12,4 +12,6 @@ mod batch_test;
 mod pbr_test;
 mod culling_test;
 mod postprocess_test;
+mod render_integration_test;
+mod render_benchmark_test;
 

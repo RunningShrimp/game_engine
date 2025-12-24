@@ -103,7 +103,7 @@ mod tests {
     #[test]
     fn test_extract_lights_empty() {
         let mut world = World::new();
-        let lights = extract_lights(&world);
+        let lights = extract_lights(&mut world);
         assert_eq!(lights.len(), 0);
     }
 
@@ -119,15 +119,16 @@ mod tests {
                 scale: Vec3::ONE,
             },
             PointLight {
-                color: Vec3::new(1.0, 1.0, 1.0),
+                color: [1.0, 1.0, 1.0],
                 intensity: 1.0,
-                range: 10.0,
+                radius: 10.0,
+                falloff: 1.0,
             },
         )).id();
 
-        let lights = extract_lights(&world);
+        let lights = extract_lights(&mut world);
         assert_eq!(lights.len(), 1);
-        assert_eq!(lights[0].position, [1.0, 2.0, 3.0]);
+        assert_eq!(lights[0].pos, [1.0, 2.0]);
     }
 
     #[test]
@@ -149,6 +150,7 @@ mod tests {
                 scale: Vec3::ONE,
             },
             Camera {
+                is_active: true,
                 projection: Projection::Perspective {
                     fov: 60.0,
                     aspect: 16.0 / 9.0,

@@ -701,6 +701,7 @@ mod tests {
         world.insert_resource(crate::platform::InputBuffer::default());
 
         let touch_event = WindowEvent::Touch(winit::event::Touch {
+            device_id: winit::event::DeviceId::dummy(),
             id: 1,
             location: PhysicalPosition::new(100.0, 200.0),
             phase: TouchPhase::Started,
@@ -727,6 +728,7 @@ mod tests {
         world.insert_resource(crate::platform::InputBuffer::default());
 
         let touch_event = WindowEvent::Touch(winit::event::Touch {
+            device_id: winit::event::DeviceId::dummy(),
             id: 2,
             location: PhysicalPosition::new(150.0, 250.0),
             phase: TouchPhase::Moved,
@@ -753,6 +755,7 @@ mod tests {
         world.insert_resource(crate::platform::InputBuffer::default());
 
         let touch_event = WindowEvent::Touch(winit::event::Touch {
+            device_id: winit::event::DeviceId::dummy(),
             id: 3,
             location: PhysicalPosition::new(200.0, 300.0),
             phase: TouchPhase::Ended,
@@ -779,6 +782,7 @@ mod tests {
         world.insert_resource(crate::platform::InputBuffer::default());
 
         let touch_event = WindowEvent::Touch(winit::event::Touch {
+            device_id: winit::event::DeviceId::dummy(),
             id: 4,
             location: PhysicalPosition::new(250.0, 350.0),
             phase: TouchPhase::Cancelled,
