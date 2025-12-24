@@ -1,5 +1,5 @@
 //  渲染系统性能基准测试
-// 
+//
 //  测试视锥剔除、LOD计算、批渲染等操作的性能
 
 use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
@@ -81,10 +81,8 @@ fn bench_lod_calculation(c: &mut Criterion) {
                     let mut lod_counts = [0; 4];
                     for pos in &positions {
                         let distance = pos.distance(camera_pos);
-                        let lod_level = lod_distances
-                            .iter()
-                            .position(|&d| distance < d)
-                            .unwrap_or(3);
+                        let lod_level =
+                            lod_distances.iter().position(|&d| distance < d).unwrap_or(3);
                         lod_counts[lod_level] += 1;
                     }
                     black_box(lod_counts)
@@ -106,19 +104,17 @@ fn bench_gpu_indirect_draw(c: &mut Criterion) {
 
     // 创建WGPU实例和设备（简化版本，实际应该使用完整的初始化）
     // 注意：这个测试需要实际的GPU设备，在某些环境中可能失败
-    let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
-        backends: wgpu::Backends::all(),
-        ..Default::default()
-    });
+    let instance = wgpu::Instance::default();
 
     // 尝试创建适配器（如果失败则跳过测试）
-    let adapter_future = instance.request_adapter(&wgpu::RequestAdapterOptions {
-        power_preference: wgpu::PowerPreference::default(),
-        compatible_surface: None,
-        force_fallback_adapter: false,
-    });
-
-    let adapter = match adapter_future.block_on() {
+    let adapter = match instance
+        .request_adapter(&wgpu::RequestAdapterOptions {
+            power_preference: wgpu::PowerPreference::default(),
+            compatible_surface: None,
+            force_fallback_adapter: false,
+        })
+        .block_on()
+    {
         Some(a) => a,
         None => {
             eprintln!("No GPU adapter found, skipping GPU indirect draw benchmark");
@@ -130,8 +126,11 @@ fn bench_gpu_indirect_draw(c: &mut Criterion) {
         .request_device(
             &wgpu::DeviceDescriptor {
                 label: None,
-                features: wgpu::Features::empty(),
-                limits: wgpu::Limits::default(),
+                required_features: wgpu::Features::empty(),
+                required_limits: wgpu::Limits::default(),
+                memory_hints: Default::default(),
+                trace: wgpu::Trace::Off,
+                experimental_features: Default::default(),
             },
             None,
         )
@@ -246,18 +245,16 @@ fn bench_gpu_culling(c: &mut Criterion) {
     let mut group = c.benchmark_group("gpu_culling");
 
     // 创建WGPU实例和设备
-    let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
-        backends: wgpu::Backends::all(),
-        ..Default::default()
-    });
+    let instance = wgpu::Instance::default();
 
-    let adapter_future = instance.request_adapter(&wgpu::RequestAdapterOptions {
-        power_preference: wgpu::PowerPreference::default(),
-        compatible_surface: None,
-        force_fallback_adapter: false,
-    });
-
-    let adapter = match adapter_future.block_on() {
+    let adapter = match instance
+        .request_adapter(&wgpu::RequestAdapterOptions {
+            power_preference: wgpu::PowerPreference::default(),
+            compatible_surface: None,
+            force_fallback_adapter: false,
+        })
+        .block_on()
+    {
         Some(a) => a,
         None => {
             eprintln!("No GPU adapter found, skipping GPU culling benchmark");
@@ -269,8 +266,11 @@ fn bench_gpu_culling(c: &mut Criterion) {
         .request_device(
             &wgpu::DeviceDescriptor {
                 label: None,
-                features: wgpu::Features::empty(),
-                limits: wgpu::Limits::default(),
+                required_features: wgpu::Features::empty(),
+                required_limits: wgpu::Limits::default(),
+                memory_hints: Default::default(),
+                trace: wgpu::Trace::Off,
+                experimental_features: Default::default(),
             },
             None,
         )

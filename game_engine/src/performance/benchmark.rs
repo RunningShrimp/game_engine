@@ -1,23 +1,23 @@
 //  性能基准测试和回归检测模块
-// 
+//
 //  提供自动化性能基准测试功能，支持性能回归检测和阈值配置。
-// 
+//
 //  ## 功能特性
-// 
+//
 //  - 自动化性能基准测试
 //  - 性能回归检测（基于阈值）
 //  - 历史性能数据对比
 //  - 多种性能指标支持
-// 
+//
 //  ## 使用示例
-// 
+//
 //  ```ignore
 //  let mut benchmark = PerformanceBenchmark::new();
 //  benchmark.set_threshold("physics_step", 16.0); // ms
 //  benchmark.run("physics_step", || {
 //      physics_step_simulation(0.016);
 //  });
-//  
+//
 //  let result = benchmark.get_result("physics_step");
 //  assert!(!result.has_regression());
 //  ```
@@ -86,7 +86,9 @@ impl Threshold {
     pub fn is_exceeded(&self, value: f64, history_average: Option<f64>) -> bool {
         match self.threshold_type {
             ThresholdType::Absolute => value > self.baseline,
-            ThresholdType::Relative => value > self.baseline * (1.0 + self.tolerance_percent / 100.0),
+            ThresholdType::Relative => {
+                value > self.baseline * (1.0 + self.tolerance_percent / 100.0)
+            }
             ThresholdType::RelativeToAverage => {
                 if let Some(avg) = history_average {
                     value > avg * (1.0 + self.tolerance_percent / 100.0)
@@ -220,18 +222,15 @@ impl PerformanceBenchmark {
         }
 
         // 计算基准值（使用阈值配置或历史平均值）
-        let baseline = self.thresholds
+        let baseline = self
+            .thresholds
             .get(name)
             .map(|t| t.baseline)
-            .unwrap_or_else(|| {
-                history.iter().sum::<f64>() / history.len() as f64
-            });
+            .unwrap_or_else(|| history.iter().sum::<f64>() / history.len() as f64);
 
         // 检测回归
         let threshold = self.thresholds.get(name);
-        let has_regression = threshold
-            .map(|t| t.is_exceeded(value, None))
-            .unwrap_or(false);
+        let has_regression = threshold.map(|t| t.is_exceeded(value, None)).unwrap_or(false);
 
         let regression_percent = if baseline > 0.0 {
             ((value - baseline) / baseline) * 100.0
@@ -304,7 +303,10 @@ impl PerformanceBenchmark {
 
         report.push_str(&format!("\n总测试数: {}\n", self.results.len()));
         report.push_str(&format!("回归数: {}\n", self.regression_count()));
-        report.push_str(&format!("改进数: {}\n", self.results.values().filter(|r| r.has_improvement()).count()));
+        report.push_str(&format!(
+            "改进数: {}\n",
+            self.results.values().filter(|r| r.has_improvement()).count()
+        ));
 
         report
     }
@@ -344,24 +346,12 @@ impl DefaultThresholds {
                 "render_frame",
                 Threshold::new_relative(16.6, 20.0), // 60FPS基准
             ),
-            (
-                "render_scene_build",
-                Threshold::new_relative(0.5, 20.0),
-            ),
+            ("render_scene_build", Threshold::new_relative(0.5, 20.0)),
             // 音频系统阈值
-            (
-                "audio_source_creation",
-                Threshold::new_relative(0.01, 30.0),
-            ),
+            ("audio_source_creation", Threshold::new_relative(0.01, 30.0)),
             // 场景系统阈值
-            (
-                "scene_load",
-                Threshold::new_relative(100.0, 30.0),
-            ),
-            (
-                "scene_switch",
-                Threshold::new_relative(50.0, 30.0),
-            ),
+            ("scene_load", Threshold::new_relative(100.0, 30.0)),
+            ("scene_switch", Threshold::new_relative(50.0, 30.0)),
         ]
     }
 }
@@ -455,9 +445,13 @@ mod tests {
     #[test]
     fn test_benchmark_run() {
         let mut benchmark = PerformanceBenchmark::new();
-        benchmark.run("test", || {
-            std::thread::sleep(Duration::from_millis(1));
-        }, "ms");
+        benchmark.run(
+            "test",
+            || {
+                std::thread::sleep(Duration::from_millis(1));
+            },
+            "ms",
+        );
 
         let result = benchmark.get_result("test");
         assert!(result.is_some());
@@ -467,9 +461,14 @@ mod tests {
     #[test]
     fn test_benchmark_run_multiple() {
         let mut benchmark = PerformanceBenchmark::new();
-        benchmark.run_multiple("test", 5, || {
-            std::thread::sleep(Duration::from_millis(1));
-        }, "ms");
+        benchmark.run_multiple(
+            "test",
+            5,
+            || {
+                std::thread::sleep(Duration::from_millis(1));
+            },
+            "ms",
+        );
 
         let result = benchmark.get_result("test");
         assert!(result.is_some());
@@ -481,9 +480,13 @@ mod tests {
         let mut benchmark = PerformanceBenchmark::new();
         benchmark.set_relative_threshold("test", 1.0, 10.0);
 
-        benchmark.run("test", || {
-            std::thread::sleep(Duration::from_millis(1));
-        }, "ms");
+        benchmark.run(
+            "test",
+            || {
+                std::thread::sleep(Duration::from_millis(1));
+            },
+            "ms",
+        );
 
         let result = benchmark.get_result("test").unwrap();
         assert!(!result.has_regression);

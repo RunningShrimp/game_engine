@@ -1,11 +1,11 @@
 //  光线追踪渲染模块
-// 
+//
 //  提供基于计算着色器的光线追踪实现，支持：
 //  - 反射和折射
 //  - 软阴影
 //  - 全局光照
 //  - 环境光遮蔽
-// 
+//
 //  注意：当前实现使用计算着色器进行软件光线追踪，不依赖硬件RTX支持。
 
 use crate::error::RenderError;
@@ -339,26 +339,29 @@ impl RayTracingRenderer {
         let Some(bind_group_layout) = &self.bind_group_layout else {
             return Err(RenderError::InvalidState {
                 message: "Bind group layout not initialized".into(),
-                severity: crate::error::ErrorSeverity::Error
+                severity: crate::error::ErrorSeverity::Error,
             });
         };
 
         let Some(output_view) = &self.output_view else {
-            return Err(RenderError::InvalidState { message: 
-                "Output view not initialized".into(),
-                severity: crate::error::ErrorSeverity::Error });
+            return Err(RenderError::InvalidState {
+                message: "Output view not initialized".into(),
+                severity: crate::error::ErrorSeverity::Error,
+            });
         };
 
         let Some(scene_buffer) = &self.scene_buffer else {
-            return Err(RenderError::InvalidState { message: 
-                "Scene buffer not initialized".into(),
-                severity: crate::error::ErrorSeverity::Error });
+            return Err(RenderError::InvalidState {
+                message: "Scene buffer not initialized".into(),
+                severity: crate::error::ErrorSeverity::Error,
+            });
         };
 
         let Some(config_buffer) = &self.config_buffer else {
-            return Err(RenderError::InvalidState { message: 
-                "Config buffer not initialized".into(),
-                severity: crate::error::ErrorSeverity::Error });
+            return Err(RenderError::InvalidState {
+                message: "Config buffer not initialized".into(),
+                severity: crate::error::ErrorSeverity::Error,
+            });
         };
 
         Ok(device.create_bind_group(&wgpu::BindGroupDescriptor {
@@ -399,21 +402,24 @@ impl RayTracingRenderer {
         };
 
         let Some(_output_view) = &self.output_view else {
-            return Err(RenderError::InvalidState { message: 
-                "Ray tracing output texture not prepared".into(),
-                severity: crate::error::ErrorSeverity::Error });
+            return Err(RenderError::InvalidState {
+                message: "Ray tracing output texture not prepared".into(),
+                severity: crate::error::ErrorSeverity::Error,
+            });
         };
 
         let Some(_scene_buffer) = &self.scene_buffer else {
-            return Err(RenderError::InvalidState { message: 
-                "Scene buffer not initialized".into(),
-                severity: crate::error::ErrorSeverity::Error });
+            return Err(RenderError::InvalidState {
+                message: "Scene buffer not initialized".into(),
+                severity: crate::error::ErrorSeverity::Error,
+            });
         };
 
         let Some(_config_buffer) = &self.config_buffer else {
-            return Err(RenderError::InvalidState { message: 
-                "Config buffer not initialized".into(),
-                severity: crate::error::ErrorSeverity::Error });
+            return Err(RenderError::InvalidState {
+                message: "Config buffer not initialized".into(),
+                severity: crate::error::ErrorSeverity::Error,
+            });
         };
 
         // 开始计算通道

@@ -1,18 +1,17 @@
 //  性能数据可视化模块
-// 
+//
 //  提供性能趋势分析、图表生成和数据导出功能。
 
+use pollster::block_on;
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
 use std::time::Duration;
-use pollster::block_on;
 
 use serde::{Deserialize, Serialize};
 
-use super::storage::*;
 use super::ProfilingResult;
-use super::metrics::MetricCategory;
+use super::storage::*;
 
 // ============================================================================
 // 图表数据结构
@@ -158,7 +157,7 @@ impl TrendDirection {
         match self {
             TrendDirection::Increasing => "#28a745",  // 绿色
             TrendDirection::Decreasing => "#dc3545",  // 红色
-            TrendDirection::Stable => "#6c757d",    // 灰色
+            TrendDirection::Stable => "#6c757d",      // 灰色
             TrendDirection::Fluctuating => "#ffc107", // 黄色
         }
     }
@@ -254,19 +253,19 @@ impl TrendAnalyzer {
 
         // 提取数值
         let values: Vec<f64> = data_points.iter().map(|p| p.value).collect();
-        
+
         // 分析趋势方向
         let direction = self.calculate_trend_direction(&values);
-        
+
         // 计算变化率
         let change_rate = self.calculate_change_rate(&values);
-        
+
         // 计算置信度
         let confidence = self.calculate_confidence(&values);
-        
+
         // 预测下一个值
         let prediction = self.predict_next_value(&values);
-        
+
         // 检测异常点
         let anomalies = self.detect_anomalies(data_points);
 
@@ -292,17 +291,14 @@ impl TrendAnalyzer {
         let n = values.len() as f64;
         let sum_x: f64 = (0..values.len()).map(|i| i as f64).sum();
         let sum_y: f64 = values.iter().sum();
-        let sum_xy: f64 = values.iter().enumerate()
-            .map(|(i, &y)| i as f64 * y).sum();
+        let sum_xy: f64 = values.iter().enumerate().map(|(i, &y)| i as f64 * y).sum();
         let sum_x2: f64 = (0..values.len()).map(|i| (i as f64).powi(2)).sum();
 
         let slope = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x.powi(2));
-        
+
         // 计算方差
         let mean_y = sum_y / n;
-        let variance: f64 = values.iter()
-            .map(|y| (y - mean_y).powi(2))
-            .sum::<f64>() / n;
+        let variance: f64 = values.iter().map(|y| (y - mean_y).powi(2)).sum::<f64>() / n;
         let std_dev = variance.sqrt();
 
         // 根据斜率和标准差判断趋势
@@ -325,7 +321,7 @@ impl TrendAnalyzer {
 
         let first = values.first().unwrap();
         let last = values.last().unwrap();
-        
+
         if first.abs() < f64::EPSILON {
             return 0.0;
         }
@@ -342,23 +338,21 @@ impl TrendAnalyzer {
         // 计算相关系数
         let n = values.len() as f64;
         let indices: Vec<f64> = (0..values.len()).map(|i| i as f64).collect();
-        
+
         let mean_x = indices.iter().sum::<f64>() / n;
         let mean_y = values.iter().sum::<f64>() / n;
-        
-        let numerator: f64 = indices.iter().zip(values.iter())
+
+        let numerator: f64 = indices
+            .iter()
+            .zip(values.iter())
             .map(|(x, y)| (x - mean_x) * (y - mean_y))
             .sum();
-        
-        let sum_x2: f64 = indices.iter()
-            .map(|x| (x - mean_x).powi(2))
-            .sum();
-        let sum_y2: f64 = values.iter()
-            .map(|y| (y - mean_y).powi(2))
-            .sum();
-        
+
+        let sum_x2: f64 = indices.iter().map(|x| (x - mean_x).powi(2)).sum();
+        let sum_y2: f64 = values.iter().map(|y| (y - mean_y).powi(2)).sum();
+
         let denominator = (sum_x2 * sum_y2).sqrt();
-        
+
         if denominator < f64::EPSILON {
             return 0.0;
         }
@@ -376,11 +370,9 @@ impl TrendAnalyzer {
         // 使用简单移动平均预测
         let window_size = (values.len() / 3).min(5);
         if values.len() >= window_size {
-            let recent_avg: f64 = values.iter()
-                .rev()
-                .take(window_size)
-                .sum::<f64>() / window_size as f64;
-            
+            let recent_avg: f64 =
+                values.iter().rev().take(window_size).sum::<f64>() / window_size as f64;
+
             Some(recent_avg)
         } else {
             None
@@ -390,16 +382,15 @@ impl TrendAnalyzer {
     /// 检测异常点
     fn detect_anomalies(&self, data_points: &[DataPoint]) -> Vec<AnomalyPoint> {
         let mut anomalies = Vec::new();
-        
+
         if data_points.len() < 5 {
             return anomalies;
         }
 
         let values: Vec<f64> = data_points.iter().map(|p| p.value).collect();
         let mean = values.iter().sum::<f64>() / values.len() as f64;
-        let variance: f64 = values.iter()
-            .map(|v| (v - mean).powi(2))
-            .sum::<f64>() / values.len() as f64;
+        let variance: f64 =
+            values.iter().map(|v| (v - mean).powi(2)).sum::<f64>() / values.len() as f64;
         let std_dev = variance.sqrt();
 
         // 检测3σ外的点
@@ -426,8 +417,9 @@ impl TrendAnalyzer {
             let prev_value = values[i - 1];
             let curr_value = values[i];
             let change_rate = (curr_value - prev_value).abs() / prev_value.abs();
-            
-            if change_rate > 0.5 { // 50%变化
+
+            if change_rate > 0.5 {
+                // 50%变化
                 anomalies.push(AnomalyPoint {
                     timestamp: data_points[i].timestamp,
                     value: curr_value,
@@ -473,7 +465,9 @@ impl ExportFormat {
             ExportFormat::Csv => "text/csv",
             ExportFormat::Json => "application/json",
             ExportFormat::Xml => "application/xml",
-            ExportFormat::Excel => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            ExportFormat::Excel => {
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            }
         }
     }
 }
@@ -536,7 +530,7 @@ impl DataExporter {
 
         // 执行查询
         let result = block_on(self.queryer.query(&condition))?;
-        
+
         // 根据格式导出
         match config.format {
             ExportFormat::Csv => self.export_csv(&result.data_points, config, output_path),
@@ -547,21 +541,23 @@ impl DataExporter {
     }
 
     /// 导出为CSV
-    fn export_csv(&self, data_points: &[DataPoint], config: &ExportConfig, output_path: &Path) -> ProfilingResult<()> {
+    fn export_csv(
+        &self,
+        data_points: &[DataPoint],
+        config: &ExportConfig,
+        output_path: &Path,
+    ) -> ProfilingResult<()> {
         let mut file = File::create(output_path)?;
-        
+
         // 写入CSV头
         writeln!(file, "timestamp,metric_name,value,category")?;
-        
+
         // 写入数据
         for point in data_points {
             writeln!(
                 file,
                 "{},{},{},{}",
-                point.timestamp,
-                point.metric_name,
-                point.value,
-                point.category as u8
+                point.timestamp, point.metric_name, point.value, point.category as u8
             )?;
         }
 
@@ -569,16 +565,28 @@ impl DataExporter {
         if config.include_metadata {
             writeln!(file, "\n# Metadata")?;
             writeln!(file, "# Total Records: {}", data_points.len())?;
-            writeln!(file, "# Export Time: {}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs())?;
+            writeln!(
+                file,
+                "# Export Time: {}",
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs()
+            )?;
         }
 
         Ok(())
     }
 
     /// 导出为JSON
-    fn export_json(&self, data_points: &[DataPoint], config: &ExportConfig, output_path: &Path) -> ProfilingResult<()> {
+    fn export_json(
+        &self,
+        data_points: &[DataPoint],
+        config: &ExportConfig,
+        output_path: &Path,
+    ) -> ProfilingResult<()> {
         use serde_json;
-        
+
         let mut export_data = serde_json::json!({
             "data": data_points,
         });
@@ -600,40 +608,64 @@ impl DataExporter {
     }
 
     /// 导出为XML
-    fn export_xml(&self, data_points: &[DataPoint], config: &ExportConfig, output_path: &Path) -> ProfilingResult<()> {
+    fn export_xml(
+        &self,
+        data_points: &[DataPoint],
+        config: &ExportConfig,
+        output_path: &Path,
+    ) -> ProfilingResult<()> {
         let mut file = File::create(output_path)?;
-        
+
         writeln!(file, r#"<?xml version="1.0" encoding="UTF-8"?>"#)?;
         writeln!(file, "<performance_data>")?;
-        
+
         // 写入数据
         writeln!(file, "  <data_points>")?;
         for point in data_points {
             writeln!(file, "    <data_point>")?;
             writeln!(file, "      <timestamp>{}</timestamp>", point.timestamp)?;
-            writeln!(file, "      <metric_name>{}</metric_name>", point.metric_name)?;
+            writeln!(
+                file,
+                "      <metric_name>{}</metric_name>",
+                point.metric_name
+            )?;
             writeln!(file, "      <value>{}</value>", point.value)?;
             writeln!(file, "      <category>{}</category>", point.category as u8)?;
             writeln!(file, "    </data_point>")?;
         }
         writeln!(file, "  </data_points>")?;
-        
+
         // 写入元数据
         if config.include_metadata {
             writeln!(file, "  <metadata>")?;
-            writeln!(file, "    <total_records>{}</total_records>", data_points.len())?;
-            writeln!(file, "    <export_time>{}</export_time>", 
-                std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs())?;
+            writeln!(
+                file,
+                "    <total_records>{}</total_records>",
+                data_points.len()
+            )?;
+            writeln!(
+                file,
+                "    <export_time>{}</export_time>",
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs()
+            )?;
             writeln!(file, "  </metadata>")?;
         }
-        
+
         writeln!(file, "</performance_data>")?;
-        
+
         Ok(())
     }
 
     /// 导出为Excel（简化实现）
-    fn export_excel(&self, data_points: &[DataPoint], config: &ExportConfig, output_path: &Path) -> ProfilingResult<()> {
+    fn export_excel(
+        &self,
+        data_points: &[DataPoint],
+        config: &ExportConfig,
+        output_path: &Path,
+    ) -> ProfilingResult<()> {
         // 简化实现：导出为CSV格式，但使用.xlsx扩展名
         // 实际项目中应使用excelwriter或calamine库
         self.export_csv(data_points, config, output_path)
@@ -647,7 +679,6 @@ impl DataExporter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::time::Duration;
 
     #[test]
     fn test_chart_type() {
@@ -665,7 +696,7 @@ mod tests {
         assert_eq!(TrendDirection::Decreasing.as_str(), "下降");
         assert_eq!(TrendDirection::Stable.as_str(), "稳定");
         assert_eq!(TrendDirection::Fluctuating.as_str(), "波动");
-        
+
         assert_eq!(TrendDirection::Increasing.color(), "#28a745");
         assert_eq!(TrendDirection::Decreasing.color(), "#dc3545");
         assert_eq!(TrendDirection::Stable.color(), "#6c757d");
@@ -686,17 +717,20 @@ mod tests {
         assert_eq!(ExportFormat::Json.extension(), ".json");
         assert_eq!(ExportFormat::Xml.extension(), ".xml");
         assert_eq!(ExportFormat::Excel.extension(), ".xlsx");
-        
+
         assert_eq!(ExportFormat::Csv.mime_type(), "text/csv");
         assert_eq!(ExportFormat::Json.mime_type(), "application/json");
         assert_eq!(ExportFormat::Xml.mime_type(), "application/xml");
-        assert_eq!(ExportFormat::Excel.mime_type(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        assert_eq!(
+            ExportFormat::Excel.mime_type(),
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        );
     }
 
     #[test]
     fn test_trend_analyzer() {
         let analyzer = TrendAnalyzer::new(10, 2.0);
-        
+
         // 创建测试数据点
         let data_points = vec![
             DataPoint::new("test_metric", 10.0, MetricCategory::Render),
@@ -705,9 +739,9 @@ mod tests {
             DataPoint::new("test_metric", 18.0, MetricCategory::Render),
             DataPoint::new("test_metric", 20.0, MetricCategory::Render),
         ];
-        
+
         let analysis = analyzer.analyze_trend(&data_points).unwrap();
-        
+
         assert_eq!(analysis.metric_name, "test_metric");
         assert_eq!(analysis.data_points, 5);
         assert!(analysis.change_rate > 0.0); // 上升趋势
@@ -719,15 +753,30 @@ mod tests {
         let series = ChartSeries {
             name: "测试系列".to_string(),
             data: vec![
-                ChartDataPoint { x: 1.0, y: 10.0, label: None, color: None },
-                ChartDataPoint { x: 2.0, y: 15.0, label: None, color: None },
-                ChartDataPoint { x: 3.0, y: 12.0, label: None, color: None },
+                ChartDataPoint {
+                    x: 1.0,
+                    y: 10.0,
+                    label: None,
+                    color: None,
+                },
+                ChartDataPoint {
+                    x: 2.0,
+                    y: 15.0,
+                    label: None,
+                    color: None,
+                },
+                ChartDataPoint {
+                    x: 3.0,
+                    y: 12.0,
+                    label: None,
+                    color: None,
+                },
             ],
             color: Some("#ff0000".to_string()),
             line_type: Some("solid".to_string()),
             visible: true,
         };
-        
+
         assert_eq!(series.name, "测试系列");
         assert_eq!(series.data.len(), 3);
         assert_eq!(series.data[0].x, 1.0);
@@ -738,7 +787,7 @@ mod tests {
     #[test]
     fn test_chart_config() {
         let config = ChartConfig::default();
-        
+
         assert_eq!(config.title, "性能图表");
         assert_eq!(config.x_axis_label, "时间");
         assert_eq!(config.y_axis_label, "值");

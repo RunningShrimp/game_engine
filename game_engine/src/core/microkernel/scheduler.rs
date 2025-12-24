@@ -6,9 +6,9 @@ use std::collections::{BinaryHeap, HashMap};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use tokio::sync::{Mutex, RwLock, Notify};
+use tokio::sync::{Mutex, Notify, RwLock};
 
-use super::{ServiceId};
+use super::ServiceId;
 use super::service::ServiceError;
 
 #[derive(Debug, Clone)]
@@ -73,9 +73,7 @@ impl PartialEq for ScheduledService {
 impl Ord for ScheduledService {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         match self.priority.cmp(&other.priority) {
-            std::cmp::Ordering::Equal => {
-                self.last_update.cmp(&other.last_update)
-            }
+            std::cmp::Ordering::Equal => self.last_update.cmp(&other.last_update),
             other => other.reverse(),
         }
     }
@@ -155,7 +153,11 @@ impl ServiceScheduler {
         heap.retain(|s| &s.service_id != service_id);
     }
 
-    pub async fn set_priority(&self, service_id: &ServiceId, priority: i8) -> Result<(), ServiceError> {
+    pub async fn set_priority(
+        &self,
+        service_id: &ServiceId,
+        priority: i8,
+    ) -> Result<(), ServiceError> {
         let mut map = self.service_map.write().await;
         if let Some(scheduled) = map.get_mut(service_id) {
             scheduled.priority = priority;
@@ -245,7 +247,8 @@ impl ServiceScheduler {
             stats.active_services = self.service_map.read().await.len();
 
             if stats.total_updates > 0 {
-                let new_average = (stats.average_update_time * (stats.total_updates - 1) as u32 + total_update_time)
+                let new_average = (stats.average_update_time * (stats.total_updates - 1) as u32
+                    + total_update_time)
                     / stats.total_updates as u32;
                 stats.average_update_time = new_average;
             }
@@ -265,8 +268,7 @@ impl ServiceScheduler {
 
     pub async fn next_update_time(&self, service_id: &ServiceId) -> Option<Duration> {
         let map = self.service_map.read().await;
-        map.get(service_id)
-            .map(|s| s.update_time_remaining(Instant::now()))
+        map.get(service_id).map(|s| s.update_time_remaining(Instant::now()))
     }
 
     pub async fn is_scheduled(&self, service_id: &ServiceId) -> bool {

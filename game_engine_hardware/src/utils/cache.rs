@@ -41,10 +41,7 @@ impl HardwareCache {
                 match serde_json::from_str::<HardwareCache>(&data) {
                     Ok(cache) => {
                         // 检查缓存是否过期（24小时）
-                        let now = SystemTime::now()
-                            .duration_since(UNIX_EPOCH)
-                            .unwrap()
-                            .as_secs();
+                        let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
                         if now - cache.timestamp > 86400 {
                             return None;
@@ -77,10 +74,7 @@ impl HardwareCache {
 
     /// 创建新的缓存
     pub fn new(gpu: GpuInfo, npu: Option<NpuInfo>, soc: Option<SocInfo>) -> Self {
-        let timestamp = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_secs();
+        let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
         let driver_version = gpu.driver_version.clone();
 
@@ -95,10 +89,7 @@ impl HardwareCache {
 
     /// 检查缓存是否有效
     pub fn is_valid(&self) -> bool {
-        let now = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_secs();
+        let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
         // 24小时内有效
         now - self.timestamp <= 86400

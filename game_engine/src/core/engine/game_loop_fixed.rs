@@ -160,7 +160,11 @@ impl FixedTimestepLoop {
     /// # 返回
     ///
     /// 返回`FixedTimestepInfo`，包含插值因子和更新次数
-    pub fn update_with_info<F>(&mut self, frame_time: Duration, mut update_fn: F) -> FixedTimestepInfo
+    pub fn update_with_info<F>(
+        &mut self,
+        frame_time: Duration,
+        mut update_fn: F,
+    ) -> FixedTimestepInfo
     where
         F: FnMut(Duration),
     {
@@ -257,7 +261,10 @@ mod tests {
     #[test]
     fn test_fixed_timestep_loop_creation() {
         let loop_manager = FixedTimestepLoop::new(Duration::from_secs_f64(1.0 / 60.0));
-        assert_eq!(loop_manager.fixed_time_step(), Duration::from_secs_f64(1.0 / 60.0));
+        assert_eq!(
+            loop_manager.fixed_time_step(),
+            Duration::from_secs_f64(1.0 / 60.0)
+        );
     }
 
     #[test]
@@ -316,14 +323,14 @@ mod tests {
     #[test]
     fn test_fixed_timestep_reset() {
         let mut loop_manager = FixedTimestepLoop::new(Duration::from_secs_f64(1.0 / 60.0));
-        
+
         // 运行一次更新
         let frame_time = Duration::from_millis(16);
         loop_manager.update(frame_time, |_| {});
-        
+
         // 重置
         loop_manager.reset();
-        
+
         // 验证重置后可以正常使用
         let mut update_count = 0;
         loop_manager.update(frame_time, |_| {
@@ -332,4 +339,3 @@ mod tests {
         assert_eq!(update_count, 1);
     }
 }
-

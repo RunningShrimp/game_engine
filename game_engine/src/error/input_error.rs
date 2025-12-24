@@ -1,5 +1,5 @@
 //  输入系统错误类型
-// 
+//
 //  定义了输入系统相关的所有错误类型，包括键盘、鼠标、触摸、游戏手柄等。
 
 use crate::error::{ErrorCategory, ErrorSeverity};

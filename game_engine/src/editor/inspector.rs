@@ -26,39 +26,21 @@ impl Inspector {
 
                     ui.horizontal(|ui| {
                         ui.label("Position:");
-                        ui.add(
-                            egui::DragValue::new(&mut transform.pos.x)
-                                .prefix("X: ")
-                                .speed(0.1),
-                        );
-                        ui.add(
-                            egui::DragValue::new(&mut transform.pos.y)
-                                .prefix("Y: ")
-                                .speed(0.1),
-                        );
-                        ui.add(
-                            egui::DragValue::new(&mut transform.pos.z)
-                                .prefix("Z: ")
-                                .speed(0.1),
-                        );
+                        ui.add(egui::DragValue::new(&mut transform.pos.x).prefix("X: ").speed(0.1));
+                        ui.add(egui::DragValue::new(&mut transform.pos.y).prefix("Y: ").speed(0.1));
+                        ui.add(egui::DragValue::new(&mut transform.pos.z).prefix("Z: ").speed(0.1));
                     });
 
                     ui.horizontal(|ui| {
                         ui.label("Scale:");
                         ui.add(
-                            egui::DragValue::new(&mut transform.scale.x)
-                                .prefix("X: ")
-                                .speed(0.01),
+                            egui::DragValue::new(&mut transform.scale.x).prefix("X: ").speed(0.01),
                         );
                         ui.add(
-                            egui::DragValue::new(&mut transform.scale.y)
-                                .prefix("Y: ")
-                                .speed(0.01),
+                            egui::DragValue::new(&mut transform.scale.y).prefix("Y: ").speed(0.01),
                         );
                         ui.add(
-                            egui::DragValue::new(&mut transform.scale.z)
-                                .prefix("Z: ")
-                                .speed(0.01),
+                            egui::DragValue::new(&mut transform.scale.z).prefix("Z: ").speed(0.01),
                         );
                     });
 
@@ -66,24 +48,16 @@ impl Inspector {
                     ui.horizontal(|ui| {
                         ui.label("Rotation:");
                         ui.add(
-                            egui::DragValue::new(&mut transform.rot.x)
-                                .prefix("X: ")
-                                .speed(0.01),
+                            egui::DragValue::new(&mut transform.rot.x).prefix("X: ").speed(0.01),
                         );
                         ui.add(
-                            egui::DragValue::new(&mut transform.rot.y)
-                                .prefix("Y: ")
-                                .speed(0.01),
+                            egui::DragValue::new(&mut transform.rot.y).prefix("Y: ").speed(0.01),
                         );
                         ui.add(
-                            egui::DragValue::new(&mut transform.rot.z)
-                                .prefix("Z: ")
-                                .speed(0.01),
+                            egui::DragValue::new(&mut transform.rot.z).prefix("Z: ").speed(0.01),
                         );
                         ui.add(
-                            egui::DragValue::new(&mut transform.rot.w)
-                                .prefix("W: ")
-                                .speed(0.01),
+                            egui::DragValue::new(&mut transform.rot.w).prefix("W: ").speed(0.01),
                         );
                     });
 

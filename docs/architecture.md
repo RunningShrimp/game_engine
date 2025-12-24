@@ -64,6 +64,7 @@
 - **systems**: ECS系统定义
 - **resources**: ECS资源定义
 - **scheduler**: 任务调度系统
+- **error_aggregator**: 错误聚合和统计
 
 ### 领域层（domain）
 
@@ -78,6 +79,15 @@
 - **pbr**: 基于物理的渲染
 - **gpu_driven**: GPU驱动渲染
 - **postprocess**: 后处理效果
+  - **PostProcessPipeline**: 固定效果链管线
+  - **PostProcessEffectManager**: 动态效果链管理器，支持自适应质量调整
+  - **效果类型**: Bloom、SSAO、Motion Blur、Depth of Field、Color Correction、Tonemap
+- **webgl_adapter**: WebGL适配器和WGSL到GLSL转换器
+- **instance_batch**: 实例批处理系统
+- **lod**: 多级细节（LOD）系统
+- **csm**: 级联阴影贴图
+- **frustum**: 视锥剔除系统
+- **occlusion_culling**: 遮挡剔除系统
 
 ### 物理系统（physics）
 
@@ -90,6 +100,13 @@
 - **manager**: 资源加载和管理
 - **coroutine_loader**: 协程优化的加载器
 - **atlas**: 纹理图集管理
+- **resource_trait**: 统一资源接口（Resource、ResourceLoader）
+- **unified_manager**: 统一资源管理器
+- **dependency_manager**: 资源依赖管理（DependencyGraph）
+- **hot_reload**: 资源热重载系统
+- **streaming_loader**: 流式资源加载器
+- **compressed_cache**: 压缩资源缓存
+- **gltf_loader**: GLTF/GLB文件加载器（可选特性）
 
 ### 网络系统（network）
 
@@ -97,6 +114,7 @@
 - **synchronization**: 状态同步
 - **prediction**: 客户端预测
 - **parallel**: 并行消息处理
+- **webrtc**: WebRTC网络协议支持
 
 ## 性能优化
 
@@ -111,12 +129,18 @@
 - **对象池**: 预定义的对象池减少分配
 - **碎片整理**: 内存碎片监控和整理
 - **Arena分配器**: 用于临时分配
+- **WASM内存池**: WebAssembly平台的内存池管理
+- **SIMD优化**: 使用SIMD指令加速计算
+- **线性内存管理**: WASM线性内存优化策略
 
 ### 3. 渲染优化
 
 - **GPU驱动渲染**: 使用计算着色器进行剔除
 - **批处理**: 合并draw call
 - **状态缓存**: LRU缓存减少状态切换
+- **后处理优化**: 效果链自动优化和合并
+- **自适应质量**: 根据性能自动调整后处理质量
+- **WebGL优化**: WebGL能力检测和性能优化建议
 
 ## 扩展性
 
@@ -150,6 +174,8 @@
 - WebAssembly支持
 - 使用`wasm-bindgen`进行绑定
 - WebGL/WebGPU渲染
+- **WASM性能优化**: 内存池、SIMD、线性内存管理
+- **WebGL适配器**: WGSL到GLSL转换、能力检测、性能优化
 
 ### 移动平台
 
@@ -244,11 +270,69 @@ GPU上传
 - 性能回归测试
 - 负载测试
 
+## 新增架构特性
+
+### 后处理效果管理系统
+
+**PostProcessEffectManager** 提供动态后处理效果链管理：
+
+- **动态效果链**: 运行时添加/移除效果
+- **自动优化**: 效果链自动排序和合并兼容效果
+- **自适应质量**: 根据性能自动调整质量模式
+- **预设管理**: 保存和加载效果配置
+- **性能监控**: 跟踪每个效果的GPU时间
+
+详见[后处理效果API指南](guides/postprocess_api_guide.md)。
+
+### 统一资源管理系统
+
+**UnifiedResourceManager** 提供统一的资源管理接口：
+
+- **统一接口**: Resource和ResourceLoader trait
+- **依赖管理**: DependencyGraph自动管理资源依赖
+- **热重载**: HotReloadManager支持运行时资源更新
+- **流式加载**: StreamingLoader支持大资源流式加载
+- **压缩缓存**: CompressedResourceCache自动压缩和缓存
+
+### WebAssembly优化
+
+针对Web平台的性能优化：
+
+- **内存池**: WasmMemoryPool减少内存分配开销
+- **SIMD支持**: WasmSimdSupport检测和利用SIMD指令
+- **线性内存优化**: WasmLinearMemoryOptimizer管理内存增长策略
+
+详见[WASM构建指南](guides/wasm_build_guide.md)。
+
+### 异步寻路服务
+
+**AsyncPathfindingService** 提供协程版本的寻路服务：
+
+- **异步接口**: 使用Tokio协程实现异步寻路
+- **性能提升**: 相比同步版本减少阻塞
+- **易于集成**: 与异步资源加载系统集成
+
+详见[异步寻路指南](guides/async_pathfinding_guide.md)。
+
+### 性能监控系统
+
+**PerformanceDashboard** 提供实时性能监控：
+
+- **Web仪表盘**: 基于Web的实时性能监控界面
+- **性能热力图**: 帧时间分布可视化
+- **GPU监控**: GPU性能指标和着色器阶段分析
+- **回归检测**: 自动检测性能回归并生成报告
+
 ## 相关文档
 
+- [API参考](api_reference.md)
 - [特性标志使用指南](guides/feature_flags_guide.md)
 - [错误处理指南](guides/error_handling_guide.md)
 - [服务层指南](guides/service_layer_guide.md)
 - [插件系统指南](guides/plugin_system_guide.md)
 - [对象池使用指南](guides/object_pool_usage_guide.md)
+- [后处理效果API指南](guides/postprocess_api_guide.md)
+- [WASM构建指南](guides/wasm_build_guide.md)
+- [异步寻路指南](guides/async_pathfinding_guide.md)
+- [ADR记录](adr/README.md)
 

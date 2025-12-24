@@ -1,7 +1,7 @@
 pub mod arena;
 pub mod memory_optimization;
 pub mod pool_manager;
-pub use pool_manager::{PoolManager, PoolConfig, PoolManagerStats, global_pool_manager};
+pub use pool_manager::{PoolConfig, PoolManager, PoolManagerStats, global_pool_manager};
 
 pub use arena::{Arena, ArenaError, MemoryPool, TypedArena, TypedArenaWithDrop};
 pub use memory_optimization::*;

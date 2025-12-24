@@ -31,7 +31,14 @@ fn main() {
         println!("执行时间: {:.2} {}", result.current_value, result.unit);
         println!("基准时间: {:.2} {}", result.baseline, result.unit);
         println!("性能变化: {:.2}%", result.regression_percent);
-        println!("状态: {}", if result.has_regression { "回退" } else { "正常" });
+        println!(
+            "状态: {}",
+            if result.has_regression {
+                "回退"
+            } else {
+                "正常"
+            }
+        );
     }
 
     println!("\n2. 多次运行取平均");
@@ -63,8 +70,10 @@ fn main() {
     let thresholds = DefaultThresholds::get_default_thresholds();
     println!("引擎默认配置的阈值:");
     for (name, threshold) in thresholds.iter().take(5) {
-        println!("  {}: 基准={:.2}ms, 偏差={}%",
-            name, threshold.baseline, threshold.tolerance_percent);
+        println!(
+            "  {}: 基准={:.2}ms, 偏差={}%",
+            name, threshold.baseline, threshold.tolerance_percent
+        );
     }
 
     println!("\n5. 性能改进检测");
@@ -73,15 +82,23 @@ fn main() {
     let mut benchmark = suite.get_benchmark().clone();
     benchmark.set_relative_threshold("render_improvement", 20.0, 0.0);
 
-    benchmark.run("render_improvement", || {
-        render_frame();
-    }, "ms");
+    benchmark.run(
+        "render_improvement",
+        || {
+            render_frame();
+        },
+        "ms",
+    );
 
     if let Some(result) = benchmark.get_result("render_improvement") {
         if result.has_improvement() {
-            println!("性能改进: {:.2}% ({} -> {} {})",
+            println!(
+                "性能改进: {:.2}% ({} -> {} {})",
                 (1.0 - result.current_value / result.baseline) * 100.0,
-                result.baseline, result.current_value, result.unit);
+                result.baseline,
+                result.current_value,
+                result.unit
+            );
         }
     }
 

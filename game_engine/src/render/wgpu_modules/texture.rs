@@ -1,5 +1,5 @@
 //  WGPU 纹理管理
-// 
+//
 //  包含纹理加载、创建和管理功能。
 //  支持压缩纹理格式（ASTC、BC等）的加载和解码。
 
@@ -232,11 +232,8 @@ impl TextureManager {
         linear: bool,
     ) -> Option<u32> {
         // 检查压缩配置是否启用
-        let compression_enabled = self
-            .compression_config
-            .as_ref()
-            .map(|config| config.enabled)
-            .unwrap_or(true); // 默认启用
+        let compression_enabled =
+            self.compression_config.as_ref().map(|config| config.enabled).unwrap_or(true); // 默认启用
 
         if compression_enabled {
             // 首先尝试检测压缩格式

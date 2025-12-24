@@ -1,5 +1,5 @@
 //  演示场景模块
-// 
+//
 //  负责创建游戏引擎的演示场景，包括：
 //  - 物理对象生成
 //  - 精灵网格生成
@@ -30,8 +30,7 @@ pub fn spawn_demo_scene(world: &mut World, asset_server: &AssetServer) {
     let atlas_path = std::path::Path::new("assets/atlas.png");
     let atlas_handle = asset_server.load_texture(atlas_path);
 
-    // 生成物理场景（如果启用了物理特性）
-    #[cfg(feature = "physics")]
+    // 生成物理场景
     spawn_physics_scene(world);
 
     // 生成精灵网格
@@ -48,7 +47,6 @@ pub fn spawn_demo_scene(world: &mut World, asset_server: &AssetServer) {
 /// # 参数
 ///
 /// * `world` - ECS世界
-#[cfg(feature = "physics")]
 fn spawn_physics_scene(world: &mut World) {
     use crate::domain::physics::{RigidBodyType, ShapeType};
     use crate::physics::{ColliderDesc, RigidBodyDesc};

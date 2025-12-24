@@ -1,22 +1,22 @@
 //  异步上传队列模块
-// 
+//
 //  管理 CPU→GPU 数据传输，支持纹理、缓冲区等资源的异步上传。
-// 
+//
 //  ## 使用示例
-// 
+//
 //  ```ignore
 //  let mut upload_queue = UploadQueue::new();
-// 
+//
 //  // 队列纹理上传
 //  upload_queue.queue_texture(
 //      &texture_data,
 //      &gpu_texture,
 //      TextureUploadInfo { width: 512, height: 512, format: TextureFormat::Rgba8Unorm },
 //  );
-// 
+//
 //  // 队列缓冲区上传
 //  upload_queue.queue_buffer(&vertex_data, &gpu_buffer, 0);
-// 
+//
 //  // 在渲染循环中刷新
 //  upload_queue.flush(device, queue, encoder);
 //  ```
@@ -24,7 +24,7 @@
 use super::staging_buffer::StagingBufferPool;
 
 // 性能监控集成 - 使用 tracing 系统
-use tracing::{span, Level, info};
+use tracing::{Level, info, span};
 
 // ============================================================================
 // 上传请求
@@ -140,12 +140,11 @@ impl UploadQueue {
     /// - `target`: 目标 GPU 缓冲区
     /// - `target_offset`: 目标缓冲区中的偏移
     pub fn queue_buffer(&mut self, data: &[u8], target: wgpu::Buffer, target_offset: u64) {
-        self.pending
-            .push(UploadRequest::Buffer(BufferUploadRequest {
-                data: data.to_vec(),
-                target,
-                target_offset,
-            }));
+        self.pending.push(UploadRequest::Buffer(BufferUploadRequest {
+            data: data.to_vec(),
+            target,
+            target_offset,
+        }));
 
         self.stats.buffer_uploads += 1;
         self.stats.bytes_uploaded += data.len() as u64;
@@ -164,12 +163,11 @@ impl UploadQueue {
             bytes_queued = data.len(),
             "Texture upload queued"
         );
-        self.pending
-            .push(UploadRequest::Texture(TextureUploadRequest {
-                data: data.to_vec(),
-                target,
-                info,
-            }));
+        self.pending.push(UploadRequest::Texture(TextureUploadRequest {
+            data: data.to_vec(),
+            target,
+            info,
+        }));
 
         self.stats.texture_uploads += 1;
         self.stats.bytes_uploaded += data.len() as u64;

@@ -124,10 +124,7 @@ impl PerformanceMonitor {
 
     /// 记录指标
     pub fn record(&mut self, metric_type: MetricType, value: f64, unit: &str) {
-        self.metrics
-            .entry(metric_type)
-            .or_default()
-            .push(value);
+        self.metrics.entry(metric_type).or_default().push(value);
 
         let metric = Metric::new(metric_type, value, unit.to_string());
         self.metric_history.push(metric);
@@ -330,8 +327,7 @@ impl OptimizationRecommendation {
             recommendations.push(Self {
                 area: "Rendering".to_string(),
                 issue: "Too many draw calls".to_string(),
-                recommendation: "Enable draw call batching and implement LOD system"
-                    .to_string(),
+                recommendation: "Enable draw call batching and implement LOD system".to_string(),
                 expected_improvement: "30-50% reduction in draw calls".to_string(),
             });
         }
@@ -343,8 +339,7 @@ impl OptimizationRecommendation {
             recommendations.push(Self {
                 area: "CPU".to_string(),
                 issue: "High update time".to_string(),
-                recommendation: "Profile and optimize hot paths, consider using SIMD"
-                    .to_string(),
+                recommendation: "Profile and optimize hot paths, consider using SIMD".to_string(),
                 expected_improvement: "20-40% improvement in update performance".to_string(),
             });
         }

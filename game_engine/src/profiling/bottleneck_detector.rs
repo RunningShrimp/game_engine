@@ -317,10 +317,7 @@ impl BottleneckDetector {
 
     /// 获取特定阶段的样本数
     pub fn sample_count(&self, phase_name: &str) -> usize {
-        self.phase_history
-            .get(phase_name)
-            .map(|v| v.len())
-            .unwrap_or(0)
+        self.phase_history.get(phase_name).map(|v| v.len()).unwrap_or(0)
     }
 }
 

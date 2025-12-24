@@ -32,14 +32,19 @@ impl DomainEvent for EntityCreatedEvent {
     }
 
     fn apply(&self, world: &mut World) -> Result<(), EventError> {
-        println!("  Applying EntityCreated event: entity_id={}, type={}", 
-                 self.entity_id, self.entity_type);
+        println!(
+            "  Applying EntityCreated event: entity_id={}, type={}",
+            self.entity_id, self.entity_type
+        );
         // 在实际应用中，这里会创建ECS实体
         Ok(())
     }
 
     fn revert(&self, world: &mut World) -> Result<(), EventError> {
-        println!("  Reverting EntityCreated event: entity_id={}", self.entity_id);
+        println!(
+            "  Reverting EntityCreated event: entity_id={}",
+            self.entity_id
+        );
         // 在实际应用中，这里会删除ECS实体
         Ok(())
     }
@@ -57,12 +62,18 @@ impl DomainEvent for EntityRemovedEvent {
     }
 
     fn apply(&self, world: &mut World) -> Result<(), EventError> {
-        println!("  Applying EntityRemoved event: entity_id={}", self.entity_id);
+        println!(
+            "  Applying EntityRemoved event: entity_id={}",
+            self.entity_id
+        );
         Ok(())
     }
 
     fn revert(&self, world: &mut World) -> Result<(), EventError> {
-        println!("  Reverting EntityRemoved event: entity_id={}", self.entity_id);
+        println!(
+            "  Reverting EntityRemoved event: entity_id={}",
+            self.entity_id
+        );
         Ok(())
     }
 }
@@ -95,8 +106,10 @@ fn main() {
         let mut handler_state = 0u32;
         event_bus.subscribe::<EntityCreatedEvent>(move |event: &EntityCreatedEvent| {
             handler_state += 1;
-            println!("  Handler received EntityCreated (call #{}): entity_id={}, type={}", 
-                     handler_state, event.entity_id, event.entity_type);
+            println!(
+                "  Handler received EntityCreated (call #{}): entity_id={}, type={}",
+                handler_state, event.entity_id, event.entity_type
+            );
         });
     }
     println!("  ✓ Subscribed to EntityCreated events");
@@ -108,8 +121,10 @@ fn main() {
         let mut handler_state = 0u32;
         event_bus.subscribe::<EntityRemovedEvent>(move |event: &EntityRemovedEvent| {
             handler_state += 1;
-            println!("  Handler received EntityRemoved (call #{}): entity_id={}", 
-                     handler_state, event.entity_id);
+            println!(
+                "  Handler received EntityRemoved (call #{}): entity_id={}",
+                handler_state, event.entity_id
+            );
         });
     }
     println!("  ✓ Subscribed to EntityRemoved events");
@@ -146,10 +161,13 @@ fn main() {
             entity_type: "Item".to_string(),
         },
     ];
-    
+
     event_bus.publish_batch(&batch_create_events);
-    println!("  ✓ Published {} EntityCreated events in batch", batch_create_events.len());
-    
+    println!(
+        "  ✓ Published {} EntityCreated events in batch",
+        batch_create_events.len()
+    );
+
     let remove_event = EntityRemovedEvent { entity_id: 1 };
     event_bus.publish(&remove_event);
     println!("  ✓ Published EntityRemoved event");
@@ -169,4 +187,3 @@ fn main() {
     println!("      In a real application, events would be integrated with");
     println!("      aggregate roots and event sourcing.");
 }
-

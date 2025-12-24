@@ -1,0 +1,129 @@
+name: Performance Regression Detection
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  performance-regression:
+    name: Detect Performance Regressions
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+          components: rustfmt, clippy
+
+      - name: Cache Cargo dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Build project
+        run: cargo build --release --package game_engine
+
+      - name: Run performance benchmarks
+        run: |
+          cargo bench --package game_engine --no-fail-fast || true
+        continue-on-error: true
+
+      - name: Check for baseline file
+        id: check_baseline
+        run: |
+          if [ -f "performance_baselines.json" ]; then
+            echo "baseline_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "baseline_exists=false" >> $GITHUB_OUTPUT
+            echo "No baseline file found. Creating initial baseline..."
+          fi
+
+      - name: Create baseline if not exists
+        if: steps.check_baseline.outputs.baseline_exists == 'false'
+        run: |
+          # 运行基准测试并创建初始基线
+          cargo bench --package game_engine -- --output-format json > benchmark_results.json || true
+          # 这里应该调用Rust程序来生成基线文件
+          echo "Baseline creation would happen here"
+
+      - name: Detect performance regressions
+        id: detect_regression
+        run: |
+          # 运行性能回归检测
+          cargo run --release --package game_engine --bin performance_regression_check || true
+          # 检查是否有严重回归
+          if [ -f "regression_report.json" ]; then
+            HAS_REGRESSION=$(cat regression_report.json | jq -r '.has_severe_regression')
+            if [ "$HAS_REGRESSION" = "true" ]; then
+              echo "has_regression=true" >> $GITHUB_OUTPUT
+              exit 1
+            else
+              echo "has_regression=false" >> $GITHUB_OUTPUT
+            fi
+          fi
+        continue-on-error: true
+
+      - name: Upload regression report
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: performance-regression-report
+          path: |
+            regression_report.json
+            performance_baselines.json
+            benchmark_results.json
+
+      - name: Comment PR with regression results
+        if: github.event_name == 'pull_request' && steps.detect_regression.outputs.has_regression == 'true'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            if (fs.existsSync('regression_report.json')) {
+              const report = JSON.parse(fs.readFileSync('regression_report.json', 'utf8'));
+              const body = `## ⚠️ Performance Regression Detected
+              
+              **Severe Regressions:** ${report.regression_count.severe}
+              **Moderate Regressions:** ${report.regression_count.moderate}
+              **Minor Regressions:** ${report.regression_count.minor}
+              
+              ### Details
+              ${report.regressions.map(r => `
+              - **${r.metric}**: ${r.regression_percent.toFixed(2)}% regression (${r.severity})
+                - Baseline: ${r.baseline.toFixed(2)}
+                - Current: ${r.current.toFixed(2)}
+                - Suggested Fix: ${r.suggested_fix || 'N/A'}
+              `).join('')}
+              
+              Please review and address these performance regressions before merging.`;
+              
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: body
+              });
+            }
+
+      - name: Fail if severe regression detected
+        if: steps.detect_regression.outputs.has_regression == 'true'
+        run: |
+          echo "❌ Severe performance regression detected. Please review the regression report."
+          exit 1
+

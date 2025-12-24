@@ -24,7 +24,9 @@ impl WinitWindow {
                 WindowAttributes::default().with_inner_size(PhysicalSize::new(size.0, size.1)),
             )
             .unwrap();
-        Self { window: Some(Arc::new(win)) }
+        Self {
+            window: Some(Arc::new(win)),
+        }
     }
 
     pub fn try_new(event_loop: &ActiveEventLoop, size: (u32, u32)) -> Option<Self> {
@@ -57,7 +59,9 @@ impl WinitWindow {
     ///
     /// 用于在事件循环中从已存在的窗口创建WinitWindow包装器
     pub fn from_arc(window: Arc<Window>) -> Self {
-        Self { window: Some(window) }
+        Self {
+            window: Some(window),
+        }
     }
 }
 
@@ -88,8 +92,7 @@ impl crate::platform::Window for WinitWindow {
     fn set_fullscreen(&self, fullscreen: bool) {
         if self.window.is_some() {
             if fullscreen {
-                self.raw()
-                    .set_fullscreen(Some(Fullscreen::Borderless(None)));
+                self.raw().set_fullscreen(Some(Fullscreen::Borderless(None)));
             } else {
                 self.raw().set_fullscreen(None);
             }

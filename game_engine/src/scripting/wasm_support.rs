@@ -1,19 +1,19 @@
 //  WebAssembly 脚本支持模块
-// 
+//
 //  提供完整的 WebAssembly 运行时支持，基于 wasmtime 库实现。
-// 
+//
 //  ## 功能特性
-// 
+//
 //  - WASM 模块加载和执行
 //  - 宿主函数注册
 //  - 类型安全的函数调用
 //  - 内存管理
-// 
+//
 //  ## 示例
-// 
+//
 //  ```rust,ignore
 //  use game_engine::scripting::wasm_support::{WasmRuntime, WasmValue};
-// 
+//
 //  let mut runtime = WasmRuntime::new().expect("Failed to create WASM runtime");
 //  runtime.load_module("game_logic", &wasm_bytes).expect("Failed to load module");
 //  let result = runtime.call_function("game_logic", "update", vec![WasmValue::F32(0.016)]);
@@ -249,14 +249,9 @@ impl WasmRuntime {
         let mut exports = HashMap::new();
         for export in module.exports() {
             if let wasmtime::ExternType::Func(func_type) = export.ty() {
-                let param_types: Vec<WasmType> = func_type
-                    .params()
-                    .map(|p| val_type_to_wasm_type(&p))
-                    .collect();
-                let return_type = func_type
-                    .results()
-                    .next()
-                    .map(|r| val_type_to_wasm_type(&r));
+                let param_types: Vec<WasmType> =
+                    func_type.params().map(|p| val_type_to_wasm_type(&p)).collect();
+                let return_type = func_type.results().next().map(|r| val_type_to_wasm_type(&r));
 
                 exports.insert(
                     export.name().to_string(),
@@ -316,14 +311,12 @@ impl WasmRuntime {
             .ok_or_else(|| format!("Module '{}' not instantiated", module_name))?;
 
         // 获取函数
-        let func = instance
-            .get_func(&mut self.store, function_name)
-            .ok_or_else(|| {
-                format!(
-                    "Function '{}' not found in module '{}'",
-                    function_name, module_name
-                )
-            })?;
+        let func = instance.get_func(&mut self.store, function_name).ok_or_else(|| {
+            format!(
+                "Function '{}' not found in module '{}'",
+                function_name, module_name
+            )
+        })?;
 
         // 转换参数
         let wasm_args: Vec<wasmtime::Val> = args.iter().map(wasm_value_to_val).collect();

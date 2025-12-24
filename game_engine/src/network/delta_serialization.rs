@@ -1,11 +1,11 @@
 //  增量序列化模块
-// 
+//
 //  实现网络数据的增量序列化协议，只传输变化的数据以减少网络带宽使用。
-// 
+//
 //  ## 设计原理
-// 
+//
 //  增量序列化通过比较当前状态和基准状态，只序列化变化的部分：
-// 
+//
 //  ```text
 //  ┌─────────────────┐         ┌─────────────────┐
 //  │   Current State │         │  Baseline State │
@@ -22,39 +22,39 @@
 //               │  (Only Changes)│
 //               └───────────────┘
 //  ```
-// 
+//
 //  ## 性能优化
-// 
+//
 //  - 减少网络带宽使用 50-80%（取决于变化率）
 //  - 支持字段级别的增量更新
 //  - 支持批量增量更新
 //  - 自动基准状态管理
-// 
+//
 //  ## 使用示例
-// 
+//
 //  ```rust
 //  use game_engine::network::{DeltaSerializer, EntityDelta};
-// 
+//
 //  // 创建增量序列化器
 //  let mut serializer = DeltaSerializer::new();
-// 
+//
 //  // 设置基准状态
 //  let baseline = vec![
 //      EntityDelta { id: 1, position: Some([0.0, 0.0, 0.0]), ..Default::default() },
 //      EntityDelta { id: 2, position: Some([1.0, 1.0, 1.0]), ..Default::default() },
 //  ];
 //  serializer.set_baseline(baseline);
-// 
+//
 //  // 计算增量
 //  let current = vec![
 //      EntityDelta { id: 1, position: Some([0.5, 0.0, 0.0]), ..Default::default() },
 //      EntityDelta { id: 2, position: Some([1.0, 1.0, 1.0]), ..Default::default() },
 //  ];
 //  let delta = serializer.compute_delta(&current);
-// 
+//
 //  // 序列化增量（只包含变化的数据）
 //  let serialized = serializer.serialize_delta(&delta)?;
-// 
+//
 //  // 反序列化并应用增量
 //  let deserialized = serializer.deserialize_delta(&serialized)?;
 //  serializer.apply_delta(&deserialized);

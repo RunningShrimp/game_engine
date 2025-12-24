@@ -1,5 +1,5 @@
 //  实施计划执行系统示例
-// 
+//
 //  本示例演示如何使用实施计划执行系统来管理项目任务、里程碑和风险。
 
 use chrono::{DateTime, Utc};
@@ -175,16 +175,10 @@ impl ImplementationPlanExecutor {
 
         // 任务统计
         let total_tasks = self.tasks.len();
-        let completed_tasks = self
-            .tasks
-            .values()
-            .filter(|t| t.status == TaskStatus::Completed)
-            .count();
-        let in_progress_tasks = self
-            .tasks
-            .values()
-            .filter(|t| t.status == TaskStatus::InProgress)
-            .count();
+        let completed_tasks =
+            self.tasks.values().filter(|t| t.status == TaskStatus::Completed).count();
+        let in_progress_tasks =
+            self.tasks.values().filter(|t| t.status == TaskStatus::InProgress).count();
 
         report.push_str(&format!("## 任务统计\n"));
         report.push_str(&format!("- 总任务数: {}\n", total_tasks));
@@ -201,16 +195,10 @@ impl ImplementationPlanExecutor {
 
         // 里程碑统计
         let total_milestones = self.milestones.len();
-        let completed_milestones = self
-            .milestones
-            .values()
-            .filter(|m| m.status == TaskStatus::Completed)
-            .count();
+        let completed_milestones =
+            self.milestones.values().filter(|m| m.status == TaskStatus::Completed).count();
         let avg_progress: f32 = if total_milestones > 0 {
-            self.milestones
-                .values()
-                .map(|m| m.progress as f32)
-                .sum::<f32>()
+            self.milestones.values().map(|m| m.progress as f32).sum::<f32>()
                 / total_milestones as f32
         } else {
             0.0
@@ -223,11 +211,8 @@ impl ImplementationPlanExecutor {
 
         // 风险统计
         let total_risks = self.risks.len();
-        let resolved_risks = self
-            .risks
-            .values()
-            .filter(|r| r.status == RiskStatus::Resolved)
-            .count();
+        let resolved_risks =
+            self.risks.values().filter(|r| r.status == RiskStatus::Resolved).count();
         let high_severity_risks = self
             .risks
             .values()

@@ -69,25 +69,29 @@ fn main() {
     println!("Post-Process Config:");
     println!("  - Antialiasing: {:?}", postprocess_config.antialiasing);
     println!("  - Bloom Enabled: {}", postprocess_config.bloom_enabled);
-    println!("  - Bloom Intensity: {}", postprocess_config.bloom_intensity);
+    println!(
+        "  - Bloom Intensity: {}",
+        postprocess_config.bloom_intensity
+    );
     println!("  - SSAO Enabled: {}", postprocess_config.ssao_enabled);
-    println!("  - Tonemap Operator: {:?}", postprocess_config.tonemap_operator);
+    println!(
+        "  - Tonemap Operator: {:?}",
+        postprocess_config.tonemap_operator
+    );
     println!();
 
     // 创建GPU实例数据示例
     println!("Creating GPU instances...");
     let mut instances = Vec::new();
     for i in 0..100 {
-        let transform = Mat4::from_translation(Vec3::new(
-            (i % 10) as f32 * 2.0,
-            0.0,
-            (i / 10) as f32 * 2.0,
-        ));
+        let transform =
+            Mat4::from_translation(Vec3::new((i % 10) as f32 * 2.0, 0.0, (i / 10) as f32 * 2.0));
         instances.push(game_engine::render::gpu_driven::GpuInstance {
-            transform,
-            mesh_id: 1,
-            material_id: (i % 3) as u64,
-            lod_level: 0,
+            model: transform.to_cols_array_2d(),
+            aabb_min: [-1.0, -1.0, -1.0],
+            instance_id: i as u32,
+            aabb_max: [1.0, 1.0, 1.0],
+            flags: (i % 3) as u32,
         });
     }
     println!("Created {} GPU instances", instances.len());
@@ -97,4 +101,3 @@ fn main() {
     println!("Note: This is a demonstration of configuration. Actual rendering");
     println!("      requires a full engine initialization with WGPU device.");
 }
-

@@ -1,26 +1,26 @@
 //  音频流式加载模块
-// 
+//
 //  实现音频流式解码和缓冲区管理，支持大音频文件的分块加载和播放。
-// 
+//
 //  ## 功能特性
-// 
+//
 //  - 流式音频解码
 //  - 双缓冲或三缓冲管理
 //  - 自动预加载
 //  - 内存使用优化
 //  - 支持多种音频格式（WAV, MP3, OGG等）
-// 
+//
 //  ## 使用示例
-// 
+//
 //  ```rust
 //  use crate::audio::streaming::*;
-// 
+//
 //  // 创建流式音频加载器
 //  let mut stream_loader = AudioStreamLoader::new();
-// 
+//
 //  // 开始流式加载音频
 //  let stream_id = stream_loader.start_streaming("assets/music.mp3", StreamConfig::default())?;
-// 
+//
 //  // 获取音频流
 //  if let Some(stream) = stream_loader.get_stream(stream_id) {
 //      // 播放流式音频
@@ -36,25 +36,32 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use thiserror::Error;
 
-
-
 /// 音频流式加载错误
+/// 流式音频处理错误
 #[derive(Error, Debug)]
 pub enum StreamingError {
+    /// 文件未找到
     #[error("File not found: {0}")]
     FileNotFound(String),
+    /// IO错误
     #[error("IO error: {0}")]
     IoError(String),
+    /// 解码错误
     #[error("Decode error: {0}")]
     DecodeError(String),
+    /// 流未找到
     #[error("Stream not found: {0}")]
     StreamNotFound(u64),
+    /// 流已存在
     #[error("Stream already exists: {0}")]
     StreamAlreadyExists(u64),
+    /// 缓冲区溢出
     #[error("Buffer overflow")]
     BufferOverflow,
+    /// 流已结束
     #[error("Stream ended")]
     StreamEnded,
+    /// 解码器已初始化
     #[error("Decoder already initialized")]
     AlreadyInitialized,
 }
@@ -62,6 +69,13 @@ pub enum StreamingError {
 /// 音频流ID
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct StreamId(pub u64);
+
+/// 创建新的流ID
+impl StreamId {
+    pub fn new(id: u64) -> Self {
+        Self(id)
+    }
+}
 
 impl StreamId {
     pub fn new(id: u64) -> Self {
@@ -481,9 +495,7 @@ impl AudioStreamLoader {
 
     /// 移除音频流
     pub fn remove_stream(&mut self, id: StreamId) -> Result<(), StreamingError> {
-        self.streams
-            .remove(&id)
-            .ok_or(StreamingError::StreamNotFound(id.0))?;
+        self.streams.remove(&id).ok_or(StreamingError::StreamNotFound(id.0))?;
         Ok(())
     }
 

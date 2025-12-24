@@ -1,5 +1,5 @@
 //  渲染模块
-// 
+//
 //  负责游戏引擎的渲染逻辑，包括：
 //  - 场景渲染
 //  - 光照处理
@@ -8,8 +8,8 @@
 //  - 性能监控
 
 use crate::ecs::{Camera, PointLight, Projection, Transform};
-use crate::platform::winit::WinitWindow;
 use crate::platform::run_sync;
+use crate::platform::winit::WinitWindow;
 use crate::render::wgpu_utils::{GpuPointLight, WgpuRenderer};
 use crate::services::render::RenderService;
 use bevy_ecs::prelude::*;
@@ -46,8 +46,9 @@ pub fn render(
 ) {
     let _frame_span = crate::performance::tracing_metrics::TracingMetricsManager::frame_span(
         world.entities().len() as usize,
-        window.raw().scale_factor() as f64
-    ).entered();
+        window.raw().scale_factor() as f64,
+    )
+    .entered();
 
     // Editor UI
     editor_ctx.begin_frame(window.raw());
@@ -97,7 +98,6 @@ pub fn render(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use bevy_ecs::prelude::*;
     use glam::{Quat, Vec3};
 
     #[test]
@@ -110,9 +110,9 @@ mod tests {
     #[test]
     fn test_extract_lights_with_point_light() {
         let mut world = World::new();
-        
+
         // 创建一个带点光源的实体
-        let entity = world.spawn((
+        world.spawn((
             Transform {
                 pos: Vec3::new(1.0, 2.0, 3.0),
                 rot: Quat::IDENTITY,
@@ -124,7 +124,7 @@ mod tests {
                 radius: 10.0,
                 falloff: 1.0,
             },
-        )).id();
+        ));
 
         let lights = extract_lights(&mut world);
         assert_eq!(lights.len(), 1);
@@ -133,7 +133,7 @@ mod tests {
 
     #[test]
     fn test_setup_camera_no_camera() {
-        let mut world = World::new();
+        let world = World::new();
         // 没有相机时应该返回默认值
         // 注意：这个测试可能需要mock renderer
     }
@@ -141,7 +141,7 @@ mod tests {
     #[test]
     fn test_setup_camera_with_camera() {
         let mut world = World::new();
-        
+
         // 创建一个带相机的实体
         world.spawn((
             Transform {
@@ -275,12 +275,16 @@ fn render_pbr_scene(
     egui_primitives: &[egui::ClippedPrimitive],
     pixels_per_point: f32,
 ) {
-    let batch_count = world.get_resource::<crate::render::instance_batch::BatchManager>()
-        .map(|bm| bm.stats.total_batches).unwrap_or(0);
-    let _render_span = crate::performance::tracing_metrics::TracingMetricsManager::render_submit_span(
-        batch_count as usize,
-        egui_primitives.len()
-    ).entered();
+    let batch_count = world
+        .get_resource::<crate::render::instance_batch::BatchManager>()
+        .map(|bm| bm.stats.total_batches)
+        .unwrap_or(0);
+    let _render_span =
+        crate::performance::tracing_metrics::TracingMetricsManager::render_submit_span(
+            batch_count as usize,
+            egui_primitives.len(),
+        )
+        .entered();
     if let Some(mut bm) = world.get_resource_mut::<crate::render::instance_batch::BatchManager>() {
         renderer.upload_batches(&mut bm);
         if let Err(e) = render_service.paint_pbr(
@@ -469,11 +473,8 @@ fn write_render_stats_csv(stats: &RenderStats, window: &WinitWindow) {
         let line_clone = line.clone();
         let _ = run_sync(async move {
             use tokio::io::AsyncWriteExt;
-            if let Ok(mut f) = tokio::fs::OpenOptions::new()
-                .create(true)
-                .append(true)
-                .open(&path_clone)
-                .await
+            if let Ok(mut f) =
+                tokio::fs::OpenOptions::new().create(true).append(true).open(&path_clone).await
             {
                 f.write_all(line_clone.as_bytes()).await.ok()
             } else {

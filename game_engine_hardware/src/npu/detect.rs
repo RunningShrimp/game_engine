@@ -1,5 +1,5 @@
 //  NPU（神经网络处理器）检测模块
-// 
+//
 //  检测并识别主流NPU，用于AI加速
 
 //  NPU厂商
@@ -93,10 +93,7 @@ fn detect_apple_neural_engine() -> Option<NpuInfo> {
     use std::process::Command;
 
     // 检测Apple芯片
-    if let Ok(output) = Command::new("sysctl")
-        .arg("-n")
-        .arg("machdep.cpu.brand_string")
-        .output()
+    if let Ok(output) = Command::new("sysctl").arg("-n").arg("machdep.cpu.brand_string").output()
         && let Ok(brand) = String::from_utf8(output.stdout)
     {
         let brand_lower = brand.to_lowercase();

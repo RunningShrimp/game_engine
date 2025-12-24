@@ -1,7 +1,7 @@
 //  领域特定错误类型
 
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use serde::{Serialize, Deserialize};
 
 /// 领域层错误枚举
 #[derive(Error, Debug, Clone)]

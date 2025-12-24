@@ -45,8 +45,7 @@ impl LuaContext {
     /// 执行Lua脚本
     pub fn execute(&mut self, script_name: &str, code: &str) -> Result<LuaValue, String> {
         // 保存脚本
-        self.scripts
-            .insert(script_name.to_string(), code.to_string());
+        self.scripts.insert(script_name.to_string(), code.to_string());
 
         // 实际实现需要集成mlua或rlua库
         // 这里返回一个模拟值
@@ -199,10 +198,8 @@ pub fn lua_value_to_script_value(value: &LuaValue) -> ScriptValue {
         LuaValue::Number(n) => ScriptValue::Float(*n),
         LuaValue::String(s) => ScriptValue::String(s.clone()),
         LuaValue::Table(t) => {
-            let obj: HashMap<String, ScriptValue> = t
-                .iter()
-                .map(|(k, v)| (k.clone(), lua_value_to_script_value(v)))
-                .collect();
+            let obj: HashMap<String, ScriptValue> =
+                t.iter().map(|(k, v)| (k.clone(), lua_value_to_script_value(v))).collect();
             ScriptValue::Object(obj)
         }
     }
@@ -225,10 +222,8 @@ fn script_value_to_lua_value(value: &ScriptValue) -> LuaValue {
             LuaValue::Table(table)
         }
         ScriptValue::Object(obj) => {
-            let table: HashMap<String, LuaValue> = obj
-                .iter()
-                .map(|(k, v)| (k.clone(), script_value_to_lua_value(v)))
-                .collect();
+            let table: HashMap<String, LuaValue> =
+                obj.iter().map(|(k, v)| (k.clone(), script_value_to_lua_value(v))).collect();
             LuaValue::Table(table)
         }
     }

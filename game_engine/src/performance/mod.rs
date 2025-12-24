@@ -1,17 +1,17 @@
 //  Performance模块
-// 
+//
 //  提供性能优化和集成功能。
-// 
+//
 //  ## 模块结构
-// 
+//
 //  - `memory/` - 内存优化（引擎核心依赖）
 //  - `rendering/` - 渲染优化（引擎核心依赖）
 //  - `gpu/` - GPU计算（引擎核心依赖）
 //  - `optimization/` - 特定领域优化（引擎核心依赖）
 //  - `sync/` - 同步工具（引擎核心依赖）
-// 
+//
 //  ## 性能分析工具
-// 
+//
 //  性能分析和基准测试工具在 `crate::profiling` 模块中。
 //  该模块提供：
 //  - 实时性能指标收集
@@ -20,16 +20,16 @@
 //  - 自动性能报告和告警
 
 // 引擎核心依赖的模块
+pub mod alerting;
 pub mod benchmark;
 pub mod gpu;
 pub mod memory;
-pub mod optimization;
+pub mod metrics_storage;
 pub mod monitoring;
+pub mod optimization;
 pub mod rendering;
 pub mod sync;
 pub mod tracing_metrics;
-pub mod metrics_storage;
-pub mod alerting;
 
 // 重新导出引擎核心模块
 pub use benchmark::*;

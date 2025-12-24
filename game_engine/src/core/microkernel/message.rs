@@ -96,17 +96,11 @@ impl Message {
         Self::new(source, Some(target), MessageType::Response, payload)
     }
 
-    pub fn notification(
-        source: super::ServiceId,
-        payload: MessagePayload,
-    ) -> Self {
+    pub fn notification(source: super::ServiceId, payload: MessagePayload) -> Self {
         Self::new(source, None, MessageType::Notification, payload)
     }
 
-    pub fn broadcast(
-        source: super::ServiceId,
-        payload: MessagePayload,
-    ) -> Self {
+    pub fn broadcast(source: super::ServiceId, payload: MessagePayload) -> Self {
         Self::new(source, None, MessageType::Broadcast, payload)
     }
 
@@ -125,7 +119,13 @@ pub struct Request {
 impl Request {
     pub fn new(message: Message) -> (Self, tokio::sync::oneshot::Receiver<Response>) {
         let (tx, rx) = tokio::sync::oneshot::channel();
-        (Self { message, reply_channel: tx }, rx)
+        (
+            Self {
+                message,
+                reply_channel: tx,
+            },
+            rx,
+        )
     }
 }
 
@@ -183,8 +183,8 @@ impl MessageHeaders {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::ServiceId;
+    use super::*;
 
     #[test]
     fn test_message_id() {

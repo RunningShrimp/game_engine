@@ -1,5 +1,5 @@
 //  GPU vs CPU 性能对比工具
-// 
+//
 //  量化 GPU 加速的性能收益
 //  - CPU 基准测试
 //  - GPU 模拟执行
@@ -31,9 +31,8 @@ impl PerformanceBenchmark {
 
     /// 运行 CPU 基准
     pub fn benchmark_cpu_physics(&self) -> CPUBenchmarkResult {
-        let mut positions: Vec<Vec3> = (0..self.data_size)
-            .map(|i| Vec3::new(i as f32, 0.0, 0.0))
-            .collect();
+        let mut positions: Vec<Vec3> =
+            (0..self.data_size).map(|i| Vec3::new(i as f32, 0.0, 0.0)).collect();
 
         let velocities: Vec<Vec3> = vec![Vec3::new(0.0, -9.8, 0.0); self.data_size];
         let gravity = 9.8;
@@ -67,9 +66,8 @@ impl PerformanceBenchmark {
 
     /// 运行 CPU 碰撞检测基准
     pub fn benchmark_cpu_collision(&self) -> CPUBenchmarkResult {
-        let positions: Vec<Vec3> = (0..self.data_size)
-            .map(|i| Vec3::new(i as f32 * 2.0, 0.0, 0.0))
-            .collect();
+        let positions: Vec<Vec3> =
+            (0..self.data_size).map(|i| Vec3::new(i as f32 * 2.0, 0.0, 0.0)).collect();
 
         let collision_radius = 1.0;
 
@@ -105,9 +103,8 @@ impl PerformanceBenchmark {
 
     /// 运行 CPU 粒子模拟基准
     pub fn benchmark_cpu_particles(&self) -> CPUBenchmarkResult {
-        let mut particles: Vec<Vec4> = (0..self.data_size)
-            .map(|i| Vec4::new(i as f32, 0.0, 0.0, 1.0))
-            .collect();
+        let mut particles: Vec<Vec4> =
+            (0..self.data_size).map(|i| Vec4::new(i as f32, 0.0, 0.0, 1.0)).collect();
 
         let mut velocities: Vec<Vec3> = vec![Vec3::new(0.0, 1.0, 0.0); self.data_size];
         let delta_time = 0.016;
@@ -146,13 +143,11 @@ impl PerformanceBenchmark {
 
     /// 运行 CPU 路径规划基准
     pub fn benchmark_cpu_pathfinding(&self) -> CPUBenchmarkResult {
-        let agents: Vec<Vec3> = (0..self.data_size)
-            .map(|i| Vec3::new(i as f32, 0.0, 0.0))
-            .collect();
+        let agents: Vec<Vec3> =
+            (0..self.data_size).map(|i| Vec3::new(i as f32, 0.0, 0.0)).collect();
 
-        let goals: Vec<Vec3> = (0..self.data_size)
-            .map(|i| Vec3::new(100.0 + i as f32, 100.0, 0.0))
-            .collect();
+        let goals: Vec<Vec3> =
+            (0..self.data_size).map(|i| Vec3::new(100.0 + i as f32, 100.0, 0.0)).collect();
 
         let start = Instant::now();
 
@@ -351,8 +346,7 @@ impl GPUComparativeBenchmarkSuite {
                 100,
                 cpu_physics.duration_us * 0.1, // 假设 GPU 快 10 倍
             );
-            self.analyses
-                .push(PerformanceAnalysis::new(cpu_physics, gpu_physics));
+            self.analyses.push(PerformanceAnalysis::new(cpu_physics, gpu_physics));
 
             // 碰撞检测
             let cpu_collision = bench.benchmark_cpu_collision();
@@ -362,8 +356,7 @@ impl GPUComparativeBenchmarkSuite {
                 100,
                 cpu_collision.duration_us * 0.05, // 假设 GPU 快 20 倍
             );
-            self.analyses
-                .push(PerformanceAnalysis::new(cpu_collision, gpu_collision));
+            self.analyses.push(PerformanceAnalysis::new(cpu_collision, gpu_collision));
 
             // 粒子系统
             let cpu_particles = bench.benchmark_cpu_particles();
@@ -373,8 +366,7 @@ impl GPUComparativeBenchmarkSuite {
                 100,
                 cpu_particles.duration_us * 0.15, // 假设 GPU 快 6-7 倍
             );
-            self.analyses
-                .push(PerformanceAnalysis::new(cpu_particles, gpu_particles));
+            self.analyses.push(PerformanceAnalysis::new(cpu_particles, gpu_particles));
 
             // 路径规划
             let cpu_pathfinding = bench.benchmark_cpu_pathfinding();
@@ -384,8 +376,7 @@ impl GPUComparativeBenchmarkSuite {
                 100,
                 cpu_pathfinding.duration_us * 0.08, // 假设 GPU 快 12 倍
             );
-            self.analyses
-                .push(PerformanceAnalysis::new(cpu_pathfinding, gpu_pathfinding));
+            self.analyses.push(PerformanceAnalysis::new(cpu_pathfinding, gpu_pathfinding));
         }
     }
 

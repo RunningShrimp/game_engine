@@ -164,9 +164,7 @@ mod tests {
         let mut registry = super::registry::EventTypeRegistry::new();
 
         // 注册事件类型
-        registry
-            .register_event_type::<EntityCreatedEvent>()
-            .unwrap();
+        registry.register_event_type::<EntityCreatedEvent>().unwrap();
 
         // 测试创建事件
         let event = EntityCreatedEvent {
@@ -191,9 +189,7 @@ mod tests {
             initial_data: vec![1, 2, 3],
         };
 
-        let event_id = handler
-            .execute_command(command, &mut world, Some(123))
-            .unwrap();
+        let event_id = handler.execute_command(command, &mut world, Some(123)).unwrap();
 
         let history = manager.get_event_history();
         assert_eq!(history.len(), 1);

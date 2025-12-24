@@ -1,5 +1,5 @@
 //  实时音频处理管道
-// 
+//
 //  提供优化的音频处理管道，集成各种音频效果和处理操作
 //  - 音频混合
 //  - 实时效果处理
@@ -145,10 +145,7 @@ impl AudioChannelMixer {
 
     /// 添加通道效果
     pub fn add_channel_effect(&mut self, channel: AudioChannel, effect: AudioEffect) {
-        self.channel_effects
-            .entry(channel)
-            .or_insert_with(Vec::new)
-            .push(effect);
+        self.channel_effects.entry(channel).or_insert_with(Vec::new).push(effect);
     }
 
     /// 计算最终输出增益 (包括通道音量、主音量、效果等)

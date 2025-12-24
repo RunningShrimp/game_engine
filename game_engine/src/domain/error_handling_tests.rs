@@ -261,11 +261,7 @@ mod tests {
         );
 
         // 验证JSON数据可以正确访问
-        let pos = action
-            .data
-            .get("position")
-            .and_then(|v| v.as_array())
-            .unwrap();
+        let pos = action.data.get("position").and_then(|v| v.as_array()).unwrap();
         assert_eq!(pos.len(), 3);
         assert_eq!(pos[0].as_f64(), Some(1.0));
 

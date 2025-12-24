@@ -1,5 +1,5 @@
 //  Staging Buffer集成示例
-// 
+//
 //  展示如何将新的环形缓冲区系统集成到现有的渲染管线中。
 
 use std::sync::Arc;
@@ -69,8 +69,7 @@ impl StagingBufferIntegration {
     fn setup_monitoring(&self) {
         if self.monitoring_enabled {
             // 将增强池添加到监控器
-            self.memory_monitor
-                .add_monitored_pool(self.enhanced_pool.clone());
+            self.memory_monitor.add_monitored_pool(self.enhanced_pool.clone());
 
             // 启动监控
             self.memory_monitor.lock().start_monitoring();
@@ -93,9 +92,7 @@ impl StagingBufferIntegration {
         });
 
         // 将监控器添加到调试器
-        self.memory_debugger
-            .lock()
-            .set_memory_monitor(self.memory_monitor.clone());
+        self.memory_debugger.lock().set_memory_monitor(self.memory_monitor.clone());
 
         // 启动调试
         self.memory_debugger.lock().start_debugging();

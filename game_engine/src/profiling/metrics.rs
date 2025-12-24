@@ -1,11 +1,11 @@
 //  性能指标模块
-// 
+//
 //  定义全面的性能指标体系，包括渲染、内存、物理、音频和系统指标。
 
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
-use serde::{Deserialize, Serialize};
 
 // ============================================================================
 // 指标分类
@@ -116,7 +116,7 @@ impl MetricUnit {
 // ============================================================================
 
 /// 性能计数器
-/// 
+///
 /// 使用原子操作确保线程安全，支持高频率更新
 #[derive(Debug)]
 pub struct PerformanceCounter {
@@ -138,11 +138,7 @@ pub struct PerformanceCounter {
 
 impl PerformanceCounter {
     /// 创建新的性能计数器
-    pub fn new(
-        name: impl Into<String>,
-        category: MetricCategory,
-        unit: MetricUnit,
-    ) -> Self {
+    pub fn new(name: impl Into<String>, category: MetricCategory, unit: MetricUnit) -> Self {
         let now = Instant::now();
         Self {
             name: name.into(),
@@ -159,7 +155,7 @@ impl PerformanceCounter {
     pub fn increment(&self, delta: u64) {
         let old_value = self.value.fetch_add(delta, Ordering::Relaxed);
         let new_value = old_value + delta;
-        
+
         // 更新峰值
         let mut current_peak = self.peak.load(Ordering::Relaxed);
         while new_value > current_peak {
@@ -184,7 +180,7 @@ impl PerformanceCounter {
     /// 设置计数器值
     pub fn set(&self, value: u64) {
         self.value.store(value, Ordering::Relaxed);
-        
+
         // 更新峰值
         let mut current_peak = self.peak.load(Ordering::Relaxed);
         while value > current_peak {
@@ -347,7 +343,7 @@ impl MetricRegistry {
             definitions: HashMap::new(),
             counters: HashMap::new(),
         };
-        
+
         // 注册默认指标
         registry.register_default_metrics();
         registry
@@ -372,11 +368,7 @@ impl MetricRegistry {
     pub fn get_counter(&mut self, name: &str) -> Option<&PerformanceCounter> {
         if !self.counters.contains_key(name) {
             if let Some(def) = self.definitions.get(name) {
-                let counter = PerformanceCounter::new(
-                    name,
-                    def.category,
-                    def.unit,
-                );
+                let counter = PerformanceCounter::new(name, def.category, def.unit);
                 self.counters.insert(name.to_string(), counter);
             }
         }
@@ -514,18 +506,18 @@ mod tests {
     #[test]
     fn test_performance_counter() {
         let counter = PerformanceCounter::new("test", MetricCategory::Render, MetricUnit::Count);
-        
+
         assert_eq!(counter.value(), 0);
         assert_eq!(counter.peak(), 0);
-        
+
         counter.increment(5);
         assert_eq!(counter.value(), 5);
         assert_eq!(counter.peak(), 5);
-        
+
         counter.set(3);
         assert_eq!(counter.value(), 3);
         assert_eq!(counter.peak(), 5); // 峰值保持不变
-        
+
         counter.reset();
         assert_eq!(counter.value(), 0);
         assert_eq!(counter.peak(), 0);
@@ -534,11 +526,11 @@ mod tests {
     #[test]
     fn test_metric_registry() {
         let mut registry = MetricRegistry::new();
-        
+
         // 测试获取预定义指标
         let frame_time_counter = registry.get_counter("render.frame_time");
         assert!(frame_time_counter.is_some());
-        
+
         // 测试注册新指标
         registry.register_metric(MetricDefinition {
             name: "custom.test_metric".to_string(),
@@ -548,7 +540,7 @@ mod tests {
             critical: false,
             default_threshold: Some(10.0),
         });
-        
+
         let custom_counter = registry.get_counter("custom.test_metric");
         assert!(custom_counter.is_some());
     }
@@ -558,7 +550,7 @@ mod tests {
         assert_eq!(MetricCategory::Render.name(), "渲染");
         assert_eq!(MetricCategory::Memory.name(), "内存");
         assert_eq!(MetricCategory::Physics.name(), "物理");
-        
+
         assert!(!MetricCategory::Render.description().is_empty());
     }
 
@@ -574,10 +566,14 @@ mod tests {
     fn test_concurrent_counter() {
         use std::sync::Arc;
         use std::thread;
-        
-        let counter = Arc::new(PerformanceCounter::new("concurrent", MetricCategory::System, MetricUnit::Count));
+
+        let counter = Arc::new(PerformanceCounter::new(
+            "concurrent",
+            MetricCategory::System,
+            MetricUnit::Count,
+        ));
         let mut handles = Vec::new();
-        
+
         // 创建多个线程同时增加计数器
         for _ in 0..10 {
             let counter_clone = Arc::clone(&counter);
@@ -588,12 +584,12 @@ mod tests {
             });
             handles.push(handle);
         }
-        
+
         // 等待所有线程完成
         for handle in handles {
             handle.join().unwrap();
         }
-        
+
         assert_eq!(counter.value(), 1000);
     }
 }

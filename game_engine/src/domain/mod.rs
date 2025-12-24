@@ -4,13 +4,15 @@
 pub mod actor;
 pub mod audio;
 pub mod entity;
-pub mod event_bus;
-pub mod event_registry;
-pub mod event_sourcing;
-pub mod events;
 #[cfg(test)]
 mod error_handling_tests;
 pub mod errors;
+pub mod event_bus;
+pub mod event_registry;
+pub mod event_sourcing;
+pub mod event_sourcing_enhanced;
+pub mod cqrs;
+pub mod events;
 
 #[cfg(test)]
 mod aggregate_invariants_tests;
@@ -44,9 +46,9 @@ pub use value_objects::{
 
 // 事件总线导出
 pub use event_bus::{
-    EnhancedEventBus, EventBusResource, EventBusStats, EventPriority,
-    EventQueue, EventSystemSet, event_publish_system, publish_event,
+    EnhancedEventBus, EventBusResource, EventBusStats, EventPriority, EventQueue, EventSystemSet,
+    event_publish_system, publish_event,
 };
 
 // Re-export event registry
-pub use event_registry::{EventRegistry, global_registry, register_event_type, deserialize_event};
+pub use event_registry::{EventRegistry, deserialize_event, global_registry, register_event_type};

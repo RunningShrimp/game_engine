@@ -140,8 +140,7 @@ impl UpscalingSdkManager {
                 // Apple平台使用MetalFX
                 #[cfg(any(target_os = "macos", target_os = "ios"))]
                 {
-                    self.available_technologies
-                        .push(UpscalingTechnology::MetalFX);
+                    self.available_technologies.push(UpscalingTechnology::MetalFX);
                 }
             }
             _ => {
@@ -218,8 +217,7 @@ impl UpscalingSdkManager {
 
     /// 获取推荐技术
     pub fn recommend_technology(&self) -> UpscalingTechnology {
-        self.preferred_technology
-            .unwrap_or(UpscalingTechnology::TAA)
+        self.preferred_technology.unwrap_or(UpscalingTechnology::TAA)
     }
 
     /// 获取推荐质量模式

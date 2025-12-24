@@ -123,10 +123,7 @@ impl PerformanceMonitor {
 
     /// 记录指标
     pub fn record(&mut self, metric_type: MetricType, value: f64, unit: &str) {
-        self.metrics
-            .entry(metric_type)
-            .or_default()
-            .push(value);
+        self.metrics.entry(metric_type).or_default().push(value);
 
         let metric = Metric::new(metric_type, value, unit.to_string());
         self.metric_history.push(metric);
@@ -270,7 +267,8 @@ impl PerformanceReport {
 
         // 检测 Draw Call 问题
         if let Some(stats) = self.stats.get(&MetricType::DrawCalls)
-            && stats.avg > 1000.0 {
+            && stats.avg > 1000.0
+        {
             issues.push(PerformanceIssue {
                 severity: IssueSeverity::Medium,
                 message: format!("High draw call count: {:.0}", stats.avg),
@@ -279,7 +277,8 @@ impl PerformanceReport {
 
         // 检测内存问题
         if let Some(stats) = self.stats.get(&MetricType::RamUsage)
-            && stats.max > 2048.0 {
+            && stats.max > 2048.0
+        {
             // 超过 2GB
             issues.push(PerformanceIssue {
                 severity: IssueSeverity::High,
@@ -322,31 +321,32 @@ impl OptimizationRecommendation {
 
         // 检测 Draw Call 过多
         if let Some(stats) = report.stats.get(&MetricType::DrawCalls)
-            && stats.avg > 500.0 {
+            && stats.avg > 500.0
+        {
             recommendations.push(Self {
                 area: "Rendering".to_string(),
                 issue: "Too many draw calls".to_string(),
-                recommendation: "Enable draw call batching and implement LOD system"
-                    .to_string(),
+                recommendation: "Enable draw call batching and implement LOD system".to_string(),
                 expected_improvement: "30-50% reduction in draw calls".to_string(),
             });
         }
 
         // 检测 CPU 时间过长
         if let Some(update_stats) = report.stats.get(&MetricType::UpdateTime)
-            && update_stats.avg > 10.0 {
+            && update_stats.avg > 10.0
+        {
             recommendations.push(Self {
                 area: "CPU".to_string(),
                 issue: "High update time".to_string(),
-                recommendation: "Profile and optimize hot paths, consider using SIMD"
-                    .to_string(),
+                recommendation: "Profile and optimize hot paths, consider using SIMD".to_string(),
                 expected_improvement: "20-40% improvement in update performance".to_string(),
             });
         }
 
         // 检测内存使用
         if let Some(ram_stats) = report.stats.get(&MetricType::RamUsage)
-            && ram_stats.avg > 1024.0 {
+            && ram_stats.avg > 1024.0
+        {
             recommendations.push(Self {
                 area: "Memory".to_string(),
                 issue: "High RAM usage".to_string(),

@@ -49,23 +49,17 @@ impl AnimationClip {
 
     /// 采样指定时间的位置
     pub fn sample_position(&self, entity_id: u64, time: f32) -> Option<Vec3> {
-        self.position_tracks
-            .get(&entity_id)
-            .and_then(|track| track.sample_vec3(time))
+        self.position_tracks.get(&entity_id).and_then(|track| track.sample_vec3(time))
     }
 
     /// 采样指定时间的旋转
     pub fn sample_rotation(&self, entity_id: u64, time: f32) -> Option<Quat> {
-        self.rotation_tracks
-            .get(&entity_id)
-            .and_then(|track| track.sample_quat(time))
+        self.rotation_tracks.get(&entity_id).and_then(|track| track.sample_quat(time))
     }
 
     /// 采样指定时间的缩放
     pub fn sample_scale(&self, entity_id: u64, time: f32) -> Option<Vec3> {
-        self.scale_tracks
-            .get(&entity_id)
-            .and_then(|track| track.sample_vec3(time))
+        self.scale_tracks.get(&entity_id).and_then(|track| track.sample_vec3(time))
     }
 
     /// 采样指定骨骼的变换（位置/旋转/缩放）

@@ -1,5 +1,5 @@
 //  资源管理错误类型
-// 
+//
 //  定义了资源管理相关的所有错误类型，包括资源加载、缓存、流式传输等。
 
 use crate::error::{ErrorCategory, ErrorSeverity};

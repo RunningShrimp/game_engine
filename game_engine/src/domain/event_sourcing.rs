@@ -5,8 +5,8 @@
 //! 注意：此模块是新的类型安全实现，与core::event_sourcing模块并行存在。
 //! 新代码应该使用此模块，旧代码可以继续使用core::event_sourcing。
 
-use crate::domain::events::{AggregateRoot, DomainEvent, EventError};
 use crate::domain::event_registry::EventRegistry;
+use crate::domain::events::{AggregateRoot, DomainEvent, EventError};
 use crate::error::{safe_lock, safe_read, safe_write};
 use bevy_ecs::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -114,7 +114,10 @@ impl EventStore for MemoryEventStore {
             .iter()
             .find(|e| e.id == id)
             .cloned()
-            .ok_or(EventError::UnknownEventType(format!("Event {} not found", id.sequence)))
+            .ok_or(EventError::UnknownEventType(format!(
+                "Event {} not found",
+                id.sequence
+            )))
     }
 
     fn get_all_events(&self) -> Vec<StoredEvent> {
@@ -130,11 +133,7 @@ impl EventStore for MemoryEventStore {
     }
 
     fn get_events_range(&self, from: EventId, to: EventId) -> Vec<StoredEvent> {
-        self.events
-            .iter()
-            .filter(|e| e.id >= from && e.id <= to)
-            .cloned()
-            .collect()
+        self.events.iter().filter(|e| e.id >= from && e.id <= to).cloned().collect()
     }
 
     fn get_aggregate_events_from_version(
@@ -212,8 +211,7 @@ impl MemorySnapshotStore {
 impl SnapshotStore for MemorySnapshotStore {
     fn save_snapshot(&mut self, snapshot: Snapshot) -> Result<(), EventError> {
         // 移除旧的快照（只保留最新的）
-        self.snapshots
-            .retain(|s| s.aggregate_id != snapshot.aggregate_id);
+        self.snapshots.retain(|s| s.aggregate_id != snapshot.aggregate_id);
         self.snapshots.push(snapshot);
         Ok(())
     }
@@ -367,7 +365,7 @@ impl EventSourcingManager {
             // 使用事件注册表序列化事件
             let registry = safe_read(&self.event_registry, "event_registry")
                 .map_err(|e| EventError::ApplyFailed(format!("Failed to acquire lock: {}", e)))?;
-            
+
             // 注意：由于DomainEvent trait object的限制，我们需要通过类型ID来序列化
             // 这里简化处理：如果事件类型已注册，尝试序列化；否则使用空数据
             let data = if registry.is_registered(event_type) {
@@ -400,7 +398,10 @@ impl EventSourcingManager {
         // 注意：快照创建需要Serialize trait，这里暂时跳过
         // 实际使用中，应该通过事件类型注册表来处理
         if new_version % (self.snapshot_interval as u64) == 0 {
-            tracing::debug!("Snapshot interval reached for aggregate {}, but snapshot creation requires Serialize trait", aggregate_id);
+            tracing::debug!(
+                "Snapshot interval reached for aggregate {}, but snapshot creation requires Serialize trait",
+                aggregate_id
+            );
         }
 
         // 清理旧事件
@@ -424,8 +425,8 @@ impl EventSourcingManager {
 
         // 序列化事件
         let event_type = event.event_type();
-        let data = bincode::serialize(event)
-            .map_err(|e| EventError::SerializationError(e.to_string()))?;
+        let data =
+            bincode::serialize(event).map_err(|e| EventError::SerializationError(e.to_string()))?;
 
         let stored_event = StoredEvent {
             id: event_id,
@@ -448,11 +449,7 @@ impl EventSourcingManager {
         let store = safe_read(&self.event_store, "event_store")
             .map_err(|e| EventError::ApplyFailed(format!("Failed to acquire lock: {}", e)))?;
         let events = store.get_aggregate_events(aggregate_id);
-        Ok(events
-            .iter()
-            .map(|e| e.aggregate_version)
-            .max()
-            .unwrap_or(0))
+        Ok(events.iter().map(|e| e.aggregate_version).max().unwrap_or(0))
     }
 
     /// 创建快照（需要聚合实现Serialize）
@@ -591,7 +588,7 @@ impl EventSourcingManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::events::{EntityAddedEvent, SceneActivatedEvent, SceneLoadedEvent};
+    use crate::domain::events::SceneLoadedEvent;
     use crate::domain::scene::{Scene, SceneId};
 
     #[test]
@@ -607,14 +604,9 @@ mod tests {
             scene_name: "Test Scene".to_string(),
         };
 
-        let event_id = manager
-            .save_event(&event, Some("Scene_1"), 1, &World::default())
-            .unwrap();
+        let event_id = manager.save_event(&event, Some("Scene_1"), 1, &World::default()).unwrap();
 
-        let stored = safe_read(&store, "event_store")
-            .unwrap()
-            .get_event(event_id)
-            .unwrap();
+        let stored = safe_read(&store, "event_store").unwrap().get_event(event_id).unwrap();
 
         assert_eq!(stored.event_type, "SceneLoaded");
         assert_eq!(stored.aggregate_id, Some("Scene_1".to_string()));
@@ -632,15 +624,10 @@ mod tests {
         let mut scene = Scene::new(SceneId(1), "Test Scene");
         scene.load().unwrap(); // 这会添加SceneLoadedEvent
 
-        let event_id = manager
-            .commit_aggregate_events(&mut scene, &mut World::default())
-            .unwrap();
+        let event_id = manager.commit_aggregate_events(&mut scene, &mut World::default()).unwrap();
 
         // 验证事件已保存
-        let stored = safe_read(&store, "event_store")
-            .unwrap()
-            .get_event(event_id)
-            .unwrap();
+        let stored = safe_read(&store, "event_store").unwrap().get_event(event_id).unwrap();
         assert_eq!(stored.event_type, "SceneLoaded");
 
         // 验证事件已清除
@@ -659,15 +646,10 @@ mod tests {
         scene.load().unwrap();
         scene.activate().unwrap();
 
-        manager
-            .commit_aggregate_events(&mut scene, &mut World::default())
-            .unwrap();
+        manager.commit_aggregate_events(&mut scene, &mut World::default()).unwrap();
 
-        let events = manager
-            .replay_aggregate_events("Scene_1", None)
-            .unwrap();
+        let events = manager.replay_aggregate_events("Scene_1", None).unwrap();
 
         assert_eq!(events.len(), 2); // SceneLoaded + SceneActivated
     }
 }
-

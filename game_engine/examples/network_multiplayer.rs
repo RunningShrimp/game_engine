@@ -16,7 +16,7 @@
 //! ```
 
 use game_engine::network::compression::{CompressionLevel, NetworkCompressor};
-use game_engine::network::prediction::{ClientPredictionManager, InputCommand};
+use game_engine::network::prediction::ClientPredictionManager;
 use game_engine::network::synchronization::{EntityState, SyncStrategy};
 use glam::{Quat, Vec3};
 
@@ -73,16 +73,17 @@ fn main() {
     // 演示数据压缩
     println!("Demonstrating data compression...");
     let compressor = NetworkCompressor::with_level(CompressionLevel::Balanced);
-    
+
     let test_data = b"Hello, World! This is a test string for compression. ".repeat(100);
     println!("  Original data size: {} bytes", test_data.len());
-    
+
     match compressor.compress(&test_data) {
         Ok(compressed) => {
             println!("  Compressed data size: {} bytes", compressed.len());
-            let compression_ratio = (1.0 - compressed.len() as f64 / test_data.len() as f64) * 100.0;
+            let compression_ratio =
+                (1.0 - compressed.len() as f64 / test_data.len() as f64) * 100.0;
             println!("  Compression ratio: {:.2}%", compression_ratio);
-            
+
             // 测试解压缩
             match compressor.decompress(&compressed) {
                 Ok(decompressed) => {
@@ -105,7 +106,10 @@ fn main() {
 
     // 演示同步策略
     println!("Synchronization Strategies:");
-    println!("  - ServerAuthoritative: {:?}", SyncStrategy::ServerAuthoritative);
+    println!(
+        "  - ServerAuthoritative: {:?}",
+        SyncStrategy::ServerAuthoritative
+    );
     println!("  - ClientPrediction: {:?}", SyncStrategy::ClientPrediction);
     println!("  - Hybrid: {:?}", SyncStrategy::Hybrid);
     println!();
@@ -114,4 +118,3 @@ fn main() {
     println!("Note: This is a demonstration of network components.");
     println!("      For real multiplayer, initialize a full network connection.");
 }
-

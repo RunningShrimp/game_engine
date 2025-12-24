@@ -67,9 +67,7 @@ impl OffscreenTarget {
             view_formats: &[],
         });
 
-        self.view = self
-            .texture
-            .create_view(&wgpu::TextureViewDescriptor::default());
+        self.view = self.texture.create_view(&wgpu::TextureViewDescriptor::default());
     }
 }
 

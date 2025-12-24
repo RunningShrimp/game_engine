@@ -1,14 +1,14 @@
 //  协程优化的异步资源加载系统
-// 
+//
 //  使用 Rust async/await 协程实现高效的资源加载：
 //  - 并发加载多个资源
 //  - 优先级队列
 //  - 加载进度追踪
 //  - 取消支持
 //  - 批量加载优化
-// 
+//
 //  ## 设计原则
-// 
+//
 //  ```text
 //  ┌─────────────────────────────────────────────────────────┐
 //  │              Coroutine Asset Loading Pipeline            │
@@ -39,8 +39,8 @@ use std::sync::{Arc, Mutex};
 use thiserror::Error;
 
 use bevy_ecs::prelude::*;
-use tokio::sync::{Semaphore, mpsc, oneshot};
 use num_cpus;
+use tokio::sync::{Semaphore, mpsc, oneshot};
 
 use super::runtime::global_runtime;
 
@@ -241,11 +241,11 @@ impl CoroutineLoaderConfig {
         let cpu_count = num_cpus::get();
         Self {
             max_concurrent_loads: (cpu_count * 2).max(4).min(16), // 2倍CPU核数，最小4，最大16
-            max_spawn_blocking: cpu_count.max(2).min(8), // CPU核数，最小2，最大8
+            max_spawn_blocking: cpu_count.max(2).min(8),          // CPU核数，最小2，最大8
             load_timeout_ms: 30_000,
             max_retries: 2,
             retry_delay_ms: 100,
-            max_queue_length: 1000, // 默认最大队列长度1000
+            max_queue_length: 1000,       // 默认最大队列长度1000
             queue_warning_threshold: 500, // 超过500时警告
         }
     }
@@ -397,7 +397,7 @@ impl CoroutineAssetLoader {
                     {
                         let mut queue = safe_lock(&priority_queue, "CoroutineAssetLoader.priority_queue").unwrap();
                         let current_len = queue.len();
-                        
+
                         // 检查队列长度限制
                         if max_queue_length > 0 && current_len >= max_queue_length {
                             tracing::warn!(
@@ -422,10 +422,10 @@ impl CoroutineAssetLoader {
                         } else {
                             queue.push(request);
                         }
-                        
+
                         let new_len = queue.len();
                         queue_length.store(new_len, Ordering::Relaxed);
-                        
+
                         // 检查警告阈值
                         if new_len >= queue_warning_threshold {
                             tracing::warn!(
@@ -495,7 +495,9 @@ impl CoroutineAssetLoader {
                         }
                         stats.sample_count += 1;
                     } else {
-                        tracing::error!("Failed to acquire wait_time_stats lock, skipping statistics update");
+                        tracing::error!(
+                            "Failed to acquire wait_time_stats lock, skipping statistics update"
+                        );
                     }
                 }
 
@@ -620,7 +622,9 @@ impl CoroutineAssetLoader {
                         .map_err(|e| LoadError::DecodeError(e.to_string()));
                     result
                     // 许可将在函数结束时自动释放
-                }).await.unwrap()?;
+                })
+                .await
+                .unwrap()?;
 
                 Ok(LoadResult::Texture { image, is_linear })
             }
@@ -715,7 +719,7 @@ impl CoroutineAssetLoader {
     }
 
     /// 预加载资源（使用低优先级）
-    /// 
+    ///
     /// 用于在后台预加载资源，避免阻塞关键路径。
     /// 预加载的资源使用 Low 优先级，在队列满时可能被丢弃。
     pub fn preload(&self, path: impl AsRef<Path>, asset_type: AssetType) -> LoadHandle {
@@ -768,7 +772,9 @@ impl CoroutineAssetLoader {
 
         while let Ok(complete) = rx.try_recv() {
             // 清理取消发送器
-            if let Ok(mut cancel_senders) = safe_lock(&self.cancel_senders, "CoroutineAssetLoader.cancel_senders") {
+            if let Ok(mut cancel_senders) =
+                safe_lock(&self.cancel_senders, "CoroutineAssetLoader.cancel_senders")
+            {
                 cancel_senders.remove(&complete.request_id);
             } else {
                 tracing::warn!("Failed to acquire cancel_senders lock, skipping cleanup");
@@ -788,11 +794,11 @@ impl CoroutineAssetLoader {
     }
 
     /// 处理完成的加载请求（在主线程调用，兼容旧API）
-    /// 
+    ///
     /// # 注意
     /// 此方法使用轮询方式检查完成结果，可能造成CPU浪费。
     /// 优先使用 `wait_for_completed()` 异步方法，它使用通知机制，更高效。
-    /// 
+    ///
     /// 仅在无法使用异步上下文的同步代码中使用此方法。
     pub fn poll_completed(&self) -> Vec<LoadComplete> {
         let mut completed = Vec::new();

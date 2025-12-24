@@ -130,9 +130,7 @@ pub fn init_joints_system(
 
         if let (Ok(rb_a), Ok(rb_b)) = (rb_query.get(*entity_a), rb_query.get(*entity_b)) {
             let joint = joint_desc.to_rapier_joint();
-            let handle = physics
-                .impulse_joint_set
-                .insert(rb_a.handle, rb_b.handle, joint, true);
+            let handle = physics.impulse_joint_set.insert(rb_a.handle, rb_b.handle, joint, true);
 
             commands.entity(entity).insert(Joint { handle });
         }

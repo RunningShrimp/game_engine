@@ -24,10 +24,7 @@ impl MaterialEditor {
         ui.label("Materials:");
         for (i, _material) in self.materials.iter().enumerate() {
             let is_selected = self.selected_material == Some(i);
-            if ui
-                .selectable_label(is_selected, format!("Material {}", i))
-                .clicked()
-            {
+            if ui.selectable_label(is_selected, format!("Material {}", i)).clicked() {
                 self.selected_material = Some(i);
             }
         }

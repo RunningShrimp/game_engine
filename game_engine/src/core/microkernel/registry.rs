@@ -5,7 +5,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use tokio::sync::{RwLock, Mutex};
+use tokio::sync::{Mutex, RwLock};
 
 use super::{Service, ServiceId, ServiceInfo};
 
@@ -44,7 +44,9 @@ impl ServiceRegistry {
     ) -> Result<(), ServiceRegistryError> {
         let mut services = self.services.write().await;
         if services.contains_key(&service_id) {
-            return Err(ServiceRegistryError::AlreadyRegistered(service_id.as_str().to_string()));
+            return Err(ServiceRegistryError::AlreadyRegistered(
+                service_id.as_str().to_string(),
+            ));
         }
         services.insert(service_id.clone(), service);
         Ok(())
@@ -55,7 +57,9 @@ impl ServiceRegistry {
         let mut info = self.service_info.write().await;
 
         if services.remove(service_id).is_none() {
-            return Err(ServiceRegistryError::NotFound(service_id.as_str().to_string()));
+            return Err(ServiceRegistryError::NotFound(
+                service_id.as_str().to_string(),
+            ));
         }
 
         info.remove(service_id);
@@ -82,10 +86,14 @@ impl ServiceRegistry {
         info.values().cloned().collect()
     }
 
-    pub async fn resolve_dependencies(&self, service_id: &ServiceId) -> Result<Vec<ServiceId>, ServiceRegistryError> {
+    pub async fn resolve_dependencies(
+        &self,
+        service_id: &ServiceId,
+    ) -> Result<Vec<ServiceId>, ServiceRegistryError> {
         let mut visited = Vec::new();
         let mut visiting = Vec::new();
-        self.resolve_dependencies_recursive(service_id, &mut visited, &mut visiting).await
+        self.resolve_dependencies_recursive(service_id, &mut visited, &mut visiting)
+            .await
     }
 
     fn resolve_dependencies_recursive<'a>(
@@ -107,7 +115,9 @@ impl ServiceRegistry {
 
             visiting.push(service_id.clone());
 
-            let service = self.get(service_id).await
+            let service = self
+                .get(service_id)
+                .await
                 .ok_or_else(|| ServiceRegistryError::NotFound(service_id.as_str().to_string()))?;
 
             let service_guard = service.lock().await;
@@ -118,7 +128,8 @@ impl ServiceRegistry {
             for dep_id in dependencies {
                 let dep_id_clone = dep_id.clone();
                 resolved.extend(
-                    Box::pin(self.resolve_dependencies_recursive(&dep_id_clone, visited, visiting)).await?
+                    Box::pin(self.resolve_dependencies_recursive(&dep_id_clone, visited, visiting))
+                        .await?,
                 );
             }
 
@@ -155,7 +166,9 @@ impl ServiceRegistry {
 
             visited.insert(service_id.clone());
 
-            let service = self.get(service_id).await
+            let service = self
+                .get(service_id)
+                .await
                 .ok_or_else(|| ServiceRegistryError::NotFound(service_id.as_str().to_string()))?;
 
             let service_guard = service.lock().await;

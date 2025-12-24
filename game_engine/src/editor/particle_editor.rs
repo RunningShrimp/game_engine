@@ -424,21 +424,9 @@ impl ParticleEditor {
         ui.collapsing("Physics Settings", |ui| {
             ui.horizontal(|ui| {
                 ui.label("Gravity:");
-                ui.add(
-                    egui::DragValue::new(&mut self.config.gravity.x)
-                        .prefix("X: ")
-                        .speed(0.1),
-                );
-                ui.add(
-                    egui::DragValue::new(&mut self.config.gravity.y)
-                        .prefix("Y: ")
-                        .speed(0.1),
-                );
-                ui.add(
-                    egui::DragValue::new(&mut self.config.gravity.z)
-                        .prefix("Z: ")
-                        .speed(0.1),
-                );
+                ui.add(egui::DragValue::new(&mut self.config.gravity.x).prefix("X: ").speed(0.1));
+                ui.add(egui::DragValue::new(&mut self.config.gravity.y).prefix("Y: ").speed(0.1));
+                ui.add(egui::DragValue::new(&mut self.config.gravity.z).prefix("Z: ").speed(0.1));
             });
 
             ui.horizontal(|ui| {
@@ -451,10 +439,7 @@ impl ParticleEditor {
 
         // 播放控制
         ui.horizontal(|ui| {
-            if ui
-                .button(if self.is_playing { "Stop" } else { "Play" })
-                .clicked()
-            {
+            if ui.button(if self.is_playing { "Stop" } else { "Play" }).clicked() {
                 self.is_playing = !self.is_playing;
             }
 

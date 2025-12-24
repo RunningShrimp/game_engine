@@ -1,4 +1,4 @@
-use crossbeam_channel::{unbounded, Receiver, Sender};
+use crossbeam_channel::{Receiver, Sender, unbounded};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
@@ -150,9 +150,7 @@ impl<T> RwLockWrapper<T> {
         match self.inner.read() {
             Ok(guard) => Ok(guard),
             Err(_) => {
-                self.metrics
-                    .contention_count
-                    .fetch_add(1, Ordering::Relaxed);
+                self.metrics.contention_count.fetch_add(1, Ordering::Relaxed);
                 self.metrics
                     .wait_time_ns
                     .fetch_add(start.elapsed().as_nanos() as u64, Ordering::Relaxed);
@@ -167,9 +165,7 @@ impl<T> RwLockWrapper<T> {
         match self.inner.write() {
             Ok(guard) => Ok(guard),
             Err(_) => {
-                self.metrics
-                    .contention_count
-                    .fetch_add(1, Ordering::Relaxed);
+                self.metrics.contention_count.fetch_add(1, Ordering::Relaxed);
                 self.metrics
                     .wait_time_ns
                     .fetch_add(start.elapsed().as_nanos() as u64, Ordering::Relaxed);

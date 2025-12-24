@@ -7,11 +7,11 @@
 //! - 事件溯源系统并发测试
 //! - 性能压力测试
 
-use crate::error::lock_safety::{safe_lock, safe_read, safe_write, try_lock, try_read, try_write};
-use crate::performance::memory::{SyncObjectPool, PoolManager};
-use crate::domain::events::{SafeEventBus, DomainEvent, EventError};
-use crate::domain::event_sourcing::{EventSourcingManager, MemoryEventStore, MemorySnapshotStore};
 use crate::domain::event_registry::EventRegistry;
+use crate::domain::event_sourcing::{EventSourcingManager, MemoryEventStore, MemorySnapshotStore};
+use crate::domain::events::{DomainEvent, EventError, SafeEventBus};
+use crate::error::lock_safety::{safe_lock, safe_read, safe_write, try_lock};
+use crate::performance::memory::{PoolManager, SyncObjectPool};
 use bevy_ecs::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex, RwLock, mpsc};
@@ -21,7 +21,7 @@ use std::time::{Duration, Instant};
 /// 带超时的线程join辅助函数
 ///
 /// 如果线程在指定时间内未完成，会返回错误
-/// 
+///
 /// 注意：当超时发生时，原始线程可能仍在运行，但测试会失败并报告超时
 fn join_with_timeout<T: Send + 'static>(
     handle: thread::JoinHandle<T>,
@@ -45,8 +45,7 @@ fn join_with_timeout<T: Send + 'static>(
             // 注意：我们无法强制终止线程，但测试会失败
             Err(format!(
                 "Thread {} did not complete within {:?} (possible deadlock or hang)",
-                thread_name,
-                timeout
+                thread_name, timeout
             ))
         }
         Err(mpsc::RecvTimeoutError::Disconnected) => {
@@ -70,15 +69,14 @@ fn join_all_with_timeout<T: Send + 'static>(
         if start.elapsed() > total_timeout {
             return Err(format!(
                 "Total timeout exceeded: {} threads did not complete within {:?}",
-                i,
-                total_timeout
+                i, total_timeout
             ));
         }
 
         // 等待单个线程完成
         let remaining_timeout = total_timeout.saturating_sub(start.elapsed());
         let thread_timeout = remaining_timeout.min(timeout_per_thread);
-        
+
         join_with_timeout(handle, thread_timeout, &format!("thread_{}", i))?;
     }
 
@@ -194,8 +192,7 @@ mod lock_safety_tests {
         });
 
         // 等待线程panic（带超时保护）
-        let _ = join_with_timeout(handle, Duration::from_secs(5), "poison_test")
-            .ok(); // 忽略panic错误，因为我们期望它panic
+        let _ = join_with_timeout(handle, Duration::from_secs(5), "poison_test").ok(); // 忽略panic错误，因为我们期望它panic
 
         // 验证safe_lock能够恢复
         let result = safe_lock(&mutex, "test_poison_recovery");
@@ -236,11 +233,7 @@ mod object_pool_concurrency_tests {
 
     #[test]
     fn test_object_pool_concurrent_access() {
-        let pool = Arc::new(SyncObjectPool::new(
-            || Vec::<u32>::new(),
-            10,
-            100,
-        ));
+        let pool = Arc::new(SyncObjectPool::new(|| Vec::<u32>::new(), 10, 100));
 
         let mut handles = Vec::new();
 
@@ -275,23 +268,21 @@ mod object_pool_concurrency_tests {
         // 测试多个池的并发访问
         for i in 0..10 {
             let manager_clone = Arc::clone(&manager);
-            let handle = thread::spawn(move || {
-                match i % 3 {
-                    0 => {
-                        let mut vec = manager_clone.vec_u8_pool().acquire();
-                        vec.push(i as u8);
-                        manager_clone.vec_u8_pool().release(vec);
-                    }
-                    1 => {
-                        let mut vec = manager_clone.vec_f32_pool().acquire();
-                        vec.push(i as f32);
-                        manager_clone.vec_f32_pool().release(vec);
-                    }
-                    _ => {
-                        let mut s = manager_clone.string_pool().acquire();
-                        s.push_str(&i.to_string());
-                        manager_clone.string_pool().release(s);
-                    }
+            let handle = thread::spawn(move || match i % 3 {
+                0 => {
+                    let mut vec = manager_clone.vec_u8_pool().acquire();
+                    vec.push(i as u8);
+                    manager_clone.vec_u8_pool().release(vec);
+                }
+                1 => {
+                    let mut vec = manager_clone.vec_f32_pool().acquire();
+                    vec.push(i as f32);
+                    manager_clone.vec_f32_pool().release(vec);
+                }
+                _ => {
+                    let mut s = manager_clone.string_pool().acquire();
+                    s.push_str(&i.to_string());
+                    manager_clone.string_pool().release(s);
                 }
             });
             handles.push(handle);
@@ -355,7 +346,9 @@ mod event_bus_concurrency_tests {
             let bus_clone = Arc::clone(&bus);
             let handle = thread::spawn(move || {
                 for j in 0..100 {
-                    let event = TestEvent { value: (i * 100 + j) as u32 };
+                    let event = TestEvent {
+                        value: (i * 100 + j) as u32,
+                    };
                     bus_clone.publish(&event);
                 }
             });
@@ -461,7 +454,7 @@ mod event_sourcing_concurrency_tests {
 
         // 注册事件类型
         {
-            let  registry = event_registry.write().unwrap();
+            let registry = event_registry.write().unwrap();
             registry.register::<TestEvent>("TestEvent", 1).unwrap();
         }
 
@@ -478,14 +471,12 @@ mod event_sourcing_concurrency_tests {
             let manager_clone = Arc::clone(&manager);
             let handle = thread::spawn(move || {
                 for j in 0..50 {
-                    let event = TestEvent { value: (i * 50 + j) as u32 };
+                    let event = TestEvent {
+                        value: (i * 50 + j) as u32,
+                    };
                     let world = World::default();
-                    let _ = manager_clone.save_event(
-                        &event,
-                        Some("test_aggregate"),
-                        j as u64,
-                        &world,
-                    );
+                    let _ =
+                        manager_clone.save_event(&event, Some("test_aggregate"), j as u64, &world);
                 }
             });
             handles.push(handle);
@@ -529,7 +520,10 @@ mod performance_stress_tests {
             .expect("Threads did not complete within timeout");
 
         let duration = start.elapsed();
-        println!("Lock performance test: {}ms for 100k operations", duration.as_millis());
+        println!(
+            "Lock performance test: {}ms for 100k operations",
+            duration.as_millis()
+        );
 
         // 验证正确性
         let guard = safe_lock(&mutex, "perf_test_final").unwrap();
@@ -567,7 +561,10 @@ mod performance_stress_tests {
             .expect("Threads did not complete within timeout");
 
         let duration = start.elapsed();
-        println!("Object pool performance test: {}ms for 50k operations", duration.as_millis());
+        println!(
+            "Object pool performance test: {}ms for 50k operations",
+            duration.as_millis()
+        );
 
         // 验证统计信息
         let stats = pool.stats();
@@ -609,4 +606,3 @@ mod performance_stress_tests {
         assert!(duration.as_secs() < 10);
     }
 }
-

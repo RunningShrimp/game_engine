@@ -1,30 +1,30 @@
 //  GPU 剔除模块
-// 
+//
 //  实现基于计算着色器的视锥剔除，提供高性能的GPU端可见性判断。
-// 
+//
 //  ## 架构设计
-// 
+//
 //  - **GpuCuller**: GPU剔除器，管理计算着色器和资源
 //  - **CullingUniforms**: 剔除Uniform数据（视锥平面、实例数量）
 //  - **GpuInstance**: GPU实例数据（模型矩阵、AABB）
-// 
+//
 //  ## 性能特性
-// 
+//
 //  - 并行处理：每个实例在独立的GPU线程中处理
 //  - 原子操作：使用原子计数器收集可见实例
 //  - 内存优化：紧凑的数据布局，减少内存带宽
-// 
+//
 //  ## 使用示例
-// 
+//
 //  ```ignore
 //  use game_engine::render::gpu_driven::culling::{GpuCuller, GpuInstance};
-// 
+//
 //  // 创建GPU剔除器
 //  let culler = GpuCuller::new(device, max_instances, 64);
-// 
+//
 //  // 准备实例数据
 //  let instances: Vec<GpuInstance> = collect_instances();
-// 
+//
 //  // 执行剔除
 //  culler.cull(
 //      &mut encoder,

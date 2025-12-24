@@ -3,7 +3,10 @@
 
 use crate::domain::entity::{EntityId, GameEntity};
 use crate::domain::errors::{CompensationAction, DomainError, RecoveryStrategy, SceneError};
-use crate::domain::events::{AggregateEventQueue, AggregateRoot, DomainEvent, EntityAddedEvent, SceneActivatedEvent, SceneLoadedEvent};
+use crate::domain::events::{
+    AggregateEventQueue, AggregateRoot, DomainEvent, EntityAddedEvent, SceneActivatedEvent,
+    SceneLoadedEvent,
+};
 use crate::impl_default;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -507,9 +510,7 @@ impl Scene {
 
     /// 查找实体（按名称）
     pub fn find_entity_by_name(&self, name: &str) -> Option<&GameEntity> {
-        self.entities
-            .values()
-            .find(|e| e.name.as_deref() == Some(name))
+        self.entities.values().find(|e| e.name.as_deref() == Some(name))
     }
 
     /// 获取所有实体ID
@@ -611,11 +612,7 @@ impl Scene {
 
         // 不变式4：活跃场景最多只能有一个相机
         if self.state == SceneState::Active {
-            let camera_count = self
-                .entities
-                .values()
-                .filter(|e| e.camera.is_some())
-                .count();
+            let camera_count = self.entities.values().filter(|e| e.camera.is_some()).count();
 
             if camera_count > 1 {
                 return Err(DomainError::Scene(SceneError::ComponentNotFound(format!(
@@ -625,11 +622,7 @@ impl Scene {
             }
 
             // 不变式5：场景激活时，所有实体必须激活
-            let inactive_count = self
-                .entities
-                .values()
-                .filter(|e| !e.is_active())
-                .count();
+            let inactive_count = self.entities.values().filter(|e| !e.is_active()).count();
 
             if inactive_count > 0 {
                 return Err(DomainError::Scene(SceneError::ComponentNotFound(format!(
@@ -655,11 +648,7 @@ impl Scene {
         }
 
         if self.state == SceneState::Active {
-            let camera_count = self
-                .entities
-                .values()
-                .filter(|e| e.camera.is_some())
-                .count();
+            let camera_count = self.entities.values().filter(|e| e.camera.is_some()).count();
 
             if camera_count > 1 {
                 return Err(DomainError::Scene(SceneError::ComponentNotFound(format!(
@@ -1027,11 +1016,8 @@ mod tests {
         // 测试不变式3：所有实体必须有效
         let mut scene = Scene::new(SceneId(1), "Test Scene");
         scene.load().unwrap();
-        let mut invalid_entity = EntityFactory::create_sprite(
-            EntityId(1),
-            Vec3::ZERO,
-            crate::ecs::Sprite::default(),
-        );
+        let mut invalid_entity =
+            EntityFactory::create_sprite(EntityId(1), Vec3::ZERO, crate::ecs::Sprite::default());
         invalid_entity.camera = Some(Camera::default()); // 违反实体不变式
         scene.entities.insert(EntityId(1), invalid_entity);
         assert!(scene.validate().is_err());
@@ -1045,7 +1031,8 @@ mod tests {
         scene.add_entity(entity1).unwrap();
         assert!(scene.validate().is_ok());
 
-        let entity2 = EntityFactory::create_camera(EntityId(2), Vec3::new(1.0, 0.0, 0.0), Camera::default());
+        let entity2 =
+            EntityFactory::create_camera(EntityId(2), Vec3::new(1.0, 0.0, 0.0), Camera::default());
         let result = scene.add_entity(entity2);
         assert!(result.is_err()); // 应该失败，因为已经有相机了
 
@@ -1072,7 +1059,8 @@ mod tests {
         assert!(scene.validate().is_ok());
 
         // 尝试添加第二个相机（应该失败）
-        let entity2 = EntityFactory::create_camera(EntityId(2), Vec3::new(1.0, 0.0, 0.0), Camera::default());
+        let entity2 =
+            EntityFactory::create_camera(EntityId(2), Vec3::new(1.0, 0.0, 0.0), Camera::default());
         let result = scene.add_entity(entity2);
         assert!(result.is_err());
         if let Err(DomainError::Scene(SceneError::ComponentNotFound(msg))) = result {
@@ -1293,12 +1281,8 @@ mod tests {
         let mut scene = Scene::new(SceneId(1), "Test Scene");
         scene.load().unwrap();
 
-        scene
-            .add_entity(EntityFactory::create_basic(EntityId(1), Vec3::ZERO))
-            .unwrap();
-        scene
-            .add_entity(EntityFactory::create_basic(EntityId(2), Vec3::ZERO))
-            .unwrap();
+        scene.add_entity(EntityFactory::create_basic(EntityId(1), Vec3::ZERO)).unwrap();
+        scene.add_entity(EntityFactory::create_basic(EntityId(2), Vec3::ZERO)).unwrap();
 
         let ids = scene.entity_ids();
         assert_eq!(ids.len(), 2);
@@ -1339,19 +1323,11 @@ mod tests {
         let mut scene = Scene::new(SceneId(1), "Test Scene");
         scene.load().unwrap();
 
-        scene
-            .add_entity(EntityFactory::create_basic(EntityId(1), Vec3::ZERO))
-            .unwrap();
-        scene
-            .add_entity(EntityFactory::create_basic(EntityId(2), Vec3::ZERO))
-            .unwrap();
-        scene
-            .add_entity(EntityFactory::create_basic(EntityId(3), Vec3::ZERO))
-            .unwrap();
+        scene.add_entity(EntityFactory::create_basic(EntityId(1), Vec3::ZERO)).unwrap();
+        scene.add_entity(EntityFactory::create_basic(EntityId(2), Vec3::ZERO)).unwrap();
+        scene.add_entity(EntityFactory::create_basic(EntityId(3), Vec3::ZERO)).unwrap();
 
-        let removed = scene
-            .remove_entities(vec![EntityId(1), EntityId(3)])
-            .unwrap();
+        let removed = scene.remove_entities(vec![EntityId(1), EntityId(3)]).unwrap();
         assert_eq!(removed.len(), 2);
         assert_eq!(scene.total_entity_count(), 1);
     }
@@ -1431,9 +1407,7 @@ mod tests {
         let mut scene = Scene::new(SceneId(1), "Test Scene");
         scene.load().unwrap();
 
-        scene
-            .add_entity(EntityFactory::create_basic(EntityId(1), Vec3::ZERO))
-            .unwrap();
+        scene.add_entity(EntityFactory::create_basic(EntityId(1), Vec3::ZERO)).unwrap();
 
         let snapshot = scene.create_snapshot();
         assert_eq!(snapshot.scene_id, SceneId(1));
@@ -1538,9 +1512,7 @@ mod tests {
     fn test_scene_recover_from_error_use_default() {
         let mut scene = Scene::new(SceneId(1), "Test Scene");
         scene.load().unwrap();
-        scene
-            .add_entity(EntityFactory::create_basic(EntityId(1), Vec3::ZERO))
-            .unwrap();
+        scene.add_entity(EntityFactory::create_basic(EntityId(1), Vec3::ZERO)).unwrap();
         scene.recovery_strategy = RecoveryStrategy::UseDefault;
 
         let error = SceneError::SerializationFailed("test".to_string());
@@ -1597,9 +1569,7 @@ mod tests {
     fn test_scene_create_compensation() {
         let mut scene = Scene::new(SceneId(1), "Test Scene");
         scene.load().unwrap();
-        scene
-            .add_entity(EntityFactory::create_basic(EntityId(1), Vec3::ZERO))
-            .unwrap();
+        scene.add_entity(EntityFactory::create_basic(EntityId(1), Vec3::ZERO)).unwrap();
 
         let compensation = scene.create_compensation();
 

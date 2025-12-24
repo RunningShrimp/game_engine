@@ -20,9 +20,7 @@ pub struct WebInput {
 impl WebInput {
     pub fn new(canvas_id: &str) -> Result<Self, JsValue> {
         let window = web_sys::window().ok_or_else(|| JsValue::from_str("No window"))?;
-        let document = window
-            .document()
-            .ok_or_else(|| JsValue::from_str("No document"))?;
+        let document = window.document().ok_or_else(|| JsValue::from_str("No document"))?;
         let canvas = document
             .get_element_by_id(canvas_id)
             .ok_or_else(|| JsValue::from_str("Canvas not found"))?
@@ -54,15 +52,11 @@ impl WebInput {
             let closure = Closure::wrap(Box::new(move |event: KeyboardEvent| {
                 if let Some(key_code) = map_key_code(&event.code()) {
                     let modifiers = get_modifiers(&event);
-                    safe_lock(&keys, "WebInput.keys_pressed")
-                        .unwrap()
-                        .insert(key_code);
-                    safe_lock(&events, "WebInput.events")
-                        .unwrap()
-                        .push(InputEvent::KeyPressed {
-                            key: key_code,
-                            modifiers,
-                        });
+                    safe_lock(&keys, "WebInput.keys_pressed").unwrap().insert(key_code);
+                    safe_lock(&events, "WebInput.events").unwrap().push(InputEvent::KeyPressed {
+                        key: key_code,
+                        modifiers,
+                    });
                 }
             }) as Box<dyn FnMut(_)>);
             self.window
@@ -76,15 +70,11 @@ impl WebInput {
             let closure = Closure::wrap(Box::new(move |event: KeyboardEvent| {
                 if let Some(key_code) = map_key_code(&event.code()) {
                     let modifiers = get_modifiers(&event);
-                    safe_lock(&keys, "WebInput.keys_pressed")
-                        .unwrap()
-                        .remove(&key_code);
-                    safe_lock(&events, "WebInput.events")
-                        .unwrap()
-                        .push(InputEvent::KeyReleased {
-                            key: key_code,
-                            modifiers,
-                        });
+                    safe_lock(&keys, "WebInput.keys_pressed").unwrap().remove(&key_code);
+                    safe_lock(&events, "WebInput.events").unwrap().push(InputEvent::KeyReleased {
+                        key: key_code,
+                        modifiers,
+                    });
                 }
             }) as Box<dyn FnMut(_)>);
             self.window
@@ -116,9 +106,7 @@ impl WebInput {
                 let button = map_mouse_button(event.button());
                 let x = event.offset_x() as f32;
                 let y = event.offset_y() as f32;
-                safe_lock(&buttons, "WebInput.mouse_buttons")
-                    .unwrap()
-                    .insert(button);
+                safe_lock(&buttons, "WebInput.mouse_buttons").unwrap().insert(button);
                 safe_lock(&events, "WebInput.events")
                     .unwrap()
                     .push(InputEvent::MouseButtonPressed { button, x, y });
@@ -135,9 +123,7 @@ impl WebInput {
                 let button = map_mouse_button(event.button());
                 let x = event.offset_x() as f32;
                 let y = event.offset_y() as f32;
-                safe_lock(&buttons, "WebInput.mouse_buttons")
-                    .unwrap()
-                    .remove(&button);
+                safe_lock(&buttons, "WebInput.mouse_buttons").unwrap().remove(&button);
                 safe_lock(&events, "WebInput.events")
                     .unwrap()
                     .push(InputEvent::MouseButtonReleased { button, x, y });
@@ -168,16 +154,11 @@ impl WebInput {
 
 impl Input for WebInput {
     fn poll_events(&mut self) -> Vec<InputEvent> {
-        safe_lock(&self.events, "WebInput.events")
-            .unwrap()
-            .drain(..)
-            .collect()
+        safe_lock(&self.events, "WebInput.events").unwrap().drain(..).collect()
     }
 
     fn is_key_pressed(&self, key: KeyCode) -> bool {
-        safe_lock(&self.keys_pressed, "WebInput.keys_pressed")
-            .unwrap()
-            .contains(&key)
+        safe_lock(&self.keys_pressed, "WebInput.keys_pressed").unwrap().contains(&key)
     }
 
     fn is_mouse_button_pressed(&self, button: MouseButton) -> bool {

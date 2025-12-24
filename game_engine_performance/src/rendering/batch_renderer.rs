@@ -44,7 +44,8 @@ impl BatchRenderer {
 
         // 尝试合并到现有批次
         if let Some(last_batch) = batches.last_mut()
-            && last_batch.instance_count < self.max_instances_per_batch {
+            && last_batch.instance_count < self.max_instances_per_batch
+        {
             last_batch.instance_count += 1;
             return;
         }
@@ -72,12 +73,7 @@ impl BatchRenderer {
     /// 获取批次统计信息
     pub fn stats(&self) -> BatchStats {
         let total_batches: usize = self.batches.values().map(|v| v.len()).sum();
-        let total_instances: u32 = self
-            .batches
-            .values()
-            .flatten()
-            .map(|b| b.instance_count)
-            .sum();
+        let total_instances: u32 = self.batches.values().flatten().map(|b| b.instance_count).sum();
 
         BatchStats {
             total_batches,

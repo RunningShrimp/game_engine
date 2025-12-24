@@ -177,10 +177,7 @@ impl CicdPipeline {
     ) -> Result<(), &'static str> {
         if let Some(stage_result) = self.stages.iter_mut().find(|s| s.stage == stage) {
             stage_result.end_time = SystemTime::now();
-            if let Ok(duration) = stage_result
-                .end_time
-                .duration_since(stage_result.start_time)
-            {
+            if let Ok(duration) = stage_result.end_time.duration_since(stage_result.start_time) {
                 stage_result.duration = duration;
             }
 
@@ -248,21 +245,10 @@ impl CicdPipeline {
     /// 获取摘要
     pub fn get_summary(&self) -> CicdSummary {
         let total_stages = self.stages.len();
-        let passed_stages = self
-            .stages
-            .iter()
-            .filter(|s| s.status == StageStatus::Passed)
-            .count();
-        let failed_stages = self
-            .stages
-            .iter()
-            .filter(|s| s.status == StageStatus::Failed)
-            .count();
-        let skipped_stages = self
-            .stages
-            .iter()
-            .filter(|s| s.status == StageStatus::Skipped)
-            .count();
+        let passed_stages = self.stages.iter().filter(|s| s.status == StageStatus::Passed).count();
+        let failed_stages = self.stages.iter().filter(|s| s.status == StageStatus::Failed).count();
+        let skipped_stages =
+            self.stages.iter().filter(|s| s.status == StageStatus::Skipped).count();
 
         let total_duration = self.get_total_duration().unwrap_or(Duration::ZERO);
 
@@ -393,9 +379,7 @@ impl CicdManager {
 
     /// 获取可变流水线
     pub fn get_pipeline_mut(&mut self, pipeline_id: &str) -> Option<&mut CicdPipeline> {
-        self.pipelines
-            .iter_mut()
-            .find(|p| p.get_id() == pipeline_id)
+        self.pipelines.iter_mut().find(|p| p.get_id() == pipeline_id)
     }
 
     /// 获取最后一个流水线

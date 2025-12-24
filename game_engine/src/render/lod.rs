@@ -1,13 +1,13 @@
 //  LOD (Level of Detail) 系统
-// 
+//
 //  提供完整的多级细节管理，包括：
 //  - 距离自动选择
 //  - 平滑过渡 (Crossfade/Dithering)
 //  - 屏幕覆盖率选择
 //  - 性能预算控制
-// 
+//
 //  # 示例
-// 
+//
 //  ```ignore
 //  // 创建 LOD 配置
 //  let config = LodConfig::builder()
@@ -16,7 +16,7 @@
 //      .add_level(50.0, 100.0, LodQuality::Low)
 //      .with_transition(LodTransition::Crossfade { duration: 0.3 })
 //      .build();
-// 
+//
 //  // 使用 LOD 选择器
 //  let selector = LodSelector::new(config);
 //  let lod_level = selector.select(distance, screen_size);
@@ -186,9 +186,7 @@ impl LodConfig {
             return self.levels.last();
         }
 
-        self.levels
-            .iter()
-            .find(|level| level.contains_distance(adjusted_distance))
+        self.levels.iter().find(|level| level.contains_distance(adjusted_distance))
     }
 
     /// 获取指定质量的级别
@@ -217,9 +215,7 @@ impl LodConfigBuilder {
 impl LodConfigBuilder {
     /// 添加 LOD 级别
     pub fn add_level(mut self, min_dist: f32, max_dist: f32, quality: LodQuality) -> Self {
-        self.config
-            .levels
-            .push(LodLevel::new(min_dist, max_dist, quality));
+        self.config.levels.push(LodLevel::new(min_dist, max_dist, quality));
         self
     }
 
@@ -354,12 +350,7 @@ impl AdaptiveLodConfig {
         let recent_count = 10.min(self.frame_time_history.len());
         let mut weighted_sum = 0.0;
         let mut weight_sum = 0.0;
-        for (i, &frame_time) in self
-            .frame_time_history
-            .iter()
-            .rev()
-            .take(recent_count)
-            .enumerate()
+        for (i, &frame_time) in self.frame_time_history.iter().rev().take(recent_count).enumerate()
         {
             let weight = (i + 1) as f32; // 越近的帧权重越大
             weighted_sum += frame_time * weight;
@@ -381,13 +372,9 @@ impl AdaptiveLodConfig {
 
         // 计算GPU负载（如果有）
         let gpu_load_factor = if !self.gpu_load_history.is_empty() {
-            let recent_gpu_load: f32 = self
-                .gpu_load_history
-                .iter()
-                .rev()
-                .take(recent_count)
-                .sum::<f32>()
-                / recent_count as f32;
+            let recent_gpu_load: f32 =
+                self.gpu_load_history.iter().rev().take(recent_count).sum::<f32>()
+                    / recent_count as f32;
             recent_gpu_load
         } else {
             0.5 // 默认中等负载
@@ -554,15 +541,12 @@ impl LodSelector {
         let target_level = self.find_level_index(effective_distance);
 
         // 获取或创建实体状态
-        let state = self
-            .entity_states
-            .entry(entity_id)
-            .or_insert(LodEntityState {
-                current_level: target_level,
-                last_distance: distance,
-                transition_progress: 0.0,
-                target_level: None,
-            });
+        let state = self.entity_states.entry(entity_id).or_insert(LodEntityState {
+            current_level: target_level,
+            last_distance: distance,
+            transition_progress: 0.0,
+            target_level: None,
+        });
 
         // 应用过渡逻辑
         let selection = match self.config.transition {
@@ -780,11 +764,7 @@ impl LodSelector {
 
         LodSelection {
             current_level: target_level,
-            quality: cfg
-                .levels
-                .get(target_level)
-                .map(|l| l.quality)
-                .unwrap_or(LodQuality::Culled),
+            quality: cfg.levels.get(target_level).map(|l| l.quality).unwrap_or(LodQuality::Culled),
             transition_factor: transition_factor.clamp(0.0, 1.0),
             is_transitioning: transition_factor > 0.0,
             next_level: if transition_factor > 0.0 {
@@ -807,11 +787,7 @@ pub struct LodGroup {
 impl LodGroup {
     /// 创建 LOD 组
     pub fn new(config: LodConfig) -> Self {
-        let mesh_ids = config
-            .levels
-            .iter()
-            .filter_map(|l| l.mesh_id.clone())
-            .collect();
+        let mesh_ids = config.levels.iter().filter_map(|l| l.mesh_id.clone()).collect();
 
         Self { config, mesh_ids }
     }

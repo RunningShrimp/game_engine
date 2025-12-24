@@ -166,9 +166,7 @@ impl SpriteBatchRenderer {
 
     /// 获取所有批次
     pub fn batches(&self) -> impl Iterator<Item = &SpriteBatch> {
-        self.completed_batches
-            .iter()
-            .chain(std::iter::once(&self.current_batch))
+        self.completed_batches.iter().chain(std::iter::once(&self.current_batch))
     }
 
     /// 清空所有批次

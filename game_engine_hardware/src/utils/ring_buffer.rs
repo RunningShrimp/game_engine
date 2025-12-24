@@ -72,18 +72,12 @@ where
 
     /// 计算最小值
     pub fn min(&self) -> Option<f32> {
-        self.buffer
-            .iter()
-            .map(|&x| x.into())
-            .min_by(|a, b| a.partial_cmp(b).unwrap())
+        self.buffer.iter().map(|&x| x.into()).min_by(|a, b| a.partial_cmp(b).unwrap())
     }
 
     /// 计算最大值
     pub fn max(&self) -> Option<f32> {
-        self.buffer
-            .iter()
-            .map(|&x| x.into())
-            .max_by(|a, b| a.partial_cmp(b).unwrap())
+        self.buffer.iter().map(|&x| x.into()).max_by(|a, b| a.partial_cmp(b).unwrap())
     }
 }
 

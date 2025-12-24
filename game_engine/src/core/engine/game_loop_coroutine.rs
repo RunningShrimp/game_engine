@@ -84,7 +84,7 @@
 
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-use tokio::sync::{mpsc, Semaphore, Mutex, RwLock};
+use tokio::sync::{Mutex, RwLock, Semaphore, mpsc};
 use tokio::task::JoinHandle;
 
 use crate::ecs::Time;
@@ -528,7 +528,7 @@ mod tests {
     async fn test_task_spawn() {
         let loop_ = CoroutineGameLoop::new(Duration::from_secs_f64(1.0 / 60.0));
 
-        let id = loop_
+        let task_id = loop_
             .spawn_task(
                 "test_task".to_string(),
                 TaskPriority::Normal,
@@ -539,6 +539,8 @@ mod tests {
             )
             .await;
 
+        // 验证任务ID已分配
+        assert!(task_id > 0);
         assert!(loop_.task_count().await > 0);
 
         tokio::time::sleep(Duration::from_millis(50)).await;

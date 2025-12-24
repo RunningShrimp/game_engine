@@ -1,14 +1,16 @@
+pub mod adapter;
 pub mod hardware_info;
+pub mod native_input;
 pub mod power_aware;
 pub mod winit;
-pub mod adapter;
-pub mod native_input;
 
 use thiserror::Error;
 
 #[cfg(target_arch = "wasm32")]
 pub mod web_fs;
 
+#[cfg(target_arch = "wasm32")]
+pub mod wasm_performance;
 #[cfg(target_arch = "wasm32")]
 pub mod web_input;
 
@@ -343,9 +345,7 @@ pub trait Filesystem: Send + Sync {
         // 对于trait方法，我们需要直接调用tokio::fs而不是通过self
         // 因为self在async move中无法使用
         run_sync(async move {
-            tokio::fs::read(&path_clone)
-                .await
-                .map_err(|e| FsError::IoError(e.to_string()))
+            tokio::fs::read(&path_clone).await.map_err(|e| FsError::IoError(e.to_string()))
         })
     }
 
@@ -363,16 +363,14 @@ pub trait Filesystem: Send + Sync {
 
 // Runtime-aware helper for syncing an async future to a blocking context.
 #[cfg(not(target_arch = "wasm32"))]
-pub fn run_sync<Fut: std::future::Future + Send + 'static>(fut: Fut) -> Fut::Output 
+pub fn run_sync<Fut: std::future::Future + Send + 'static>(fut: Fut) -> Fut::Output
 where
     Fut::Output: Send,
 {
     if tokio::runtime::Handle::try_current().is_ok() {
         // Inside runtime: use block_in_place to avoid blocking the runtime
         // Note: This requires the future to be Send, which is already required by the function signature
-        tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current().block_on(fut)
-        })
+        tokio::task::block_in_place(|| tokio::runtime::Handle::current().block_on(fut))
     } else {
         // Outside runtime, use a small executor to drive the future to completion.
         pollster::block_on(fut)
@@ -393,7 +391,8 @@ pub trait Filesystem: Send + Sync {
 // XR Input (Placeholder for OpenXR integration)
 // ============================================================================
 
-#[cfg(feature = "xr")]
+// XR types are now always available (xr module is always compiled)
+// If xr feature is not enabled, the XR session will fail to initialize
 pub struct XrActionSet {
     pub hand_poses: [XrHandPose; 2],
     pub trigger_values: [f32; 2],
@@ -403,7 +402,6 @@ pub struct XrActionSet {
     pub button_b: bool,
 }
 
-#[cfg(feature = "xr")]
 #[derive(Default, Clone, Copy)]
 pub struct XrHandPose {
     pub position: [f32; 3],
@@ -430,15 +428,11 @@ impl NativeFilesystem {
 #[async_trait::async_trait]
 impl Filesystem for NativeFilesystem {
     async fn read(&self, path: &Path) -> Result<Vec<u8>, FsError> {
-        tokio::fs::read(path)
-            .await
-            .map_err(|e| FsError::IoError(e.to_string()))
+        tokio::fs::read(path).await.map_err(|e| FsError::IoError(e.to_string()))
     }
 
     async fn write(&self, path: &Path, data: &[u8]) -> Result<(), FsError> {
-        tokio::fs::write(path, data)
-            .await
-            .map_err(|e| FsError::IoError(e.to_string()))
+        tokio::fs::write(path, data).await.map_err(|e| FsError::IoError(e.to_string()))
     }
 
     fn exists(&self, path: &Path) -> bool {
@@ -456,21 +450,16 @@ impl Filesystem for NativeFilesystem {
     }
 
     async fn remove_file(&self, path: &Path) -> Result<(), FsError> {
-        tokio::fs::remove_file(path)
-            .await
-            .map_err(|e| FsError::IoError(e.to_string()))
+        tokio::fs::remove_file(path).await.map_err(|e| FsError::IoError(e.to_string()))
     }
 
     async fn read_dir(&self, path: &Path) -> Result<Vec<std::path::PathBuf>, FsError> {
         let mut entries = Vec::new();
-        let mut dir = tokio::fs::read_dir(path)
-            .await
-            .map_err(|e| FsError::IoError(e.to_string()))?;
+        let mut dir =
+            tokio::fs::read_dir(path).await.map_err(|e| FsError::IoError(e.to_string()))?;
 
-        while let Some(entry) = dir
-            .next_entry()
-            .await
-            .map_err(|e| FsError::IoError(e.to_string()))?
+        while let Some(entry) =
+            dir.next_entry().await.map_err(|e| FsError::IoError(e.to_string()))?
         {
             entries.push(entry.path());
         }

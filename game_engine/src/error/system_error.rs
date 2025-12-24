@@ -1,5 +1,5 @@
 //  系统级错误类型
-// 
+//
 //  定义了系统级相关的所有错误类型，包括初始化、配置、权限等。
 
 use crate::error::{ErrorCategory, ErrorSeverity};

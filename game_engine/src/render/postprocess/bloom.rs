@@ -1,7 +1,7 @@
 //  Bloom（辉光）后处理效果
-// 
+//
 //  实现双向高斯模糊 + 亮度提取的 Bloom 效果。
-// 
+//
 //  ## 算法流程
 //  1. 亮度提取：从场景中提取高于阈值的亮度区域
 //  2. 降采样：逐级降低分辨率，扩大模糊范围
@@ -326,9 +326,7 @@ impl BloomPass {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
             view_formats: &[],
         });
-        self.output_view = self
-            .output_texture
-            .create_view(&wgpu::TextureViewDescriptor::default());
+        self.output_view = self.output_texture.create_view(&wgpu::TextureViewDescriptor::default());
     }
 
     /// 执行 Bloom 渲染

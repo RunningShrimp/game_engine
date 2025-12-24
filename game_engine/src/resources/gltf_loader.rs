@@ -3,9 +3,9 @@
 //! 提供异步 GLTF/GLB 模型加载功能，支持纹理、网格和场景数据解析。
 
 #[cfg(feature = "gltf")]
-use std::sync::Arc;
-#[cfg(feature = "gltf")]
 use std::path::Path;
+#[cfg(feature = "gltf")]
+use std::sync::Arc;
 
 #[cfg(feature = "gltf")]
 use serde_json::Value;
@@ -113,15 +113,16 @@ impl GltfLoader {
     /// # 返回
     /// 加载的 `GltfScene` 或错误信息
     pub async fn load_from_path(path: &Path) -> Result<GltfScene, String> {
-        let bytes = tokio::fs::read(path).await
+        let bytes = tokio::fs::read(path)
+            .await
             .map_err(|e| format!("Failed to read GLTF file: {}", e))?;
 
         let json = String::from_utf8(bytes.clone())
             .ok()
             .and_then(|s| serde_json::from_str::<Value>(&s).ok());
 
-        let data = gltf::import_slice(&bytes)
-            .map_err(|e| format!("Failed to import GLTF: {}", e))?;
+        let data =
+            gltf::import_slice(&bytes).map_err(|e| format!("Failed to import GLTF: {}", e))?;
 
         Ok(GltfScene {
             data: Arc::new(data),
@@ -142,6 +143,39 @@ impl GltfLoader {
             Some(ext) => Err(GltfLoadError::InvalidExtension(ext.to_string())),
             None => Err(GltfLoadError::InvalidExtension("none".to_string())),
         }
+    }
+}
+
+// Default implementations when gltf feature is not enabled
+#[cfg(not(feature = "gltf"))]
+#[derive(Clone, Debug)]
+pub struct GltfScene;
+
+#[cfg(not(feature = "gltf"))]
+impl GltfScene {
+    pub fn from_bytes(_bytes: Vec<u8>, _json: Option<serde_json::Value>) -> Self {
+        Self
+    }
+}
+
+#[cfg(not(feature = "gltf"))]
+#[derive(Debug, thiserror::Error)]
+pub enum GltfLoadError {
+    #[error("GLTF support not enabled. Enable the 'gltf' feature to use this function.")]
+    FeatureNotEnabled,
+}
+
+#[cfg(not(feature = "gltf"))]
+pub struct GltfLoader;
+
+#[cfg(not(feature = "gltf"))]
+impl GltfLoader {
+    pub async fn load_from_path(_path: &std::path::Path) -> Result<GltfScene, String> {
+        Err("GLTF support not enabled. Enable the 'gltf' feature to use this function.".to_string())
+    }
+
+    pub fn validate_extension(_path: &std::path::Path) -> Result<(), GltfLoadError> {
+        Err(GltfLoadError::FeatureNotEnabled)
     }
 }
 

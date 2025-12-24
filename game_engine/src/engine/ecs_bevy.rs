@@ -1,4 +1,3 @@
-#![cfg(feature = "use_bevy_ecs")]
 use bevy_ecs::prelude::*;
 
 #[derive(Component, Clone, Copy)]

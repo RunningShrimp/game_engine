@@ -1,5 +1,5 @@
 //  音频系统错误类型
-// 
+//
 //  定义了音频系统相关的所有错误类型，包括音频设备、音频源、播放控制等。
 
 use crate::error::{ErrorCategory, ErrorSeverity};

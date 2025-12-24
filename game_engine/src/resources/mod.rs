@@ -1,9 +1,9 @@
 //  资源管理模块
-// 
+//
 //  提供高性能的GPU资源管理，包括Staging Buffer、内存分配和上传队列。
 
-pub mod atlas;
 pub mod async_upload;
+pub mod atlas;
 pub mod coroutine_loader;
 pub mod dependency_manager;
 pub mod enhanced_staging_buffer;
@@ -12,20 +12,37 @@ pub mod font;
 pub mod gltf_loader;
 pub mod hot_reload;
 pub mod manager;
-pub mod preload_manager;
 pub mod memory_allocator;
 pub mod memory_debug;
 pub mod memory_monitor;
 pub mod preallocation_manager;
+pub mod preload_manager;
 pub mod ring_buffer_pool;
 pub mod runtime;
 pub mod staging_buffer;
-pub mod texture_compression;
 #[cfg(test)]
 mod tests;
+pub mod texture_compression;
 pub mod upload_queue;
 
+// 统一资源接口
+pub mod compressed_cache;
+pub mod loader_trait;
+pub mod resource_trait;
+pub mod streaming_loader;
+pub mod unified_manager;
+
+// 重新导出统一资源接口
+pub use loader_trait::{
+    AudioLoader, AudioResource, ModelLoader, ModelResource, TextureLoader, TextureResource,
+};
+pub use resource_trait::{
+    Resource, ResourceError, ResourceLoader, ResourceLoaderRegistry, ResourceMetadata,
+};
+pub use unified_manager::{CacheStats, UnifiedResourceManager};
+
 // 重新导出主要类型
+pub use async_upload::{AsyncUploader, UploadTask};
 pub use enhanced_staging_buffer::{
     EnhancedPerformanceMetrics, EnhancedPoolStats, EnhancedStagingBuffer,
     EnhancedStagingBufferPool, create_enhanced_staging_buffer_pool,
@@ -55,12 +72,11 @@ pub use ring_buffer_pool::{
     AllocationStats, BlockSize, BufferState, MemoryBlock, RingBuffer, RingBufferPool,
 };
 pub use staging_buffer::{PoolStats, StagingBuffer, StagingBufferPool};
-pub use upload_queue::{TextureUploadBuilder, TextureUploadInfo, UploadQueue, UploadStats};
-pub use async_upload::{AsyncUploader, UploadTask};
 pub use texture_compression::{
-    CompressionError, CompressionFormat, CompressedTexture, BC1Format, BC2Format, BC3Format,
-    TextureCompressionManager, TextureCompression,
+    BC1Format, BC2Format, BC3Format, CompressedTexture, CompressionError, CompressionFormat,
+    TextureCompression, TextureCompressionManager,
 };
+pub use upload_queue::{TextureUploadBuilder, TextureUploadInfo, UploadQueue, UploadStats};
 
 // Re-export Dependency Manager components
 pub use dependency_manager::{
@@ -72,3 +88,14 @@ pub use preload_manager::{
     PreloadConfig, PreloadManager, PreloadRequest, PreloadState, PreloadStats, PreloadStatus,
     PreloadStrategy,
 };
+
+// Re-export Hot Reload components
+pub use hot_reload::{HotReloadEvent, HotReloadManager, HotReloadService};
+
+// Re-export Streaming Loader components
+pub use streaming_loader::{
+    ProgressiveQualityLoader, ResourceChunk, StreamingConfig, StreamingHandle, StreamingLoader,
+};
+
+// Re-export Compressed Cache components
+pub use compressed_cache::{CompressedCacheStats, CompressedResourceCache, CompressionAlgorithm};

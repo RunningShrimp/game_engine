@@ -2,9 +2,9 @@ use crate::ecs::Transform;
 use bevy_ecs::prelude::*;
 use glam::{Quat, Vec3};
 use rapier3d::na::{Isometry3, Point3, Quaternion, UnitQuaternion, Vector3};
-use rapier3d::prelude::*;
 use rapier3d::parry::bounding_volume::Aabb;
 use rapier3d::parry::shape::SharedShape;
+use rapier3d::prelude::*;
 
 // --- Components ---
 
@@ -101,7 +101,11 @@ impl PhysicsWorld3D {
 
             // 简单的球形相交测试作为示例
             if let Some(ball) = collider.shape().as_ball() {
-                let ball_center = Point3::new(collider_pos.translation.x, collider_pos.translation.y, collider_pos.translation.z);
+                let ball_center = Point3::new(
+                    collider_pos.translation.x,
+                    collider_pos.translation.y,
+                    collider_pos.translation.z,
+                );
                 let distance_to_center = (ball_center - ray.origin).magnitude();
 
                 if distance_to_center <= ball.radius + max_distance {
@@ -130,7 +134,9 @@ impl PhysicsWorld3D {
     ) -> Option<(Entity, f32)> {
         let shape_pos = Isometry3::from_parts(
             Point3::new(position.x, position.y, position.z).into(),
-            UnitQuaternion::from_quaternion(Quaternion::new(rotation.w, rotation.x, rotation.y, rotation.z)),
+            UnitQuaternion::from_quaternion(Quaternion::new(
+                rotation.w, rotation.x, rotation.y, rotation.z,
+            )),
         );
         let dir = Vector3::new(direction.x, direction.y, direction.z);
 
@@ -143,14 +149,18 @@ impl PhysicsWorld3D {
         for (_collider_handle, collider) in self.collider_set.iter() {
             // 计算两个形状之间的距离（简化实现）
             let collider_pos = collider.position();
-            let distance = (shape_pos.translation.vector - collider_pos.translation.vector).magnitude();
+            let distance =
+                (shape_pos.translation.vector - collider_pos.translation.vector).magnitude();
 
             // 使用 shape 参数进行更精确的碰撞检测（即使是简化的实现）
             let shape_influence = if shape.as_ball().is_some() { 1.0 } else { 0.5 };
             let adjusted_distance = distance * shape_influence;
 
             // 使用 direction 参数来影响检测（简化逻辑）
-            let direction_factor = dir.normalize().dot(&(collider_pos.translation.vector - shape_pos.translation.vector).normalize()).abs();
+            let direction_factor = dir
+                .normalize()
+                .dot(&(collider_pos.translation.vector - shape_pos.translation.vector).normalize())
+                .abs();
             let final_distance = adjusted_distance * (1.0 + direction_factor);
 
             if final_distance < closest_distance && final_distance <= max_distance {
@@ -305,14 +315,10 @@ pub fn init_physics_bodies_3d(
                 ..
             } = &mut *physics;
             let col_handle = collider_set.insert_with_parent(collider, rb_handle, rigid_body_set);
-            commands
-                .entity(entity)
-                .insert(Collider3D { handle: col_handle });
+            commands.entity(entity).insert(Collider3D { handle: col_handle });
         }
 
-        commands
-            .entity(entity)
-            .insert(RigidBody3D { handle: rb_handle });
+        commands.entity(entity).insert(RigidBody3D { handle: rb_handle });
     }
 }
 
@@ -345,9 +351,7 @@ mod tests {
         let mut world = PhysicsWorld3D::default();
 
         // 创建一个刚体
-        let rb = RigidBodyBuilder::dynamic()
-            .translation(vector![0.0, 10.0, 0.0])
-            .build();
+        let rb = RigidBodyBuilder::dynamic().translation(vector![0.0, 10.0, 0.0]).build();
         let rb_handle = world.rigid_body_set.insert(rb);
 
         // 创建一个碰撞体
@@ -371,9 +375,7 @@ mod tests {
         let mut world = PhysicsWorld3D::default();
 
         // 创建一个静态地面
-        let rb = RigidBodyBuilder::fixed()
-            .translation(vector![0.0, 0.0, 0.0])
-            .build();
+        let rb = RigidBodyBuilder::fixed().translation(vector![0.0, 0.0, 0.0]).build();
         let rb_handle = world.rigid_body_set.insert(rb);
 
         let collider = ColliderBuilder::cuboid(10.0, 0.1, 10.0).build();

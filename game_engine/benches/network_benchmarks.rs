@@ -2,21 +2,33 @@
 //
 //  测试消息序列化、网络消息处理等操作的性能
 
-use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
-use game_engine::network::{NetworkMessage, key_exchange};
-use game_engine::network::security::MessageEncryptor;
 use bincode;
+use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
+use game_engine::network::security::MessageEncryptor;
+use game_engine::network::{NetworkMessage, key_exchange};
 
 fn bench_message_serialization(c: &mut Criterion) {
     let mut group = c.benchmark_group("message_serialization");
 
     // 创建测试消息
     let messages = vec![
-        NetworkMessage::Connect { client_id: 1, name: "TestClient".to_string() },
+        NetworkMessage::Connect {
+            client_id: 1,
+            name: "TestClient".to_string(),
+        },
         NetworkMessage::Disconnect { client_id: 1 },
-        NetworkMessage::StateSync { tick: 1, data: vec![1, 2, 3, 4] },
-        NetworkMessage::Rpc { id: 1, method: "test".to_string(), params: vec![1, 2, 3] },
-        NetworkMessage::Heartbeat { timestamp: 1234567890 },
+        NetworkMessage::StateSync {
+            tick: 1,
+            data: vec![1, 2, 3, 4],
+        },
+        NetworkMessage::Rpc {
+            id: 1,
+            method: "test".to_string(),
+            params: vec![1, 2, 3],
+        },
+        NetworkMessage::Heartbeat {
+            timestamp: 1234567890,
+        },
     ];
 
     for message in messages {
@@ -33,9 +45,7 @@ fn bench_message_serialization(c: &mut Criterion) {
             BenchmarkId::from_parameter(format!("{}_serialize", message_name)),
             &message,
             |b, msg| {
-                b.iter(|| {
-                    black_box(bincode::serialize(msg).unwrap())
-                });
+                b.iter(|| black_box(bincode::serialize(msg).unwrap()));
             },
         );
 
@@ -44,9 +54,7 @@ fn bench_message_serialization(c: &mut Criterion) {
             &message,
             |b, msg| {
                 let serialized = bincode::serialize(msg).unwrap();
-                b.iter(|| {
-                    black_box(bincode::deserialize::<NetworkMessage>(&serialized).unwrap())
-                });
+                b.iter(|| black_box(bincode::deserialize::<NetworkMessage>(&serialized).unwrap()));
             },
         );
     }
@@ -58,9 +66,7 @@ fn bench_key_exchange(c: &mut Criterion) {
     let mut group = c.benchmark_group("key_exchange");
 
     group.bench_function("generate_keypair", |b| {
-        b.iter(|| {
-            black_box(key_exchange::KeyPair::generate())
-        });
+        b.iter(|| black_box(key_exchange::KeyPair::generate()));
     });
 
     group.finish();
@@ -74,18 +80,14 @@ fn bench_message_encryption(c: &mut Criterion) {
     let test_data = b"Hello, this is a test message for encryption benchmarking!";
 
     group.bench_function("encrypt_message", |b| {
-        b.iter(|| {
-            black_box(encryptor.encrypt(test_data).unwrap())
-        });
+        b.iter(|| black_box(encryptor.encrypt(test_data).unwrap()));
     });
 
     // 预加密一个消息用于解密测试
     let encrypted = encryptor.encrypt(test_data).unwrap();
 
     group.bench_function("decrypt_message", |b| {
-        b.iter(|| {
-            black_box(encryptor.decrypt(&encrypted).unwrap())
-        });
+        b.iter(|| black_box(encryptor.decrypt(&encrypted).unwrap()));
     });
 
     group.finish();

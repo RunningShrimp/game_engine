@@ -48,7 +48,10 @@ impl<E: DomainEvent + Serialize + for<'de> Deserialize<'de> + std::default::Defa
 impl std::fmt::Debug for EventTypeRegistry {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("EventTypeRegistry")
-            .field("registered_types", &self.type_name_to_factory.keys().collect::<Vec<_>>())
+            .field(
+                "registered_types",
+                &self.type_name_to_factory.keys().collect::<Vec<_>>(),
+            )
             .finish()
     }
 }
@@ -91,10 +94,8 @@ impl EventTypeRegistry {
             return Ok(()); // 已注册，忽略
         }
 
-        self.type_name_to_factory
-            .insert(event_type_name.to_string(), event_factory);
-        self.type_id_to_name
-            .insert(type_id, event_type_name.to_string());
+        self.type_name_to_factory.insert(event_type_name.to_string(), event_factory);
+        self.type_id_to_name.insert(type_id, event_type_name.to_string());
 
         Ok(())
     }

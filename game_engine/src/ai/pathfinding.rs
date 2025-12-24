@@ -1,5 +1,5 @@
 //  寻路系统
-// 
+//
 //  实现A*寻路算法和导航网格支持。
 
 use crossbeam_channel::{Receiver, Sender, unbounded};
@@ -194,10 +194,7 @@ impl PartialOrd for SearchNode {
 impl Ord for SearchNode {
     fn cmp(&self, other: &Self) -> Ordering {
         // 注意：反转顺序，因为BinaryHeap是最大堆
-        other
-            .f_score
-            .partial_cmp(&self.f_score)
-            .unwrap_or(Ordering::Equal)
+        other.f_score.partial_cmp(&self.f_score).unwrap_or(Ordering::Equal)
     }
 }
 
@@ -276,6 +273,26 @@ pub struct PathfindingResult {
 /// // 收集所有可用结果
 /// let results = parallel_service.collect_results();
 /// ```
+///
+/// ## 迁移到 AsyncPathfindingService
+///
+/// **已弃用**: 此类型已弃用，请使用 `AsyncPathfindingService` 替代。
+/// `AsyncPathfindingService` 提供更好的异步集成、取消支持和性能。
+///
+/// ```rust
+/// // 旧代码
+/// let service = ParallelPathfindingService::new(nav_mesh, 4);
+/// let request_id = service.submit_request(start, end);
+/// let result = service.wait_for_result(request_id, 1000);
+///
+/// // 新代码
+/// let service = AsyncPathfindingService::new(nav_mesh, 4);
+/// let path = service.find_path(start, end).await;
+/// ```
+#[deprecated(
+    since = "0.1.0",
+    note = "请使用 AsyncPathfindingService 替代，它提供更好的异步集成和性能"
+)]
 pub struct ParallelPathfindingService {
     /// 导航网格（共享，只读）
     nav_mesh: Arc<NavigationMesh>,
@@ -502,9 +519,7 @@ impl ParallelPathfindingService {
     /// - 无锁发送，减少同步开销
     /// - 自动更新待处理计数
     pub fn submit_request(&self, start: Vec3, end: Vec3) -> u64 {
-        let request_id = self
-            .next_request_id
-            .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        let request_id = self.next_request_id.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         let request = PathfindingRequest {
             request_id,
             start,
@@ -516,8 +531,7 @@ impl ParallelPathfindingService {
             tracing::warn!(target: "pathfinding", "Failed to submit pathfinding request: {}", e);
         } else {
             // 更新待处理计数
-            self.pending_count
-                .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            self.pending_count.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         }
         request_id
     }
@@ -554,9 +568,7 @@ impl ParallelPathfindingService {
         let mut success_count = 0;
 
         for (start, end) in paths {
-            let request_id = self
-                .next_request_id
-                .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            let request_id = self.next_request_id.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
             request_ids.push(request_id);
 
             let request = PathfindingRequest {
@@ -671,8 +683,7 @@ impl ParallelPathfindingService {
     /// - 使用原子计数器提供近似但更准确的计数
     /// - 无锁读取，性能开销小
     pub fn pending_requests(&self) -> usize {
-        self.pending_count
-            .load(std::sync::atomic::Ordering::Relaxed)
+        self.pending_count.load(std::sync::atomic::Ordering::Relaxed)
     }
 
     /// 获取已完成结果数量（优化版本：结合队列长度和计数器）
@@ -686,8 +697,7 @@ impl ParallelPathfindingService {
 
     /// 获取总完成数（自服务启动以来）
     pub fn total_completed(&self) -> usize {
-        self.completed_count
-            .load(std::sync::atomic::Ordering::Relaxed)
+        self.completed_count.load(std::sync::atomic::Ordering::Relaxed)
     }
 
     /// 清空所有待处理的请求
@@ -714,8 +724,7 @@ impl ParallelPathfindingService {
 impl Drop for ParallelPathfindingService {
     fn drop(&mut self) {
         // 停止所有工作线程
-        self.stop_flag
-            .store(true, std::sync::atomic::Ordering::Relaxed);
+        self.stop_flag.store(true, std::sync::atomic::Ordering::Relaxed);
 
         // 等待所有线程完成
         for handle in self.worker_threads.drain(..) {

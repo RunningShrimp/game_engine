@@ -76,9 +76,7 @@ impl DependencyGraph {
         Self {
             nodes: HashMap::new(),
             path_resolver: Arc::new(|base: &Path, relative: &Path| {
-                base.parent()
-                    .unwrap_or_else(|| Path::new("."))
-                    .join(relative)
+                base.parent().unwrap_or_else(|| Path::new(".")).join(relative)
             }),
         }
     }
@@ -121,7 +119,7 @@ impl DependencyGraph {
     ) -> Result<(), DependencyError> {
         // 确保两个节点都存在
         self.add_resource(resource_path.clone());
-        
+
         // 解析依赖路径
         let resolved_dep_path = (self.path_resolver)(&resource_path, &dependency.path);
         self.add_resource(resolved_dep_path.clone());
@@ -168,7 +166,12 @@ impl DependencyGraph {
     }
 
     /// 检查是否存在从start到target的路径
-    fn has_path_to(&self, start: &PathBuf, target: &PathBuf, visited: &mut HashSet<PathBuf>) -> bool {
+    fn has_path_to(
+        &self,
+        start: &PathBuf,
+        target: &PathBuf,
+        visited: &mut HashSet<PathBuf>,
+    ) -> bool {
         if start == target {
             return true;
         }
@@ -345,7 +348,7 @@ mod tests {
     #[test]
     fn test_add_dependency() {
         let mut graph = DependencyGraph::new();
-        
+
         let resource = PathBuf::from("resource.txt");
         let dependency = ResourceDependency {
             path: PathBuf::from("dependency.txt"),
@@ -360,18 +363,20 @@ mod tests {
     #[test]
     fn test_circular_dependency_detection() {
         let mut graph = DependencyGraph::new();
-        
+
         let a = PathBuf::from("a.txt");
         let b = PathBuf::from("b.txt");
 
-        graph.add_dependency(
-            a.clone(),
-            ResourceDependency {
-                path: b.clone(),
-                dependency_type: "texture".to_string(),
-                required: true,
-            },
-        ).unwrap();
+        graph
+            .add_dependency(
+                a.clone(),
+                ResourceDependency {
+                    path: b.clone(),
+                    dependency_type: "texture".to_string(),
+                    required: true,
+                },
+            )
+            .unwrap();
 
         // 尝试创建循环依赖
         let result = graph.add_dependency(
@@ -384,38 +389,45 @@ mod tests {
         );
 
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), DependencyError::CircularDependency(_)));
+        assert!(matches!(
+            result.unwrap_err(),
+            DependencyError::CircularDependency(_)
+        ));
     }
 
     #[test]
     fn test_load_order() {
         let mut graph = DependencyGraph::new();
-        
+
         // 创建依赖链: a -> b -> c
         let a = PathBuf::from("a.txt");
         let b = PathBuf::from("b.txt");
         let c = PathBuf::from("c.txt");
 
-        graph.add_dependency(
-            a.clone(),
-            ResourceDependency {
-                path: b.clone(),
-                dependency_type: "texture".to_string(),
-                required: true,
-            },
-        ).unwrap();
+        graph
+            .add_dependency(
+                a.clone(),
+                ResourceDependency {
+                    path: b.clone(),
+                    dependency_type: "texture".to_string(),
+                    required: true,
+                },
+            )
+            .unwrap();
 
-        graph.add_dependency(
-            b.clone(),
-            ResourceDependency {
-                path: c.clone(),
-                dependency_type: "texture".to_string(),
-                required: true,
-            },
-        ).unwrap();
+        graph
+            .add_dependency(
+                b.clone(),
+                ResourceDependency {
+                    path: c.clone(),
+                    dependency_type: "texture".to_string(),
+                    required: true,
+                },
+            )
+            .unwrap();
 
         let load_order = graph.get_load_order().unwrap();
-        
+
         // c应该在b之前，b应该在a之前
         let c_idx = load_order.iter().position(|p| p == &c).unwrap();
         let b_idx = load_order.iter().position(|p| p == &b).unwrap();
@@ -428,32 +440,35 @@ mod tests {
     #[test]
     fn test_get_all_dependencies() {
         let mut graph = DependencyGraph::new();
-        
+
         let a = PathBuf::from("a.txt");
         let b = PathBuf::from("b.txt");
         let c = PathBuf::from("c.txt");
 
-        graph.add_dependency(
-            a.clone(),
-            ResourceDependency {
-                path: b.clone(),
-                dependency_type: "texture".to_string(),
-                required: true,
-            },
-        ).unwrap();
+        graph
+            .add_dependency(
+                a.clone(),
+                ResourceDependency {
+                    path: b.clone(),
+                    dependency_type: "texture".to_string(),
+                    required: true,
+                },
+            )
+            .unwrap();
 
-        graph.add_dependency(
-            b.clone(),
-            ResourceDependency {
-                path: c.clone(),
-                dependency_type: "texture".to_string(),
-                required: true,
-            },
-        ).unwrap();
+        graph
+            .add_dependency(
+                b.clone(),
+                ResourceDependency {
+                    path: c.clone(),
+                    dependency_type: "texture".to_string(),
+                    required: true,
+                },
+            )
+            .unwrap();
 
         let deps = graph.get_all_dependencies(&a);
         assert!(deps.contains(&b));
         assert!(deps.contains(&c));
     }
 }
-

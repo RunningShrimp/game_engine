@@ -2,11 +2,10 @@
 //!
 //! 测试SIMD优化与标量实现的性能对比
 
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, criterion_group, criterion_main};
 use game_engine_simd::{
+    SimdBackend, detect_cpu_features,
     math::{Vec3Simd, Vec4Simd, VectorOps},
-    SimdBackend,
-    detect_cpu_features,
 };
 
 /// 向量运算基准测试

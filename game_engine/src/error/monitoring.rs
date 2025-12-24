@@ -1,5 +1,5 @@
 //  错误监控和报告机制
-// 
+//
 //  提供错误统计收集、分析和报告功能，支持实时监控和历史追踪。
 
 use crate::error::{EngineError, ErrorCategory, ErrorSeverity, safe_lock};
@@ -446,9 +446,7 @@ impl ErrorMonitor {
 
     /// 获取错误统计
     pub fn get_stats(&self) -> ErrorStats {
-        safe_lock(&self.stats, "ErrorMonitor.stats")
-            .unwrap()
-            .clone()
+        safe_lock(&self.stats, "ErrorMonitor.stats").unwrap().clone()
     }
 
     /// 获取最近的错误
@@ -464,17 +462,11 @@ impl ErrorMonitor {
 
         // 分析错误率趋势
         if stats.errors_by_hour.len() > 1 {
-            let error_rates: Vec<f64> = stats
-                .errors_by_hour
-                .iter()
-                .map(|(_, &count)| count as f64)
-                .collect();
+            let error_rates: Vec<f64> =
+                stats.errors_by_hour.iter().map(|(_, &count)| count as f64).collect();
 
             let avg_rate = error_rates.iter().sum::<f64>() / error_rates.len() as f64;
-            let variance = error_rates
-                .iter()
-                .map(|rate| (rate - avg_rate).powi(2))
-                .sum::<f64>()
+            let variance = error_rates.iter().map(|rate| (rate - avg_rate).powi(2)).sum::<f64>()
                 / error_rates.len() as f64;
             let std_dev = variance.sqrt();
 
@@ -577,9 +569,7 @@ impl ErrorMonitor {
         }
 
         // 检查总错误数阈值
-        let total_errors = &safe_lock(&self.stats, "ErrorMonitor.stats")
-            .unwrap()
-            .total_errors;
+        let total_errors = &safe_lock(&self.stats, "ErrorMonitor.stats").unwrap().total_errors;
         if *total_errors >= thresholds.total_error_threshold as u64 {
             self.trigger_alert(format!(
                 "Total error threshold exceeded: {} >= {}",

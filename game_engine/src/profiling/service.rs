@@ -1,50 +1,19 @@
 //  性能监控服务
-// 
+//
 //  提供统一的性能监控入口，整合指标收集、数据存储、告警和可视化功能。
 
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
+use super::ProfilingResult;
+use super::alerting::*;
 use super::collector::*;
 use super::storage::*;
-use super::alerting::*;
-use super::ProfilingResult;
 use super::visualization::{DataExporter, ExportConfig};
 
 // Dashboard 相关类型只在 dashboard 模块中定义。
 // ProfilingService 不再直接依赖 Dashboard，以避免循环依赖。
-#[cfg(feature = "profiling")]
 use super::dashboard::{DashboardConfig, RealtimeMetrics};
-
-/// 当未启用 `profiling` feature 时的 Dashboard 配置占位类型。
-#[cfg(not(feature = "profiling"))]
-#[derive(Debug, Clone, Default)]
-pub struct DashboardConfig {
-    /// 是否启用实时仪表盘（占位字段，仅用于保持配置结构兼容）
-    pub enable_realtime: bool,
-    /// 是否启用 WebSocket（占位字段）
-    pub enable_websocket: bool,
-    /// 绑定地址（占位字段）
-    pub bind_address: String,
-    /// 是否启用 CORS（占位字段）
-    pub enable_cors: bool,
-}
-
-/// 当未启用 `profiling` feature 时的实时指标占位类型。
-#[cfg(not(feature = "profiling"))]
-#[derive(Debug, Clone, Default)]
-pub struct RealtimeMetrics {
-    pub timestamp: u64,
-    pub fps: f64,
-    pub frame_time: f64,
-    pub cpu_usage: f64,
-    pub memory_usage: f64,
-    pub gpu_usage: f64,
-    pub draw_calls: u64,
-    pub triangle_count: u64,
-    pub physics_time: f64,
-    pub audio_latency: f64,
-}
 
 /// 历史数据点
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -145,18 +114,19 @@ impl ProfilingService {
     /// 创建新的性能监控服务
     pub fn new(config: ProfilingServiceConfig) -> ProfilingResult<Self> {
         // 创建指标收集器
-        let collector = Arc::new(Mutex::new(
-            MetricCollector::new(config.collector_config.clone())?
-        ));
+        let collector = Arc::new(Mutex::new(MetricCollector::new(
+            config.collector_config.clone(),
+        )?));
 
         // 创建持久化存储（同步包装异步初始化）
-        let storage_instance = pollster::block_on(PersistentStorage::new(config.storage_config.clone()))?;
+        let storage_instance =
+            pollster::block_on(PersistentStorage::new(config.storage_config.clone()))?;
         let storage = Arc::new(Mutex::new(storage_instance));
 
         // 创建告警引擎
-        let alerting_engine = Arc::new(Mutex::new(
-            AlertingEngine::new(config.alerting_config.clone())
-        ));
+        let alerting_engine = Arc::new(Mutex::new(AlertingEngine::new(
+            config.alerting_config.clone(),
+        )));
 
         let service = Self {
             config,
@@ -185,7 +155,9 @@ impl ProfilingService {
 
         // 设置运行状态
         {
-            let mut state = self.state.lock()
+            let mut state = self
+                .state
+                .lock()
                 .map_err(|e| super::ProfilingError::ConfigurationError(e.to_string()))?;
             state.is_running = true;
         }
@@ -208,7 +180,9 @@ impl ProfilingService {
 
         // 设置运行状态
         {
-            let mut state = self.state.lock()
+            let mut state = self
+                .state
+                .lock()
                 .map_err(|e| super::ProfilingError::ConfigurationError(e.to_string()))?;
             state.is_running = false;
         }
@@ -229,14 +203,18 @@ impl ProfilingService {
 
         // 更新收集器
         {
-            let mut collector = self.collector.lock()
+            let mut collector = self
+                .collector
+                .lock()
                 .map_err(|e| super::ProfilingError::ConfigurationError(e.to_string()))?;
             collector.record_value(name, value);
         }
 
         // 更新告警检查
         {
-            let mut alerting_engine = self.alerting_engine.lock()
+            let mut alerting_engine = self
+                .alerting_engine
+                .lock()
                 .map_err(|e| super::ProfilingError::ConfigurationError(e.to_string()))?;
             alerting_engine.update_metric(name, value);
         }
@@ -271,13 +249,17 @@ impl ProfilingService {
         }
 
         let _collector_stats = {
-            let collector = self.collector.lock()
+            let collector = self
+                .collector
+                .lock()
                 .map_err(|e| super::ProfilingError::ConfigurationError(e.to_string()))?;
             collector.get_collector_stats()
         };
 
         let current_values = {
-            let collector = self.collector.lock()
+            let collector = self
+                .collector
+                .lock()
                 .map_err(|e| super::ProfilingError::ConfigurationError(e.to_string()))?;
             collector.get_current_values()
         };
@@ -302,7 +284,11 @@ impl ProfilingService {
     }
 
     /// 获取历史数据
-    pub fn get_metric_history(&self, metric_name: &str, limit: Option<usize>) -> ProfilingResult<Vec<HistoricalDataPoint>> {
+    pub fn get_metric_history(
+        &self,
+        metric_name: &str,
+        limit: Option<usize>,
+    ) -> ProfilingResult<Vec<HistoricalDataPoint>> {
         if !self.is_running() {
             return Err(super::ProfilingError::CollectionError(
                 "服务未运行".to_string(),
@@ -310,7 +296,9 @@ impl ProfilingService {
         }
 
         // 查询存储数据
-        let _storage = self.storage.lock()
+        let _storage = self
+            .storage
+            .lock()
             .map_err(|e| super::ProfilingError::ConfigurationError(e.to_string()))?;
         let query_condition = QueryCondition {
             metric_names: Some(vec![metric_name.to_string()]),
@@ -329,7 +317,7 @@ impl ProfilingService {
 
         // 使用同步方式查询数据
         let result = queryer.query_sync(&query_condition)?;
-        
+
         // 转换为历史数据点
         let mut data_points = Vec::new();
         for data_point in result.data_points {
@@ -347,7 +335,9 @@ impl ProfilingService {
 
     /// 获取服务状态
     pub fn get_service_state(&self) -> ProfilingResult<ServiceState> {
-        let state = self.state.lock()
+        let state = self
+            .state
+            .lock()
             .map_err(|e| super::ProfilingError::ConfigurationError(e.to_string()))?;
         Ok(state.clone())
     }
@@ -358,12 +348,12 @@ impl ProfilingService {
             return Ok(Vec::new());
         }
 
-        let alerting_engine = self.alerting_engine.lock()
+        let alerting_engine = self
+            .alerting_engine
+            .lock()
             .map_err(|e| super::ProfilingError::ConfigurationError(e.to_string()))?;
-        let active_alerts: Vec<AlertInstance> = alerting_engine.get_active_alerts()
-            .into_iter()
-            .cloned()
-            .collect();
+        let active_alerts: Vec<AlertInstance> =
+            alerting_engine.get_active_alerts().into_iter().cloned().collect();
         Ok(active_alerts)
     }
 
@@ -373,20 +363,28 @@ impl ProfilingService {
             return Ok(false);
         }
 
-        let mut alerting_engine = self.alerting_engine.lock()
+        let mut alerting_engine = self
+            .alerting_engine
+            .lock()
             .map_err(|e| super::ProfilingError::ConfigurationError(e.to_string()))?;
         Ok(alerting_engine.acknowledge_alert(alert_id))
     }
 
     /// 导出数据
-    pub fn export_data(&self, config: &ExportConfig, output_path: &std::path::Path) -> ProfilingResult<()> {
+    pub fn export_data(
+        &self,
+        config: &ExportConfig,
+        output_path: &std::path::Path,
+    ) -> ProfilingResult<()> {
         if !self.is_running() {
             return Err(super::ProfilingError::CollectionError(
                 "服务未运行".to_string(),
             ));
         }
 
-        let mut storage = self.storage.lock()
+        let mut storage = self
+            .storage
+            .lock()
             .map_err(|e| super::ProfilingError::ConfigurationError(e.to_string()))?;
         let exporter = DataExporter::new(
             &self.config.storage_config.data_dir,
@@ -430,8 +428,11 @@ impl ProfilingService {
         if let Ok(storage) = self.storage.lock() {
             // 使用同步方法获取存储统计信息
             if let Ok(storage_stats) = storage.get_storage_stats_sync() {
-                report.operations.push(format!("清理存储文件，当前文件数: {}", storage_stats.total_files));
-                
+                report.operations.push(format!(
+                    "清理存储文件，当前文件数: {}",
+                    storage_stats.total_files
+                ));
+
                 if storage_stats.total_files > self.config.storage_config.retain_files {
                     // 这里可以实现文件清理逻辑
                     report.operations.push("删除过期文件".to_string());
@@ -441,7 +442,9 @@ impl ProfilingService {
 
         // 重置计数器
         {
-            let mut collector = self.collector.lock()
+            let mut collector = self
+                .collector
+                .lock()
                 .map_err(|e| super::ProfilingError::ConfigurationError(e.to_string()))?;
             collector.reset();
             report.operations.push("重置指标收集器".to_string());
@@ -449,7 +452,9 @@ impl ProfilingService {
 
         // 检查告警状态
         {
-            let alerting_engine = self.alerting_engine.lock()
+            let alerting_engine = self
+                .alerting_engine
+                .lock()
                 .map_err(|e| super::ProfilingError::ConfigurationError(e.to_string()))?;
             let active_alerts = alerting_engine.get_active_alerts();
             if active_alerts.len() > self.config.alerting_config.max_active_alerts / 2 {
@@ -472,44 +477,58 @@ impl ProfilingService {
 
     /// 添加默认告警规则
     fn add_default_alert_rules(&self) -> ProfilingResult<()> {
-        let mut alerting_engine = self.alerting_engine.lock()
+        let mut alerting_engine = self
+            .alerting_engine
+            .lock()
             .map_err(|e| super::ProfilingError::ConfigurationError(e.to_string()))?;
 
         // FPS告警
-        alerting_engine.add_strategy("render.fps", AlertStrategy::Threshold(ThresholdAlertStrategy {
-            level: AlertLevel::Warning,
-            threshold: 30.0,
-            operator: AlertOperator::LessThan,
-            duration: Duration::from_secs(5),
-            enable_recovery_notification: true,
-        }));
+        alerting_engine.add_strategy(
+            "render.fps",
+            AlertStrategy::Threshold(ThresholdAlertStrategy {
+                level: AlertLevel::Warning,
+                threshold: 30.0,
+                operator: AlertOperator::LessThan,
+                duration: Duration::from_secs(5),
+                enable_recovery_notification: true,
+            }),
+        );
 
         // CPU使用率告警
-        alerting_engine.add_strategy("system.cpu_usage", AlertStrategy::Threshold(ThresholdAlertStrategy {
-            level: AlertLevel::Critical,
-            threshold: 80.0,
-            operator: AlertOperator::GreaterThan,
-            duration: Duration::from_secs(10),
-            enable_recovery_notification: true,
-        }));
+        alerting_engine.add_strategy(
+            "system.cpu_usage",
+            AlertStrategy::Threshold(ThresholdAlertStrategy {
+                level: AlertLevel::Critical,
+                threshold: 80.0,
+                operator: AlertOperator::GreaterThan,
+                duration: Duration::from_secs(10),
+                enable_recovery_notification: true,
+            }),
+        );
 
         // 内存使用告警
-        alerting_engine.add_strategy("memory.usage_mb", AlertStrategy::Threshold(ThresholdAlertStrategy {
-            level: AlertLevel::Warning,
-            threshold: 1024.0, // 1GB
-            operator: AlertOperator::GreaterThan,
-            duration: Duration::from_secs(30),
-            enable_recovery_notification: true,
-        }));
+        alerting_engine.add_strategy(
+            "memory.usage_mb",
+            AlertStrategy::Threshold(ThresholdAlertStrategy {
+                level: AlertLevel::Warning,
+                threshold: 1024.0, // 1GB
+                operator: AlertOperator::GreaterThan,
+                duration: Duration::from_secs(30),
+                enable_recovery_notification: true,
+            }),
+        );
 
         // 帧时间告警
-        alerting_engine.add_strategy("render.frame_time", AlertStrategy::Threshold(ThresholdAlertStrategy {
-            level: AlertLevel::Warning,
-            threshold: 33.3, // 30FPS
-            operator: AlertOperator::GreaterThan,
-            duration: Duration::from_secs(3),
-            enable_recovery_notification: true,
-        }));
+        alerting_engine.add_strategy(
+            "render.frame_time",
+            AlertStrategy::Threshold(ThresholdAlertStrategy {
+                level: AlertLevel::Warning,
+                threshold: 33.3, // 30FPS
+                operator: AlertOperator::GreaterThan,
+                duration: Duration::from_secs(3),
+                enable_recovery_notification: true,
+            }),
+        );
 
         Ok(())
     }
@@ -518,7 +537,7 @@ impl ProfilingService {
     fn update_state(&self) {
         if let Ok(mut state) = self.state.lock() {
             state.last_refresh = Instant::now();
-            
+
             // 更新统计信息
             if let Ok(collector) = self.collector.lock() {
                 let stats = collector.get_collector_stats();
@@ -547,11 +566,21 @@ impl ProfilingService {
 
         let mut report = String::new();
         report.push_str("=== 性能监控报告 ===\n\n");
-        
+
         // 服务状态
         if let Ok(state) = self.get_service_state() {
-            report.push_str(&format!("服务状态: {}\n", if state.is_running { "运行中" } else { "已停止" }));
-            report.push_str(&format!("运行时间: {:.2}秒\n", state.last_refresh.elapsed().as_secs_f64()));
+            report.push_str(&format!(
+                "服务状态: {}\n",
+                if state.is_running {
+                    "运行中"
+                } else {
+                    "已停止"
+                }
+            ));
+            report.push_str(&format!(
+                "运行时间: {:.2}秒\n",
+                state.last_refresh.elapsed().as_secs_f64()
+            ));
             report.push_str(&format!("总处理样本: {}\n", state.total_samples_processed));
             report.push_str(&format!("活跃告警数: {}\n", state.active_alerts_count));
             report.push_str(&format!("存储文件数: {}\n", state.storage_files_count));
@@ -590,7 +619,7 @@ impl ProfilingService {
         }
 
         report.push_str("====================\n");
-        
+
         Ok(report)
     }
 }
@@ -630,23 +659,19 @@ macro_rules! profile_metric {
 /// 记录性能时间的宏
 #[macro_export]
 macro_rules! profile_scope {
-    ($service:expr, $name:expr, $code:expr) => {
-        {
-            let _timer = $service.create_timer($name);
-            let _result = $code;
-            drop(_timer);
-            _result
-        }
-    };
+    ($service:expr, $name:expr, $code:expr) => {{
+        let _timer = $service.create_timer($name);
+        let _result = $code;
+        drop(_timer);
+        _result
+    }};
 }
 
 /// 记录函数执行时间的宏
 #[macro_export]
 macro_rules! profile_function {
     ($service:expr, $name:expr, $func:expr) => {
-        profile_scope!($service, $name, {
-            $func()
-        })
+        profile_scope!($service, $name, { $func() })
     };
 }
 
@@ -696,7 +721,7 @@ mod tests {
         };
 
         let mut service = ProfilingService::new(config).unwrap();
-        
+
         // 初始状态应该是未运行
         assert!(!service.is_running());
 

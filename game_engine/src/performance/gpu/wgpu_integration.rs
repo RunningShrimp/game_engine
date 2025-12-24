@@ -1,5 +1,5 @@
 //  WGPU GPU 计算集成
-// 
+//
 //  集成 WGPU 和 GPU 计算能力
 //  - 计算管道管理
 //  - WGSL 着色器编译
@@ -529,14 +529,14 @@ impl GPUTimeQuery {
     /// 记录结束时间戳
     pub fn record_end(&mut self, timestamp_ns: u64) {
         self.end_timestamp_ns = Some(timestamp_ns);
-        
+
         // 计算时间差并记录
         if let Some(start) = self.start_timestamp_ns {
             let duration_ns = timestamp_ns.saturating_sub(start);
             let duration_ms = duration_ns as f32 / 1_000_000.0;
-            
+
             self.history.push(duration_ms);
-            
+
             // 保持历史记录在合理大小
             if self.history.len() > 100 {
                 self.history.remove(0);
@@ -607,10 +607,11 @@ impl GPUProfiler {
     pub fn start_query(&mut self, name: &str) {
         // 在实际实现中，这里应该调用wgpu的timestamp query
         // 这里使用占位实现
-        let query = self.time_queries
+        let query = self
+            .time_queries
             .entry(name.to_string())
             .or_insert_with(|| GPUTimeQuery::new(name.to_string()));
-        
+
         // 模拟时间戳（实际应该从GPU获取）
         let timestamp_ns = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
@@ -648,21 +649,19 @@ impl GPUProfiler {
     /// 更新性能指标
     pub fn update_metrics(&mut self) {
         // 计算GPU利用率（简化实现）
-        let gpu_time = self.time_queries
-            .values()
-            .filter_map(|q| q.last_time_ms())
-            .sum::<f32>();
-        
+        let gpu_time = self.time_queries.values().filter_map(|q| q.last_time_ms()).sum::<f32>();
+
         self.metrics.gpu_time_ms = gpu_time;
         self.metrics.draw_calls = self.draw_call_count;
         self.metrics.triangles = self.triangle_count;
         self.metrics.vertices = self.vertex_count;
-        
+
         // 估算利用率（简化实现）
         if self.metrics.frame_time_ms > 0.0 {
-            self.metrics.utilization = (self.metrics.gpu_time_ms / self.metrics.frame_time_ms).min(1.0);
+            self.metrics.utilization =
+                (self.metrics.gpu_time_ms / self.metrics.frame_time_ms).min(1.0);
         }
-        
+
         // 检测瓶颈
         self.metrics.pipeline_bottleneck = self.detect_bottleneck();
     }
@@ -671,7 +670,7 @@ impl GPUProfiler {
     fn detect_bottleneck(&self) -> PipelineBottleneck {
         // 简化实现：基于时间查询检测瓶颈
         // 实际实现应该分析各个阶段的GPU时间
-        
+
         if let Some(vertex_time) = self.time_queries.get("vertex_processing") {
             if let Some(time) = vertex_time.last_time_ms() {
                 if time > 5.0 {
@@ -679,7 +678,7 @@ impl GPUProfiler {
                 }
             }
         }
-        
+
         if let Some(fragment_time) = self.time_queries.get("fragment_processing") {
             if let Some(time) = fragment_time.last_time_ms() {
                 if time > 5.0 {
@@ -687,7 +686,7 @@ impl GPUProfiler {
                 }
             }
         }
-        
+
         PipelineBottleneck::None
     }
 

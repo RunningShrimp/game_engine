@@ -13,10 +13,7 @@ fn test_editor_basics() {
     assert_eq!(scene_editor.camera_position, Vec3::new(0.0, 5.0, 10.0));
 
     // 创建一个实体
-    let entity = world
-        .spawn_empty()
-        .insert(Transform::from_pos(Vec3::new(1.0, 2.0, 3.0)))
-        .id();
+    let entity = world.spawn_empty().insert(Transform::from_pos(Vec3::new(1.0, 2.0, 3.0))).id();
 
     // 测试增强场景编辑器
     let mut enhanced_editor = SceneEditorEnhanced::new();

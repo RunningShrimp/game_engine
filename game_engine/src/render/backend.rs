@@ -1,9 +1,9 @@
 //  渲染后端抽象
-// 
+//
 //  提供渲染后端 trait 定义，支持未来多后端扩展。
-// 
+//
 //  ## 设计目标
-// 
+//
 //  - 统一不同渲染 API 的接口
 //  - 支持 wgpu、Vulkan、Metal 等后端
 //  - 易于扩展和测试
@@ -289,10 +289,7 @@ impl NullBackend {
 
 impl RenderBackend for NullBackend {
     fn create_buffer(&self, _desc: &BufferDescriptor) -> BufferHandle {
-        BufferHandle(
-            self.next_buffer_id
-                .fetch_add(1, std::sync::atomic::Ordering::SeqCst),
-        )
+        BufferHandle(self.next_buffer_id.fetch_add(1, std::sync::atomic::Ordering::SeqCst))
     }
 
     fn destroy_buffer(&self, _buffer: BufferHandle) {}
@@ -300,10 +297,7 @@ impl RenderBackend for NullBackend {
     fn write_buffer(&self, _buffer: BufferHandle, _offset: u64, _data: &[u8]) {}
 
     fn create_texture(&self, _desc: &TextureDescriptor) -> TextureHandle {
-        TextureHandle(
-            self.next_texture_id
-                .fetch_add(1, std::sync::atomic::Ordering::SeqCst),
-        )
+        TextureHandle(self.next_texture_id.fetch_add(1, std::sync::atomic::Ordering::SeqCst))
     }
 
     fn destroy_texture(&self, _texture: TextureHandle) {}

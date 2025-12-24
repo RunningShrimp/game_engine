@@ -1,5 +1,5 @@
 //  GPU厂商特定优化模块
-// 
+//
 //  为不同GPU厂商（NVIDIA、AMD、Apple）提供特定的优化路径
 
 use super::detect::{GpuInfo, GpuVendor};
@@ -133,7 +133,8 @@ impl GpuOptimizer {
             enable_async_compute: gpu_info.name.to_lowercase().contains("rx 6")
                 || gpu_info.name.to_lowercase().contains("rx 7"),
             enable_raytracing: if gpu_info.name.to_lowercase().contains("rx 6")
-                || gpu_info.name.to_lowercase().contains("rx 7") {
+                || gpu_info.name.to_lowercase().contains("rx 7")
+            {
                 gpu_info.supports_raytracing
             } else {
                 false
@@ -180,14 +181,16 @@ impl GpuOptimizer {
             // M系列芯片支持光线追踪和网格着色器
             enable_raytracing: if gpu_info.name.to_lowercase().contains("m1")
                 || gpu_info.name.to_lowercase().contains("m2")
-                || gpu_info.name.to_lowercase().contains("m3") {
+                || gpu_info.name.to_lowercase().contains("m3")
+            {
                 gpu_info.supports_raytracing
             } else {
                 false
             },
             enable_mesh_shaders: if gpu_info.name.to_lowercase().contains("m1")
                 || gpu_info.name.to_lowercase().contains("m2")
-                || gpu_info.name.to_lowercase().contains("m3") {
+                || gpu_info.name.to_lowercase().contains("m3")
+            {
                 gpu_info.supports_mesh_shaders
             } else {
                 false

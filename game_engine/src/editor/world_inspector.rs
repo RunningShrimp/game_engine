@@ -1,11 +1,11 @@
 //  世界检查器
-// 
+//
 //  提供ECS世界的完整视图，用于编辑器调试。
 //  显示所有实体、组件和资源信息。
 
-use bevy_ecs::prelude::*;
-use crate::ecs::{Camera, PointLight, Sprite, Transform};
 use crate::core::resources::RenderStats;
+use crate::ecs::{Camera, PointLight, Sprite, Transform};
+use bevy_ecs::prelude::*;
 
 /// 世界检查器
 #[derive(Debug)]
@@ -65,11 +65,9 @@ impl WorldInspector {
                 ui.separator();
 
                 // 实体列表
-                egui::ScrollArea::vertical()
-                    .auto_shrink([false; 2])
-                    .show(ui, |ui| {
-                        self.render_entities(ui, world);
-                    });
+                egui::ScrollArea::vertical().auto_shrink([false; 2]).show(ui, |ui| {
+                    self.render_entities(ui, world);
+                });
 
                 ui.separator();
 
@@ -97,7 +95,7 @@ impl WorldInspector {
         // 注意：World::query需要可变引用，这里暂时只显示实体数量
         // 实体列表显示需要在使用WorldInspector时传递可变World引用
         // 或者在EditorState中单独调用world_inspector.render
-        
+
         ui.label("Entity listing requires mutable World reference");
         ui.label("World Inspector implemented at: game_engine/src/editor/world_inspector.rs");
     }
@@ -110,24 +108,38 @@ impl WorldInspector {
         // Transform组件
         if let Some(transform) = world.get::<Transform>(entity) {
             ui.collapsing("Transform", |ui| {
-                ui.label(format!("Position: ({:.2}, {:.2}, {:.2})", 
-                    transform.pos.x, transform.pos.y, transform.pos.z));
-                ui.label(format!("Rotation: ({:.2}, {:.2}, {:.2}, {:.2})", 
-                    transform.rot.x, transform.rot.y, transform.rot.z, transform.rot.w));
-                ui.label(format!("Scale: ({:.2}, {:.2}, {:.2})", 
-                    transform.scale.x, transform.scale.y, transform.scale.z));
+                ui.label(format!(
+                    "Position: ({:.2}, {:.2}, {:.2})",
+                    transform.pos.x, transform.pos.y, transform.pos.z
+                ));
+                ui.label(format!(
+                    "Rotation: ({:.2}, {:.2}, {:.2}, {:.2})",
+                    transform.rot.x, transform.rot.y, transform.rot.z, transform.rot.w
+                ));
+                ui.label(format!(
+                    "Scale: ({:.2}, {:.2}, {:.2})",
+                    transform.scale.x, transform.scale.y, transform.scale.z
+                ));
             });
         }
 
         // Sprite组件
         if let Some(sprite) = world.get::<Sprite>(entity) {
             ui.collapsing("Sprite", |ui| {
-                ui.label(format!("Color: ({:.2}, {:.2}, {:.2}, {:.2})", 
-                    sprite.color[0], sprite.color[1], sprite.color[2], sprite.color[3]));
+                ui.label(format!(
+                    "Color: ({:.2}, {:.2}, {:.2}, {:.2})",
+                    sprite.color[0], sprite.color[1], sprite.color[2], sprite.color[3]
+                ));
                 ui.label(format!("Texture Index: {}", sprite.tex_index));
                 ui.label(format!("Normal Tex Index: {}", sprite.normal_tex_index));
-                ui.label(format!("UV Offset: ({:.2}, {:.2})", sprite.uv_off[0], sprite.uv_off[1]));
-                ui.label(format!("UV Scale: ({:.2}, {:.2})", sprite.uv_scale[0], sprite.uv_scale[1]));
+                ui.label(format!(
+                    "UV Offset: ({:.2}, {:.2})",
+                    sprite.uv_off[0], sprite.uv_off[1]
+                ));
+                ui.label(format!(
+                    "UV Scale: ({:.2}, {:.2})",
+                    sprite.uv_scale[0], sprite.uv_scale[1]
+                ));
                 ui.label(format!("Layer: {:.2}", sprite.layer));
             });
         }
@@ -136,7 +148,12 @@ impl WorldInspector {
         if let Some(camera) = world.get::<Camera>(entity) {
             ui.collapsing("Camera", |ui| {
                 match &camera.projection {
-                    crate::ecs::Projection::Perspective { fov, aspect, near, far } => {
+                    crate::ecs::Projection::Perspective {
+                        fov,
+                        aspect,
+                        near,
+                        far,
+                    } => {
                         ui.label(format!("Type: Perspective"));
                         ui.label(format!("FOV: {:.2}°", fov));
                         ui.label(format!("Aspect: {:.2}", aspect));
@@ -157,8 +174,10 @@ impl WorldInspector {
         // PointLight组件
         if let Some(light) = world.get::<PointLight>(entity) {
             ui.collapsing("PointLight", |ui| {
-                ui.label(format!("Color: ({:.2}, {:.2}, {:.2})", 
-                    light.color[0], light.color[1], light.color[2]));
+                ui.label(format!(
+                    "Color: ({:.2}, {:.2}, {:.2})",
+                    light.color[0], light.color[1], light.color[2]
+                ));
                 ui.label(format!("Intensity: {:.2}", light.intensity));
                 ui.label(format!("Radius: {:.2}", light.radius));
                 ui.label(format!("Falloff: {:.2}", light.falloff));
@@ -198,7 +217,10 @@ impl WorldInspector {
                 ui.label("Batch Stats:");
                 ui.label(format!("Total Batches: {}", stats.batch_total));
                 ui.label(format!("Visible Batches: {}", stats.batch_visible_batches));
-                ui.label(format!("Saved Draw Calls: {}", stats.batch_saved_draw_calls));
+                ui.label(format!(
+                    "Saved Draw Calls: {}",
+                    stats.batch_saved_draw_calls
+                ));
             });
         }
 
@@ -238,7 +260,6 @@ impl WorldInspector {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use bevy_ecs::prelude::*;
     use glam::{Quat, Vec3};
 
     #[test]

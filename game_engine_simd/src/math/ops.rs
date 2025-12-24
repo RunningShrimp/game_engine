@@ -73,10 +73,7 @@ impl MatrixBatchOps {
 
     /// 回退实现
     fn batch_mul_vec3_fallback(matrix: &Mat4, vectors: &[Vec3]) -> VectorBatchResult {
-        let results = vectors
-            .iter()
-            .map(|v| matrix.transform_point3(*v))
-            .collect();
+        let results = vectors.iter().map(|v| matrix.transform_point3(*v)).collect();
 
         VectorBatchResult {
             count: vectors.len(),
@@ -213,10 +210,7 @@ impl GeometryOps {
         plane_normal: Vec3,
         plane_d: f32,
     ) -> Vec<f32> {
-        points
-            .iter()
-            .map(|p| plane_normal.dot(*p) - plane_d)
-            .collect()
+        points.iter().map(|p| plane_normal.dot(*p) - plane_d).collect()
     }
 
     /// 回退实现
@@ -225,10 +219,7 @@ impl GeometryOps {
         plane_normal: Vec3,
         plane_d: f32,
     ) -> Vec<f32> {
-        points
-            .iter()
-            .map(|p| plane_normal.dot(*p) - plane_d)
-            .collect()
+        points.iter().map(|p| plane_normal.dot(*p) - plane_d).collect()
     }
 
     /// 批量计算点到球的最近距离
@@ -268,10 +259,7 @@ impl GeometryOps {
         sphere_center: Vec3,
         sphere_radius: f32,
     ) -> Vec<f32> {
-        points
-            .iter()
-            .map(|p| (*p - sphere_center).length() - sphere_radius)
-            .collect()
+        points.iter().map(|p| (*p - sphere_center).length() - sphere_radius).collect()
     }
 
     /// 回退实现
@@ -280,10 +268,7 @@ impl GeometryOps {
         sphere_center: Vec3,
         sphere_radius: f32,
     ) -> Vec<f32> {
-        points
-            .iter()
-            .map(|p| (*p - sphere_center).length() - sphere_radius)
-            .collect()
+        points.iter().map(|p| (*p - sphere_center).length() - sphere_radius).collect()
     }
 }
 
@@ -336,10 +321,7 @@ impl TransformOps {
     ///
     /// 变换后的向量数组
     pub fn batch_transform_vectors(matrix: &Mat4, vectors: &[Vec3]) -> Vec<Vec3> {
-        vectors
-            .iter()
-            .map(|v| matrix.transform_vector3(*v))
-            .collect()
+        vectors.iter().map(|v| matrix.transform_vector3(*v)).collect()
     }
 }
 
@@ -439,7 +421,7 @@ mod tests {
         /// # 性能
         ///
         /// 相比标准实现，在1000+向量时可获得3-5x性能提升
-    pub fn batch_transform_vec3_optimized(
+        pub fn batch_transform_vec3_optimized(
             matrix: &Mat4,
             vectors: &[Vec3],
         ) -> VectorBatchResult {
@@ -617,10 +599,7 @@ mod tests {
 
         /// 标量回退实现
         fn batch_transform_vec3_fallback(matrix: &Mat4, vectors: &[Vec3]) -> VectorBatchResult {
-            let results = vectors
-                .iter()
-                .map(|v| matrix.transform_point3(*v))
-                .collect();
+            let results = vectors.iter().map(|v| matrix.transform_point3(*v)).collect();
 
             VectorBatchResult {
                 count: vectors.len(),

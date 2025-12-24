@@ -93,9 +93,7 @@ impl RetryConfig {
     /// 计算重试延迟
     pub fn calculate_delay(&self, attempt: u32) -> Duration {
         let base_delay = if self.exponential_backoff {
-            let multiplier = self
-                .backoff_multiplier
-                .powi(attempt.saturating_sub(1) as i32);
+            let multiplier = self.backoff_multiplier.powi(attempt.saturating_sub(1) as i32);
             self.base_delay.mul_f64(multiplier)
         } else {
             self.base_delay

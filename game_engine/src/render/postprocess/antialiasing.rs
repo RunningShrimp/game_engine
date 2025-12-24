@@ -1,12 +1,12 @@
 //  抗锯齿后处理模块
-// 
+//
 //  提供多种抗锯齿算法实现：
 //  - FXAA (Fast Approximate Anti-Aliasing) - 快速近似抗锯齿
 //  - TAA (Temporal Anti-Aliasing) - 时间抗锯齿
 //  - SMAA (Subpixel Morphological Anti-Aliasing) - 子像素形态学抗锯齿
-// 
+//
 //  # 示例
-// 
+//
 //  ```ignore
 //  let mut config = PostProcessConfig::default();
 //  config.antialiasing = AntialiasingMode::FXAA;

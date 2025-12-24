@@ -851,9 +851,7 @@ mod tests {
         service.create_collider(collider, RigidBodyId(1)).unwrap();
 
         // 应用力
-        service
-            .apply_force(RigidBodyId(1), glam::Vec3::new(10.0, 0.0, 0.0))
-            .unwrap();
+        service.apply_force(RigidBodyId(1), glam::Vec3::new(10.0, 0.0, 0.0)).unwrap();
 
         // 步进模拟
         service.step_simulation(1.0 / 60.0).unwrap();

@@ -64,8 +64,7 @@ impl ScriptApi {
     where
         F: Fn(&[ScriptValue]) -> ScriptResult + Send + Sync + 'static,
     {
-        self.registered_functions
-            .insert(name.to_string(), Box::new(func));
+        self.registered_functions.insert(name.to_string(), Box::new(func));
     }
 
     /// 调用已注册的函数
@@ -121,9 +120,7 @@ impl ExtendedScriptValue {
                 ScriptValue::Array(arr.iter().map(|v| v.to_script_value()).collect())
             }
             ExtendedScriptValue::Object(obj) => ScriptValue::Object(
-                obj.iter()
-                    .map(|(k, v)| (k.clone(), v.to_script_value()))
-                    .collect(),
+                obj.iter().map(|(k, v)| (k.clone(), v.to_script_value())).collect(),
             ),
             ExtendedScriptValue::Vec2(v) => {
                 let mut obj = HashMap::new();
@@ -162,9 +159,7 @@ impl ExtendedScriptValue {
                 ExtendedScriptValue::Array(arr.iter().map(Self::from_script_value).collect())
             }
             ScriptValue::Object(obj) => ExtendedScriptValue::Object(
-                obj.iter()
-                    .map(|(k, v)| (k.clone(), Self::from_script_value(v)))
-                    .collect(),
+                obj.iter().map(|(k, v)| (k.clone(), Self::from_script_value(v))).collect(),
             ),
         }
     }

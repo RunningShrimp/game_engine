@@ -1,12 +1,12 @@
 //  寻路系统性能基准测试
-// 
+//
 //  测试A*寻路算法和并行寻路服务的性能
 
 use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
-use game_engine::ai::pathfinding::{
-    NavigationMesh, ParallelPathfindingService, PathfindingService,
-};
+use game_engine::ai::pathfinding::{NavigationMesh, PathfindingService};
+use game_engine::ai::{AsyncPathfindingService, ParallelPathfindingService};
 use glam::Vec3;
+use tokio::runtime::Runtime;
 
 fn bench_single_pathfinding(c: &mut Criterion) {
     let mut group = c.benchmark_group("single_pathfinding");
@@ -134,9 +134,6 @@ fn bench_parallel_pathfinding(c: &mut Criterion) {
             BenchmarkId::from_parameter(request_count),
             request_count,
             |b, &count| {
-                // 创建并行寻路服务（使用4个工作线程）
-                let parallel_service = ParallelPathfindingService::new(mesh.clone(), 4);
-
                 // 准备寻路请求
                 let requests: Vec<(Vec3, Vec3)> = (0..count)
                     .map(|i| {
@@ -154,21 +151,16 @@ fn bench_parallel_pathfinding(c: &mut Criterion) {
                     })
                     .collect();
 
+                // 使用异步协程寻路服务（推荐）
+                let rt = Runtime::new().unwrap();
+                let async_service = AsyncPathfindingService::new(mesh.clone(), 4);
+
                 b.iter(|| {
-                    // 提交批量请求
-                    let request_ids = parallel_service.submit_path_requests(requests.clone());
-
-                    // 等待所有结果
-                    let mut results = Vec::new();
-                    while results.len() < request_ids.len() {
-                        let batch = parallel_service.collect_results();
-                        results.extend(batch);
-                        if results.len() < request_ids.len() {
-                            std::thread::sleep(std::time::Duration::from_millis(1));
-                        }
-                    }
-
-                    black_box(results)
+                    // 使用异步批量寻路
+                    rt.block_on(async {
+                        let results = async_service.find_paths_batch(requests.clone()).await;
+                        black_box(results)
+                    })
                 });
             },
         );
@@ -259,8 +251,9 @@ fn bench_parallel_vs_sequential(c: &mut Criterion) {
         });
     });
 
-    // 并行执行基准测试
-    group.bench_function("parallel_4_threads", |b| {
+    // 并行执行基准测试（已弃用，保留用于对比）
+    #[allow(deprecated)]
+    group.bench_function("parallel_4_threads_deprecated", |b| {
         let parallel_service = ParallelPathfindingService::new(mesh.clone(), 4);
         b.iter(|| {
             let request_ids = parallel_service.submit_path_requests(requests.clone());
@@ -276,8 +269,26 @@ fn bench_parallel_vs_sequential(c: &mut Criterion) {
         });
     });
 
-    // 并行执行基准测试（8线程）
-    group.bench_function("parallel_8_threads", |b| {
+    // 异步协程执行基准测试（推荐）
+    group.bench_function("async_4_concurrent", |b| {
+        let rt = Runtime::new().unwrap();
+        let async_service = AsyncPathfindingService::new(mesh.clone(), 4);
+        b.iter(|| {
+            rt.block_on(async {
+                let mut handles = Vec::new();
+                for (start, end) in &requests {
+                    let service = &async_service;
+                    handles.push(async move { service.find_path(*start, *end).await });
+                }
+                let results: Vec<_> = futures::future::join_all(handles).await;
+                black_box(results)
+            })
+        });
+    });
+
+    // 并行执行基准测试（8线程，已弃用，保留用于对比）
+    #[allow(deprecated)]
+    group.bench_function("parallel_8_threads_deprecated", |b| {
         let parallel_service = ParallelPathfindingService::new(mesh.clone(), 8);
         b.iter(|| {
             let request_ids = parallel_service.submit_path_requests(requests.clone());
@@ -290,6 +301,23 @@ fn bench_parallel_vs_sequential(c: &mut Criterion) {
                 }
             }
             black_box(results)
+        });
+    });
+
+    // 异步协程执行基准测试（8并发，推荐）
+    group.bench_function("async_8_concurrent", |b| {
+        let rt = Runtime::new().unwrap();
+        let async_service = AsyncPathfindingService::new(mesh.clone(), 8);
+        b.iter(|| {
+            rt.block_on(async {
+                let mut handles = Vec::new();
+                for (start, end) in &requests {
+                    let service = &async_service;
+                    handles.push(async move { service.find_path(*start, *end).await });
+                }
+                let results: Vec<_> = futures::future::join_all(handles).await;
+                black_box(results)
+            })
         });
     });
 

@@ -377,13 +377,8 @@ impl JavaScriptContext {
 impl ScriptContext for JavaScriptContext {
     fn execute(&mut self, code: &str) -> ScriptResult {
         let (tx, rx) = mpsc::channel();
-        if self
-            .sender
-            .send(JsCommand::Execute(code.to_string(), tx))
-            .is_ok()
-        {
-            rx.recv()
-                .unwrap_or(ScriptResult::Error("Channel closed".to_string()))
+        if self.sender.send(JsCommand::Execute(code.to_string(), tx)).is_ok() {
+            rx.recv().unwrap_or(ScriptResult::Error("Channel closed".to_string()))
         } else {
             ScriptResult::Error("Failed to send command".to_string())
         }
@@ -396,8 +391,7 @@ impl ScriptContext for JavaScriptContext {
             .send(JsCommand::CallFunction(name.to_string(), args.to_vec(), tx))
             .is_ok()
         {
-            rx.recv()
-                .unwrap_or(ScriptResult::Error("Channel closed".to_string()))
+            rx.recv().unwrap_or(ScriptResult::Error("Channel closed".to_string()))
         } else {
             ScriptResult::Error("Failed to send command".to_string())
         }
@@ -405,13 +399,8 @@ impl ScriptContext for JavaScriptContext {
 
     fn set_global(&mut self, name: &str, value: ScriptValue) -> ScriptResult {
         let (tx, rx) = mpsc::channel();
-        if self
-            .sender
-            .send(JsCommand::SetGlobal(name.to_string(), value, tx))
-            .is_ok()
-        {
-            rx.recv()
-                .unwrap_or(ScriptResult::Error("Channel closed".to_string()))
+        if self.sender.send(JsCommand::SetGlobal(name.to_string(), value, tx)).is_ok() {
+            rx.recv().unwrap_or(ScriptResult::Error("Channel closed".to_string()))
         } else {
             ScriptResult::Error("Failed to send command".to_string())
         }
@@ -419,11 +408,7 @@ impl ScriptContext for JavaScriptContext {
 
     fn get_global(&self, name: &str) -> Option<ScriptValue> {
         let (tx, rx) = mpsc::channel();
-        if self
-            .sender
-            .send(JsCommand::GetGlobal(name.to_string(), tx))
-            .is_ok()
-        {
+        if self.sender.send(JsCommand::GetGlobal(name.to_string(), tx)).is_ok() {
             rx.recv().ok().flatten()
         } else {
             None

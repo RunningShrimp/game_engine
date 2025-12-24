@@ -6,6 +6,8 @@ pub mod shader_cache_helper;
 pub mod text;
 pub mod texture_compression;
 pub mod tilemap;
+#[cfg(target_arch = "wasm32")]
+pub mod webgl_adapter;
 pub mod wgpu_modules;
 pub mod wgpu_utils;
 
@@ -15,11 +17,11 @@ pub mod backend;
 pub mod batch_builder;
 pub mod batch_optimizer;
 pub mod clipping;
-pub mod gpu_instancing;
 pub mod csm;
 pub mod deferred;
 pub mod frustum;
 pub mod gpu_driven;
+pub mod gpu_instancing;
 pub mod graph;
 pub mod instance_batch;
 pub mod lod;
@@ -72,7 +74,9 @@ pub use pipeline_optimization::{
 };
 
 // Re-export Batch Optimizer components
-pub use batch_optimizer::{BatchOptimizer, BatchOptimizerStats, BatchPerformanceMonitor, OptimizedBatch};
+pub use batch_optimizer::{
+    BatchOptimizer, BatchOptimizerStats, BatchPerformanceMonitor, OptimizedBatch,
+};
 
 // Re-export GPU Instancing components
 pub use gpu_instancing::{

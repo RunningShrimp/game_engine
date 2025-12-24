@@ -239,9 +239,7 @@ impl Vec3Simd {
 
 impl VectorOps for Vec3Simd {
     fn dot(&self, other: &Self) -> f32 {
-        self.data[0] * other.data[0] +
-        self.data[1] * other.data[1] +
-        self.data[2] * other.data[2]
+        self.data[0] * other.data[0] + self.data[1] * other.data[1] + self.data[2] * other.data[2]
     }
 
     fn add(&self, other: &Self) -> Self {

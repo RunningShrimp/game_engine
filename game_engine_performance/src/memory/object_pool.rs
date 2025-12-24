@@ -1,7 +1,7 @@
-use crossbeam_channel::{unbounded, Receiver, Sender};
+use crossbeam_channel::{Receiver, Sender, unbounded};
 use std::collections::VecDeque;
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 //  对象池 - 减少内存分配和释放的开销
 pub struct ObjectPool<T> {
@@ -30,9 +30,7 @@ impl<T> ObjectPool<T> {
 
     /// 从池中获取对象
     pub fn acquire(&mut self) -> T {
-        self.available
-            .pop_front()
-            .unwrap_or_else(|| (self.factory)())
+        self.available.pop_front().unwrap_or_else(|| (self.factory)())
     }
 
     /// 将对象归还到池中
@@ -132,8 +130,7 @@ impl<T: Send> SyncObjectPool<T> {
         let current = self.current_size.load(Ordering::Relaxed);
 
         // 检查池是否已满
-        if current < max_size
-            && self.available_sender.send(obj).is_ok() {
+        if current < max_size && self.available_sender.send(obj).is_ok() {
             self.current_size.fetch_add(1, Ordering::Relaxed);
         }
         // 如果池已满，对象将被丢弃
@@ -260,9 +257,7 @@ impl<T: Resettable> ResettablePool<T> {
 
     /// 从池中获取对象
     pub fn acquire(&mut self) -> T {
-        self.available
-            .pop_front()
-            .unwrap_or_else(|| (self.factory)())
+        self.available.pop_front().unwrap_or_else(|| (self.factory)())
     }
 
     /// 将对象归还到池中 (自动重置)

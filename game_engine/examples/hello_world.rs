@@ -1,5 +1,5 @@
 //  Hello World 示例
-// 
+//
 //  最简单的引擎使用示例，展示如何初始化和运行引擎
 
 use bevy_ecs::prelude::*;

@@ -1,5 +1,5 @@
 //  SIMD性能测试和功能验证
-// 
+//
 //  测试SIMD优化模块的性能提升和功能正确性
 
 use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
@@ -13,9 +13,8 @@ use glam::{Mat4, Quat, Vec3};
 fn bench_simd_vector_operations(c: &mut Criterion) {
     let mut group = c.benchmark_group("simd_vector_operations");
 
-    let vectors: Vec<Vec3> = (0..1000)
-        .map(|i| Vec3::new(i as f32, i as f32 * 2.0, i as f32 * 3.0))
-        .collect();
+    let vectors: Vec<Vec3> =
+        (0..1000).map(|i| Vec3::new(i as f32, i as f32 * 2.0, i as f32 * 3.0)).collect();
 
     // 标准实现基准
     group.bench_with_input(
@@ -79,9 +78,8 @@ fn bench_simd_matrix_operations(c: &mut Criterion) {
         Vec3::new(1.0, 2.0, 3.0),
     );
 
-    let vectors: Vec<Vec3> = (0..1000)
-        .map(|i| Vec3::new(i as f32, i as f32 * 0.1, i as f32 * 0.2))
-        .collect();
+    let vectors: Vec<Vec3> =
+        (0..1000).map(|i| Vec3::new(i as f32, i as f32 * 0.1, i as f32 * 0.2)).collect();
 
     // 标准矩阵变换
     group.bench_with_input(
@@ -228,9 +226,8 @@ fn bench_simd_bounding_volume(c: &mut Criterion) {
 fn bench_simd_backends(c: &mut Criterion) {
     let mut group = c.benchmark_group("simd_backends");
 
-    let vectors: Vec<Vec3> = (0..1000)
-        .map(|i| Vec3::new(i as f32, i as f32 * 2.0, i as f32 * 3.0))
-        .collect();
+    let vectors: Vec<Vec3> =
+        (0..1000).map(|i| Vec3::new(i as f32, i as f32 * 2.0, i as f32 * 3.0)).collect();
 
     let backend = SimdBackend::best_available();
     println!("Testing with backend: {:?}", backend);
@@ -343,9 +340,8 @@ mod regression_tests {
 
     #[test]
     fn test_performance_regression() {
-        let vectors: Vec<Vec3> = (0..1000)
-            .map(|i| Vec3::new(i as f32, i as f32 * 2.0, i as f32 * 3.0))
-            .collect();
+        let vectors: Vec<Vec3> =
+            (0..1000).map(|i| Vec3::new(i as f32, i as f32 * 2.0, i as f32 * 3.0)).collect();
 
         let start = std::time::Instant::now();
 

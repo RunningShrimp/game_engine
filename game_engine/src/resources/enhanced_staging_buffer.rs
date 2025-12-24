@@ -1,9 +1,9 @@
 //  增强型Staging Buffer管理模块
-// 
+//
 //  使用环形缓冲区池的高性能Staging Buffer管理，优化CPU-GPU数据传输。
-// 
+//
 //  ## 架构设计
-// 
+//
 //  ```text
 //  ┌─────────────────────────────────────────────────────────┐
 //  │              Enhanced Staging Buffer                 │
@@ -278,31 +278,28 @@ impl EnhancedStagingBufferPool {
             .with_priority(AllocationPriority::Normal);
 
         // 尝试从预分配管理器分配
-        let mut buffer = if let Some(block) = self
-            .preallocation_manager
-            .lock()
-            .allocate(request.clone(), 0)
-        {
-            let mut enhanced_buffer = EnhancedStagingBuffer::from_block(
-                block,
-                Some(self.allocator.clone()),
-                Some(self.preallocation_manager.clone()),
-            );
-            enhanced_buffer.mark_preallocated();
-            enhanced_buffer
-        } else {
-            // 从内存分配器分配
-            if let Some(result) = self.allocator.lock().allocate(request.clone()) {
-                EnhancedStagingBuffer::from_block(
-                    result.block,
+        let mut buffer =
+            if let Some(block) = self.preallocation_manager.lock().allocate(request.clone(), 0) {
+                let mut enhanced_buffer = EnhancedStagingBuffer::from_block(
+                    block,
                     Some(self.allocator.clone()),
                     Some(self.preallocation_manager.clone()),
-                )
+                );
+                enhanced_buffer.mark_preallocated();
+                enhanced_buffer
             } else {
-                // 创建新的GPU缓冲区作为回退
-                self.create_fallback_buffer(size)
-            }
-        };
+                // 从内存分配器分配
+                if let Some(result) = self.allocator.lock().allocate(request.clone()) {
+                    EnhancedStagingBuffer::from_block(
+                        result.block,
+                        Some(self.allocator.clone()),
+                        Some(self.preallocation_manager.clone()),
+                    )
+                } else {
+                    // 创建新的GPU缓冲区作为回退
+                    self.create_fallback_buffer(size)
+                }
+            };
 
         // 尝试写入数据（这里简化处理）
         let offset = if let Some(write_offset) = buffer.write(&[], alignment) {

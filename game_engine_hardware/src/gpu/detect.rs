@@ -117,7 +117,12 @@ fn detect_gpu_wgpu() -> Option<GpuInfo> {
 
         let vendor = match adapter_info.vendor.to_lowercase() {
             s if s.contains("nvidia") => GpuVendor::Nvidia,
-            s if s.contains("amd") || s.contains("radeon") || s.contains("advanced micro devices") => GpuVendor::Amd,
+            s if s.contains("amd")
+                || s.contains("radeon")
+                || s.contains("advanced micro devices") =>
+            {
+                GpuVendor::Amd
+            }
             s if s.contains("intel") => GpuVendor::Intel,
             s if s.contains("apple") => GpuVendor::Apple,
             s if s.contains("qualcomm") => GpuVendor::Qualcomm,

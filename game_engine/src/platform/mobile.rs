@@ -1,5 +1,5 @@
 //  移动平台优化模块
-// 
+//
 //  提供移动平台特定的优化和配置
 
 use crate::config::graphics::GraphicsConfig;
@@ -221,9 +221,7 @@ impl MobileAdaptivePerformance {
         }
 
         // 检查性能问题
-        let issue = self
-            .monitor
-            .check_performance_issues(self.current_target_fps);
+        let issue = self.monitor.check_performance_issues(self.current_target_fps);
 
         match issue {
             PerformanceIssue::LowFps { current, target } => {

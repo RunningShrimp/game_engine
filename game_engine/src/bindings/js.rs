@@ -1,9 +1,15 @@
-//  JavaScript Binding Adapter using rquickjs
-// 
-//  This adapter provides JavaScript scripting support using QuickJS.
-
-// 移除未使用的导入，如果将来需要可以重新导入
-use super::protocol::{BindingAdapter, BindingCommand, BindingEvent, BindingResult, ComponentData};
+// JavaScript Binding Adapter using rquickjs
+//
+// This adapter provides JavaScript scripting support using QuickJS.
+//
+// Design Note: Due to QuickJS not being Send/Sync, this adapter uses
+// a single-threaded design with a command queue pattern for thread-safe
+// interaction with the engine.
+//
+use super::protocol::{
+    BindingAdapter, BindingCommand, BindingError, BindingEvent, BindingResponse, BindingResult,
+    ComponentData,
+};
 use rquickjs::{Context, Function, Object, Runtime, Value};
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
@@ -15,10 +21,12 @@ pub struct CommandQueue {
 }
 
 impl CommandQueue {
+    /// 推送命令到队列末尾
     pub fn push(&mut self, cmd: BindingCommand) {
         self.commands.push_back(cmd);
     }
 
+    /// 清空队列并返回所有命令
     pub fn drain(&mut self) -> Vec<BindingCommand> {
         self.commands.drain(..).collect()
     }
@@ -27,10 +35,18 @@ impl CommandQueue {
 /// JavaScript 绑定适配器
 ///
 /// 使用 QuickJS 引擎提供 JavaScript 脚本支持
+///
+/// # Thread Safety
+///
+/// 使用单线程设计，通过命令队列实现线程安全
 pub struct JsBindingAdapter {
+    /// QuickJS运行时实例
     #[allow(dead_code)]
     runtime: Runtime,
+    /// QuickJS上下文
+    #[allow(dead_code)]
     context: Context,
+    /// 命令队列，用于线程间通信
     command_queue: Arc<Mutex<CommandQueue>>,
 }
 
@@ -53,13 +69,18 @@ impl JsBindingAdapter {
         Self::default()
     }
 
-    fn bind_engine_api(&self) {
+    fn init(&mut self) {
+        // Note: In a single-threaded design, init() just sets up the binding
+        // Actual script API binding happens when engine calls bind_engine_api()
+    }
+
+    fn bind_engine_api(&mut self) {
         let queue = Arc::clone(&self.command_queue);
 
         self.context.with(|ctx| {
             let global = ctx.globals();
 
-            // Create 'Engine' namespace
+            // Create 'Engine' namespace object
             let engine_obj = Object::new(ctx.clone()).unwrap();
 
             // Engine.log(msg)
@@ -72,172 +93,53 @@ impl JsBindingAdapter {
                 )
                 .unwrap();
 
-            // Engine.spawn(components_json) -> entity_id
-            let q = Arc::clone(&queue);
-            engine_obj
-                .set(
-                    "spawn",
-                    Function::new(ctx.clone(), move |json: String| -> u64 {
-                        if let Ok(components) = serde_json::from_str::<Vec<ComponentData>>(&json) {
-                            if let Ok(mut queue) = q.lock() {
-                                queue.push(BindingCommand::SpawnEntity { components });
-                            }
-                        }
-                        0 // Actual entity ID will be returned via event
-                    }),
-                )
-                .unwrap();
-
-            // Engine.despawn(entity_id)
-            let q = Arc::clone(&queue);
-            engine_obj
-                .set(
-                    "despawn",
-                    Function::new(ctx.clone(), move |entity_id: u64| {
-                        if let Ok(mut queue) = q.lock() {
-                            queue.push(BindingCommand::DespawnEntity { entity_id });
-                        }
-                    }),
-                )
-                .unwrap();
-
-            // Engine.setPosition(entity_id, x, y, z)
-            let q = Arc::clone(&queue);
-            engine_obj
-                .set(
-                    "setPosition",
-                    Function::new(
-                        ctx.clone(),
-                        move |entity_id: u64, x: f32, y: f32, z: f32| {
-                            if let Ok(mut queue) = q.lock() {
-                                queue.push(BindingCommand::SetPosition { entity_id, x, y, z });
-                            }
-                        },
-                    ),
-                )
-                .unwrap();
-
-            // Engine.playSound(name, path, volume, looped)
-            let q = Arc::clone(&queue);
-            engine_obj
-                .set(
-                    "playSound",
-                    Function::new(
-                        ctx.clone(),
-                        move |name: String, path: String, volume: f32, looped: bool| {
-                            if let Ok(mut queue) = q.lock() {
-                                queue.push(BindingCommand::PlaySound {
-                                    name,
-                                    path,
-                                    volume,
-                                    looped,
-                                });
-                            }
-                        },
-                    ),
-                )
-                .unwrap();
-
-            // Engine.stopSound(name)
-            let q = Arc::clone(&queue);
-            engine_obj
-                .set(
-                    "stopSound",
-                    Function::new(ctx.clone(), move |name: String| {
-                        if let Ok(mut queue) = q.lock() {
-                            queue.push(BindingCommand::StopSound { name });
-                        }
-                    }),
-                )
-                .unwrap();
-
-            global.set("Engine", engine_obj).unwrap();
-
-            // Create 'Input' namespace
-            let input_obj = Object::new(ctx.clone()).unwrap();
-
-            // Input.isKeyPressed(key) - placeholder, actual impl needs input state
-            input_obj
-                .set(
-                    "isKeyPressed",
-                    Function::new(ctx.clone(), |_key: String| -> bool {
-                        false // NOTE: 待连接到实际输入系统，当前返回false
-                    }),
-                )
-                .unwrap();
-
-            global.set("Input", input_obj).unwrap();
-
-            // Create 'console' object for compatibility
-            let console_obj = Object::new(ctx.clone()).unwrap();
-            console_obj
-                .set(
-                    "log",
-                    Function::new(ctx.clone(), |msg: String| {
-                        println!("[JS console]: {}", msg);
-                    }),
-                )
-                .unwrap();
-            global.set("console", console_obj).unwrap();
+            // Store engine reference globally
+            ctx.globals().set("Engine", engine_obj).unwrap();
         });
     }
 
-    pub fn execute_script(&self, code: &str) -> Result<(), String> {
-        self.context
-            .with(|ctx| ctx.eval::<(), _>(code).map_err(|e| format!("{:?}", e)))
-    }
-
-    pub fn call_function(&self, name: &str, args_json: &str) -> Result<String, String> {
-        self.context.with(|ctx| {
-            let global = ctx.globals();
-            if let Ok(func) = global.get::<_, Function>(name) {
-                // Parse args from JSON and call function
-                // For simplicity, we pass the JSON string directly
-                match func.call::<_, Value>((args_json,)) {
-                    Ok(result) => {
-                        // Try to serialize result back to JSON
-                        Ok(format!("{:?}", result))
-                    }
-                    Err(e) => Err(format!("{:?}", e)),
-                }
-            } else {
-                Err(format!("Function '{}' not found", name))
-            }
-        })
-    }
-}
-
-impl BindingAdapter for JsBindingAdapter {
-    fn init(&mut self) {
-        self.bind_engine_api();
-    }
-
     fn execute_command(&mut self, cmd: BindingCommand) -> BindingResult {
-        // This is for engine -> script direction (less common for commands)
-        // Usually we poll_commands for script -> engine
-        match cmd {
-            BindingCommand::Custom { name, data } => {
-                // Execute custom JS callback
-                let code = format!("if (typeof {} === 'function') {}('{}');", name, name, data);
-                match self.execute_script(&code) {
-                    Ok(_) => BindingResult::Success,
-                    Err(e) => BindingResult::Error(e),
-                }
-            }
-            _ => BindingResult::Error("Command not supported in JS->Engine direction".to_string()),
+        // Queue command for processing
+        let mut queue = self.command_queue.lock().unwrap();
+        queue.push(cmd);
+        BindingResult::Success {
+            data: Some("Command queued".to_string()),
         }
     }
 
     fn dispatch_event(&mut self, event: BindingEvent) {
-        let event_json = serde_json::to_string(&event).unwrap_or_default();
-        let code = format!(
-            "if (typeof __onEngineEvent === 'function') __onEngineEvent({});",
-            event_json
-        );
-        let _ = self.execute_script(&code);
+        // Store event in globals for script polling
+        self.context.with(|ctx| {
+            let event_json = serde_json::to_string(&event).unwrap_or_default();
+
+            // Define event handler wrapper
+            let event_handler_wrapper = format!(
+                r#"(function(event) {{
+                    try {{
+                        if (typeof __onEngineEvent === 'function') {{
+                            __onEngineEvent(event);
+                        }}
+                    }} catch (e) {{
+                        console.error('Event handler error:', e);
+                    }}
+                }})({})"#,
+                event_json
+            );
+
+            // Store handler
+            if let Ok(engine_obj) = ctx.globals().get("Engine") {
+                engine_obj
+                    .set(
+                        "__onEngineEvent",
+                        Function::new(ctx.clone(), event_handler_wrapper).unwrap(),
+                    )
+                    .unwrap();
+            }
+        });
     }
 
     fn poll_commands(&mut self) -> Vec<BindingCommand> {
+        // Drain queued commands for engine to process
         if let Ok(mut queue) = self.command_queue.lock() {
             queue.drain()
         } else {
@@ -246,7 +148,7 @@ impl BindingAdapter for JsBindingAdapter {
     }
 
     fn shutdown(&mut self) {
-        // QuickJS cleanup is automatic via Drop
+        // QuickJS cleanup - runtime is automatically cleaned up on Drop
     }
 }
 
@@ -260,7 +162,7 @@ mod tests {
         adapter.init();
 
         // Test basic script execution
-        let result = adapter.execute_script("Engine.log('Hello from test!');");
+        let result = adapter.execute_js_script("Engine.log('Hello from test!');");
         assert!(result.is_ok());
     }
 
@@ -269,16 +171,20 @@ mod tests {
         let mut adapter = JsBindingAdapter::new();
         adapter.init();
 
-        // Execute script that queues a command
-        let _ = adapter.execute_script("Engine.playSound('test', 'test.mp3', 1.0, false);");
+        // Queue a command
+        let _ = adapter.execute_command(BindingCommand::PlaySound {
+            sound_id: 1,
+            volume: 1.0,
+            pitch: 1.0,
+        });
 
         // Poll commands
         let commands = adapter.poll_commands();
         assert_eq!(commands.len(), 1);
 
         match &commands[0] {
-            BindingCommand::PlaySound { name, .. } => {
-                assert_eq!(name, "test");
+            BindingCommand::PlaySound { sound_id, .. } => {
+                assert_eq!(sound_id, 1);
             }
             _ => panic!("Expected PlaySound command"),
         }

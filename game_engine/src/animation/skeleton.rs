@@ -1,5 +1,5 @@
 //  骨骼数据结构
-// 
+//
 //  定义骨骼层级和骨骼节点，支持复杂角色动画。
 
 use bevy_ecs::prelude::*;
@@ -122,11 +122,8 @@ impl Skeleton {
     /// 创建新的骨骼层级
     pub fn new(bones: Vec<Bone>) -> Self {
         let bone_count = bones.len();
-        let bone_name_to_index = bones
-            .iter()
-            .enumerate()
-            .map(|(i, b)| (b.name.clone(), i))
-            .collect();
+        let bone_name_to_index =
+            bones.iter().enumerate().map(|(i, b)| (b.name.clone(), i)).collect();
 
         Self {
             bones,
@@ -216,11 +213,8 @@ impl Skeleton {
 
         // 写入蒙皮矩阵
         if let Some(buffer) = &self.matrix_buffer {
-            let data: Vec<[[f32; 4]; 4]> = self
-                .skin_matrices
-                .iter()
-                .map(|m| m.to_cols_array_2d())
-                .collect();
+            let data: Vec<[[f32; 4]; 4]> =
+                self.skin_matrices.iter().map(|m| m.to_cols_array_2d()).collect();
             queue.write_buffer(buffer, 0, bytemuck::cast_slice(&data));
         }
 
@@ -313,11 +307,8 @@ pub fn build_skeleton_from_gltf(
     };
 
     // 构建骨骼节点索引映射 (gltf node index -> skeleton bone index)
-    let joint_to_index: std::collections::HashMap<usize, usize> = joints
-        .iter()
-        .enumerate()
-        .map(|(i, joint)| (joint.index(), i))
-        .collect();
+    let joint_to_index: std::collections::HashMap<usize, usize> =
+        joints.iter().enumerate().map(|(i, joint)| (joint.index(), i)).collect();
 
     // 构建父子关系映射 (通过遍历节点的 children)
     let mut parent_map: std::collections::HashMap<usize, usize> = std::collections::HashMap::new();
@@ -339,10 +330,7 @@ pub fn build_skeleton_from_gltf(
             .get(&joint.index())
             .and_then(|parent_node_idx| joint_to_index.get(parent_node_idx).copied());
 
-        let name = joint
-            .name()
-            .map(|s| s.to_string())
-            .unwrap_or_else(|| format!("bone_{}", i));
+        let name = joint.name().map(|s| s.to_string()).unwrap_or_else(|| format!("bone_{}", i));
 
         let mut bone = Bone::new(name, parent_index);
 
@@ -351,10 +339,7 @@ pub fn build_skeleton_from_gltf(
             Quat::from_array(rotation),
             Vec3::from(scale),
         );
-        bone.inverse_bind_matrix = inverse_bind_matrices
-            .get(i)
-            .copied()
-            .unwrap_or(Mat4::IDENTITY);
+        bone.inverse_bind_matrix = inverse_bind_matrices.get(i).copied().unwrap_or(Mat4::IDENTITY);
 
         bones.push(bone);
     }

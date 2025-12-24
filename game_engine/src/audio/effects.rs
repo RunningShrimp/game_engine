@@ -1,24 +1,24 @@
 //  高级音频效果模块
-// 
+//
 //  实现各种音频效果处理器，包括混响、均衡器、压缩器等。
-// 
+//
 //  ## 功能特性
-// 
+//
 //  - 混响效果（Reverb）
 //  - 均衡器（Equalizer）
 //  - 压缩器（Compressor）
 //  - 延迟效果（Delay/Echo）
 //  - 失真效果（Distortion）
 //  - 效果链管理
-// 
+//
 //  ## 使用示例
-// 
+//
 //  ```rust
 //  use crate::audio::effects::*;
-// 
+//
 //  // 创建效果链
 //  let mut chain = EffectChain::new();
-// 
+//
 //  // 添加混响效果
 //  let reverb = ReverbEffect::new(ReverbConfig {
 //      room_size: 0.8,
@@ -27,11 +27,11 @@
 //      dry_level: 0.7,
 //  });
 //  chain.add_effect(Box::new(reverb));
-// 
+//
 //  // 添加均衡器
 //  let eq = EqualizerEffect::new(EqualizerConfig::default());
 //  chain.add_effect(Box::new(eq));
-// 
+//
 //  // 处理音频数据
 //  let mut samples = vec![0.5; 44100];
 //  chain.process(&mut samples);
@@ -43,8 +43,10 @@ use thiserror::Error;
 /// 音频效果错误
 #[derive(Error, Debug)]
 pub enum EffectError {
+    /// 无效的参数
     #[error("Invalid parameter: {0}")]
     InvalidParameter(String),
+    /// 效果链错误
     #[error("Effect chain error: {0}")]
     ChainError(String),
 }

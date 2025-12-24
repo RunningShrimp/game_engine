@@ -110,7 +110,10 @@ pub trait Service: Send + Sync {
 
     async fn shutdown(&mut self) -> Result<(), ServiceError>;
 
-    async fn handle_message(&mut self, message: super::Message) -> Result<Option<super::Message>, ServiceError>;
+    async fn handle_message(
+        &mut self,
+        message: super::Message,
+    ) -> Result<Option<super::Message>, ServiceError>;
 
     fn info(&self) -> ServiceInfo {
         ServiceInfo::new(

@@ -192,7 +192,12 @@ impl SystemSchedulerOptimizer {
     /// * `parallel` - 是否并行执行
     /// * `execution_time_us` - 执行时间（微秒）
     /// * `system_count` - 执行的系统数量
-    pub fn record_execution(&mut self, parallel: bool, execution_time_us: f64, system_count: usize) {
+    pub fn record_execution(
+        &mut self,
+        parallel: bool,
+        execution_time_us: f64,
+        system_count: usize,
+    ) {
         self.stats.execution_count += 1;
         if parallel {
             self.stats.parallel_execution_count += 1;
@@ -274,11 +279,7 @@ impl ParallelSystemExecutor {
         let elapsed_us = elapsed.as_micros() as f64;
 
         if let Ok(mut optimizer) = self.optimizer.lock() {
-            optimizer.record_execution(
-                systems.len() > 4,
-                elapsed_us,
-                systems.len(),
-            );
+            optimizer.record_execution(systems.len() > 4, elapsed_us, systems.len());
         }
     }
 
@@ -376,4 +377,3 @@ mod tests {
         }
     }
 }
-

@@ -1,5 +1,5 @@
 //  硬件检测和优化模块
-// 
+//
 //  提供GPU、NPU、SoC等硬件的自动检测和优化建议。
 
 pub mod adaptive;
@@ -93,7 +93,7 @@ impl HardwareInfo {
 /// 全局硬件信息缓存
 static HARDWARE_INFO: OnceLock<HardwareInfo> = OnceLock::new();
 
-  /// 获取全局硬件信息（缓存）
+/// 获取全局硬件信息（缓存）
 pub fn get_hardware_info() -> &'static HardwareInfo {
     HARDWARE_INFO.get_or_init(HardwareInfo::detect)
 }

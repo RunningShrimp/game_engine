@@ -1,5 +1,5 @@
 //  数学运算性能基准测试
-// 
+//
 //  测试向量、矩阵、四元数等数学运算的性能
 //  包含SIMD优化版本的性能对比
 
@@ -157,11 +157,7 @@ fn bench_simd_math(c: &mut Criterion) {
         BenchmarkId::new("simd_batch_transform", count),
         &vectors,
         |b, vecs| {
-            b.iter(|| {
-                black_box(MatrixBatchOps::batch_mul_vec3_simd(
-                    &matrix, vecs,
-                ))
-            });
+            b.iter(|| black_box(MatrixBatchOps::batch_mul_vec3_simd(&matrix, vecs)));
         },
     );
 
@@ -185,9 +181,8 @@ fn bench_simd_math(c: &mut Criterion) {
 fn bench_simd_backends(c: &mut Criterion) {
     let mut group = c.benchmark_group("simd_backends");
 
-    let vectors: Vec<Vec3> = (0..1000)
-        .map(|i| Vec3::new(i as f32, i as f32 * 2.0, i as f32 * 3.0))
-        .collect();
+    let vectors: Vec<Vec3> =
+        (0..1000).map(|i| Vec3::new(i as f32, i as f32 * 2.0, i as f32 * 3.0)).collect();
 
     // 测试不同后端的向量操作
     for &backend in &[

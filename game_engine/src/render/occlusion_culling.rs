@@ -1,5 +1,5 @@
 //  遮挡剔除模块
-// 
+//
 //  实现基于层次Z缓冲（Hi-Z）的GPU端遮挡剔除，提供高性能的遮挡检测。
 
 use bytemuck;
@@ -345,14 +345,10 @@ impl HierarchicalZCulling {
             return Err(OcclusionError::NotInitialized);
         }
 
-        let build_pipeline = self
-            .build_pipeline
-            .as_ref()
-            .ok_or_else(|| OcclusionError::NotInitialized)?;
-        let hi_z_texture = self
-            .hi_z_texture
-            .as_ref()
-            .ok_or_else(|| OcclusionError::NotInitialized)?;
+        let build_pipeline =
+            self.build_pipeline.as_ref().ok_or_else(|| OcclusionError::NotInitialized)?;
+        let hi_z_texture =
+            self.hi_z_texture.as_ref().ok_or_else(|| OcclusionError::NotInitialized)?;
 
         // 重新创建构建绑定组布局（因为我们需要在build_hi_z中使用）
         // 理想情况下应该存储build_bind_group_layout，但为了简化，我们在这里重新创建
@@ -542,18 +538,13 @@ impl HierarchicalZCulling {
             return Err(OcclusionError::NotInitialized);
         }
 
-        let query_pipeline = self
-            .query_pipeline
-            .as_ref()
-            .ok_or_else(|| OcclusionError::NotInitialized)?;
+        let query_pipeline =
+            self.query_pipeline.as_ref().ok_or_else(|| OcclusionError::NotInitialized)?;
         let query_bind_group_layout = self
             .query_bind_group_layout
             .as_ref()
             .ok_or_else(|| OcclusionError::NotInitialized)?;
-        let hi_z_view = self
-            .hi_z_view
-            .as_ref()
-            .ok_or_else(|| OcclusionError::NotInitialized)?;
+        let hi_z_view = self.hi_z_view.as_ref().ok_or_else(|| OcclusionError::NotInitialized)?;
 
         let query_count = queries.len() as u32;
 
@@ -715,18 +706,13 @@ impl HierarchicalZCulling {
             return Err(OcclusionError::NotInitialized);
         }
 
-        let query_pipeline = self
-            .query_pipeline
-            .as_ref()
-            .ok_or_else(|| OcclusionError::NotInitialized)?;
+        let query_pipeline =
+            self.query_pipeline.as_ref().ok_or_else(|| OcclusionError::NotInitialized)?;
         let query_bind_group_layout = self
             .query_bind_group_layout
             .as_ref()
             .ok_or_else(|| OcclusionError::NotInitialized)?;
-        let hi_z_view = self
-            .hi_z_view
-            .as_ref()
-            .ok_or_else(|| OcclusionError::NotInitialized)?;
+        let hi_z_view = self.hi_z_view.as_ref().ok_or_else(|| OcclusionError::NotInitialized)?;
 
         let query_count = queries.len() as u32;
 

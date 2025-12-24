@@ -1,5 +1,5 @@
 //  性能分析和报告生成工具
-// 
+//
 //  分析性能数据并生成详细报告
 //  - 性能分析
 //  - 瓶颈检测
@@ -68,9 +68,7 @@ impl PerformanceAnalyzer {
 
         // 记录指标
         analysis.metrics.insert("fps".to_string(), fps as f64);
-        analysis
-            .metrics
-            .insert("memory_mb".to_string(), memory_mb as f64);
+        analysis.metrics.insert("memory_mb".to_string(), memory_mb as f64);
 
         // 检测瓶颈
         if fps < 30.0 {
@@ -98,8 +96,7 @@ impl PerformanceAnalyzer {
             );
         }
 
-        self.analyses
-            .insert(analysis.name.clone(), analysis.clone());
+        self.analyses.insert(analysis.name.clone(), analysis.clone());
         analysis
     }
 
@@ -118,12 +115,8 @@ impl PerformanceAnalyzer {
         };
 
         analysis.metrics.insert("fps".to_string(), fps as f64);
-        analysis
-            .metrics
-            .insert("memory_mb".to_string(), memory_mb as f64);
-        analysis
-            .metrics
-            .insert("body_count".to_string(), body_count as f64);
+        analysis.metrics.insert("memory_mb".to_string(), memory_mb as f64);
+        analysis.metrics.insert("body_count".to_string(), body_count as f64);
 
         // 物理性能分析
         let fps_per_body = fps / body_count.max(1) as f32;
@@ -149,8 +142,7 @@ impl PerformanceAnalyzer {
             });
         }
 
-        self.analyses
-            .insert(analysis.name.clone(), analysis.clone());
+        self.analyses.insert(analysis.name.clone(), analysis.clone());
         analysis
     }
 
@@ -169,12 +161,8 @@ impl PerformanceAnalyzer {
         };
 
         analysis.metrics.insert("fps".to_string(), fps as f64);
-        analysis
-            .metrics
-            .insert("agent_count".to_string(), agent_count as f64);
-        analysis
-            .metrics
-            .insert("avg_path_length".to_string(), path_length_avg as f64);
+        analysis.metrics.insert("agent_count".to_string(), agent_count as f64);
+        analysis.metrics.insert("avg_path_length".to_string(), path_length_avg as f64);
 
         // AI 性能分析
         if fps < 60.0 && agent_count > 100 {
@@ -195,8 +183,7 @@ impl PerformanceAnalyzer {
             });
         }
 
-        self.analyses
-            .insert(analysis.name.clone(), analysis.clone());
+        self.analyses.insert(analysis.name.clone(), analysis.clone());
         analysis
     }
 

@@ -83,7 +83,7 @@ impl BVHTree {
         if depth >= self.max_depth || items.len() <= self.max_colliders_per_leaf {
             let aabb = self.compute_union_aabb(items);
             let colliders: Vec<ColliderHandle> = items.iter().map(|(handle, _)| *handle).collect();
-            
+
             let node_index = self.nodes.len();
             self.nodes.push(BVHNode {
                 aabb,
@@ -136,8 +136,16 @@ impl BVHTree {
         let node_index = self.nodes.len();
         self.nodes.push(BVHNode {
             aabb,
-            left: if left_index != usize::MAX { Some(left_index) } else { None },
-            right: if right_index != usize::MAX { Some(right_index) } else { None },
+            left: if left_index != usize::MAX {
+                Some(left_index)
+            } else {
+                None
+            },
+            right: if right_index != usize::MAX {
+                Some(right_index)
+            } else {
+                None
+            },
             colliders: Vec::new(),
             depth,
         });
@@ -165,11 +173,11 @@ impl BVHTree {
     /// 查询与AABB相交的碰撞体
     pub fn query_aabb(&self, query_aabb: &Aabb, collider_set: &ColliderSet) -> Vec<ColliderHandle> {
         let mut results = Vec::new();
-        
+
         if let Some(root_index) = self.root {
             self.query_node(root_index, query_aabb, collider_set, &mut results);
         }
-        
+
         results
     }
 
@@ -246,11 +254,11 @@ impl BVHTree {
         let ray_origin = ray.origin;
         let aabb_center = node.aabb.center();
         let aabb_extents = node.aabb.extents();
-        
+
         let mut tmin = 0.0f32;
         let mut tmax = max_toi;
         let mut intersects = true;
-        
+
         for i in 0..3 {
             let axis = match i {
                 0 => ray_dir.x,
@@ -276,10 +284,11 @@ impl BVHTree {
                 2 => aabb_extents.z,
                 _ => unreachable!(),
             };
-            
+
             if axis.abs() < 1e-6 {
-                if origin_component < center_component - extent_component || 
-                   origin_component > center_component + extent_component {
+                if origin_component < center_component - extent_component
+                    || origin_component > center_component + extent_component
+                {
                     intersects = false;
                     break;
                 }
@@ -296,7 +305,7 @@ impl BVHTree {
                 }
             }
         }
-        
+
         if !intersects {
             return None;
         }
@@ -313,7 +322,7 @@ impl BVHTree {
                     let mut tmin_collider = 0.0f32;
                     let mut tmax_collider = max_toi;
                     let mut collider_intersects = true;
-                    
+
                     for i in 0..3 {
                         let axis = match i {
                             0 => ray_dir.x,
@@ -339,9 +348,10 @@ impl BVHTree {
                             2 => collider_aabb.maxs.z,
                             _ => unreachable!(),
                         };
-                        
+
                         if axis.abs() < 1e-6 {
-                            if origin_component < min_component || origin_component > max_component {
+                            if origin_component < min_component || origin_component > max_component
+                            {
                                 collider_intersects = false;
                                 break;
                             }
@@ -358,7 +368,7 @@ impl BVHTree {
                             }
                         }
                     }
-                    
+
                     if collider_intersects && tmin_collider < closest_toi {
                         closest = Some((handle, tmin_collider));
                         closest_toi = tmin_collider;
@@ -430,7 +440,7 @@ impl SpatialHash {
 
         for (handle, collider) in collider_set.iter() {
             let aabb = collider.compute_aabb();
-            
+
             // 计算碰撞体覆盖的网格范围
             let min_cell = self.world_to_cell(aabb.mins);
             let max_cell = self.world_to_cell(aabb.maxs);
@@ -466,20 +476,20 @@ impl SpatialHash {
         for x in min_cell.0..=max_cell.0 {
             for y in min_cell.1..=max_cell.1 {
                 for z in min_cell.2..=max_cell.2 {
-                if let Some(handles) = self.grid.get(&(x, y, z)) {
-                    for &handle in handles {
-                        if visited.insert(handle) {
-                            if let Some(collider) = collider_set.get(handle) {
-                                let collider_aabb = collider.compute_aabb();
-                                if query_aabb.intersects(&collider_aabb) {
-                                    results.push(handle);
+                    if let Some(handles) = self.grid.get(&(x, y, z)) {
+                        for &handle in handles {
+                            if visited.insert(handle) {
+                                if let Some(collider) = collider_set.get(handle) {
+                                    let collider_aabb = collider.compute_aabb();
+                                    if query_aabb.intersects(&collider_aabb) {
+                                        results.push(handle);
+                                    }
                                 }
                             }
                         }
                     }
                 }
             }
-        }
         }
 
         results
@@ -566,8 +576,9 @@ impl Octree {
 
         // 如果达到最大深度或碰撞体数量足够少，创建叶子节点
         if depth >= self.max_depth || filtered_items.len() <= self.max_colliders_per_leaf {
-            let colliders: Vec<ColliderHandle> = filtered_items.iter().map(|(handle, _)| *handle).collect();
-            
+            let colliders: Vec<ColliderHandle> =
+                filtered_items.iter().map(|(handle, _)| *handle).collect();
+
             let node_index = self.nodes.len();
             self.nodes.push(OctreeNode {
                 aabb,
@@ -646,11 +657,11 @@ impl Octree {
     /// 查询与AABB相交的碰撞体
     pub fn query_aabb(&self, query_aabb: &Aabb, collider_set: &ColliderSet) -> Vec<ColliderHandle> {
         let mut results = Vec::new();
-        
+
         if let Some(root_index) = self.root {
             self.query_node(root_index, query_aabb, collider_set, &mut results);
         }
-        
+
         results
     }
 
@@ -768,7 +779,7 @@ impl SpatialPartitionManager {
     /// 构建空间分区
     pub fn build(&mut self, collider_set: &ColliderSet) {
         let start = std::time::Instant::now();
-        
+
         match self.partition_type {
             SpatialPartitionType::BVH => {
                 if let Some(ref mut bvh) = self.bvh {
@@ -786,7 +797,7 @@ impl SpatialPartitionManager {
                 }
             }
         }
-        
+
         let elapsed = start.elapsed();
         tracing::debug!(
             target: "physics",
@@ -794,14 +805,14 @@ impl SpatialPartitionManager {
             elapsed.as_secs_f64() * 1000.0,
             self.partition_type
         );
-        
+
         self.needs_rebuild = false;
     }
 
     /// 查询与AABB相交的碰撞体（带性能监控）
     pub fn query_aabb(&self, query_aabb: &Aabb, collider_set: &ColliderSet) -> Vec<ColliderHandle> {
         let start = std::time::Instant::now();
-        
+
         let results = match self.partition_type {
             SpatialPartitionType::BVH => {
                 if let Some(ref bvh) = self.bvh {
@@ -825,16 +836,16 @@ impl SpatialPartitionManager {
                 }
             }
         };
-        
+
         let elapsed = start.elapsed();
         let _elapsed_us = elapsed.as_micros() as f64;
-        
+
         // 更新性能统计（注意：这里需要&mut self，但为了保持API不变，我们使用内部可变性）
         // 实际实现中可以使用Arc<Mutex<>>或AtomicU64来记录统计
-        
+
         results
     }
-    
+
     /// 获取性能统计
     pub fn get_performance_stats(&self) -> SpatialPartitionStats {
         SpatialPartitionStats {
@@ -843,12 +854,27 @@ impl SpatialPartitionManager {
             partition_type: self.partition_type,
         }
     }
-    
+
     /// 更新性能统计（内部使用）
     fn record_query(&mut self, query_time_us: f64) {
         self.query_count += 1;
         let alpha = 0.1; // 指数移动平均
-        self.average_query_time_us = alpha * query_time_us + (1.0 - alpha) * self.average_query_time_us;
+        self.average_query_time_us =
+            alpha * query_time_us + (1.0 - alpha) * self.average_query_time_us;
+    }
+
+    /// 获取树的深度信息（用于性能分析和调试）
+    pub fn get_tree_depth_info(&self) -> (Option<usize>, Option<usize>) {
+        let bvh_depth = self
+            .bvh
+            .as_ref()
+            .and_then(|bvh| bvh.root.and_then(|root| bvh.nodes.get(root).map(|node| node.depth)));
+
+        let octree_depth = self.octree.as_ref().and_then(|octree| {
+            octree.root.and_then(|root| octree.nodes.get(root).map(|node| node.depth))
+        });
+
+        (bvh_depth, octree_depth)
     }
 
     /// 射线查询
@@ -883,7 +909,7 @@ impl SpatialPartitionManager {
     pub fn needs_rebuild(&self) -> bool {
         self.needs_rebuild
     }
-    
+
     /// 动态调整分区（根据场景大小和对象分布）
     pub fn adjust_for_scene(&mut self, scene_aabb: &Aabb, object_count: usize) {
         match self.partition_type {
@@ -903,7 +929,8 @@ impl SpatialPartitionManager {
                     let scene_size = scene_aabb.extents();
                     let avg_size = (scene_size.x + scene_size.y + scene_size.z) / 3.0;
                     // 单元格大小应该是平均对象大小的2-4倍
-                    let optimal_cell_size = (avg_size / (object_count as f32).cbrt()).max(0.5).min(10.0);
+                    let optimal_cell_size =
+                        (avg_size / (object_count as f32).cbrt()).max(0.5).min(10.0);
                     *spatial_hash = SpatialHash::new(optimal_cell_size);
                     self.needs_rebuild = true;
                 }
@@ -929,7 +956,6 @@ pub struct SpatialPartitionStats {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rapier3d::prelude::*;
     use rapier3d::na::Point3 as NaPoint3;
 
     #[test]
@@ -980,7 +1006,7 @@ mod tests {
     #[test]
     fn test_spatial_hash_build() {
         let mut collider_set = ColliderSet::new();
-        
+
         // 创建几个碰撞体
         for i in 0..10 {
             let shape = SharedShape::ball(0.5);
@@ -999,7 +1025,7 @@ mod tests {
     #[test]
     fn test_spatial_hash_query() {
         let mut collider_set = ColliderSet::new();
-        
+
         // 创建碰撞体
         for i in 0..10 {
             let shape = SharedShape::ball(0.5);
@@ -1022,4 +1048,3 @@ mod tests {
         assert!(!results.is_empty());
     }
 }
-

@@ -43,10 +43,7 @@ impl MetricData {
     }
 
     pub fn get_max(&self) -> f32 {
-        self.values
-            .iter()
-            .cloned()
-            .fold(f32::NEG_INFINITY, f32::max)
+        self.values.iter().cloned().fold(f32::NEG_INFINITY, f32::max)
     }
 
     pub fn get_avg(&self) -> f32 {
@@ -91,17 +88,12 @@ impl PerformancePanel {
         self.frame_time_history.push_back(frame_time_ms);
 
         // 更新指标
-        if let Some(fps_metric) = self
-            .metrics
-            .iter_mut()
-            .find(|m| m.metric_type == MetricType::FPS)
+        if let Some(fps_metric) = self.metrics.iter_mut().find(|m| m.metric_type == MetricType::FPS)
         {
             fps_metric.add_value(fps);
         }
-        if let Some(frame_time_metric) = self
-            .metrics
-            .iter_mut()
-            .find(|m| m.metric_type == MetricType::FrameTime)
+        if let Some(frame_time_metric) =
+            self.metrics.iter_mut().find(|m| m.metric_type == MetricType::FrameTime)
         {
             frame_time_metric.add_value(frame_time_ms);
         }
@@ -117,17 +109,12 @@ impl PerformancePanel {
 
     /// 添加自定义指标
     pub fn add_metric(&mut self, metric_type: MetricType, color: egui::Color32) {
-        self.metrics
-            .push(MetricData::new(metric_type, self.max_history, color));
+        self.metrics.push(MetricData::new(metric_type, self.max_history, color));
     }
 
     /// 更新指标值
     pub fn update_metric(&mut self, metric_type: MetricType, value: f32) {
-        if let Some(metric) = self
-            .metrics
-            .iter_mut()
-            .find(|m| m.metric_type == metric_type)
-        {
+        if let Some(metric) = self.metrics.iter_mut().find(|m| m.metric_type == metric_type) {
             metric.add_value(value);
         }
     }
@@ -173,16 +160,8 @@ impl PerformancePanel {
         // FPS统计
         if !self.fps_history.is_empty() {
             let avg_fps: f32 = self.fps_history.iter().sum::<f32>() / self.fps_history.len() as f32;
-            let min_fps = self
-                .fps_history
-                .iter()
-                .cloned()
-                .fold(f32::INFINITY, f32::min);
-            let max_fps = self
-                .fps_history
-                .iter()
-                .cloned()
-                .fold(f32::NEG_INFINITY, f32::max);
+            let min_fps = self.fps_history.iter().cloned().fold(f32::INFINITY, f32::min);
+            let max_fps = self.fps_history.iter().cloned().fold(f32::NEG_INFINITY, f32::max);
 
             ui.label(format!("Average FPS: {:.1}", avg_fps));
             ui.label(format!("Min FPS: {:.1}", min_fps));
@@ -195,16 +174,10 @@ impl PerformancePanel {
         if !self.frame_time_history.is_empty() {
             let avg_frame_time: f32 =
                 self.frame_time_history.iter().sum::<f32>() / self.frame_time_history.len() as f32;
-            let min_frame_time = self
-                .frame_time_history
-                .iter()
-                .cloned()
-                .fold(f32::INFINITY, f32::min);
-            let max_frame_time = self
-                .frame_time_history
-                .iter()
-                .cloned()
-                .fold(f32::NEG_INFINITY, f32::max);
+            let min_frame_time =
+                self.frame_time_history.iter().cloned().fold(f32::INFINITY, f32::min);
+            let max_frame_time =
+                self.frame_time_history.iter().cloned().fold(f32::NEG_INFINITY, f32::max);
 
             ui.label(format!("Average Frame Time: {:.2} ms", avg_frame_time));
             ui.label(format!("Min Frame Time: {:.2} ms", min_frame_time));
@@ -284,12 +257,8 @@ impl PerformancePanel {
 
         if !self.fps_history.is_empty() {
             let min_fps = 0.0;
-            let max_fps = self
-                .fps_history
-                .iter()
-                .cloned()
-                .fold(f32::NEG_INFINITY, f32::max)
-                .max(60.0);
+            let max_fps =
+                self.fps_history.iter().cloned().fold(f32::NEG_INFINITY, f32::max).max(60.0);
             let range = max_fps - min_fps;
 
             if range > 0.0 {

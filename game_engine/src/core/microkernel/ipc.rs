@@ -6,7 +6,7 @@ use std::collections::HashMap;
 
 use tokio::sync::{mpsc, oneshot};
 
-pub use super::{ServiceId, Message, MessagePayload};
+pub use super::{Message, MessagePayload, ServiceId};
 
 #[derive(Debug, Clone)]
 pub struct Response {
@@ -42,7 +42,13 @@ pub struct Request {
 impl Request {
     pub fn new(message: Message) -> (Self, oneshot::Receiver<Response>) {
         let (tx, rx) = oneshot::channel();
-        (Self { message, reply_channel: tx }, rx)
+        (
+            Self {
+                message,
+                reply_channel: tx,
+            },
+            rx,
+        )
     }
 }
 
@@ -81,6 +87,7 @@ impl RequestHandler {
         }
     }
 
+    /// 注册响应通道，等待特定消息的响应
     async fn register(&self, id: super::MessageId, sender: oneshot::Sender<Response>) {
         let mut pending = self.pending_requests.write().await;
         pending.insert(id, sender);
@@ -123,9 +130,7 @@ impl IpcChannel {
     }
 
     pub async fn send(&self, message: Message) -> Result<Option<Message>, IpcError> {
-        self.sender
-            .send(message.clone())
-            .map_err(|_| IpcError::ChannelClosed)?;
+        self.sender.send(message.clone()).map_err(|_| IpcError::ChannelClosed)?;
 
         if message.message_type == super::MessageType::Request {
             Ok(None)
@@ -137,17 +142,12 @@ impl IpcChannel {
     pub async fn request(&self, message: Message) -> Result<Response, IpcError> {
         let (_request, receiver) = Request::new(message.clone());
 
-        self.sender
-            .send(message)
-            .map_err(|_| IpcError::ChannelClosed)?;
+        self.sender.send(message).map_err(|_| IpcError::ChannelClosed)?;
 
-        tokio::time::timeout(
-            std::time::Duration::from_secs(5),
-            receiver,
-        )
-        .await
-        .map_err(|_| IpcError::Timeout)?
-        .map_err(|_| IpcError::ChannelClosed)
+        tokio::time::timeout(std::time::Duration::from_secs(5), receiver)
+            .await
+            .map_err(|_| IpcError::Timeout)?
+            .map_err(|_| IpcError::ChannelClosed)
     }
 
     pub async fn try_recv(&self) -> Result<Option<Message>, IpcError> {
@@ -169,15 +169,9 @@ impl IpcChannel {
                     }
                     None
                 }
-                super::MessageType::Response => {
-                    Some(message)
-                }
-                super::MessageType::Notification | super::MessageType::Broadcast => {
-                    Some(message)
-                }
-                super::MessageType::Error => {
-                    Some(message)
-                }
+                super::MessageType::Response => Some(message),
+                super::MessageType::Notification | super::MessageType::Broadcast => Some(message),
+                super::MessageType::Error => Some(message),
             };
 
             if let Some(response_msg) = response {

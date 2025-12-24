@@ -30,9 +30,9 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 #[cfg(feature = "secure_key_exchange")]
 use {
-    x25519_dalek_ng::{PublicKey, StaticSecret},
     hkdf::Hkdf,
     sha2::Sha256 as HkdfSha256,
+    x25519_dalek_ng::{PublicKey, StaticSecret},
 };
 
 #[cfg(not(any(feature = "secure_key_exchange", feature = "insecure_key_exchange")))]
@@ -57,7 +57,6 @@ pub trait KeyExchangeProtocol {
     /// 获取本地密钥对的可选引用
     fn keypair(&self) -> Option<&KeyPair>;
 }
-
 
 /// 密钥对
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -86,7 +85,9 @@ impl KeyPair {
         }
 
         #[cfg(not(any(feature = "secure_key_exchange", feature = "insecure_key_exchange")))]
-        compile_error!("Either 'secure_key_exchange' or 'insecure_key_exchange' feature must be enabled");
+        compile_error!(
+            "Either 'secure_key_exchange' or 'insecure_key_exchange' feature must be enabled"
+        );
     }
 
     /// 生成安全的X25519密钥对
@@ -95,10 +96,10 @@ impl KeyPair {
         // 生成随机私钥
         // 使用 ThreadRng 生成随机字节，然后创建 StaticSecret
         use rand::RngCore;
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let mut private_key_bytes = [0u8; 32];
         rng.fill_bytes(&mut private_key_bytes);
-        
+
         // 创建 StaticSecret 和对应的 PublicKey
         let static_secret = StaticSecret::from(private_key_bytes);
         let public_key = PublicKey::from(&static_secret);
@@ -107,10 +108,7 @@ impl KeyPair {
         let private_key_bytes = static_secret.to_bytes();
         let public_key_bytes = public_key.to_bytes();
 
-        let created_at = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_secs();
+        let created_at = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_secs();
 
         Self {
             public_key: public_key_bytes,
@@ -139,10 +137,7 @@ impl KeyPair {
         // 计算公钥（使用SHA256作为简化实现）
         let public_key = Self::derive_public_key_insecure(&private_key);
 
-        let created_at = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_secs();
+        let created_at = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_secs();
 
         Self {
             public_key,
@@ -171,10 +166,7 @@ impl KeyPair {
 
     /// 获取密钥年龄（秒）
     pub fn age_secs(&self) -> u64 {
-        let now = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_secs();
+        let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_secs();
         now.saturating_sub(self.created_at)
     }
 }
@@ -193,10 +185,7 @@ pub struct KeyExchangeMessage {
 impl KeyExchangeMessage {
     /// 创建密钥交换消息
     pub fn new(client_id: u64, public_key: [u8; 32]) -> Self {
-        let timestamp = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_secs();
+        let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_secs();
 
         Self {
             public_key,
@@ -207,10 +196,7 @@ impl KeyExchangeMessage {
 
     /// 验证消息时间戳（防止旧消息重放）
     pub fn is_recent(&self, max_age_secs: u64) -> bool {
-        let now = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_secs();
+        let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_secs();
 
         now.saturating_sub(self.timestamp) < max_age_secs
     }
@@ -235,7 +221,7 @@ impl SharedSecret {
         {
             // 使用HKDF进行密钥派生
             let hk = Hkdf::<HkdfSha256>::new(None, &shared_secret);
-            
+
             // 派生加密密钥
             let mut encryption_key = [0u8; 32];
             hk.expand(b"encryption", &mut encryption_key)
@@ -305,7 +291,7 @@ impl KeyExchange {
             // 使用真正的X25519 ECDH计算共享密钥
             let static_secret = StaticSecret::from(self.local_keypair.private_key);
             let peer_public = PublicKey::from(peer_public_key);
-            
+
             // 执行ECDH密钥交换
             let shared_secret_bytes = static_secret.diffie_hellman(&peer_public);
             let shared_secret = shared_secret_bytes.to_bytes();
@@ -316,7 +302,9 @@ impl KeyExchange {
         #[cfg(not(feature = "secure_key_exchange"))]
         {
             // 向后兼容：使用SHA256的简化实现（仅用于测试）
-            eprintln!("WARNING: Using simplified key exchange computation! Replace with proper ECDH in production.");
+            eprintln!(
+                "WARNING: Using simplified key exchange computation! Replace with proper ECDH in production."
+            );
 
             let mut hasher = Sha256::new();
             hasher.update(&self.local_keypair.private_key);
@@ -347,7 +335,7 @@ impl KeyExchangeProtocol for KeyExchange {
             // 使用真正的X25519 ECDH计算共享密钥
             let static_secret = StaticSecret::from(self.local_keypair.private_key);
             let peer_public = PublicKey::from(peer_public_key);
-            
+
             // 执行ECDH密钥交换
             let shared_secret_bytes = static_secret.diffie_hellman(&peer_public);
             let shared_secret = shared_secret_bytes.to_bytes();
@@ -358,7 +346,9 @@ impl KeyExchangeProtocol for KeyExchange {
         #[cfg(not(feature = "secure_key_exchange"))]
         {
             // 向后兼容：使用SHA256的简化实现（仅用于测试）
-            eprintln!("WARNING: Using simplified key exchange computation! Replace with proper ECDH in production.");
+            eprintln!(
+                "WARNING: Using simplified key exchange computation! Replace with proper ECDH in production."
+            );
 
             let mut hasher = Sha256::new();
             hasher.update(&self.local_keypair.private_key);
@@ -439,7 +429,10 @@ mod tests {
             // X25519 ECDH保证双方生成相同的共享密钥
             assert_eq!(client_shared.shared_secret, server_shared.shared_secret);
             assert_eq!(client_shared.encryption_key, server_shared.encryption_key);
-            assert_eq!(client_shared.authentication_key, server_shared.authentication_key);
+            assert_eq!(
+                client_shared.authentication_key,
+                server_shared.authentication_key
+            );
         }
 
         #[cfg(not(feature = "secure_key_exchange"))]

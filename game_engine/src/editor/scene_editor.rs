@@ -108,21 +108,9 @@ impl SceneEditor {
         ui.collapsing("Camera", |ui| {
             ui.horizontal(|ui| {
                 ui.label("Position:");
-                ui.add(
-                    egui::DragValue::new(&mut self.camera_position.x)
-                        .prefix("X: ")
-                        .speed(0.1),
-                );
-                ui.add(
-                    egui::DragValue::new(&mut self.camera_position.y)
-                        .prefix("Y: ")
-                        .speed(0.1),
-                );
-                ui.add(
-                    egui::DragValue::new(&mut self.camera_position.z)
-                        .prefix("Z: ")
-                        .speed(0.1),
-                );
+                ui.add(egui::DragValue::new(&mut self.camera_position.x).prefix("X: ").speed(0.1));
+                ui.add(egui::DragValue::new(&mut self.camera_position.y).prefix("Y: ").speed(0.1));
+                ui.add(egui::DragValue::new(&mut self.camera_position.z).prefix("Z: ").speed(0.1));
             });
 
             ui.horizontal(|ui| {

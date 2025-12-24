@@ -1,33 +1,33 @@
 //  导航网格生成模块
-// 
+//
 //  实现导航网格（NavMesh）的自动生成和优化算法，用于AI寻路。
-// 
+//
 //  ## 功能特性
-// 
+//
 //  - 基于几何体的导航网格生成
 //  - 网格简化和优化
 //  - 区域标记（可通行、不可通行、特殊区域）
 //  - 网格查询（最近点、路径查找）
 //  - 动态网格更新
-// 
+//
 //  ## 使用示例
-// 
+//
 //  ```rust
 //  use crate::ai::navmesh::*;
-// 
+//
 //  // 创建导航网格生成器
 //  let mut generator = NavMeshGenerator::new();
-// 
+//
 //  // 添加几何体
 //  generator.add_collider(ColliderGeometry {
 //      vertices: vec![...],
 //      indices: vec![...],
 //      is_walkable: true,
 //  });
-// 
+//
 //  // 生成导航网格
 //  let navmesh = generator.generate(NavMeshConfig::default())?;
-// 
+//
 //  // 查询路径
 //  let path = navmesh.find_path(start, end)?;
 //  ```
@@ -183,10 +183,7 @@ impl NavMesh {
         let mut regions = HashMap::new();
 
         for (idx, poly) in polygons.iter().enumerate() {
-            regions
-                .entry(poly.region_id)
-                .or_insert_with(Vec::new)
-                .push(idx);
+            regions.entry(poly.region_id).or_insert_with(Vec::new).push(idx);
         }
 
         Self {
@@ -214,9 +211,7 @@ impl NavMesh {
 
     /// 根据区域ID获取所有多边形索引，形成逻辑闭环
     pub fn get_polygons_in_region(&self, region_id: u32) -> &[usize] {
-        self.regions.get(&region_id)
-            .map(|indices| indices.as_slice())
-            .unwrap_or(&[])
+        self.regions.get(&region_id).map(|indices| indices.as_slice()).unwrap_or(&[])
     }
 
     /// 查找路径（使用A*算法）
@@ -225,12 +220,8 @@ impl NavMesh {
             return Err(NavMeshError::PathNotFound);
         }
 
-        let start_poly = self
-            .find_nearest_polygon(start)
-            .ok_or(NavMeshError::PathNotFound)?;
-        let end_poly = self
-            .find_nearest_polygon(end)
-            .ok_or(NavMeshError::PathNotFound)?;
+        let start_poly = self.find_nearest_polygon(start).ok_or(NavMeshError::PathNotFound)?;
+        let end_poly = self.find_nearest_polygon(end).ok_or(NavMeshError::PathNotFound)?;
 
         if start_poly == end_poly {
             return Ok(vec![start, end]);

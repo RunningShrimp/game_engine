@@ -1,5 +1,5 @@
 //  WGPU 缓冲区管理
-// 
+//
 //  包含缓冲区创建和管理相关功能。
 
 use super::types::Instance;
@@ -243,14 +243,12 @@ impl InstanceDirtyTracker {
         // 调整容量
         if new_count > self.instance_dirty.len() {
             let additional = new_count - self.instance_dirty.len();
-            self.instance_dirty
-                .extend(std::iter::repeat(true).take(additional));
+            self.instance_dirty.extend(std::iter::repeat(true).take(additional));
 
             let new_chunk_count = (new_count + self.chunk_size - 1) / self.chunk_size;
             if new_chunk_count > self.chunk_dirty.len() {
                 let chunk_additional = new_chunk_count - self.chunk_dirty.len();
-                self.chunk_dirty
-                    .extend(std::iter::repeat(true).take(chunk_additional));
+                self.chunk_dirty.extend(std::iter::repeat(true).take(chunk_additional));
             }
         }
 
@@ -362,10 +360,7 @@ impl InstanceDirtyTracker {
 
     /// 获取脏实例总数
     pub fn dirty_instance_count(&self) -> usize {
-        self.dirty_ranges
-            .iter()
-            .map(|(s, e)| (e - s) as usize)
-            .sum()
+        self.dirty_ranges.iter().map(|(s, e)| (e - s) as usize).sum()
     }
 
     /// 检查是否有任何脏数据

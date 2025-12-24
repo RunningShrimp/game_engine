@@ -1,16 +1,16 @@
 //  网络安全模块
-// 
+//
 //  实现消息加密和客户端认证机制，确保网络通信的安全性。
-// 
+//
 //  ## 安全机制
-// 
+//
 //  1. **消息加密**: 使用AES-256-GCM对称加密保护消息内容
 //  2. **客户端认证**: 基于令牌的认证机制
 //  3. **消息签名**: HMAC-SHA256消息认证码防止篡改
 //  4. **密钥交换**: 使用Diffie-Hellman密钥交换建立安全通道
-// 
+//
 //  ## 架构设计
-// 
+//
 //  ```text
 //  ┌─────────────────┐         ┌─────────────────┐
 //  │     Client      │         │     Server      │
@@ -62,7 +62,13 @@ impl AuthToken {
         // 生成签名（包含版本以防止版本混淆攻击）
         let mut mac =
             <HmacSha256 as Mac>::new_from_slice(secret_key).expect("HMAC can take key of any size");
-        mac.update(format!("{}_{}_{}_{}", CURRENT_VERSION, token_id, client_id, expires_at).as_bytes());
+        mac.update(
+            format!(
+                "{}_{}_{}_{}",
+                CURRENT_VERSION, token_id, client_id, expires_at
+            )
+            .as_bytes(),
+        );
         let signature = mac.finalize().into_bytes().to_vec();
 
         Self {
@@ -90,7 +96,13 @@ impl AuthToken {
         // 验证签名（包含版本以防止版本混淆攻击）
         let mut mac =
             <HmacSha256 as Mac>::new_from_slice(secret_key).expect("HMAC can take key of any size");
-        mac.update(format!("{}_{}_{}_{}", self.version, self.token_id, self.client_id, self.expires_at).as_bytes());
+        mac.update(
+            format!(
+                "{}_{}_{}_{}",
+                self.version, self.token_id, self.client_id, self.expires_at
+            )
+            .as_bytes(),
+        );
         let expected_signature = mac.finalize().into_bytes();
 
         // 使用常量时间比较防止时序攻击
@@ -178,14 +190,11 @@ impl MessageEncryptor {
         ciphertext_with_tag.extend_from_slice(&encrypted.tag);
 
         // 使用 AES-256-GCM 进行认证解密
-        let plaintext = self
-            .cipher
-            .decrypt(nonce, ciphertext_with_tag.as_ref())
-            .map_err(|_| {
-                NetworkError::CompressionError(
-                    "Decryption failed: authentication tag mismatch or corrupted data".to_string(),
-                )
-            })?;
+        let plaintext = self.cipher.decrypt(nonce, ciphertext_with_tag.as_ref()).map_err(|_| {
+            NetworkError::CompressionError(
+                "Decryption failed: authentication tag mismatch or corrupted data".to_string(),
+            )
+        })?;
 
         Ok(plaintext)
     }
@@ -283,8 +292,7 @@ impl AuthenticationManager {
 
     /// 清理过期令牌
     pub fn cleanup_expired_tokens(&mut self) {
-        self.authenticated_clients
-            .retain(|_, token| !token.is_expired());
+        self.authenticated_clients.retain(|_, token| !token.is_expired());
     }
 
     /// 检查客户端是否已认证
@@ -387,10 +395,7 @@ impl SecureSession {
         // 先验证签名
         let encrypted_bytes = bincode::serialize(&signed_encrypted.encrypted)
             .map_err(|e| NetworkError::SerializationError(e.to_string()))?;
-        if !self
-            .signer
-            .verify(&encrypted_bytes, &signed_encrypted.signature)
-        {
+        if !self.signer.verify(&encrypted_bytes, &signed_encrypted.signature) {
             return Err(NetworkError::CompressionError(
                 "Signature verification failed".to_string(),
             ));

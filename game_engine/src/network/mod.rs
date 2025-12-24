@@ -1,17 +1,17 @@
 //  网络同步模块
-// 
+//
 //  提供基础的网络同步框架，支持多人游戏开发。
-// 
+//
 //  ## 功能特性
-// 
+//
 //  - TCP/UDP 双协议支持
 //  - RPC 框架基础
 //  - 状态同步机制
 //  - 网络延迟补偿
 //  - 客户端预测和回滚
-// 
+//
 //  ## 架构设计
-// 
+//
 //  ```text
 //  ┌─────────────────┐     ┌─────────────────┐
 //  │     Client      │────►│     Server      │
@@ -28,24 +28,35 @@ pub mod delay_compensation;
 pub mod delta_serialization;
 pub mod interpolation;
 pub mod key_exchange;
+/// 并行网络消息处理
+/// 并行功能默认启用，使用线程池进行并行消息处理
+pub mod parallel;
 pub mod prediction;
 pub mod security;
 pub mod server;
 pub mod synchronization;
-/// 并行网络消息处理
-/// 并行功能默认启用，使用线程池进行并行消息处理
-pub mod parallel;
+/// WebRTC网络协议支持
+pub mod webrtc;
 
 use crate::impl_default;
 
 // Re-export key exchange types
-pub use key_exchange::{KeyExchangeProtocol, KeyPair, KeyExchangeMessage, SharedSecret, KeyExchange};
+pub use key_exchange::{
+    KeyExchange, KeyExchangeMessage, KeyExchangeProtocol, KeyPair, SharedSecret,
+};
+
+// Re-export WebRTC types
 use bevy_ecs::prelude::*;
 use crossbeam_channel::{Receiver, Sender, unbounded};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::net::{SocketAddr, TcpStream};
 use thiserror::Error;
+pub use webrtc::{
+    DataChannelConfig, IceConnectionState, IceGatheringState, IceTransportPolicy, SignalingHandler,
+    SignalingMessage, WebRtcConfig, WebRtcConnectionState, WebRtcError, WebRtcManager,
+    WebRtcPeerConnection,
+};
 
 /// 网络错误类型
 #[derive(Error, Debug)]
@@ -226,7 +237,8 @@ impl NetworkManager {
 
     /// 获取所有连接的摘要
     pub fn get_connections_summary(&self) -> Vec<(u64, SocketAddr, ConnectionState)> {
-        self.connections.values()
+        self.connections
+            .values()
             .map(|conn| (conn.peer_id, conn.address, conn.state))
             .collect()
     }
@@ -542,23 +554,25 @@ pub fn network_update_system(mut state: ResMut<NetworkState>) {
             }
             NetworkMessage::StateSync { tick, data } => {
                 let decompressed_data = if let Some(ref compressor) = state.compressor {
-                    compressor
-                        .decompress_with_flag(&data)
-                        .unwrap_or_else(|_| data.clone())
+                    compressor.decompress_with_flag(&data).unwrap_or_else(|_| data.clone())
                 } else {
                     if !data.is_empty() && data[0] == 1 {
                         let temp_compressor = compression::NetworkCompressor::new();
-                        temp_compressor
-                            .decompress_with_flag(&data)
-                            .unwrap_or_else(|_| data.clone())
+                        temp_compressor.decompress_with_flag(&data).unwrap_or_else(|_| data.clone())
                     } else {
                         data.clone()
                     }
                 };
 
-                if let Ok(delta_packet) = bincode::deserialize::<delta_serialization::DeltaPacket>(&decompressed_data) {
+                if let Ok(delta_packet) =
+                    bincode::deserialize::<delta_serialization::DeltaPacket>(&decompressed_data)
+                {
                     for delta in delta_packet.deltas {
-                        log::debug!("Received state update for entity {} at tick {}", delta.id, tick);
+                        log::debug!(
+                            "Received state update for entity {} at tick {}",
+                            delta.id,
+                            tick
+                        );
                     }
                 }
             }
@@ -587,7 +601,11 @@ pub fn network_update_system(mut state: ResMut<NetworkState>) {
             }
             NetworkMessage::EventSync { events } => {
                 for event in events {
-                    log::debug!("Received event: {:?} for entity: {:?}", event.event_type, event.entity_id);
+                    log::debug!(
+                        "Received event: {:?} for entity: {:?}",
+                        event.event_type,
+                        event.entity_id
+                    );
                 }
             }
         }

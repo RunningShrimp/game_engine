@@ -114,8 +114,7 @@ impl EventData {
         E: serde::Serialize,
     {
         let event_type_name = event.event_type().to_string();
-        let data = bincode::serialize(event)
-            .unwrap_or_else(|_| Vec::new());
+        let data = bincode::serialize(event).unwrap_or_else(|_| Vec::new());
 
         Self {
             event_type_name,
@@ -225,7 +224,11 @@ impl EventQueue {
         self.events.push(EventData::new(&event, EventPriority::Normal));
     }
 
-    pub fn push_with_priority<E: DomainEvent + Serialize>(&mut self, event: E, priority: EventPriority) {
+    pub fn push_with_priority<E: DomainEvent + Serialize>(
+        &mut self,
+        event: E,
+        priority: EventPriority,
+    ) {
         self.events.push(EventData::new(&event, priority));
     }
 
@@ -243,10 +246,7 @@ impl EventQueue {
 }
 
 /// 事件发布系统
-pub fn event_publish_system(
-    event_bus: Res<EventBusResource>,
-    mut event_queue: ResMut<EventQueue>,
-) {
+pub fn event_publish_system(event_bus: Res<EventBusResource>, mut event_queue: ResMut<EventQueue>) {
     for event_data in event_queue.drain() {
         event_bus.bus.publish_event_data(event_data);
     }

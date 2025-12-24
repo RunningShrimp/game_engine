@@ -44,7 +44,7 @@ impl_default!(Pose {
 
 impl Pose {
     /// 将姿态转换为变换矩阵
-    /// 
+    ///
     /// # 返回
     /// 返回基于位置和旋转的变换矩阵
     pub fn to_matrix(&self) -> Mat4 {
@@ -52,7 +52,7 @@ impl Pose {
     }
 
     /// 计算姿态的逆变换
-    /// 
+    ///
     /// # 返回
     /// 返回逆变换的姿态
     pub fn inverse(&self) -> Self {
@@ -79,11 +79,11 @@ pub struct Fov {
 
 impl Fov {
     /// 将视野参数转换为投影矩阵
-    /// 
+    ///
     /// # 参数
     /// * `near` - 近裁剪面距离
     /// * `far` - 远裁剪面距离
-    /// 
+    ///
     /// # 返回
     /// 返回对应的投影矩阵
     pub fn to_projection_matrix(&self, near: f32, far: f32) -> Mat4 {
@@ -129,7 +129,7 @@ pub struct XrView {
 
 impl XrView {
     /// 获取视图矩阵
-    /// 
+    ///
     /// # 返回
     /// 返回基于视图姿态的视图矩阵
     pub fn view_matrix(&self) -> Mat4 {
@@ -137,11 +137,11 @@ impl XrView {
     }
 
     /// 获取投影矩阵
-    /// 
+    ///
     /// # 参数
     /// * `near` - 近裁剪面距离
     /// * `far` - 远裁剪面距离
-    /// 
+    ///
     /// # 返回
     /// 返回基于视野参数的投影矩阵
     pub fn projection_matrix(&self, near: f32, far: f32) -> Mat4 {
@@ -149,11 +149,11 @@ impl XrView {
     }
 
     /// 获取视图投影矩阵
-    /// 
+    ///
     /// # 参数
     /// * `near` - 近裁剪面距离
     /// * `far` - 远裁剪面距离
-    /// 
+    ///
     /// # 返回
     /// 返回视图矩阵与投影矩阵的乘积
     pub fn view_projection_matrix(&self, near: f32, far: f32) -> Mat4 {
@@ -193,24 +193,24 @@ impl_default!(XrConfig {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BlendMode {
     /// 不透明模式（VR）
-    Opaque,     
+    Opaque,
     /// 叠加模式（AR 光学透视）
-    Additive,   
+    Additive,
     /// Alpha混合模式（AR 视频透视）
-    AlphaBlend, 
+    AlphaBlend,
 }
 
 /// 参考空间类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ReferenceSpaceType {
     /// 头部相对空间
-    View,      
+    View,
     /// 起始位置空间
-    Local,     
+    Local,
     /// 房间空间
-    Stage,     
+    Stage,
     /// 无边界空间 (AR)
-    Unbounded, 
+    Unbounded,
 }
 
 /// XR 会话 trait
@@ -218,28 +218,28 @@ pub trait XrSession: Send + Sync {
     /// 获取当前会话状态
     fn state(&self) -> XrSessionState;
     /// 开始渲染帧
-    /// 
+    ///
     /// # 返回
     /// 返回帧状态信息
     fn begin_frame(&mut self) -> Result<XrFrameState, XrError>;
     /// 结束渲染帧并提交图层
-    /// 
+    ///
     /// # 参数
     /// * `layers` - 要提交的合成图层列表
-    /// 
+    ///
     /// # 返回
     /// 成功时返回Ok(())，失败时返回XrError
     fn end_frame(&mut self, layers: &[XrCompositionLayer]) -> Result<(), XrError>;
     /// 定位视图（获取当前时间的视图姿态和视野）
-    /// 
+    ///
     /// # 参数
     /// * `time` - 预测的时间戳
-    /// 
+    ///
     /// # 返回
     /// 成功时返回视图列表，失败时返回XrError
     fn locate_views(&self, time: i64) -> Result<Vec<XrView>, XrError>;
     /// 轮询并获取XR事件
-    /// 
+    ///
     /// # 返回
     /// 当前可用的XR事件列表
     fn poll_events(&mut self) -> Vec<XrEvent>;
@@ -432,12 +432,16 @@ impl GestureRecognizer {
     ///
     /// # 返回
     /// 如果识别到手势，返回手势事件
-    pub fn recognize(&mut self, hand_joints: &hand_tracking::HandJoints, hand: Hand) -> Option<GestureEvent> {
+    pub fn recognize(
+        &mut self,
+        hand_joints: &hand_tracking::HandJoints,
+        hand: Hand,
+    ) -> Option<GestureEvent> {
         if let Some(hand_gesture) = hand_joints.detect_gesture() {
             let confidence = hand_joints.confidence();
             let position = hand_joints.get_palm_position().unwrap_or(Vec3::ZERO);
             let timestamp = crate::core::utils::current_timestamp_ms();
-            
+
             // 将 HandGesture 转换为 Gesture
             let gesture = match hand_gesture {
                 hand_tracking::HandGesture::Fist => hand_tracking::Gesture::Fist,
@@ -586,7 +590,9 @@ impl EyeTrackingManager {
     /// 启用眼动追踪
     pub fn enable(&mut self) -> Result<(), XrError> {
         if !self.is_supported() {
-            return Err(XrError::FeatureNotSupported("Eye tracking not supported".to_string()));
+            return Err(XrError::FeatureNotSupported(
+                "Eye tracking not supported".to_string(),
+            ));
         }
         self.enabled = true;
         Ok(())
@@ -621,13 +627,13 @@ impl Default for EyeTrackingManager {
 }
 
 /// XR 渲染器模块
-/// 
+///
 /// 提供XR渲染所需的特殊渲染流程和立体渲染支持
 pub mod renderer;
 pub use renderer::XrRenderer;
 
 /// XR 输入系统模块
-/// 
+///
 /// 提供XR控制器输入、手部追踪和手势识别功能
 pub mod input;
 pub use input::{
@@ -635,19 +641,19 @@ pub use input::{
     XrInputEventHandler, XrInputEventQueue, XrInputManager,
 };
 /// XR 手部追踪模块
-/// 
+///
 /// 提供手部关节追踪和手势识别功能
 pub mod hand_tracking;
 pub use hand_tracking::{Finger, HandJoints, HandTracker, HandTrackingConfig, HandTrackingState};
 
 /// XR 空间锚点模块
-/// 
+///
 /// 提供在物理空间中固定位置的虚拟对象锚点功能
 pub mod spatial_anchors;
 pub use spatial_anchors::{AnchorId, SpatialAnchor, SpatialAnchorManager};
 
 /// XR 空间映射模块
-/// 
+///
 /// 提供对物理环境的3D重建和空间理解功能
 pub mod spatial_mapping;
 pub use spatial_mapping::{

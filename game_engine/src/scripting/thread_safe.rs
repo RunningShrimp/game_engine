@@ -6,11 +6,11 @@ use std::thread;
 #[derive(Debug, Clone)]
 pub enum ScriptCommand {
     /// 执行脚本命令
-    Execute { 
+    Execute {
         /// 脚本ID
-        script_id: u64, 
+        script_id: u64,
         /// 脚本代码
-        code: String 
+        code: String,
     },
     /// 调用函数命令
     CallFunction {
@@ -22,9 +22,9 @@ pub enum ScriptCommand {
         args: Vec<ScriptValue>,
     },
     /// 停止脚本命令
-    Stop { 
+    Stop {
         /// 脚本ID
-        script_id: u64 
+        script_id: u64,
     },
     /// 关闭脚本系统命令
     Shutdown,
@@ -51,18 +51,18 @@ pub enum ScriptValue {
 #[derive(Debug, Clone)]
 pub enum ScriptResult {
     /// 成功结果
-    Success { 
+    Success {
         /// 脚本ID
-        script_id: u64, 
+        script_id: u64,
         /// 返回值
-        value: ScriptValue 
+        value: ScriptValue,
     },
     /// 错误结果
-    Error { 
+    Error {
         /// 脚本ID
-        script_id: u64, 
+        script_id: u64,
         /// 错误消息
-        message: String 
+        message: String,
     },
 }
 
@@ -220,9 +220,7 @@ mod tests {
         let script_system = ThreadSafeScriptSystem::new();
 
         // 执行脚本
-        script_system
-            .execute(1, "print('Hello, World!')".to_string())
-            .unwrap();
+        script_system.execute(1, "print('Hello, World!')".to_string()).unwrap();
 
         // 等待结果
         thread::sleep(Duration::from_millis(100));

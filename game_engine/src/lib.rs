@@ -85,10 +85,10 @@ pub mod animation;
 pub mod audio;
 /// Language bindings for scripting
 pub mod bindings;
-/// Configuration system
-pub mod config;
 /// Common error types
 pub mod common_errors;
+/// Configuration system
+pub mod config;
 /// Core engine functionality including the main engine loop and initialization
 pub mod core;
 /// Domain layer with rich domain objects
@@ -101,12 +101,12 @@ pub mod editor;
 pub mod network;
 /// Performance profiling and optimization tools
 pub mod performance;
-/// Performance monitoring and analysis
-pub mod profiling;
 /// Physics simulation using Rapier
 pub mod physics;
 /// Platform abstraction layer for cross-platform support
 pub mod platform;
+/// Performance monitoring and analysis
+pub mod profiling;
 /// Rendering system with 2D/3D support
 pub mod render;
 /// Resource management for assets like textures and fonts
@@ -119,6 +119,8 @@ pub mod scripting;
 pub mod services;
 /// UI system for user interface management
 pub mod ui;
+/// World generation system
+pub mod world;
 /// XR (VR/AR/MR) support
 pub mod xr;
 

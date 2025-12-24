@@ -1,4 +1,4 @@
-use std::alloc::{alloc, dealloc, Layout};
+use std::alloc::{Layout, alloc, dealloc};
 use std::cell::RefCell;
 use std::ptr::NonNull;
 use std::time::Duration;
@@ -261,9 +261,7 @@ impl<T> TypedArena<T> {
     /// 调用 `reset()` 后，之前返回的引用将失效。
     #[allow(clippy::mut_from_ref)]
     pub fn alloc(&mut self, value: T) -> Result<&mut T, ArenaError> {
-        let ptr = self
-            .arena
-            .alloc(std::mem::size_of::<T>(), std::mem::align_of::<T>())?;
+        let ptr = self.arena.alloc(std::mem::size_of::<T>(), std::mem::align_of::<T>())?;
 
         self.alloc_count.set(self.alloc_count.get() + 1);
 
@@ -340,9 +338,7 @@ impl<T> TypedArenaWithDrop<T> {
     /// 分配单个对象
     #[allow(clippy::mut_from_ref)]
     pub fn alloc(&mut self, value: T) -> Result<&mut T, ArenaError> {
-        let ptr = self
-            .arena
-            .alloc(std::mem::size_of::<T>(), std::mem::align_of::<T>())?;
+        let ptr = self.arena.alloc(std::mem::size_of::<T>(), std::mem::align_of::<T>())?;
 
         // SAFETY: ptr 来自 arena.alloc，保证有效且对齐正确
         unsafe {
@@ -350,9 +346,7 @@ impl<T> TypedArenaWithDrop<T> {
             std::ptr::write(typed_ptr, value);
 
             // 记录指针用于后续析构
-            self.allocated
-                .borrow_mut()
-                .push(NonNull::new_unchecked(typed_ptr));
+            self.allocated.borrow_mut().push(NonNull::new_unchecked(typed_ptr));
 
             Ok(&mut *typed_ptr)
         }
@@ -534,7 +528,8 @@ impl MemoryPoolPreallocator {
 
         // 尝试从预分配池中获取
         if let Some(arenas) = pools.get_mut(&chunk_size)
-            && let Some(arena) = arenas.pop() {
+            && let Some(arena) = arenas.pop()
+        {
             return Ok(arena);
         }
 

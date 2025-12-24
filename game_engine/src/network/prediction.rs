@@ -1,16 +1,16 @@
 //  客户端预测系统
-// 
+//
 //  实现客户端预测、状态回滚和重放机制，减少输入延迟，提升多人游戏体验。
-// 
+//
 //  ## 设计原则
-// 
+//
 //  1. **输入缓冲**: 存储本地输入历史，用于回滚和重放
 //  2. **状态快照**: 定期保存游戏状态快照，用于快速回滚
 //  3. **预测执行**: 在服务器确认前本地执行输入
 //  4. **回滚重放**: 服务器状态不一致时回滚并重放输入
-// 
+//
 //  ## 架构设计
-// 
+//
 //  ```text
 //  ┌─────────────────────────────────────────────────────────┐
 //  │              Client-Side Prediction Pipeline            │
@@ -236,8 +236,7 @@ impl ClientPredictionManager {
     /// 获取补偿后的输入时间（用于服务器回滚）
     pub fn get_compensated_input_time(&self, command: &InputCommand) -> u64 {
         // 将客户端时间转换为服务器时间
-        self.delay_compensation
-            .client_to_server_time(command.timestamp_ms)
+        self.delay_compensation.client_to_server_time(command.timestamp_ms)
     }
 
     /// 提交输入命令
@@ -258,10 +257,7 @@ impl ClientPredictionManager {
 
     /// 获取未确认的输入命令
     pub fn get_unconfirmed_inputs(&self) -> Vec<&InputCommand> {
-        self.input_queue
-            .iter()
-            .filter(|cmd| !cmd.confirmed)
-            .collect()
+        self.input_queue.iter().filter(|cmd| !cmd.confirmed).collect()
     }
 
     /// 确认输入命令（服务器已处理）
@@ -278,9 +274,7 @@ impl ClientPredictionManager {
         // 清理已确认的旧命令
         while let Some(front) = self.input_queue.front() {
             if front.confirmed
-                && front
-                    .confirmed_tick
-                    .map_or(false, |t| t < server_tick.saturating_sub(60))
+                && front.confirmed_tick.map_or(false, |t| t < server_tick.saturating_sub(60))
             {
                 self.input_queue.pop_front();
             } else {
@@ -311,10 +305,7 @@ impl ClientPredictionManager {
     /// 获取指定tick的快照
     pub fn get_snapshot(&self, tick: u64) -> Option<&StateSnapshot> {
         // 查找最接近的快照
-        self.snapshots
-            .iter()
-            .filter(|s| s.tick <= tick)
-            .max_by_key(|s| s.tick)
+        self.snapshots.iter().filter(|s| s.tick <= tick).max_by_key(|s| s.tick)
     }
 
     /// 回滚到指定tick

@@ -232,10 +232,8 @@ impl CpuFeatures {
         #[cfg(target_os = "macos")]
         {
             use std::process::Command;
-            if let Ok(output) = Command::new("sysctl")
-                .arg("-n")
-                .arg("machdep.cpu.brand_string")
-                .output()
+            if let Ok(output) =
+                Command::new("sysctl").arg("-n").arg("machdep.cpu.brand_string").output()
                 && let Ok(brand) = String::from_utf8(output.stdout)
             {
                 return brand.trim().to_string();

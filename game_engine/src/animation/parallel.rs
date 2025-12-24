@@ -46,10 +46,8 @@ pub fn parallel_animation_system(
 ) {
     // 收集所有需要更新的实体数据
     let delta = time.delta_seconds;
-    let entities: Vec<(Entity, AnimationPlayer, Transform)> = query
-        .iter_mut()
-        .map(|(e, p, t)| (e, p.as_ref().clone(), *t))
-        .collect();
+    let entities: Vec<(Entity, AnimationPlayer, Transform)> =
+        query.iter_mut().map(|(e, p, t)| (e, p.as_ref().clone(), *t)).collect();
 
     // 并行更新动画
     let updated: Vec<(Entity, AnimationPlayer, Transform)> = entities
@@ -57,10 +55,10 @@ pub fn parallel_animation_system(
         .map(|(entity, mut player, mut transform)| {
             // 更新动画
             player.update(delta);
-            
+
             // 应用动画到Transform
             player.apply_to_transform(entity.to_bits(), &mut transform);
-            
+
             (entity, player, transform)
         })
         .collect();
@@ -82,7 +80,7 @@ pub fn parallel_skeleton_animation_system(
     mut query: Query<(&mut super::skeleton::Skeleton, &mut SkeletonAnimationPlayer)>,
 ) {
     let delta = time.delta_seconds;
-    
+
     // 收集需要更新的骨骼动画数据
     let skeletons: Vec<(usize, SkeletonAnimationPlayer, super::skeleton::Skeleton)> = query
         .iter_mut()
@@ -151,7 +149,8 @@ fn sample_skeleton_pose_from_clip_parallel(
     time: f32,
 ) {
     // 并行采样所有骨骼
-    let bone_transforms: Vec<(usize, Option<super::skeleton::BoneTransform>)> = (0..skeleton.bone_count())
+    let bone_transforms: Vec<(usize, Option<super::skeleton::BoneTransform>)> = (0..skeleton
+        .bone_count())
         .into_par_iter()
         .map(|bone_id| {
             let transform = clip.sample_bone_transform(bone_id as u64, time);
@@ -221,7 +220,6 @@ impl ParallelAnimationConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use bevy_ecs::prelude::*;
 
     #[test]
     fn test_parallel_animation_config() {
@@ -239,4 +237,3 @@ mod tests {
         assert!(!disabled.enabled);
     }
 }
-

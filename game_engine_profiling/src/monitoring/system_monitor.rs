@@ -1,5 +1,5 @@
 //  系统性能监控器
-// 
+//
 //  实时性能监控和数据收集
 //  - 帧率监控
 //  - 内存跟踪
@@ -134,10 +134,7 @@ impl MemoryMonitor {
 
     /// 获取当前内存使用 (MB)
     pub fn current_memory_mb(&self) -> f32 {
-        self.history
-            .back()
-            .map(|&b| b as f32 / (1024.0 * 1024.0))
-            .unwrap_or(0.0)
+        self.history.back().map(|&b| b as f32 / (1024.0 * 1024.0)).unwrap_or(0.0)
     }
 
     /// 获取平均内存使用 (MB)
@@ -153,11 +150,7 @@ impl MemoryMonitor {
 
     /// 获取峰值内存 (MB)
     pub fn peak_memory_mb(&self) -> f32 {
-        self.history
-            .iter()
-            .max()
-            .map(|&b| b as f32 / (1024.0 * 1024.0))
-            .unwrap_or(0.0)
+        self.history.iter().max().map(|&b| b as f32 / (1024.0 * 1024.0)).unwrap_or(0.0)
     }
 }
 

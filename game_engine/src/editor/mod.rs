@@ -30,12 +30,12 @@ pub use config::{EditorConfig, EditorConfigManager, EditorTheme};
 pub use hierarchy::HierarchyView;
 pub use inspector::Inspector;
 pub use scene_editor_enhanced::SceneEditorEnhanced;
-pub use world_inspector::WorldInspector;
 pub use shortcuts::{Modifiers, ShortcutAction, ShortcutManager};
 pub use transform_gizmo::TransformGizmo;
 pub use undo_redo::{
     Command, CommandError, CommandManager, CompositeCommand, PropertyChangeCommand,
 };
+pub use world_inspector::WorldInspector;
 
 /// 全局编辑器状态
 #[derive(Default, Debug, Resource)]
@@ -88,12 +88,9 @@ impl EditorContext {
             None,
         );
         // 创建egui渲染器
-        let egui_renderer = egui_wgpu::Renderer::new(
-            device,
-            format,
-            egui_wgpu::RendererOptions::default(),
-        );
-        
+        let egui_renderer =
+            egui_wgpu::Renderer::new(device, format, egui_wgpu::RendererOptions::default());
+
         Self {
             context,
             state,
@@ -106,13 +103,9 @@ impl EditorContext {
         self.context.begin_pass(raw_input);
     }
 
-    pub fn end_frame(
-        &mut self,
-        window: &winit::window::Window,
-    ) -> Vec<egui::ClippedPrimitive> {
+    pub fn end_frame(&mut self, window: &winit::window::Window) -> Vec<egui::ClippedPrimitive> {
         let output = self.context.end_pass();
-        self.state
-            .handle_platform_output(window, output.platform_output);
+        self.state.handle_platform_output(window, output.platform_output);
         self.context.tessellate(output.shapes, window.scale_factor() as f32)
     }
 }

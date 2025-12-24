@@ -1,9 +1,9 @@
 //  环形缓冲区池模块
-// 
+//
 //  实现高性能的环形缓冲区管理，用于优化Staging Buffer的内存分配。
-// 
+//
 //  ## 架构设计
-// 
+//
 //  ```text
 //  ┌─────────────────────────────────────────────────────────┐
 //  │                  Ring Buffer Pool                       │
@@ -472,8 +472,7 @@ impl RingBuffer {
     pub fn reset(&self) {
         self.write_offset.store(0, Ordering::Release);
         self.read_offset.store(0, Ordering::Release);
-        self.state
-            .store(BufferState::Idle as usize, Ordering::Release);
+        self.state.store(BufferState::Idle as usize, Ordering::Release);
         self.blocks.lock().clear();
         self.free_blocks.lock().clear();
         self.next_block_id.store(1, Ordering::Relaxed);

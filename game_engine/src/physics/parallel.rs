@@ -1,11 +1,11 @@
 //  优化的并行物理系统
-// 
+//
 //  将物理模拟移至独立线程，使用双缓冲实现读写分离。
 //  支持物理岛屿并行处理和并行碰撞检测优化。
 //  预计性能提升 30-50%（取决于场景复杂度和CPU核心数）。
-// 
+//
 //  ## 架构设计
-// 
+//
 //  ```text
 //  ┌─────────────────┐     ┌─────────────────┐
 //  │   Main Thread   │     │  Physics Thread │
@@ -20,16 +20,16 @@
 //                  ▼
 //             Swap Buffers
 //  ```
-// 
+//
 //  ## 使用示例
-// 
+//
 //  ```ignore
 //  // 创建并行物理世界
 //  let parallel_physics = ParallelPhysicsWorld::new();
-// 
+//
 //  // 发送命令（非阻塞）
 //  parallel_physics.send_command(PhysicsCommand::Step { dt: 0.016 });
-// 
+//
 //  // 读取状态（从读缓冲区）
 //  let positions = parallel_physics.read_body_positions();
 //  ```
@@ -42,9 +42,7 @@ use std::sync::{
 };
 use std::thread::{self, JoinHandle};
 
-#[cfg(feature = "physics")]
 use rapier2d::prelude::DefaultBroadPhase;
-#[cfg(feature = "physics")]
 use rapier2d::prelude::*;
 
 /// 物理命令枚举
@@ -143,7 +141,6 @@ impl DoubleBufferedPhysicsState {
 ///
 /// 将物理模拟放在独立线程中运行，使用双缓冲实现无锁读取。
 /// 支持物理岛屿并行处理和并行碰撞检测优化。
-#[cfg(feature = "physics")]
 pub struct ParallelPhysicsWorld {
     /// 命令发送通道
     command_tx: Sender<PhysicsCommand>,
@@ -163,7 +160,6 @@ pub struct ParallelPhysicsWorld {
     parallel_enabled: bool,
 }
 
-#[cfg(feature = "physics")]
 impl ParallelPhysicsWorld {
     /// 创建并行物理世界（默认启用并行优化）
     pub fn new() -> Self {
@@ -335,14 +331,12 @@ impl ParallelPhysicsWorld {
     }
 }
 
-#[cfg(feature = "physics")]
 impl Default for ParallelPhysicsWorld {
     fn default() -> Self {
         Self::new_with_parallel(true)
     }
 }
 
-#[cfg(feature = "physics")]
 impl Drop for ParallelPhysicsWorld {
     fn drop(&mut self) {
         self.shutdown();
@@ -350,10 +344,8 @@ impl Drop for ParallelPhysicsWorld {
 }
 
 /// 优化的物理线程运行器
-#[cfg(feature = "physics")]
 struct PhysicsThreadRunner;
 
-#[cfg(feature = "physics")]
 impl PhysicsThreadRunner {
     /// 运行物理线程（优化版本：支持并行岛屿处理和碰撞检测）
     fn run(
@@ -482,9 +474,7 @@ impl PhysicsThreadRunner {
                         1 => RigidBodyType::Fixed,
                         _ => RigidBodyType::KinematicPositionBased,
                     };
-                    let rb = RigidBodyBuilder::new(rb_type)
-                        .translation(vector![x, y])
-                        .build();
+                    let rb = RigidBodyBuilder::new(rb_type).translation(vector![x, y]).build();
                     let handle = rigid_body_set.insert(rb);
                     id_to_handle.insert(id, handle);
                     handle_to_id.insert(handle, id);
@@ -576,24 +566,20 @@ impl PhysicsThreadRunner {
 // ECS 集成
 // ============================================================================
 
-#[cfg(feature = "physics")]
 use bevy_ecs::prelude::*;
 
 /// 并行物理世界资源
-#[cfg(feature = "physics")]
 #[derive(Resource)]
 pub struct ParallelPhysicsResource {
     /// 并行物理世界
     pub world: ParallelPhysicsWorld,
 }
 
-#[cfg(feature = "physics")]
 impl_default!(ParallelPhysicsResource {
     world: ParallelPhysicsWorld::new(),
 });
 
 /// 并行物理步进系统
-#[cfg(feature = "physics")]
 pub fn parallel_physics_step_system(
     mut physics: ResMut<ParallelPhysicsResource>,
     time: Res<crate::ecs::Time>,

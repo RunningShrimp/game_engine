@@ -99,11 +99,8 @@ impl FrameSnapshot {
     /// 计算GPU/CPU时间比
     pub fn gpu_cpu_ratio(&self) -> Option<f64> {
         let total_cpu: u128 = self.phases.iter().map(|p| p.duration.as_micros()).sum();
-        let total_gpu: u128 = self
-            .phases
-            .iter()
-            .filter_map(|p| p.gpu_time.map(|d| d.as_micros()))
-            .sum();
+        let total_gpu: u128 =
+            self.phases.iter().filter_map(|p| p.gpu_time.map(|d| d.as_micros())).sum();
 
         if total_cpu == 0 {
             return Some(0.0);
@@ -180,18 +177,8 @@ impl FrameAnalyzer {
             return None;
         }
 
-        let min_fps = self
-            .frame_buffer
-            .iter()
-            .map(|f| f.fps as u64)
-            .min()
-            .unwrap_or(0) as f64;
-        let max_fps = self
-            .frame_buffer
-            .iter()
-            .map(|f| f.fps as u64)
-            .max()
-            .unwrap_or(0) as f64;
+        let min_fps = self.frame_buffer.iter().map(|f| f.fps as u64).min().unwrap_or(0) as f64;
+        let max_fps = self.frame_buffer.iter().map(|f| f.fps as u64).max().unwrap_or(0) as f64;
 
         Some((min_fps, max_fps))
     }

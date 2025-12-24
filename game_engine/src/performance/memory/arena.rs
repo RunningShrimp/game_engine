@@ -207,7 +207,7 @@ impl Chunk {
 impl Drop for Chunk {
     fn drop(&mut self) {
         let layout = Layout::from_size_align(self.size, 8).unwrap();
-        // SAFETY: 
+        // SAFETY:
         // - self.ptr 是通过 alloc() 分配的，且从未被修改或释放
         // - layout 与分配时使用的 layout 匹配（size 和 align 都是 8 的倍数）
         // - 这是 Drop 实现，确保每个分配都有对应的释放
@@ -270,9 +270,7 @@ impl<T> TypedArena<T> {
     /// 返回的引用生命周期与 Arena 绑定。
     /// 调用 `reset()` 后，之前返回的引用将失效。
     pub fn alloc(&self, value: T) -> Result<&mut T, ArenaError> {
-        let ptr = self
-            .arena
-            .alloc(std::mem::size_of::<T>(), std::mem::align_of::<T>())?;
+        let ptr = self.arena.alloc(std::mem::size_of::<T>(), std::mem::align_of::<T>())?;
 
         self.alloc_count.set(self.alloc_count.get() + 1);
 
@@ -348,9 +346,7 @@ impl<T> TypedArenaWithDrop<T> {
 
     /// 分配单个对象
     pub fn alloc(&self, value: T) -> Result<&mut T, ArenaError> {
-        let ptr = self
-            .arena
-            .alloc(std::mem::size_of::<T>(), std::mem::align_of::<T>())?;
+        let ptr = self.arena.alloc(std::mem::size_of::<T>(), std::mem::align_of::<T>())?;
 
         // SAFETY: ptr 来自 arena.alloc，保证有效且对齐正确
         unsafe {
@@ -358,9 +354,7 @@ impl<T> TypedArenaWithDrop<T> {
             std::ptr::write(typed_ptr, value);
 
             // 记录指针用于后续析构
-            self.allocated
-                .borrow_mut()
-                .push(NonNull::new_unchecked(typed_ptr));
+            self.allocated.borrow_mut().push(NonNull::new_unchecked(typed_ptr));
 
             Ok(&mut *typed_ptr)
         }

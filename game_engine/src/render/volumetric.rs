@@ -1,5 +1,5 @@
 //  体积渲染模块
-// 
+//
 //  实现体积渲染效果，包括：
 //  - 雾效果（线性、指数、高度雾）
 //  - 体积光（God Rays）
@@ -317,15 +317,17 @@ impl VolumetricRenderer {
         depth_sampler: &Sampler,
     ) -> Result<BindGroup, RenderError> {
         let Some(bind_group_layout) = &self.bind_group_layout else {
-            return Err(RenderError::InvalidState { message: 
-                "Bind group layout not initialized".into(),
-                severity: crate::error::ErrorSeverity::Error });
+            return Err(RenderError::InvalidState {
+                message: "Bind group layout not initialized".into(),
+                severity: crate::error::ErrorSeverity::Error,
+            });
         };
 
         let Some(uniform_buffer) = &self.uniform_buffer else {
-            return Err(RenderError::InvalidState { message: 
-                "Uniform buffer not initialized".into(),
-                severity: crate::error::ErrorSeverity::Error });
+            return Err(RenderError::InvalidState {
+                message: "Uniform buffer not initialized".into(),
+                severity: crate::error::ErrorSeverity::Error,
+            });
         };
 
         Ok(device.create_bind_group(&wgpu::BindGroupDescriptor {

@@ -77,7 +77,7 @@ impl Engine {
     #[allow(deprecated)]
     async fn run_async(self) -> Result<(), Box<dyn std::error::Error>> {
         use winit::event::{Event, WindowEvent};
-        use winit::event_loop::{EventLoop, ControlFlow};
+        use winit::event_loop::{ControlFlow, EventLoop};
 
         // 创建事件循环
         let event_loop = EventLoop::new()?;
@@ -101,11 +101,7 @@ impl Engine {
         // 初始化编辑器上下文（异步）
         let device = renderer.device();
         let format = renderer.surface_format();
-        let mut editor_ctx = crate::editor::EditorContext::new(
-            &window,
-            device,
-            format,
-        ).await;
+        let mut editor_ctx = crate::editor::EditorContext::new(&window, device, format).await;
 
         // 初始化渲染服务
         let mut render_service = crate::services::render::RenderService::new();
@@ -119,7 +115,7 @@ impl Engine {
 
         // 创建固定时间步调度器
         let mut fixed_schedule = crate::core::engine::initialization::create_fixed_schedule();
-        
+
         // 创建可变时间步调度器
         let mut update_schedule = bevy_ecs::schedule::Schedule::default();
 
@@ -149,9 +145,8 @@ impl Engine {
         let _guard = runtime.enter();
 
         // 创建协程游戏循环
-        let mut coroutine_game_loop = CoroutineGameLoop::new(
-            std::time::Duration::from_secs_f64(1.0 / 60.0),
-        );
+        let mut coroutine_game_loop =
+            CoroutineGameLoop::new(std::time::Duration::from_secs_f64(1.0 / 60.0));
 
         tracing::info!("Coroutine game loop initialized");
 
@@ -173,7 +168,8 @@ impl Engine {
             match event {
                 Event::WindowEvent { event, window_id } if window_id == window.id() => {
                     // 创建WinitWindow包装器用于事件处理
-                    let winit_window = crate::platform::winit::WinitWindow::from_arc(winit_window_arc.clone());
+                    let winit_window =
+                        crate::platform::winit::WinitWindow::from_arc(winit_window_arc.clone());
 
                     // 处理窗口事件
                     crate::core::engine::input_handler::handle_window_event(
@@ -199,16 +195,19 @@ impl Engine {
                             last_time = current_time;
 
                             // 使用协程游戏循环更新固定时间步
-                            let alpha = coroutine_game_loop.update_fixed_step(&mut world, |world, dt| {
-                                // 更新固定时间步资源
-                                if let Some(mut time) = world.get_resource_mut::<crate::ecs::Time>() {
-                                    time.delta_seconds = dt.as_secs_f32();
-                                    time.elapsed_seconds += dt.as_secs_f64();
-                                }
+                            let alpha =
+                                coroutine_game_loop.update_fixed_step(&mut world, |world, dt| {
+                                    // 更新固定时间步资源
+                                    if let Some(mut time) =
+                                        world.get_resource_mut::<crate::ecs::Time>()
+                                    {
+                                        time.delta_seconds = dt.as_secs_f32();
+                                        time.elapsed_seconds += dt.as_secs_f64();
+                                    }
 
-                                // 运行固定时间步调度器
-                                fixed_schedule.run(world);
-                            });
+                                    // 运行固定时间步调度器
+                                    fixed_schedule.run(world);
+                                });
 
                             // 更新插值因子（用于平滑渲染）
                             if let Some(mut time) = world.get_resource_mut::<crate::ecs::Time>() {
@@ -223,17 +222,21 @@ impl Engine {
                             if let Some(time) = world.get_resource::<crate::ecs::Time>() {
                                 let frame_count = (time.elapsed_seconds * 60.0) as u64;
                                 if frame_count % 60 == 0 {
-                                    let _world_ptr = &world as *const _ as *mut bevy_ecs::world::World;
+                                    let _world_ptr =
+                                        &world as *const _ as *mut bevy_ecs::world::World;
                                     let _ = runtime.spawn(async move {
                                         tracing::debug!("Async task running in background");
-                                        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+                                        tokio::time::sleep(std::time::Duration::from_millis(10))
+                                            .await;
                                         tracing::debug!("Async task completed");
                                     });
                                 }
                             }
 
                             // 创建WinitWindow包装器用于渲染
-                            let winit_window = crate::platform::winit::WinitWindow::from_arc(winit_window_arc.clone());
+                            let winit_window = crate::platform::winit::WinitWindow::from_arc(
+                                winit_window_arc.clone(),
+                            );
 
                             // 渲染
                             crate::core::engine::renderer::render(

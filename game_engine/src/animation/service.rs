@@ -1,5 +1,5 @@
 //  动画服务层
-// 
+//
 //  遵循DDD贫血模型，将动画业务逻辑封装在Service中
 
 use super::clip::AnimationClip;
@@ -65,7 +65,10 @@ impl AnimationService {
     }
 
     /// 应用动画到Transform组件（委托给AnimationPlayer）
-    #[deprecated(since = "0.3.0", note = "请直接使用 AnimationPlayer::apply_to_transform()")]
+    #[deprecated(
+        since = "0.3.0",
+        note = "请直接使用 AnimationPlayer::apply_to_transform()"
+    )]
     pub fn apply_to_transform(player: &AnimationPlayer, entity_id: u64, transform: &mut Transform) {
         player.apply_to_transform(entity_id, transform);
     }
@@ -118,14 +121,14 @@ mod tests {
         let mut player = AnimationPlayer::default();
         let clip = create_test_clip();
 
-        AnimationService::play(&mut player, clip);
+        player.play(clip);
         assert!(player.playing);
         assert_eq!(player.current_time, 0.0);
 
-        AnimationService::pause(&mut player);
+        player.pause();
         assert!(!player.playing);
 
-        AnimationService::resume(&mut player);
+        player.resume();
         assert!(player.playing);
     }
 
@@ -134,8 +137,8 @@ mod tests {
         let mut player = AnimationPlayer::default();
         let clip = create_test_clip();
 
-        AnimationService::play(&mut player, clip);
-        AnimationService::update(&mut player, 0.5);
+        player.play(clip);
+        player.update(0.5);
 
         assert_eq!(player.current_time, 0.5);
     }
@@ -145,10 +148,10 @@ mod tests {
         let mut player = AnimationPlayer::default();
         let clip = create_test_clip();
 
-        AnimationService::play(&mut player, clip);
+        player.play(clip);
         player.current_time = 0.5;
 
-        let progress = AnimationService::progress(&player);
+        let progress = player.progress();
         assert!((progress - 0.5).abs() < 0.001);
     }
 
@@ -165,7 +168,7 @@ mod tests {
             scale: Vec3::ONE * 2.0,
         };
 
-        let blended = AnimationService::blend_transforms(&t1, &t2, 0.5);
+        let blended = t1.blend(&t2, 0.5);
 
         assert!((blended.pos.x - 5.0).abs() < 0.001);
         assert!((blended.scale.x - 1.5).abs() < 0.001);

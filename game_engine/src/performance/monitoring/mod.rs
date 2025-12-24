@@ -1,5 +1,5 @@
-pub mod system_monitor;
 pub mod monitoring_legacy;
+pub mod system_monitor;
 
 pub use system_monitor::{
     CPUMonitor, FrameTimeSampler, MemoryMonitor, PerformanceMetrics, PerformanceReport,
@@ -12,4 +12,3 @@ pub use monitoring_legacy::{
     IssueSeverity, Metric, MetricStats, MetricType, OptimizationRecommendation, PerformanceIssue,
     PerformanceMonitor, PerformanceReport as MonitoringReport,
 };
-

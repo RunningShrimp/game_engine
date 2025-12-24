@@ -34,11 +34,11 @@ pub struct StateSwitchCost {
 impl Default for StateSwitchCost {
     fn default() -> Self {
         Self {
-            pipeline: 100.0,  // Pipeline切换最昂贵
+            pipeline: 100.0, // Pipeline切换最昂贵
             blend: 50.0,
             depth: 30.0,
             material: 10.0,
-            mesh: 1.0,        // Mesh切换相对便宜
+            mesh: 1.0, // Mesh切换相对便宜
         }
     }
 }
@@ -104,13 +104,13 @@ impl BatchOptimizer {
     /// 按渲染状态优先级排序，最小化状态切换成本
     pub fn optimize_batches(&mut self, batches: &mut Vec<OptimizedBatch>) {
         self.optimization_start = Some(Instant::now());
-        
+
         // 按BatchKey排序（BatchKey已经实现了按优先级排序）
         batches.sort_by(|a, b| a.key.cmp(&b.key));
-        
+
         // 合并相同状态的批次
         self.merge_batches(batches);
-        
+
         // 计算统计信息
         self.calculate_stats(batches);
     }
@@ -127,8 +127,9 @@ impl BatchOptimizer {
 
         for batch in batches.iter().skip(1) {
             // 检查是否可以合并（相同状态且未超过最大实例数）
-            if current.key == batch.key 
-                && (current.instance_count + batch.instance_count) <= self.max_instances_per_batch {
+            if current.key == batch.key
+                && (current.instance_count + batch.instance_count) <= self.max_instances_per_batch
+            {
                 // 合并批次
                 current.instance_count += batch.instance_count;
                 current.instances.extend_from_slice(&batch.instances);
@@ -139,10 +140,10 @@ impl BatchOptimizer {
                 _state_switches += 1;
             }
         }
-        
+
         // 添加最后一个批次
         merged.push(current);
-        
+
         // 替换原列表
         batches.clear();
         batches.extend(merged);
@@ -156,24 +157,17 @@ impl BatchOptimizer {
         }
 
         let total_instances: u32 = batches.iter().map(|b| b.instance_count).sum();
-        let unique_materials: std::collections::HashSet<u64> = batches
-            .iter()
-            .map(|b| b.key.material_id)
-            .collect();
-        let unique_meshes: std::collections::HashSet<u64> = batches
-            .iter()
-            .map(|b| b.key.mesh_id)
-            .collect();
-        
-        let max_instances = batches.iter()
-            .map(|b| b.instance_count)
-            .max()
-            .unwrap_or(0);
-        
+        let unique_materials: std::collections::HashSet<u64> =
+            batches.iter().map(|b| b.key.material_id).collect();
+        let unique_meshes: std::collections::HashSet<u64> =
+            batches.iter().map(|b| b.key.mesh_id).collect();
+
+        let max_instances = batches.iter().map(|b| b.instance_count).max().unwrap_or(0);
+
         // 计算状态切换次数（相邻批次状态不同）
         let mut state_switches = 0u32;
         for i in 1..batches.len() {
-            if batches[i].key != batches[i-1].key {
+            if batches[i].key != batches[i - 1].key {
                 state_switches += 1;
             }
         }
@@ -210,9 +204,7 @@ impl BatchOptimizer {
 
     /// 获取优化耗时（微秒）
     pub fn optimization_time_us(&self) -> Option<u64> {
-        self.optimization_start.map(|start| {
-            start.elapsed().as_micros() as u64
-        })
+        self.optimization_start.map(|start| start.elapsed().as_micros() as u64)
     }
 
     /// 计算状态切换成本
@@ -299,9 +291,9 @@ pub struct PerformanceThresholds {
 impl Default for PerformanceThresholds {
     fn default() -> Self {
         Self {
-            min_optimization_ratio: 0.5,  // 至少50%的优化率
-            max_state_switches: 100,       // 最多100次状态切换
-            min_avg_instances: 10.0,       // 平均每批次至少10个实例
+            min_optimization_ratio: 0.5, // 至少50%的优化率
+            max_state_switches: 100,     // 最多100次状态切换
+            min_avg_instances: 10.0,     // 平均每批次至少10个实例
         }
     }
 }
@@ -320,7 +312,7 @@ impl BatchPerformanceMonitor {
     pub fn record_stats(&mut self, stats: BatchOptimizerStats) {
         // 先检查性能警告（在move之前）
         self.check_warnings(&stats);
-        
+
         // 然后添加到历史记录
         self.history.push(stats);
         if self.history.len() > self.max_history {
@@ -379,7 +371,9 @@ impl BatchPerformanceMonitor {
             state_switches: (total_switches as f32 / count) as u32,
             optimization_ratio: total_optimization / count,
             avg_instances_per_batch: total_avg_instances / count,
-            max_instances_per_batch: self.history.iter()
+            max_instances_per_batch: self
+                .history
+                .iter()
                 .map(|s| s.max_instances_per_batch)
                 .max()
                 .unwrap_or(0),
@@ -399,7 +393,7 @@ mod tests {
     #[test]
     fn test_batch_optimizer() {
         let mut optimizer = BatchOptimizer::new(100);
-        
+
         let mut batches = vec![
             OptimizedBatch::new(
                 BatchKey {
@@ -437,7 +431,7 @@ mod tests {
         ];
 
         optimizer.optimize_batches(&mut batches);
-        
+
         let stats = optimizer.stats();
         assert_eq!(stats.total_batches, 2); // 前两个应该合并
         assert_eq!(stats.total_instances, 100);
@@ -446,7 +440,7 @@ mod tests {
     #[test]
     fn test_state_switch_cost() {
         let optimizer = BatchOptimizer::new(100);
-        
+
         let from = BatchKey {
             mesh_id: 1,
             material_id: 1,
@@ -455,7 +449,7 @@ mod tests {
             depth_test: true,
             render_flags: 0,
         };
-        
+
         let to = BatchKey {
             mesh_id: 2,
             material_id: 2,
@@ -464,10 +458,9 @@ mod tests {
             depth_test: false,
             render_flags: 0,
         };
-        
+
         let cost = optimizer.calculate_switch_cost(&from, &to);
         // 应该包含所有状态的切换成本
         assert!(cost > 0.0);
     }
 }
-

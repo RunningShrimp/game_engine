@@ -1,5 +1,5 @@
 //  XR (VR/AR) 演示程序
-// 
+//
 //  展示OpenXR集成功能，包括：
 //  - XR会话初始化
 //  - 立体渲染
@@ -264,9 +264,7 @@ impl XrDemoState {
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 初始化日志
-    tracing_subscriber::fmt()
-        .with_max_level(tracing::Level::INFO)
-        .init();
+    tracing_subscriber::fmt().with_max_level(tracing::Level::INFO).init();
 
     tracing::info!("Starting XR Demo");
 

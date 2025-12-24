@@ -60,10 +60,7 @@ impl Profiler {
     pub fn end_scope(&mut self) {
         if let Some((name, start)) = self.current_scope.take() {
             let duration = start.elapsed();
-            let stats = self
-                .scopes
-                .entry(name.clone())
-                .or_insert_with(|| ScopeStats::new(name));
+            let stats = self.scopes.entry(name.clone()).or_insert_with(|| ScopeStats::new(name));
             stats.record(duration);
         }
     }

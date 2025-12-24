@@ -1,9 +1,9 @@
 //  GPU间接绘制管理器模块
-// 
+//
 //  统一管理GPU间接绘制流程，协调剔除和命令生成。
-// 
+//
 //  ## 设计要点
-// 
+//
 //  - 统一管理剔除和间接绘制
 //  - 支持多种剔除策略（视锥、遮挡、LOD）
 //  - 自动回退到CPU间接绘制
@@ -169,8 +169,7 @@ impl GpuIndirectDrawManager {
     ) -> Result<(), IndirectDrawError> {
         // 确保容量足够
         if instances.len() as u32 > self.instance_pool.max_instances() {
-            self.instance_pool
-                .ensure_capacity(device, instances.len() as u32)?;
+            self.instance_pool.ensure_capacity(device, instances.len() as u32)?;
         }
 
         // 更新实例数据（增量更新）

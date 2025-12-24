@@ -363,7 +363,6 @@ impl DeferredRenderer {
     }
 
     pub fn resize(&mut self, device: &wgpu::Device, width: u32, height: u32) {
-        self.gbuffer
-            .resize(device, width, height, &self.gbuffer_bind_group_layout);
+        self.gbuffer.resize(device, width, height, &self.gbuffer_bind_group_layout);
     }
 }

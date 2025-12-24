@@ -1,31 +1,31 @@
 //  渲染领域对象模块
-// 
+//
 //  实现富领域对象设计模式，将渲染业务逻辑封装到领域对象中。
-// 
+//
 //  ## 设计原则
-// 
+//
 //  - **RenderObject**: 封装渲染对象的业务逻辑（可见性、LOD、变换）
 //  - **RenderStrategy**: 封装渲染策略决策（批次选择、实例化策略）
 //  - **RenderScene**: 聚合根，管理整个渲染场景
-// 
+//
 //  ## 使用示例
-// 
+//
 //  ```ignore
 //  use game_engine::domain::render::{RenderObject, RenderStrategy, RenderScene};
-// 
+//
 //  // 创建渲染对象
 //  let mut render_obj = RenderObject::new(mesh, transform);
 //  render_obj.update_visibility(&frustum);
 //  render_obj.select_lod(distance, &lod_selector);
-// 
+//
 //  // 创建渲染场景
 //  let mut scene = RenderScene::new();
 //  scene.add_object(render_obj);
 //  scene.build_render_commands(&strategy);
 //  ```
 
-use crate::error::RenderError;
 use crate::ecs::Transform;
+use crate::error::RenderError;
 use crate::impl_default;
 use crate::render::frustum::Frustum;
 use crate::render::lod::{LodQuality, LodSelection, LodSelector};
@@ -150,11 +150,7 @@ impl RenderObject {
         // 应用局部变换到包围球中心
         let local_center = transform.pos + transform.rot * (transform.scale * aabb_center);
         // 使用最大缩放分量计算半径
-        let max_scale = transform
-            .scale
-            .x
-            .max(transform.scale.y)
-            .max(transform.scale.z);
+        let max_scale = transform.scale.x.max(transform.scale.y).max(transform.scale.z);
         let bounding_radius = aabb_radius * max_scale;
 
         Self {
@@ -461,7 +457,7 @@ impl RenderObject {
         if self.bounding_radius <= 0.0 {
             return Err(RenderError::InvalidState {
                 message: "Invalid bounding radius".to_string(),
-                severity: crate::error::ErrorSeverity::Error
+                severity: crate::error::ErrorSeverity::Error,
             });
         }
         Ok(())
@@ -636,11 +632,7 @@ impl RenderObject {
         let aabb_radius = aabb_size.length() * 0.5;
 
         let local_center = transform.pos + transform.rot * (transform.scale * aabb_center);
-        let max_scale = transform
-            .scale
-            .x
-            .max(transform.scale.y)
-            .max(transform.scale.z);
+        let max_scale = transform.scale.x.max(transform.scale.y).max(transform.scale.z);
         self.bounding_radius = aabb_radius * max_scale.max(0.01);
         self.bounding_center = local_center;
 
@@ -1905,7 +1897,7 @@ impl PbrScene {
         if !light.is_valid() {
             return Err(RenderError::InvalidState {
                 message: "Cannot add invalid light source".to_string(),
-                severity: crate::error::ErrorSeverity::Error
+                severity: crate::error::ErrorSeverity::Error,
             });
         }
 
@@ -1944,9 +1936,10 @@ impl PbrScene {
                 radius: _,
             } => {
                 // 聚光灯暂不支持，未来可以扩展
-                return Err(RenderError::InvalidState { message: 
-                    "Spot lights are not yet supported".to_string(),
-                 severity: crate::error::ErrorSeverity::Error });
+                return Err(RenderError::InvalidState {
+                    message: "Spot lights are not yet supported".to_string(),
+                    severity: crate::error::ErrorSeverity::Error,
+                });
             }
         }
 
@@ -1995,18 +1988,20 @@ impl PbrScene {
         // 验证所有点光源有效性
         for light in &self.point_lights {
             if light.intensity <= 0.0 || light.radius <= 0.0 {
-                return Err(RenderError::InvalidState { message: 
-                    "Invalid point light found in scene".to_string(),
-                 severity: crate::error::ErrorSeverity::Error });
+                return Err(RenderError::InvalidState {
+                    message: "Invalid point light found in scene".to_string(),
+                    severity: crate::error::ErrorSeverity::Error,
+                });
             }
         }
 
         // 验证所有方向光有效性
         for light in &self.dir_lights {
             if light.intensity <= 0.0 {
-                return Err(RenderError::InvalidState { message: 
-                    "Invalid directional light found in scene".to_string(),
-                 severity: crate::error::ErrorSeverity::Error });
+                return Err(RenderError::InvalidState {
+                    message: "Invalid directional light found in scene".to_string(),
+                    severity: crate::error::ErrorSeverity::Error,
+                });
             }
         }
 
@@ -2353,16 +2348,18 @@ impl LightSource {
     ) -> Result<Self, RenderError> {
         // 业务规则：强度必须>0
         if intensity <= 0.0 {
-            return Err(RenderError::InvalidState { message: 
-                "Point light intensity must be greater than 0".to_string(),
-             severity: crate::error::ErrorSeverity::Error });
+            return Err(RenderError::InvalidState {
+                message: "Point light intensity must be greater than 0".to_string(),
+                severity: crate::error::ErrorSeverity::Error,
+            });
         }
 
         // 业务规则：半径必须>0
         if radius <= 0.0 {
-            return Err(RenderError::InvalidState { message: 
-                "Point light radius must be greater than 0".to_string(),
-             severity: crate::error::ErrorSeverity::Error });
+            return Err(RenderError::InvalidState {
+                message: "Point light radius must be greater than 0".to_string(),
+                severity: crate::error::ErrorSeverity::Error,
+            });
         }
 
         Ok(Self::Point {
@@ -2425,18 +2422,20 @@ impl LightSource {
     ) -> Result<Self, RenderError> {
         // 业务规则：强度必须>0
         if intensity <= 0.0 {
-            return Err(RenderError::InvalidState { message: 
-                "Directional light intensity must be greater than 0".to_string(),
-             severity: crate::error::ErrorSeverity::Error });
+            return Err(RenderError::InvalidState {
+                message: "Directional light intensity must be greater than 0".to_string(),
+                severity: crate::error::ErrorSeverity::Error,
+            });
         }
 
         // 归一化方向
         let normalized_direction = if direction.length_squared() > 0.0 {
             direction.normalize()
         } else {
-            return Err(RenderError::InvalidState { message: 
-                "Directional light direction cannot be zero".to_string(),
-             severity: crate::error::ErrorSeverity::Error });
+            return Err(RenderError::InvalidState {
+                message: "Directional light direction cannot be zero".to_string(),
+                severity: crate::error::ErrorSeverity::Error,
+            });
         };
 
         Ok(Self::Directional {
@@ -2505,32 +2504,36 @@ impl LightSource {
     ) -> Result<Self, RenderError> {
         // 业务规则：强度必须>0
         if intensity <= 0.0 {
-            return Err(RenderError::InvalidState { message: 
-                "Spot light intensity must be greater than 0".to_string(),
-             severity: crate::error::ErrorSeverity::Error });
+            return Err(RenderError::InvalidState {
+                message: "Spot light intensity must be greater than 0".to_string(),
+                severity: crate::error::ErrorSeverity::Error,
+            });
         }
 
         // 业务规则：半径必须>0
         if radius <= 0.0 {
-            return Err(RenderError::InvalidState { message: 
-                "Spot light radius must be greater than 0".to_string(),
-             severity: crate::error::ErrorSeverity::Error });
+            return Err(RenderError::InvalidState {
+                message: "Spot light radius must be greater than 0".to_string(),
+                severity: crate::error::ErrorSeverity::Error,
+            });
         }
 
         // 业务规则：内角必须<外角
         if inner_cutoff >= outer_cutoff {
-            return Err(RenderError::InvalidState { message: 
-                "Spot light inner cutoff must be less than outer cutoff".to_string(),
-             severity: crate::error::ErrorSeverity::Error });
+            return Err(RenderError::InvalidState {
+                message: "Spot light inner cutoff must be less than outer cutoff".to_string(),
+                severity: crate::error::ErrorSeverity::Error,
+            });
         }
 
         // 归一化方向
         let normalized_direction = if direction.length_squared() > 0.0 {
             direction.normalize()
         } else {
-            return Err(RenderError::InvalidState { message: 
-                "Spot light direction cannot be zero".to_string(),
-             severity: crate::error::ErrorSeverity::Error });
+            return Err(RenderError::InvalidState {
+                message: "Spot light direction cannot be zero".to_string(),
+                severity: crate::error::ErrorSeverity::Error,
+            });
         };
 
         Ok(Self::Spot {

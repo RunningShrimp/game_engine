@@ -1,5 +1,5 @@
 //  场景管理器
-// 
+//
 //  提供场景的加载、保存、切换和管理功能。
 
 use bevy_ecs::prelude::*;
@@ -165,9 +165,7 @@ impl SceneManager {
 
     /// 获取场景元数据
     pub fn get_scene_metadata(&self, scene_id: SceneId, key: &str) -> Option<&String> {
-        self.scenes
-            .get(&scene_id)
-            .and_then(|scene| scene.metadata.get(key))
+        self.scenes.get(&scene_id).and_then(|scene| scene.metadata.get(key))
     }
 
     /// 更新过渡状态

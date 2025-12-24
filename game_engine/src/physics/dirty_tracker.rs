@@ -1,16 +1,16 @@
 //  物理脏标记追踪模块
-// 
+//
 //  通过脏标记机制优化物理系统与 Transform 的同步，
 //  仅同步发生变化的物体，减少不必要的数据传输。
-// 
+//
 //  ## 优化效果
-// 
+//
 //  - 静止物体零开销
 //  - 休眠物体自动跳过
 //  - 批量同步减少分散访问
-// 
+//
 //  ## 使用示例
-// 
+//
 //  ```ignore
 //  // 使用优化后的同步系统
 //  fn physics_sync_system(
@@ -31,7 +31,7 @@ use bevy_ecs::prelude::*;
 use glam::{Quat, Vec3};
 
 // 性能监控集成 - 使用 tracing 系统
-use tracing::{span, Level, info};
+use tracing::{Level, info, span};
 
 // ============================================================================
 // 脏标记组件
@@ -241,7 +241,10 @@ pub fn optimized_physics_sync_system(
 
         // 使用脏检测
         if config.dirty_tracking_enabled {
-            info!(dirty_tracking_enabled_checks = 1, "Dirty tracking check performed");
+            info!(
+                dirty_tracking_enabled_checks = 1,
+                "Dirty tracking check performed"
+            );
             if let (Some(mut cached), Some(mut dirty)) = (cached_opt, dirty_opt) {
                 // 检查是否真的改变了
                 let pos_changed = cached.position_changed(new_position, config.position_threshold);
@@ -300,11 +303,17 @@ pub fn transform_to_physics_sync_system(
     >,
 ) {
     let _transform_sync_span = span!(Level::DEBUG, "transform_to_physics_sync_system").entered();
-    info!(transform_sync_system_calls = 1, "Transform to physics sync system called");
+    info!(
+        transform_sync_system_calls = 1,
+        "Transform to physics sync system called"
+    );
     for (rb_comp, transform, dirty) in query.iter() {
         // 只同步被外部修改的 Transform
         if !dirty.transform_changed {
-            info!(transform_not_dirty_skipped = 1, "Transform not dirty, skipped");
+            info!(
+                transform_not_dirty_skipped = 1,
+                "Transform not dirty, skipped"
+            );
             continue;
         }
 

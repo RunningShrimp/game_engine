@@ -8,12 +8,14 @@
 /// 此模块中的类型已被 system_monitor 模块中的新实现替代。
 /// 新代码应使用 system_monitor 中的类型，此模块仅为向后兼容保留。
 /// 计划在下一个主要版本中移除此模块。
-
 use std::collections::HashMap;
 use std::time::Instant;
 
 /// 性能指标类型
-#[deprecated(since = "0.1.0", note = "Use system_monitor::PerformanceMetrics instead")]
+#[deprecated(
+    since = "0.1.0",
+    note = "Use system_monitor::PerformanceMetrics instead"
+)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum MetricType {
     // CPU 指标
@@ -133,10 +135,7 @@ impl PerformanceMonitor {
 
     /// 记录指标
     pub fn record(&mut self, metric_type: MetricType, value: f64, unit: &str) {
-        self.metrics
-            .entry(metric_type)
-            .or_insert_with(Vec::new)
-            .push(value);
+        self.metrics.entry(metric_type).or_insert_with(Vec::new).push(value);
 
         let metric = Metric::new(metric_type, value, unit.to_string());
         self.metric_history.push(metric);

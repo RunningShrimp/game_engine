@@ -1,5 +1,5 @@
 //  WGPU 公共类型定义
-// 
+//
 //  包含渲染所需的各种数据结构定义。
 
 use crate::impl_default;

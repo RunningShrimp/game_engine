@@ -1,42 +1,42 @@
 //  AI 系统模块
-// 
+//
 //  提供智能代理的决策和导航功能。
-// 
+//
 //  ## 功能特性
-// 
+//
 //  - 行为树系统
 //  - 状态机系统
 //  - A* 寻路算法
 //  - 导航网格支持
-// 
+//
 //  ## 使用示例
-// 
+//
 //  ### 寻路示例
-// 
+//
 //  ```rust
 //  use game_engine::ai::{PathfindingService, NavigationMesh, PathNode};
 //  use glam::Vec3;
-// 
+//
 //  // 创建导航网格
 //  let mut nav_mesh = NavigationMesh::new();
 //  nav_mesh.add_node(PathNode::new(0, Vec3::new(0.0, 0.0, 0.0)));
 //  nav_mesh.add_node(PathNode::new(1, Vec3::new(10.0, 0.0, 0.0)));
 //  nav_mesh.add_connection(0, 1, 10.0);
-// 
+//
 //  // 创建寻路服务
 //  let mut pathfinding = PathfindingService::new(nav_mesh);
-// 
+//
 //  // 寻路
 //  let path = pathfinding.find_path(0, 1).unwrap();
 //  assert_eq!(path.len(), 2);
 //  ```
-// 
+//
 //  ### AI组件示例
-// 
+//
 //  ```rust
 //  use game_engine::ai::AI;
 //  use bevy_ecs::prelude::*;
-// 
+//
 //  // 在ECS系统中使用AI组件
 //  fn setup_ai_system(mut commands: Commands) {
 //      commands.spawn(AI {
@@ -67,9 +67,17 @@ pub use flocking::{Agent, AgentId, FlockConfig, FlockManager, FlockingError, Obs
 
 // 重新导出寻路相关类型
 pub use pathfinding::{
-    NavigationMesh, ParallelPathfindingService, PathConnection, PathNode, PathfindingRequest,
-    PathfindingResult, PathfindingService,
+    NavigationMesh, PathConnection, PathNode, PathfindingRequest, PathfindingResult,
+    PathfindingService,
 };
+
+/// 异步协程寻路服务（推荐使用）
+pub mod async_pathfinding;
+pub use async_pathfinding::AsyncPathfindingService;
+
+// 向后兼容：导出已弃用的 ParallelPathfindingService
+#[allow(deprecated)]
+pub use pathfinding::ParallelPathfindingService;
 
 use bevy_ecs::prelude::*;
 use glam::Vec3;

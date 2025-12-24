@@ -91,9 +91,7 @@ impl AdvancedProfiler {
 
     /// 获取计时结果 (毫秒)
     pub fn get_timing(&self, name: &str) -> Option<f32> {
-        self.timing_results
-            .get(name)
-            .map(|d| d.as_secs_f32() * 1000.0)
+        self.timing_results.get(name).map(|d| d.as_secs_f32() * 1000.0)
     }
 
     /// 获取平均帧时间 (毫秒)

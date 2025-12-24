@@ -1,13 +1,13 @@
 //  后处理管线模块
-// 
+//
 //  提供完整的后处理效果管线，包括：
 //  - Antialiasing（抗锯齿：FXAA/TAA）
 //  - Bloom（辉光效果）
 //  - SSAO（屏幕空间环境光遮蔽）
 //  - Tonemap（HDR色调映射）
-// 
+//
 //  # 示例
-// 
+//
 //  ```ignore
 //  let mut postprocess = PostProcessPipeline::new(&device, &config);
 //  postprocess.set_antialiasing(AntialiasingMode::FXAA);
@@ -20,19 +20,23 @@ use crate::impl_default;
 
 pub mod antialiasing;
 pub mod bloom;
+pub mod color_correction;
+pub mod depth_of_field;
+pub mod effect_manager;
+pub mod motion_blur;
 pub mod ssao;
 pub mod tonemap;
-pub mod motion_blur;
-pub mod depth_of_field;
-pub mod color_correction;
 
 pub use antialiasing::{AntialiasingMode, FxaaPass, FxaaQuality, TaaPass};
 pub use bloom::BloomPass;
+pub use color_correction::{ColorCorrectionPass, ColorCorrectionUniforms};
+pub use depth_of_field::DepthOfFieldPass;
+pub use effect_manager::{
+    EffectPerformanceStats, EffectPreset, PostProcessEffect, PostProcessEffectManager, QualityMode,
+};
+pub use motion_blur::MotionBlurPass;
 pub use ssao::SsaoPass;
 pub use tonemap::{TonemapOperator, TonemapPass};
-pub use motion_blur::MotionBlurPass;
-pub use depth_of_field::DepthOfFieldPass;
-pub use color_correction::{ColorCorrectionPass, ColorCorrectionUniforms};
 
 use wgpu::TextureFormat;
 
@@ -318,9 +322,7 @@ impl PostProcessPipeline {
                 | wgpu::TextureUsages::COPY_DST,
             view_formats: &[],
         });
-        self.hdr_view = self
-            .hdr_texture
-            .create_view(&wgpu::TextureViewDescriptor::default());
+        self.hdr_view = self.hdr_texture.create_view(&wgpu::TextureViewDescriptor::default());
 
         // 调整各通道大小
         self.bloom_pass.resize(device, width, height);

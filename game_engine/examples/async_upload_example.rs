@@ -1,7 +1,7 @@
+use bevy_ecs::prelude::*;
 use game_engine::ecs::{Transform, World};
 use game_engine::render::mesh::GpuMesh;
 use game_engine::resources::{AsyncUploader, UploadTask};
-use bevy_ecs::prelude::*;
 use std::sync::Arc;
 use wgpu::{BufferUsage, CommandEncoder, Device, Queue};
 
@@ -32,14 +32,16 @@ fn main() {
     println!("----------------------");
 
     for i in 0..10 {
-        let entity = world.spawn((
-            Transform {
-                pos: glam::Vec3::new(i as f32, 0.0, 0.0),
-                rot: glam::Quat::IDENTITY,
-                scale: glam::Vec3::ONE,
-            },
-            mesh.clone(),
-        )).id();
+        let entity = world
+            .spawn((
+                Transform {
+                    pos: glam::Vec3::new(i as f32, 0.0, 0.0),
+                    rot: glam::Quat::IDENTITY,
+                    scale: glam::Vec3::ONE,
+                },
+                mesh.clone(),
+            ))
+            .id();
 
         let data = format!("entity_{}_data", i).into_bytes();
         let task = UploadTask {
@@ -48,8 +50,7 @@ fn main() {
             size: data.len() as u64,
         };
 
-        world.resource_mut::<AsyncUploader>()
-            .queue_upload(entity, task);
+        world.resource_mut::<AsyncUploader>().queue_upload(entity, task);
 
         println!("已排队实体 {} 的上传任务", entity.index());
     }
@@ -86,10 +87,7 @@ fn main() {
     println!("----------------------");
 
     for _ in 0..5 {
-        world.spawn((
-            Transform::default(),
-            mesh.clone(),
-        ));
+        world.spawn((Transform::default(), mesh.clone()));
 
         let data = vec![0u8; 1024];
         let task = UploadTask {
@@ -98,7 +96,8 @@ fn main() {
             size: 1024,
         };
 
-        world.resource_mut::<AsyncUploader>()
+        world
+            .resource_mut::<AsyncUploader>()
             .queue_upload(world.entities().last().unwrap().id(), task);
     }
 

@@ -551,12 +551,8 @@ mod tests {
         let mut entity = GameEntity::new(EntityId(1));
 
         // 设置属性
-        entity
-            .set_property("health", serde_json::json!(100))
-            .unwrap();
-        entity
-            .set_property("name", serde_json::json!("Player"))
-            .unwrap();
+        entity.set_property("health", serde_json::json!(100)).unwrap();
+        entity.set_property("name", serde_json::json!("Player")).unwrap();
 
         // 获取属性
         assert_eq!(entity.get_property("health"), Some(&serde_json::json!(100)));

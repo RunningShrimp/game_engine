@@ -1,29 +1,29 @@
 //  空间音频模块
-// 
+//
 //  提供 3D 空间音频功能，支持：
 //  - 距离衰减 (Linear, Inverse, Exponential)
 //  - 3D 定位和平移
 //  - 多普勒效果
 //  - 环境遮挡/阻挡
 //  - HRTF (头部相关传输函数) 支持
-// 
+//
 //  # 架构设计
-// 
+//
 //  遵循与主音频模块相同的贫血模型设计：
 //  - `SpatialAudioState` (Resource): 空间音频状态数据
 //  - `AudioListener` (Component): 听者组件
 //  - `SpatialAudioSource` (Component): 空间音频源组件
 //  - `SpatialAudioService`: 空间音频业务逻辑
-// 
+//
 //  # 示例
-// 
+//
 //  ```ignore
 //  // 设置监听器
 //  commands.spawn((
 //      AudioListener::new(),
 //      Transform::from_translation(Vec3::ZERO),
 //  ));
-// 
+//
 //  // 创建空间音频源
 //  commands.spawn((
 //      SpatialAudioSource::new("explosion")
@@ -423,10 +423,7 @@ impl SpatialAudioService {
         let cone_gain = source.cone.calculate_gain(cone_angle);
 
         // 计算左右声道定位 (简化的HRTF)
-        let listener_right = state
-            .listener_forward
-            .cross(state.listener_up)
-            .normalize_or_zero();
+        let listener_right = state.listener_forward.cross(state.listener_up).normalize_or_zero();
         let direction_to_source = relative_pos.normalize_or_zero();
 
         // 方位角 (水平面内与前方的夹角)
@@ -508,9 +505,7 @@ impl SpatialAudioService {
         scored.sort_by(|a, b| {
             let score_a = a.2 as f32 * 1000.0 - a.1;
             let score_b = b.2 as f32 * 1000.0 - b.1;
-            score_b
-                .partial_cmp(&score_a)
-                .unwrap_or(std::cmp::Ordering::Equal)
+            score_b.partial_cmp(&score_a).unwrap_or(std::cmp::Ordering::Equal)
         });
 
         // 返回前 N 个
@@ -627,12 +622,12 @@ mod tests {
     #[test]
     fn test_spatial_params_calculation() {
         let state = SpatialAudioState::new();
-        let source = SpatialAudioSource::new("test")
-            .with_volume(1.0)
-            .with_distance_model(DistanceModel::Inverse {
+        let source = SpatialAudioSource::new("test").with_volume(1.0).with_distance_model(
+            DistanceModel::Inverse {
                 ref_distance: 1.0,
                 rolloff: 1.0,
-            });
+            },
+        );
 
         let params = SpatialAudioService::calculate_params(
             &state,

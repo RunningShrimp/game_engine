@@ -3,7 +3,7 @@
 //! 提供统一的日志接口，集成错误处理和日志记录。
 //! 支持多种日志级别、结构化日志、日志过滤和输出目标。
 
-use crate::error::{EngineError, ErrorSeverity, ErrorCategory};
+use crate::error::{EngineError, ErrorCategory, ErrorSeverity};
 use std::fmt;
 use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -75,10 +75,7 @@ pub struct LogEntry {
 impl LogEntry {
     /// 创建新的日志条目
     pub fn new(level: LogLevel, message: String) -> Self {
-        let timestamp = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_secs();
+        let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_secs();
 
         Self {
             timestamp,
@@ -100,7 +97,7 @@ impl LogEntry {
             EngineError::General { severity, .. } => *severity,
             _ => ErrorSeverity::Error, // 默认错误级别
         };
-        
+
         let level = LogLevel::from_error_severity(severity);
         let msg = message.unwrap_or_else(|| format!("{}", error));
 
@@ -116,10 +113,7 @@ impl LogEntry {
         };
 
         Self {
-            timestamp: SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap_or_default()
-                .as_secs(),
+            timestamp: SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_secs(),
             level,
             message: msg,
             module: Some(category.as_str().to_string()),
@@ -187,7 +181,7 @@ impl ConsoleLogSink {
 impl LogSink for ConsoleLogSink {
     fn log(&self, entry: &LogEntry) {
         let formatted = entry.format();
-        
+
         if self.color_enabled {
             // 根据日志级别添加颜色（简化版本）
             match entry.level {
@@ -235,10 +229,7 @@ impl FileLogSink {
         use std::fs::OpenOptions;
         use std::io::Write;
 
-        let mut file = OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(&self.file_path)?;
+        let mut file = OpenOptions::new().create(true).append(true).open(&self.file_path)?;
 
         for entry in buffer.iter() {
             writeln!(file, "{}", entry.format())?;
@@ -252,7 +243,7 @@ impl FileLogSink {
 impl LogSink for FileLogSink {
     fn log(&self, entry: &LogEntry) {
         let mut buffer = self.buffer.lock().unwrap();
-        
+
         if buffer.len() >= self.max_buffer_size {
             // 如果缓冲区满了，尝试刷新
             drop(buffer);
@@ -413,7 +404,6 @@ pub fn log_error(error: &EngineError, message: Option<String>) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::error::RenderError;
 
     #[test]
     fn test_log_level_from_error_severity() {
@@ -453,4 +443,3 @@ mod tests {
         logger.error("Test error message");
     }
 }
-

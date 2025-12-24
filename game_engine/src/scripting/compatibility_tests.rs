@@ -1,5 +1,5 @@
 //  脚本系统兼容性测试
-// 
+//
 //  测试所有脚本语言实现与ScriptContext trait的兼容性
 
 #[cfg(test)]
@@ -160,7 +160,10 @@ mod tests {
         // 测试函数调用
         let _ = context.execute("add_func", "function add(a, b) return a + b end");
 
-        let args = vec![crate::scripting::LuaValue::Number(3.0), crate::scripting::LuaValue::Number(4.0)];
+        let args = vec![
+            crate::scripting::LuaValue::Number(3.0),
+            crate::scripting::LuaValue::Number(4.0),
+        ];
         let result = context.call_function("add", args);
 
         assert!(

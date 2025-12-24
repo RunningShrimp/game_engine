@@ -1,5 +1,5 @@
 //  物理系统错误类型
-// 
+//
 //  定义了物理系统相关的所有错误类型，包括刚体、碰撞体、约束等。
 
 use crate::error::{ErrorCategory, ErrorSeverity};

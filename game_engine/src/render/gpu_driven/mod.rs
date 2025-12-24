@@ -1,27 +1,27 @@
 //  GPU Driven Rendering 模块
-// 
+//
 //  实现基于 GPU 的高性能渲染技术：
 //  - **计算着色器剔除（Compute Shader Culling）** - **默认启用**
 //  - 间接绘制（Indirect Drawing）- 可选优化
 //  - 层次化场景剔除（BVH/八叉树）- 未来扩展
-// 
+//
 //  ## GPU驱动剔除（默认策略）
-// 
+//
 //  GPU驱动剔除现在是引擎的默认剔除策略，提供：
 //  - **高性能**：GPU并行处理，预计性能提升 30-50%（取决于场景复杂度）
 //  - **自动回退**：如果GPU剔除不可用，自动回退到CPU剔除
 //  - **优化着色器**：使用优化的计算着色器，减少分支和内存访问
-// 
+//
 //  ## 性能优化
-// 
+//
 //  计算着色器优化：
 //  - 展开循环以减少分支预测失败
 //  - 使用`select`函数替代if-else分支
 //  - 早期退出优化
 //  - 优化的AABB变换
-// 
+//
 //  ## 架构设计
-// 
+//
 //  ```text
 //  ┌─────────────────────────────────────────────────────────┐
 //  │                    GPU Driven Pipeline                   │
@@ -400,7 +400,7 @@ impl GpuDrivenRenderer {
     /// 获取可见实例数量（异步读取）
     ///
     /// 使用staging buffer和异步映射从GPU读取计数器。
-    /// 
+    ///
     /// # 参数
     /// - `device`: WGPU设备
     /// - `queue`: 命令队列
@@ -409,14 +409,14 @@ impl GpuDrivenRenderer {
     /// 可见实例数量（如果读取成功）
     ///
     /// # 工作原理
-    /// 
+    ///
     /// 1. 将计数器buffer复制到staging buffer
     /// 2. 提交命令到设备
     /// 3. 异步映射staging buffer读取数据
     /// 4. 解析u32值并返回
     ///
     /// # 注意
-    /// 
+    ///
     /// 此方法已实现异步GPU缓冲区读取功能。
     /// 使用staging buffer避免阻塞主线程。
     pub fn get_visible_count(&self, device: &wgpu::Device, queue: &wgpu::Queue) -> Option<u32> {

@@ -2,8 +2,8 @@
 //!
 //! 提供碰撞检测性能统计和监控功能。
 
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Instant;
 
 /// 碰撞检测性能统计
@@ -75,42 +75,40 @@ impl CollisionPerformanceMonitor {
     /// 记录碰撞检测
     pub fn record_collision_check(&self, duration: std::time::Duration, is_collision: bool) {
         let time_us = duration.as_micros() as u64;
-        
+
         self.total_checks.fetch_add(1, Ordering::Relaxed);
         if is_collision {
             self.actual_collisions.fetch_add(1, Ordering::Relaxed);
         }
-        
+
         self.total_time_us.fetch_add(time_us, Ordering::Relaxed);
-        
+
         // 更新最大时间
         loop {
             let current_max = self.max_time_us.load(Ordering::Relaxed);
             if time_us <= current_max {
                 break;
             }
-            if self.max_time_us.compare_exchange(
-                current_max,
-                time_us,
-                Ordering::Relaxed,
-                Ordering::Relaxed,
-            ).is_ok() {
+            if self
+                .max_time_us
+                .compare_exchange(current_max, time_us, Ordering::Relaxed, Ordering::Relaxed)
+                .is_ok()
+            {
                 break;
             }
         }
-        
+
         // 更新最小时间
         loop {
             let current_min = self.min_time_us.load(Ordering::Relaxed);
             if time_us >= current_min {
                 break;
             }
-            if self.min_time_us.compare_exchange(
-                current_min,
-                time_us,
-                Ordering::Relaxed,
-                Ordering::Relaxed,
-            ).is_ok() {
+            if self
+                .min_time_us
+                .compare_exchange(current_min, time_us, Ordering::Relaxed, Ordering::Relaxed)
+                .is_ok()
+            {
                 break;
             }
         }
@@ -151,7 +149,11 @@ impl CollisionPerformanceMonitor {
             actual_collisions,
             avg_check_time_us: avg_time_us,
             max_check_time_us: max_time_us as f64,
-            min_check_time_us: if min_time_us == u64::MAX { 0.0 } else { min_time_us as f64 },
+            min_check_time_us: if min_time_us == u64::MAX {
+                0.0
+            } else {
+                min_time_us as f64
+            },
             spatial_query_count: spatial_queries,
             spatial_query_hit_rate: hit_rate,
         }
@@ -205,7 +207,7 @@ mod tests {
     #[test]
     fn test_performance_monitor() {
         let monitor = Arc::new(CollisionPerformanceMonitor::new());
-        
+
         // 记录几次检测
         monitor.record_collision_check(Duration::from_micros(100), false);
         monitor.record_collision_check(Duration::from_micros(200), true);
@@ -220,7 +222,7 @@ mod tests {
     #[test]
     fn test_spatial_query_tracking() {
         let monitor = Arc::new(CollisionPerformanceMonitor::new());
-        
+
         monitor.record_spatial_query(true);
         monitor.record_spatial_query(false);
         monitor.record_spatial_query(true);
@@ -230,4 +232,3 @@ mod tests {
         assert!((stats.spatial_query_hit_rate - 2.0 / 3.0).abs() < 0.001);
     }
 }
-

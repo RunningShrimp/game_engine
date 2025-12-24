@@ -20,4 +20,5 @@ mod ecs_scheduling_performance_test;
 mod physics_spatial_partition_test;
 mod ecs_benchmark_test;
 mod physics_benchmark_test;
+mod resource_dependency_hotreload_test;
 

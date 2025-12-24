@@ -1,5 +1,5 @@
 //  网络状态插值系统
-// 
+//
 //  实现网络状态插值和平滑，减少抖动，提升游戏体验。
 
 use crate::impl_default;
@@ -100,9 +100,7 @@ pub fn interpolation_system(
 ) {
     for (mut interp, mut transform) in query.iter_mut() {
         // 计算目标时间（当前时间 - 延迟）
-        let target_time = interp
-            .current_time
-            .saturating_sub(interp.interpolation_delay_ms);
+        let target_time = interp.current_time.saturating_sub(interp.interpolation_delay_ms);
 
         if let Some(state) = interp.get_interpolated(target_time) {
             transform.pos = state.position;

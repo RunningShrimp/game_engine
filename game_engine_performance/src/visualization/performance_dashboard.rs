@@ -1,5 +1,5 @@
 //  性能仪表板
-// 
+//
 //  实时性能数据可视化
 //  - 指标跟踪
 //  - 趋势分析
@@ -152,18 +152,12 @@ impl MetricTracker {
 
     /// 获取最大值
     pub fn get_max(&self) -> Option<f64> {
-        self.history
-            .iter()
-            .map(|s| s.value)
-            .max_by(|a, b| a.partial_cmp(b).unwrap())
+        self.history.iter().map(|s| s.value).max_by(|a, b| a.partial_cmp(b).unwrap())
     }
 
     /// 获取最小值
     pub fn get_min(&self) -> Option<f64> {
-        self.history
-            .iter()
-            .map(|s| s.value)
-            .min_by(|a, b| a.partial_cmp(b).unwrap())
+        self.history.iter().map(|s| s.value).min_by(|a, b| a.partial_cmp(b).unwrap())
     }
 
     /// 计算趋势（上升/下降/平稳）
@@ -181,13 +175,9 @@ impl MetricTracker {
             .sum::<f64>()
             / ((self.history.len() / 2).max(1) as f64);
 
-        let older_avg: f64 = self
-            .history
-            .iter()
-            .take(self.history.len() / 2)
-            .map(|s| s.value)
-            .sum::<f64>()
-            / ((self.history.len() / 2).max(1) as f64);
+        let older_avg: f64 =
+            self.history.iter().take(self.history.len() / 2).map(|s| s.value).sum::<f64>()
+                / ((self.history.len() / 2).max(1) as f64);
 
         let diff_percent = ((recent_avg - older_avg) / older_avg.max(1.0)) * 100.0;
 

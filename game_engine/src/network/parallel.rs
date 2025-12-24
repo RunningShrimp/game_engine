@@ -12,8 +12,8 @@
 use rayon::prelude::*;
 use std::sync::Arc;
 
-use super::{NetworkMessage, NetworkState};
 use super::compression::NetworkCompressor;
+use super::{NetworkMessage, NetworkState};
 
 /// 并行网络消息处理器
 ///
@@ -91,9 +91,7 @@ impl ParallelMessageProcessor {
             NetworkMessage::StateSync { tick, data } => {
                 // 解压缩数据（如果需要）
                 let decompressed_data = if let Some(compressor) = compressor {
-                    compressor
-                        .decompress_with_flag(data)
-                        .unwrap_or_else(|_| data.clone())
+                    compressor.decompress_with_flag(data).unwrap_or_else(|_| data.clone())
                 } else {
                     data.clone()
                 };
@@ -115,9 +113,7 @@ impl ParallelMessageProcessor {
                 }
             }
             NetworkMessage::TimeSyncResponse { sync } => {
-                MessageProcessResult::TimeSyncResponse {
-                    sync: sync.clone(),
-                }
+                MessageProcessResult::TimeSyncResponse { sync: sync.clone() }
             }
             _ => MessageProcessResult::Other,
         }
@@ -144,7 +140,9 @@ pub enum MessageProcessResult {
     /// 时间同步请求
     TimeSyncRequest { client_send_time: u64 },
     /// 时间同步响应
-    TimeSyncResponse { sync: super::delay_compensation::TimeSyncMessage },
+    TimeSyncResponse {
+        sync: super::delay_compensation::TimeSyncMessage,
+    },
     /// 其他消息类型
     Other,
 }
@@ -225,4 +223,3 @@ mod tests {
         assert!(processor.enabled);
     }
 }
-

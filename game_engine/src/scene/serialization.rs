@@ -4,11 +4,11 @@ use crate::ecs::{
     Transform,
 };
 use crate::physics::{ColliderDesc, RigidBodyDesc};
+use crate::platform::run_sync;
 use bevy_ecs::prelude::*;
 use glam::{Quat, Vec3};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use crate::platform::run_sync;
 
 /// 序列化的场景数据
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -548,11 +548,8 @@ impl SerializedScene {
     /// 清空场景中的所有实体
     pub fn clear_world(world: &mut World) {
         // 收集所有实体ID
-        let entities: Vec<Entity> = world
-            .query::<EntityRef>()
-            .iter(world)
-            .map(|e| e.id())
-            .collect();
+        let entities: Vec<Entity> =
+            world.query::<EntityRef>().iter(world).map(|e| e.id()).collect();
         // 删除所有实体
         for entity in entities {
             world.despawn(entity);
@@ -560,17 +557,24 @@ impl SerializedScene {
     }
 
     /// 保存场景到JSON文件（异步版本）
-    pub async fn save_to_file_async(&self, path: &str) -> Result<(), Box<dyn std::error::Error + Send>> {
+    pub async fn save_to_file_async(
+        &self,
+        path: &str,
+    ) -> Result<(), Box<dyn std::error::Error + Send>> {
         let json = serde_json::to_string_pretty(self)
             .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send>)?;
-        tokio::fs::write(path, json).await
+        tokio::fs::write(path, json)
+            .await
             .map_err(|e| Box::new(std::io::Error::from(e)) as Box<dyn std::error::Error + Send>)?;
         Ok(())
     }
 
     /// 从JSON文件加载场景（异步版本）
-    pub async fn load_from_file_async(path: &str) -> Result<Self, Box<dyn std::error::Error + Send>> {
-        let json = tokio::fs::read_to_string(path).await
+    pub async fn load_from_file_async(
+        path: &str,
+    ) -> Result<Self, Box<dyn std::error::Error + Send>> {
+        let json = tokio::fs::read_to_string(path)
+            .await
             .map_err(|e| Box::new(std::io::Error::from(e)) as Box<dyn std::error::Error + Send>)?;
         let scene = serde_json::from_str(&json)
             .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send>)?;
@@ -581,17 +585,13 @@ impl SerializedScene {
     pub fn save_to_file(&self, path: &str) -> Result<(), Box<dyn std::error::Error + Send>> {
         let path_clone = path.to_string();
         let self_clone = self.clone();
-        run_sync(async move {
-            self_clone.save_to_file_async(&path_clone).await
-        })
+        run_sync(async move { self_clone.save_to_file_async(&path_clone).await })
     }
 
     /// 从JSON文件加载场景（同步版本，用于向后兼容）
     pub fn load_from_file(path: &str) -> Result<Self, Box<dyn std::error::Error + Send>> {
         let path_clone = path.to_string();
-        run_sync(async move {
-            Self::load_from_file_async(&path_clone).await
-        })
+        run_sync(async move { Self::load_from_file_async(&path_clone).await })
     }
 }
 

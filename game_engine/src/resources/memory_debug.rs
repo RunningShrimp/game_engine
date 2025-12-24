@@ -1,9 +1,9 @@
 //  内存调试工具模块
-// 
+//
 //  提供内存可视化、性能分析器集成和调试辅助工具。
-// 
+//
 //  ## 调试功能
-// 
+//
 //  ```text
 //  ┌─────────────────────────────────────────────────────────┐
 //  │                Memory Debug Tools                  │
@@ -133,14 +133,10 @@ impl AllocationTrace {
 
         if let Ok(allocation_duration) = self.allocation_time.duration_since(std::time::UNIX_EPOCH)
         {
-            if let Ok(free_duration) = self
-                .free_time
-                .unwrap()
-                .duration_since(std::time::UNIX_EPOCH)
+            if let Ok(free_duration) = self.free_time.unwrap().duration_since(std::time::UNIX_EPOCH)
             {
-                let lifetime = free_duration
-                    .as_micros()
-                    .saturating_sub(allocation_duration.as_micros());
+                let lifetime =
+                    free_duration.as_micros().saturating_sub(allocation_duration.as_micros());
                 self.lifetime_us = Some(lifetime as u64);
             }
         }
@@ -659,11 +655,7 @@ impl MemoryDebugger {
             .values()
             .filter(|t| {
                 !t.is_freed
-                    && t.allocation_time
-                        .elapsed()
-                        .unwrap_or(Duration::from_secs(0))
-                        .as_secs()
-                        > 60
+                    && t.allocation_time.elapsed().unwrap_or(Duration::from_secs(0)).as_secs() > 60
             })
             .count();
 

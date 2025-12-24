@@ -1,26 +1,26 @@
 //  撤销/重做系统
-// 
+//
 //  提供编辑器操作的撤销和重做功能，基于命令模式实现。
-// 
+//
 //  # 架构设计
-// 
+//
 //  - `Command` trait: 定义可撤销操作的接口
 //  - `CommandManager`: 管理命令历史和执行
 //  - `CompositeCommand`: 组合多个命令为一个原子操作
 //  - `PropertyChange`: 通用属性变更命令
-// 
+//
 //  # 示例
-// 
+//
 //  ```ignore
 //  // 创建命令管理器
 //  let mut manager = CommandManager::new(100);
-// 
+//
 //  // 执行命令
 //  manager.execute(Box::new(SetPositionCommand::new(entity, old_pos, new_pos)));
-// 
+//
 //  // 撤销
 //  manager.undo();
-// 
+//
 //  // 重做
 //  manager.redo();
 //  ```
@@ -274,20 +274,12 @@ impl CommandManager {
 
     /// 获取所有撤销命令的描述
     pub fn get_undo_history(&self) -> Vec<&str> {
-        self.undo_stack
-            .iter()
-            .rev()
-            .map(|c| c.description())
-            .collect()
+        self.undo_stack.iter().rev().map(|c| c.description()).collect()
     }
 
     /// 获取所有重做命令的描述
     pub fn get_redo_history(&self) -> Vec<&str> {
-        self.redo_stack
-            .iter()
-            .rev()
-            .map(|c| c.description())
-            .collect()
+        self.redo_stack.iter().rev().map(|c| c.description()).collect()
     }
 
     /// 撤销多步

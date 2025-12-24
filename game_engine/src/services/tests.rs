@@ -1,5 +1,5 @@
 //  Service层单元测试
-// 
+//
 //  为Service层提供全面的单元测试，确保测试覆盖率达到80%以上
 
 #[cfg(test)]
@@ -229,11 +229,10 @@ mod render_service_tests {
     use super::super::render::*;
     use crate::ecs::Transform;
     use crate::render::lod::LodConfig;
-    use crate::domain::RenderStrategy;
     use bevy_ecs::prelude::*;
     use glam::{Mat4, Quat, Vec3};
-    use std::sync::Arc;
     use std::default::Default;
+    use std::sync::Arc;
 
     #[test]
     fn test_render_service_creation() {
@@ -275,8 +274,8 @@ mod render_service_tests {
     #[test]
     fn test_render_service_render_strategy_selection() {
         use crate::domain::render::{RenderObject, RenderObjectId, RenderStrategy};
-        use crate::render::mesh::GpuMesh;
         use crate::ecs::Transform;
+        use crate::render::mesh::GpuMesh;
 
         let service = RenderService::new();
 
@@ -790,9 +789,7 @@ mod render_service_tests {
         let mut service = RenderService::new();
 
         // 第一次配置
-        let config1 = LodConfigBuilder::new()
-            .add_level(0.0, 20.0, LodQuality::High)
-            .build();
+        let config1 = LodConfigBuilder::new().add_level(0.0, 20.0, LodQuality::High).build();
         service.configure_lod(config1);
 
         // 第二次配置（应该覆盖第一次）
@@ -897,12 +894,8 @@ mod domain_service_tests {
         use crate::domain::services::AudioDomainService;
         let mut service = AudioDomainService::new();
 
-        service
-            .create_source(AudioSourceId(1), "test1.wav")
-            .unwrap();
-        service
-            .create_source(AudioSourceId(2), "test2.wav")
-            .unwrap();
+        service.create_source(AudioSourceId(1), "test1.wav").unwrap();
+        service.create_source(AudioSourceId(2), "test2.wav").unwrap();
 
         service.play_source(AudioSourceId(1)).unwrap();
         service.play_source(AudioSourceId(2)).unwrap();
@@ -969,11 +962,7 @@ mod domain_service_tests {
 
         // 测试设置不存在音频源的音量
         let volume = crate::domain::value_objects::Volume::new(0.5).unwrap();
-        assert!(
-            service
-                .set_source_volume(AudioSourceId(999), volume)
-                .is_err()
-        );
+        assert!(service.set_source_volume(AudioSourceId(999), volume).is_err());
     }
 
     #[test]
@@ -1008,9 +997,7 @@ mod domain_service_tests {
         use crate::domain::services::AudioDomainService;
         let mut service = AudioDomainService::new();
 
-        service
-            .create_source(AudioSourceId(1), "test1.wav")
-            .unwrap();
+        service.create_source(AudioSourceId(1), "test1.wav").unwrap();
 
         // 尝试创建重复ID的音频源
         let result = service.create_source(AudioSourceId(1), "test2.wav");
@@ -1137,18 +1124,10 @@ mod domain_service_tests {
         service.create_collider(collider, RigidBodyId(1)).unwrap();
 
         // 销毁碰撞体
-        assert!(
-            service
-                .destroy_collider(crate::domain::physics::ColliderId(1))
-                .is_ok()
-        );
+        assert!(service.destroy_collider(crate::domain::physics::ColliderId(1)).is_ok());
 
         // 销毁不存在的碰撞体应该失败
-        assert!(
-            service
-                .destroy_collider(crate::domain::physics::ColliderId(999))
-                .is_err()
-        );
+        assert!(service.destroy_collider(crate::domain::physics::ColliderId(999)).is_err());
     }
 
     #[test]
@@ -1231,7 +1210,7 @@ mod domain_service_tests {
 
         // 设置极端位置值
         let extreme_pos = Vec3::new(1e6, -1e6, 1e6);
-        let  body_at_extreme = RigidBody::dynamic(RigidBodyId(1), extreme_pos);
+        let body_at_extreme = RigidBody::dynamic(RigidBodyId(1), extreme_pos);
         assert!(service.update_body(&body_at_extreme).is_ok());
 
         // 应用极端力值
@@ -1264,19 +1243,11 @@ mod domain_service_tests {
         // 注意：create_collider可能不会验证刚体是否存在
         // 这取决于实现，这里只测试API调用
         // 测试向不存在的刚体添加碰撞体
-        assert!(
-            service
-                .add_collider_to_body(collider, RigidBodyId(999))
-                .is_err()
-        );
+        assert!(service.add_collider_to_body(collider, RigidBodyId(999)).is_err());
 
         // 销毁不存在的碰撞体应该失败
         // 使用remove_collider代替destroy_collider
-        assert!(
-            service
-                .remove_collider(crate::domain::physics::ColliderId(999))
-                .is_err()
-        );
+        assert!(service.remove_collider(crate::domain::physics::ColliderId(999)).is_err());
     }
 
     #[test]

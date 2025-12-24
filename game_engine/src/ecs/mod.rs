@@ -301,9 +301,7 @@ pub fn tilemap_build_system(
     } else {
         return;
     };
-    let vp = viewport
-        .map(|v| (v.width as f32, v.height as f32))
-        .unwrap_or((800.0, 600.0));
+    let vp = viewport.map(|v| (v.width as f32, v.height as f32)).unwrap_or((800.0, 600.0));
     for (entity, t_base, mut tm) in query.iter_mut() {
         if !tm.dirty {
             continue;
@@ -433,9 +431,7 @@ pub fn tilemap_chunk_system(
     } else {
         return;
     };
-    let (vpw, vph) = viewport
-        .map(|v| (v.width as f32, v.height as f32))
-        .unwrap_or((800.0, 600.0));
+    let (vpw, vph) = viewport.map(|v| (v.width as f32, v.height as f32)).unwrap_or((800.0, 600.0));
     let mut cam_pos = glam::Vec3::new(vpw * 0.5, vph * 0.5, 0.0);
     for (t, c) in cam_q.iter() {
         if c.is_active {
@@ -537,9 +533,7 @@ pub fn tilemap_chunk_system(
         if let Some(mut ch) = opt_chunks {
             ch.visible = new_vis;
         } else {
-            commands
-                .entity(map_e)
-                .insert(TileChunks { visible: new_vis });
+            commands.entity(map_e).insert(TileChunks { visible: new_vis });
         }
     }
 }

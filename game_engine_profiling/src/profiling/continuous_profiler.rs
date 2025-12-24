@@ -1,26 +1,26 @@
 //  持续性能分析器模块
-// 
+//
 //  提供持续的性能监控和分析功能，用于跟踪游戏引擎的运行时性能指标。
-// 
+//
 //  ## 功能特性
-// 
+//
 //  - 持续收集性能样本（FPS、帧时间、CPU使用率、内存使用量）
 //  - 性能统计计算（平均值、范围、异常检测）
 //  - 可配置的采样间隔
 //  - 性能报告生成
-// 
+//
 //  ## 使用示例
-// 
+//
 //  ```rust
 //  use game_engine::performance::continuous_profiler::ContinuousProfiler;
-// 
+//
 //  let mut profiler = ContinuousProfiler::new(1000); // 保存1000个样本
-// 
+//
 //  // 在游戏循环中
 //  loop {
 //      profiler.begin_frame();
 //      // ... 游戏逻辑 ...
-//      
+//
 //      // 定期检查性能
 //      if profiler.get_samples().len() > 100 {
 //          let avg_fps = profiler.get_average_fps();

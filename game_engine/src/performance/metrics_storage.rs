@@ -1,5 +1,5 @@
 //  Metrics存储系统
-// 
+//
 //  提供统一的metrics存储和查询接口。
 //  支持时间序列数据存储和聚合统计。
 
@@ -106,7 +106,8 @@ impl MetricsStorage {
         let metrics = self.metrics.lock().unwrap();
         let now = Instant::now();
 
-        metrics.get(name)
+        metrics
+            .get(name)
             .map(|v| {
                 v.iter()
                     .filter(|dp| now.duration_since(dp.timestamp) <= duration)

@@ -35,14 +35,14 @@ use crate::network::compression;
 use crate::network::delay_compensation;
 use crate::network::{ConnectionState, NetworkError, NetworkMessage, NetworkState};
 use bincode;
+use crossbeam_channel::unbounded;
+use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::net::{TcpStream as TokioTcpStream};
+use tokio::net::TcpStream as TokioTcpStream;
 use tokio::sync::Mutex;
 use tokio::task;
-use std::net::SocketAddr;
-use crossbeam_channel::unbounded;
 
 /// 客户端配置
 #[derive(Debug, Clone)]
@@ -104,6 +104,12 @@ impl GameClient {
 
         let (send_tx, _send_rx) = unbounded::<NetworkMessage>();
         let (recv_tx, recv_rx) = unbounded::<NetworkMessage>();
+
+        // 记录重连计数器用于跟踪连接历史
+        let reconnect_attempts = Arc::new(Mutex::new(0usize));
+
+        // 将重连计数器初始化到网络状态中（虽然network_state目前不使用它，但保留用于未来扩展）
+        let _reconnect_attempts = &reconnect_attempts;
 
         let network_state = NetworkState {
             connection_state: ConnectionState::default(),
@@ -172,7 +178,13 @@ impl GameClient {
 
                 *self.running.lock().await = true;
                 task::spawn(async move {
-                    Self::receive_loop_async(stream_clone, state_clone, recv_tx_clone, running_clone).await;
+                    Self::receive_loop_async(
+                        stream_clone,
+                        state_clone,
+                        recv_tx_clone,
+                        running_clone,
+                    )
+                    .await;
                 });
 
                 let stream_clone = Arc::clone(&self.stream);
@@ -246,16 +258,19 @@ impl GameClient {
             stream.write_all(&len.to_be_bytes()).await.map_err(|e| {
                 NetworkError::SendError(format!("Failed to write message length: {}", e))
             })?;
-            stream.write_all(&data).await.map_err(|e| {
-                NetworkError::SendError(format!("Failed to write message: {}", e))
-            })?;
+            stream
+                .write_all(&data)
+                .await
+                .map_err(|e| NetworkError::SendError(format!("Failed to write message: {}", e)))?;
             drop(stream_guard);
 
             let mut state = self.state.lock().await;
             state.stats.bytes_sent += len as u64;
             state.stats.messages_sent += 1;
         } else {
-            return Err(NetworkError::ConnectionError("No active connection".to_string()));
+            return Err(NetworkError::ConnectionError(
+                "No active connection".to_string(),
+            ));
         }
 
         Ok(())
@@ -345,7 +360,7 @@ impl GameClient {
                                     Ok(msg) => {
                                         state_guard.stats.bytes_received += len as u64;
                                         state_guard.stats.messages_received += 1;
-                                        
+
                                         let _ = recv_tx.lock().await.send(msg);
                                     }
                                     Err(e) => {

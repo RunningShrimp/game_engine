@@ -1,29 +1,29 @@
 //  群体行为模块
-// 
+//
 //  实现Flocking算法和避障行为，用于模拟群体AI实体的自然运动。
-// 
+//
 //  ## 功能特性
-// 
+//
 //  - Flocking算法（分离、对齐、聚集）
 //  - 避障行为
 //  - 群体目标跟随
 //  - 可配置的行为权重
-// 
+//
 //  ## 使用示例
-// 
+//
 //  ```rust
 //  use crate::ai::flocking::*;
-// 
+//
 //  // 创建群体管理器
 //  let mut flock = FlockManager::new(FlockConfig::default());
-// 
+//
 //  // 添加群体成员
 //  let agent1 = flock.add_agent(Vec3::new(0.0, 0.0, 0.0));
 //  let agent2 = flock.add_agent(Vec3::new(1.0, 0.0, 0.0));
-// 
+//
 //  // 更新群体行为
 //  flock.update(0.016); // delta_time
-// 
+//
 //  // 获取代理的新速度
 //  let velocity = flock.get_agent_velocity(agent1);
 //  ```
@@ -207,9 +207,7 @@ impl FlockManager {
 
     /// 移除代理
     pub fn remove_agent(&mut self, id: AgentId) -> Result<(), FlockingError> {
-        self.agents
-            .remove(&id)
-            .ok_or(FlockingError::AgentNotFound(id.0))?;
+        self.agents.remove(&id).ok_or(FlockingError::AgentNotFound(id.0))?;
         Ok(())
     }
 

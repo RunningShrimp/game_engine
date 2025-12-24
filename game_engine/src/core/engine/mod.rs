@@ -1,5 +1,5 @@
 //  引擎主入口
-// 
+//
 //  定义Engine结构和主运行循环
 
 pub mod asset_processor;
@@ -8,8 +8,8 @@ pub mod engine;
 #[cfg(test)]
 mod engine_tests;
 pub mod game_loop;
-pub mod game_loop_fixed;
 pub mod game_loop_coroutine;
+pub mod game_loop_fixed;
 pub mod initialization;
 pub mod input_handler;
 pub mod renderer;

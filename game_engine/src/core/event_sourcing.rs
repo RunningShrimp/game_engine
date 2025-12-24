@@ -97,9 +97,7 @@ impl std::fmt::Debug for EventBus {
             Ok(guard) => guard.len(),
             Err(_) => 0,
         };
-        f.debug_struct("EventBus")
-            .field("subscriber_count", &subscriber_count)
-            .finish()
+        f.debug_struct("EventBus").field("subscriber_count", &subscriber_count).finish()
     }
 }
 
@@ -262,11 +260,7 @@ impl EventStore for MemoryEventStore {
     }
 
     fn get_events_range(&self, from: EventId, to: EventId) -> Vec<StoredEvent> {
-        self.events
-            .iter()
-            .filter(|e| e.id >= from && e.id <= to)
-            .cloned()
-            .collect()
+        self.events.iter().filter(|e| e.id >= from && e.id <= to).cloned().collect()
     }
 
     fn delete_events_before(&mut self, sequence: u64) {
@@ -326,8 +320,7 @@ impl MemorySnapshotStore {
 impl SnapshotStore for MemorySnapshotStore {
     fn save_snapshot(&mut self, snapshot: Snapshot) -> Result<(), EventError> {
         // 移除旧的快照（只保留最新的）
-        self.snapshots
-            .retain(|s| s.aggregate_id != snapshot.aggregate_id);
+        self.snapshots.retain(|s| s.aggregate_id != snapshot.aggregate_id);
         self.snapshots.push(snapshot);
         Ok(())
     }
@@ -388,18 +381,10 @@ impl EventSourcingManager {
         let mut registry = registry::EventTypeRegistry::new();
 
         // 注册内置事件类型
-        registry
-            .register_event_type::<EntityCreatedEvent>()
-            .unwrap_or(());
-        registry
-            .register_event_type::<EntityDeletedEvent>()
-            .unwrap_or(());
-        registry
-            .register_event_type::<EntityTransformChangedEvent>()
-            .unwrap_or(());
-        registry
-            .register_event_type::<EntityUpdatedEvent>()
-            .unwrap_or(());
+        registry.register_event_type::<EntityCreatedEvent>().unwrap_or(());
+        registry.register_event_type::<EntityDeletedEvent>().unwrap_or(());
+        registry.register_event_type::<EntityTransformChangedEvent>().unwrap_or(());
+        registry.register_event_type::<EntityUpdatedEvent>().unwrap_or(());
 
         Self {
             event_bus: Arc::new(EventBus::new()),
@@ -495,9 +480,8 @@ impl EventSourcingManager {
 
         for stored_event in events {
             // 使用事件类型注册表反序列化事件
-            let event = self
-                .event_registry
-                .create_event(&stored_event.event_type, &stored_event.data)?;
+            let event =
+                self.event_registry.create_event(&stored_event.event_type, &stored_event.data)?;
             event.apply(world)?;
         }
 
@@ -537,9 +521,8 @@ impl EventSourcingManager {
             }
 
             // 使用事件类型注册表反序列化事件
-            let event = self
-                .event_registry
-                .create_event(&stored_event.event_type, &stored_event.data)?;
+            let event =
+                self.event_registry.create_event(&stored_event.event_type, &stored_event.data)?;
             event.apply(world)?;
         }
 
@@ -554,9 +537,8 @@ impl EventSourcingManager {
 
         if let Some(last_event) = events.last() {
             // 使用事件类型注册表反序列化并撤销事件
-            let event = self
-                .event_registry
-                .create_event(&last_event.event_type, &last_event.data)?;
+            let event =
+                self.event_registry.create_event(&last_event.event_type, &last_event.data)?;
             event.revert(world)?;
 
             Ok(Some(last_event.id))

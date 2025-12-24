@@ -1,5 +1,5 @@
 //  Rust脚本引擎
-// 
+//
 //  提供Rust代码的动态编译和执行功能。
 
 use super::system::{ScriptContext, ScriptResult, ScriptValue};
@@ -82,9 +82,7 @@ impl RustScriptEngine {
         F: Fn() + Send + Sync + 'static,
     {
         if let Ok(mut context) = self.context.lock() {
-            context
-                .compiled_scripts
-                .insert(name.to_string(), Box::new(func));
+            context.compiled_scripts.insert(name.to_string(), Box::new(func));
         }
     }
 

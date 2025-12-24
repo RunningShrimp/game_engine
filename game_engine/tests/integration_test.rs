@@ -1,5 +1,5 @@
 //  集成测试套件
-// 
+//
 //  测试引擎各个系统之间的集成，包括：
 //  - 渲染系统集成
 //  - 物理系统集成
@@ -53,13 +53,14 @@ fn test_complete_game_loop() {
     }
 
     // 验证状态
-    assert!(world.iter_entities().count() > 0);
+    let entity_ref: Vec<_> = world.query::<EntityRef>().iter(&world).collect();
+    assert!(!entity_ref.is_empty());
 
     // 测试物理状态（验证物理服务存在）
     assert!(world.get_resource::<PhysicsDomainService>().is_some());
 
     // 实体数量验证
-    let entity_count = world.iter_entities().count();
+    let entity_count = world.query::<EntityRef>().iter(&world).count();
     assert!(entity_count >= 1);
 }
 
@@ -123,11 +124,7 @@ fn test_audio_system_integration() {
 
     // 测试设置不存在的音频源音量（应该失败）
     let volume = Volume::new(0.7).unwrap();
-    assert!(
-        audio_service
-            .set_source_volume(AudioSourceId(1), volume)
-            .is_err()
-    );
+    assert!(audio_service.set_source_volume(AudioSourceId(1), volume).is_err());
 
     // 验证没有音频源
     assert_eq!(audio_service.source_ids().len(), 0);
@@ -180,11 +177,7 @@ fn test_scene_physics_integration() {
     let mut physics_service = PhysicsDomainService::new();
 
     // 创建场景
-    assert!(
-        scene_service
-            .create_scene(SceneId(1), "PhysicsScene")
-            .is_ok()
-    );
+    assert!(scene_service.create_scene(SceneId(1), "PhysicsScene").is_ok());
 
     // 加载场景（switch_to_scene需要场景已加载）
     if let Some(scene) = scene_service.get_scene_mut(SceneId(1)) {
@@ -314,11 +307,7 @@ fn test_multi_system_cooperation() {
     let mut physics_service = PhysicsDomainService::new();
 
     // 创建场景
-    assert!(
-        scene_service
-            .create_scene(SceneId(1), "MultiSystemScene")
-            .is_ok()
-    );
+    assert!(scene_service.create_scene(SceneId(1), "MultiSystemScene").is_ok());
 
     // 加载场景
     if let Some(scene) = scene_service.get_scene_mut(SceneId(1)) {
@@ -423,7 +412,10 @@ fn test_performance_many_entities() {
     }
 
     // 验证实体创建
-    assert_eq!(world.iter_entities().count(), ENTITY_COUNT);
+    assert_eq!(
+        world.query::<EntityRef>().iter(&world).count(),
+        ENTITY_COUNT
+    );
 
     // 运行多帧模拟
     const FRAME_COUNT: usize = 60;
@@ -439,7 +431,10 @@ fn test_performance_many_entities() {
     }
 
     // 验证所有实体仍然存在
-    assert_eq!(world.iter_entities().count(), ENTITY_COUNT);
+    assert_eq!(
+        world.query::<EntityRef>().iter(&world).count(),
+        ENTITY_COUNT
+    );
 }
 
 /// 测试客户端预测系统集成
@@ -628,16 +623,10 @@ fn test_actor_system_integration() {
     );
 
     // 注册物理Actor
-    let physics_handle = actor_system
-        .register("physics", PhysicsActor::new())
-        .unwrap();
+    let physics_handle = actor_system.register("physics", PhysicsActor::new()).unwrap();
 
     // 发送物理消息
-    assert!(
-        physics_handle
-            .send(PhysicsActorMessage::Step { delta_time: 0.016 })
-            .is_ok()
-    );
+    assert!(physics_handle.send(PhysicsActorMessage::Step { delta_time: 0.016 }).is_ok());
 
     // 注册渲染Actor
     let render_handle = actor_system.register("render", RenderActor::new()).unwrap();
@@ -659,9 +648,7 @@ fn test_actor_ecs_integration() {
 
     // 注册Actor
     let audio_handle = actor_system.register("audio", AudioActor::new()).unwrap();
-    let physics_handle = actor_system
-        .register("physics", PhysicsActor::new())
-        .unwrap();
+    let physics_handle = actor_system.register("physics", PhysicsActor::new()).unwrap();
 
     // 模拟几帧更新（不将ActorHandle添加到ECS，直接使用）
     for _ in 0..10 {
@@ -791,12 +778,12 @@ fn test_e2e_physics_render_sync() {
 
         // 验证实体数量
         if frame % 10 == 0 {
-            assert_eq!(world.iter_entities().count(), 10);
+            assert_eq!(world.query::<EntityRef>().iter(&world).count(), 10);
         }
     }
 
     // 验证所有实体仍然存在
-    assert_eq!(world.iter_entities().count(), 10);
+    assert_eq!(world.query::<EntityRef>().iter(&world).count(), 10);
 }
 
 /// E2E测试：多场景完整生命周期
@@ -806,7 +793,12 @@ fn test_e2e_multi_scene_lifecycle() {
     let mut physics_service = PhysicsDomainService::new();
 
     // 创建多个场景
-    let scenes = vec![(1, "MainMenu"), (2, "Level1"), (3, "Level2"), (4, "Credits")];
+    let scenes = vec![
+        (1, "MainMenu"),
+        (2, "Level1"),
+        (3, "Level2"),
+        (4, "Credits"),
+    ];
     for (id, name) in &scenes {
         assert!(scene_service.create_scene(SceneId(*id), name).is_ok());
     }
@@ -892,11 +884,7 @@ fn test_e2e_performance_stress() {
     for i in 0..ENTITY_COUNT {
         world.spawn((
             Transform {
-                pos: Vec3::new(
-                    (i % 50) as f32 * 2.0,
-                    (i / 50) as f32 * 2.0,
-                    0.0,
-                ),
+                pos: Vec3::new((i % 50) as f32 * 2.0, (i / 50) as f32 * 2.0, 0.0),
                 rot: Quat::IDENTITY,
                 scale: Vec3::ONE,
             },
@@ -918,12 +906,18 @@ fn test_e2e_performance_stress() {
 
         // 定期验证
         if frame % 30 == 0 {
-            assert_eq!(world.iter_entities().count(), ENTITY_COUNT);
+            assert_eq!(
+                world.query::<EntityRef>().iter(&world).count(),
+                ENTITY_COUNT
+            );
         }
     }
 
     // 最终验证
-    assert_eq!(world.iter_entities().count(), ENTITY_COUNT);
+    assert_eq!(
+        world.query::<EntityRef>().iter(&world).count(),
+        ENTITY_COUNT
+    );
 }
 
 /// E2E测试：错误恢复和容错
@@ -1040,7 +1034,7 @@ fn test_e2e_render_pipeline() {
     }
 
     // 验证实体数量
-    assert_eq!(world.iter_entities().count(), 20);
+    assert_eq!(world.query::<EntityRef>().iter(&world).count(), 20);
 }
 
 /// E2E测试：网络同步完整流程
@@ -1119,9 +1113,7 @@ fn test_complete_system_workflow() {
 
     // 5. 注册Actor
     let audio_handle = actor_system.register("audio", AudioActor::new()).unwrap();
-    let physics_handle = actor_system
-        .register("physics", PhysicsActor::new())
-        .unwrap();
+    let physics_handle = actor_system.register("physics", PhysicsActor::new()).unwrap();
 
     // 6. 模拟游戏循环
     for _ in 0..60 {
@@ -1205,11 +1197,7 @@ fn test_physics_system_integration_complex_collisions() {
 
         // 为每个刚体添加碰撞体
         let collider = Collider::cuboid(ColliderId(i), Vec3::new(0.5, 0.5, 0.5));
-        assert!(
-            physics_service
-                .create_collider(collider, RigidBodyId(i))
-                .is_ok()
-        );
+        assert!(physics_service.create_collider(collider, RigidBodyId(i)).is_ok());
     }
 
     // 模拟多帧物理步进

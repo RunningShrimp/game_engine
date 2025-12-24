@@ -1,5 +1,5 @@
 //  ECS系统模块
-// 
+//
 //  提供各种ECS系统实现，包括：
 //  - 变换更新系统
 //  - 物理系统
@@ -7,7 +7,7 @@
 //  - 动画系统
 //  - 音频系统
 //  - AI系统
-// 
+//
 
 use crate::ecs::{AiComponent, PreviousTransform, Sprite, Time, Transform};
 use crate::resources::manager::Handle;

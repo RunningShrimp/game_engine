@@ -1,16 +1,16 @@
 //  批次构建器模块
-// 
+//
 //  提供便捷的批次构建 API，简化实例化渲染的使用流程。
-// 
+//
 //  ## 设计目标
-// 
+//
 //  - 流式 API 构建批次
 //  - 支持静态/动态批次
 //  - 自动 LOD 选择
 //  - 与 GPU Driven 剔除集成
-// 
+//
 //  ## 使用示例
-// 
+//
 //  ```ignore
 //  let batch = BatchBuilder::new()
 //      .mesh(mesh_handle)
@@ -149,8 +149,7 @@ impl BatchBuilder {
 
     /// 添加实例（使用完整变换）
     pub fn add_instance(mut self, position: Vec3, rotation: Quat, scale: Vec3) -> Self {
-        self.instances
-            .push(InstanceData::new(position, rotation, scale));
+        self.instances.push(InstanceData::new(position, rotation, scale));
         self
     }
 
@@ -483,10 +482,7 @@ impl LodBatchBuilder {
 
         for (data, distance) in &self.instances {
             if let Some(lod) = self.select_lod(*distance) {
-                lod_instances
-                    .entry(lod.mesh_id)
-                    .or_default()
-                    .push(data.clone());
+                lod_instances.entry(lod.mesh_id).or_default().push(data.clone());
             }
         }
 
@@ -549,9 +545,8 @@ mod tests {
 
     #[test]
     fn test_mesh_batch_generator_random() {
-        let generator = MeshBatchGenerator::new()
-            .seed(42)
-            .position_range(Vec3::ZERO, Vec3::splat(10.0));
+        let generator =
+            MeshBatchGenerator::new().seed(42).position_range(Vec3::ZERO, Vec3::splat(10.0));
 
         let instances = generator.generate(100);
         assert_eq!(instances.len(), 100);

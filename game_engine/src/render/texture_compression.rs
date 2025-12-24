@@ -1,5 +1,5 @@
 //  纹理压缩支持模块
-// 
+//
 //  提供ASTC、BC等压缩纹理格式的加载和解码支持。
 
 use crate::error::RenderError;
@@ -283,11 +283,12 @@ impl BcDecoder {
             }
         }
 
-        image::RgbaImage::from_raw(width, height, rgba_data)
-            .ok_or_else(|| RenderError::InvalidState {
+        image::RgbaImage::from_raw(width, height, rgba_data).ok_or_else(|| {
+            RenderError::InvalidState {
                 message: "Failed to create RGBA image".to_string(),
-                severity: crate::error::ErrorSeverity::Error
-            })
+                severity: crate::error::ErrorSeverity::Error,
+            }
+        })
     }
 
     /// 解码BC3纹理数据为RGBA8

@@ -65,18 +65,10 @@ impl MsdfFontAtlas {
             let w = doc.common.scale_w as f32;
             let h = doc.common.scale_h as f32;
             let mut glyphs = std::collections::HashMap::new();
-            let pr = doc
-                .info
-                .as_ref()
-                .and_then(|i| i.distance_range)
-                .unwrap_or(4.0);
+            let pr = doc.info.as_ref().and_then(|i| i.distance_range).unwrap_or(4.0);
             let asc = doc.info.as_ref().and_then(|i| i.ascent).unwrap_or(0.8 * h);
             let des = doc.info.as_ref().and_then(|i| i.descent).unwrap_or(0.2 * h);
-            let base = doc
-                .info
-                .as_ref()
-                .and_then(|i| i.baseline)
-                .unwrap_or(0.85 * h);
+            let base = doc.info.as_ref().and_then(|i| i.baseline).unwrap_or(0.85 * h);
             for ch in doc.chars {
                 let uv_off = [ch.x as f32 / w, ch.y as f32 / h];
                 let uv_scale = [ch.width as f32 / w, ch.height as f32 / h];

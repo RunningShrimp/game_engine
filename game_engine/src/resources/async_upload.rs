@@ -1,11 +1,11 @@
 //  GPU资源异步上传模块
-// 
+//
 //  提供异步GPU资源上传功能，避免阻塞主线程。
 
-use std::sync::Arc;
-use wgpu::{Buffer, Device, Queue};
 use std::collections::VecDeque;
+use std::sync::Arc;
 use std::task::Waker;
+use wgpu::{Buffer, Device, Queue};
 
 /// 异步上传任务
 pub struct UploadTask {
@@ -70,7 +70,13 @@ impl AsyncUploader {
             }
             staging.unmap();
 
-            encoder.copy_buffer_to_buffer(&staging, 0, &task.buffer, task.offset, task.data.len() as u64);
+            encoder.copy_buffer_to_buffer(
+                &staging,
+                0,
+                &task.buffer,
+                task.offset,
+                task.data.len() as u64,
+            );
 
             // 通知等待的waker
             if let Some(waker) = task.waker {

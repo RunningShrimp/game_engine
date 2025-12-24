@@ -190,17 +190,11 @@ impl PerformanceValidationSuite {
     }
 
     pub fn get_beneficial_gpu_ops(&self) -> Vec<&CpuGpuComparison> {
-        self.comparisons
-            .iter()
-            .filter(|c| c.is_gpu_beneficial())
-            .collect()
+        self.comparisons.iter().filter(|c| c.is_gpu_beneficial()).collect()
     }
 
     pub fn get_non_beneficial_gpu_ops(&self) -> Vec<&CpuGpuComparison> {
-        self.comparisons
-            .iter()
-            .filter(|c| !c.is_gpu_beneficial())
-            .collect()
+        self.comparisons.iter().filter(|c| !c.is_gpu_beneficial()).collect()
     }
 
     pub fn get_summary(&self) -> ValidationSummary {
@@ -215,10 +209,7 @@ impl PerformanceValidationSuite {
         };
 
         let avg_improvement = if total_goals > 0 {
-            self.results
-                .iter()
-                .map(|r| r.improvement_percentage())
-                .sum::<f64>()
+            self.results.iter().map(|r| r.improvement_percentage()).sum::<f64>()
                 / total_goals as f64
         } else {
             0.0

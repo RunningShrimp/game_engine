@@ -1,5 +1,5 @@
 //  AI 路径寻找加速
-// 
+//
 //  使用 SIMD 和并行处理优化多个智能体的路径寻找
 //  - SIMD 加速启发式函数
 //  - 批量寻路
@@ -268,9 +268,9 @@ impl AgentPathfinder {
             HeuristicType::Manhattan => {
                 (from.x - to.x).abs() + (from.y - to.y).abs() + (from.z - to.z).abs()
             }
-            HeuristicType::Chebyshev => ((from.x - to.x).abs())
-                .max((from.y - to.y).abs())
-                .max((from.z - to.z).abs()),
+            HeuristicType::Chebyshev => {
+                ((from.x - to.x).abs()).max((from.y - to.y).abs()).max((from.z - to.z).abs())
+            }
         }
     }
 
@@ -470,8 +470,7 @@ impl BatchPathfinder {
 
     /// 添加智能体
     pub fn add_agent(&mut self, agent_id: u32, position: Vec3) {
-        self.agents
-            .insert(agent_id, AgentPathfinder::new(agent_id, position));
+        self.agents.insert(agent_id, AgentPathfinder::new(agent_id, position));
     }
 
     /// 为智能体寻找路径

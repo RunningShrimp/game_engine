@@ -6,12 +6,12 @@
 //! - Performance profiling integration
 //! - 集成 game_engine_performance crate
 
-use std::sync::Arc;
-use std::time::{Duration, Instant};
+use crate::performance::alerting::PerformanceAlertSystem;
+use crate::performance::metrics_storage::MetricsStorage;
 use crate::performance::monitoring::system_monitor::SystemPerformanceMonitor;
 use crate::profiling::{Bottleneck, ContinuousProfiler, PerformanceAnalysis};
-use crate::performance::metrics_storage::MetricsStorage;
-use crate::performance::alerting::PerformanceAlertSystem;
+use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 /// 统一的tracing和metrics管理器
 #[derive(Debug)]
@@ -67,8 +67,16 @@ impl TracingMetricsManager {
     }
 
     /// 创建着色器编译span
-    #[tracing::instrument(target = "render", skip_all, fields(shader_label, source_size, enable_cache))]
-    pub fn shader_compile_span(shader_label: &str, source_size: usize, enable_cache: bool) -> tracing::Span {
+    #[tracing::instrument(
+        target = "render",
+        skip_all,
+        fields(shader_label, source_size, enable_cache)
+    )]
+    pub fn shader_compile_span(
+        shader_label: &str,
+        source_size: usize,
+        enable_cache: bool,
+    ) -> tracing::Span {
         tracing::info_span!("shader_compile", shader_label, source_size, enable_cache)
     }
 
@@ -86,7 +94,9 @@ impl TracingMetricsManager {
     }
 
     /// 获取系统性能快照
-    pub fn get_performance_snapshot(&self) -> crate::performance::monitoring::system_monitor::PerformanceMetrics {
+    pub fn get_performance_snapshot(
+        &self,
+    ) -> crate::performance::monitoring::system_monitor::PerformanceMetrics {
         self.system_monitor.get_metrics()
     }
 
@@ -105,17 +115,21 @@ impl TracingMetricsManager {
 
             let mut metrics = std::collections::HashMap::new();
             metrics.insert("avg_fps".to_string(), avg_fps as f64);
-            metrics.insert("avg_frame_time_ms".to_string(), (avg_frame_time * 1000.0) as f64);
+            metrics.insert(
+                "avg_frame_time_ms".to_string(),
+                (avg_frame_time * 1000.0) as f64,
+            );
             metrics.insert("sample_count".to_string(), samples.len() as f64);
 
-            let bottlenecks = anomalies.into_iter().map(|anomaly| {
-                Bottleneck {
+            let bottlenecks = anomalies
+                .into_iter()
+                .map(|anomaly| Bottleneck {
                     name: "Performance Anomaly".to_string(),
                     severity: 50,
                     description: format!("Performance anomaly detected: {:?}", anomaly),
                     suggestion: "Investigate recent changes or system load".to_string(),
-                }
-            }).collect();
+                })
+                .collect();
 
             Some(PerformanceAnalysis {
                 name: "engine_runtime".to_string(),
@@ -209,7 +223,10 @@ impl TracingMetricsManager {
     /// # 返回
     ///
     /// metric的所有数据点
-    pub fn query_metrics(&self, name: &str) -> Vec<crate::performance::metrics_storage::MetricDataPoint> {
+    pub fn query_metrics(
+        &self,
+        name: &str,
+    ) -> Vec<crate::performance::metrics_storage::MetricDataPoint> {
         self.metrics_storage.get_metrics(name)
     }
 
@@ -257,7 +274,8 @@ impl Default for TracingMetricsManager {
 }
 
 /// 全局tracing/metrics管理器实例
-static TRACING_METRICS_MANAGER: std::sync::OnceLock<std::sync::Mutex<TracingMetricsManager>> = std::sync::OnceLock::new();
+static TRACING_METRICS_MANAGER: std::sync::OnceLock<std::sync::Mutex<TracingMetricsManager>> =
+    std::sync::OnceLock::new();
 
 /// 获取全局tracing/metrics管理器
 pub fn global_tracing_metrics() -> &'static std::sync::Mutex<TracingMetricsManager> {
@@ -304,14 +322,14 @@ mod tests {
     #[test]
     fn test_alert_system_integration() {
         let mut manager = TracingMetricsManager::new();
-        
+
         // 更新性能指标并检查告警
         manager.update_and_check_alerts();
-        
+
         // 获取告警统计
         let stats = manager.get_alert_statistics();
         assert_eq!(stats.total_alerts, 0);
-        
+
         // 获取最近的告警
         let alerts = manager.get_recent_alerts(10);
         assert!(alerts.is_empty());

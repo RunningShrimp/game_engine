@@ -1,9 +1,9 @@
 //  异步着色器编译系统
-// 
+//
 //  使用异步编译减少主线程阻塞，提升启动性能和响应性。
-// 
+//
 //  ## 设计原则
-// 
+//
 //  1. **异步编译**: 使用`tokio::task::spawn_blocking`在后台线程编译
 //  2. **编译队列**: 优先级队列管理编译任务
 //  3. **进度跟踪**: 实时追踪编译进度
@@ -13,6 +13,7 @@
 use crate::error::RenderError;
 use crate::error::safe_lock;
 use crate::render::shader_cache::{ShaderCache, ShaderCacheKey};
+use num_cpus;
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
 use std::sync::{Arc, Mutex};
@@ -20,7 +21,6 @@ use std::time::{Duration, Instant};
 use thiserror::Error;
 use tokio::sync::{mpsc, oneshot};
 use tokio::time::timeout;
-use num_cpus;
 
 /// 着色器编译优先级
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -42,6 +42,7 @@ impl Default for ShaderCompilePriority {
 }
 
 impl ShaderCompilePriority {
+    /// 创建默认的着色器编译优先级
     pub fn new() -> Self {
         Self::default()
     }
@@ -381,7 +382,9 @@ impl AsyncShaderCompiler {
                         wait_stats.max_wait_time_ms = wait_stats.max_wait_time_ms.max(wait_time_ms);
                         wait_stats.sample_count += 1;
                     } else {
-                        tracing::error!("Failed to acquire wait_time_stats lock, skipping statistics update");
+                        tracing::error!(
+                            "Failed to acquire wait_time_stats lock, skipping statistics update"
+                        );
                     }
                 }
 
@@ -500,11 +503,9 @@ impl AsyncShaderCompiler {
             response_tx,
         };
 
-        self.request_tx.send(request).map_err(|e| {
-            RenderError::InvalidState {
-                message: format!("Failed to send compile request: {}", e),
-                severity: crate::error::ErrorSeverity::Error
-            }
+        self.request_tx.send(request).map_err(|e| RenderError::InvalidState {
+            message: format!("Failed to send compile request: {}", e),
+            severity: crate::error::ErrorSeverity::Error,
         })?;
 
         Ok(response_rx)
@@ -581,12 +582,9 @@ mod tests {
         let compiler = AsyncShaderCompiler::with_default_config().unwrap();
 
         // 提交不同优先级的请求
-        let rx_low = compiler
-            .compile_async(None, "low", "", ShaderCompilePriority::Low)
-            .unwrap();
-        let rx_high = compiler
-            .compile_async(None, "high", "", ShaderCompilePriority::High)
-            .unwrap();
+        let rx_low = compiler.compile_async(None, "low", "", ShaderCompilePriority::Low).unwrap();
+        let rx_high =
+            compiler.compile_async(None, "high", "", ShaderCompilePriority::High).unwrap();
         let rx_critical = compiler
             .compile_async(None, "critical", "", ShaderCompilePriority::Critical)
             .unwrap();

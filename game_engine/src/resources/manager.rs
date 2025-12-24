@@ -16,17 +16,9 @@ use crate::render::wgpu_utils::WgpuRenderer;
 use std::collections::HashMap;
 
 // --- GLTF Support ---
-
+// GltfScene is now defined in gltf_loader.rs with proper feature gating
 #[cfg(feature = "gltf")]
-#[derive(Clone, Debug)]
-pub struct GltfScene {
-    pub data: Arc<(
-        gltf::Document,
-        Vec<gltf::buffer::Data>,
-        Vec<gltf::image::Data>,
-    )>,
-    pub json: Option<serde_json::Value>,
-}
+pub use super::gltf_loader::GltfScene;
 
 // --- Handle System ---
 
@@ -101,15 +93,11 @@ impl<T: 'static + Send + Sync> Handle<T> {
     where
         T: Clone,
     {
-        self.container
-            .state
-            .try_read()
-            .ok()
-            .and_then(|state| match &*state {
-                LoadState::Loaded(v) => Some(LoadState::Loaded(v.clone())),
-                LoadState::Failed(e) => Some(LoadState::Failed(e.clone())),
-                LoadState::Loading => Some(LoadState::Loading),
-            })
+        self.container.state.try_read().ok().and_then(|state| match &*state {
+            LoadState::Loaded(v) => Some(LoadState::Loaded(v.clone())),
+            LoadState::Failed(e) => Some(LoadState::Failed(e.clone())),
+            LoadState::Loading => Some(LoadState::Loading),
+        })
     }
 
     /// 带超时的资源获取，在指定时间内尝试获取资源
@@ -371,10 +359,12 @@ impl AssetServer {
 
     /// 异步加载纹理
     pub async fn load_texture_async(&self, path: &Path) -> Result<Handle<u32>, String> {
-        let _load_span = crate::performance::tracing_metrics::TracingMetricsManager::asset_load_span(
-            &path.display().to_string(),
-            "texture"
-        ).entered();
+        let _load_span =
+            crate::performance::tracing_metrics::TracingMetricsManager::asset_load_span(
+                &path.display().to_string(),
+                "texture",
+            )
+            .entered();
 
         let handle = Handle::new_loading();
         let task = AssetTask::Texture {
@@ -581,15 +571,12 @@ impl AssetServer {
                     },
                     Ok(AssetResult::Image(img)),
                 ) => {
-                    let ms = std::time::Instant::now()
-                        .duration_since(start)
-                        .as_secs_f64()
-                        * 1000.0;
+                    let ms = std::time::Instant::now().duration_since(start).as_secs_f64() * 1000.0;
                     if let Some(tex_id) = renderer.load_texture_from_image(img.clone(), is_linear) {
                         if let Ok(mut state) = handle.container.state.write() {
                             *state = LoadState::Loaded(tex_id);
                         } // ✅ 处理锁中毒情况，忽略更新失败
-                        
+
                         // 更新统计信息
                         self.texture_count.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
                         if let Ok(mut stats) = self.stats.write() {
@@ -598,24 +585,25 @@ impl AssetServer {
                             // 更新平均加载时间
                             let total_loads = stats.loaded_textures + stats.failed_textures;
                             if total_loads > 0 {
-                                stats.average_load_time_ms = 
-                                    (stats.average_load_time_ms * (total_loads - 1) as f64 + ms) / total_loads as f64;
+                                stats.average_load_time_ms =
+                                    (stats.average_load_time_ms * (total_loads - 1) as f64 + ms)
+                                        / total_loads as f64;
                             } else {
                                 stats.average_load_time_ms = ms;
                             }
                         }
-                        
+
                         events.push(AssetEvent::TextureLoaded(handle.clone(), ms as f32));
                     } else {
                         if let Ok(mut state) = handle.container.state.write() {
                             *state = LoadState::Failed("Failed to create texture".to_string());
                         } // ✅ 处理锁中毒情况，忽略更新失败
-                        
+
                         // 更新失败统计
                         if let Ok(mut stats) = self.stats.write() {
                             stats.failed_textures += 1;
                         }
-                        
+
                         events.push(AssetEvent::TextureFailed(
                             handle.clone(),
                             "Failed to create texture".to_string(),
@@ -624,33 +612,30 @@ impl AssetServer {
                 }
                 (AssetTask::Atlas { handle, start, .. }, Ok(AssetResult::Bytes(bytes))) => {
                     let bytes_len = bytes.len();
-                    let ms = std::time::Instant::now()
-                        .duration_since(start)
-                        .as_secs_f64()
-                        * 1000.0;
+                    let ms = std::time::Instant::now().duration_since(start).as_secs_f64() * 1000.0;
                     if let Ok(json_str) = String::from_utf8(bytes) {
                         if let Some(atlas) = Atlas::from_json(&json_str) {
                             if let Ok(mut state) = handle.container.state.write() {
                                 *state = LoadState::Loaded(atlas);
                             } // ✅ 处理锁中毒情况，忽略更新失败
-                            
+
                             // 更新统计信息
                             if let Ok(mut stats) = self.stats.write() {
                                 stats.loaded_atlases += 1;
                                 stats.total_memory_bytes += bytes_len;
                             }
-                            
+
                             events.push(AssetEvent::AtlasLoaded(handle.clone(), ms as f32));
                         } else {
                             if let Ok(mut state) = handle.container.state.write() {
                                 *state = LoadState::Failed("Invalid Atlas JSON".to_string());
                             } // ✅ 处理锁中毒情况，忽略更新失败
-                            
+
                             // 更新统计信息
                             if let Ok(mut stats) = self.stats.write() {
                                 stats.failed_atlases += 1;
                             }
-                            
+
                             events.push(AssetEvent::AtlasFailed(
                                 handle.clone(),
                                 "Invalid Atlas JSON".to_string(),
@@ -668,43 +653,40 @@ impl AssetServer {
                 }
                 #[cfg(feature = "gltf")]
                 (AssetTask::Gltf { handle, start, .. }, Ok(AssetResult::Gltf(scene))) => {
-                    let ms = std::time::Instant::now()
-                        .duration_since(start)
-                        .as_secs_f64()
-                        * 1000.0;
+                    let ms = std::time::Instant::now().duration_since(start).as_secs_f64() * 1000.0;
                     if let Ok(mut state) = handle.container.state.write() {
                         *state = LoadState::Loaded(scene);
                     } // ✅ 处理锁中毒情况，忽略更新失败
-                    
+
                     // 更新统计信息
                     if let Ok(mut stats) = self.stats.write() {
                         stats.loaded_gltf_scenes += 1;
                     }
-                    
+
                     events.push(AssetEvent::GltfLoaded(handle.clone(), ms as f32));
                 }
                 (AssetTask::Texture { handle, .. }, Err(e)) => {
                     if let Ok(mut state) = handle.container.state.write() {
                         *state = LoadState::Failed(e.clone());
                     } // ✅ 处理锁中毒情况，忽略更新失败
-                    
+
                     // 更新失败统计
                     if let Ok(mut stats) = self.stats.write() {
                         stats.failed_textures += 1;
                     }
-                    
+
                     events.push(AssetEvent::TextureFailed(handle.clone(), e));
                 }
                 (AssetTask::Atlas { handle, .. }, Err(e)) => {
                     if let Ok(mut state) = handle.container.state.write() {
                         *state = LoadState::Failed(e.clone());
                     } // ✅ 处理锁中毒情况，忽略更新失败
-                    
+
                     // 更新失败统计
                     if let Ok(mut stats) = self.stats.write() {
                         stats.failed_atlases += 1;
                     }
-                    
+
                     events.push(AssetEvent::AtlasFailed(handle.clone(), e));
                 }
                 #[cfg(feature = "gltf")]
@@ -764,9 +746,7 @@ impl AssetServer {
     ///
     /// 资源统计信息的副本
     pub fn get_stats(&self) -> AssetStats {
-        self.stats.read()
-            .map(|s| s.clone())
-            .unwrap_or_default()
+        self.stats.read().map(|s| s.clone()).unwrap_or_default()
     }
 
     /// 重置统计信息
@@ -799,7 +779,7 @@ mod tests {
     fn test_asset_server_creation() {
         let server = AssetServer::new();
         assert_eq!(server.get_loaded_texture_count(), 0);
-        
+
         let stats = server.get_stats();
         assert_eq!(stats.loaded_textures, 0);
     }
@@ -809,7 +789,7 @@ mod tests {
         let mut stats = AssetStats::default();
         stats.loaded_textures = 5;
         stats.total_memory_bytes = 1024;
-        
+
         let cloned = stats.clone();
         assert_eq!(cloned.loaded_textures, 5);
         assert_eq!(cloned.total_memory_bytes, 1024);
@@ -819,7 +799,7 @@ mod tests {
     fn test_asset_server_reset_stats() {
         let server = AssetServer::new();
         server.reset_stats();
-        
+
         let stats = server.get_stats();
         assert_eq!(stats.loaded_textures, 0);
         assert_eq!(server.get_loaded_texture_count(), 0);
@@ -850,22 +830,20 @@ pub fn import_gltf_to_world(
     // use gltf::Primitive;
     if let Some(scene) = handle.get() {
         let (doc, buffers, images) = &*scene.data;
-        
+
         // Check if pbr renderer exists first to avoid borrowing conflicts
         if renderer.pbr_renderer.is_none() {
             return;
         }
-        
+
         // Process all primitives to collect mesh data and material info separately
         let mut primitive_data = Vec::new();
-        
+
         for mesh in doc.meshes() {
             for primitive in mesh.primitives() {
                 let reader = primitive.reader(|buf| Some(&buffers[buf.index()]));
-                let positions: Vec<[f32; 3]> = reader
-                    .read_positions()
-                    .map(|it| it.collect())
-                    .unwrap_or_default();
+                let positions: Vec<[f32; 3]> =
+                    reader.read_positions().map(|it| it.collect()).unwrap_or_default();
                 let normals: Vec<[f32; 3]> = reader
                     .read_normals()
                     .map(|it| it.collect())
@@ -890,10 +868,8 @@ pub fn import_gltf_to_world(
                     .and_then(|tc| Some(tc.into_f32()))
                     .map(|it| it.collect())
                     .unwrap_or_else(|| vec![[0.0, 0.0]; positions.len()]);
-                let mut tangents: Vec<[f32; 4]> = reader
-                    .read_tangents()
-                    .map(|it| it.collect())
-                    .unwrap_or_default();
+                let mut tangents: Vec<[f32; 4]> =
+                    reader.read_tangents().map(|it| it.collect()).unwrap_or_default();
                 let indices: Vec<u32> = reader
                     .read_indices()
                     .map(|r| r.into_u32().collect())
@@ -912,7 +888,7 @@ pub fn import_gltf_to_world(
                         tangent: tangents[i],
                     });
                 }
-                
+
                 // GLTF 材质参数映射
                 let mr = primitive.material().pbr_metallic_roughness();
                 let mut mat = crate::render::pbr::PbrMaterial::default();
@@ -921,17 +897,11 @@ pub fn import_gltf_to_world(
                 mat.metallic = mr.metallic_factor();
                 mat.roughness = mr.roughness_factor();
                 mat.emissive = glam::Vec3::from_array(primitive.material().emissive_factor());
-                mat.normal_scale = primitive
-                    .material()
-                    .normal_texture()
-                    .map(|n| n.scale())
-                    .unwrap_or(1.0);
-                mat.ambient_occlusion = primitive
-                    .material()
-                    .occlusion_texture()
-                    .map(|o| o.strength())
-                    .unwrap_or(1.0);
-                
+                mat.normal_scale =
+                    primitive.material().normal_texture().map(|n| n.scale()).unwrap_or(1.0);
+                mat.ambient_occlusion =
+                    primitive.material().occlusion_texture().map(|o| o.strength()).unwrap_or(1.0);
+
                 // KHR_texture_transform（UV变换）解析（仅 .gltf JSON 可用）
                 let reader = primitive.reader(|buf| Some(&buffers[buf.index()]));
                 let mut final_vertices = vertices;
@@ -980,22 +950,39 @@ pub fn import_gltf_to_world(
                                                             // Get original UVs if the alternate set doesn't exist
                                                             let mut texcoord_index = 0u32;
                                                             let mt = primitive.material();
-                                                            if let Some(info) = mt.pbr_metallic_roughness().base_color_texture() {
+                                                            if let Some(info) = mt
+                                                                .pbr_metallic_roughness()
+                                                                .base_color_texture()
+                                                            {
                                                                 texcoord_index = info.tex_coord();
-                                                            } else if let Some(info) = mt.pbr_metallic_roughness().metallic_roughness_texture() {
+                                                            } else if let Some(info) = mt
+                                                                .pbr_metallic_roughness()
+                                                                .metallic_roughness_texture()
+                                                            {
                                                                 texcoord_index = info.tex_coord();
-                                                            } else if let Some(info) = mt.normal_texture() {
+                                                            } else if let Some(info) =
+                                                                mt.normal_texture()
+                                                            {
                                                                 texcoord_index = info.tex_coord();
-                                                            } else if let Some(info) = mt.occlusion_texture() {
+                                                            } else if let Some(info) =
+                                                                mt.occlusion_texture()
+                                                            {
                                                                 texcoord_index = info.tex_coord();
-                                                            } else if let Some(info) = mt.emissive_texture() {
+                                                            } else if let Some(info) =
+                                                                mt.emissive_texture()
+                                                            {
                                                                 texcoord_index = info.tex_coord();
                                                             }
                                                             reader
                                                                 .read_tex_coords(texcoord_index)
                                                                 .and_then(|tc| Some(tc.into_f32()))
                                                                 .map(|it| it.collect())
-                                                                .unwrap_or_else(|| vec![[0.0, 0.0]; positions.len()])
+                                                                .unwrap_or_else(|| {
+                                                                    vec![
+                                                                        [0.0, 0.0];
+                                                                        positions.len()
+                                                                    ]
+                                                                })
                                                         });
                                                     // 用新版 UV 替换
                                                     for i in 0..final_vertices.len() {
@@ -1012,26 +999,33 @@ pub fn import_gltf_to_world(
                         }
                     }
                 }
-                
+
                 // Store the vertex and index data for later processing
                 let mesh_id = mesh.index() as u64;
                 let mat_id = primitive.material().index().unwrap_or(0) as u64;
-                
+
                 // Store primitive data for later processing to avoid borrowing conflicts
-                primitive_data.push((final_vertices, indices, mat, mat_id, mesh_id, primitive.material().index().unwrap_or(0)));
+                primitive_data.push((
+                    final_vertices,
+                    indices,
+                    mat,
+                    mat_id,
+                    mesh_id,
+                    primitive.material().index().unwrap_or(0),
+                ));
             }
         }
-        
+
         // Now process the collected data using the renderer
         for (vertices, indices, mat, mat_id, mesh_id, material_index) in primitive_data {
             // Create GPU mesh (this requires mutable access to renderer)
             let gpu_mesh = renderer.create_gpu_mesh(&vertices, &indices);
-            
+
             // Now we can safely use the pbr renderer (immutable access) with device and queue
             let pbr = renderer.pbr_renderer.as_ref().unwrap();
             let device = renderer.device();
             let queue = renderer.queue();
-            
+
             // 构建纹理绑定组（五贴图）并持久化纹理
             // 创建1x1白色默认纹理（固定参数，不会失败）
             let default_img = image::RgbaImage::from_raw(1, 1, vec![255, 255, 255, 255])
@@ -1075,16 +1069,19 @@ pub fn import_gltf_to_world(
             // 材质注册与复用
             let mut registry =
                 world.get_resource_or_insert_with::<MaterialRegistry>(Default::default);
-            let (material_bg, material_buf): (std::sync::Arc<wgpu::BindGroup>, std::sync::Arc<wgpu::Buffer>) = if let Some(triple) = registry.materials.get(&mat_id) {
+            let (material_bg, material_buf): (
+                std::sync::Arc<wgpu::BindGroup>,
+                std::sync::Arc<wgpu::Buffer>,
+            ) = if let Some(triple) = registry.materials.get(&mat_id) {
                 // 使用已注册的材质
                 (triple.0.clone(), triple.1.clone())
             } else {
-                let (bg, buf): (std::sync::Arc<wgpu::BindGroup>, std::sync::Arc<wgpu::Buffer>) =
-                    pbr.create_material_bind_group(device, queue, &mat);
+                let (bg, buf): (
+                    std::sync::Arc<wgpu::BindGroup>,
+                    std::sync::Arc<wgpu::Buffer>,
+                ) = pbr.create_material_bind_group(device, queue, &mat);
                 // 登记材质，包括纹理绑定组
-                registry
-                    .materials
-                    .insert(mat_id, (bg.clone(), buf.clone(), tex_bg.clone()));
+                registry.materials.insert(mat_id, (bg.clone(), buf.clone(), tex_bg.clone()));
                 (bg, buf)
             };
 
@@ -1128,16 +1125,15 @@ fn to_rgba(data: &gltf::image::Data) -> image::RgbaImage {
                     255,
                 ]);
             }
-            image::RgbaImage::from_raw(data.width, data.height, rgba)
-                .unwrap_or_else(|| {
-                    // 如果无法创建图像（通常是因为尺寸不匹配），创建一个默认图像
-                    log::warn!(
-                        "Failed to create image from raw data ({}x{}), using default",
-                        data.width,
-                        data.height
-                    );
-                    image::RgbaImage::new(data.width.max(1), data.height.max(1))
-                })
+            image::RgbaImage::from_raw(data.width, data.height, rgba).unwrap_or_else(|| {
+                // 如果无法创建图像（通常是因为尺寸不匹配），创建一个默认图像
+                log::warn!(
+                    "Failed to create image from raw data ({}x{}), using default",
+                    data.width,
+                    data.height
+                );
+                image::RgbaImage::new(data.width.max(1), data.height.max(1))
+            })
         }
         _ => image::RgbaImage::new(data.width, data.height),
     }

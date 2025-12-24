@@ -205,7 +205,7 @@ impl ProjectSettingsManager {
                 .map_err(|e| format!("Failed to parse settings file: {}", e))?;
             Ok(Some(settings))
         });
-        
+
         match result {
             Ok(Some(settings)) => {
                 self.settings = settings;
@@ -240,40 +240,28 @@ impl ProjectSettingsManager {
         ui.collapsing("Project Info", |ui| {
             ui.horizontal(|ui| {
                 ui.label("Name:");
-                if ui
-                    .text_edit_singleline(&mut self.settings.project_name)
-                    .changed()
-                {
+                if ui.text_edit_singleline(&mut self.settings.project_name).changed() {
                     self.has_unsaved_changes = true;
                 }
             });
 
             ui.horizontal(|ui| {
                 ui.label("Version:");
-                if ui
-                    .text_edit_singleline(&mut self.settings.project_version)
-                    .changed()
-                {
+                if ui.text_edit_singleline(&mut self.settings.project_version).changed() {
                     self.has_unsaved_changes = true;
                 }
             });
 
             ui.horizontal(|ui| {
                 ui.label("Author:");
-                if ui
-                    .text_edit_singleline(&mut self.settings.project_author)
-                    .changed()
-                {
+                if ui.text_edit_singleline(&mut self.settings.project_author).changed() {
                     self.has_unsaved_changes = true;
                 }
             });
 
             ui.horizontal(|ui| {
                 ui.label("Description:");
-                if ui
-                    .text_edit_multiline(&mut self.settings.project_description)
-                    .changed()
-                {
+                if ui.text_edit_multiline(&mut self.settings.project_description).changed() {
                     self.has_unsaved_changes = true;
                 }
             });
@@ -314,10 +302,7 @@ impl ProjectSettingsManager {
                 self.has_unsaved_changes = true;
             }
 
-            if ui
-                .checkbox(&mut self.settings.render_settings.vsync, "VSync")
-                .changed()
-            {
+            if ui.checkbox(&mut self.settings.render_settings.vsync, "VSync").changed() {
                 self.has_unsaved_changes = true;
             }
 

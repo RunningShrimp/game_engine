@@ -1,6 +1,6 @@
 //  Actor模式实现
 //  替代channel通信，实现更细粒度的并发控制
-// 
+//
 //  使用异步非阻塞消息处理，避免阻塞主循环
 
 use crate::domain::errors::DomainError;
@@ -207,10 +207,7 @@ impl ActorSystem {
 
     /// 获取Actor的默认优先级
     pub fn get_actor_priority(&self, name: &str) -> MessagePriority {
-        self.actor_priorities
-            .get(name)
-            .copied()
-            .unwrap_or(MessagePriority::Normal)
+        self.actor_priorities.get(name).copied().unwrap_or(MessagePriority::Normal)
     }
 
     /// 注册Actor
@@ -592,12 +589,8 @@ mod tests {
         let render_handle = system.register("render", RenderActor::new()).unwrap();
 
         // 发送消息到不同Actor
-        audio_handle
-            .send(AudioActorMessage::SetMasterVolume { volume: 0.8 })
-            .unwrap();
-        physics_handle
-            .send(PhysicsActorMessage::Step { delta_time: 0.016 })
-            .unwrap();
+        audio_handle.send(AudioActorMessage::SetMasterVolume { volume: 0.8 }).unwrap();
+        physics_handle.send(PhysicsActorMessage::Step { delta_time: 0.016 }).unwrap();
         render_handle.send(RenderActorMessage::RenderFrame).unwrap();
 
         // 停止所有Actor

@@ -15,13 +15,13 @@ pub use benchmark_baselines::{
 pub use benchmark_runner::{
     BenchmarkResult as RunnerBenchResult, BenchmarkRunner, BenchmarkStatistics, BenchmarkSuite,
 };
-pub use gpu_comparative_benchmark::{
-    CPUBenchmarkResult, GPUComparativeBenchmarkSuite, GPUSimulationResult,
-    PerformanceAnalysis as GPUPerformanceAnalysis, PerformanceBenchmark,
-};
 pub use game_engine_common::benchmarking::{
     CpuGpuComparison, OptimizationGoal, OptimizationResult, PerformanceValidationSuite,
     ValidationSummary,
+};
+pub use gpu_comparative_benchmark::{
+    CPUBenchmarkResult, GPUComparativeBenchmarkSuite, GPUSimulationResult,
+    PerformanceAnalysis as GPUPerformanceAnalysis, PerformanceBenchmark,
 };
 pub use regression_testing::{
     BaselineType, PerformanceBaseline, RegressionSummary, RegressionTestResult, RegressionTestSuite,

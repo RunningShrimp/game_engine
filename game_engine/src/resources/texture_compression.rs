@@ -91,7 +91,11 @@ pub struct BC1Format;
 
 impl BC1Format {
     /// 压缩 RGBA 数据到 BC1 格式
-    pub fn compress_rgba(data: &[u8], width: usize, height: usize) -> Result<CompressedTexture, CompressionError> {
+    pub fn compress_rgba(
+        data: &[u8],
+        width: usize,
+        height: usize,
+    ) -> Result<CompressedTexture, CompressionError> {
         if width % 4 != 0 || height % 4 != 0 {
             return Err(CompressionError::InvalidSize);
         }
@@ -113,7 +117,11 @@ impl BC1Format {
     }
 
     /// 从 BC1 格式解压缩到 RGBA 数据
-    pub fn decompress(data: &[u8], _width: usize, _height: usize) -> Result<Vec<u8>, CompressionError> {
+    pub fn decompress(
+        data: &[u8],
+        _width: usize,
+        _height: usize,
+    ) -> Result<Vec<u8>, CompressionError> {
         if data.len() % 8 != 0 {
             return Err(CompressionError::InvalidDataLength);
         }
@@ -132,7 +140,11 @@ pub struct BC2Format;
 
 impl BC2Format {
     /// 压缩 RGBA 数据到 BC2 格式
-    pub fn compress_rgba(data: &[u8], width: usize, height: usize) -> Result<CompressedTexture, CompressionError> {
+    pub fn compress_rgba(
+        data: &[u8],
+        width: usize,
+        height: usize,
+    ) -> Result<CompressedTexture, CompressionError> {
         if width % 4 != 0 || height % 4 != 0 {
             return Err(CompressionError::InvalidSize);
         }
@@ -154,7 +166,11 @@ impl BC2Format {
     }
 
     /// 从 BC2 格式解压缩到 RGBA 数据
-    pub fn decompress(data: &[u8], _width: usize, _height: usize) -> Result<Vec<u8>, CompressionError> {
+    pub fn decompress(
+        data: &[u8],
+        _width: usize,
+        _height: usize,
+    ) -> Result<Vec<u8>, CompressionError> {
         if data.len() % 16 != 0 {
             return Err(CompressionError::InvalidDataLength);
         }
@@ -173,7 +189,11 @@ pub struct BC3Format;
 
 impl BC3Format {
     /// 压缩 RGBA 数据到 BC3 格式
-    pub fn compress_rgba(data: &[u8], width: usize, height: usize) -> Result<CompressedTexture, CompressionError> {
+    pub fn compress_rgba(
+        data: &[u8],
+        width: usize,
+        height: usize,
+    ) -> Result<CompressedTexture, CompressionError> {
         if width % 4 != 0 || height % 4 != 0 {
             return Err(CompressionError::InvalidSize);
         }
@@ -195,7 +215,11 @@ impl BC3Format {
     }
 
     /// 从 BC3 格式解压缩到 RGBA 数据
-    pub fn decompress(data: &[u8], _width: usize, _height: usize) -> Result<Vec<u8>, CompressionError> {
+    pub fn decompress(
+        data: &[u8],
+        _width: usize,
+        _height: usize,
+    ) -> Result<Vec<u8>, CompressionError> {
         if data.len() % 16 != 0 {
             return Err(CompressionError::InvalidDataLength);
         }
@@ -322,10 +346,20 @@ impl Default for TextureCompressionManager {
 /// 纹理压缩器 trait
 pub trait TextureCompression: Send + Sync {
     /// 压缩纹理
-    fn compress(&self, data: &[u8], width: usize, height: usize) -> Result<CompressedTexture, CompressionError>;
+    fn compress(
+        &self,
+        data: &[u8],
+        width: usize,
+        height: usize,
+    ) -> Result<CompressedTexture, CompressionError>;
 
     /// 解压缩纹理
-    fn decompress(&self, data: &[u8], width: usize, height: usize) -> Result<Vec<u8>, CompressionError>;
+    fn decompress(
+        &self,
+        data: &[u8],
+        width: usize,
+        height: usize,
+    ) -> Result<Vec<u8>, CompressionError>;
 }
 
 #[cfg(test)]

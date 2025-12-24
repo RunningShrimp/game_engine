@@ -1,10 +1,10 @@
 //  Staging Buffer 管理模块
-// 
+//
 //  用于高效地将 CPU 数据上传到 GPU，通过 Staging Buffer 实现异步上传，
 //  避免主线程阻塞。
-// 
+//
 //  ## 架构设计
-// 
+//
 //  ```text
 //  ┌─────────────────────────────────────────────────────────┐
 //  │                  Staging Buffer Pool                     │
@@ -25,7 +25,7 @@
 use std::collections::VecDeque;
 
 // 性能监控集成 - 使用 tracing 系统
-use tracing::{span, Level, info};
+use tracing::{Level, info, span};
 
 // ============================================================================
 // 常量配置
@@ -79,7 +79,10 @@ impl StagingBuffer {
 
     /// 检查是否有足够空间
     pub fn can_fit(&self, size: u64, alignment: u64) -> bool {
-        info!(staging_buffer_space_checks = 1, "Staging buffer space checked");
+        info!(
+            staging_buffer_space_checks = 1,
+            "Staging buffer space checked"
+        );
 
         let aligned_offset = align_to(self.offset, alignment);
         aligned_offset + size <= self.size

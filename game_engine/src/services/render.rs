@@ -1,9 +1,9 @@
-use crate::error::RenderError;
 use crate::domain::render::{
     PbrScene as DomainPbrScene, RenderCommand, RenderObject as DomainRenderObject, RenderObjectId,
     RenderScene, RenderStrategy,
 };
 use crate::ecs::{Mesh, Transform};
+use crate::error::RenderError;
 use crate::render::frustum::Frustum;
 use crate::render::lod::{LodConfig, LodConfigBuilder, LodQuality, LodSelector};
 use crate::render::pbr::{DirectionalLight, PointLight3D};
@@ -66,8 +66,7 @@ impl LayerCache {
     pub fn new_frame(&mut self) {
         self.frame_count += 1;
         // 淘汰60帧未使用的纹理
-        self.offscreen_cache
-            .retain(|_, v| self.frame_count - v.last_used_frame < 60);
+        self.offscreen_cache.retain(|_, v| self.frame_count - v.last_used_frame < 60);
     }
 
     /// 标记纹理为已使用

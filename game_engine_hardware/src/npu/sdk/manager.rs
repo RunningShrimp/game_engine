@@ -146,11 +146,10 @@ impl SdkManager {
     /// 使用首选后端创建引擎
     pub fn create_engine(&self) -> HardwareResult<Box<dyn NpuInferenceEngine>> {
         let backend =
-            self.preferred_backend
-                .ok_or_else(|| HardwareError::NpuAccelerationError {
-                    operation: "create_engine".to_string(),
-                    reason: "No available backend".to_string(),
-                })?;
+            self.preferred_backend.ok_or_else(|| HardwareError::NpuAccelerationError {
+                operation: "create_engine".to_string(),
+                reason: "No available backend".to_string(),
+            })?;
 
         self.create_engine_with_backend(backend)
     }

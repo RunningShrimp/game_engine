@@ -218,12 +218,7 @@ impl PerformanceProfiler {
         ProfileReport {
             sections: stats,
             total_time_ms,
-            frame_count: self
-                .sections
-                .values()
-                .map(|m| m.call_count)
-                .max()
-                .unwrap_or(0),
+            frame_count: self.sections.values().map(|m| m.call_count).max().unwrap_or(0),
         }
     }
 

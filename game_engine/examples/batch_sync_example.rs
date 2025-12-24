@@ -1,11 +1,10 @@
+use bevy_ecs::prelude::*;
 use game_engine::ecs::{Transform, World};
 use game_engine::physics::{
+    BatchSyncResource, PhysicsDirty, PhysicsDomainService, PhysicsSyncConfig, RigidBodyComp,
     batch_collect_physics_state_system, batch_physics_to_transform_system,
-    BatchSyncResource, PhysicsDirty, PhysicsDomainService, PhysicsSyncConfig,
-    RigidBodyComp,
 };
 use game_engine::render::mesh::GpuMesh;
-use bevy_ecs::prelude::*;
 use std::sync::Arc;
 
 fn main() {
@@ -26,16 +25,18 @@ fn main() {
     println!("----------------");
 
     for i in 0..100 {
-        let entity = world.spawn((
-            Transform {
-                pos: glam::Vec3::new(0.0, 10.0 + i as f32 * 0.5, 0.0),
-                rot: glam::Quat::IDENTITY,
-                scale: glam::Vec3::ONE,
-            },
-            mesh.clone(),
-            RigidBodyComp::new(i as u64),
-            PhysicsDirty::default(),
-        )).id();
+        let entity = world
+            .spawn((
+                Transform {
+                    pos: glam::Vec3::new(0.0, 10.0 + i as f32 * 0.5, 0.0),
+                    rot: glam::Quat::IDENTITY,
+                    scale: glam::Vec3::ONE,
+                },
+                mesh.clone(),
+                RigidBodyComp::new(i as u64),
+                PhysicsDirty::default(),
+            ))
+            .id();
     }
 
     println!("创建了 100 个物理实体\n");
@@ -60,8 +61,12 @@ fn main() {
 
     let old_rot = glam::Quat::IDENTITY;
     let new_rot = glam::Quat::from_rotation_x(0.0001);
-    let rotation_changed = game_engine::physics::rotation_changed_simd(old_rot, new_rot, threshold_sq);
-    println!("旋转变化检测: {}", if rotation_changed { "是" } else { "否" });
+    let rotation_changed =
+        game_engine::physics::rotation_changed_simd(old_rot, new_rot, threshold_sq);
+    println!(
+        "旋转变化检测: {}",
+        if rotation_changed { "是" } else { "否" }
+    );
 
     println!("\n4. 批量同步系统");
     println!("----------------");
@@ -69,13 +74,22 @@ fn main() {
     batch_collect_physics_state_system(
         world.resource(),
         world.resource(),
-        world.query::<(bevy_ecs::prelude::Entity, &RigidBodyComp, Option<&mut PhysicsDirty>)>(),
+        world.query::<(
+            bevy_ecs::prelude::Entity,
+            &RigidBodyComp,
+            Option<&mut PhysicsDirty>,
+        )>(),
     );
 
     batch_physics_to_transform_system(
         world.resource(),
         world.resource(),
-        world.query::<(bevy_ecs::prelude::Entity, &RigidBodyComp, &mut Transform, Option<&mut PhysicsDirty>)>(),
+        world.query::<(
+            bevy_ecs::prelude::Entity,
+            &RigidBodyComp,
+            &mut Transform,
+            Option<&mut PhysicsDirty>,
+        )>(),
     );
 
     println!("批量物理到Transform同步完成");

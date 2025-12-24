@@ -1,22 +1,22 @@
 //  性能数据收集器
-// 
+//
 //  提供高精度时间测量、低开销计数器和批量数据聚合功能。
 
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
-use std::thread;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::{Arc, Mutex};
+use std::thread;
+use std::time::{Duration, Instant};
 
-use super::metrics::*;
 use super::ProfilingResult;
+use super::metrics::*;
 
 // ============================================================================
 // 高精度计时器
 // ============================================================================
 
 /// 高精度计时器
-/// 
+///
 /// 使用RAII模式自动记录作用域时间
 #[derive(Debug)]
 pub struct HighPrecisionTimer {
@@ -39,10 +39,7 @@ impl HighPrecisionTimer {
     }
 
     /// 创建绑定到收集器的计时器
-    pub fn with_collector(
-        name: impl Into<String>,
-        collector: Arc<Mutex<MetricCollector>>,
-    ) -> Self {
+    pub fn with_collector(name: impl Into<String>, collector: Arc<Mutex<MetricCollector>>) -> Self {
         Self {
             name: name.into(),
             start_time: Instant::now(),
@@ -68,13 +65,13 @@ impl HighPrecisionTimer {
     /// 结束计时并记录到收集器
     pub fn finish(self) -> Duration {
         let elapsed = self.elapsed();
-        
+
         if let Some(ref collector) = self.collector {
             if let Ok(mut collector) = collector.lock() {
                 collector.record_timing(&self.name, elapsed);
             }
         }
-        
+
         elapsed
     }
 }
@@ -90,7 +87,7 @@ impl Drop for HighPrecisionTimer {
 }
 
 /// 作用域计时器宏
-/// 
+///
 /// 自动创建和销毁计时器
 #[macro_export]
 macro_rules! timed_scope {
@@ -104,7 +101,7 @@ macro_rules! timed_scope {
 // ============================================================================
 
 /// 滑动窗口聚合器
-/// 
+///
 /// 用于实时统计和趋势分析
 #[derive(Debug, Clone)]
 pub struct SlidingWindowAggregator {
@@ -133,7 +130,7 @@ impl SlidingWindowAggregator {
     pub fn add_sample(&mut self, value: f64) {
         self.samples[self.current_index] = value;
         self.current_index = (self.current_index + 1) % self.window_size;
-        
+
         if self.current_index == 0 {
             self.is_full = true;
         }
@@ -141,68 +138,89 @@ impl SlidingWindowAggregator {
 
     /// 获取平均值
     pub fn average(&self) -> f64 {
-        let count = if self.is_full { self.window_size } else { self.current_index };
+        let count = if self.is_full {
+            self.window_size
+        } else {
+            self.current_index
+        };
         if count == 0 {
             return 0.0;
         }
-        
+
         let sum: f64 = self.samples.iter().take(count).sum();
         sum / count as f64
     }
 
     /// 获取最小值
     pub fn minimum(&self) -> f64 {
-        let count = if self.is_full { self.window_size } else { self.current_index };
+        let count = if self.is_full {
+            self.window_size
+        } else {
+            self.current_index
+        };
         if count == 0 {
             return f64::INFINITY;
         }
-        
+
         self.samples.iter().take(count).fold(f64::INFINITY, |a, &b| a.min(b))
     }
 
     /// 获取最大值
     pub fn maximum(&self) -> f64 {
-        let count = if self.is_full { self.window_size } else { self.current_index };
+        let count = if self.is_full {
+            self.window_size
+        } else {
+            self.current_index
+        };
         if count == 0 {
             return f64::NEG_INFINITY;
         }
-        
+
         self.samples.iter().take(count).fold(f64::NEG_INFINITY, |a, &b| a.max(b))
     }
 
     /// 获取标准差
     pub fn standard_deviation(&self) -> f64 {
-        let count = if self.is_full { self.window_size } else { self.current_index };
+        let count = if self.is_full {
+            self.window_size
+        } else {
+            self.current_index
+        };
         if count < 2 {
             return 0.0;
         }
-        
+
         let avg = self.average();
-        let variance: f64 = self.samples
-            .iter()
-            .take(count)
-            .map(|x| (x - avg).powi(2))
-            .sum::<f64>() / (count - 1) as f64;
+        let variance: f64 = self.samples.iter().take(count).map(|x| (x - avg).powi(2)).sum::<f64>()
+            / (count - 1) as f64;
         variance.sqrt()
     }
 
     /// 获取百分位数
     pub fn percentile(&self, p: f64) -> f64 {
-        let count = if self.is_full { self.window_size } else { self.current_index };
+        let count = if self.is_full {
+            self.window_size
+        } else {
+            self.current_index
+        };
         if count == 0 {
             return 0.0;
         }
-        
+
         let mut sorted: Vec<f64> = self.samples.iter().take(count).cloned().collect();
         sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
-        
+
         let index = ((p / 100.0) * (count - 1) as f64) as usize;
         sorted[index.min(count - 1)]
     }
 
     /// 获取样本数量
     pub fn sample_count(&self) -> usize {
-        if self.is_full { self.window_size } else { self.current_index }
+        if self.is_full {
+            self.window_size
+        } else {
+            self.current_index
+        }
     }
 
     /// 重置聚合器
@@ -255,7 +273,7 @@ pub struct DataItem {
 }
 
 /// 异步数据传输器
-/// 
+///
 /// 在后台线程中批量处理数据传输，减少主线程开销
 #[derive(Debug)]
 pub struct AsyncDataTransmitter {
@@ -299,11 +317,11 @@ impl AsyncDataTransmitter {
 
         let handle = thread::spawn(move || {
             let mut last_flush = Instant::now();
-            
+
             while running.load(Ordering::Relaxed) {
                 // 检查是否需要刷新
                 let should_flush = last_flush.elapsed() >= config.flush_interval;
-                
+
                 // 获取待处理数据
                 let mut items = Vec::new();
                 {
@@ -314,14 +332,14 @@ impl AsyncDataTransmitter {
                             let excess = queue.len() - config.max_queue_size + config.batch_size;
                             queue.drain(0..excess);
                         }
-                        
+
                         // 批量提取数据
                         let take_count = if should_flush {
                             queue.len()
                         } else {
                             queue.len().min(config.batch_size)
                         };
-                        
+
                         items = queue.drain(0..take_count).collect();
                     }
                 }
@@ -345,15 +363,13 @@ impl AsyncDataTransmitter {
     /// 停止异步传输
     pub fn stop(&mut self) -> ProfilingResult<()> {
         self.running.store(false, Ordering::Relaxed);
-        
+
         if let Some(handle) = self.handle.take() {
             handle.join().map_err(|_| {
-                super::ProfilingError::ProcessingError(
-                    "无法加入异步传输线程".to_string(),
-                )
+                super::ProfilingError::ProcessingError("无法加入异步传输线程".to_string())
             })?;
         }
-        
+
         Ok(())
     }
 
@@ -383,14 +399,14 @@ impl AsyncDataTransmitter {
     fn process_batch(items: &[DataItem], config: &AsyncTransferConfig) {
         // 这里可以实现实际的传输逻辑
         // 例如发送到监控系统、写入文件等
-        
+
         tracing::debug!(
             target: "profiling",
             "处理数据批次: {} 项, 压缩: {}",
             items.len(),
             config.enable_compression
         );
-        
+
         // 模拟处理时间
         thread::sleep(Duration::from_micros(100));
     }
@@ -434,7 +450,7 @@ impl Default for CollectorConfig {
 }
 
 /// 指标收集器
-/// 
+///
 /// 统一收集和管理所有性能指标
 #[derive(Debug)]
 pub struct MetricCollector {
@@ -493,7 +509,9 @@ impl MetricCollector {
         }
 
         // 更新滑动窗口
-        let aggregator = self.aggregators.entry(name.to_string())
+        let aggregator = self
+            .aggregators
+            .entry(name.to_string())
             .or_insert_with(|| SlidingWindowAggregator::new(60)); // 60个样本的窗口
         aggregator.add_sample(value);
 
@@ -528,13 +546,13 @@ impl MetricCollector {
     /// 获取所有指标的当前值
     pub fn get_current_values(&self) -> HashMap<String, u64> {
         let mut values = HashMap::new();
-        
+
         if let Ok(registry) = self.registry.lock() {
             for (name, counter) in registry.get_all_counters() {
                 values.insert(name.clone(), counter.value());
             }
         }
-        
+
         values
     }
 
@@ -543,14 +561,10 @@ impl MetricCollector {
         CollectorStats {
             uptime: self.start_time.elapsed(),
             total_samples: self.total_samples.load(Ordering::Relaxed),
-            metrics_count: self.registry.lock()
-                .map(|r| r.get_all_definitions().len())
-                .unwrap_or(0),
-            queue_size: self.async_transmitter
-                .as_ref()
-                .map(|t| t.queue_size())
-                .unwrap_or(0),
-            transmitted_count: self.async_transmitter
+            metrics_count: self.registry.lock().map(|r| r.get_all_definitions().len()).unwrap_or(0),
+            queue_size: self.async_transmitter.as_ref().map(|t| t.queue_size()).unwrap_or(0),
+            transmitted_count: self
+                .async_transmitter
                 .as_ref()
                 .map(|t| t.transmitted_count())
                 .unwrap_or(0),
@@ -562,11 +576,11 @@ impl MetricCollector {
         if let Ok(registry) = self.registry.lock() {
             registry.reset_all();
         }
-        
+
         for aggregator in self.aggregators.values_mut() {
             aggregator.reset();
         }
-        
+
         self.start_time = Instant::now();
         self.total_samples.store(0, Ordering::Relaxed);
     }
@@ -628,7 +642,7 @@ mod tests {
         let timer = HighPrecisionTimer::new("test");
         thread::sleep(Duration::from_millis(10));
         let elapsed = timer.finish();
-        
+
         assert!(elapsed.as_millis() >= 10);
         assert!(elapsed.as_millis() < 20);
     }
@@ -636,11 +650,11 @@ mod tests {
     #[test]
     fn test_sliding_window_aggregator() {
         let mut aggregator = SlidingWindowAggregator::new(5);
-        
+
         aggregator.add_sample(10.0);
         aggregator.add_sample(20.0);
         aggregator.add_sample(30.0);
-        
+
         assert_eq!(aggregator.average(), 20.0);
         assert_eq!(aggregator.minimum(), 10.0);
         assert_eq!(aggregator.maximum(), 30.0);
@@ -655,10 +669,10 @@ mod tests {
             max_queue_size: 10,
             enable_compression: false,
         };
-        
+
         let mut transmitter = AsyncDataTransmitter::new(config);
         transmitter.start().unwrap();
-        
+
         // 发送测试数据
         for i in 0..5 {
             let item = DataItem {
@@ -669,10 +683,10 @@ mod tests {
             };
             transmitter.send(item).unwrap();
         }
-        
+
         // 等待处理
         thread::sleep(Duration::from_millis(100));
-        
+
         assert!(transmitter.transmitted_count() > 0);
         transmitter.stop().unwrap();
     }
@@ -683,18 +697,18 @@ mod tests {
             enable_async_transfer: false, // 测试时禁用异步传输
             ..Default::default()
         };
-        
+
         let mut collector = MetricCollector::new(config).unwrap();
-        
+
         // 记录一些测试数据
         collector.record_value("test_metric", 42.0);
         collector.record_timing("test_timing", Duration::from_millis(16));
-        
+
         // 检查统计信息
         let stats = collector.get_window_stats("test_metric");
         assert!(stats.is_some());
         assert_eq!(stats.unwrap().average, 42.0);
-        
+
         let current_values = collector.get_current_values();
         assert!(current_values.contains_key("test_metric"));
     }
@@ -705,12 +719,12 @@ mod tests {
             enable_async_transfer: false,
             ..Default::default()
         };
-        
+
         let mut collector = MetricCollector::new(config).unwrap();
         let collector = Arc::new(Mutex::new(collector));
-        
+
         let mut handles = Vec::new();
-        
+
         // 创建多个线程同时记录数据
         for i in 0..10 {
             let collector_clone = Arc::clone(&collector);
@@ -723,12 +737,12 @@ mod tests {
             });
             handles.push(handle);
         }
-        
+
         // 等待所有线程完成
         for handle in handles {
             handle.join().unwrap();
         }
-        
+
         // 验证数据已记录
         if let Ok(collector) = collector.lock() {
             let stats = collector.get_collector_stats();

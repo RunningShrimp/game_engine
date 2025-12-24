@@ -1,9 +1,9 @@
 //  统一错误处理模块
-// 
+//
 //  提供引擎范围内的统一错误类型定义、错误处理策略和恢复机制。
-// 
+//
 //  ## 架构概览
-// 
+//
 //  ```text
 //  ┌─────────────────────────────────────────────────────────┐
 //  │                  错误处理架构                             │
@@ -35,14 +35,18 @@
 
 /// 音频错误类型 - 音频系统特定的错误
 pub mod audio_error;
+#[cfg(test)]
+pub mod concurrency_tests;
 /// 引擎核心错误 - 统一的错误处理类型
 pub mod engine_error;
+/// 统一错误处理器 - 错误处理、恢复和日志的集成
+pub mod error_handler;
 /// 输入错误类型 - 输入系统特定的错误
 pub mod input_error;
 /// 锁安全工具 - 线程安全的锁包装器
 pub mod lock_safety;
-#[cfg(test)]
-pub mod concurrency_tests;
+/// 统一日志管理 - 日志系统和错误处理的集成
+pub mod logging;
 /// 错误监控 - 错误的监控和统计
 pub mod monitoring;
 /// 物理错误类型 - 物理系统特定的错误
@@ -57,10 +61,6 @@ pub mod resource_error;
 pub mod retry;
 /// 系统错误类型 - 系统级别的错误
 pub mod system_error;
-/// 统一日志管理 - 日志系统和错误处理的集成
-pub mod logging;
-/// 统一错误处理器 - 错误处理、恢复和日志的集成
-pub mod error_handler;
 
 // Serde imports for serialization/deserialization
 use serde::{Deserialize, Serialize};
@@ -70,13 +70,13 @@ pub use audio_error::AudioError;
 pub use engine_error::EngineError;
 pub use input_error::InputError;
 pub use physics_error::PhysicsError;
-pub use render_error::RenderError;
-pub use resource_error::ResourceError;
-pub use system_error::SystemError;
-/// 脚本相关错误
-pub use script_error::ScriptError;
 /// 平台相关错误
 pub use platform_error::PlatformError;
+pub use render_error::RenderError;
+pub use resource_error::ResourceError;
+/// 脚本相关错误
+pub use script_error::ScriptError;
+pub use system_error::SystemError;
 
 // 重新导出错误处理策略
 pub use lock_safety::{
@@ -95,8 +95,8 @@ pub use retry::{RetryCondition, RetryConfig, RetryExecutor, RetryPolicy, RetryRe
 
 // Re-export Logging components
 pub use logging::{
-    init_logger, log, log_error, ConsoleLogSink, FileLogSink, LogEntry, LogLevel, Logger,
-    LoggingConfig, LogSink,
+    ConsoleLogSink, FileLogSink, LogEntry, LogLevel, LogSink, Logger, LoggingConfig, init_logger,
+    log, log_error,
 };
 
 // Re-export Error Handler components
@@ -119,7 +119,7 @@ pub enum ErrorSeverity {
 
 impl ErrorSeverity {
     /// 获取严重级别的字符串表示
-    /// 
+    ///
     /// # Returns
     /// 返回严重级别的简洁字符串表示（"INFO", "WARNING", "ERROR", "CRITICAL", "FATAL"）
     pub fn as_str(&self) -> &'static str {
@@ -133,10 +133,10 @@ impl ErrorSeverity {
     }
 
     /// 从字符串解析严重级别
-    /// 
+    ///
     /// # Arguments
     /// * `s` - 要解析的字符串（大小写不敏感）
-    /// 
+    ///
     /// # Returns
     /// 如果字符串有效返回Some(严重级别)，否则返回None
     pub fn from_str(s: &str) -> Option<Self> {
@@ -178,7 +178,7 @@ pub enum ErrorCategory {
 
 impl ErrorCategory {
     /// 获取分类的字符串表示
-    /// 
+    ///
     /// # Returns
     /// 返回分类的简洁字符串表示
     pub fn as_str(&self) -> &'static str {
@@ -282,8 +282,12 @@ pub mod platform_error {
         /// Gets the severity level of this platform error
         pub fn severity(&self) -> ErrorSeverity {
             match self {
-                PlatformError::WindowCreation(_) | PlatformError::EventLoop(_) => ErrorSeverity::Error,
-                PlatformError::InputDevice(_) | PlatformError::Filesystem(_) => ErrorSeverity::Warning,
+                PlatformError::WindowCreation(_) | PlatformError::EventLoop(_) => {
+                    ErrorSeverity::Error
+                }
+                PlatformError::InputDevice(_) | PlatformError::Filesystem(_) => {
+                    ErrorSeverity::Warning
+                }
                 PlatformError::NotSupported(_) => ErrorSeverity::Info,
             }
         }

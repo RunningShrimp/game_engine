@@ -1,5 +1,5 @@
 //  控制台平台支持模块
-// 
+//
 //  提供游戏主机平台的抽象和优化
 
 use crate::config::graphics::{GraphicsConfig, QualityLevel};

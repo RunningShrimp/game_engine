@@ -186,8 +186,7 @@ impl RegressionTestSuite {
 
     /// 注册基线
     pub fn register_baseline(&mut self, baseline: PerformanceBaseline) {
-        self.baselines
-            .insert(baseline.metric_name.clone(), baseline);
+        self.baselines.insert(baseline.metric_name.clone(), baseline);
     }
 
     /// 注册多个基线
@@ -203,10 +202,7 @@ impl RegressionTestSuite {
         metric_name: &str,
         current_value: f64,
     ) -> Result<RegressionTestResult, &'static str> {
-        let baseline = self
-            .baselines
-            .get(metric_name)
-            .ok_or("Metric not found in baseline")?;
+        let baseline = self.baselines.get(metric_name).ok_or("Metric not found in baseline")?;
 
         let result = RegressionTestResult::new(baseline, current_value);
         self.results.push(result.clone());

@@ -4,7 +4,7 @@
 // ============================================================================
 
 use super::*;
-use glam::{Vec3, Mat4};
+use glam::{Mat4, Vec3};
 use std::collections::HashMap;
 
 /// 空间网格顶点
@@ -306,11 +306,8 @@ impl SpatialMappingManager {
         // 限制最大网格数量
         if self.meshes.len() >= self.config.max_mesh_count {
             // 移除最旧的网格
-            if let Some(oldest_id) = self
-                .meshes
-                .iter()
-                .min_by_key(|(_, m)| m.last_updated)
-                .map(|(id, _)| *id)
+            if let Some(oldest_id) =
+                self.meshes.iter().min_by_key(|(_, m)| m.last_updated).map(|(id, _)| *id)
             {
                 self.meshes.remove(&oldest_id);
             }
@@ -387,11 +384,8 @@ impl SpatialMappingManager {
         // 限制最大平面数量
         if self.planes.len() >= self.config.max_plane_count {
             // 移除最旧的平面
-            if let Some(oldest_id) = self
-                .planes
-                .iter()
-                .min_by_key(|(_, p)| p.last_updated)
-                .map(|(id, _)| *id)
+            if let Some(oldest_id) =
+                self.planes.iter().min_by_key(|(_, p)| p.last_updated).map(|(id, _)| *id)
             {
                 self.planes.remove(&oldest_id);
             }
@@ -453,10 +447,7 @@ impl SpatialMappingManager {
     /// let horizontal_planes = manager.query_planes_by_type(PlaneType::HorizontalUp);
     /// ```
     pub fn query_planes_by_type(&self, plane_type: PlaneType) -> Vec<&DetectedPlane> {
-        self.planes
-            .values()
-            .filter(|p| p.plane_type == plane_type)
-            .collect()
+        self.planes.values().filter(|p| p.plane_type == plane_type).collect()
     }
 
     /// 移除检测到的平面
@@ -666,4 +657,3 @@ mod tests {
         assert_eq!(vertical_planes.len(), 1);
     }
 }
-

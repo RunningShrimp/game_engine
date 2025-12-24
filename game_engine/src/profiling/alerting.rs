@@ -1,5 +1,5 @@
 //  性能告警模块
-// 
+//
 //  提供阈值告警、趋势异常检测、多级告警和通知集成功能。
 
 use std::collections::{HashMap, VecDeque};
@@ -415,17 +415,19 @@ impl AlertingEngine {
 
     /// 添加告警策略
     pub fn add_strategy(&mut self, metric_name: &str, strategy: AlertStrategy) {
-        let strategies = self.alert_strategies.entry(metric_name.to_string()).or_insert_with(Vec::new);
+        let strategies =
+            self.alert_strategies.entry(metric_name.to_string()).or_insert_with(Vec::new);
         strategies.push(strategy);
     }
 
     /// 更新指标值
     pub fn update_metric(&mut self, metric_name: &str, value: f64) {
-        let values = self.metric_values.entry(metric_name.to_string()).or_insert_with(VecDeque::new);
-        
+        let values =
+            self.metric_values.entry(metric_name.to_string()).or_insert_with(VecDeque::new);
+
         // 添加新值
         values.push_back(value);
-        
+
         // 限制历史数据大小
         let max_history = 1000; // 保留1000个历史值
         while values.len() > max_history {
@@ -439,15 +441,17 @@ impl AlertingEngine {
         if now.duration_since(self.last_check_time) < self.config.check_interval {
             return Ok(Vec::new());
         }
-        
+
         let mut new_alerts = Vec::new();
-        
+
         // 检查每个指标的告警策略
         for (metric_name, strategies) in &self.alert_strategies {
             if let Some(values) = self.metric_values.get(metric_name) {
                 if let Some(&current_value) = values.back() {
                     for strategy in strategies {
-                        if let Some(alert) = self.evaluate_strategy(metric_name, current_value, values, strategy)? {
+                        if let Some(alert) =
+                            self.evaluate_strategy(metric_name, current_value, values, strategy)?
+                        {
                             // 检查去重
                             if !self.is_duplicate_alert(metric_name, &alert) {
                                 new_alerts.push(alert);
@@ -457,21 +461,21 @@ impl AlertingEngine {
                 }
             }
         }
-        
+
         // 处理新告警
         for alert in &new_alerts {
             self.add_alert(alert.clone());
         }
-        
+
         // 检查恢复告警
         self.check_resolved_alerts();
-        
+
         // 清理过期告警
         self.cleanup_expired_alerts();
-        
+
         // 发送通知
         self.send_notifications(&new_alerts)?;
-        
+
         self.last_check_time = now;
         Ok(new_alerts)
     }
@@ -494,9 +498,12 @@ impl AlertingEngine {
             AlertStrategy::Anomaly(anomaly_strategy) => {
                 self.evaluate_anomaly_strategy(metric_name, historical_values, anomaly_strategy)
             }
-            AlertStrategy::Composite(composite_strategy) => {
-                self.evaluate_composite_strategy(metric_name, current_value, historical_values, composite_strategy)
-            }
+            AlertStrategy::Composite(composite_strategy) => self.evaluate_composite_strategy(
+                metric_name,
+                current_value,
+                historical_values,
+                composite_strategy,
+            ),
         }
     }
 
@@ -508,15 +515,26 @@ impl AlertingEngine {
         strategy: &ThresholdAlertStrategy,
     ) -> ProfilingResult<Option<AlertInstance>> {
         let should_alert = strategy.operator.evaluate(current_value, strategy.threshold);
-        
+
         if should_alert {
             let alert = AlertInstance {
-                id: format!("alert_{}_{}", metric_name, std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis()),
+                id: format!(
+                    "alert_{}_{}",
+                    metric_name,
+                    std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap()
+                        .as_millis()
+                ),
                 name: format!("{}阈值告警", metric_name),
                 level: strategy.level,
                 metric_name: metric_name.to_string(),
                 current_value,
-                condition: format!("{} {}", Self::operator_to_string(strategy.operator), strategy.threshold),
+                condition: format!(
+                    "{} {}",
+                    Self::operator_to_string(strategy.operator),
+                    strategy.threshold
+                ),
                 message: format!(
                     "{} {} {} (当前: {}, 阈值: {})",
                     metric_name,
@@ -525,15 +543,21 @@ impl AlertingEngine {
                     current_value,
                     strategy.threshold
                 ),
-                created_at: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
-                updated_at: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
+                created_at: std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs(),
+                updated_at: std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs(),
                 acknowledged_at: None,
                 resolved_at: None,
                 status: AlertStatus::Active,
                 strategy: AlertStrategy::Threshold(strategy.clone()),
                 metadata: HashMap::new(),
             };
-            
+
             Ok(Some(alert))
         } else {
             Ok(None)
@@ -552,16 +576,12 @@ impl AlertingEngine {
         }
 
         // 提取窗口数据
-        let window_data: Vec<f64> = historical_values
-            .iter()
-            .rev()
-            .take(strategy.window_size)
-            .cloned()
-            .collect();
+        let window_data: Vec<f64> =
+            historical_values.iter().rev().take(strategy.window_size).cloned().collect();
 
         // 计算趋势
         let trend_direction = self.calculate_trend(&window_data);
-        
+
         // 检查趋势方向匹配
         if let Some(required_direction) = strategy.trend_direction {
             if trend_direction != required_direction {
@@ -574,14 +594,27 @@ impl AlertingEngine {
         let confidence = self.calculate_confidence(&window_data);
 
         // 检查阈值
-        if change_rate.abs() >= strategy.change_rate_threshold && confidence >= strategy.confidence_threshold {
+        if change_rate.abs() >= strategy.change_rate_threshold
+            && confidence >= strategy.confidence_threshold
+        {
             let alert = AlertInstance {
-                id: format!("trend_alert_{}_{}", metric_name, std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis()),
+                id: format!(
+                    "trend_alert_{}_{}",
+                    metric_name,
+                    std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap()
+                        .as_millis()
+                ),
                 name: format!("{}趋势告警", metric_name),
                 level: strategy.level,
                 metric_name: metric_name.to_string(),
                 current_value: *window_data.last().unwrap(),
-                condition: format!("趋势变化率 {:.2}% (置信度: {:.2}%)", change_rate, confidence * 100.0),
+                condition: format!(
+                    "趋势变化率 {:.2}% (置信度: {:.2}%)",
+                    change_rate,
+                    confidence * 100.0
+                ),
                 message: format!(
                     "{}检测到{}趋势，变化率: {:.2}%，置信度: {:.2}%",
                     metric_name,
@@ -589,21 +622,30 @@ impl AlertingEngine {
                     change_rate,
                     confidence * 100.0
                 ),
-                created_at: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
-                updated_at: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
+                created_at: std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs(),
+                updated_at: std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs(),
                 acknowledged_at: None,
                 resolved_at: None,
                 status: AlertStatus::Active,
                 strategy: AlertStrategy::Trend(strategy.clone()),
                 metadata: {
                     let mut meta = HashMap::new();
-                    meta.insert("trend_direction".to_string(), trend_direction.as_str().to_string());
+                    meta.insert(
+                        "trend_direction".to_string(),
+                        trend_direction.as_str().to_string(),
+                    );
                     meta.insert("change_rate".to_string(), change_rate.to_string());
                     meta.insert("confidence".to_string(), confidence.to_string());
                     meta
                 },
             };
-            
+
             Ok(Some(alert))
         } else {
             Ok(None)
@@ -624,15 +666,27 @@ impl AlertingEngine {
         let anomaly_score = match strategy.algorithm {
             AnomalyAlgorithm::ZScore => self.calculate_zscore_anomaly(historical_values),
             AnomalyAlgorithm::IQR => self.calculate_iqr_anomaly(historical_values),
-            AnomalyAlgorithm::IsolationForest => self.calculate_isolation_forest_anomaly(historical_values),
-            AnomalyAlgorithm::MovingAverageDeviation => self.calculate_moving_average_anomaly(historical_values),
+            AnomalyAlgorithm::IsolationForest => {
+                self.calculate_isolation_forest_anomaly(historical_values)
+            }
+            AnomalyAlgorithm::MovingAverageDeviation => {
+                self.calculate_moving_average_anomaly(historical_values)
+            }
         };
 
-        let threshold = strategy.anomaly_score_threshold * strategy.sensitivity.threshold_multiplier();
-        
+        let threshold =
+            strategy.anomaly_score_threshold * strategy.sensitivity.threshold_multiplier();
+
         if anomaly_score >= threshold {
             let alert = AlertInstance {
-                id: format!("anomaly_alert_{}_{}", metric_name, std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis()),
+                id: format!(
+                    "anomaly_alert_{}_{}",
+                    metric_name,
+                    std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap()
+                        .as_millis()
+                ),
                 name: format!("{}异常检测告警", metric_name),
                 level: strategy.level,
                 metric_name: metric_name.to_string(),
@@ -640,12 +694,16 @@ impl AlertingEngine {
                 condition: format!("异常分数 {:.2} (阈值: {:.2})", anomaly_score, threshold),
                 message: format!(
                     "{}检测到异常，异常分数: {:.2}，算法: {:?}",
-                    metric_name,
-                    anomaly_score,
-                    strategy.algorithm
+                    metric_name, anomaly_score, strategy.algorithm
                 ),
-                created_at: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
-                updated_at: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
+                created_at: std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs(),
+                updated_at: std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs(),
                 acknowledged_at: None,
                 resolved_at: None,
                 status: AlertStatus::Active,
@@ -654,11 +712,14 @@ impl AlertingEngine {
                     let mut meta = HashMap::new();
                     meta.insert("anomaly_score".to_string(), anomaly_score.to_string());
                     meta.insert("algorithm".to_string(), format!("{:?}", strategy.algorithm));
-                    meta.insert("sensitivity".to_string(), format!("{:?}", strategy.sensitivity));
+                    meta.insert(
+                        "sensitivity".to_string(),
+                        format!("{:?}", strategy.sensitivity),
+                    );
                     meta
                 },
             };
-            
+
             Ok(Some(alert))
         } else {
             Ok(None)
@@ -674,9 +735,11 @@ impl AlertingEngine {
         strategy: &CompositeAlertStrategy,
     ) -> ProfilingResult<Option<AlertInstance>> {
         let mut matched_alerts = Vec::new();
-        
+
         for sub_strategy in &strategy.sub_strategies {
-            if let Some(alert) = self.evaluate_strategy(metric_name, current_value, historical_values, sub_strategy)? {
+            if let Some(alert) =
+                self.evaluate_strategy(metric_name, current_value, historical_values, sub_strategy)?
+            {
                 matched_alerts.push(alert);
             }
         }
@@ -689,13 +752,21 @@ impl AlertingEngine {
 
         if should_alert && !matched_alerts.is_empty() {
             // 合并告警信息
-            let highest_level = matched_alerts.iter()
+            let highest_level = matched_alerts
+                .iter()
                 .map(|a| a.level)
                 .max_by(|a, b| a.partial_cmp(b).unwrap())
                 .unwrap();
 
             let alert = AlertInstance {
-                id: format!("composite_alert_{}_{}", metric_name, std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis()),
+                id: format!(
+                    "composite_alert_{}_{}",
+                    metric_name,
+                    std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap()
+                        .as_millis()
+                ),
                 name: format!("{}复合告警", metric_name),
                 level: highest_level,
                 metric_name: metric_name.to_string(),
@@ -706,20 +777,29 @@ impl AlertingEngine {
                     metric_name,
                     matched_alerts.len()
                 ),
-                created_at: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
-                updated_at: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
+                created_at: std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs(),
+                updated_at: std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs(),
                 acknowledged_at: None,
                 resolved_at: None,
                 status: AlertStatus::Active,
                 strategy: AlertStrategy::Composite(strategy.clone()),
                 metadata: {
                     let mut meta = HashMap::new();
-                    meta.insert("sub_alerts".to_string(), format!("{}", matched_alerts.len()));
+                    meta.insert(
+                        "sub_alerts".to_string(),
+                        format!("{}", matched_alerts.len()),
+                    );
                     meta.insert("operator".to_string(), format!("{:?}", strategy.operator));
                     meta
                 },
             };
-            
+
             Ok(Some(alert))
         } else {
             Ok(None)
@@ -729,21 +809,24 @@ impl AlertingEngine {
     /// 添加告警
     fn add_alert(&mut self, alert: AlertInstance) {
         let alert_id = alert.id.clone();
-        
+
         // 检查是否已存在
         if let Some(existing_alert) = self.active_alerts.get_mut(&alert_id) {
             // 更新现有告警
-            existing_alert.updated_at = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
+            existing_alert.updated_at = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs();
             existing_alert.current_value = alert.current_value;
             return;
         }
-        
+
         // 添加到历史记录（在移动alert之前）
         self.alert_history.push_back(alert.clone());
-        
+
         // 添加新告警
         self.active_alerts.insert(alert_id, alert);
-        
+
         // 限制历史记录大小
         while self.active_alerts.len() > self.config.alert_history_size {
             if let Some(key) = self.active_alerts.keys().next().cloned() {
@@ -756,16 +839,21 @@ impl AlertingEngine {
 
     /// 检查恢复告警
     fn check_resolved_alerts(&mut self) {
-        let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
-        
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+
         let mut alerts_to_resolve = Vec::new();
-        
+
         for (alert_id, alert) in &self.active_alerts {
             if alert.status == AlertStatus::Active {
                 // 重新评估告警条件
                 if let Some(historical_values) = self.metric_values.get(&alert.metric_name) {
                     if let Some(&current_value) = historical_values.back() {
-                        if let Ok(should_resolve) = self.should_resolve_alert(alert, current_value, historical_values) {
+                        if let Ok(should_resolve) =
+                            self.should_resolve_alert(alert, current_value, historical_values)
+                        {
                             if should_resolve {
                                 alerts_to_resolve.push((alert_id.clone(), now));
                             }
@@ -774,7 +862,7 @@ impl AlertingEngine {
                 }
             }
         }
-        
+
         for (alert_id, resolved_time) in alerts_to_resolve {
             if let Some(alert) = self.active_alerts.get_mut(&alert_id) {
                 alert.status = AlertStatus::Resolved;
@@ -792,9 +880,9 @@ impl AlertingEngine {
         historical_values: &VecDeque<f64>,
     ) -> ProfilingResult<bool> {
         match &alert.strategy {
-            AlertStrategy::Threshold(threshold_strategy) => {
-                Ok(!threshold_strategy.operator.evaluate(current_value, threshold_strategy.threshold))
-            }
+            AlertStrategy::Threshold(threshold_strategy) => Ok(!threshold_strategy
+                .operator
+                .evaluate(current_value, threshold_strategy.threshold)),
             AlertStrategy::Trend(_) => {
                 // 趋势告警通常需要手动确认
                 Ok(false)
@@ -803,11 +891,16 @@ impl AlertingEngine {
                 let anomaly_score = match anomaly_strategy.algorithm {
                     AnomalyAlgorithm::ZScore => self.calculate_zscore_anomaly(historical_values),
                     AnomalyAlgorithm::IQR => self.calculate_iqr_anomaly(historical_values),
-                    AnomalyAlgorithm::IsolationForest => self.calculate_isolation_forest_anomaly(historical_values),
-                    AnomalyAlgorithm::MovingAverageDeviation => self.calculate_moving_average_anomaly(historical_values),
+                    AnomalyAlgorithm::IsolationForest => {
+                        self.calculate_isolation_forest_anomaly(historical_values)
+                    }
+                    AnomalyAlgorithm::MovingAverageDeviation => {
+                        self.calculate_moving_average_anomaly(historical_values)
+                    }
                 };
-                
-                let threshold = anomaly_strategy.anomaly_score_threshold * anomaly_strategy.sensitivity.threshold_multiplier();
+
+                let threshold = anomaly_strategy.anomaly_score_threshold
+                    * anomaly_strategy.sensitivity.threshold_multiplier();
                 Ok(anomaly_score < threshold)
             }
             AlertStrategy::Composite(_) => {
@@ -819,13 +912,16 @@ impl AlertingEngine {
 
     /// 清理过期告警
     fn cleanup_expired_alerts(&mut self) {
-        let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
-        
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+
         self.active_alerts.retain(|_, alert| {
             // 移除超过最大活跃时间的告警
             let alert_age = now - alert.created_at;
             let max_age = 24 * 60 * 60; // 24小时
-            
+
             alert_age < max_age
         });
     }
@@ -833,10 +929,10 @@ impl AlertingEngine {
     /// 检查是否为重复告警
     fn is_duplicate_alert(&self, metric_name: &str, new_alert: &AlertInstance) -> bool {
         for alert in self.active_alerts.values() {
-            if alert.metric_name == metric_name 
+            if alert.metric_name == metric_name
                 && alert.status == AlertStatus::Active
-                && alert.level == new_alert.level {
-                
+                && alert.level == new_alert.level
+            {
                 let time_diff = new_alert.created_at.saturating_sub(alert.created_at);
                 if time_diff < self.config.deduplication_window.as_secs() {
                     return true;
@@ -857,7 +953,7 @@ impl AlertingEngine {
                 let _: ProfilingResult<()> = sender.send_alert(alert);
             }
         }
-        
+
         Ok(())
     }
 
@@ -869,7 +965,7 @@ impl AlertingEngine {
 
         let first = values[0];
         let last = values[values.len() - 1];
-        
+
         if last > first * 1.1 {
             TrendDirection::Increasing
         } else if last < first * 0.9 {
@@ -886,7 +982,7 @@ impl AlertingEngine {
 
         let first = values[0];
         let last = values[values.len() - 1];
-        
+
         if first.abs() < f64::EPSILON {
             return 0.0;
         }
@@ -901,23 +997,21 @@ impl AlertingEngine {
 
         let n = values.len() as f64;
         let indices: Vec<f64> = (0..values.len()).map(|i| i as f64).collect();
-        
+
         let mean_x = indices.iter().sum::<f64>() / n;
         let mean_y = values.iter().sum::<f64>() / n;
-        
-        let numerator: f64 = indices.iter().zip(values.iter())
+
+        let numerator: f64 = indices
+            .iter()
+            .zip(values.iter())
             .map(|(x, y)| (x - mean_x) * (y - mean_y))
             .sum();
-        
-        let sum_x2: f64 = indices.iter()
-            .map(|x| (x - mean_x).powi(2))
-            .sum();
-        let sum_y2: f64 = values.iter()
-            .map(|y| (y - mean_y).powi(2))
-            .sum();
-        
+
+        let sum_x2: f64 = indices.iter().map(|x| (x - mean_x).powi(2)).sum();
+        let sum_y2: f64 = values.iter().map(|y| (y - mean_y).powi(2)).sum();
+
         let denominator = (sum_x2 * sum_y2).sqrt();
-        
+
         if denominator < f64::EPSILON {
             return 0.0;
         }
@@ -932,9 +1026,7 @@ impl AlertingEngine {
         }
 
         let mean = values.iter().sum::<f64>() / values.len() as f64;
-        let variance = values.iter()
-            .map(|v| (v - mean).powi(2))
-            .sum::<f64>() / values.len() as f64;
+        let variance = values.iter().map(|v| (v - mean).powi(2)).sum::<f64>() / values.len() as f64;
         let std_dev = variance.sqrt();
 
         let current = *values.back().unwrap();
@@ -959,7 +1051,7 @@ impl AlertingEngine {
         let iqr = q3 - q1;
 
         let current = *values.back().unwrap();
-        
+
         if current < q1 - 1.5 * iqr || current > q3 + 1.5 * iqr {
             ((current - q1).abs().max((current - q3).abs())) / iqr
         } else {
@@ -979,14 +1071,12 @@ impl AlertingEngine {
 
         let window_size = (values.len() / 3).min(20);
         let current = *values.back().unwrap();
-        
-        let recent_avg: f64 = values.iter()
-            .rev()
-            .take(window_size)
-            .sum::<f64>() / window_size as f64;
-        
+
+        let recent_avg: f64 =
+            values.iter().rev().take(window_size).sum::<f64>() / window_size as f64;
+
         let overall_avg = values.iter().sum::<f64>() / values.len() as f64;
-        
+
         if overall_avg < f64::EPSILON {
             return 0.0;
         }
@@ -1026,7 +1116,10 @@ impl AlertingEngine {
             if alert.status == AlertStatus::Active {
                 alert.status = AlertStatus::Acknowledged;
                 alert.acknowledged_at = Some(
-                    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs()
+                    std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap()
+                        .as_secs(),
                 );
                 return true;
             }
@@ -1077,7 +1170,11 @@ impl NotificationSender {
     }
 
     /// 发送邮件通知
-    fn send_email_notification(&self, alert: &AlertInstance, _config: &EmailConfig) -> ProfilingResult<()> {
+    fn send_email_notification(
+        &self,
+        alert: &AlertInstance,
+        _config: &EmailConfig,
+    ) -> ProfilingResult<()> {
         // 简化实现，实际应使用SMTP库
         tracing::info!(
             target: "profiling",
@@ -1089,7 +1186,11 @@ impl NotificationSender {
     }
 
     /// 发送Webhook通知
-    fn send_webhook_notification(&self, alert: &AlertInstance, webhook_url: &str) -> ProfilingResult<()> {
+    fn send_webhook_notification(
+        &self,
+        alert: &AlertInstance,
+        webhook_url: &str,
+    ) -> ProfilingResult<()> {
         // 简化实现，实际应使用HTTP客户端
         tracing::info!(
             target: "profiling",
@@ -1162,13 +1263,16 @@ mod tests {
         let mut engine = AlertingEngine::new(config);
 
         // 添加阈值告警策略
-        engine.add_strategy("test_metric", AlertStrategy::Threshold(ThresholdAlertStrategy {
-            level: AlertLevel::Warning,
-            threshold: 50.0,
-            operator: AlertOperator::GreaterThan,
-            duration: Duration::from_secs(5),
-            enable_recovery_notification: true,
-        }));
+        engine.add_strategy(
+            "test_metric",
+            AlertStrategy::Threshold(ThresholdAlertStrategy {
+                level: AlertLevel::Warning,
+                threshold: 50.0,
+                operator: AlertOperator::GreaterThan,
+                duration: Duration::from_secs(5),
+                enable_recovery_notification: true,
+            }),
+        );
 
         // 更新指标值
         engine.update_metric("test_metric", 60.0);
@@ -1183,7 +1287,7 @@ mod tests {
     #[test]
     fn test_notification_sender() {
         let mut sender = NotificationSender::new();
-        
+
         let alert = AlertInstance {
             id: "test_alert".to_string(),
             name: "测试告警".to_string(),

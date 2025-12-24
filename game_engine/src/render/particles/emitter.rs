@@ -1,5 +1,5 @@
 //  粒子发射器组件和 GPU 粒子系统
-// 
+//
 //  支持大规模粒子模拟，完全在 GPU 上执行。
 
 use crate::impl_default;
@@ -225,8 +225,7 @@ impl ColorGradient {
 
     pub fn add_stop(mut self, time: f32, color: Vec4) -> Self {
         self.stops.push(ColorStop { time, color });
-        self.stops
-            .sort_by(|a, b| a.time.partial_cmp(&b.time).unwrap());
+        self.stops.sort_by(|a, b| a.time.partial_cmp(&b.time).unwrap());
         self
     }
 

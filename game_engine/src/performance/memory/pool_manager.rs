@@ -9,7 +9,7 @@
 //! 3. **性能监控**：跟踪池的使用情况和性能指标
 //! 4. **线程安全**：所有池都是线程安全的
 
-use game_engine_performance::memory::object_pool::{SyncObjectPool, PoolStats};
+use game_engine_performance::memory::object_pool::{PoolStats, SyncObjectPool};
 use glam::{Mat4, Vec3};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -43,44 +43,20 @@ impl PoolManager {
         Self {
             vec_u8_pool: Arc::new(SyncObjectPool::new(
                 || Vec::<u8>::new(),
-                32,   // 初始大小
-                256,  // 最大大小
+                32,  // 初始大小
+                256, // 最大大小
             )),
-            vec_f32_pool: Arc::new(SyncObjectPool::new(
-                || Vec::<f32>::new(),
-                32,
-                256,
-            )),
-            vec_vec3_pool: Arc::new(SyncObjectPool::new(
-                || Vec::<Vec3>::new(),
-                16,
-                128,
-            )),
-            vec_mat4_pool: Arc::new(SyncObjectPool::new(
-                || Vec::<Mat4>::new(),
-                16,
-                128,
-            )),
-            string_pool: Arc::new(SyncObjectPool::new(
-                || String::new(),
-                32,
-                256,
-            )),
+            vec_f32_pool: Arc::new(SyncObjectPool::new(|| Vec::<f32>::new(), 32, 256)),
+            vec_vec3_pool: Arc::new(SyncObjectPool::new(|| Vec::<Vec3>::new(), 16, 128)),
+            vec_mat4_pool: Arc::new(SyncObjectPool::new(|| Vec::<Mat4>::new(), 16, 128)),
+            string_pool: Arc::new(SyncObjectPool::new(|| String::new(), 32, 256)),
             hashmap_string_pool: Arc::new(SyncObjectPool::new(
                 || HashMap::<String, String>::new(),
                 16,
                 128,
             )),
-            vec_u32_pool: Arc::new(SyncObjectPool::new(
-                || Vec::<u32>::new(),
-                32,
-                256,
-            )),
-            vec_vec3_pool_extended: Arc::new(SyncObjectPool::new(
-                || Vec::<Vec3>::new(),
-                32,
-                256,
-            )),
+            vec_u32_pool: Arc::new(SyncObjectPool::new(|| Vec::<u32>::new(), 32, 256)),
+            vec_vec3_pool_extended: Arc::new(SyncObjectPool::new(|| Vec::<Vec3>::new(), 32, 256)),
         }
     }
 
@@ -481,4 +457,3 @@ mod tests {
         assert_eq!(s.len(), 0);
     }
 }
-

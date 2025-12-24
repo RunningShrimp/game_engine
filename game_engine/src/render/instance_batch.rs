@@ -1,17 +1,17 @@
 //  3D 网格实例化批处理模块
-// 
+//
 //  通过将相同 Mesh + Material 的对象合并为单次 Draw Call，
 //  减少 70-90% 的渲染开销。
-// 
+//
 //  ## SIMD 优化
-// 
+//
 //  本模块使用 game_engine_simd 库进行 SIMD 优化：
 //  - 批量矩阵变换使用 AVX2/NEON 指令集
 //  - 包围体计算使用向量化算法
 //  - 实例数据更新使用批量内存操作
-// 
+//
 //  ## 架构设计
-// 
+//
 //  ```text
 //  ┌─────────────────────────────────────────────────────────┐
 //  │                  Instance Batching Pipeline              │
@@ -226,14 +226,12 @@ impl Instance3DDirtyTracker {
         // 调整容量
         if new_count > self.instance_dirty.len() {
             let additional = new_count - self.instance_dirty.len();
-            self.instance_dirty
-                .extend(std::iter::repeat(true).take(additional));
+            self.instance_dirty.extend(std::iter::repeat(true).take(additional));
 
             let new_chunk_count = (new_count + self.chunk_size - 1) / self.chunk_size;
             if new_chunk_count > self.chunk_dirty.len() {
                 let chunk_additional = new_chunk_count - self.chunk_dirty.len();
-                self.chunk_dirty
-                    .extend(std::iter::repeat(true).take(chunk_additional));
+                self.chunk_dirty.extend(std::iter::repeat(true).take(chunk_additional));
             }
         }
 
@@ -533,7 +531,8 @@ impl InstanceBatch {
         }
 
         self.update_count += 1;
-        let was_full_rebuild = self.instance_buffer.is_none() || self.buffer_capacity < self.instances.len();
+        let was_full_rebuild =
+            self.instance_buffer.is_none() || self.buffer_capacity < self.instances.len();
 
         // 1. 检查容量并调整缓冲区
         if was_full_rebuild {
@@ -972,11 +971,8 @@ impl BatchManager {
         }
 
         // 2. 对实例按X坐标排序（简单的空间排序策略）
-        instance_centers.sort_by(|a, b| {
-            a.1[0]
-                .partial_cmp(&b.1[0])
-                .unwrap_or(std::cmp::Ordering::Equal)
-        });
+        instance_centers
+            .sort_by(|a, b| a.1[0].partial_cmp(&b.1[0]).unwrap_or(std::cmp::Ordering::Equal));
 
         // 3. 创建批次，按空间排序后的顺序分组
         let mut batch_instances: Vec<Vec<Instance3D>> =
@@ -1049,10 +1045,7 @@ impl BatchManager {
                     batch.key.blend_mode,
                     batch.key.depth_test,
                 );
-                render_state_groups
-                    .entry(render_state_key)
-                    .or_insert_with(Vec::new)
-                    .push(*key);
+                render_state_groups.entry(render_state_key).or_insert_with(Vec::new).push(*key);
             }
         }
 
@@ -1084,10 +1077,7 @@ impl BatchManager {
         for key in &batch_keys {
             if let Some(batch) = self.batches.get(key) {
                 let mm_key = (batch.key.mesh_id, batch.key.material_id);
-                material_mesh_groups
-                    .entry(mm_key)
-                    .or_insert_with(Vec::new)
-                    .push(*key);
+                material_mesh_groups.entry(mm_key).or_insert_with(Vec::new).push(*key);
             }
         }
 
@@ -1144,9 +1134,7 @@ impl BatchManager {
         while temp_batches.len() > 1 {
             // 按实例数排序，从最小的开始合并
             temp_batches.sort_by_key(|key| {
-                self.batches
-                    .get(key)
-                    .map_or(0, |batch| batch.instance_count() as usize)
+                self.batches.get(key).map_or(0, |batch| batch.instance_count() as usize)
             });
 
             let first_key = temp_batches[0];
@@ -1154,14 +1142,10 @@ impl BatchManager {
 
             // 检查总实例数
             let total_instances: usize = {
-                let first_count = self
-                    .batches
-                    .get(&first_key)
-                    .map_or(0, |b| b.instance_count() as usize);
-                let second_count = self
-                    .batches
-                    .get(&second_key)
-                    .map_or(0, |b| b.instance_count() as usize);
+                let first_count =
+                    self.batches.get(&first_key).map_or(0, |b| b.instance_count() as usize);
+                let second_count =
+                    self.batches.get(&second_key).map_or(0, |b| b.instance_count() as usize);
                 first_count + second_count
             };
 
@@ -1262,15 +1246,11 @@ impl BatchManager {
         );
 
         // 添加源批次的实例
-        new_batch
-            .instances
-            .extend_from_slice(&source_batch.instances);
+        new_batch.instances.extend_from_slice(&source_batch.instances);
 
         // 添加目标批次的实例
         // 注意：这里目标批次的实例将使用源批次的材质和网格
-        new_batch
-            .instances
-            .extend_from_slice(&target_batch.instances);
+        new_batch.instances.extend_from_slice(&target_batch.instances);
 
         // 复制额外绑定组
         new_batch.extra_material_bind_groups = source_batch.extra_material_bind_groups.clone();
@@ -1451,11 +1431,7 @@ impl BatchManager {
         let mut sorted_keys: Vec<_> = self
             .visible_batch_keys
             .iter()
-            .filter(|key| {
-                self.batches
-                    .get(key)
-                    .map_or(false, |batch| !batch.instances.is_empty())
-            })
+            .filter(|key| self.batches.get(key).map_or(false, |batch| !batch.instances.is_empty()))
             .cloned()
             .collect();
 
@@ -1463,9 +1439,7 @@ impl BatchManager {
         sorted_keys.sort();
 
         // 返回排序后的批次
-        sorted_keys
-            .into_iter()
-            .filter_map(|key| self.batches.get(&key))
+        sorted_keys.into_iter().filter_map(|key| self.batches.get(&key))
     }
 
     pub fn small_batches(&self) -> impl Iterator<Item = &InstanceBatch> {
@@ -1503,8 +1477,7 @@ impl BatchManager {
 
     /// 移除空批次（定期调用）
     pub fn cleanup_empty_batches(&mut self) {
-        self.batches
-            .retain(|_, batch| !batch.instances.is_empty() || batch.is_static);
+        self.batches.retain(|_, batch| !batch.instances.is_empty() || batch.is_static);
     }
 
     pub fn set_batch_textures_bind_group(
@@ -1720,10 +1693,8 @@ pub fn batch_visibility_culling_system(
             let view = glam::Mat4::from_rotation_translation(t.rot, t.pos).inverse();
             let proj = match c.projection {
                 crate::ecs::Projection::Orthographic { scale, near, far } => {
-                    let aspect = vp
-                        .as_ref()
-                        .map(|v| v.width as f32 / v.height as f32)
-                        .unwrap_or(1.0);
+                    let aspect =
+                        vp.as_ref().map(|v| v.width as f32 / v.height as f32).unwrap_or(1.0);
                     glam::Mat4::orthographic_rh(
                         -aspect * scale,
                         aspect * scale,
@@ -1857,11 +1828,7 @@ pub fn render_small_batches<'a>(
                 render_pass.draw_indexed_indirect(ib, 0);
             } else {
                 // 回退到直接绘制
-                render_pass.draw_indexed(
-                    0..batch.mesh.index_count,
-                    0,
-                    0..batch.instance_count(),
-                );
+                render_pass.draw_indexed(0..batch.mesh.index_count, 0, 0..batch.instance_count());
             }
         } else {
             render_pass.draw_indexed(0..batch.mesh.index_count, 0, 0..batch.instance_count());

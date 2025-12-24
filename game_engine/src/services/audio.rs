@@ -1,5 +1,5 @@
 //  音频服务模块
-// 
+//
 //  提供音频播放、暂停、停止、音量控制等功能。
 //  底层使用rodio库实现跨平台音频播放。
 
@@ -9,7 +9,7 @@ use std::io::Read;
 // use tokio::io::AsyncReadExt; // Temporarily disabled - not currently used
 
 // 性能监控集成 - 使用 tracing 系统
-use tracing::{instrument, span, Level, info};
+use tracing::{Level, info, instrument, span};
 
 /// 音频服务
 ///
@@ -51,7 +51,10 @@ impl AudioService {
 
         match OutputStreamBuilder::open_default_stream() {
             Ok(stream) => {
-                info!(service_init_success = 1, "Audio service initialized successfully");
+                info!(
+                    service_init_success = 1,
+                    "Audio service initialized successfully"
+                );
                 Some(Self {
                     _stream: stream,
                     sinks: HashMap::new(),

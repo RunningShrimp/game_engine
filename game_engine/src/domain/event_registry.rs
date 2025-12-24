@@ -52,7 +52,7 @@ pub struct EventTypeInfo {
 trait EventDeserializer: Send + Sync {
     /// 从字节数据反序列化事件
     fn deserialize(&self, data: &[u8]) -> Result<Box<dyn DomainEvent>, EventError>;
-    
+
     /// 获取事件类型信息
     fn type_info(&self) -> EventTypeInfo;
 }
@@ -77,13 +77,19 @@ impl<E: DomainEvent + Serialize + for<'de> Deserialize<'de> + 'static> TypedEven
     }
 }
 
-impl<E: DomainEvent + Serialize + for<'de> Deserialize<'de> + 'static> EventDeserializer for TypedEventDeserializer<E> {
+impl<E: DomainEvent + Serialize + for<'de> Deserialize<'de> + 'static> EventDeserializer
+    for TypedEventDeserializer<E>
+{
     fn deserialize(&self, data: &[u8]) -> Result<Box<dyn DomainEvent>, EventError> {
-        let event: E = bincode::deserialize(data)
-            .map_err(|e| EventError::SerializationError(format!("Failed to deserialize {}: {}", self.type_info.name, e)))?;
+        let event: E = bincode::deserialize(data).map_err(|e| {
+            EventError::SerializationError(format!(
+                "Failed to deserialize {}: {}",
+                self.type_info.name, e
+            ))
+        })?;
         Ok(Box::new(event))
     }
-    
+
     fn type_info(&self) -> EventTypeInfo {
         self.type_info.clone()
     }
@@ -108,15 +114,15 @@ impl std::fmt::Debug for EventRegistry {
         } else {
             Vec::new()
         };
-        
+
         let type_count = registered_types.len();
-        
+
         let versions: HashMap<String, u32> = if let Ok(versions_guard) = self.versions.read() {
             versions_guard.clone()
         } else {
             HashMap::new()
         };
-        
+
         f.debug_struct("EventRegistry")
             .field("registered_types", &registered_types)
             .field("type_count", &type_count)
@@ -152,17 +158,22 @@ impl EventRegistry {
     ) -> Result<(), EventError> {
         // 注意：名称验证在运行时进行（通过serialize/deserialize）
         // 如果名称不匹配，会在使用时发现并报告错误
-        
+
         let type_id = TypeId::of::<E>();
-        let deserializer: Box<dyn EventDeserializer> = Box::new(TypedEventDeserializer::<E>::new(name, version));
+        let deserializer: Box<dyn EventDeserializer> =
+            Box::new(TypedEventDeserializer::<E>::new(name, version));
 
         // 写入映射
-        let mut deserializers = safe_write(&self.deserializers, "deserializers")
-            .map_err(|e| EventError::SerializationError(format!("Failed to acquire lock: {}", e)))?;
-        let mut type_id_map = safe_write(&self.type_id_to_name, "type_id_to_name")
-            .map_err(|e| EventError::SerializationError(format!("Failed to acquire lock: {}", e)))?;
-        let mut versions = safe_write(&self.versions, "versions")
-            .map_err(|e| EventError::SerializationError(format!("Failed to acquire lock: {}", e)))?;
+        let mut deserializers = safe_write(&self.deserializers, "deserializers").map_err(|e| {
+            EventError::SerializationError(format!("Failed to acquire lock: {}", e))
+        })?;
+        let mut type_id_map =
+            safe_write(&self.type_id_to_name, "type_id_to_name").map_err(|e| {
+                EventError::SerializationError(format!("Failed to acquire lock: {}", e))
+            })?;
+        let mut versions = safe_write(&self.versions, "versions").map_err(|e| {
+            EventError::SerializationError(format!("Failed to acquire lock: {}", e))
+        })?;
 
         deserializers.insert(name.to_string(), deserializer);
         type_id_map.insert(type_id, name.to_string());
@@ -193,31 +204,31 @@ impl EventRegistry {
         // 验证事件类型是否已注册
         let event_type = event.event_type();
         let type_id = TypeId::of::<E>();
-        
-        let type_id_map = safe_read(&self.type_id_to_name, "type_id_to_name")
-            .map_err(|e| EventError::SerializationError(format!("Failed to acquire lock: {}", e)))?;
-        
+
+        let type_id_map = safe_read(&self.type_id_to_name, "type_id_to_name").map_err(|e| {
+            EventError::SerializationError(format!("Failed to acquire lock: {}", e))
+        })?;
+
         // 检查类型ID是否已注册
         if let Some(registered_name) = type_id_map.get(&type_id) {
             // 验证事件类型名称是否匹配
             if registered_name != event_type {
                 return Err(EventError::SerializationError(format!(
                     "Event type name mismatch: event_type() returns '{}', but registered as '{}'",
-                    event_type,
-                    registered_name
+                    event_type, registered_name
                 )));
             }
         } else {
             return Err(EventError::UnknownEventType(format!(
                 "Event type '{}' (type_id: {:?}) is not registered",
-                event_type,
-                type_id
+                event_type, type_id
             )));
         }
 
         // 序列化事件
-        bincode::serialize(event)
-            .map_err(|e| EventError::SerializationError(format!("Failed to serialize {}: {}", event_type, e)))
+        bincode::serialize(event).map_err(|e| {
+            EventError::SerializationError(format!("Failed to serialize {}: {}", event_type, e))
+        })
     }
 
     /// 反序列化事件
@@ -228,13 +239,18 @@ impl EventRegistry {
     ///
     /// # 返回
     /// 反序列化后的事件（trait object）
-    pub fn deserialize(&self, event_type: &str, data: &[u8]) -> Result<Box<dyn DomainEvent>, EventError> {
-        let deserializers = safe_read(&self.deserializers, "deserializers")
-            .map_err(|e| EventError::SerializationError(format!("Failed to acquire lock: {}", e)))?;
+    pub fn deserialize(
+        &self,
+        event_type: &str,
+        data: &[u8],
+    ) -> Result<Box<dyn DomainEvent>, EventError> {
+        let deserializers = safe_read(&self.deserializers, "deserializers").map_err(|e| {
+            EventError::SerializationError(format!("Failed to acquire lock: {}", e))
+        })?;
 
-        let deserializer = deserializers
-            .get(event_type)
-            .ok_or_else(|| EventError::UnknownEventType(format!("Event type '{}' is not registered", event_type)))?;
+        let deserializer = deserializers.get(event_type).ok_or_else(|| {
+            EventError::UnknownEventType(format!("Event type '{}' is not registered", event_type))
+        })?;
 
         deserializer.deserialize(data)
     }
@@ -272,12 +288,16 @@ impl EventRegistry {
 
     /// 取消注册事件类型
     pub fn unregister(&self, event_type: &str) -> Result<(), EventError> {
-        let mut deserializers = safe_write(&self.deserializers, "deserializers")
-            .map_err(|e| EventError::SerializationError(format!("Failed to acquire lock: {}", e)))?;
-        let mut type_id_map = safe_write(&self.type_id_to_name, "type_id_to_name")
-            .map_err(|e| EventError::SerializationError(format!("Failed to acquire lock: {}", e)))?;
-        let mut versions = safe_write(&self.versions, "versions")
-            .map_err(|e| EventError::SerializationError(format!("Failed to acquire lock: {}", e)))?;
+        let mut deserializers = safe_write(&self.deserializers, "deserializers").map_err(|e| {
+            EventError::SerializationError(format!("Failed to acquire lock: {}", e))
+        })?;
+        let mut type_id_map =
+            safe_write(&self.type_id_to_name, "type_id_to_name").map_err(|e| {
+                EventError::SerializationError(format!("Failed to acquire lock: {}", e))
+            })?;
+        let mut versions = safe_write(&self.versions, "versions").map_err(|e| {
+            EventError::SerializationError(format!("Failed to acquire lock: {}", e))
+        })?;
 
         // 获取类型ID以便从type_id_map中删除
         if let Some(deserializer) = deserializers.get(event_type) {
@@ -298,22 +318,21 @@ impl EventRegistry {
     /// 检查事件类型名称是否与已注册的类型匹配
     pub fn validate_event_type<E: DomainEvent>(&self, event_type: &str) -> Result<(), EventError> {
         let type_id = TypeId::of::<E>();
-        let type_id_map = safe_read(&self.type_id_to_name, "type_id_to_name")
-            .map_err(|e| EventError::SerializationError(format!("Failed to acquire lock: {}", e)))?;
+        let type_id_map = safe_read(&self.type_id_to_name, "type_id_to_name").map_err(|e| {
+            EventError::SerializationError(format!("Failed to acquire lock: {}", e))
+        })?;
 
         if let Some(registered_name) = type_id_map.get(&type_id) {
             if registered_name != event_type {
                 return Err(EventError::SerializationError(format!(
                     "Event type name mismatch: expected '{}', but registered as '{}'",
-                    event_type,
-                    registered_name
+                    event_type, registered_name
                 )));
             }
         } else {
             return Err(EventError::UnknownEventType(format!(
                 "Event type '{}' (type_id: {:?}) is not registered",
-                event_type,
-                type_id
+                event_type, type_id
             )));
         }
 
@@ -330,11 +349,14 @@ impl Default for EventRegistry {
 /// 全局事件类型注册表（单例）
 ///
 /// 使用`std::sync::Once`确保线程安全的初始化
-static GLOBAL_REGISTRY: std::sync::OnceLock<Arc<RwLock<EventRegistry>>> = std::sync::OnceLock::new();
+static GLOBAL_REGISTRY: std::sync::OnceLock<Arc<RwLock<EventRegistry>>> =
+    std::sync::OnceLock::new();
 
 /// 获取全局事件类型注册表
 pub fn global_registry() -> Arc<RwLock<EventRegistry>> {
-    GLOBAL_REGISTRY.get_or_init(|| Arc::new(RwLock::new(EventRegistry::new()))).clone()
+    GLOBAL_REGISTRY
+        .get_or_init(|| Arc::new(RwLock::new(EventRegistry::new())))
+        .clone()
 }
 
 /// 便捷函数：注册事件类型到全局注册表
@@ -343,15 +365,20 @@ pub fn register_event_type<E: DomainEvent + Serialize + for<'de> Deserialize<'de
     version: u32,
 ) -> Result<(), EventError> {
     let registry = global_registry();
-    let registry_guard = registry.write()
+    let registry_guard = registry
+        .write()
         .map_err(|e| EventError::SerializationError(format!("Failed to acquire lock: {}", e)))?;
     registry_guard.register::<E>(name, version)
 }
 
 /// 便捷函数：从全局注册表反序列化事件
-pub fn deserialize_event(event_type: &str, data: &[u8]) -> Result<Box<dyn DomainEvent>, EventError> {
+pub fn deserialize_event(
+    event_type: &str,
+    data: &[u8],
+) -> Result<Box<dyn DomainEvent>, EventError> {
     let registry = global_registry();
-    let registry_guard = registry.read()
+    let registry_guard = registry
+        .read()
         .map_err(|e| EventError::SerializationError(format!("Failed to acquire lock: {}", e)))?;
     registry_guard.deserialize(event_type, data)
 }
@@ -420,6 +447,8 @@ mod tests {
 
         // 验证正确的事件类型
         let event = TestEvent { value: 42 };
+        let serialized = registry.serialize_event(&event).unwrap();
+        let _deserialized: TestEvent = registry.deserialize_event(&serialized).unwrap();
         registry.validate_event_type::<TestEvent>("TestEvent").unwrap();
 
         // 验证错误的事件类型名称应该失败
@@ -439,4 +468,3 @@ mod tests {
         assert_eq!(deserialized.event_type(), "TestEvent");
     }
 }
-

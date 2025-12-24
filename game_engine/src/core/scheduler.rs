@@ -1,9 +1,9 @@
 //  任务调度系统
-// 
+//
 //  提供统一的任务调度和管理，替代分散的线程管理。
-// 
+//
 //  ## 功能特性
-// 
+//
 //  - 后台任务执行
 //  - 主线程回调
 //  - 任务优先级
@@ -204,9 +204,7 @@ impl TaskScheduler {
         F: Future<Output = T> + Send + 'static,
         T: Send + 'static,
     {
-        let task_id = self
-            .next_task_id
-            .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        let task_id = self.next_task_id.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         let (cancel_tx, cancel_rx) = oneshot::channel::<()>();
 
         self.runtime.spawn(async move {
@@ -258,9 +256,7 @@ impl TaskScheduler {
         F: FnOnce() -> T + Send + 'static,
         T: Send + 'static,
     {
-        let task_id = self
-            .next_task_id
-            .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        let task_id = self.next_task_id.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         let (cancel_tx, _cancel_rx) = oneshot::channel::<()>();
 
         self.runtime.spawn_blocking(task);
@@ -414,7 +410,7 @@ impl TaskScheduler {
     /// });
     /// assert_eq!(result, 42);
     /// ```
-    pub fn block_on<F: Future + Send + 'static>(&self, future: F) -> F::Output 
+    pub fn block_on<F: Future + Send + 'static>(&self, future: F) -> F::Output
     where
         F::Output: Send,
     {

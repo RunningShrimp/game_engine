@@ -247,11 +247,7 @@ impl CurveEditor {
 
                 ui.horizontal(|ui| {
                     ui.label("Time:");
-                    ui.add(
-                        egui::DragValue::new(&mut point.time)
-                            .speed(0.01)
-                            .range(0.0..=1.0),
-                    );
+                    ui.add(egui::DragValue::new(&mut point.time).speed(0.01).range(0.0..=1.0));
                 });
 
                 ui.horizontal(|ui| {
@@ -262,28 +258,20 @@ impl CurveEditor {
                 ui.horizontal(|ui| {
                     ui.label("Left Tangent:");
                     ui.add(
-                        egui::DragValue::new(&mut point.left_tangent.x)
-                            .prefix("X: ")
-                            .speed(0.01),
+                        egui::DragValue::new(&mut point.left_tangent.x).prefix("X: ").speed(0.01),
                     );
                     ui.add(
-                        egui::DragValue::new(&mut point.left_tangent.y)
-                            .prefix("Y: ")
-                            .speed(0.01),
+                        egui::DragValue::new(&mut point.left_tangent.y).prefix("Y: ").speed(0.01),
                     );
                 });
 
                 ui.horizontal(|ui| {
                     ui.label("Right Tangent:");
                     ui.add(
-                        egui::DragValue::new(&mut point.right_tangent.x)
-                            .prefix("X: ")
-                            .speed(0.01),
+                        egui::DragValue::new(&mut point.right_tangent.x).prefix("X: ").speed(0.01),
                     );
                     ui.add(
-                        egui::DragValue::new(&mut point.right_tangent.y)
-                            .prefix("Y: ")
-                            .speed(0.01),
+                        egui::DragValue::new(&mut point.right_tangent.y).prefix("Y: ").speed(0.01),
                     );
                 });
             }

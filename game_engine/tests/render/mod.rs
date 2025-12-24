@@ -15,3 +15,7 @@ mod postprocess_test;
 mod render_integration_test;
 mod render_benchmark_test;
 
+// 渲染系统单元测试（着色器、管线、纹理）
+#[path = "../render_unit_tests.rs"]
+mod render_unit_tests;
+

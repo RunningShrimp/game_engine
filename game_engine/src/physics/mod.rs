@@ -1,5 +1,5 @@
 //  物理系统模块
-// 
+//
 //  提供物理模拟功能，基于富领域对象架构。
 //  使用 `crate::domain::physics` 模块中的富领域对象。
 //
@@ -71,12 +71,12 @@ pub mod dirty_tracker;
 pub mod joints;
 pub mod parallel;
 pub mod physics3d;
+pub mod soft_body;
 pub mod spatial_partition;
 
 pub use batch_sync::{
-    batch_collect_physics_state_system, batch_physics_to_transform_system,
-    position_changed_simd, rotation_changed_simd, BatchSyncBuffer, BatchSyncManager,
-    BatchSyncResource,
+    BatchSyncBuffer, BatchSyncManager, BatchSyncResource, batch_collect_physics_state_system,
+    batch_physics_to_transform_system, position_changed_simd, rotation_changed_simd,
 };
 pub use collision_performance::{
     CollisionPerformanceMonitor, CollisionPerformanceStats, CollisionProfiler,
@@ -85,9 +85,11 @@ pub use dirty_tracker::{
     BatchSyncData, CachedPhysicsState, PhysicsDirty, PhysicsSyncConfig, PhysicsSyncStats,
     optimized_physics_sync_system, transform_to_physics_sync_system,
 };
-pub use spatial_partition::{
-    BVHTree, SpatialHash, SpatialPartitionManager, SpatialPartitionType,
+pub use soft_body::{
+    ClothSoftBody, FluidSoftBody, Particle, SoftBodyComponent, SoftBodyPhysicsWorld,
+    SoftBodyType, SphParameters, soft_body_physics_system,
 };
+pub use spatial_partition::{BVHTree, SpatialHash, SpatialPartitionManager, SpatialPartitionType};
 
 // 重新导出富领域对象（推荐使用）
 pub use crate::domain::physics::{

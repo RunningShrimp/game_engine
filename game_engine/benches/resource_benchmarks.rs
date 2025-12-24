@@ -9,9 +9,7 @@ fn bench_resource_manager_creation(c: &mut Criterion) {
     let mut group = c.benchmark_group("resource_manager_creation");
 
     group.bench_function("create_hashmap", |b| {
-        b.iter(|| {
-            black_box(std::collections::HashMap::<String, Vec<u8>>::new())
-        });
+        b.iter(|| black_box(std::collections::HashMap::<String, Vec<u8>>::new()));
     });
 
     group.finish();
@@ -78,7 +76,8 @@ fn bench_resource_cache(c: &mut Criterion) {
             cache_size,
             |b, &size| {
                 b.iter(|| {
-                    let mut cache: std::collections::HashMap<String, Vec<u8>> = std::collections::HashMap::new();
+                    let mut cache: std::collections::HashMap<String, Vec<u8>> =
+                        std::collections::HashMap::new();
                     // 模拟缓存查找和插入
                     for i in 0..size {
                         let key = format!("resource_{}", i);

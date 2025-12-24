@@ -1,11 +1,10 @@
 use wgpu::util::DeviceExt;
-// 移除未使用的Window导入，因为我们使用的是WinitWindow包装器
 
 use crate::error::RenderError;
 use crate::render::mesh::Vertex3D;
 
 // 性能监控集成 - 使用 tracing 系统
-use tracing::{instrument, span, Level, info};
+use tracing::{Level, info, instrument, span};
 
 #[repr(C)]
 #[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
@@ -151,14 +150,12 @@ impl InstanceDirtyTracker {
         // 调整容量
         if new_count > self.instance_dirty.len() {
             let additional = new_count - self.instance_dirty.len();
-            self.instance_dirty
-                .extend(std::iter::repeat(true).take(additional));
+            self.instance_dirty.extend(std::iter::repeat(true).take(additional));
 
             let new_chunk_count = (new_count + self.chunk_size - 1) / self.chunk_size;
             if new_chunk_count > self.chunk_dirty.len() {
                 let chunk_additional = new_chunk_count - self.chunk_dirty.len();
-                self.chunk_dirty
-                    .extend(std::iter::repeat(true).take(chunk_additional));
+                self.chunk_dirty.extend(std::iter::repeat(true).take(chunk_additional));
             }
         }
 
@@ -277,10 +274,7 @@ impl InstanceDirtyTracker {
 
     /// 获取脏实例总数
     pub fn dirty_instance_count(&self) -> usize {
-        self.dirty_ranges
-            .iter()
-            .map(|(s, e)| (e - s) as usize)
-            .sum()
+        self.dirty_ranges.iter().map(|(s, e)| (e - s) as usize).sum()
     }
 
     /// 检查是否有任何脏数据
@@ -579,7 +573,7 @@ impl WgpuRenderer {
         let surface = instance.create_surface(window.clone());
         let surface = surface.map_err(|e| RenderError::SurfaceCreation {
             message: format!("{}", e),
-            severity: crate::error::ErrorSeverity::Critical
+            severity: crate::error::ErrorSeverity::Critical,
         })?;
         let adapter = instance
             .request_adapter(&wgpu::RequestAdapterOptions {
@@ -603,25 +597,23 @@ impl WgpuRenderer {
                 | wgpu::Features::PIPELINE_STATISTICS_QUERY
                 | wgpu::Features::PUSH_CONSTANTS
                 | wgpu::Features::VERTEX_WRITABLE_STORAGE;
-            
+
             features
         };
         let required_features = supported & desired;
         let (device, queue) = adapter
-            .request_device(
-                &wgpu::DeviceDescriptor {
-                    required_features,
-                    required_limits: wgpu::Limits::default(),
-                    label: None,
-                    memory_hints: Default::default(),
-                    trace: wgpu::Trace::Off,
-                    experimental_features: Default::default(),
-                },
-            )
+            .request_device(&wgpu::DeviceDescriptor {
+                required_features,
+                required_limits: wgpu::Limits::default(),
+                label: None,
+                memory_hints: Default::default(),
+                trace: wgpu::Trace::Off,
+                experimental_features: Default::default(),
+            })
             .await
             .map_err(|e| RenderError::DeviceCreation {
                 message: format!("Failed to request device: {}", e),
-                severity: crate::error::ErrorSeverity::Critical
+                severity: crate::error::ErrorSeverity::Critical,
             })?;
         let caps = surface.get_capabilities(&adapter);
         let format = caps.formats[0];
@@ -1374,7 +1366,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         let dirty_tracker = InstanceDirtyTracker::with_capacity(1024);
 
         // 创建GPU剔除管理器（在移动device之前）
-        use crate::render::gpu_driven::{GpuCullingManager, GpuDrivenRenderer, GpuDrivenConfig};
+        use crate::render::gpu_driven::{GpuCullingManager, GpuDrivenConfig, GpuDrivenRenderer};
         let gpu_culling_manager = Some(GpuCullingManager::new(&device, 65536, 64));
 
         // 创建GPU驱动渲染器（用于遮挡剔除）
@@ -1387,7 +1379,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
             workgroup_size: 64,
         };
         let mut gpu_driven_renderer = Some(GpuDrivenRenderer::new(&device, gpu_driven_config));
-        
+
         // 初始化遮挡剔除（如果启用）
         if let Some(ref mut gpu_driven) = gpu_driven_renderer {
             if let Err(e) = gpu_driven.initialize_occlusion_culling(&device) {
@@ -1446,7 +1438,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
             gpu_driven_renderer,
             occlusion_mapping_buffer: [None, None],
             occlusion_mapping_index: 0,
-            use_full_gpu_culling: false,  // 默认使用传统路径，可以逐步迁移
+            use_full_gpu_culling: false, // 默认使用传统路径，可以逐步迁移
         })
     }
 
@@ -1511,11 +1503,11 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         egui_pixels_per_point: f32,
     ) {
         let _frame_span = span!(Level::DEBUG, "frame_render").entered();
-        
+
         info!(frame_count = 1, "Frame rendered");
         info!(instance_count = instances.len(), "Instances updated");
         info!(mesh_count = meshes.len(), "Meshes rendered");
-        
+
         self.update_instances_grouped(&mut instances.to_vec());
 
         // Update 3D uniforms
@@ -1553,7 +1545,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         }
 
         let _acquire_span = span!(Level::DEBUG, "acquire_frame_texture").entered();
-        
+
         let frame = match self.surface.get_current_texture() {
             Ok(frame) => frame,
             Err(e) => {
@@ -1562,24 +1554,30 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                 match self.surface.get_current_texture() {
                     Ok(frame) => frame,
                     Err(e2) => {
-                        tracing::error!("Failed to get texture after reconfigure. Original: {}, Retry: {}", e, e2);
+                        tracing::error!(
+                            "Failed to get texture after reconfigure. Original: {}, Retry: {}",
+                            e,
+                            e2
+                        );
                         // Return early without error since function has no return type
                         return;
                     }
                 }
             }
         };
-        let view = frame
-            .texture
-            .create_view(&wgpu::TextureViewDescriptor::default());
+        let view = frame.texture.create_view(&wgpu::TextureViewDescriptor::default());
         let _encoder_span = span!(Level::DEBUG, "create_command_encoder").entered();
-        
-        let mut encoder = self
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some("Main Render Encoder") });
+
+        let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("Main Render Encoder"),
+        });
 
         let mut egui_encoder = if egui_renderer.is_some() {
-            Some(self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some("Egui Render Encoder") }))
+            Some(
+                self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                    label: Some("Egui Render Encoder"),
+                }),
+            )
         } else {
             None
         };
@@ -1738,10 +1736,10 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         }
 
         let _submit_span = span!(Level::DEBUG, "submit_commands").entered();
-        
+
         // Submit main rendering command
         self.queue.submit(std::iter::once(encoder.finish()));
-        
+
         // Handle egui rendering - create a separate encoder to avoid borrowing issues
         if let Some(renderer) = egui_renderer {
             if !egui_shapes.is_empty() {
@@ -1751,28 +1749,32 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                 };
 
                 // Create a new encoder for egui to avoid borrowing conflicts
-                let mut egui_cmd_encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                    label: Some("egui render pass encoder"),
-                });
-                
+                let mut egui_cmd_encoder =
+                    self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                        label: Some("egui render pass encoder"),
+                    });
+
                 // Update buffers and render egui content
-                renderer.update_buffers(&self.device, &self.queue, &mut egui_cmd_encoder, egui_shapes, &screen_desc);
-                
+                renderer.update_buffers(
+                    &self.device,
+                    &self.queue,
+                    &mut egui_cmd_encoder,
+                    egui_shapes,
+                    &screen_desc,
+                );
+
                 let cmd_buffer = egui_cmd_encoder.finish();
                 self.queue.submit(std::iter::once(cmd_buffer));
             }
         }
-        
+
         let _present_span = span!(Level::DEBUG, "present_frame").entered();
-        
+
         frame.present();
-        
+
         // 记录帧渲染时间和Draw Call数量
         let (draws, _) = self.draw_stats();
-        info!(
-            draw_calls = draws,
-            "Frame rendered"
-        );
+        info!(draw_calls = draws, "Frame rendered");
     }
 
     pub fn set_lights(&mut self, lights: Vec<GpuPointLight>) {
@@ -1813,7 +1815,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     pub fn update_instances(&mut self, instances: &[Instance]) {
         let _update_span = span!(Level::DEBUG, "update_instances").entered();
         info!(instance_updates = 1, "Instances updated");
-        
+
         self.instance_count = instances.len() as u32;
         self.layer_ranges.clear();
         self.layer_ranges.push((0, self.instance_count));
@@ -1843,7 +1845,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     pub fn update_instances_incremental(&mut self, instances: &[Instance]) -> usize {
         let _incremental_span = span!(Level::DEBUG, "update_instances_incremental").entered();
         info!(incremental_updates = 1, "Incremental instances updated");
-        
+
         self.instance_count = instances.len() as u32;
         self.layer_ranges.clear();
         self.layer_ranges.push((0, self.instance_count));
@@ -1882,7 +1884,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
             dirty_instances = self.dirty_tracker.dirty_instance_count(),
             "Dirty ranges updated"
         );
-        
+
         range_count
     }
 
@@ -1985,8 +1987,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                 let cid = instances[s as usize].chunk;
                 let prev = self.chunk_hashes.get(&cid).copied();
                 if prev != Some(h) {
-                    self.queue
-                        .write_buffer(&self.instance_buffer, 0, bytemuck::cast_slice(slice));
+                    self.queue.write_buffer(&self.instance_buffer, 0, bytemuck::cast_slice(slice));
                     self.chunk_hashes.insert(cid, h);
                 }
             }
@@ -2071,9 +2072,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                 },
             );
             let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
-            let sampler = self
-                .device
-                .create_sampler(&wgpu::SamplerDescriptor::default());
+            let sampler = self.device.create_sampler(&wgpu::SamplerDescriptor::default());
             let bg = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
                 label: None,
                 layout: &self.texture_bgl,
@@ -2091,14 +2090,14 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
             let idx = self.texture_bind_groups.len() as u32;
             self.texture_bind_groups.push(bg);
             self.textures_size.push([w, h]);
-            
+
             info!(
                 texture_load_success = 1,
                 loaded_textures = 1,
                 total_texture_memory = w * h * 4,
                 "Texture loaded successfully"
             );
-            
+
             Some(idx)
         } else {
             info!(texture_load_failures = 1, "Texture load failed");
@@ -2144,9 +2143,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                 },
             );
             let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
-            let sampler = self
-                .device
-                .create_sampler(&wgpu::SamplerDescriptor::default());
+            let sampler = self.device.create_sampler(&wgpu::SamplerDescriptor::default());
             let bg = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
                 label: None,
                 layout: &self.texture_bgl,
@@ -2218,9 +2215,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                 },
             );
             let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
-            let sampler = self
-                .device
-                .create_sampler(&wgpu::SamplerDescriptor::default());
+            let sampler = self.device.create_sampler(&wgpu::SamplerDescriptor::default());
             let bg = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
                 label: None,
                 layout: &self.texture_bgl,
@@ -2288,9 +2283,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                 },
             );
             let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
-            let sampler = self
-                .device
-                .create_sampler(&wgpu::SamplerDescriptor::default());
+            let sampler = self.device.create_sampler(&wgpu::SamplerDescriptor::default());
             let bg = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
                 label: None,
                 layout: &self.texture_bgl,
@@ -2359,9 +2352,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
             },
         );
         let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
-        let sampler = self
-            .device
-            .create_sampler(&wgpu::SamplerDescriptor::default());
+        let sampler = self.device.create_sampler(&wgpu::SamplerDescriptor::default());
         let bg = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: None,
             layout: &self.texture_bgl,
@@ -2388,8 +2379,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
             scale_factor: self.scale_factor,
             _pad: 0.0,
         };
-        self.queue
-            .write_buffer(&self.uniform_buffer, 0, bytemuck::bytes_of(&u));
+        self.queue.write_buffer(&self.uniform_buffer, 0, bytemuck::bytes_of(&u));
     }
 
     pub fn set_scissor_for_layer(&mut self, layer: f32, rect: Option<[u32; 4]>) {
@@ -2462,7 +2452,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         // 优先使用完全GPU端剔除（GpuDrivenRenderer + 间接绘制），避免CPU-GPU同步
         // 如果不可用，回退到传统GPU剔除（GpuCullingManager + CPU读取结果）
         let mut used_gpu_cull = false;
-        let mut used_full_gpu_culling = false;  // 完全GPU端剔除标志
+        let mut used_full_gpu_culling = false; // 完全GPU端剔除标志
 
         // 遮挡剔除集成：收集遮挡查询数据
         // 注意：遮挡查询在视锥剔除后执行，使用可见实例的AABB
@@ -2473,7 +2463,6 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         // 这样可以完全避免CPU读取结果，实现零延迟剔除
         if let Some(ref mut gpu_driven_renderer) = self.gpu_driven_renderer {
             if gpu_driven_renderer.config().frustum_culling && self.use_full_gpu_culling {
-
                 // 收集GPU实例数据
                 let (instances, mapping) = batch_manager.collect_gpu_instances();
 
@@ -2484,17 +2473,16 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                         .visible_batches()
                         .next()
                         .map(|batch| batch.mesh.index_count)
-                        .unwrap_or(36);  // 默认值
+                        .unwrap_or(36); // 默认值
 
                     // 更新实例数据到GPU
                     gpu_driven_renderer.update_instances(&self.queue, &instances);
 
                     // 创建剔除编码器
-                    let mut cull_encoder = self.device.create_command_encoder(
-                        &wgpu::CommandEncoderDescriptor {
+                    let mut cull_encoder =
+                        self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
                             label: Some("Full GPU Culling Encoder"),
-                        },
-                    );
+                        });
 
                     // 执行剔除并生成间接绘制命令（完全GPU端，零CPU读取）
                     if let Ok(_) = gpu_driven_renderer.cull_with_indirect(
@@ -2503,7 +2491,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                         &self.queue,
                         view_proj,
                         instances.len() as u32,
-                        0,  // vertex_count (not used for indexed drawing)
+                        0, // vertex_count (not used for indexed drawing)
                         index_count,
                     ) {
                         // 提交剔除命令到GPU（不等待结果）
@@ -2551,17 +2539,15 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         // 如果完全GPU端剔除未使用，尝试传统GPU剔除（需要CPU读取结果）
         if !used_full_gpu_culling {
             if let Some(ref mut culling_manager) = self.gpu_culling_manager {
-
                 // 收集GPU实例数据
                 let (instances, mapping) = batch_manager.collect_gpu_instances();
 
                 if !instances.is_empty() && culling_manager.is_enabled() {
                     // 创建专用的剔除命令编码器
                     let mut encoder =
-                        self.device
-                            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                                label: Some("GPU Culling Encoder"),
-                            });
+                        self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                            label: Some("GPU Culling Encoder"),
+                        });
 
                     // 执行GPU剔除
                     if culling_manager
@@ -2587,11 +2573,11 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                                 mapped_at_creation: false,
                             });
 
-                            let mut read_encoder =
-                                self.device
-                                    .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                                        label: Some("Read Counter Copy"),
-                                    });
+                            let mut read_encoder = self.device.create_command_encoder(
+                                &wgpu::CommandEncoderDescriptor {
+                                    label: Some("Read Counter Copy"),
+                                },
+                            );
                             read_encoder.copy_buffer_to_buffer(
                                 counter_buffer,
                                 0,
@@ -2600,15 +2586,22 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                                 std::mem::size_of::<u32>() as wgpu::BufferAddress,
                             );
                             self.queue.submit(std::iter::once(read_encoder.finish()));
-                            let _ = self.device.poll(wgpu::PollType::Wait { submission_index: None, timeout: Some(std::time::Duration::from_millis(100)) });
+                            let _ = self.device.poll(wgpu::PollType::Wait {
+                                submission_index: None,
+                                timeout: Some(std::time::Duration::from_millis(100)),
+                            });
 
                             let count_slice = read_counter.slice(..);
                             count_slice.map_async(wgpu::MapMode::Read, |_| {});
-                            let _ = self.device.poll(wgpu::PollType::Wait { submission_index: None, timeout: Some(std::time::Duration::from_millis(100)) });
+                            let _ = self.device.poll(wgpu::PollType::Wait {
+                                submission_index: None,
+                                timeout: Some(std::time::Duration::from_millis(100)),
+                            });
 
                             let count_data = count_slice.get_mapped_range();
-                            let visible_count =
-                                u32::from_le_bytes(count_data[..4].try_into().unwrap_or([0, 0, 0, 0]));
+                            let visible_count = u32::from_le_bytes(
+                                count_data[..4].try_into().unwrap_or([0, 0, 0, 0]),
+                            );
                             drop(count_data);
                             read_counter.unmap();
 
@@ -2640,32 +2633,52 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                                             as wgpu::BufferAddress,
                                     );
                                     self.queue.submit(std::iter::once(read_encoder.finish()));
-                                    let _ = self.device.poll(wgpu::PollType::Wait { submission_index: None, timeout: Some(std::time::Duration::from_millis(100)) });
+                                    let _ = self.device.poll(wgpu::PollType::Wait {
+                                        submission_index: None,
+                                        timeout: Some(std::time::Duration::from_millis(100)),
+                                    });
 
                                     let out_slice = read_output.slice(..);
                                     out_slice.map_async(wgpu::MapMode::Read, |_| {});
-                                    let _ = self.device.poll(wgpu::PollType::Wait { submission_index: None, timeout: Some(std::time::Duration::from_millis(100)) });
+                                    let _ = self.device.poll(wgpu::PollType::Wait {
+                                        submission_index: None,
+                                        timeout: Some(std::time::Duration::from_millis(100)),
+                                    });
 
                                     let out_data = out_slice.get_mapped_range();
                                     let visible_instances: &[Instance] =
                                         bytemuck::cast_slice(&out_data);
-                                    let ids: Vec<u32> =
-                                        visible_instances.iter().enumerate().map(|(i, _)| i as u32).collect();
+                                    let ids: Vec<u32> = visible_instances
+                                        .iter()
+                                        .enumerate()
+                                        .map(|(i, _)| i as u32)
+                                        .collect();
                                     drop(out_data);
                                     read_output.unmap();
 
                                     // 收集遮挡查询数据（从可见实例）
                                     // 如果启用遮挡剔除，收集AABB用于遮挡查询
-                                    if let Some(ref gpu_driven_renderer) = self.gpu_driven_renderer {
-                                        if let Some(ref occluder) = gpu_driven_renderer.occlusion_culler() {
+                                    if let Some(ref gpu_driven_renderer) = self.gpu_driven_renderer
+                                    {
+                                        if let Some(ref occluder) =
+                                            gpu_driven_renderer.occlusion_culler()
+                                        {
                                             if occluder.is_initialized() {
                                                 for &id in &ids {
-                                                    if let Some(instance) = instances.get(id as usize) {
+                                                    if let Some(instance) =
+                                                        instances.get(id as usize)
+                                                    {
                                                         occlusion_queries.push((
-                                                            glam::Vec3::from_array(instance.aabb_min),
-                                                            glam::Vec3::from_array(instance.aabb_max),
+                                                            glam::Vec3::from_array(
+                                                                instance.aabb_min,
+                                                            ),
+                                                            glam::Vec3::from_array(
+                                                                instance.aabb_max,
+                                                            ),
                                                         ));
-                                                        if let Some(mapping_entry) = mapping.get(id as usize) {
+                                                        if let Some(mapping_entry) =
+                                                            mapping.get(id as usize)
+                                                        {
                                                             occlusion_mapping.push(*mapping_entry);
                                                         }
                                                     }
@@ -2706,7 +2719,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         // 1. 在深度预渲染后构建Hi-Z（在渲染阶段之前）
         // 2. 在视锥剔除后执行遮挡查询
         // 3. 应用遮挡查询结果过滤不可见对象
-        
+
         // 步骤1: 构建Hi-Z（在深度预渲染后）
         // 注意：这里简化处理，实际应该在深度预渲染阶段构建Hi-Z
         // 当前实现假设深度缓冲已经渲染完成
@@ -2714,11 +2727,10 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
             if let Some(ref occluder) = gpu_driven_renderer.occlusion_culler() {
                 if occluder.is_initialized() {
                     // 创建Hi-Z构建编码器
-                    let mut hi_z_encoder = self.device.create_command_encoder(
-                        &wgpu::CommandEncoderDescriptor {
+                    let mut hi_z_encoder =
+                        self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
                             label: Some("Hi-Z Build Encoder"),
-                        },
-                    );
+                        });
 
                     // 构建Hi-Z（使用当前深度缓冲）
                     if let Some(ref depth_tex) = self.depth_texture_raw {
@@ -2742,13 +2754,12 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
             if let Some(ref mut gpu_driven_renderer) = self.gpu_driven_renderer {
                 let view_proj_mat = glam::Mat4::from_cols_array_2d(&view_proj);
                 let screen_size = (self.config.width, self.config.height);
-                
+
                 // 创建遮挡查询编码器
-                let mut occlusion_encoder = self.device.create_command_encoder(
-                    &wgpu::CommandEncoderDescriptor {
+                let mut occlusion_encoder =
+                    self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
                         label: Some("Occlusion Query Encoder"),
-                    },
-                );
+                    });
 
                 // 执行异步遮挡查询
                 if let Err(e) = gpu_driven_renderer.query_occlusion_async(
@@ -2761,12 +2772,13 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                     tracing::warn!(target: "render", "Occlusion query failed: {}", e);
                 } else {
                     // 存储当前帧的mapping（用于下一帧应用结果）
-                    self.occlusion_mapping_buffer[self.occlusion_mapping_index] = Some(occlusion_mapping.clone());
+                    self.occlusion_mapping_buffer[self.occlusion_mapping_index] =
+                        Some(occlusion_mapping.clone());
                     self.occlusion_mapping_index = (self.occlusion_mapping_index + 1) % 2;
-                    
+
                     // 提交遮挡查询命令
                     self.queue.submit(std::iter::once(occlusion_encoder.finish()));
-                    
+
                     tracing::debug!(
                         target: "render",
                         "Occlusion query submitted: {} queries",
@@ -2779,13 +2791,12 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         // 步骤3: 读取上一帧的遮挡查询结果（如果有）
         // 使用双缓冲延迟应用结果：当前帧的查询结果在下一帧应用
         if let Some(ref mut gpu_driven_renderer) = self.gpu_driven_renderer {
-            if let Some(Ok(visibility)) = gpu_driven_renderer.read_occlusion_query_result(
-                &self.device,
-                &self.queue,
-            ) {
+            if let Some(Ok(visibility)) =
+                gpu_driven_renderer.read_occlusion_query_result(&self.device, &self.queue)
+            {
                 // 获取上一帧的mapping（与查询结果配对）
                 let prev_mapping_index = (self.occlusion_mapping_index + 1) % 2;
-                
+
                 if let Some(ref prev_mapping) = self.occlusion_mapping_buffer[prev_mapping_index] {
                     // 应用遮挡查询结果
                     // 将visibility结果映射回实例ID，然后过滤不可见实例
@@ -2797,11 +2808,11 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                                 visible_ids.push(i as u32);
                             }
                         }
-                        
+
                         // 应用可见实例ID到批次管理器
                         if !visible_ids.is_empty() {
                             batch_manager.apply_visible_ids(prev_mapping, &visible_ids);
-                            
+
                             let visible_count = visible_ids.len();
                             tracing::debug!(
                                 target: "render",
@@ -2812,7 +2823,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                         } else {
                             tracing::debug!(target: "render", "Occlusion query: no visible instances");
                         }
-                        
+
                         // 清理已使用的mapping
                         self.occlusion_mapping_buffer[prev_mapping_index] = None;
                     } else {
@@ -2841,21 +2852,21 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                 match self.surface.get_current_texture() {
                     Ok(frame) => frame,
                     Err(e2) => {
-                        tracing::error!("Failed to get texture after reconfigure. Original: {}, Retry: {}", e, e2);
+                        tracing::error!(
+                            "Failed to get texture after reconfigure. Original: {}, Retry: {}",
+                            e,
+                            e2
+                        );
                         // Return early without error since function has no return type
                         return;
                     }
                 }
             }
         };
-        let view = frame
-            .texture
-            .create_view(&wgpu::TextureViewDescriptor::default());
-        let mut encoder = self
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("PBR Batched Encoder"),
-            });
+        let view = frame.texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("PBR Batched Encoder"),
+        });
 
         // Update egui buffers if present
         if let Some(renderer) = egui_renderer.as_mut() {
@@ -2913,21 +2924,27 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                 if used_full_gpu_culling {
                     if let Some(ref gpu_driven_renderer) = self.gpu_driven_renderer {
                         let indirect_buffer = gpu_driven_renderer.indirect_buffer();
-                        
+
                         // 绑定可见实例缓冲区作为顶点缓冲区
                         // 注意：需要确保可见实例缓冲区包含正确的实例数据
-                        rpass.set_vertex_buffer(1, gpu_driven_renderer.visible_instance_buffer().slice(..));
-                        
+                        rpass.set_vertex_buffer(
+                            1,
+                            gpu_driven_renderer.visible_instance_buffer().slice(..),
+                        );
+
                         // 获取第一个batch的mesh信息（用于绑定顶点和索引缓冲区）
                         if let Some(batch) = batch_manager.visible_batches().next() {
                             rpass.set_vertex_buffer(0, batch.mesh.vertex_buffer.slice(..));
-                            rpass.set_index_buffer(batch.mesh.index_buffer.slice(..), wgpu::IndexFormat::Uint32);
-                            
+                            rpass.set_index_buffer(
+                                batch.mesh.index_buffer.slice(..),
+                                wgpu::IndexFormat::Uint32,
+                            );
+
                             // 使用间接绘制命令直接绘制（完全GPU端，零CPU读取）
                             // 注意：这里假设所有可见实例使用相同的mesh
                             // 如果不同batch使用不同mesh，需要为每个batch单独处理
                             rpass.draw_indexed_indirect(indirect_buffer.buffer(), 0);
-                            
+
                             tracing::debug!(
                                 target: "render",
                                 "Rendering with indirect draw commands (full GPU culling)"
@@ -2973,8 +2990,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
             data[i] = *light;
         }
 
-        self.queue
-            .write_buffer(&self.lights_buffer, 0, bytemuck::cast_slice(&data));
+        self.queue.write_buffer(&self.lights_buffer, 0, bytemuck::cast_slice(&data));
     }
 
     // ========================================================================
@@ -3035,20 +3051,20 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                 match self.surface.get_current_texture() {
                     Ok(frame) => frame,
                     Err(e2) => {
-                        tracing::error!("Failed to get texture after reconfigure. Original: {}, Retry: {}", e, e2);
+                        tracing::error!(
+                            "Failed to get texture after reconfigure. Original: {}, Retry: {}",
+                            e,
+                            e2
+                        );
                         return Err(format!("Failed to get surface texture: {}", e2).into());
                     }
                 }
             }
         };
-        let view = frame
-            .texture
-            .create_view(&wgpu::TextureViewDescriptor::default());
-        let mut encoder = self
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("PBR Encoder"),
-            });
+        let view = frame.texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("PBR Encoder"),
+        });
 
         // Update egui buffers if present
         if let Some(renderer) = egui_renderer.as_mut() {
@@ -3228,7 +3244,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                     rpass.draw_indexed(0..batch.mesh.index_count, 0, 0..batch.count);
                 }
             }
-            
+
             // 结束PBR渲染通道
         }
 
@@ -3238,15 +3254,22 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                 size_in_pixels: [self.config.width, self.config.height],
                 pixels_per_point: egui_pixels_per_point,
             };
-            
+
             // Create a separate encoder for egui to avoid borrowing issues
-            let mut egui_encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("egui Encoder"),
-            });
-            
+            let mut egui_encoder =
+                self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                    label: Some("egui Encoder"),
+                });
+
             // Update buffers and render egui content
-            renderer.update_buffers(&self.device, &self.queue, &mut egui_encoder, egui_shapes, &screen_desc);
-            
+            renderer.update_buffers(
+                &self.device,
+                &self.queue,
+                &mut egui_encoder,
+                egui_shapes,
+                &screen_desc,
+            );
+
             let cmd_buffer = egui_encoder.finish();
 
             Some(cmd_buffer) // egui_encoder is finished here
@@ -3254,7 +3277,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
             // 如果没有egui渲染器，返回None
             None
         };
-        
+
         // 提交所有命令缓冲区
         let pbr_cmd_buffer = encoder.finish();
         if let Some(egui_cmd_buffer) = egui_cmd_buffer {
@@ -3262,11 +3285,11 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         } else {
             self.queue.submit([pbr_cmd_buffer]);
         }
-        
+
         frame.present();
         Ok(())
     }
-    
+
     /// 获取PBR渲染器引用
     pub fn pbr_renderer(&self) -> Option<&crate::render::pbr_renderer::PbrRenderer> {
         self.pbr_renderer.as_ref()
@@ -3337,8 +3360,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     }
 
     pub fn create_sampler(&self) -> wgpu::Sampler {
-        self.device
-            .create_sampler(&wgpu::SamplerDescriptor::default())
+        self.device.create_sampler(&wgpu::SamplerDescriptor::default())
     }
 
     pub fn device(&self) -> &wgpu::Device {
@@ -3361,11 +3383,10 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         F: FnOnce(&mut wgpu::RenderPass),
     {
         // 创建新的命令编码器用于egui渲染
-        let mut egui_encoder = device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("egui Encoder"),
-            });
-            
+        let mut egui_encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("egui Encoder"),
+        });
+
         let egui_render_pass = wgpu::RenderPassDescriptor {
             label: Some("egui render pass"),
             color_attachments: &[Some(wgpu::RenderPassColorAttachment {
@@ -3386,11 +3407,11 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
             let mut rpass = egui_encoder.begin_render_pass(&egui_render_pass);
             render_fn(&mut rpass);
         } // 确保render pass在此处结束
-        
+
         // 完成egui命令编码器并返回命令缓冲区
         egui_encoder.finish()
     }
-    
+
     fn compute_scissor(
         insts: &[Instance],
         start: u32,
@@ -3468,8 +3489,6 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         }
         h
     }
-    
-
 }
 
 #[allow(dead_code)]

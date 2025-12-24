@@ -13,7 +13,7 @@
 //! - 批量分配相同生命周期对象
 //! - 减少内存分配开销
 
-use std::alloc::{alloc, dealloc, Layout};
+use std::alloc::{Layout, alloc, dealloc};
 use std::ptr::NonNull;
 use thiserror::Error;
 
@@ -97,12 +97,9 @@ impl BumpAllocator {
             .map_err(|_| BumpError::AllocationFailed { size, align: 1 })?;
 
         let ptr = unsafe { alloc(layout) };
-        let start = NonNull::new(ptr)
-            .ok_or(BumpError::AllocationFailed { size, align: 1 })?;
+        let start = NonNull::new(ptr).ok_or(BumpError::AllocationFailed { size, align: 1 })?;
 
-        let end = unsafe {
-            NonNull::new_unchecked(start.as_ptr().add(size))
-        };
+        let end = unsafe { NonNull::new_unchecked(start.as_ptr().add(size)) };
 
         Ok(Self {
             start,
@@ -143,14 +140,11 @@ impl BumpAllocator {
         let aligned_ptr = unsafe { NonNull::new_unchecked(aligned_addr as *mut u8) };
 
         // 检查是否有足够空间
-        let new_current = unsafe {
-            aligned_ptr.as_ptr().add(size)
-        };
+        let new_current = unsafe { aligned_ptr.as_ptr().add(size) };
 
         if new_current > self.end.as_ptr() {
-            let available = unsafe { 
-                self.end.as_ptr().offset_from(self.current.as_ptr()) 
-            } as usize;
+            let available =
+                unsafe { self.end.as_ptr().offset_from(self.current.as_ptr()) } as usize;
             return Err(BumpError::OutOfMemory {
                 requested: size,
                 available,
@@ -187,13 +181,9 @@ impl BumpAllocator {
     ///
     /// 返回已分配的内存大小（字节）。
     pub fn used_size(&self) -> usize {
-        unsafe { 
+        unsafe {
             let offset = self.current.as_ptr().offset_from(self.start.as_ptr());
-            if offset < 0 {
-                0
-            } else {
-                offset as usize
-            }
+            if offset < 0 { 0 } else { offset as usize }
         }
     }
 
@@ -258,10 +248,10 @@ mod tests {
         let mut bump = BumpAllocator::new(4096).unwrap();
         let ptr1 = bump.alloc(64, 8);
         assert!(ptr1.is_ok());
-        
+
         let ptr2 = bump.alloc(128, 16);
         assert!(ptr2.is_ok());
-        
+
         assert!(bump.used_size() > 0);
     }
 
@@ -270,7 +260,7 @@ mod tests {
         let mut bump = BumpAllocator::new(4096).unwrap();
         bump.alloc(64, 8).unwrap();
         bump.alloc(128, 16).unwrap();
-        
+
         assert!(bump.used_size() > 0);
         bump.reset();
         assert_eq!(bump.used_size(), 0);
@@ -286,20 +276,19 @@ mod tests {
     #[test]
     fn test_bump_allocator_alignment() {
         let mut bump = BumpAllocator::new(4096).unwrap();
-        
+
         // 分配一个未对齐的大小
         let ptr1 = bump.alloc(1, 1).unwrap();
         let addr1 = ptr1.as_ptr() as usize;
-        
+
         // 分配一个需要对齐的大小
         let ptr2 = bump.alloc(64, 16).unwrap();
         let addr2 = ptr2.as_ptr() as usize;
-        
+
         // 验证第一个分配的地址是有效的（对齐要求为1，所以任意地址都可以）
         assert!(addr1 > 0); // Verify the address is valid
-        
+
         // 验证对齐
         assert_eq!(addr2 % 16, 0);
     }
 }
-

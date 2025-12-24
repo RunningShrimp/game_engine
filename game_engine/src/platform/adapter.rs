@@ -1,16 +1,16 @@
+pub use crate::platform::Filesystem as PlatformFilesystem;
 pub use crate::platform::FsError;
 pub use crate::platform::FsEvent;
-pub use crate::platform::WatchHandle;
-pub use crate::platform::Filesystem as PlatformFilesystem;
-pub use crate::platform::Window as PlatformWindow;
 pub use crate::platform::Input as PlatformInput;
 pub use crate::platform::InputEvent;
 pub use crate::platform::KeyCode;
 pub use crate::platform::Modifiers;
 pub use crate::platform::MouseButton;
+pub use crate::platform::WatchHandle;
+pub use crate::platform::Window as PlatformWindow;
+pub use crate::platform::console::{ConsoleConfig, ConsolePlatform};
 pub use crate::platform::hardware_info::HardwareInfo;
 pub use crate::platform::power_aware::{PowerAwareManager, PowerState};
-pub use crate::platform::console::{ConsoleConfig, ConsolePlatform};
 pub use crate::platform::winit::WinitWindow;
 
 #[cfg(target_arch = "wasm32")]
@@ -39,9 +39,12 @@ impl PlatformAdapter {
 
         #[cfg(target_arch = "wasm32")]
         {
-            let filesystem = Box::new(WebFilesystem::new().expect("Failed to create WebFilesystem")) as Box<dyn PlatformFilesystem>;
-            let window = Box::new(crate::platform::web_window::WebWindow::new()) as Box<dyn PlatformWindow>;
-            let input = Box::new(WebInput::new("canvas").expect("Failed to create WebInput")) as Box<dyn PlatformInput>;
+            let filesystem = Box::new(WebFilesystem::new().expect("Failed to create WebFilesystem"))
+                as Box<dyn PlatformFilesystem>;
+            let window =
+                Box::new(crate::platform::web_window::WebWindow::new()) as Box<dyn PlatformWindow>;
+            let input = Box::new(WebInput::new("canvas").expect("Failed to create WebInput"))
+                as Box<dyn PlatformInput>;
 
             Self {
                 filesystem,
@@ -57,7 +60,8 @@ impl PlatformAdapter {
         {
             let filesystem = Box::new(NativeFilesystem::new()) as Box<dyn PlatformFilesystem>;
             let window = Box::new(WinitWindow::default()) as Box<dyn PlatformWindow>;
-            let input = Box::new(crate::platform::native_input::NativeInput::new()) as Box<dyn PlatformInput>;
+            let input = Box::new(crate::platform::native_input::NativeInput::new())
+                as Box<dyn PlatformInput>;
 
             Self {
                 filesystem,

@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
-    use crate::core::engine::engine::Engine;
     use crate::config::EngineConfig;
+    use crate::core::engine::engine::Engine;
 
     #[test]
     fn test_engine_creation() {
@@ -25,4 +25,3 @@ mod tests {
         assert!(true);
     }
 }
-

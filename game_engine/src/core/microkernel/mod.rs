@@ -43,21 +43,21 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
-use tokio::sync::{RwLock, Mutex};
+use tokio::sync::{Mutex, RwLock};
 
 use bevy_ecs::prelude::*;
 
-pub mod service;
+pub mod ipc;
 pub mod message;
 pub mod registry;
 pub mod scheduler;
-pub mod ipc;
+pub mod service;
 
-pub use service::{Service, ServiceId, ServiceState, ServiceInfo};
-pub use message::{Message, MessageId, MessageType, MessagePayload};
-pub use registry::{ServiceRegistry, ServiceRegistryError};
-pub use scheduler::{ServiceScheduler, SchedulerConfig};
 pub use ipc::{IpcChannel, IpcError, Request, Response};
+pub use message::{Message, MessageId, MessagePayload, MessageType};
+pub use registry::{ServiceRegistry, ServiceRegistryError};
+pub use scheduler::{SchedulerConfig, ServiceScheduler};
+pub use service::{Service, ServiceId, ServiceInfo, ServiceState};
 
 #[derive(Debug, Clone, thiserror::Error)]
 pub enum MicrokernelError {
@@ -139,7 +139,8 @@ impl Microkernel {
         message: Message,
     ) -> Result<Option<Message>, MicrokernelError> {
         let channels = self.ipc_channels.read().await;
-        let channel = channels.get(target)
+        let channel = channels
+            .get(target)
             .ok_or_else(|| MicrokernelError::ServiceNotFound(target.as_str().to_string()))?;
 
         channel.send(message).await.map_err(MicrokernelError::from)
@@ -152,7 +153,8 @@ impl Microkernel {
         timeout: Duration,
     ) -> Result<Response, MicrokernelError> {
         let channels = self.ipc_channels.read().await;
-        let channel = channels.get(target)
+        let channel = channels
+            .get(target)
             .ok_or_else(|| MicrokernelError::ServiceNotFound(target.as_str().to_string()))?;
 
         tokio::time::timeout(timeout, channel.request(message))
@@ -242,7 +244,10 @@ impl Service for DummyService {
         Ok(())
     }
 
-    async fn handle_message(&mut self, _message: Message) -> Result<Option<Message>, service::ServiceError> {
+    async fn handle_message(
+        &mut self,
+        _message: Message,
+    ) -> Result<Option<Message>, service::ServiceError> {
         Ok(None)
     }
 }

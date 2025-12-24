@@ -126,11 +126,8 @@ impl AssetBrowser {
         if let Ok(entries) = fs::read_dir(&self.current_directory) {
             for entry in entries.flatten() {
                 let path = entry.path();
-                let name = path
-                    .file_name()
-                    .and_then(|n| n.to_str())
-                    .unwrap_or("Unknown")
-                    .to_string();
+                let name =
+                    path.file_name().and_then(|n| n.to_str()).unwrap_or("Unknown").to_string();
 
                 let is_directory = path.is_dir();
                 let asset_type = if is_directory {
@@ -144,9 +141,7 @@ impl AssetBrowser {
 
                 // 应用搜索过滤器
                 if !self.search_filter.is_empty()
-                    && !name
-                        .to_lowercase()
-                        .contains(&self.search_filter.to_lowercase())
+                    && !name.to_lowercase().contains(&self.search_filter.to_lowercase())
                 {
                     continue;
                 }
@@ -208,12 +203,11 @@ impl AssetBrowser {
         }
 
         // 排序: 目录在前,然后按名称排序
-        self.assets
-            .sort_by(|a, b| match (a.is_directory, b.is_directory) {
-                (true, false) => std::cmp::Ordering::Less,
-                (false, true) => std::cmp::Ordering::Greater,
-                _ => a.name.cmp(&b.name),
-            });
+        self.assets.sort_by(|a, b| match (a.is_directory, b.is_directory) {
+            (true, false) => std::cmp::Ordering::Less,
+            (false, true) => std::cmp::Ordering::Greater,
+            _ => a.name.cmp(&b.name),
+        });
     }
 
     /// 导航到指定目录

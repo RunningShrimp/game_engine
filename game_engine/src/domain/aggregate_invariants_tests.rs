@@ -48,7 +48,8 @@ mod scene_invariants_tests {
         assert!(scene.validate().is_ok());
 
         // 尝试添加第二个相机（应该失败）
-        let entity2 = EntityFactory::create_camera(EntityId(2), Vec3::new(1.0, 0.0, 0.0), Camera::default());
+        let entity2 =
+            EntityFactory::create_camera(EntityId(2), Vec3::new(1.0, 0.0, 0.0), Camera::default());
         let result = scene.add_entity(entity2);
         assert!(result.is_err());
     }
@@ -79,11 +80,8 @@ mod scene_invariants_tests {
         scene.load().unwrap();
 
         // 创建一个违反实体不变式的实体（同时有Sprite和Camera）
-        let mut invalid_entity = EntityFactory::create_sprite(
-            EntityId(1),
-            Vec3::ZERO,
-            crate::ecs::Sprite::default(),
-        );
+        let mut invalid_entity =
+            EntityFactory::create_sprite(EntityId(1), Vec3::ZERO, crate::ecs::Sprite::default());
         invalid_entity.camera = Some(Camera::default());
 
         // 直接插入应该导致验证失败
@@ -113,4 +111,3 @@ mod scene_invariants_tests {
         assert_eq!(scene.state, SceneState::Unloaded);
     }
 }
-

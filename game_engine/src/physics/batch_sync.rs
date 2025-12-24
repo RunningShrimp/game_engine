@@ -1,17 +1,17 @@
 //  物理批量同步模块
-// 
+//
 //  优化物理引擎与渲染系统的 Transform 同步性能。
 //  使用批量处理、SIMD 优化和缓存友好的数据结构减少同步开销。
-// 
+//
 //  ## 优化策略
-// 
+//
 //  - 批量收集同步数据，减少内存分配
 //  - 使用连续内存布局提高缓存命中率
 //  - 并行处理同步操作
 //  - 基于 SoA (Structure of Arrays) 的数据布局
-// 
+//
 //  ## 性能提升
-// 
+//
 //  - 大规模场景 (>1000 刚体): 2-3x 性能提升
 //  - 中等场景 (100-1000 刚体): 1.5-2x 性能提升
 //  - 小场景 (<100 刚体): 性能相当或略有提升
@@ -20,7 +20,7 @@ use bevy_ecs::prelude::*;
 use glam::{Quat, Vec3, Vec4};
 use parking_lot::Mutex;
 use std::sync::Arc;
-use tracing::{span, Level, info};
+use tracing::{Level, info, span};
 
 // ============================================================================
 // 批量同步数据结构 (SoA 布局)
@@ -201,11 +201,16 @@ pub fn batch_collect_physics_state_system(
 
         let needs_sync = if config.dirty_tracking_enabled {
             if let (Some(cached), Some(_dirty)) = (cached_opt, dirty_opt) {
-                let pos_changed = cached.position_changed(body_state.position, config.position_threshold);
-                let rot_changed = cached.rotation_changed(body_state.rotation, config.rotation_threshold);
+                let pos_changed =
+                    cached.position_changed(body_state.position, config.position_threshold);
+                let rot_changed =
+                    cached.rotation_changed(body_state.rotation, config.rotation_threshold);
 
                 if pos_changed || rot_changed {
-                    info!(changes_detected = pos_changed as u8 + rot_changed as u8, "Changes detected");
+                    info!(
+                        changes_detected = pos_changed as u8 + rot_changed as u8,
+                        "Changes detected"
+                    );
                     true
                 } else {
                     info!(no_change_skipped = 1, "No change, skipped");
@@ -233,7 +238,10 @@ pub fn batch_collect_physics_state_system(
     }
 
     if !buffer.is_empty() {
-        info!(batch_collected = buffer.len(), "Batch collected physics state");
+        info!(
+            batch_collected = buffer.len(),
+            "Batch collected physics state"
+        );
     }
 }
 
@@ -300,22 +308,14 @@ pub fn batch_physics_to_transform_system(
 // ============================================================================
 
 /// SIMD 优化的位置变化检测
-pub fn position_changed_simd(
-    old_pos: Vec3,
-    new_pos: Vec3,
-    threshold_sq: f32,
-) -> bool {
+pub fn position_changed_simd(old_pos: Vec3, new_pos: Vec3, threshold_sq: f32) -> bool {
     let diff = old_pos - new_pos;
     let diff_sq = diff.dot(diff);
     diff_sq > threshold_sq
 }
 
 /// SIMD 优化的旋转变化检测
-pub fn rotation_changed_simd(
-    old_rot: Quat,
-    new_rot: Quat,
-    threshold_sq: f32,
-) -> bool {
+pub fn rotation_changed_simd(old_rot: Quat, new_rot: Quat, threshold_sq: f32) -> bool {
     let dot = old_rot.dot(new_rot);
     let angle_sq = (1.0 - dot.abs()).max(0.0) * 4.0;
     angle_sq > threshold_sq

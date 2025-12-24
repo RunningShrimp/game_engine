@@ -1,5 +1,5 @@
 //  着色器缓存辅助函数
-// 
+//
 //  提供便捷的着色器创建函数，自动集成缓存和异步编译功能。
 
 use crate::error::RenderError;
@@ -75,23 +75,19 @@ pub async fn create_shader_module_async(
     priority: ShaderCompilePriority,
 ) -> Result<wgpu::ShaderModule, RenderError> {
     // 提交异步编译请求
-    let rx = compiler
-        .compile_async(label, source, "", priority)
-        .map_err(|e| {
-            RenderError::InvalidState {
-                message: format!("Failed to submit compile request: {}", e),
-                severity: crate::error::ErrorSeverity::Error
-            }
-        })?;
+    let rx = compiler.compile_async(label, source, "", priority).map_err(|e| {
+        RenderError::InvalidState {
+            message: format!("Failed to submit compile request: {}", e),
+            severity: crate::error::ErrorSeverity::Error,
+        }
+    })?;
 
     // 等待编译完成
-    let compiled = wait_for_compile(rx)
-        .await
-        .map_err(|e| RenderError::ShaderCompilation {
-            shader: "unknown".to_string(),
-            message: e.to_string(),
-            severity: crate::error::ErrorSeverity::Error
-        })?;
+    let compiled = wait_for_compile(rx).await.map_err(|e| RenderError::ShaderCompilation {
+        shader: "unknown".to_string(),
+        message: e.to_string(),
+        severity: crate::error::ErrorSeverity::Error,
+    })?;
 
     // 在主线程创建着色器模块（wgpu要求在主线程）
     // 注意：实际的wgpu编译仍然需要在主线程进行
@@ -110,14 +106,12 @@ pub async fn compile_shaders_async(
     // 提交所有编译请求
     let mut receivers = Vec::new();
     for (label, source, priority) in requests {
-        let rx = compiler
-            .compile_async(label, source, "", priority)
-            .map_err(|e| {
-                RenderError::InvalidState {
+        let rx = compiler.compile_async(label, source, "", priority).map_err(|e| {
+            RenderError::InvalidState {
                 message: format!("Failed to submit compile request: {}", e),
-                severity: crate::error::ErrorSeverity::Error
+                severity: crate::error::ErrorSeverity::Error,
             }
-            })?;
+        })?;
         receivers.push((label, source, rx));
     }
 
@@ -137,7 +131,7 @@ pub async fn compile_shaders_async(
                 results.push(Err(RenderError::ShaderCompilation {
                     shader: "unknown".to_string(),
                     message: e.to_string(),
-                    severity: crate::error::ErrorSeverity::Error
+                    severity: crate::error::ErrorSeverity::Error,
                 }));
             }
         }

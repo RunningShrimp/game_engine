@@ -1,9 +1,9 @@
 //  内存监控模块
-// 
+//
 //  提供实时的内存使用监控、性能指标收集和调试工具。
-// 
+//
 //  ## 监控功能
-// 
+//
 //  ```text
 //  ┌─────────────────────────────────────────────────────────┐
 //  │                Memory Monitor                      │
@@ -230,28 +230,23 @@ impl PerformanceAnalysis {
         self.recommendations.clear();
 
         if self.average_utilization > 0.9 {
-            self.recommendations
-                .push("内存使用率过高，考虑增加内存池大小".to_string());
+            self.recommendations.push("内存使用率过高，考虑增加内存池大小".to_string());
         }
 
         if self.average_allocation_latency > 100.0 {
-            self.recommendations
-                .push("分配延迟较高，检查内存碎片化程度".to_string());
+            self.recommendations.push("分配延迟较高，检查内存碎片化程度".to_string());
         }
 
         if self.preallocation_hit_rate < 0.5 {
-            self.recommendations
-                .push("预分配命中率较低，调整预分配策略".to_string());
+            self.recommendations.push("预分配命中率较低，调整预分配策略".to_string());
         }
 
         if self.pressure_events > 10 {
-            self.recommendations
-                .push("内存压力事件频繁，优化内存使用模式".to_string());
+            self.recommendations.push("内存压力事件频繁，优化内存使用模式".to_string());
         }
 
         if self.efficiency_score < 0.5 {
-            self.recommendations
-                .push("整体内存效率较低，建议进行性能优化".to_string());
+            self.recommendations.push("整体内存效率较低，建议进行性能优化".to_string());
         }
     }
 }
@@ -303,8 +298,7 @@ impl LeakDetectionResult {
         self.recommendations.clear();
 
         if self.has_leak {
-            self.recommendations
-                .push("检测到内存泄漏，建议检查资源释放逻辑".to_string());
+            self.recommendations.push("检测到内存泄漏，建议检查资源释放逻辑".to_string());
             self.recommendations.push(format!(
                 "泄漏量: {:.1}MB, 泄漏块数: {}",
                 self.leaked_bytes as f32 / (1024.0 * 1024.0),
@@ -313,8 +307,7 @@ impl LeakDetectionResult {
         }
 
         if !self.suspicious_allocations.is_empty() {
-            self.recommendations
-                .push("发现可疑分配点，建议添加详细日志".to_string());
+            self.recommendations.push("发现可疑分配点，建议添加详细日志".to_string());
         }
     }
 }
@@ -636,10 +629,7 @@ impl MemoryMonitor {
         analysis.utilization_std_dev = variance.sqrt();
 
         // 计算延迟统计
-        let latencies: Vec<f32> = history
-            .iter()
-            .map(|s| s.average_allocation_latency_us)
-            .collect();
+        let latencies: Vec<f32> = history.iter().map(|s| s.average_allocation_latency_us).collect();
         analysis.average_allocation_latency =
             latencies.iter().sum::<f32>() / latencies.len() as f32;
         analysis.max_allocation_latency = latencies.iter().fold(0.0f32, |a, &b| a.max(b));

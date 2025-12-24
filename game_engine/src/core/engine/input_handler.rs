@@ -1,5 +1,5 @@
 //  输入处理模块
-// 
+//
 //  负责处理各种输入事件，包括：
 //  - 窗口事件处理
 //  - 键盘输入处理
@@ -10,7 +10,10 @@
 
 use crate::config::input::InputConfig;
 use crate::platform::winit::WinitWindow;
-use crate::platform::{InputActions, InputBuffer, InputEvent, KeyCode, Modifiers, MouseButton, GamepadAxis, GamepadButton};
+use crate::platform::{
+    GamepadAxis, GamepadButton, InputActions, InputBuffer, InputEvent, KeyCode, Modifiers,
+    MouseButton,
+};
 use crate::render::wgpu_utils::WgpuRenderer;
 use crate::services::render::RenderService;
 use bevy_ecs::prelude::*;
@@ -157,13 +160,11 @@ pub fn handle_input_event(event: &WindowEvent, world: &mut World) {
 
                 match state {
                     winit::event::ElementState::Pressed => {
-                        buf.events
-                            .push(InputEvent::MouseButtonPressed { button: mb, x, y });
+                        buf.events.push(InputEvent::MouseButtonPressed { button: mb, x, y });
                         tracing::debug!(target: "input", "Mouse button pressed: {:?}", mb);
                     }
                     winit::event::ElementState::Released => {
-                        buf.events
-                            .push(InputEvent::MouseButtonReleased { button: mb, x, y });
+                        buf.events.push(InputEvent::MouseButtonReleased { button: mb, x, y });
                         tracing::debug!(target: "input", "Mouse button released: {:?}", mb);
                     }
                 }
@@ -550,7 +551,6 @@ fn update_action_state(
     }
 }
 
-
 /// 处理触摸输入
 ///
 /// 处理触摸事件（TouchStart、TouchMove、TouchEnd），将触摸事件转换为统一的InputEvent格式。
@@ -607,7 +607,7 @@ pub fn handle_pointer_button(event: &winit::event::WindowEvent, _world: &mut Wor
     // 这里可以处理其他指针设备的特殊事件
     // 目前触摸和鼠标事件已经在handle_input_event中处理
     // 此函数保留用于未来扩展（如触控笔压力感应等）
-    
+
     // 如果需要处理特殊的指针设备事件，可以在这里添加
     match event {
         // 可以在这里添加其他指针设备的事件处理
@@ -627,7 +627,11 @@ pub fn handle_pointer_button(event: &winit::event::WindowEvent, _world: &mut Wor
 pub fn handle_gamepad_input(event: &InputEvent, world: &mut World) {
     if let Some(mut buf) = world.get_resource_mut::<InputBuffer>() {
         match event {
-            InputEvent::GamepadButton { id, button, pressed } => {
+            InputEvent::GamepadButton {
+                id,
+                button,
+                pressed,
+            } => {
                 let mapped_button = map_gamepad_button(*button);
                 buf.events.push(InputEvent::GamepadButton {
                     id: *id,
@@ -691,9 +695,8 @@ fn map_gamepad_axis(axis: GamepadAxis) -> GamepadAxis {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use bevy_ecs::prelude::*;
-    use winit::event::{WindowEvent, TouchPhase};
     use winit::dpi::PhysicalPosition;
+    use winit::event::{TouchPhase, WindowEvent};
 
     #[test]
     fn test_handle_touch_start() {
@@ -820,7 +823,11 @@ mod tests {
         let buf = world.get_resource::<crate::platform::InputBuffer>().unwrap();
         assert_eq!(buf.events.len(), 1);
         match &buf.events[0] {
-            crate::platform::InputEvent::GamepadButton { id, button, pressed } => {
+            crate::platform::InputEvent::GamepadButton {
+                id,
+                button,
+                pressed,
+            } => {
                 assert_eq!(*id, 0);
                 assert_eq!(*button, crate::platform::GamepadButton::South);
                 assert!(pressed);
@@ -894,21 +901,57 @@ mod tests {
 
     #[test]
     fn test_map_gamepad_button() {
-        assert_eq!(map_gamepad_button(crate::platform::GamepadButton::South), crate::platform::GamepadButton::South);
-        assert_eq!(map_gamepad_button(crate::platform::GamepadButton::East), crate::platform::GamepadButton::East);
-        assert_eq!(map_gamepad_button(crate::platform::GamepadButton::West), crate::platform::GamepadButton::West);
-        assert_eq!(map_gamepad_button(crate::platform::GamepadButton::North), crate::platform::GamepadButton::North);
-        assert_eq!(map_gamepad_button(crate::platform::GamepadButton::LeftBumper), crate::platform::GamepadButton::LeftBumper);
-        assert_eq!(map_gamepad_button(crate::platform::GamepadButton::RightBumper), crate::platform::GamepadButton::RightBumper);
+        assert_eq!(
+            map_gamepad_button(crate::platform::GamepadButton::South),
+            crate::platform::GamepadButton::South
+        );
+        assert_eq!(
+            map_gamepad_button(crate::platform::GamepadButton::East),
+            crate::platform::GamepadButton::East
+        );
+        assert_eq!(
+            map_gamepad_button(crate::platform::GamepadButton::West),
+            crate::platform::GamepadButton::West
+        );
+        assert_eq!(
+            map_gamepad_button(crate::platform::GamepadButton::North),
+            crate::platform::GamepadButton::North
+        );
+        assert_eq!(
+            map_gamepad_button(crate::platform::GamepadButton::LeftBumper),
+            crate::platform::GamepadButton::LeftBumper
+        );
+        assert_eq!(
+            map_gamepad_button(crate::platform::GamepadButton::RightBumper),
+            crate::platform::GamepadButton::RightBumper
+        );
     }
 
     #[test]
     fn test_map_gamepad_axis() {
-        assert_eq!(map_gamepad_axis(crate::platform::GamepadAxis::LeftStickX), crate::platform::GamepadAxis::LeftStickX);
-        assert_eq!(map_gamepad_axis(crate::platform::GamepadAxis::LeftStickY), crate::platform::GamepadAxis::LeftStickY);
-        assert_eq!(map_gamepad_axis(crate::platform::GamepadAxis::RightStickX), crate::platform::GamepadAxis::RightStickX);
-        assert_eq!(map_gamepad_axis(crate::platform::GamepadAxis::RightStickY), crate::platform::GamepadAxis::RightStickY);
-        assert_eq!(map_gamepad_axis(crate::platform::GamepadAxis::LeftTrigger), crate::platform::GamepadAxis::LeftTrigger);
-        assert_eq!(map_gamepad_axis(crate::platform::GamepadAxis::RightTrigger), crate::platform::GamepadAxis::RightTrigger);
+        assert_eq!(
+            map_gamepad_axis(crate::platform::GamepadAxis::LeftStickX),
+            crate::platform::GamepadAxis::LeftStickX
+        );
+        assert_eq!(
+            map_gamepad_axis(crate::platform::GamepadAxis::LeftStickY),
+            crate::platform::GamepadAxis::LeftStickY
+        );
+        assert_eq!(
+            map_gamepad_axis(crate::platform::GamepadAxis::RightStickX),
+            crate::platform::GamepadAxis::RightStickX
+        );
+        assert_eq!(
+            map_gamepad_axis(crate::platform::GamepadAxis::RightStickY),
+            crate::platform::GamepadAxis::RightStickY
+        );
+        assert_eq!(
+            map_gamepad_axis(crate::platform::GamepadAxis::LeftTrigger),
+            crate::platform::GamepadAxis::LeftTrigger
+        );
+        assert_eq!(
+            map_gamepad_axis(crate::platform::GamepadAxis::RightTrigger),
+            crate::platform::GamepadAxis::RightTrigger
+        );
     }
 }

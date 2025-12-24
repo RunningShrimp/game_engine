@@ -6,7 +6,7 @@
 //! - 基于优先级的预加载
 //! - 预加载进度追踪
 
-use crate::resources::coroutine_loader::{CoroutineAssetLoader, LoadPriority, AssetType};
+use crate::resources::coroutine_loader::{AssetType, CoroutineAssetLoader, LoadPriority};
 use crate::resources::dependency_manager::DependencyGraph;
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
@@ -216,7 +216,10 @@ impl PreloadManager {
     }
 
     /// 批量添加预加载请求
-    pub fn request_preload_batch(&self, requests: Vec<(PathBuf, AssetType, LoadPriority, PreloadStrategy)>) {
+    pub fn request_preload_batch(
+        &self,
+        requests: Vec<(PathBuf, AssetType, LoadPriority, PreloadStrategy)>,
+    ) {
         for (path, asset_type, priority, strategy) in requests {
             self.request_preload(path, asset_type, priority, strategy);
         }
@@ -273,11 +276,9 @@ impl PreloadManager {
         let mut status_map = self.status_map.write().unwrap();
 
         // 按优先级和策略排序
-        queue.sort_by(|a, b| {
-            match a.strategy.cmp(&b.strategy) {
-                Ordering::Equal => a.priority.cmp(&b.priority),
-                other => other,
-            }
+        queue.sort_by(|a, b| match a.strategy.cmp(&b.strategy) {
+            Ordering::Equal => a.priority.cmp(&b.priority),
+            other => other,
         });
 
         // 启动新的加载任务（不超过最大并发数）
@@ -324,14 +325,15 @@ impl PreloadManager {
         if let Some(status) = status_map.get_mut(path) {
             status.completed_at = Some(Instant::now());
             status.progress = 1.0;
-            
+
             if success {
                 status.state = PreloadState::Completed;
                 stats.completed += 1;
-                
+
                 // 计算加载时间
                 if let Some(started_at) = status.started_at {
-                    let load_time = status.completed_at.unwrap().duration_since(started_at).as_secs_f32();
+                    let load_time =
+                        status.completed_at.unwrap().duration_since(started_at).as_secs_f32();
                     stats.total_load_time += load_time;
                     stats.avg_load_time = stats.total_load_time / stats.completed as f32;
                 }
@@ -405,7 +407,7 @@ mod tests {
     #[test]
     fn test_preload_request() {
         let manager = PreloadManager::new(PreloadConfig::default());
-        
+
         manager.request_preload(
             PathBuf::from("texture.png"),
             AssetType::Texture,
@@ -420,7 +422,7 @@ mod tests {
     #[test]
     fn test_preload_scene() {
         let manager = PreloadManager::new(PreloadConfig::default());
-        
+
         let scene_resources = vec![
             (PathBuf::from("texture1.png"), AssetType::Texture),
             (PathBuf::from("texture2.png"), AssetType::Texture),
@@ -437,7 +439,7 @@ mod tests {
         let mut config = PreloadConfig::default();
         config.distance_threshold = 100.0;
         let manager = PreloadManager::new(config);
-        
+
         let resources = vec![
             (PathBuf::from("near.png"), AssetType::Texture, 50.0),
             (PathBuf::from("far.png"), AssetType::Texture, 150.0),
@@ -449,4 +451,3 @@ mod tests {
         assert_eq!(stats.total_requests, 1); // 只有near.png在阈值内
     }
 }
-

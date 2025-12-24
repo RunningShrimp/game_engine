@@ -7,11 +7,19 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use thiserror::Error;
 
+/// 图形配置模块
 pub mod graphics;
+
+/// 性能配置模块
 pub mod performance;
 
+/// 音频配置模块
 pub mod audio;
+
+/// 输入配置模块
 pub mod input;
+
+/// 移动端配置模块（仅Android/iOS）
 #[cfg(any(target_os = "android", target_os = "ios"))]
 pub mod mobile;
 
@@ -176,10 +184,8 @@ impl EngineConfig {
 
         // 尝试用户配置目录
         if let Some(home) = env::var_os("HOME") {
-            let config_path = PathBuf::from(home)
-                .join(".config")
-                .join("game_engine")
-                .join("config.toml");
+            let config_path =
+                PathBuf::from(home).join(".config").join("game_engine").join("config.toml");
 
             if let Ok(config) = Self::from_toml_file(&config_path) {
                 println!("Loaded config from {:?}", config_path);

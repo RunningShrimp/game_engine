@@ -75,10 +75,7 @@ impl EditorConsole {
 
     /// 获取过滤后的日志
     pub fn get_filtered_logs(&self) -> Vec<&LogEntry> {
-        self.logs
-            .iter()
-            .filter(|entry| self.filter.matches(entry))
-            .collect()
+        self.logs.iter().filter(|entry| self.filter.matches(entry)).collect()
     }
 
     /// 清空日志

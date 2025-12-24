@@ -70,7 +70,7 @@ impl RenderStateCache {
     pub fn register_state(&mut self, state: RenderStateKey, batch_index: usize) {
         // 更新访问频率
         *self.state_frequency.entry(state).or_insert(0) += 1;
-        
+
         // 如果缓存未满，直接添加
         if self.state_to_batch.len() < self.max_cache_size {
             self.state_to_batch.insert(state, batch_index);
@@ -129,7 +129,7 @@ impl DrawCallOptimizer {
     /// 添加绘制命令到批次
     pub fn add_command(&mut self, command: DrawCommand, state: RenderStateKey) {
         self.original_draw_calls += 1;
-        
+
         // 检查状态缓存
         let batch_index = if let Some(idx) = self.state_cache.get_batch_index(&state) {
             // 缓存命中，使用现有批次

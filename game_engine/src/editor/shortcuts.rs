@@ -1,5 +1,5 @@
 //  编辑器快捷键系统
-// 
+//
 //  提供统一的快捷键管理，支持快捷键绑定、冲突检测和配置持久化
 
 use serde::{Deserialize, Serialize};
@@ -253,9 +253,7 @@ impl ShortcutManager {
             ShortcutAction::ToggleConsole,
             ShortcutAction::TogglePerformancePanel,
         ] {
-            manager
-                .bindings
-                .insert(action.clone(), action.default_shortcut());
+            manager.bindings.insert(action.clone(), action.default_shortcut());
         }
 
         manager

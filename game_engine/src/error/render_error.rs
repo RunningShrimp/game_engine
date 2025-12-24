@@ -1,5 +1,5 @@
 //  渲染系统错误类型
-// 
+//
 //  定义了渲染系统相关的所有错误类型，包括GPU操作、着色器编译、纹理创建等。
 
 use crate::error::{ErrorCategory, ErrorSeverity};

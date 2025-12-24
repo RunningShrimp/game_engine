@@ -1,5 +1,5 @@
 //  物理系统性能基准测试
-// 
+//
 //  测试物理世界更新、碰撞检测等操作的性能
 
 use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
@@ -54,9 +54,7 @@ fn bench_physics_step(c: &mut Criterion) {
                 let mut collider_set = ColliderSet::new();
 
                 // 创建地面
-                let ground = RigidBodyBuilder::fixed()
-                    .translation(vector![0.0, -10.0])
-                    .build();
+                let ground = RigidBodyBuilder::fixed().translation(vector![0.0, -10.0]).build();
                 let ground_handle = physics_world.insert(ground);
                 let ground_collider = ColliderBuilder::cuboid(50.0, 1.0).build();
                 collider_set.insert_with_parent(ground_collider, ground_handle, &mut physics_world);

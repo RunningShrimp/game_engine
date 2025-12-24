@@ -1,8 +1,11 @@
 //  错误聚合和报告模块
-// 
+//
 //  提供错误统计、聚合和可视化功能。
 
-use crate::{error::{EngineError, safe_lock}, impl_default};
+use crate::{
+    error::{EngineError, safe_lock},
+    impl_default,
+};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -100,10 +103,7 @@ impl ErrorStats {
     /// 返回指定时间窗口内的错误数量。
     pub fn error_trend(&self, seconds: u64) -> u64 {
         let cutoff = Self::current_timestamp().saturating_sub(seconds);
-        self.recent_errors
-            .iter()
-            .filter(|record| record.timestamp >= cutoff)
-            .count() as u64
+        self.recent_errors.iter().filter(|record| record.timestamp >= cutoff).count() as u64
     }
 }
 
@@ -345,9 +345,7 @@ impl ErrorAggregator {
     /// assert_eq!(stats.total_count, 1);
     /// ```
     pub fn get_stats(&self) -> ErrorStats {
-        safe_lock(&self.stats, "ErrorAggregator.stats")
-            .unwrap()
-            .clone()
+        safe_lock(&self.stats, "ErrorAggregator.stats").unwrap().clone()
     }
 
     /// 获取错误摘要
@@ -357,9 +355,7 @@ impl ErrorAggregator {
             total_errors: stats.total_count,
             error_rate: stats.error_rate,
             most_common_type: stats.most_common_error_type().map(|(t, c)| (t.clone(), *c)),
-            most_common_source: stats
-                .most_common_error_source()
-                .map(|(s, c)| (s.clone(), *c)),
+            most_common_source: stats.most_common_error_source().map(|(s, c)| (s.clone(), *c)),
             recent_error_count: stats.recent_errors.len(),
             last_updated: stats.last_updated,
         }
@@ -466,7 +462,7 @@ impl ErrorSummary {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::error::{RenderError, ResourceError, ErrorSeverity};
+    use crate::error::ErrorSeverity;
 
     #[test]
     fn test_error_aggregator() {
@@ -480,10 +476,11 @@ mod tests {
         aggregator.record_error(&render_err, "render_system");
 
         // Note: AssetError doesn't exist, using a different error for testing
-        let resource_err = EngineError::Resource(crate::error::resource_error::ResourceError::NotFound {
-            path: "test.png".to_string(),
-            severity: ErrorSeverity::Error,
-        });
+        let resource_err =
+            EngineError::Resource(crate::error::resource_error::ResourceError::NotFound {
+                path: "test.png".to_string(),
+                severity: ErrorSeverity::Error,
+            });
         aggregator.record_error(&resource_err, "asset_manager");
 
         // 获取统计

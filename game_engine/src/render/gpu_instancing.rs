@@ -200,19 +200,20 @@ impl GpuInstancingRenderer {
         if let Some(ref gpu_driven) = self.gpu_driven {
             let mut all_gpu_instances = Vec::new();
             let mut instance_id = 0u32;
-            
+
             for (_key, instances) in &self.instances {
                 for instance_data in instances {
                     // 计算AABB（简化版本，实际应该从网格获取）
                     let aabb_min = instance_data.position - instance_data.scale * 0.5;
                     let aabb_max = instance_data.position + instance_data.scale * 0.5;
-                    
-                    let gpu_instance = instance_data.to_gpu_instance(instance_id, aabb_min, aabb_max);
+
+                    let gpu_instance =
+                        instance_data.to_gpu_instance(instance_id, aabb_min, aabb_max);
                     all_gpu_instances.push(gpu_instance);
                     instance_id += 1;
                 }
             }
-            
+
             if !all_gpu_instances.is_empty() {
                 gpu_driven.update_instances(queue, &all_gpu_instances);
             }
@@ -237,11 +238,8 @@ impl GpuInstancingRenderer {
         view_proj: [[f32; 4]; 4],
     ) {
         if let Some(ref gpu_driven) = self.gpu_driven {
-            let total_instances: u32 = self
-                .instances
-                .values()
-                .map(|instances| instances.len() as u32)
-                .sum();
+            let total_instances: u32 =
+                self.instances.values().map(|instances| instances.len() as u32).sum();
             if total_instances > 0 {
                 gpu_driven.cull(encoder, device, queue, view_proj, total_instances);
             }
@@ -258,7 +256,7 @@ impl GpuInstancingRenderer {
     pub fn optimize_batches(&mut self) -> Vec<BatchKey> {
         // 创建优化批次
         let mut optimized_batches: Vec<crate::render::batch_optimizer::OptimizedBatch> = Vec::new();
-        
+
         for (key, instances) in &self.instances {
             let batch = crate::render::batch_optimizer::OptimizedBatch {
                 key: *key,
@@ -270,35 +268,32 @@ impl GpuInstancingRenderer {
             };
             optimized_batches.push(batch);
         }
-        
+
         // 使用批处理优化器进行优化
         self.batch_optimizer.optimize_batches(&mut optimized_batches);
-        
+
         // 提取优化后的批次键
         let batch_keys: Vec<BatchKey> = optimized_batches.iter().map(|b| b.key).collect();
-        
+
         // 更新统计
         self.stats.batch_count = batch_keys.len();
-        self.stats.total_instances = self
-            .instances
-            .values()
-            .map(|instances| instances.len() as u32)
-            .sum();
-        
+        self.stats.total_instances =
+            self.instances.values().map(|instances| instances.len() as u32).sum();
+
         if self.stats.batch_count > 0 {
             self.stats.avg_instances_per_batch =
                 self.stats.total_instances as f32 / self.stats.batch_count as f32;
         }
-        
+
         // 估计优化前的Draw Call数量（假设每个实例一个Draw Call）
         self.stats.draw_calls_before = self.stats.total_instances;
         self.stats.draw_calls = self.stats.batch_count as u32;
-        
+
         if self.stats.draw_calls_before > 0 {
-            self.stats.draw_call_reduction = 1.0
-                - (self.stats.draw_calls as f32 / self.stats.draw_calls_before as f32);
+            self.stats.draw_call_reduction =
+                1.0 - (self.stats.draw_calls as f32 / self.stats.draw_calls_before as f32);
         }
-        
+
         batch_keys
     }
 
@@ -307,7 +302,7 @@ impl GpuInstancingRenderer {
         self.instances.clear();
         self.stats = GpuInstancingStats::default();
     }
-    
+
     /// 获取实例数据（按批次键）
     pub fn get_instances(&self, key: &BatchKey) -> Option<&Vec<InstanceData>> {
         self.instances.get(key)
@@ -335,12 +330,8 @@ mod tests {
 
     #[test]
     fn test_instance_data_creation() {
-        let instance = InstanceData::new(
-            Vec3::new(1.0, 2.0, 3.0),
-            Vec3::ONE,
-            glam::Quat::IDENTITY,
-        );
-        
+        let instance = InstanceData::new(Vec3::new(1.0, 2.0, 3.0), Vec3::ONE, glam::Quat::IDENTITY);
+
         assert_eq!(instance.position, Vec3::new(1.0, 2.0, 3.0));
         assert_eq!(instance.scale, Vec3::ONE);
     }
@@ -354,18 +345,12 @@ mod tests {
 
     #[test]
     fn test_add_instance() {
-        use crate::render::instance_batch::BatchKey;
-        
         // 注意：这个测试需要实际的wgpu设备来创建GpuInstancingRenderer
         // 这里只测试InstanceData的创建
-        let instance = InstanceData::new(
-            Vec3::ZERO,
-            Vec3::ONE,
-            glam::Quat::IDENTITY,
-        );
-        
-        let gpu_instance = instance.to_gpu_instance(0, Vec3::new(-0.5, -0.5, -0.5), Vec3::new(0.5, 0.5, 0.5));
+        let instance = InstanceData::new(Vec3::ZERO, Vec3::ONE, glam::Quat::IDENTITY);
+
+        let gpu_instance =
+            instance.to_gpu_instance(0, Vec3::new(-0.5, -0.5, -0.5), Vec3::new(0.5, 0.5, 0.5));
         assert_eq!(gpu_instance.instance_id, 0);
     }
 }
-

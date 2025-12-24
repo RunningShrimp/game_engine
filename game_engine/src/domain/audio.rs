@@ -348,11 +348,7 @@ impl AudioSource {
             self.set_looped(looped)?;
         }
 
-        if let Some(pos) = action
-            .data
-            .get("playback_position")
-            .and_then(|v| v.as_f64())
-        {
+        if let Some(pos) = action.data.get("playback_position").and_then(|v| v.as_f64()) {
             self.playback_position = pos as f32;
         }
 

@@ -1,11 +1,11 @@
 //  网络同步算法模块
-// 
+//
 //  实现状态同步和事件同步，包括冲突解决机制。
-// 
+//
 //  ## 设计原理
-// 
+//
 //  网络同步通过以下机制确保客户端和服务器状态一致：
-// 
+//
 //  ```text
 //  ┌─────────────────┐         ┌─────────────────┐
 //  │     Client      │         │     Server      │
@@ -17,9 +17,9 @@
 //  │  State         │         │  State          │
 //  └─────────────────┘         └─────────────────┘
 //  ```
-// 
+//
 //  ## 核心机制
-// 
+//
 //  1. **状态同步**: 定期同步游戏状态（位置、旋转、速度等）
 //  2. **事件同步**: 同步离散事件（开火、拾取物品等）
 //  3. **冲突解决**: 服务器权威，客户端校正
@@ -361,20 +361,13 @@ impl StateSyncManager {
                         .rotation
                         .map(|r| Quat::from_xyzw(r[0], r[1], r[2], r[3]))
                         .unwrap_or(Quat::IDENTITY),
-                    scale: delta
-                        .scale
-                        .map(|s| Vec3::new(s[0], s[1], s[2]))
-                        .unwrap_or(Vec3::ONE),
+                    scale: delta.scale.map(|s| Vec3::new(s[0], s[1], s[2])).unwrap_or(Vec3::ONE),
                     velocity: delta
                         .velocity
                         .map(|v| Vec3::new(v[0], v[1], v[2]))
                         .unwrap_or(Vec3::ZERO),
                     timestamp: current_timestamp_ms(),
-                    version: sync_state
-                        .server_state
-                        .as_ref()
-                        .map(|s| s.version + 1)
-                        .unwrap_or(0),
+                    version: sync_state.server_state.as_ref().map(|s| s.version + 1).unwrap_or(0),
                 };
 
                 // 更新服务器状态并检测冲突
@@ -407,8 +400,7 @@ impl StateSyncManager {
 
     /// 清除已发送的事件
     pub fn clear_events(&mut self, event_ids: &[u64]) {
-        self.event_queue
-            .retain(|e| !event_ids.contains(&e.event_id));
+        self.event_queue.retain(|e| !event_ids.contains(&e.event_id));
     }
 
     /// 获取实体同步状态

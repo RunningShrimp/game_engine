@@ -1,12 +1,12 @@
 //  性能告警系统
-// 
+//
 //  提供实时性能监控和告警功能，当性能指标超过阈值时触发告警。
 //  支持多种告警类型、告警级别和告警通知方式。
 
+use crate::performance::monitoring::system_monitor::PerformanceMetrics;
 use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-use crate::performance::monitoring::system_monitor::PerformanceMetrics;
 
 /// 告警级别
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -138,7 +138,7 @@ pub struct AlertStatistics {
 pub trait AlertHandler: Send + Sync {
     /// 处理告警
     fn handle_alert(&self, alert: &AlertEvent);
-    
+
     /// 获取处理器名称
     fn name(&self) -> &str;
 }
@@ -154,13 +154,13 @@ impl AlertHandler for ConsoleAlertHandler {
             AlertLevel::Error => "ERROR",
             AlertLevel::Critical => "CRITICAL",
         };
-        
+
         println!(
             "[{}] {} - {} (value: {:.2}, threshold: {:.2})",
             level_str, alert.alert_type, alert.message, alert.current_value, alert.threshold
         );
     }
-    
+
     fn name(&self) -> &str {
         "ConsoleAlertHandler"
     }
@@ -207,7 +207,7 @@ impl AlertHandler for LogAlertHandler {
             }
         }
     }
-    
+
     fn name(&self) -> &str {
         "LogAlertHandler"
     }
@@ -276,13 +276,13 @@ impl PerformanceAlertSystem {
             enabled: true,
             alert_id_counter: 0,
         };
-        
+
         system.add_default_rules();
         system.add_default_handlers();
-        
+
         system
     }
-    
+
     /// 添加默认告警规则
     fn add_default_rules(&mut self) {
         self.add_rule(AlertRule {
@@ -295,7 +295,7 @@ impl PerformanceAlertSystem {
             enabled: true,
             message_template: "FPS is too low: {:.2} (threshold: {:.2})".to_string(),
         });
-        
+
         self.add_rule(AlertRule {
             alert_type: AlertType::HighFrameTime,
             level: AlertLevel::Warning,
@@ -306,7 +306,7 @@ impl PerformanceAlertSystem {
             enabled: true,
             message_template: "Frame time is too high: {:.2}ms (threshold: {:.2}ms)".to_string(),
         });
-        
+
         self.add_rule(AlertRule {
             alert_type: AlertType::HighMemoryUsage,
             level: AlertLevel::Warning,
@@ -317,7 +317,7 @@ impl PerformanceAlertSystem {
             enabled: true,
             message_template: "Memory usage is high: {:.2}MB (threshold: {:.2}MB)".to_string(),
         });
-        
+
         self.add_rule(AlertRule {
             alert_type: AlertType::HighCpuUsage,
             level: AlertLevel::Warning,
@@ -328,7 +328,7 @@ impl PerformanceAlertSystem {
             enabled: true,
             message_template: "CPU usage is high: {:.2}% (threshold: {:.2}%)".to_string(),
         });
-        
+
         self.add_rule(AlertRule {
             alert_type: AlertType::HighGpuUsage,
             level: AlertLevel::Warning,
@@ -339,7 +339,7 @@ impl PerformanceAlertSystem {
             enabled: true,
             message_template: "GPU usage is high: {:.2}% (threshold: {:.2}%)".to_string(),
         });
-        
+
         self.add_rule(AlertRule {
             alert_type: AlertType::HighRenderTime,
             level: AlertLevel::Warning,
@@ -350,7 +350,7 @@ impl PerformanceAlertSystem {
             enabled: true,
             message_template: "Render time is high: {:.2}ms (threshold: {:.2}ms)".to_string(),
         });
-        
+
         self.add_rule(AlertRule {
             alert_type: AlertType::HighPhysicsTime,
             level: AlertLevel::Warning,
@@ -361,7 +361,7 @@ impl PerformanceAlertSystem {
             enabled: true,
             message_template: "Physics time is high: {:.2}ms (threshold: {:.2}ms)".to_string(),
         });
-        
+
         self.add_rule(AlertRule {
             alert_type: AlertType::HighNetworkLatency,
             level: AlertLevel::Warning,
@@ -373,55 +373,64 @@ impl PerformanceAlertSystem {
             message_template: "Network latency is high: {:.2}ms (threshold: {:.2}ms)".to_string(),
         });
     }
-    
+
     /// 添加默认告警处理器
     fn add_default_handlers(&mut self) {
         self.add_handler(Arc::new(ConsoleAlertHandler));
         self.add_handler(Arc::new(LogAlertHandler));
     }
-    
+
     /// 添加告警规则
     pub fn add_rule(&mut self, rule: AlertRule) {
         let alert_type = rule.alert_type.clone();
-        self.rules.insert(alert_type, AlertState {
-            rule,
-            start_time: None,
-            triggered: false,
-            last_triggered: None,
-        });
+        self.rules.insert(
+            alert_type,
+            AlertState {
+                rule,
+                start_time: None,
+                triggered: false,
+                last_triggered: None,
+            },
+        );
     }
-    
+
     /// 移除告警规则
     pub fn remove_rule(&mut self, alert_type: &AlertType) {
         self.rules.remove(alert_type);
     }
-    
+
     /// 添加告警处理器
     pub fn add_handler(&mut self, handler: Arc<dyn AlertHandler>) {
         self.handlers.push(handler);
     }
-    
+
     /// 移除告警处理器
     pub fn remove_handler(&mut self, name: &str) {
         self.handlers.retain(|h| h.name() != name);
     }
-    
+
     /// 更新性能指标并检查告警
     pub fn update(&mut self, metrics: &PerformanceMetrics) {
         if !self.enabled {
             return;
         }
-        
+
         self.check_alert(AlertType::LowFps, metrics.fps as f64);
         self.check_alert(AlertType::HighFrameTime, metrics.frame_time_ms as f64);
         self.check_alert(AlertType::HighMemoryUsage, metrics.memory_usage_mb as f64);
         self.check_alert(AlertType::HighCpuUsage, metrics.cpu_usage_percent as f64);
         self.check_alert(AlertType::HighGpuUsage, metrics.gpu_usage_percent as f64);
         self.check_alert(AlertType::HighRenderTime, metrics.gpu_render_time_ms as f64);
-        self.check_alert(AlertType::HighPhysicsTime, metrics.physics_update_time_ms as f64);
-        self.check_alert(AlertType::HighNetworkLatency, metrics.network_sync_latency_ms as f64);
+        self.check_alert(
+            AlertType::HighPhysicsTime,
+            metrics.physics_update_time_ms as f64,
+        );
+        self.check_alert(
+            AlertType::HighNetworkLatency,
+            metrics.network_sync_latency_ms as f64,
+        );
     }
-    
+
     /// 检查告警
     fn check_alert(&mut self, alert_type: AlertType, value: f64) {
         let (should_trigger, rule_info) = {
@@ -429,29 +438,31 @@ impl PerformanceAlertSystem {
                 Some(state) => state,
                 None => return,
             };
-            
+
             if !state.rule.enabled {
                 return;
             }
-            
+
             let triggered = match state.rule.operator {
                 ComparisonOperator::GreaterThan => value > state.rule.threshold,
                 ComparisonOperator::LessThan => value < state.rule.threshold,
                 ComparisonOperator::GreaterThanOrEqual => value >= state.rule.threshold,
                 ComparisonOperator::LessThanOrEqual => value <= state.rule.threshold,
                 ComparisonOperator::Equal => (value - state.rule.threshold).abs() < f64::EPSILON,
-                ComparisonOperator::NotEqual => (value - state.rule.threshold).abs() >= f64::EPSILON,
+                ComparisonOperator::NotEqual => {
+                    (value - state.rule.threshold).abs() >= f64::EPSILON
+                }
             };
-            
+
             let now = Instant::now();
-            
+
             if triggered {
                 if state.start_time.is_none() {
                     state.start_time = Some(now);
                 }
-                
+
                 let duration = now.duration_since(state.start_time.unwrap());
-                
+
                 if duration >= state.rule.duration {
                     if !state.triggered {
                         if let Some(last_triggered) = state.last_triggered {
@@ -459,10 +470,10 @@ impl PerformanceAlertSystem {
                                 return;
                             }
                         }
-                        
+
                         state.triggered = true;
                         state.last_triggered = Some(now);
-                        
+
                         let rule_info = (
                             state.rule.alert_type.clone(),
                             state.rule.level,
@@ -470,7 +481,7 @@ impl PerformanceAlertSystem {
                             state.rule.threshold,
                             state.rule.operator,
                         );
-                        
+
                         (true, Some((duration, rule_info)))
                     } else {
                         (false, None)
@@ -484,18 +495,23 @@ impl PerformanceAlertSystem {
                 (false, None)
             }
         };
-        
+
         if should_trigger {
             if let Some((duration, rule_info)) = rule_info {
                 self.trigger_alert_direct(rule_info, value, duration);
             }
         }
     }
-    
+
     /// 直接触发告警
-    fn trigger_alert_direct(&mut self, rule_info: (AlertType, AlertLevel, String, f64, ComparisonOperator), value: f64, duration: Duration) {
+    fn trigger_alert_direct(
+        &mut self,
+        rule_info: (AlertType, AlertLevel, String, f64, ComparisonOperator),
+        value: f64,
+        duration: Duration,
+    ) {
         let (alert_type, level, message_template, threshold, operator) = rule_info;
-        
+
         let alert = AlertEvent {
             id: format!("alert_{}", self.alert_id_counter),
             alert_type: alert_type.clone(),
@@ -514,56 +530,51 @@ impl PerformanceAlertSystem {
                 meta
             },
         };
-        
+
         self.alert_id_counter += 1;
-        
+
         self.statistics.total_alerts += 1;
         *self.statistics.alerts_by_level.entry(alert.level).or_insert(0) += 1;
         *self.statistics.alerts_by_type.entry(alert.alert_type.clone()).or_insert(0) += 1;
         self.statistics.last_alert_time = Some(alert.timestamp);
-        
+
         self.alert_history.push_back(alert.clone());
         if self.alert_history.len() > self.max_history_size {
             self.alert_history.pop_front();
         }
-        
+
         for handler in &self.handlers {
             handler.handle_alert(&alert);
         }
     }
-    
+
     /// 获取告警历史
     pub fn get_alert_history(&self) -> Vec<AlertEvent> {
         self.alert_history.iter().cloned().collect()
     }
-    
+
     /// 获取最近的告警
     pub fn get_recent_alerts(&self, count: usize) -> Vec<AlertEvent> {
-        self.alert_history
-            .iter()
-            .rev()
-            .take(count)
-            .cloned()
-            .collect()
+        self.alert_history.iter().rev().take(count).cloned().collect()
     }
-    
+
     /// 获取告警统计
     pub fn get_statistics(&self) -> AlertStatistics {
         self.statistics.clone()
     }
-    
+
     /// 清除告警历史
     pub fn clear_history(&mut self) {
         self.alert_history.clear();
         self.statistics = AlertStatistics::default();
         self.alert_id_counter = 0;
     }
-    
+
     /// 启用/禁用告警系统
     pub fn set_enabled(&mut self, enabled: bool) {
         self.enabled = enabled;
     }
-    
+
     /// 检查是否启用
     pub fn is_enabled(&self) -> bool {
         self.enabled

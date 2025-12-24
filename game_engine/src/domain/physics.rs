@@ -123,11 +123,7 @@ pub struct RigidBody {
 
 impl RigidBody {
     /// 创建新的刚体（默认旋转和质量）
-    pub fn new(
-        id: RigidBodyId,
-        body_type: RigidBodyType,
-        position: Vec3,
-    ) -> Self {
+    pub fn new(id: RigidBodyId, body_type: RigidBodyType, position: Vec3) -> Self {
         Self::with_all(id, body_type, position, Quat::IDENTITY, 1.0)
     }
 
@@ -629,13 +625,12 @@ impl PhysicsWorld {
                 ))?
             }
             ShapeType::TriMesh { vertices, indices } => {
-                let vertices: Vec<_> = vertices
-                    .iter()
-                    .map(|v| Point3::new(v.x, v.y, v.z))
-                    .collect();
+                let vertices: Vec<_> =
+                    vertices.iter().map(|v| Point3::new(v.x, v.y, v.z)).collect();
                 let indices: Vec<_> = indices.iter().map(|i| [i[0], i[1], i[2]]).collect();
-                SharedShape::trimesh(vertices, indices)
-                    .map_err(|e| PhysicsError::ShapeCreationError(format!("Failed to create trimesh: {}", e)))?
+                SharedShape::trimesh(vertices, indices).map_err(|e| {
+                    PhysicsError::ShapeCreationError(format!("Failed to create trimesh: {}", e))
+                })?
             }
         };
 
@@ -709,8 +704,10 @@ impl PhysicsWorld {
         self.integration_parameters.dt = delta_time;
 
         // 执行物理步进
-        let mut physics_pipeline = safe_lock(&self.physics_pipeline, "PhysicsWorld.physics_pipeline")
-            .map_err(|e| PhysicsError::LockError(format!("Failed to acquire physics pipeline lock: {}", e)))?;
+        let mut physics_pipeline =
+            safe_lock(&self.physics_pipeline, "PhysicsWorld.physics_pipeline").map_err(|e| {
+                PhysicsError::LockError(format!("Failed to acquire physics pipeline lock: {}", e))
+            })?;
         physics_pipeline.step(
             &self.gravity,
             &self.integration_parameters,

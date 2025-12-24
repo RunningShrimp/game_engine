@@ -104,7 +104,7 @@ type EventBox = Box<dyn DomainEvent>;
 trait EventHandlerWrapper: Send + Sync {
     /// 处理事件（通过类型ID匹配）
     fn handle_by_type_id(&self, type_id: TypeId, event_data: &[u8]) -> Result<(), EventError>;
-    
+
     /// 获取事件类型ID
     fn event_type_id(&self) -> TypeId;
 }
@@ -124,7 +124,9 @@ impl<E: DomainEvent + Serialize + for<'de> Deserialize<'de>> TypedEventHandlerWr
     }
 }
 
-impl<E: DomainEvent + Serialize + for<'de> Deserialize<'de>> EventHandlerWrapper for TypedEventHandlerWrapper<E> {
+impl<E: DomainEvent + Serialize + for<'de> Deserialize<'de>> EventHandlerWrapper
+    for TypedEventHandlerWrapper<E>
+{
     fn handle_by_type_id(&self, type_id: TypeId, event_data: &[u8]) -> Result<(), EventError> {
         // 类型检查：确保类型ID匹配
         let handler_type_id = self.event_type_id();
@@ -179,10 +181,7 @@ impl SafeEventBus {
 
         // 添加订阅者（最小持锁：只在写入时持有写锁）
         if let Ok(mut subscribers) = safe_write(&self.subscribers, "event_subscribers") {
-            subscribers
-                .entry(type_id)
-                .or_insert_with(Vec::new)
-                .push(wrapper);
+            subscribers.entry(type_id).or_insert_with(Vec::new).push(wrapper);
         }
     }
 
@@ -230,7 +229,10 @@ impl SafeEventBus {
             // 注意：这里需要克隆事件，但DomainEvent trait没有Clone
             // 实际使用中，应该通过序列化/反序列化来创建新实例
             // 或者使用Arc<dyn DomainEvent>来共享
-            tracing::debug!("Async event distribution not fully implemented for event: {}", event_type);
+            tracing::debug!(
+                "Async event distribution not fully implemented for event: {}",
+                event_type
+            );
         }
     }
 

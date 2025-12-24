@@ -1,5 +1,5 @@
 //  ECS系统性能基准测试
-// 
+//
 //  测试实体创建、组件添加、系统执行等ECS操作的性能
 
 use bevy_ecs::prelude::*;
@@ -52,9 +52,8 @@ fn bench_add_components(c: &mut Criterion) {
     for count in [100, 1000, 10000].iter() {
         group.bench_with_input(BenchmarkId::from_parameter(count), count, |b, &count| {
             let mut world = World::new();
-            let entities: Vec<Entity> = (0..count)
-                .map(|_| world.spawn(Transform::default()).id())
-                .collect();
+            let entities: Vec<Entity> =
+                (0..count).map(|_| world.spawn(Transform::default()).id()).collect();
 
             b.iter(|| {
                 for entity in &entities {

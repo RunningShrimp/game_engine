@@ -2,10 +2,10 @@
 //!
 //! 提供统一的错误处理接口，集成错误恢复、日志记录和错误监控。
 
+use crate::error::recovery::{ErrorRecovery, RecoveryContext};
 use crate::error::{
     EngineError, ErrorMonitor, ErrorSeverity, Logger, RecoveryResult, RecoveryStrategy,
 };
-use crate::error::recovery::{ErrorRecovery, RecoveryContext};
 use std::sync::Arc;
 
 /// 错误处理配置
@@ -157,7 +157,7 @@ impl Default for ErrorHandler {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::error::{RenderError, ErrorSeverity};
+    use crate::error::ErrorSeverity;
 
     #[test]
     fn test_error_handler_config_default() {
@@ -173,4 +173,3 @@ mod tests {
         assert!(handler.recovery.is_none());
     }
 }
-

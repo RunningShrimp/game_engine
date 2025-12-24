@@ -73,10 +73,10 @@ mod tests {
         schedule.add_system(move |_world: &mut World| {
             *call_count_clone.lock().unwrap() += 1;
         });
-        
+
         let mut world = World::new();
         schedule.run(&mut world);
-        
+
         assert_eq!(*call_count.lock().unwrap(), 1);
     }
 
@@ -90,14 +90,14 @@ mod tests {
     fn test_fixed_schedule_runs() {
         let mut schedule = create_fixed_schedule();
         let mut world = World::new();
-        
+
         // 添加一些实体
         world.spawn_empty();
         world.spawn_empty();
-        
+
         // 运行调度器不应该panic
         schedule.run(&mut world);
-        
+
         assert_eq!(world.entities().len(), 2);
     }
 }

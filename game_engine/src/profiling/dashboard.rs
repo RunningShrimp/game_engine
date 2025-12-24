@@ -1,41 +1,32 @@
 //  性能监控仪表板后端服务
-// 
+//
 //  提供 REST API 和 WebSocket 接口，供前端仪表板获取性能数据。
 //  支持实时指标、历史数据和告警信息。
-// 
+//
 //  ## API 端点
-// 
+//
 //  - `GET /api/metrics` - 获取当前性能指标
 //  - `GET /api/chart-data` - 获取图表数据
 //  - `GET /api/alerts` - 获取告警信息
 //  - `WS /ws` - WebSocket 实时数据推送
-// 
+//
 //  ## 使用示例
-// 
+//
 //  ```ignore
 //  // 启动仪表板服务
 //  let dashboard = DashboardService::new(profiling_service);
 //  dashboard.start_server("127.0.0.1:8080").await?;
 //  ```
 
-#[cfg(feature = "profiling")]
-use std::collections::HashMap;
-#[cfg(feature = "profiling")]
-use std::sync::Arc;
-#[cfg(feature = "profiling")]
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
-#[cfg(feature = "profiling")]
-use tokio::sync::{RwLock, Mutex};
-#[cfg(feature = "profiling")]
-use warp::{Filter, Rejection, Reply};
-#[cfg(feature = "profiling")]
-use warp::ws::{Message, WebSocket};
-#[cfg(feature = "profiling")]
-use futures::{SinkExt, StreamExt};
-#[cfg(feature = "profiling")]
 use futures::stream::SplitSink;
-#[cfg(feature = "profiling")]
+use futures::{SinkExt, StreamExt};
+use std::collections::HashMap;
+use std::sync::Arc;
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use tokio::sync::{Mutex, RwLock};
 use tokio::time::interval;
+use warp::ws::{Message, WebSocket};
+use warp::{Filter, Rejection, Reply};
 
 use super::ProfilingService;
 
@@ -67,10 +58,7 @@ pub struct RealtimeMetrics {
 impl Default for RealtimeMetrics {
     fn default() -> Self {
         Self {
-            timestamp: SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_millis() as u64,
+            timestamp: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64,
             fps: 0.0,
             frame_time: 0.0,
             cpu_usage: 0.0,
@@ -339,25 +327,21 @@ impl DashboardService {
             .and_then(get_alerts);
 
         // 组合所有路由
-        let routes = metrics_route
-            .or(chart_route)
-            .or(alerts_route);
+        let mut routes = metrics_route.or(chart_route).or(alerts_route);
 
         // 如果启用WebSocket，添加WebSocket路由
-        let routes = if config.enable_websocket {
+        if config.enable_websocket {
             let profiling_service_clone = profiling_service.clone();
             let connections_clone = websocket_connections.clone();
-            let ws_route = warp::path("ws")
-                .and(warp::ws())
-                .map(move |ws: warp::ws::Ws| {
-                    let service = profiling_service_clone.clone();
-                    let connections = connections_clone.clone();
-                    ws.on_upgrade(move |socket| handle_websocket_connection(socket, service, connections))
-                });
-            routes.or(ws_route)
-        } else {
-            routes
-        };
+            let ws_route = warp::path("ws").and(warp::ws()).map(move |ws: warp::ws::Ws| {
+                let service = profiling_service_clone.clone();
+                let connections = connections_clone.clone();
+                ws.on_upgrade(move |socket| {
+                    handle_websocket_connection(socket, service, connections)
+                })
+            });
+            routes = routes.or(ws_route);
+        }
 
         let routes = if self.config.enable_cors {
             routes.with(warp::cors())
@@ -372,7 +356,11 @@ impl DashboardService {
         }
 
         let addr = self.config.bind_address.clone();
-        tracing::info!("Starting dashboard server on {} (WebSocket: {})", addr, config.enable_websocket);
+        tracing::info!(
+            "Starting dashboard server on {} (WebSocket: {})",
+            addr,
+            config.enable_websocket
+        );
 
         warp::serve(routes).run(addr.parse::<std::net::SocketAddr>()?).await;
         Ok(())
@@ -386,23 +374,23 @@ impl DashboardService {
 
         tokio::spawn(async move {
             let mut interval = interval(update_interval);
-            
+
             loop {
                 interval.tick().await;
-                
+
                 // 收集实时指标
                 let realtime_metrics = collect_realtime_metrics(&profiling_service).await;
-                
+
                 // 序列化数据
                 if let Ok(json_data) = serde_json::to_string(&realtime_metrics) {
                     // 广播给所有连接的客户端
                     let mut connections_guard = connections.lock().await;
                     let mut to_remove = Vec::new();
-                    
+
                     for (i, sender) in connections_guard.iter().enumerate() {
                         let mut sender_guard = sender.sender.lock().await;
                         match sender_guard.send(Message::text(json_data.clone())).await {
-                            Ok(_) => {},
+                            Ok(_) => {}
                             Err(_) => {
                                 // 连接已断开，标记为待移除
                                 to_remove.push(i);
@@ -410,7 +398,7 @@ impl DashboardService {
                             }
                         }
                     }
-                    
+
                     // 移除断开的连接
                     for &i in to_remove.iter().rev() {
                         connections_guard.remove(i);
@@ -423,22 +411,25 @@ impl DashboardService {
     /// 广播告警信息
     pub async fn broadcast_alert(&self, alert: AlertInfo) {
         let connections = self.websocket_connections.clone();
-        
+
         if let Ok(json_data) = serde_json::to_string(&alert) {
             let mut connections_guard = connections.lock().await;
             let mut to_remove = Vec::new();
-            
+
             for (i, sender) in connections_guard.iter().enumerate() {
                 let mut sender_guard = sender.sender.lock().await;
                 match sender_guard.send(Message::text(json_data.clone())).await {
-                    Ok(_) => {},
+                    Ok(_) => {}
                     Err(_) => {
                         to_remove.push(i);
-                        tracing::warn!("WebSocket connection {} disconnected during alert broadcast", sender.id);
+                        tracing::warn!(
+                            "WebSocket connection {} disconnected during alert broadcast",
+                            sender.id
+                        );
                     }
                 }
             }
-            
+
             for &i in to_remove.iter().rev() {
                 connections_guard.remove(i);
             }
@@ -448,22 +439,22 @@ impl DashboardService {
     /// 收集当前性能指标
     async fn collect_metrics(&self) -> MetricsResponse {
         let service = &self.profiling_service;
-        
+
         // 收集渲染指标
         let render = self.collect_render_metrics(service).await;
-        
+
         // 收集内存指标
         let memory = self.collect_memory_metrics(service).await;
-        
+
         // 收集物理指标
         let physics = self.collect_physics_metrics(service).await;
-        
+
         // 收集系统指标
         let system = self.collect_system_metrics(service).await;
-        
+
         // 检查告警
         let alerts = self.check_alerts(&render, &memory, &physics, &system).await;
-        
+
         MetricsResponse {
             render,
             memory,
@@ -476,7 +467,7 @@ impl DashboardService {
     /// 收集渲染指标
     async fn collect_render_metrics(&self, service: &ProfilingService) -> Option<RenderMetrics> {
         let metrics = service.get_realtime_metrics().ok()?;
-        
+
         Some(RenderMetrics {
             fps: metrics.fps,
             frame_time: metrics.frame_time,
@@ -490,7 +481,7 @@ impl DashboardService {
     /// 收集内存指标
     async fn collect_memory_metrics(&self, service: &ProfilingService) -> Option<MemoryMetrics> {
         let metrics = service.get_realtime_metrics().ok()?;
-        
+
         let total_memory_mb = 4096.0;
         let usage_percent = (metrics.memory_usage / total_memory_mb) * 100.0;
 
@@ -618,21 +609,21 @@ impl DashboardService {
     async fn update_historical_data(&self) {
         let service = &self.profiling_service;
         let mut data = self.historical_data.write().await;
-        
+
         let metrics = match service.get_realtime_metrics() {
             Ok(m) => m,
             Err(_) => return,
         };
-        
+
         add_data_point(&mut data, "fps", metrics.fps);
         add_data_point(&mut data, "frame_time", metrics.frame_time);
         add_data_point(&mut data, "draw_calls", metrics.draw_calls as f64);
         add_data_point(&mut data, "memory_usage", metrics.memory_usage);
         add_data_point(&mut data, "physics_time", metrics.physics_time);
-        
+
         let retention = Duration::from_secs(self.config.data_retention_seconds);
         let cutoff = Instant::now() - retention;
-        
+
         for (_, values) in data.iter_mut() {
             values.retain(|(timestamp, _)| *timestamp >= cutoff);
         }
@@ -647,10 +638,7 @@ fn add_data_point(data: &mut HashMap<String, Vec<(Instant, f64)>>, key: &str, va
 
 /// 获取当前时间戳
 fn current_timestamp() -> u64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_secs()
+    SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_secs()
 }
 
 /// Warp过滤器：注入性能监控服务
@@ -663,7 +651,10 @@ fn with_profiling_service(
 /// Warp过滤器：注入历史数据
 fn with_historical_data(
     data: Arc<RwLock<HashMap<String, Vec<(Instant, f64)>>>>,
-) -> impl Filter<Extract = (Arc<RwLock<HashMap<String, Vec<(Instant, f64)>>>>,), Error = std::convert::Infallible> + Clone {
+) -> impl Filter<
+    Extract = (Arc<RwLock<HashMap<String, Vec<(Instant, f64)>>>>,),
+    Error = std::convert::Infallible,
+> + Clone {
     warp::any().map(move || data.clone())
 }
 
@@ -682,10 +673,10 @@ async fn get_metrics(
 ) -> Result<impl Reply, Rejection> {
     let dashboard = DashboardService::with_config(service, config);
     let metrics = dashboard.collect_metrics().await;
-    
+
     // 更新历史数据
     dashboard.update_historical_data().await;
-    
+
     Ok(warp::reply::json(&metrics))
 }
 
@@ -695,21 +686,16 @@ async fn get_chart_data(
     historical_data: Arc<RwLock<HashMap<String, Vec<(Instant, f64)>>>>,
 ) -> Result<impl Reply, Rejection> {
     let metric = params.get("metric").unwrap_or(&"fps".to_string()).clone();
-    let range_seconds = params
-        .get("range")
-        .and_then(|s| s.parse().ok())
-        .unwrap_or(300); // 默认5分钟
-    
+    let range_seconds = params.get("range").and_then(|s| s.parse().ok()).unwrap_or(300); // 默认5分钟
+
     let data = historical_data.read().await;
     let values = data.get(&metric).cloned().unwrap_or_default();
-    
+
     // 过滤时间范围
     let cutoff = Instant::now() - Duration::from_secs(range_seconds);
-    let filtered_values: Vec<_> = values
-        .into_iter()
-        .filter(|(timestamp, _)| *timestamp >= cutoff)
-        .collect();
-    
+    let filtered_values: Vec<_> =
+        values.into_iter().filter(|(timestamp, _)| *timestamp >= cutoff).collect();
+
     // 转换为图表格式
     let (labels, chart_values): (Vec<_>, Vec<_>) = filtered_values
         .into_iter()
@@ -719,22 +705,20 @@ async fn get_chart_data(
             (time_str, value)
         })
         .unzip();
-    
+
     let response = ChartDataResponse {
         labels,
         values: chart_values,
     };
-    
+
     Ok(warp::reply::json(&response))
 }
 
 /// API处理器：获取告警信息
-async fn get_alerts(
-    service: Arc<ProfilingService>,
-) -> Result<impl Reply, Rejection> {
+async fn get_alerts(service: Arc<ProfilingService>) -> Result<impl Reply, Rejection> {
     let dashboard = DashboardService::new(service);
     let metrics = dashboard.collect_metrics().await;
-    
+
     Ok(warp::reply::json(&metrics.alerts))
 }
 
@@ -745,23 +729,23 @@ async fn handle_websocket_connection(
     connections: Arc<Mutex<Vec<WebSocketSender>>>,
 ) {
     let (ws_tx, mut ws_rx) = websocket.split();
-    
+
     // 生成唯一连接ID
     let connection_id = format!("ws_{}", uuid::Uuid::new_v4().to_string()[..8].to_string());
-    
+
     // 创建发送器
     let sender = WebSocketSender {
         sender: Arc::new(Mutex::new(ws_tx)),
         id: connection_id.clone(),
     };
-    
+
     // 添加到连接列表
     {
         let mut connections_guard = connections.lock().await;
         connections_guard.push(sender.clone());
         tracing::info!("WebSocket connection {} established", connection_id);
     }
-    
+
     // 发送欢迎消息
     {
         let welcome_msg = serde_json::json!({
@@ -769,13 +753,13 @@ async fn handle_websocket_connection(
             "message": "Connected to performance monitoring dashboard",
             "connection_id": connection_id
         });
-        
+
         if let Ok(json) = serde_json::to_string(&welcome_msg) {
             let mut sender_guard = sender.sender.lock().await;
             let _ = sender_guard.send(Message::text(json)).await;
         }
     }
-    
+
     // 处理客户端消息
     while let Some(result) = ws_rx.next().await {
         match result {
@@ -783,7 +767,7 @@ async fn handle_websocket_connection(
                 if msg.is_close() {
                     break;
                 }
-                
+
                 if let Some(text) = msg.to_str().ok() {
                     handle_client_message(text, &connection_id).await;
                 }
@@ -794,7 +778,7 @@ async fn handle_websocket_connection(
             }
         }
     }
-    
+
     // 连接关闭，从列表中移除
     {
         let mut connections_guard = connections.lock().await;
@@ -814,28 +798,40 @@ async fn handle_client_message(message: &str, connection_id: &str) {
             }
             Some("subscribe") => {
                 if let Some(metrics) = msg.get("metrics").and_then(|v| v.as_array()) {
-                    let metric_names: Vec<String> = metrics
-                        .iter()
-                        .filter_map(|v| v.as_str().map(|s| s.to_string()))
-                        .collect();
-                    tracing::info!("Connection {} subscribed to metrics: {:?}", connection_id, metric_names);
+                    let metric_names: Vec<String> =
+                        metrics.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect();
+                    tracing::info!(
+                        "Connection {} subscribed to metrics: {:?}",
+                        connection_id,
+                        metric_names
+                    );
                 }
             }
             Some("unsubscribe") => {
                 if let Some(metrics) = msg.get("metrics").and_then(|v| v.as_array()) {
-                    let metric_names: Vec<String> = metrics
-                        .iter()
-                        .filter_map(|v| v.as_str().map(|s| s.to_string()))
-                        .collect();
-                    tracing::info!("Connection {} unsubscribed from metrics: {:?}", connection_id, metric_names);
+                    let metric_names: Vec<String> =
+                        metrics.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect();
+                    tracing::info!(
+                        "Connection {} unsubscribed from metrics: {:?}",
+                        connection_id,
+                        metric_names
+                    );
                 }
             }
             _ => {
-                tracing::warn!("Unknown message type from connection {}: {}", connection_id, message);
+                tracing::warn!(
+                    "Unknown message type from connection {}: {}",
+                    connection_id,
+                    message
+                );
             }
         }
     } else {
-        tracing::warn!("Invalid JSON message from connection {}: {}", connection_id, message);
+        tracing::warn!(
+            "Invalid JSON message from connection {}: {}",
+            connection_id,
+            message
+        );
     }
 }
 

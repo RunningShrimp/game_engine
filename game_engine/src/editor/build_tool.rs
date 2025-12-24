@@ -258,10 +258,7 @@ impl BuildTool {
 
         // 构建按钮
         ui.horizontal(|ui| {
-            if ui
-                .add_enabled(!self.is_building, egui::Button::new("Build"))
-                .clicked()
-            {
+            if ui.add_enabled(!self.is_building, egui::Button::new("Build")).clicked() {
                 // 实际构建需要在后台线程中执行
                 self.build_log.push(
                     "Build button clicked (actual build requires background thread)".to_string(),
@@ -298,13 +295,11 @@ impl BuildTool {
 
         // 构建日志
         ui.collapsing("Build Log", |ui| {
-            egui::ScrollArea::vertical()
-                .max_height(200.0)
-                .show(ui, |ui| {
-                    for log_line in &self.build_log {
-                        ui.label(log_line);
-                    }
-                });
+            egui::ScrollArea::vertical().max_height(200.0).show(ui, |ui| {
+                for log_line in &self.build_log {
+                    ui.label(log_line);
+                }
+            });
         });
     }
 }

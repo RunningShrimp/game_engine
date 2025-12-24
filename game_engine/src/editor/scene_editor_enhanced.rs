@@ -1,5 +1,5 @@
 //  增强的场景编辑器功能
-// 
+//
 //  提供多选、复制粘贴等高级编辑功能
 
 use crate::ecs::Transform;
@@ -205,7 +205,7 @@ impl SceneEditorEnhanced {
             let selection_rect = egui::Rect::from_two_pos(start, end);
             // 使用传入的 rect 参数进行边界检查，形成逻辑闭环
             let clamped_rect = selection_rect.intersect(rect);
-              painter.rect_stroke(
+            painter.rect_stroke(
                 clamped_rect,
                 0.0,
                 egui::Stroke::new(2.0, egui::Color32::from_rgb(100, 150, 255)),

@@ -1,9 +1,9 @@
 //  内存分配器模块
-// 
+//
 //  基于环形缓冲区池的智能内存分配器，提供高性能的GPU内存管理。
-// 
+//
 //  ## 分配策略
-// 
+//
 //  ```text
 //  ┌─────────────────────────────────────────────────────────┐
 //  │                  Memory Allocator                      │
@@ -283,10 +283,8 @@ impl MemoryPressureEvent {
         recommendation: PressureRecommendation,
     ) -> Self {
         use std::time::{SystemTime, UNIX_EPOCH};
-        let timestamp_ms = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_millis() as u64;
+        let timestamp_ms =
+            SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_millis() as u64;
         Self {
             pressure,
             utilization,
@@ -520,21 +518,15 @@ impl SmartMemoryAllocator {
             return 0.0;
         }
 
-        let total_active = self
-            .ring_pools
-            .iter()
-            .map(|pool| pool.stats().active_bytes)
-            .sum::<u64>();
+        let total_active =
+            self.ring_pools.iter().map(|pool| pool.stats().active_bytes).sum::<u64>();
 
         total_active as f32 / total_capacity as f32
     }
 
     /// 获取当前总容量
     fn get_current_total_size(&self) -> u64 {
-        self.ring_pools
-            .iter()
-            .map(|pool| pool.total_capacity())
-            .sum()
+        self.ring_pools.iter().map(|pool| pool.total_capacity()).sum()
     }
 
     /// 更新分配统计信息

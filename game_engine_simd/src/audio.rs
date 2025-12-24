@@ -500,10 +500,8 @@ impl AudioDSPOps {
             for (source_idx, source) in sources.iter().enumerate() {
                 if offset + 8 <= source.len() {
                     let source_v = _mm256_loadu_ps(source.as_ptr().add(offset));
-                    let gain_v = gain_vectors
-                        .get(source_idx)
-                        .copied()
-                        .unwrap_or(_mm256_set1_ps(1.0));
+                    let gain_v =
+                        gain_vectors.get(source_idx).copied().unwrap_or(_mm256_set1_ps(1.0));
                     let scaled_v = _mm256_mul_ps(source_v, gain_v);
                     sum_v = _mm256_add_ps(sum_v, scaled_v);
                 }

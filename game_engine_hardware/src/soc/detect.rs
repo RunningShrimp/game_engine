@@ -1,5 +1,5 @@
 //  SoC（System on Chip）检测模块
-// 
+//
 //  检测移动和嵌入式平台的SoC信息
 
 //  SoC厂商
@@ -71,10 +71,7 @@ fn detect_apple_soc() -> Option<SocInfo> {
     use std::process::Command;
 
     // 检测Apple芯片
-    if let Ok(output) = Command::new("sysctl")
-        .arg("-n")
-        .arg("machdep.cpu.brand_string")
-        .output()
+    if let Ok(output) = Command::new("sysctl").arg("-n").arg("machdep.cpu.brand_string").output()
         && let Ok(brand) = String::from_utf8(output.stdout)
     {
         let brand_lower = brand.to_lowercase();
@@ -211,10 +208,7 @@ fn detect_android_soc() -> Option<SocInfo> {
     }
 
     // 尝试读取系统属性
-    if let Ok(output) = std::process::Command::new("getprop")
-        .arg("ro.product.board")
-        .output()
-    {
+    if let Ok(output) = std::process::Command::new("getprop").arg("ro.product.board").output() {
         if let Ok(board) = String::from_utf8(output.stdout) {
             let board_lower = board.to_lowercase();
 
@@ -278,9 +272,7 @@ pub fn is_mobile_platform() -> bool {
 
 //  获取CPU核心数
 pub fn get_cpu_cores() -> u32 {
-    detect_soc()
-        .map(|soc| soc.cpu_cores)
-        .unwrap_or_else(|| num_cpus::get() as u32)
+    detect_soc().map(|soc| soc.cpu_cores).unwrap_or_else(|| num_cpus::get() as u32)
 }
 
 #[cfg(test)]

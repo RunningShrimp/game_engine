@@ -1,8 +1,8 @@
 //  Language Binding Layer (FFI)
-// 
+//
 //  This module provides a unified binding layer design that can be reused
 //  across different scripting languages (JavaScript, Python, Lua, etc.).
-// 
+//
 //  Architecture:
 //  ```
 //  ┌─────────────────────────────────────────────────────────────┐

@@ -270,14 +270,12 @@ impl LayerTree {
             .collect();
         out.sort_by(|a, b| match a.target.cmp(&b.target) {
             std::cmp::Ordering::Equal => match a.tex_index.cmp(&b.tex_index) {
-                std::cmp::Ordering::Equal => match a
-                    .layer
-                    .partial_cmp(&b.layer)
-                    .unwrap_or(std::cmp::Ordering::Equal)
-                {
-                    std::cmp::Ordering::Equal => a.chunk.cmp(&b.chunk),
-                    other => other,
-                },
+                std::cmp::Ordering::Equal => {
+                    match a.layer.partial_cmp(&b.layer).unwrap_or(std::cmp::Ordering::Equal) {
+                        std::cmp::Ordering::Equal => a.chunk.cmp(&b.chunk),
+                        other => other,
+                    }
+                }
                 other => other,
             },
             other => other,
@@ -427,9 +425,7 @@ pub fn build_from_world(world: &mut bevy_ecs::world::World) -> LayerTree {
         }
     }
     for (t, tm) in query_tm.iter(world) {
-        let (vpw, vph) = vp
-            .map(|v| (v.width as f32, v.height as f32))
-            .unwrap_or((800.0, 600.0));
+        let (vpw, vph) = vp.map(|v| (v.width as f32, v.height as f32)).unwrap_or((800.0, 600.0));
         let half_w = vpw * 0.5;
         let half_h = vph * 0.5;
         let base_x = t.pos.x - (tm.width as f32 * tm.tile_size[0]) * 0.5;
@@ -594,9 +590,7 @@ pub fn build_from_world_culled(world: &mut bevy_ecs::world::World) -> (LayerTree
 
     // 获取视口信息
     let vp = world.get_resource::<Viewport>().copied();
-    let (vpw, vph) = vp
-        .map(|v| (v.width as f32, v.height as f32))
-        .unwrap_or((800.0, 600.0));
+    let (vpw, vph) = vp.map(|v| (v.width as f32, v.height as f32)).unwrap_or((800.0, 600.0));
 
     // 获取相机位置
     let mut cam_q = world.query::<(&crate::ecs::Transform, &crate::ecs::Camera)>();

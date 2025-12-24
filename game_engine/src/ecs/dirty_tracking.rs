@@ -51,34 +51,34 @@ pub struct DirtyFlags(u64);
 impl DirtyFlags {
     /// 无脏标记
     pub const NONE: DirtyFlags = DirtyFlags(0);
-    
+
     /// 位置变化
     pub const POSITION: DirtyFlags = DirtyFlags(1 << 0);
-    
+
     /// 旋转变化
     pub const ROTATION: DirtyFlags = DirtyFlags(1 << 1);
-    
+
     /// 缩放变化
     pub const SCALE: DirtyFlags = DirtyFlags(1 << 2);
-    
+
     /// Transform完整变化
     pub const TRANSFORM: DirtyFlags = DirtyFlags(0b111);
-    
+
     /// 渲染相关变化
     pub const RENDER: DirtyFlags = DirtyFlags(1 << 3);
-    
+
     /// 材质变化
     pub const MATERIAL: DirtyFlags = DirtyFlags(1 << 4);
-    
+
     /// 网格变化
     pub const MESH: DirtyFlags = DirtyFlags(1 << 5);
-    
+
     /// 物理相关变化
     pub const PHYSICS: DirtyFlags = DirtyFlags(1 << 6);
-    
+
     /// 碰撞体变化
     pub const COLLIDER: DirtyFlags = DirtyFlags(1 << 7);
-    
+
     /// 自定义标志位（8-63）
     pub fn custom(bit: u8) -> DirtyFlags {
         if bit >= 64 {
@@ -87,18 +87,18 @@ impl DirtyFlags {
             DirtyFlags(1 << (bit + 8))
         }
     }
-    
+
     /// 组合多个标志位
     pub fn combine(flags: &[DirtyFlags]) -> DirtyFlags {
         flags.iter().fold(DirtyFlags::NONE, |acc, f| acc | *f)
     }
-    
+
     /// 检查是否包含指定标志
     #[inline]
     pub fn contains(self, other: DirtyFlags) -> bool {
         (self.0 & other.0) != 0
     }
-    
+
     /// 获取标志位的值
     #[inline]
     pub fn bits(self) -> u64 {
@@ -108,7 +108,7 @@ impl DirtyFlags {
 
 impl std::ops::BitOr for DirtyFlags {
     type Output = Self;
-    
+
     #[inline]
     fn bitor(self, rhs: Self) -> Self::Output {
         DirtyFlags(self.0 | rhs.0)
@@ -117,7 +117,7 @@ impl std::ops::BitOr for DirtyFlags {
 
 impl std::ops::BitAnd for DirtyFlags {
     type Output = Self;
-    
+
     #[inline]
     fn bitand(self, rhs: Self) -> Self::Output {
         DirtyFlags(self.0 & rhs.0)
@@ -159,38 +159,38 @@ impl ComponentDirty {
             last_cleared_frame: AtomicU64::new(0),
         }
     }
-    
+
     /// 标记为脏
     #[inline]
     pub fn mark_dirty(&mut self, flags: DirtyFlags) {
         self.flags.fetch_or(flags.bits(), Ordering::Relaxed);
     }
-    
+
     /// 原子地标记为脏（线程安全）
     #[inline]
     pub fn mark_dirty_atomic(&self, flags: DirtyFlags) {
         self.flags.fetch_or(flags.bits(), Ordering::Relaxed);
     }
-    
+
     /// 检查是否脏
     #[inline]
     pub fn is_dirty(&self, flags: DirtyFlags) -> bool {
         let current = self.flags.load(Ordering::Acquire);
         DirtyFlags(current).contains(flags)
     }
-    
+
     /// 检查是否有任何脏标记
     #[inline]
     pub fn is_any_dirty(&self) -> bool {
         self.flags.load(Ordering::Acquire) != 0
     }
-    
+
     /// 获取所有脏标记
     #[inline]
     pub fn get_flags(&self) -> DirtyFlags {
         DirtyFlags(self.flags.load(Ordering::Acquire))
     }
-    
+
     /// 清除指定的脏标记
     #[inline]
     pub fn clear(&mut self, flags: DirtyFlags) {
@@ -198,7 +198,7 @@ impl ComponentDirty {
         let current = self.flags.load(Ordering::Acquire);
         self.flags.store(current & mask, Ordering::Release);
     }
-    
+
     /// 原子地清除指定的脏标记（线程安全）
     #[inline]
     pub fn clear_atomic(&self, flags: DirtyFlags) {
@@ -206,31 +206,31 @@ impl ComponentDirty {
         let current = self.flags.load(Ordering::Acquire);
         self.flags.store(current & mask, Ordering::Release);
     }
-    
+
     /// 清除所有脏标记
     #[inline]
     pub fn clear_all(&mut self) {
         self.flags.store(0, Ordering::Release);
     }
-    
+
     /// 原子地清除所有脏标记（线程安全）
     #[inline]
     pub fn clear_all_atomic(&self) {
         self.flags.store(0, Ordering::Release);
     }
-    
+
     /// 更新清理帧号
     #[inline]
     pub fn update_frame(&mut self, frame: u64) {
         self.last_cleared_frame.store(frame, Ordering::Release);
     }
-    
+
     /// 原子地更新清理帧号（线程安全）
     #[inline]
     pub fn update_frame_atomic(&self, frame: u64) {
         self.last_cleared_frame.store(frame, Ordering::Release);
     }
-    
+
     /// 获取上次清理的帧号
     #[inline]
     pub fn last_cleared_frame(&self) -> u64 {
@@ -290,12 +290,12 @@ impl DirtyTrackingResource {
     pub fn new() -> Self {
         Self::default()
     }
-    
+
     /// 更新帧号
     pub fn update_frame(&mut self) {
         self.current_frame += 1;
     }
-    
+
     /// 获取当前帧号
     pub fn current_frame(&self) -> u64 {
         self.current_frame
@@ -305,62 +305,61 @@ impl DirtyTrackingResource {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_dirty_flags() {
         let flags = DirtyFlags::POSITION | DirtyFlags::ROTATION;
         assert!(flags.contains(DirtyFlags::POSITION));
         assert!(flags.contains(DirtyFlags::ROTATION));
         assert!(!flags.contains(DirtyFlags::SCALE));
-        
+
         let transform = DirtyFlags::TRANSFORM;
         assert!(transform.contains(DirtyFlags::POSITION));
         assert!(transform.contains(DirtyFlags::ROTATION));
         assert!(transform.contains(DirtyFlags::SCALE));
     }
-    
+
     #[test]
     fn test_component_dirty() {
         let mut dirty = ComponentDirty::new();
-        
+
         // 初始状态应该是干净的
         assert!(!dirty.is_any_dirty());
-        
+
         // 标记为脏
         dirty.mark_dirty(DirtyFlags::POSITION);
         assert!(dirty.is_dirty(DirtyFlags::POSITION));
         assert!(dirty.is_any_dirty());
-        
+
         // 清除
         dirty.clear(DirtyFlags::POSITION);
         assert!(!dirty.is_dirty(DirtyFlags::POSITION));
         assert!(!dirty.is_any_dirty());
-        
+
         // 测试多个标志
         dirty.mark_dirty(DirtyFlags::POSITION | DirtyFlags::ROTATION);
         assert!(dirty.is_dirty(DirtyFlags::POSITION));
         assert!(dirty.is_dirty(DirtyFlags::ROTATION));
-        
+
         // 只清除一个
         dirty.clear(DirtyFlags::POSITION);
         assert!(!dirty.is_dirty(DirtyFlags::POSITION));
         assert!(dirty.is_dirty(DirtyFlags::ROTATION));
-        
+
         // 清除所有
         dirty.clear_all();
         assert!(!dirty.is_any_dirty());
     }
-    
+
     #[test]
     fn test_atomic_operations() {
         let dirty = ComponentDirty::new();
-        
+
         // 原子操作
         dirty.mark_dirty_atomic(DirtyFlags::POSITION);
         assert!(dirty.is_dirty(DirtyFlags::POSITION));
-        
+
         dirty.clear_atomic(DirtyFlags::POSITION);
         assert!(!dirty.is_dirty(DirtyFlags::POSITION));
     }
 }
-

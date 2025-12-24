@@ -115,21 +115,9 @@ impl KeyframeEditor {
 
         ui.horizontal(|ui| {
             ui.label("Position:");
-            ui.add(
-                egui::DragValue::new(&mut new_value.x)
-                    .prefix("X: ")
-                    .speed(0.1),
-            );
-            ui.add(
-                egui::DragValue::new(&mut new_value.y)
-                    .prefix("Y: ")
-                    .speed(0.1),
-            );
-            ui.add(
-                egui::DragValue::new(&mut new_value.z)
-                    .prefix("Z: ")
-                    .speed(0.1),
-            );
+            ui.add(egui::DragValue::new(&mut new_value.x).prefix("X: ").speed(0.1));
+            ui.add(egui::DragValue::new(&mut new_value.y).prefix("Y: ").speed(0.1));
+            ui.add(egui::DragValue::new(&mut new_value.z).prefix("Z: ").speed(0.1));
         });
 
         if ui.button("Add Keyframe").clicked() {
@@ -147,10 +135,7 @@ impl KeyframeEditor {
             ui.horizontal(|ui| {
                 let is_selected = self.selected_keyframe == Some(i);
 
-                if ui
-                    .selectable_label(is_selected, format!("Frame {}", i))
-                    .clicked()
-                {
+                if ui.selectable_label(is_selected, format!("Frame {}", i)).clicked() {
                     self.selected_keyframe = Some(i);
                 }
 
@@ -177,19 +162,13 @@ impl KeyframeEditor {
                     ui.horizontal(|ui| {
                         ui.label("Position:");
                         ui.add(
-                            egui::DragValue::new(&mut keyframe.value.x)
-                                .prefix("X: ")
-                                .speed(0.1),
+                            egui::DragValue::new(&mut keyframe.value.x).prefix("X: ").speed(0.1),
                         );
                         ui.add(
-                            egui::DragValue::new(&mut keyframe.value.y)
-                                .prefix("Y: ")
-                                .speed(0.1),
+                            egui::DragValue::new(&mut keyframe.value.y).prefix("Y: ").speed(0.1),
                         );
                         ui.add(
-                            egui::DragValue::new(&mut keyframe.value.z)
-                                .prefix("Z: ")
-                                .speed(0.1),
+                            egui::DragValue::new(&mut keyframe.value.z).prefix("Z: ").speed(0.1),
                         );
                     });
                 });
@@ -291,10 +270,7 @@ impl KeyframeEditor {
             ui.horizontal(|ui| {
                 let is_selected = self.selected_keyframe == Some(i);
 
-                if ui
-                    .selectable_label(is_selected, format!("Frame {}", i))
-                    .clicked()
-                {
+                if ui.selectable_label(is_selected, format!("Frame {}", i)).clicked() {
                     self.selected_keyframe = Some(i);
                 }
 
@@ -457,10 +433,7 @@ impl KeyframeEditor {
             ui.horizontal(|ui| {
                 let is_selected = self.selected_keyframe == Some(i);
 
-                if ui
-                    .selectable_label(is_selected, format!("Frame {}", i))
-                    .clicked()
-                {
+                if ui.selectable_label(is_selected, format!("Frame {}", i)).clicked() {
                     self.selected_keyframe = Some(i);
                 }
 
