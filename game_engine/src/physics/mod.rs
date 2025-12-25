@@ -68,11 +68,15 @@ use crate::impl_default;
 pub mod batch_sync;
 pub mod collision_performance;
 pub mod dirty_tracker;
+pub mod gpu_acceleration;
+pub mod gpu_particle_physics;
+pub mod gpu_fluid_simulation;
 pub mod joints;
 pub mod parallel;
 pub mod physics3d;
 pub mod soft_body;
 pub mod spatial_partition;
+pub mod spatial_partition_enhanced;
 
 pub use batch_sync::{
     BatchSyncBuffer, BatchSyncManager, BatchSyncResource, batch_collect_physics_state_system,
@@ -90,6 +94,21 @@ pub use soft_body::{
     SoftBodyType, SphParameters, soft_body_physics_system,
 };
 pub use spatial_partition::{BVHTree, SpatialHash, SpatialPartitionManager, SpatialPartitionType};
+pub use spatial_partition_enhanced::{
+    EnhancedSpatialPartitionConfig, EnhancedSpatialPartitionManager, SAHOptimizedBVH,
+};
+pub use gpu_acceleration::{
+    CollisionResult, GpuPhysicsAccelerator, GpuPhysicsConfig, GpuPhysicsError,
+    RigidSoftCollisionDetector,
+};
+pub use gpu_particle_physics::{
+    GpuParticle, GpuParticlePhysicsAccelerator, GpuParticlePhysicsConfig,
+    GpuParticlePhysicsError,
+};
+pub use gpu_fluid_simulation::{
+    GpuFluidParticle, GpuFluidSimulator, GpuFluidSimulationConfig,
+    GpuFluidSimulationError,
+};
 
 // 重新导出富领域对象（推荐使用）
 pub use crate::domain::physics::{

@@ -1,3 +1,4 @@
+pub mod baseline_updater;
 pub mod benchmark;
 pub mod benchmark_runner;
 pub mod benchmark_baselines;
@@ -29,5 +30,8 @@ pub use game_engine_common::benchmarking::{
 };
 pub use performance_regression_tests::{
     PerformanceRegressionSuite, PerformanceThresholds, RegressionTestResult,
+};
+pub use baseline_updater::{
+    BaselineUpdater, PerformanceBaselines, BenchmarkBaseline, SystemInfo,
 };
 

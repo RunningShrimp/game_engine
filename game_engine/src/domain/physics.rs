@@ -698,7 +698,7 @@ impl PhysicsWorld {
         }
     }
 
-    /// 步进模拟
+    /// 步进模拟（同步版本）
     pub fn step(&mut self, delta_time: f32) -> Result<(), PhysicsError> {
         // 更新积分参数的时间步长
         self.integration_parameters.dt = delta_time;
@@ -727,6 +727,24 @@ impl PhysicsWorld {
         // self.query_pipeline.update(&self.rigid_body_set, &self.collider_set);
 
         Ok(())
+    }
+
+    /// 异步步进模拟（协程版本）
+    ///
+    /// 使用Tokio协程异步执行物理步进，避免阻塞异步运行时。
+    /// 
+    /// 注意：由于Rapier物理引擎的类型限制，此方法实际上直接调用同步版本。
+    /// 对于真正的并发物理模拟，建议使用`ParallelPhysicsWorld`。
+    ///
+    /// # 参数
+    /// - `delta_time`: 时间步长
+    ///
+    /// # 返回
+    /// 返回一个Future，解析为步进结果
+    pub async fn step_async(&mut self, delta_time: f32) -> Result<(), PhysicsError> {
+        // 由于Rapier类型不支持Send/Sync，我们直接调用同步版本
+        // 对于真正的并发物理模拟，建议使用ParallelPhysicsWorld
+        self.step(delta_time)
     }
 
     /// 射线投射

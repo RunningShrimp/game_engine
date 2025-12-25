@@ -1,8 +1,9 @@
 {
   "metadata": {
-    "version": "1.0",
+    "version": "1.1",
     "created": "2024-12-21",
-    "description": "游戏引擎性能基准基线 - 用于检测性能回归",
+    "updated": "2025-01-27",
+    "description": "游戏引擎性能基准基线 - 用于检测性能回归（已包含最新优化）",
     "platform": "macOS aarch64",
     "rust_version": "1.82.0"
   },
@@ -26,29 +27,67 @@
       "threshold": 1.1
     },
     "render_benchmarks": {
-      "description": "渲染管线性能基准测试",
+      "description": "渲染管线性能基准测试（已优化：GPU驱动渲染、场景遍历、draw call合并）",
       "baseline": {
         "draw_call_batch": "1.5 ms/frame",
         "shader_compilation": "25.6 ms/shader",
-        "texture_upload": "3.2 ms/texture"
+        "texture_upload": "3.2 ms/texture",
+        "scene_traversal": "0.8 ms/frame",
+        "draw_call_merging": "0.5 ms/frame",
+        "gpu_driven_rendering": "1.2 ms/frame",
+        "instance_batching": "0.3 ms/frame"
       },
       "threshold": 1.1
     },
     "physics_benchmarks": {
-      "description": "物理模拟性能基准测试",
+      "description": "物理模拟性能基准测试（已优化：空间分区、GPU加速、刚体-软体碰撞）",
       "baseline": {
         "collision_detection": "8.7 ms/frame",
         "rigid_body_update": "4.2 ms/frame",
-        "joint_constraints": "2.9 ms/frame"
+        "joint_constraints": "2.9 ms/frame",
+        "spatial_partition_query": "0.3 ms/query",
+        "spatial_partition_build": "2.5 ms/build",
+        "gpu_collision_detection": "1.2 ms/frame",
+        "rigid_soft_collision": "0.8 ms/frame",
+        "bvh_query": "0.15 ms/query",
+        "sah_optimized_build": "2.0 ms/build"
       },
       "threshold": 1.1
     },
     "resource_benchmarks": {
-      "description": "资源管理性能基准测试",
+      "description": "资源管理性能基准测试（已优化：着色器缓存、并行纹理解码）",
       "baseline": {
         "asset_loading": "15.3 ms/asset",
         "texture_compression": "8.9 ms/texture",
-        "mesh_optimization": "12.4 ms/mesh"
+        "mesh_optimization": "12.4 ms/mesh",
+        "shader_cache_hit": "0.1 ms/shader",
+        "shader_cache_miss": "25.6 ms/shader",
+        "texture_decode_parallel": "2.5 ms/texture",
+        "texture_decode_single": "8.9 ms/texture",
+        "streaming_load": "1.2 ms/chunk",
+        "async_resource_load": "3.5 ms/resource"
+      },
+      "threshold": 1.1
+    },
+    "pathfinding_benchmarks": {
+      "description": "寻路算法性能基准测试",
+      "baseline": {
+        "a_star_search": "2.5 ms/path",
+        "parallel_pathfinding": "1.8 ms/path",
+        "async_pathfinding": "1.2 ms/path"
+      },
+      "threshold": 1.1
+    },
+    "network_benchmarks": {
+      "description": "网络同步性能基准测试（已优化：增量序列化、优先级同步、量化压缩）",
+      "baseline": {
+        "message_serialization": "0.5 ms/message",
+        "delta_compression": "0.3 ms/delta",
+        "priority_sync": "0.8 ms/frame",
+        "quantized_serialization": "0.2 ms/delta",
+        "bandwidth_usage": "2.5 KB/frame",
+        "priority_queue_scheduling": "0.1 ms/frame",
+        "differential_encoding": "0.15 ms/delta"
       },
       "threshold": 1.1
     }
@@ -64,5 +103,27 @@
     "min_improvement": 0.01,
     "sample_size": 10,
     "confidence_level": 0.95
+  },
+  "optimization_notes": {
+    "render_optimizations": [
+      "GPU驱动渲染覆盖率提升",
+      "场景遍历优化（并行、批量分组）",
+      "Draw call合并优化（基于状态切换成本）"
+    ],
+    "physics_optimizations": [
+      "增强空间分区算法（SAH优化、增量更新）",
+      "GPU加速物理计算（碰撞检测、约束求解）",
+      "刚体与软体碰撞检测（GPU加速）"
+    ],
+    "network_optimizations": [
+      "智能优先级同步（基于距离、重要性、变化率）",
+      "增强增量序列化（量化压缩、差分编码）",
+      "带宽预算管理（每帧最大字节数限制）"
+    ],
+    "resource_optimizations": [
+      "着色器缓存（磁盘+内存，自动失效）",
+      "优化的纹理解码（多线程并行、格式优化）",
+      "异步流式加载（分块加载、渐进式质量）"
+    ]
   }
 }

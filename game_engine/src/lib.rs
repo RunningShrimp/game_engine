@@ -83,10 +83,14 @@ pub mod ai;
 pub mod animation;
 /// Audio playback system
 pub mod audio;
+/// Build management and automation
+pub mod build;
 /// Language bindings for scripting
 pub mod bindings;
 /// Common error types
 pub mod common_errors;
+/// Compatibility and feature management
+pub mod compat;
 /// Configuration system
 pub mod config;
 /// Core engine functionality including the main engine loop and initialization

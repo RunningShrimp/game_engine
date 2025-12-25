@@ -50,7 +50,7 @@ impl ParallelMessageProcessor {
         }
     }
 
-    /// 并行处理消息列表
+    /// 并行处理消息列表（同步版本，使用Rayon）
     ///
     /// # 参数
     /// - `messages`: 待处理的消息列表
@@ -78,6 +78,100 @@ impl ParallelMessageProcessor {
             .into_par_iter()
             .map(|msg| self.process_message(&msg, state, compressor))
             .collect()
+    }
+
+    /// 异步协程化处理消息列表（使用Tokio）
+    ///
+    /// 使用Tokio协程异步处理网络消息，支持批量处理和并发控制。
+    ///
+    /// # 参数
+    /// - `messages`: 待处理的消息列表
+    /// - `state`: 网络状态（只读）
+    /// - `compressor`: 压缩器（可选）
+    ///
+    /// # 返回
+    /// 返回一个Future，解析为处理结果列表
+    pub async fn process_messages_async(
+        &self,
+        messages: Vec<NetworkMessage>,
+        state: Arc<NetworkState>,
+        compressor: Option<Arc<NetworkCompressor>>,
+    ) -> Vec<MessageProcessResult> {
+        use futures::future::join_all;
+
+        if !self.enabled || messages.len() < self.batch_size {
+            // 消息数量较少，使用顺序处理
+            return messages
+                .into_iter()
+                .map(|msg| self.process_message(&msg, &state, compressor.as_ref().map(|c| c.as_ref())))
+                .collect();
+        }
+
+        // 将消息分批处理
+        let batches: Vec<_> = messages
+            .chunks(self.batch_size)
+            .map(|chunk| chunk.to_vec())
+            .collect();
+
+        // 并发处理所有批次
+        let batch_tasks: Vec<_> = batches
+            .into_iter()
+            .map(|batch| {
+                let state_clone = Arc::clone(&state);
+                let compressor_clone = compressor.as_ref().map(|c| Arc::clone(c));
+                
+                tokio::task::spawn_blocking(move || {
+                    batch
+                        .into_iter()
+                        .map(|msg| {
+                            // 处理消息（在阻塞任务中执行）
+                            match &msg {
+                                NetworkMessage::StateSync { tick, data } => {
+                                    let decompressed_data = if let Some(comp) = compressor_clone.as_ref() {
+                                        comp.decompress_with_flag(data).unwrap_or_else(|_| data.clone())
+                                    } else {
+                                        data.clone()
+                                    };
+                                    MessageProcessResult::StateSync {
+                                        tick: *tick,
+                                        data: decompressed_data,
+                                    }
+                                }
+                                NetworkMessage::Heartbeat { timestamp } => {
+                                    let now = crate::core::utils::current_timestamp_ms();
+                                    let latency_ms = (now - *timestamp) as f32;
+                                    MessageProcessResult::Heartbeat { latency_ms }
+                                }
+                                NetworkMessage::TimeSyncRequest { client_send_time } => {
+                                    MessageProcessResult::TimeSyncRequest {
+                                        client_send_time: *client_send_time,
+                                    }
+                                }
+                                NetworkMessage::TimeSyncResponse { sync } => {
+                                    MessageProcessResult::TimeSyncResponse {
+                                        sync: sync.clone(),
+                                    }
+                                }
+                                _ => MessageProcessResult::Other,
+                            }
+                        })
+                        .collect::<Vec<_>>()
+                })
+            })
+            .collect();
+
+        // 等待所有批次完成
+        let batch_results = join_all(batch_tasks).await;
+        
+        // 合并所有批次的结果
+        let mut all_results = Vec::new();
+        for batch_result in batch_results {
+            if let Ok(results) = batch_result {
+                all_results.extend(results);
+            }
+        }
+
+        all_results
     }
 
     /// 处理单个消息

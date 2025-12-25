@@ -14,7 +14,7 @@
 | 状态 | 数量 |
 |------|------|
 | 待处理 | 0 |
-| 已完成 | 6 |
+| 已完成 | 20 |
 | 高优先级 | 0 |
 | 中优先级 | 0 |
 | 低优先级 | 0 |
@@ -139,6 +139,42 @@ pub fn raycast(
 - 性能报告生成器
 - 详细的实施计划和时间表
 
+### 7. 删除遗留监控模块
+- **位置**: `game_engine/src/performance/monitoring/monitoring_legacy.rs`
+- **描述**: 删除已废弃的legacy监控模块，所有功能已迁移到system_monitor模块
+- **优先级**: 高
+- **完成日期**: 2025-12-25
+- **状态**: ✅ 已完成
+
+**修改内容**:
+- 删除`monitoring_legacy.rs`文件
+- 从`performance/monitoring/mod.rs`中移除legacy模块引用
+- 更新`performance/tests/integration_tests.rs`使用新的SystemPerformanceMonitor
+
+### 8. 整合优化文件
+- **位置**: `game_engine/src/performance/rendering/render_optimization.rs`
+- **描述**: 删除重复的简化版渲染优化实现，使用render模块中的完整实现
+- **优先级**: 中
+- **完成日期**: 2025-12-25
+- **状态**: ✅ 已完成
+
+**修改内容**:
+- 删除`performance/rendering/render_optimization.rs`（包含简化版的FrustumCulling、OcclusionCulling、LodManager）
+- 更新`performance/rendering/mod.rs`，移除对render_optimization的引用
+- 注意：render模块中已有更完整的实现（frustum.rs、occlusion_culling.rs、lod.rs）
+
+### 9. 标记Script组件为废弃
+- **位置**: `game_engine/src/scripting/engine.rs`
+- **描述**: 标记Script组件为deprecated，引导用户使用ScriptComponent
+- **优先级**: 中
+- **完成日期**: 2025-12-25
+- **状态**: ✅ 已完成
+
+**修改内容**:
+- 在Script结构体上添加`#[deprecated]`属性
+- 在Script::new方法上添加`#[deprecated]`属性
+- 保留Script组件用于向后兼容，但新代码应使用ScriptComponent
+
 ## 之前已完成的重构任务
 
 以下任务已在之前的重构工作中完成：
@@ -189,3 +225,45 @@ TODO 被认为完成的标准：
 1. 相关代码已实现并经过测试
 2. 文档已更新（如适用）
 3. 本文档中的状态已更新为"已完成"
+
+## 最新完成项（2024-12-21）
+
+### 实施计划完成（10项）
+
+本次实施计划完成了以下任务：
+
+1. **代码清理和整合** ✅
+   - 删除遗留监控模块 (`monitoring_legacy.rs`)
+   - 整合优化文件到主模块
+   - 标记deprecated组件 (`Script`)
+
+2. **性能优化** ✅
+   - 协程游戏循环迁移 (`CoroutineTaskManager` 集成)
+   - SIMD优化覆盖（物理系统 `batch_sync.rs`、寻路系统 `pathfinding.rs`）
+   - 性能监控仪表盘增强（协程和SIMD指标）
+
+3. **测试增强** ✅
+   - 渲染集成测试（GPU驱动渲染、后处理、LOD）
+   - 并发测试（协程取消、并行物理一致性、死锁检测）
+   - 性能基线管理脚本 (`update_performance_baselines.sh`)
+
+4. **GPU计算着色器扩展** ✅
+   - 增强粒子系统着色器（风力场、颜色渐变、旋转动画）
+   - AI寻路加速着色器（批量距离计算、路径代价估算、最近节点查找）
+
+5. **自适应LOD增强** ✅
+   - 基于帧时间的预测性调整
+   - 性能压力等级检测（低/正常/中等/高/严重）
+   - 帧时间趋势分析（上升/下降/稳定）
+
+6. **后处理效果扩展** ✅
+   - SSR（屏幕空间反射）- `render/postprocess/ssr.rs`
+   - 体积光（Volumetric Lighting）- `render/postprocess/volumetric_lighting.rs`
+   - 程序化噪声（Procedural Noise）- `render/postprocess/procedural_noise.rs`
+
+7. **高级音频效果** ✅
+   - 音频遮挡（Audio Occlusion）- 低通滤波模拟声音被遮挡
+   - 限制器（Limiter）- 防止音频削波失真
+
+**完成日期**: 2024-12-21  
+**详细内容**: 请参考 [实施计划完成总结](../IMPLEMENTATION_SUMMARY.md) 和 [功能验证报告](../VERIFICATION_REPORT.md)

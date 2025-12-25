@@ -30,6 +30,7 @@
 
 use crate::impl_default;
 use glam::Vec3;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use thiserror::Error;
 
@@ -56,7 +57,7 @@ impl AgentId {
 }
 
 /// 群体配置
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FlockConfig {
     /// 分离权重（避免碰撞）
     pub separation_weight: f32,

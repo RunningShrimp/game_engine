@@ -31,7 +31,6 @@
 use crate::core::utils::current_timestamp_ms;
 use crate::impl_default;
 use std::collections::HashMap;
-// 移除未使用的导入，如果将来需要可以重新导入
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use thiserror::Error;
@@ -70,14 +69,8 @@ pub enum StreamingError {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct StreamId(pub u64);
 
-/// 创建新的流ID
 impl StreamId {
-    pub fn new(id: u64) -> Self {
-        Self(id)
-    }
-}
-
-impl StreamId {
+    /// 创建新的流ID
     pub fn new(id: u64) -> Self {
         Self(id)
     }
@@ -464,7 +457,7 @@ impl AudioStreamLoader {
         }
     }
 
-    /// 开始流式加载音频
+    /// 开始流式加载音频（同步版本，向后兼容）
     pub fn start_streaming(
         &mut self,
         path: impl AsRef<Path>,
@@ -488,6 +481,55 @@ impl AudioStreamLoader {
         Ok(id)
     }
 
+    /// 异步开始流式加载音频（协程版本）
+    ///
+    /// 使用Tokio协程异步加载音频流，支持多个音频流并发加载。
+    ///
+    /// # 参数
+    /// - `path`: 音频文件路径
+    /// - `config`: 流式配置
+    ///
+    /// # 返回
+    /// 返回一个Future，解析为StreamId或错误
+    pub async fn start_streaming_async(
+        &mut self,
+        path: impl AsRef<Path>,
+        config: StreamConfig,
+    ) -> Result<StreamId, StreamingError> {
+        let path = path.as_ref().to_path_buf();
+
+        // 异步检查文件是否存在
+        let path_clone = path.clone();
+        let exists = tokio::task::spawn_blocking(move || path_clone.exists())
+            .await
+            .map_err(|e| StreamingError::IoError(e.to_string()))?;
+
+        if !exists {
+            return Err(StreamingError::FileNotFound(path.display().to_string()));
+        }
+
+        let id = StreamId::new(self.next_stream_id);
+        self.next_stream_id += 1;
+
+        // 异步初始化解码器
+        let mut stream = AudioStream::new(id, path, config.clone());
+        
+        // 在阻塞任务中初始化解码器（避免阻塞异步运行时）
+        let stream_clone = Arc::new(Mutex::new(stream));
+        let stream_for_init = Arc::clone(&stream_clone);
+        tokio::task::spawn_blocking(move || {
+            let mut s = stream_for_init.lock().unwrap();
+            s.initialize_decoder()
+        })
+        .await
+        .map_err(|e| StreamingError::IoError(e.to_string()))?
+        .map_err(|e| e)?;
+
+        self.streams.insert(id, stream_clone);
+
+        Ok(id)
+    }
+
     /// 获取音频流
     pub fn get_stream(&self, id: StreamId) -> Option<Arc<Mutex<AudioStream>>> {
         self.streams.get(&id).cloned()
@@ -499,13 +541,45 @@ impl AudioStreamLoader {
         Ok(())
     }
 
-    /// 更新所有流
+    /// 更新所有流（同步版本）
     pub fn update_all(&self) -> Result<(), StreamingError> {
         for stream in self.streams.values() {
             if let Ok(mut s) = stream.lock() {
                 s.update()?;
             }
         }
+        Ok(())
+    }
+
+    /// 异步更新所有流（协程版本）
+    ///
+    /// 使用Tokio协程并发更新所有音频流，提升性能。
+    ///
+    /// # 返回
+    /// 返回一个Future，解析为更新结果
+    pub async fn update_all_async(&self) -> Result<(), StreamingError> {
+        use futures::future::join_all;
+
+        // 收集所有更新任务
+        let update_tasks: Vec<_> = self.streams.values()
+            .map(|stream| {
+                let stream = Arc::clone(stream);
+                tokio::task::spawn(async move {
+                    let mut s = stream.lock().unwrap();
+                    s.update()
+                })
+            })
+            .collect();
+
+        // 并发执行所有更新任务
+        let results = join_all(update_tasks).await;
+
+        // 检查是否有错误
+        for result in results {
+            result.map_err(|e| StreamingError::IoError(e.to_string()))?
+                .map_err(|e| e)?;
+        }
+
         Ok(())
     }
 

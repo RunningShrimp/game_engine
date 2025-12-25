@@ -9,6 +9,10 @@ use std::collections::{BinaryHeap, HashMap};
 use std::sync::Arc;
 use std::thread;
 
+// SIMD优化支持
+#[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
+use game_engine_simd::Vec3Simd;
+
 /// 寻路节点
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct PathNode {
@@ -76,7 +80,18 @@ impl NavigationMesh {
     /// 计算两点间的启发式距离（欧几里得距离）
     pub fn heuristic(&self, from: u32, to: u32) -> f32 {
         if let (Some(from_node), Some(to_node)) = (self.get_node(from), self.get_node(to)) {
-            from_node.position.distance(to_node.position)
+            #[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
+            {
+                use game_engine_simd::VectorOps;
+                let from_simd = Vec3Simd::new(from_node.position.x, from_node.position.y, from_node.position.z);
+                let to_simd = Vec3Simd::new(to_node.position.x, to_node.position.y, to_node.position.z);
+                let diff = from_simd.sub(&to_simd);
+                diff.length()
+            }
+            #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
+            {
+                from_node.position.distance(to_node.position)
+            }
         } else {
             f32::INFINITY
         }
@@ -97,18 +112,39 @@ impl NavigationMesh {
         Some(path)
     }
 
-    /// 找到最近的可通行节点
+    /// 找到最近的可通行节点（SIMD优化）
     fn find_nearest_node(&self, position: Vec3) -> Option<u32> {
-        self.nodes
-            .values()
-            .filter(|node| node.traversable)
-            .min_by(|a, b| {
-                a.position
-                    .distance_squared(position)
-                    .partial_cmp(&b.position.distance_squared(position))
-                    .unwrap_or(Ordering::Equal)
-            })
-            .map(|node| node.id)
+        #[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
+        {
+            use game_engine_simd::VectorOps;
+            let pos_simd = Vec3Simd::new(position.x, position.y, position.z);
+            self.nodes
+                .values()
+                .filter(|node| node.traversable)
+                .min_by(|a, b| {
+                    let a_simd = Vec3Simd::new(a.position.x, a.position.y, a.position.z);
+                    let b_simd = Vec3Simd::new(b.position.x, b.position.y, b.position.z);
+                    let a_diff = a_simd.sub(&pos_simd);
+                    let b_diff = b_simd.sub(&pos_simd);
+                    let a_dist_sq = a_diff.dot(&a_diff);
+                    let b_dist_sq = b_diff.dot(&b_diff);
+                    a_dist_sq.partial_cmp(&b_dist_sq).unwrap_or(Ordering::Equal)
+                })
+                .map(|node| node.id)
+        }
+        #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
+        {
+            self.nodes
+                .values()
+                .filter(|node| node.traversable)
+                .min_by(|a, b| {
+                    a.position
+                        .distance_squared(position)
+                        .partial_cmp(&b.position.distance_squared(position))
+                        .unwrap_or(Ordering::Equal)
+                })
+                .map(|node| node.id)
+        }
     }
 
     /// A* 寻路算法

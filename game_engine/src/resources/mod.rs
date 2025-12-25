@@ -19,10 +19,12 @@ pub mod preallocation_manager;
 pub mod preload_manager;
 pub mod ring_buffer_pool;
 pub mod runtime;
+pub mod shader_cache;
 pub mod staging_buffer;
 #[cfg(test)]
 mod tests;
 pub mod texture_compression;
+pub mod texture_decoder_optimized;
 pub mod upload_queue;
 
 // 统一资源接口
@@ -99,3 +101,13 @@ pub use streaming_loader::{
 
 // Re-export Compressed Cache components
 pub use compressed_cache::{CompressedCacheStats, CompressedResourceCache, CompressionAlgorithm};
+
+// Re-export Shader Cache components
+pub use shader_cache::{
+    ShaderCache, ShaderCacheConfig, ShaderCacheError, ShaderCacheKey, ShaderCacheStats,
+};
+
+// Re-export Optimized Texture Decoder components
+pub use texture_decoder_optimized::{
+    DecodedTexture, OptimizedTextureDecoder, TextureDecodeConfig, TextureDecodeError, TextureFormat,
+};

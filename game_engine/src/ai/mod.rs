@@ -52,18 +52,35 @@
 pub mod behavior_tree;
 /// 群集系统 - 用于群集行为的寻路和避障
 pub mod flocking;
+/// 增强的群集系统 - 提供更复杂的群体行为
+pub mod flocking_enhanced;
 /// 导航网格 - 用于路径规划的导航网格数据结构
 pub mod navmesh;
+/// 增强的导航网格生成器 - 提供完整的导航网格生成功能
+pub mod navmesh_enhanced;
 /// 寻路系统 - 基于A*算法的路径规划服务
 pub mod pathfinding;
 /// 状态机 - 用于AI状态管理的状态机实现
 pub mod state_machine;
+/// 决策树编辑器 - 提供决策树的可视化编辑和管理
+pub mod decision_tree_editor;
 
 pub use navmesh::{
     ColliderGeometry, NavMesh, NavMeshConfig, NavMeshError, NavMeshGenerator, NavPolygon,
 };
+pub use navmesh_enhanced::{
+    EnhancedNavMeshConfig, EnhancedNavMeshGenerator,
+};
 
 pub use flocking::{Agent, AgentId, FlockConfig, FlockManager, FlockingError, Obstacle};
+pub use flocking_enhanced::{
+    EnhancedFlockConfig, EnhancedFlockManager,
+};
+
+pub use decision_tree_editor::{
+    DecisionNodeData, DecisionNodeType, DecisionTree, DecisionTreeEditor,
+    DecisionTreeError, DecisionTreeNode, NodeUpdates,
+};
 
 // 重新导出寻路相关类型
 pub use pathfinding::{

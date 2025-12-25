@@ -24,8 +24,6 @@ mod integration_tests {
 
         // Physics
         GPUPhysicsSimulator,
-        MetricType,
-        PerformanceMonitor,
         SIMDHeuristics,
     };
     use game_engine_simd::{AudioDSPOps, AudioSpatialOps, DistanceModel};
@@ -210,20 +208,25 @@ mod integration_tests {
     }
 
     /// 集成测试: 性能监控集成
+    /// 
+    /// 注意: 此测试已更新为使用新的SystemPerformanceMonitor
     #[test]
     fn test_performance_monitoring_integration() {
-        let mut monitor = PerformanceMonitor::new(3600);
-
-        // 记录各种指标
-        monitor.record(MetricType::FrameTime, 16.67, "ms");
-        monitor.record(MetricType::RenderTime, 10.5, "ms");
-        monitor.record(MetricType::UpdateTime, 6.17, "ms");
-        monitor.record(MetricType::DrawCalls, 1024.0, "");
-
-        // 生成报告
-        let report = monitor.generate_report();
-
-        assert!(!report.stats.is_empty());
+        use crate::performance::monitoring::SystemPerformanceMonitor;
+        
+        let mut monitor = SystemPerformanceMonitor::new();
+        
+        // 更新性能指标
+        monitor.update_frame_time(16.67);
+        monitor.update_cpu_usage(25.0);
+        monitor.update_memory_usage(512.0);
+        
+        // 获取当前指标
+        let metrics = monitor.get_current_metrics();
+        
+        assert!(metrics.frame_time_ms > 0.0);
+        assert!(metrics.cpu_usage_percent >= 0.0);
+        assert!(metrics.memory_usage_mb >= 0.0);
     }
 
     /// 集成测试: 完整系统协同

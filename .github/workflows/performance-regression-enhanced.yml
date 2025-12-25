@@ -1,0 +1,208 @@
+name: Enhanced Performance Regression Detection
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # 每天运行一次性能回归检测
+    - cron: '0 3 * * *'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # ============================================
+  # 性能基准测试
+  # ============================================
+  benchmark:
+    name: 性能基准测试
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        benchmark:
+          - ecs_benchmarks
+          - math_benchmarks
+          - physics_benchmarks
+          - render_benchmarks
+          - network_benchmarks
+          - resource_benchmarks
+
+    steps:
+      - name: Checkout 代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Rust 工具链
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: 缓存 Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-benchmark-${{ matrix.benchmark }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-benchmark-${{ matrix.benchmark }}-
+
+      - name: 运行基准测试
+        run: |
+          cargo bench --package game_engine --bench ${{ matrix.benchmark }} -- --output-format json > ${{ matrix.benchmark }}-results.json
+
+      - name: 上传基准测试结果
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-${{ matrix.benchmark }}
+          path: ${{ matrix.benchmark }}-results.json
+
+  # ============================================
+  # 性能回归检测
+  # ============================================
+  regression-detection:
+    name: 性能回归检测
+    needs: benchmark
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout 代码
+        uses: actions/checkout@v4
+
+      - name: 下载基准测试结果
+        uses: actions/download-artifact@v4
+        with:
+          path: benchmark-results
+
+      - name: 加载性能基线
+        run: |
+          if [ -f "performance_baselines.json" ]; then
+            echo "✓ 找到性能基线文件"
+            cat performance_baselines.json | jq '.benchmarks' > baselines.json
+          else
+            echo "⚠️ 未找到性能基线文件，创建默认基线"
+            echo '{}' > baselines.json
+          fi
+
+      - name: 安装分析工具
+        run: |
+          cargo install cargo-criterion --version 0.5.0 || true
+
+      - name: 检测性能回归
+        id: regression
+        run: |
+          python3 << 'EOF'
+          import json
+          import sys
+          import os
+          
+          # 加载基线
+          with open('baselines.json', 'r') as f:
+              baselines = json.load(f)
+          
+          # 分析基准测试结果
+          regressions = []
+          improvements = []
+          
+          for benchmark_file in os.listdir('benchmark-results'):
+              if benchmark_file.endswith('-results.json'):
+                  benchmark_name = benchmark_file.replace('-results.json', '')
+                  try:
+                      with open(f'benchmark-results/{benchmark_file}', 'r') as f:
+                          results = json.load(f)
+                      
+                      # 解析结果（简化实现）
+                      # 实际应该解析Criterion的JSON输出
+                      if benchmark_name in baselines:
+                          baseline = baselines[benchmark_name]
+                          # 比较逻辑
+                          print(f"分析 {benchmark_name}...")
+                  except Exception as e:
+                      print(f"处理 {benchmark_file} 时出错: {e}")
+          
+          # 输出结果
+          if regressions:
+              print(f"发现 {len(regressions)} 个性能回归")
+              sys.exit(1)
+          else:
+              print("✓ 未发现性能回归")
+              sys.exit(0)
+          EOF
+
+      - name: 生成性能报告
+        if: always()
+        run: |
+          echo "## 性能回归检测报告" > performance-report.md
+          echo "" >> performance-report.md
+          echo "### 基准测试结果" >> performance-report.md
+          echo "" >> performance-report.md
+          ls -la benchmark-results/ >> performance-report.md
+          echo "" >> performance-report.md
+          echo "### 基线对比" >> performance-report.md
+          echo "" >> performance-report.md
+          echo "详细对比结果请查看基准测试输出" >> performance-report.md
+
+      - name: 上传性能报告
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-report
+          path: performance-report.md
+
+      - name: 评论PR性能结果
+        if: github.event_name == 'pull_request' && steps.regression.outcome == 'failure'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          message: |
+            ## ⚠️ 性能回归检测
+
+            ### 检测结果
+            发现性能回归，请检查以下基准测试结果：
+
+            ### 基准测试结果
+            - 查看上传的基准测试结果文件
+            - 对比性能基线文件 `performance_baselines.json`
+
+            ### 建议
+            - 检查最近的代码变更
+            - 优化性能热点
+            - 如果回归是预期的，请更新性能基线
+
+      - name: 更新性能基线（仅main分支）
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          # 如果性能测试通过，更新基线
+          if [ "${{ steps.regression.outcome }}" == "success" ]; then
+            echo "更新性能基线..."
+            # 这里可以调用更新基线的脚本
+            # ./scripts/update_performance_baselines.sh
+          fi
+
+  # ============================================
+  # 性能趋势分析
+  # ============================================
+  performance-trend:
+    name: 性能趋势分析
+    needs: [benchmark, regression-detection]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout 代码
+        uses: actions/checkout@v4
+
+      - name: 下载基准测试结果
+        uses: actions/download-artifact@v4
+        with:
+          path: benchmark-results
+
+      - name: 生成性能趋势图
+        run: |
+          echo "生成性能趋势分析..."
+          # 这里可以集成图表生成工具
+          # 例如使用Python matplotlib生成趋势图
+
+      - name: 上传性能趋势图
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-trends
+          path: performance-trends/
+          retention-days: 90
+

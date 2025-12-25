@@ -26,12 +26,15 @@ pub mod client;
 pub mod compression;
 pub mod delay_compensation;
 pub mod delta_serialization;
+pub mod delta_serialization_enhanced;
 pub mod interpolation;
 pub mod key_exchange;
 /// 并行网络消息处理
 /// 并行功能默认启用，使用线程池进行并行消息处理
 pub mod parallel;
 pub mod prediction;
+pub mod priority_sync;
+pub mod replay;
 pub mod security;
 pub mod server;
 pub mod synchronization;
@@ -43,6 +46,22 @@ use crate::impl_default;
 // Re-export key exchange types
 pub use key_exchange::{
     KeyExchange, KeyExchangeMessage, KeyExchangeProtocol, KeyPair, SharedSecret,
+};
+
+// Re-export priority sync types
+pub use priority_sync::{
+    BandwidthBudget, BandwidthStats, EntitySyncInfo, PrioritySyncManager, SyncPriority,
+};
+
+// Re-export enhanced delta serialization types
+pub use delta_serialization_enhanced::{
+    EnhancedDeltaSerializer, QuantizationConfig, QuantizedEntityDelta, Quantizer,
+};
+
+// Re-export replay types
+pub use replay::{
+    ReplayConfig, ReplayError, ReplayFrame, ReplayHeader, ReplayPlayer, ReplayRecorder,
+    ReplaySnapshot, ReplayState, TimeTravelDebugger,
 };
 
 // Re-export WebRTC types

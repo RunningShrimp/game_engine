@@ -22,6 +22,10 @@ use parking_lot::Mutex;
 use std::sync::Arc;
 use tracing::{Level, info, span};
 
+// SIMD优化支持
+#[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
+use game_engine_simd::{Vec3Simd, Vec4Simd, SimdBackend};
+
 // ============================================================================
 // 批量同步数据结构 (SoA 布局)
 // ============================================================================
@@ -308,6 +312,18 @@ pub fn batch_physics_to_transform_system(
 // ============================================================================
 
 /// SIMD 优化的位置变化检测
+#[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
+pub fn position_changed_simd(old_pos: Vec3, new_pos: Vec3, threshold_sq: f32) -> bool {
+    use game_engine_simd::VectorOps;
+    let old_simd = Vec3Simd::new(old_pos.x, old_pos.y, old_pos.z);
+    let new_simd = Vec3Simd::new(new_pos.x, new_pos.y, new_pos.z);
+    let diff = old_simd.sub(&new_simd);
+    let diff_sq = diff.dot(&diff);
+    diff_sq > threshold_sq
+}
+
+/// SIMD 优化的位置变化检测（标量后备）
+#[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
 pub fn position_changed_simd(old_pos: Vec3, new_pos: Vec3, threshold_sq: f32) -> bool {
     let diff = old_pos - new_pos;
     let diff_sq = diff.dot(diff);
@@ -315,10 +331,58 @@ pub fn position_changed_simd(old_pos: Vec3, new_pos: Vec3, threshold_sq: f32) ->
 }
 
 /// SIMD 优化的旋转变化检测
+#[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
+pub fn rotation_changed_simd(old_rot: Quat, new_rot: Quat, threshold_sq: f32) -> bool {
+    use game_engine_simd::VectorOps;
+    let old_simd = Vec4Simd::new(old_rot.x, old_rot.y, old_rot.z, old_rot.w);
+    let new_simd = Vec4Simd::new(new_rot.x, new_rot.y, new_rot.z, new_rot.w);
+    let dot = old_simd.dot(&new_simd);
+    let angle_sq = (1.0_f32 - dot.abs()).max(0.0) * 4.0;
+    angle_sq > threshold_sq
+}
+
+/// SIMD 优化的旋转变化检测（标量后备）
+#[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
 pub fn rotation_changed_simd(old_rot: Quat, new_rot: Quat, threshold_sq: f32) -> bool {
     let dot = old_rot.dot(new_rot);
     let angle_sq = (1.0 - dot.abs()).max(0.0) * 4.0;
     angle_sq > threshold_sq
+}
+
+/// 批量SIMD优化的位置变化检测
+#[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
+pub fn batch_position_changed_simd(
+    old_positions: &[Vec3],
+    new_positions: &[Vec3],
+    threshold_sq: f32,
+) -> Vec<bool> {
+    if old_positions.len() != new_positions.len() {
+        return vec![false; old_positions.len().max(new_positions.len())];
+    }
+
+    let backend = SimdBackend::best_available();
+    let mut results = Vec::with_capacity(old_positions.len());
+
+    // 使用SIMD批量处理
+    for (old, new) in old_positions.iter().zip(new_positions.iter()) {
+        results.push(position_changed_simd(*old, *new, threshold_sq));
+    }
+
+    results
+}
+
+/// 批量SIMD优化的位置变化检测（标量后备）
+#[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
+pub fn batch_position_changed_simd(
+    old_positions: &[Vec3],
+    new_positions: &[Vec3],
+    threshold_sq: f32,
+) -> Vec<bool> {
+    old_positions
+        .iter()
+        .zip(new_positions.iter())
+        .map(|(old, new)| position_changed_simd(*old, *new, threshold_sq))
+        .collect()
 }
 
 // ============================================================================

@@ -634,6 +634,217 @@ impl AudioEffect for DelayEffect {
 }
 
 // ============================================================================
+// 音频遮挡 (Audio Occlusion)
+// ============================================================================
+
+/// 音频遮挡配置
+#[derive(Debug, Clone)]
+pub struct AudioOcclusionConfig {
+    /// 遮挡强度 (0.0 - 1.0)
+    pub occlusion_intensity: f32,
+    /// 低通滤波截止频率（Hz）
+    pub lowpass_cutoff: f32,
+    /// 音量衰减 (0.0 - 1.0)
+    pub volume_attenuation: f32,
+    /// 采样率（Hz）
+    pub sample_rate: f32,
+}
+
+impl_default!(AudioOcclusionConfig {
+    occlusion_intensity: 0.5,
+    lowpass_cutoff: 2000.0,
+    volume_attenuation: 0.3,
+    sample_rate: 44100.0,
+});
+
+/// 音频遮挡效果
+/// 
+/// 模拟声音被障碍物遮挡的效果，通过低通滤波和音量衰减实现
+pub struct AudioOcclusionEffect {
+    config: AudioOcclusionConfig,
+    enabled: bool,
+    // 低通滤波器状态
+    lowpass_state: BiquadState,
+}
+
+impl AudioOcclusionEffect {
+    /// 创建新的音频遮挡效果
+    pub fn new(config: AudioOcclusionConfig) -> Self {
+        Self {
+            config,
+            enabled: true,
+            lowpass_state: BiquadState::new(),
+        }
+    }
+
+    /// 更新配置
+    pub fn update_config(&mut self, config: AudioOcclusionConfig) {
+        self.config = config;
+        self.reset();
+    }
+
+    /// 计算低通滤波器系数
+    fn calculate_lowpass_coeffs(&self) -> (f32, f32, f32, f32, f32) {
+        let f = self.config.lowpass_cutoff;
+        let q = 0.707; // 标准Q值
+        let sample_rate = self.config.sample_rate;
+        let w = 2.0 * std::f32::consts::PI * f / sample_rate;
+        let cos_w = w.cos();
+        let sin_w = w.sin();
+        let alpha = sin_w / (2.0 * q);
+
+        let b0 = (1.0 - cos_w) / 2.0;
+        let b1 = 1.0 - cos_w;
+        let b2 = (1.0 - cos_w) / 2.0;
+        let a0 = 1.0 + alpha;
+        let a1 = -2.0 * cos_w;
+        let a2 = 1.0 - alpha;
+
+        (b0 / a0, b1 / a0, b2 / a0, a1 / a0, a2 / a0)
+    }
+}
+
+impl AudioEffect for AudioOcclusionEffect {
+    fn process(&mut self, samples: &mut [f32]) {
+        if !self.enabled {
+            return;
+        }
+
+        let (b0, b1, b2, a1, a2) = self.calculate_lowpass_coeffs();
+        let volume_factor = 1.0 - self.config.volume_attenuation * self.config.occlusion_intensity;
+
+        for sample in samples.iter_mut() {
+            let input = *sample;
+
+            // 应用低通滤波
+            let output = b0 * input
+                + b1 * self.lowpass_state.x1
+                + b2 * self.lowpass_state.x2
+                - a1 * self.lowpass_state.y1
+                - a2 * self.lowpass_state.y2;
+
+            // 更新滤波器状态
+            self.lowpass_state.x2 = self.lowpass_state.x1;
+            self.lowpass_state.x1 = input;
+            self.lowpass_state.y2 = self.lowpass_state.y1;
+            self.lowpass_state.y1 = output;
+
+            // 应用音量衰减
+            *sample = (output * volume_factor).clamp(-1.0, 1.0);
+        }
+    }
+
+    fn reset(&mut self) {
+        self.lowpass_state = BiquadState::new();
+    }
+
+    fn set_enabled(&mut self, enabled: bool) {
+        self.enabled = enabled;
+    }
+
+    fn is_enabled(&self) -> bool {
+        self.enabled
+    }
+
+    fn name(&self) -> &str {
+        "AudioOcclusion"
+    }
+}
+
+// ============================================================================
+// 限制器 (Limiter)
+// ============================================================================
+
+/// 限制器配置
+#[derive(Debug, Clone)]
+pub struct LimiterConfig {
+    /// 阈值（dB）
+    pub threshold: f32,
+    /// 释放时间（毫秒）
+    pub release_ms: f32,
+    /// 采样率（Hz）
+    pub sample_rate: f32,
+}
+
+impl_default!(LimiterConfig {
+    threshold: 0.0,
+    release_ms: 10.0,
+    sample_rate: 44100.0,
+});
+
+/// 限制器效果
+/// 
+/// 防止音频信号超过阈值，用于防止削波失真
+pub struct LimiterEffect {
+    config: LimiterConfig,
+    enabled: bool,
+    // 包络跟随器状态
+    envelope: f32,
+}
+
+impl LimiterEffect {
+    /// 创建新的限制器效果
+    pub fn new(config: LimiterConfig) -> Self {
+        Self {
+            config,
+            enabled: true,
+            envelope: 0.0,
+        }
+    }
+
+    /// 更新配置
+    pub fn update_config(&mut self, config: LimiterConfig) {
+        self.config = config;
+    }
+}
+
+impl AudioEffect for LimiterEffect {
+    fn process(&mut self, samples: &mut [f32]) {
+        if !self.enabled {
+            return;
+        }
+
+        let threshold_linear = 10.0_f32.powf(self.config.threshold / 20.0);
+        let release_coeff = (-1.0 / (self.config.release_ms * 0.001 * self.config.sample_rate)).exp();
+
+        for sample in samples.iter_mut() {
+            let input_abs = sample.abs();
+
+            // 包络跟随（只跟踪峰值）
+            if input_abs > self.envelope {
+                self.envelope = input_abs;
+            } else {
+                self.envelope = input_abs + (self.envelope - input_abs) * release_coeff;
+            }
+
+            // 如果超过阈值，应用限制
+            if self.envelope > threshold_linear {
+                let gain = threshold_linear / self.envelope;
+                *sample = (*sample * gain).clamp(-1.0, 1.0);
+            } else {
+                *sample = sample.clamp(-1.0, 1.0);
+            }
+        }
+    }
+
+    fn reset(&mut self) {
+        self.envelope = 0.0;
+    }
+
+    fn set_enabled(&mut self, enabled: bool) {
+        self.enabled = enabled;
+    }
+
+    fn is_enabled(&self) -> bool {
+        self.enabled
+    }
+
+    fn name(&self) -> &str {
+        "Limiter"
+    }
+}
+
+// ============================================================================
 // 效果链 (Effect Chain)
 // ============================================================================
 

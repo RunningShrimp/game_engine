@@ -407,11 +407,14 @@ impl AdaptiveLodConfig {
             0.0
         };
 
-        // 综合调整（考虑稳定性）
+        // 预测性调整（基于趋势）
+        let predictive = self.predictive_adjustment();
+
+        // 综合调整（考虑稳定性、趋势和预测）
         let base_adjustment = (frame_time_factor + gpu_factor) * self.bias_adjustment_speed;
         let stability_adjustment = stability_factor * 0.2; // 不稳定时额外调整
-        let adjustment = (base_adjustment + stability_adjustment)
-            .clamp(-self.max_bias_adjustment, self.max_bias_adjustment);
+        let total_adjustment = base_adjustment + stability_adjustment + predictive;
+        let adjustment = total_adjustment.clamp(-self.max_bias_adjustment, self.max_bias_adjustment);
 
         adjustment
     }
@@ -431,6 +434,100 @@ impl AdaptiveLodConfig {
         }
         self.gpu_load_history.iter().sum::<f32>() / self.gpu_load_history.len() as f32
     }
+
+    /// 获取帧时间趋势（上升/下降/稳定）
+    pub fn frame_time_trend(&self) -> FrameTimeTrend {
+        if self.frame_time_history.len() < 5 {
+            return FrameTimeTrend::Stable;
+        }
+
+        let recent: Vec<f32> = self.frame_time_history.iter().rev().take(5).copied().collect();
+        let first_half_avg: f32 = recent[0..2].iter().sum::<f32>() / 2.0;
+        let second_half_avg: f32 = recent[3..5].iter().sum::<f32>() / 2.0;
+
+        let diff = second_half_avg - first_half_avg;
+        let threshold = self.target_frame_time_ms * 0.05; // 5%的变化阈值
+
+        if diff > threshold {
+            FrameTimeTrend::Rising
+        } else if diff < -threshold {
+            FrameTimeTrend::Falling
+        } else {
+            FrameTimeTrend::Stable
+        }
+    }
+
+    /// 获取性能压力等级
+    pub fn performance_pressure(&self) -> PerformancePressure {
+        if self.frame_time_history.is_empty() {
+            return PerformancePressure::Normal;
+        }
+
+        let recent_avg = self.average_frame_time();
+        let ratio = recent_avg / self.target_frame_time_ms;
+
+        if ratio > 1.5 {
+            PerformancePressure::Critical
+        } else if ratio > 1.2 {
+            PerformancePressure::High
+        } else if ratio > 1.0 {
+            PerformancePressure::Moderate
+        } else if ratio < 0.7 {
+            PerformancePressure::Low
+        } else {
+            PerformancePressure::Normal
+        }
+    }
+
+    /// 基于帧时间趋势的预测性调整
+    /// 
+    /// 如果检测到帧时间上升趋势，提前降低LOD以避免性能下降
+    pub fn predictive_adjustment(&self) -> f32 {
+        if !self.enabled || self.frame_time_history.len() < 10 {
+            return 0.0;
+        }
+
+        let trend = self.frame_time_trend();
+        let pressure = self.performance_pressure();
+        let recent_avg = self.average_frame_time();
+
+        match (trend, pressure) {
+            (FrameTimeTrend::Rising, PerformancePressure::High | PerformancePressure::Critical) => {
+                // 帧时间上升且压力高，需要激进调整
+                let excess = (recent_avg - self.target_frame_time_ms).max(0.0);
+                excess * 0.1 // 提前降低LOD
+            }
+            (FrameTimeTrend::Rising, PerformancePressure::Moderate) => {
+                // 帧时间上升但压力中等，适度调整
+                let excess = (recent_avg - self.target_frame_time_ms).max(0.0);
+                excess * 0.05
+            }
+            (FrameTimeTrend::Falling, PerformancePressure::Low) => {
+                // 帧时间下降且压力低，可以保守提高LOD
+                let improvement = (self.target_frame_time_ms - recent_avg).max(0.0);
+                -improvement * 0.02 // 负值表示提高LOD（减少bias）
+            }
+            _ => 0.0,
+        }
+    }
+}
+
+/// 帧时间趋势
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum FrameTimeTrend {
+    Rising,
+    Falling,
+    Stable,
+}
+
+/// 性能压力等级
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum PerformancePressure {
+    Low,
+    Normal,
+    Moderate,
+    High,
+    Critical,
 }
 
 /// LOD 选择器
@@ -481,13 +578,31 @@ impl LodSelector {
             let max_bias = self.adaptive.max_bias_adjustment;
             self.config.distance_bias = self.config.distance_bias.clamp(-max_bias, max_bias);
 
+            // 获取性能指标
+            let trend = self.adaptive.frame_time_trend();
+            let pressure = self.adaptive.performance_pressure();
+            let avg_frame_time = self.adaptive.average_frame_time();
+
             tracing::debug!(
                 target: "render",
-                "Adaptive LOD adjustment: bias={:.2}, frame_time={:.2}ms, gpu_load={:.2}",
+                "Adaptive LOD: bias={:.2} (Δ{:.2}), frame_time={:.2}ms (avg={:.2}ms), \
+                 gpu_load={:.2}, trend={:?}, pressure={:?}",
                 self.config.distance_bias,
+                adjustment,
                 frame_time_ms,
-                self.adaptive.average_gpu_load()
+                avg_frame_time,
+                self.adaptive.average_gpu_load(),
+                trend,
+                pressure
             );
+
+            // 如果压力很高，可以考虑强制降低所有实体的LOD
+            if matches!(pressure, PerformancePressure::Critical) {
+                tracing::warn!(
+                    target: "render",
+                    "Critical performance pressure detected, consider aggressive LOD reduction"
+                );
+            }
         }
     }
 

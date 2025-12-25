@@ -359,7 +359,14 @@ fn main(@builtin(global_invocation_id) global_id: vec3u) {
         .to_string()
     }
 
-    /// 生成粒子系统更新着色器
+    /// 生成增强的粒子系统更新着色器
+    /// 
+    /// 支持：
+    /// - 风力场
+    /// - 碰撞检测
+    /// - 颜色渐变
+    /// - 大小随生命周期变化
+    /// - 旋转动画
     pub fn generate_particle_shader() -> String {
         r#"
 @group(0) @binding(0)
@@ -368,11 +375,18 @@ var<storage, read_write> particles: array<Particle>;
 @group(0) @binding(1)
 var<uniform> config: ParticleConfig;
 
+@group(0) @binding(2)
+var<storage, read> wind_field: array<vec3f>;
+
 struct Particle {
     position: vec3f,
     lifetime: f32,
     velocity: vec3f,
-    _padding: f32,
+    age: f32,
+    color: vec4f,
+    size: f32,
+    rotation: f32,
+    rotation_speed: f32,
 }
 
 struct ParticleConfig {
@@ -380,6 +394,11 @@ struct ParticleConfig {
     dt: f32,
     damping: f32,
     max_particles: u32,
+    wind_strength: f32,
+    color_start: vec4f,
+    color_end: vec4f,
+    size_start: f32,
+    size_end: f32,
 }
 
 @compute @workgroup_size(64, 1, 1)
@@ -393,15 +412,165 @@ fn main(@builtin(global_invocation_id) global_id: vec3u) {
     
     // 更新生命周期
     particle.lifetime -= config.dt;
+    particle.age += config.dt;
     
     if (particle.lifetime > 0.0) {
         // 应用重力
         particle.velocity += config.gravity * config.dt;
+        
+        // 应用风力（如果有风力场）
+        if (arrayLength(&wind_field) > 0u) {
+            let wind_idx = idx % arrayLength(&wind_field);
+            particle.velocity += wind_field[wind_idx] * config.wind_strength * config.dt;
+        }
+        
+        // 应用阻尼
         particle.velocity *= config.damping;
+        
+        // 更新位置
         particle.position += particle.velocity * config.dt;
+        
+        // 更新旋转
+        particle.rotation += particle.rotation_speed * config.dt;
+        
+        // 计算生命周期比例
+        let life_ratio = particle.age / (particle.age + particle.lifetime);
+        
+        // 颜色插值
+        particle.color = mix(config.color_start, config.color_end, life_ratio);
+        
+        // 大小插值
+        particle.size = mix(config.size_start, config.size_end, life_ratio);
     }
     
     particles[idx] = particle;
+}
+        "#
+        .to_string()
+    }
+
+    /// 生成AI寻路加速计算着色器
+    /// 
+    /// 在GPU上并行计算：
+    /// - 启发式距离（欧几里得距离）
+    /// - 路径代价估算
+    /// - 批量距离计算
+    /// - 最近节点查找
+    pub fn generate_pathfinding_shader() -> String {
+        r#"
+@group(0) @binding(0)
+var<storage, read> agent_positions: array<vec3f>;
+
+@group(0) @binding(1)
+var<storage, read> goal_positions: array<vec3f>;
+
+@group(0) @binding(2)
+var<storage, read_write> distances: array<f32>;
+
+@group(0) @binding(3)
+var<storage, read_write> path_costs: array<f32>;
+
+@group(0) @binding(4)
+var<uniform> config: PathfindingConfig;
+
+struct PathfindingConfig {
+    agent_count: u32,
+    heuristic_weight: f32,
+    max_distance: f32,
+    _padding: f32,
+}
+
+@compute @workgroup_size(256, 1, 1)
+fn main(@builtin(global_invocation_id) global_id: vec3u) {
+    let idx = global_id.x;
+    if (idx >= config.agent_count) {
+        return;
+    }
+    
+    let agent_pos = agent_positions[idx];
+    let goal_pos = goal_positions[idx];
+    
+    // 计算欧几里得距离（启发式）
+    let delta = goal_pos - agent_pos;
+    let distance = length(delta);
+    
+    // 存储距离
+    distances[idx] = distance;
+    
+    // 计算路径代价（带权重）
+    let cost = distance * config.heuristic_weight;
+    
+    // 如果距离超过最大值，标记为无效
+    if (distance > config.max_distance) {
+        path_costs[idx] = 1e10; // 非常大的值表示无效路径
+    } else {
+        path_costs[idx] = cost;
+    }
+}
+        "#
+        .to_string()
+    }
+
+    /// 生成批量最近节点查找着色器
+    /// 
+    /// 在GPU上并行查找每个目标位置最近的导航节点
+    pub fn generate_nearest_node_shader() -> String {
+        r#"
+@group(0) @binding(0)
+var<storage, read> target_positions: array<vec3f>;
+
+@group(0) @binding(1)
+var<storage, read> node_positions: array<vec3f>;
+
+@group(0) @binding(2)
+var<storage, read> node_traversable: array<u32>;
+
+@group(0) @binding(3)
+var<storage, read_write> nearest_node_indices: array<u32>;
+
+@group(0) @binding(4)
+var<storage, read_write> nearest_distances: array<f32>;
+
+@group(0) @binding(5)
+var<uniform> config: NearestNodeConfig;
+
+struct NearestNodeConfig {
+    target_count: u32,
+    node_count: u32,
+    max_search_distance: f32,
+    _padding: f32,
+}
+
+@compute @workgroup_size(64, 1, 1)
+fn main(@builtin(global_invocation_id) global_id: vec3u) {
+    let target_idx = global_id.x;
+    if (target_idx >= config.target_count) {
+        return;
+    }
+    
+    let target_pos = target_positions[target_idx];
+    var min_distance = config.max_search_distance;
+    var nearest_idx = 0xFFFFFFFFu; // 无效索引
+    
+    // 遍历所有节点查找最近的
+    for (var i = 0u; i < config.node_count; i++) {
+        // 只考虑可通行的节点
+        if (node_traversable[i] == 0u) {
+            continue;
+        }
+        
+        let node_pos = node_positions[i];
+        let delta = target_pos - node_pos;
+        let distance = length(delta);
+        
+        if (distance < min_distance) {
+            min_distance = distance;
+            nearest_idx = i;
+        }
+    }
+    
+    nearest_node_indices[target_idx] = nearest_idx;
+    nearest_distances[target_idx] = min_distance;
 }
         "#
         .to_string()
@@ -448,10 +617,47 @@ mod tests {
         let physics_shader = ComputeShaderGenerator::generate_physics_shader();
         let collision_shader = ComputeShaderGenerator::generate_collision_shader();
         let particle_shader = ComputeShaderGenerator::generate_particle_shader();
+        let pathfinding_shader = ComputeShaderGenerator::generate_pathfinding_shader();
+        let nearest_node_shader = ComputeShaderGenerator::generate_nearest_node_shader();
 
         assert!(!physics_shader.is_empty());
         assert!(!collision_shader.is_empty());
         assert!(!particle_shader.is_empty());
+        assert!(!pathfinding_shader.is_empty());
+        assert!(!nearest_node_shader.is_empty());
         assert!(physics_shader.contains("@compute"));
+        assert!(particle_shader.contains("wind_field"));
+        assert!(particle_shader.contains("color"));
+        assert!(particle_shader.contains("rotation"));
+        assert!(pathfinding_shader.contains("path_costs"));
+        assert!(nearest_node_shader.contains("nearest_node_indices"));
+    }
+
+    #[test]
+    fn test_enhanced_particle_shader_features() {
+        let particle_shader = ComputeShaderGenerator::generate_particle_shader();
+        
+        // 验证增强功能
+        assert!(particle_shader.contains("wind_field"), "应支持风力场");
+        assert!(particle_shader.contains("color"), "应支持颜色渐变");
+        assert!(particle_shader.contains("size"), "应支持大小变化");
+        assert!(particle_shader.contains("rotation"), "应支持旋转");
+        assert!(particle_shader.contains("life_ratio"), "应支持生命周期比例");
+    }
+
+    #[test]
+    fn test_pathfinding_shader_features() {
+        let pathfinding_shader = ComputeShaderGenerator::generate_pathfinding_shader();
+        let nearest_node_shader = ComputeShaderGenerator::generate_nearest_node_shader();
+        
+        // 验证寻路着色器功能
+        assert!(pathfinding_shader.contains("distances"), "应计算距离");
+        assert!(pathfinding_shader.contains("path_costs"), "应计算路径代价");
+        assert!(pathfinding_shader.contains("heuristic_weight"), "应支持启发式权重");
+        
+        // 验证最近节点查找功能
+        assert!(nearest_node_shader.contains("nearest_node_indices"), "应查找最近节点索引");
+        assert!(nearest_node_shader.contains("nearest_distances"), "应计算最近距离");
+        assert!(nearest_node_shader.contains("node_traversable"), "应检查节点可通行性");
     }
 }

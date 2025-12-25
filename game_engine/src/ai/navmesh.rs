@@ -34,6 +34,7 @@
 
 use crate::impl_default;
 use glam::Vec3;
+use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use thiserror::Error;
 
@@ -55,7 +56,7 @@ pub enum NavMeshError {
 }
 
 /// 导航网格配置
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NavMeshConfig {
     /// 代理半径（用于生成膨胀边界）
     pub agent_radius: f32,

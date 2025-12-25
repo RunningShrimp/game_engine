@@ -1,0 +1,182 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # 触发版本发布，例如 v1.0.0
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 1.0.0)'
+        required: true
+        type: string
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # ============================================
+  # 创建发布
+  # ============================================
+  create-release:
+    name: 创建发布
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+    steps:
+      - name: Checkout 代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 提取版本号
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION=${GITHUB_REF#refs/tags/v}
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+
+      - name: 创建GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          release_name: Release ${{ steps.version.outputs.tag }}
+          body: |
+            ## 游戏引擎 ${{ steps.version.outputs.version }} 发布
+
+            ### 变更日志
+            - 查看 [CHANGELOG.md](../../CHANGELOG.md) 了解详细变更
+
+            ### 下载
+            - 查看下方的构建产物下载对应平台的版本
+
+            ### 安装
+            ```bash
+            cargo install game_engine --version ${{ steps.version.outputs.version }}
+            ```
+          draft: false
+          prerelease: false
+
+  # ============================================
+  # 构建发布版本
+  # ============================================
+  build-release:
+    name: 构建 ${{ matrix.os }} (${{ matrix.target }})
+    needs: create-release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            artifact-name: game-engine-linux-x86_64
+            binary-name: game_engine
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            artifact-name: game-engine-macos-x86_64
+            binary-name: game_engine
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            artifact-name: game-engine-macos-aarch64
+            binary-name: game_engine
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact-name: game-engine-windows-x86_64
+            binary-name: game_engine.exe
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout 代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Rust 工具链
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: 缓存 Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-${{ matrix.target }}-release-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.target }}-
+
+      - name: 构建 Release 版本
+        run: |
+          cargo build --release --target ${{ matrix.target }} --package game_engine
+
+      - name: 准备发布文件
+        shell: bash
+        run: |
+          mkdir -p release
+          if [ "${{ matrix.os }}" == "windows-latest" ]; then
+            cp target/${{ matrix.target }}/release/${{ matrix.binary-name }} release/
+          else
+            cp target/${{ matrix.target }}/release/${{ matrix.binary-name }} release/
+          fi
+          
+          # 创建版本信息文件
+          echo "${{ needs.create-release.outputs.version }}" > release/VERSION
+          echo "${{ matrix.target }}" > release/TARGET
+          echo "${{ github.sha }}" > release/COMMIT
+
+      - name: 创建压缩包
+        shell: bash
+        run: |
+          cd release
+          if [ "${{ matrix.os }}" == "windows-latest" ]; then
+            7z a ../${{ matrix.artifact-name }}.zip *
+          else
+            tar czf ../${{ matrix.artifact-name }}.tar.gz *
+          fi
+
+      - name: 上传构建产物到Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            ${{ matrix.artifact-name }}.tar.gz
+            ${{ matrix.artifact-name }}.zip
+          tag_name: ${{ needs.create-release.outputs.tag }}
+          draft: false
+          prerelease: false
+
+  # ============================================
+  # 发布到Crates.io
+  # ============================================
+  publish-crates:
+    name: 发布到Crates.io
+    needs: [create-release, build-release]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Checkout 代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Rust 工具链
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: 发布到Crates.io
+        run: |
+          cargo publish --package game_engine --token ${{ secrets.CRATES_IO_TOKEN }}
+        continue-on-error: true
+
+      - name: 发布其他包
+        run: |
+          cargo publish --package game_engine_common --token ${{ secrets.CRATES_IO_TOKEN }}
+          cargo publish --package game_engine_simd --token ${{ secrets.CRATES_IO_TOKEN }}
+          cargo publish --package game_engine_hardware --token ${{ secrets.CRATES_IO_TOKEN }}
+        continue-on-error: true
+

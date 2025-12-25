@@ -147,6 +147,110 @@ impl HotReloadManager {
         self.event_rx.recv().await
     }
 
+    /// 批量处理热重载事件（协程版本）
+    ///
+    /// 使用Tokio协程批量处理多个热重载事件，支持并发重载和防抖。
+    ///
+    /// # 参数
+    /// - `max_batch_size`: 最大批处理大小
+    /// - `timeout`: 批处理超时时间
+    ///
+    /// # 返回
+    /// 返回一个Future，解析为处理的事件列表
+    pub async fn process_events_batch(
+        &mut self,
+        max_batch_size: usize,
+        timeout: Duration,
+    ) -> Vec<HotReloadEvent> {
+        use tokio::time::{sleep, Instant};
+
+        let mut events = Vec::new();
+        let start_time = Instant::now();
+
+        // 收集事件直到达到批处理大小或超时
+        while events.len() < max_batch_size && start_time.elapsed() < timeout {
+            match tokio::time::timeout(
+                timeout - start_time.elapsed(),
+                self.event_rx.recv(),
+            )
+            .await
+            {
+                Ok(Some(event)) => {
+                    events.push(event);
+                }
+                Ok(None) => break, // 通道已关闭
+                Err(_) => break,   // 超时
+            }
+        }
+
+        // 应用防抖：合并相同路径的连续事件
+        self.debounce_events(&mut events);
+
+        events
+    }
+
+    /// 并发重载多个资源（协程版本）
+    ///
+    /// 使用Tokio协程并发重载多个资源，提升性能。
+    ///
+    /// # 参数
+    /// - `paths`: 要重载的资源路径列表
+    /// - `reload_fn`: 重载函数（异步）
+    ///
+    /// # 返回
+    /// 返回一个Future，解析为重载结果列表
+    pub async fn reload_resources_concurrent<F, Fut>(
+        &self,
+        paths: Vec<PathBuf>,
+        reload_fn: F,
+    ) -> Vec<Result<(), String>>
+    where
+        F: Fn(PathBuf) -> Fut + Send + Sync + 'static,
+        Fut: std::future::Future<Output = Result<(), String>> + Send + 'static,
+    {
+        use futures::future::join_all;
+
+        // 创建并发重载任务
+        let reload_tasks: Vec<_> = paths
+            .into_iter()
+            .map(|path| {
+                let reload_fn = &reload_fn;
+                tokio::task::spawn(async move {
+                    reload_fn(path).await
+                })
+            })
+            .collect();
+
+        // 等待所有重载任务完成
+        let results = join_all(reload_tasks).await;
+
+        // 收集结果
+        results
+            .into_iter()
+            .map(|r| r.unwrap_or_else(|e| Err(e.to_string())))
+            .collect()
+    }
+
+    /// 防抖事件：合并相同路径的连续事件
+    fn debounce_events(&self, events: &mut Vec<HotReloadEvent>) {
+        use std::collections::HashMap;
+
+        // 按路径分组事件，只保留最后一个事件
+        let mut path_to_event: HashMap<PathBuf, HotReloadEvent> = HashMap::new();
+
+        for event in events.drain(..) {
+            let path = match &event {
+                HotReloadEvent::ResourceModified(p) => p.clone(),
+                HotReloadEvent::ResourceDeleted(p) => p.clone(),
+                HotReloadEvent::ResourceCreated(p) => p.clone(),
+            };
+            path_to_event.insert(path, event);
+        }
+
+        // 将去重后的事件放回
+        events.extend(path_to_event.into_values());
+    }
+
     /// 获取需要重新加载的资源列表（考虑依赖关系）
     ///
     /// 当资源被修改时，此方法会：
@@ -180,7 +284,7 @@ impl HotReloadManager {
         // 递归获取所有依赖的资源
         for dependent in dependents {
             if !targets.contains(&dependent) {
-                targets.push(dependent);
+                targets.push(dependent.clone());
             }
 
             // 递归获取依赖的依赖

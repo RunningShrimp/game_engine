@@ -42,6 +42,27 @@ pub enum PostProcessEffect {
         intensity: f32,
         bias: f32,
     },
+    /// SSR 屏幕空间反射
+    SSR {
+        max_distance: f32,
+        step_count: u32,
+        intensity: f32,
+        edge_fade: f32,
+    },
+    /// 体积光
+    VolumetricLighting {
+        scattering_intensity: f32,
+        sample_count: u32,
+        god_ray_intensity: f32,
+        fog_density: f32,
+    },
+    /// 程序化噪声
+    ProceduralNoise {
+        film_grain_intensity: f32,
+        chromatic_aberration_intensity: f32,
+        scanline_intensity: f32,
+        noise_intensity: f32,
+    },
     /// 运动模糊
     MotionBlur { intensity: f32, max_samples: u32 },
     /// 景深
@@ -88,9 +109,12 @@ impl PostProcessEffect {
     fn priority(&self) -> EffectPriority {
         match self {
             PostProcessEffect::SSAO { .. } => EffectPriority::Early,
+            PostProcessEffect::SSR { .. } => EffectPriority::Early,
+            PostProcessEffect::VolumetricLighting { .. } => EffectPriority::Mid,
             PostProcessEffect::Bloom { .. } => EffectPriority::Mid,
             PostProcessEffect::MotionBlur { .. } => EffectPriority::Mid,
             PostProcessEffect::DepthOfField { .. } => EffectPriority::Mid,
+            PostProcessEffect::ProceduralNoise { .. } => EffectPriority::Late,
             PostProcessEffect::ColorCorrection { .. } => EffectPriority::Late,
             PostProcessEffect::Tonemap { .. } => EffectPriority::Final,
             PostProcessEffect::Antialiasing { .. } => EffectPriority::Final,
@@ -101,6 +125,11 @@ impl PostProcessEffect {
     fn estimated_gpu_time(&self) -> f32 {
         match self {
             PostProcessEffect::SSAO { .. } => 2.0,
+            PostProcessEffect::SSR { step_count, .. } => 2.5 + *step_count as f32 * 0.1,
+            PostProcessEffect::VolumetricLighting { sample_count, .. } => {
+                1.0 + *sample_count as f32 * 0.15
+            }
+            PostProcessEffect::ProceduralNoise { .. } => 0.5,
             PostProcessEffect::Bloom { radius, .. } => 1.0 + radius * 0.2,
             PostProcessEffect::MotionBlur { max_samples, .. } => 0.5 + *max_samples as f32 * 0.1,
             PostProcessEffect::DepthOfField {

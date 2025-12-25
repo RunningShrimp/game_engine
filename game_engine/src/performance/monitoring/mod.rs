@@ -1,14 +1,6 @@
-pub mod monitoring_legacy;
 pub mod system_monitor;
 
 pub use system_monitor::{
     CPUMonitor, FrameTimeSampler, MemoryMonitor, PerformanceMetrics, PerformanceReport,
     SystemPerformanceMonitor,
-};
-
-// 向后兼容：重新导出monitoring_legacy中的类型
-#[allow(deprecated)]
-pub use monitoring_legacy::{
-    IssueSeverity, Metric, MetricStats, MetricType, OptimizationRecommendation, PerformanceIssue,
-    PerformanceMonitor, PerformanceReport as MonitoringReport,
 };

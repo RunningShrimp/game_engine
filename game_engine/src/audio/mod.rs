@@ -31,8 +31,9 @@ pub use streaming::{
 };
 
 pub use effects::{
-    AudioEffect, CompressorConfig, CompressorEffect, DelayConfig, DelayEffect, EffectChain,
-    EffectError, EqualizerBand, EqualizerConfig, EqualizerEffect, ReverbConfig, ReverbEffect,
+    AudioEffect, AudioOcclusionConfig, AudioOcclusionEffect, CompressorConfig, CompressorEffect,
+    DelayConfig, DelayEffect, EffectChain, EffectError, EqualizerBand, EqualizerConfig,
+    EqualizerEffect, LimiterConfig, LimiterEffect, ReverbConfig, ReverbEffect,
 };
 
 pub use async_processing::{

@@ -103,6 +103,8 @@ toml = "0.9.10"
 fastrand = "2.3.0"
 # Web framework for profiling dashboard
 warp = "0.3"
+# Tracy Profiler integration (optional)
+tracy-client = { version = "0.18", optional = true }
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -125,6 +127,8 @@ wasm = ["dep:wasmtime"]
 secure_key_exchange = ["x25519-dalek-ng", "hkdf"]
 # 使用不安全的密钥交换（仅用于测试，生产环境不应使用）
 insecure_key_exchange = []
+# 启用Tracy Profiler集成（用于性能分析和火焰图）
+tracy = ["dep:tracy-client"]
 # 默认特性：包含GLTF支持和安全密钥交换
 # 注意：物理、ECS、SIMD、性能分析等核心功能默认启用，不再使用特性标志
 default = ["gltf", "secure_key_exchange"]

@@ -2,6 +2,7 @@ use bevy_ecs::prelude::*;
 use egui::Context as GuiContext;
 
 pub mod animation_editor;
+pub mod animation_editor_enhanced;
 pub mod asset_browser;
 pub mod build_tool;
 pub mod config;
@@ -12,8 +13,10 @@ pub mod hierarchy;
 pub mod inspector;
 pub mod keyframe_editor;
 pub mod material_editor;
+pub mod material_editor_enhanced;
 pub mod package_deploy;
 pub mod particle_editor;
+pub mod particle_editor_enhanced;
 pub mod performance_monitor;
 pub mod performance_panel;
 pub mod platform_builder;
@@ -36,6 +39,9 @@ pub use undo_redo::{
     Command, CommandError, CommandManager, CompositeCommand, PropertyChangeCommand,
 };
 pub use world_inspector::WorldInspector;
+pub use material_editor_enhanced::{MaterialEditorEnhanced, MaterialPreset, MaterialLibraryEntry};
+pub use particle_editor_enhanced::{ParticleEditorEnhanced, ParticleSystemLibraryEntry, SubEmitterConfig};
+pub use animation_editor_enhanced::{AnimationEditorEnhanced, TrackType, KeyframeSelection, AnimationEvent};
 
 /// 全局编辑器状态
 #[derive(Default, Debug, Resource)]

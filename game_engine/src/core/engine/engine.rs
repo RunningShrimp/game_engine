@@ -142,11 +142,16 @@ impl Engine {
             .build()
             .expect("Failed to create Tokio runtime");
 
+        let runtime_handle = runtime.handle().clone();
         let _guard = runtime.enter();
 
         // 创建协程游戏循环
         let mut coroutine_game_loop =
             CoroutineGameLoop::new(std::time::Duration::from_secs_f64(1.0 / 60.0));
+
+        // 创建协程任务管理器并添加到ECS世界
+        let task_manager = crate::core::engine::game_loop_coroutine::CoroutineTaskManager::new(runtime_handle.clone());
+        world.insert_resource(task_manager);
 
         tracing::info!("Coroutine game loop initialized");
 
@@ -163,6 +168,7 @@ impl Engine {
 
         // 运行事件循环
         event_loop.run(move |event, elwt| {
+            let runtime_handle = runtime_handle.clone();
             elwt.set_control_flow(ControlFlow::Poll);
 
             match event {
@@ -217,19 +223,34 @@ impl Engine {
                             // 运行可变时间步调度器
                             update_schedule.run(&mut world);
 
+                            // 轮询tokio运行时处理异步任务（非阻塞）
+                            // 这允许后台协程任务在主循环中执行
+                            runtime_handle.spawn(async {
+                                // 短暂让出控制权，允许其他协程执行
+                                tokio::task::yield_now().await;
+                            });
+
+                            // 使用协程任务管理器处理异步任务
                             // 示例：定期生成异步任务（每60帧生成一次）
                             // 在实际游戏中，这里可以用于AI寻路、资源加载等异步任务
                             if let Some(time) = world.get_resource::<crate::ecs::Time>() {
                                 let frame_count = (time.elapsed_seconds * 60.0) as u64;
                                 if frame_count % 60 == 0 {
-                                    let _world_ptr =
-                                        &world as *const _ as *mut bevy_ecs::world::World;
-                                    let _ = runtime.spawn(async move {
-                                        tracing::debug!("Async task running in background");
-                                        tokio::time::sleep(std::time::Duration::from_millis(10))
-                                            .await;
-                                        tracing::debug!("Async task completed");
-                                    });
+                                    if let Some(task_manager) = world.get_resource::<crate::core::engine::game_loop_coroutine::CoroutineTaskManager>() {
+                                        let task_manager = task_manager.clone();
+                                        runtime_handle.spawn(async move {
+                                            let _task_id = task_manager.spawn_task(
+                                                "background_task".to_string(),
+                                                crate::core::engine::game_loop_coroutine::TaskPriority::Background,
+                                                || async move {
+                                                    tracing::debug!("Async task running in background");
+                                                    tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+                                                    tracing::debug!("Async task completed");
+                                                    Ok(())
+                                                },
+                                            ).await;
+                                        });
+                                    }
                                 }
                             }
 

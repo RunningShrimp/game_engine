@@ -55,6 +55,10 @@ pub mod frame_analyzer;
 pub mod memory_profiler;
 pub mod performance_analyzer;
 pub mod profiler;
+#[cfg(feature = "tracy")]
+pub mod tracy;
+#[cfg(not(feature = "tracy"))]
+mod tracy;
 
 // 性能热力图和帧时间分布分析
 pub mod frame_time_distribution;

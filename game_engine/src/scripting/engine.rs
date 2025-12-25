@@ -11,6 +11,10 @@ use std::collections::HashMap;
 ///
 /// 注意：新代码应使用 `ScriptComponent` 而不是 `Script`
 /// 这个类型保留用于向后兼容
+#[deprecated(
+    since = "0.1.0",
+    note = "Use ScriptComponent instead. This type is kept for backward compatibility only."
+)]
 #[derive(Component, Default)]
 pub struct Script {
     /// 脚本源代码
@@ -21,6 +25,10 @@ pub struct Script {
 
 impl Script {
     /// 创建新的脚本组件
+    #[deprecated(
+        since = "0.1.0",
+        note = "Use ScriptComponent::new() instead"
+    )]
     pub fn new(source: impl Into<String>) -> Self {
         Self {
             source: source.into(),

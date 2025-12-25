@@ -1,4 +1,5 @@
 pub mod adapter;
+pub mod detection;
 pub mod hardware_info;
 pub mod native_input;
 pub mod power_aware;
@@ -528,4 +529,10 @@ pub use mobile::{
 pub use console::{
     ButtonState, ConsoleConfig, ConsoleInputHandler, ConsolePerformanceMonitor, ConsolePlatform,
     ControllerState, get_console_config, is_console_platform,
+};
+
+// 平台检测工具
+pub use detection::{
+    current_arch, current_os, is_aarch64, is_android, is_console, is_desktop, is_ios, is_linux,
+    is_macos, is_mobile, is_wasm32, is_web, is_windows, is_x86_64, supports_simd, PlatformInfo,
 };

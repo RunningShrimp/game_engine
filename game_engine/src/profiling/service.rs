@@ -278,6 +278,8 @@ impl ProfilingService {
             triangle_count: *current_values.get("render.triangle_count").unwrap_or(&0),
             physics_time: *current_values.get("physics.step_time").unwrap_or(&0) as f64,
             audio_latency: *current_values.get("audio.latency").unwrap_or(&0) as f64,
+            coroutine: None, // 协程指标需要从ECS世界获取，暂时为None
+            simd: None, // SIMD指标在collect_realtime_metrics中设置
         };
 
         Ok(metrics)

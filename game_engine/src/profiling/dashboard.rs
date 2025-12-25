@@ -53,6 +53,10 @@ pub struct RealtimeMetrics {
     pub physics_time: f64,
     /// 音频延迟（毫秒）
     pub audio_latency: f64,
+    /// 协程任务统计
+    pub coroutine: Option<CoroutineMetrics>,
+    /// SIMD性能统计
+    pub simd: Option<SimdMetrics>,
 }
 
 impl Default for RealtimeMetrics {
@@ -68,8 +72,40 @@ impl Default for RealtimeMetrics {
             triangle_count: 0,
             physics_time: 0.0,
             audio_latency: 0.0,
+            coroutine: None,
+            simd: None,
         }
     }
+}
+
+/// 协程任务指标
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct CoroutineMetrics {
+    /// 活跃任务数
+    pub active_tasks: usize,
+    /// 已完成任务数
+    pub tasks_completed: u64,
+    /// 失败任务数
+    pub tasks_failed: u64,
+    /// 平均任务执行时间（毫秒）
+    pub avg_task_time: f64,
+    /// 任务队列长度
+    pub queue_length: usize,
+}
+
+/// SIMD性能指标
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct SimdMetrics {
+    /// 当前使用的SIMD后端
+    pub backend: String,
+    /// SIMD向量宽度（位）
+    pub simd_width: u32,
+    /// 可并行处理的f32数量
+    pub f32_lanes: usize,
+    /// SIMD优化使用率（百分比）
+    pub usage_percent: f64,
+    /// SIMD加速比（相对于标量实现）
+    pub speedup_ratio: f64,
 }
 
 /// 告警信息
@@ -189,6 +225,10 @@ pub struct MetricsResponse {
     pub physics: Option<PhysicsMetrics>,
     /// 系统指标
     pub system: Option<SystemMetrics>,
+    /// 协程指标
+    pub coroutine: Option<CoroutineMetrics>,
+    /// SIMD指标
+    pub simd: Option<SimdMetrics>,
     /// 告警列表
     pub alerts: Vec<AlertInfo>,
 }
@@ -327,10 +367,7 @@ impl DashboardService {
             .and_then(get_alerts);
 
         // 组合所有路由
-        let mut routes = metrics_route.or(chart_route).or(alerts_route);
-
-        // 如果启用WebSocket，添加WebSocket路由
-        if config.enable_websocket {
+        let routes = if config.enable_websocket {
             let profiling_service_clone = profiling_service.clone();
             let connections_clone = websocket_connections.clone();
             let ws_route = warp::path("ws").and(warp::ws()).map(move |ws: warp::ws::Ws| {
@@ -340,8 +377,10 @@ impl DashboardService {
                     handle_websocket_connection(socket, service, connections)
                 })
             });
-            routes = routes.or(ws_route);
-        }
+            metrics_route.or(chart_route).or(alerts_route).or(ws_route)
+        } else {
+            metrics_route.or(chart_route).or(alerts_route)
+        };
 
         let routes = if self.config.enable_cors {
             routes.with(warp::cors())
@@ -452,6 +491,12 @@ impl DashboardService {
         // 收集系统指标
         let system = self.collect_system_metrics(service).await;
 
+        // 收集协程指标
+        let coroutine = self.collect_coroutine_metrics().await;
+
+        // 收集SIMD指标
+        let simd = self.collect_simd_metrics().await;
+
         // 检查告警
         let alerts = self.check_alerts(&render, &memory, &physics, &system).await;
 
@@ -460,6 +505,8 @@ impl DashboardService {
             memory,
             physics,
             system,
+            coroutine,
+            simd,
             alerts,
         }
     }
@@ -516,12 +563,58 @@ impl DashboardService {
         })
     }
 
+    /// 收集协程指标
+    async fn collect_coroutine_metrics(&self) -> Option<CoroutineMetrics> {
+        // 注意：这里需要从ECS世界获取CoroutineTaskManager
+        // 由于DashboardService没有直接访问ECS世界的权限，
+        // 我们需要通过ProfilingService或其他方式获取这些数据
+        // 暂时返回None，实际实现需要从ECS世界获取
+        None
+    }
+
+    /// 收集SIMD指标
+    async fn collect_simd_metrics(&self) -> Option<SimdMetrics> {
+        #[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
+        {
+            use game_engine_simd::SimdBackend;
+            let backend = SimdBackend::best_available();
+            let backend_name = format!("{:?}", backend);
+            let simd_width = match backend.width() {
+                game_engine_simd::SimdWidth::W128 => 128,
+                game_engine_simd::SimdWidth::W256 => 256,
+                game_engine_simd::SimdWidth::W512 => 512,
+            };
+            let f32_lanes = backend.f32_lanes();
+
+            Some(SimdMetrics {
+                backend: backend_name,
+                simd_width,
+                f32_lanes,
+                usage_percent: 100.0, // 假设SIMD始终在使用（实际需要运行时统计）
+                speedup_ratio: match backend {
+                    SimdBackend::Avx512 => 8.0,
+                    SimdBackend::Avx2 => 4.0,
+                    SimdBackend::Avx => 3.0,
+                    SimdBackend::Sse41 => 2.5,
+                    SimdBackend::Sse2 => 2.0,
+                    SimdBackend::Neon => 2.0,
+                    SimdBackend::Sve => 4.0,
+                    SimdBackend::Scalar => 1.0,
+                },
+            })
+        }
+        #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
+        {
+            None
+        }
+    }
+
     /// 检查告警条件
     async fn check_alerts(
         &self,
         render: &Option<RenderMetrics>,
         memory: &Option<MemoryMetrics>,
-        physics: &Option<PhysicsMetrics>,
+        _physics: &Option<PhysicsMetrics>,
         system: &Option<SystemMetrics>,
     ) -> Vec<AlertInfo> {
         let mut alerts = Vec::new();
@@ -668,7 +761,7 @@ fn with_config(
 /// API处理器：获取当前性能指标
 async fn get_metrics(
     service: Arc<ProfilingService>,
-    historical_data: Arc<RwLock<HashMap<String, Vec<(Instant, f64)>>>>,
+    _historical_data: Arc<RwLock<HashMap<String, Vec<(Instant, f64)>>>>,
     config: DashboardConfig,
 ) -> Result<impl Reply, Rejection> {
     let dashboard = DashboardService::with_config(service, config);
@@ -837,8 +930,41 @@ async fn handle_client_message(message: &str, connection_id: &str) {
 
 /// 收集实时指标数据
 async fn collect_realtime_metrics(service: &ProfilingService) -> RealtimeMetrics {
-    match service.get_realtime_metrics() {
-        Ok(metrics) => metrics,
+    let mut metrics = match service.get_realtime_metrics() {
+        Ok(m) => m,
         Err(_) => RealtimeMetrics::default(),
+    };
+
+    // 添加协程指标
+    #[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
+    {
+        use game_engine_simd::SimdBackend;
+        let backend = SimdBackend::best_available();
+        let backend_name = format!("{:?}", backend);
+        let simd_width = match backend.width() {
+            game_engine_simd::SimdWidth::W128 => 128,
+            game_engine_simd::SimdWidth::W256 => 256,
+            game_engine_simd::SimdWidth::W512 => 512,
+        };
+        let f32_lanes = backend.f32_lanes();
+
+        metrics.simd = Some(SimdMetrics {
+            backend: backend_name,
+            simd_width,
+            f32_lanes,
+            usage_percent: 100.0,
+            speedup_ratio: match backend {
+                SimdBackend::Avx512 => 8.0,
+                SimdBackend::Avx2 => 4.0,
+                SimdBackend::Avx => 3.0,
+                SimdBackend::Sse41 => 2.5,
+                SimdBackend::Sse2 => 2.0,
+                SimdBackend::Neon => 2.0,
+                SimdBackend::Sve => 4.0,
+                SimdBackend::Scalar => 1.0,
+            },
+        });
     }
+
+    metrics
 }

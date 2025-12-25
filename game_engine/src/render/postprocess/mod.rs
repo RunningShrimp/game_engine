@@ -25,7 +25,10 @@ pub mod depth_of_field;
 pub mod effect_manager;
 pub mod motion_blur;
 pub mod ssao;
+pub mod ssr;
 pub mod tonemap;
+pub mod volumetric_lighting;
+pub mod procedural_noise;
 
 pub use antialiasing::{AntialiasingMode, FxaaPass, FxaaQuality, TaaPass};
 pub use bloom::BloomPass;
@@ -36,7 +39,10 @@ pub use effect_manager::{
 };
 pub use motion_blur::MotionBlurPass;
 pub use ssao::SsaoPass;
+pub use ssr::{SsrConfig, SsrPass, SsrUniforms};
 pub use tonemap::{TonemapOperator, TonemapPass};
+pub use volumetric_lighting::{VolumetricLightingConfig, VolumetricLightingPass, VolumetricLightingUniforms};
+pub use procedural_noise::{ProceduralNoiseConfig, ProceduralNoisePass, ProceduralNoiseUniforms};
 
 use wgpu::TextureFormat;
 
