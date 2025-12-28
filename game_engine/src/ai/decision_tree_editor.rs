@@ -7,10 +7,8 @@
 //! - 决策树序列化/反序列化
 //! - 决策树验证
 
-use crate::ai::behavior_tree::{Node, Status};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::sync::Arc;
 
 /// 决策树节点类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -321,6 +319,7 @@ impl std::fmt::Display for DecisionTreeError {
 impl std::error::Error for DecisionTreeError {}
 
 /// 决策树编辑器
+#[derive(Debug)]
 pub struct DecisionTreeEditor {
     /// 当前决策树
     current_tree: Option<DecisionTree>,

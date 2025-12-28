@@ -1,6 +1,8 @@
 use crate::impl_default;
 use glam::{Vec3, Vec4};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::path::PathBuf;
 
 /// 粒子发射器类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -212,22 +214,138 @@ impl ParticlePreset {
     }
 }
 
+/// 粒子系统库条目（增强功能）
+#[derive(Debug, Clone)]
+pub struct ParticleSystemLibraryEntry {
+    pub name: String,
+    pub config: ParticleSystemConfig,
+    pub thumbnail_path: Option<PathBuf>,
+    pub tags: Vec<String>,
+    pub description: String,
+}
+
+/// 子发射器配置（增强功能）
+#[derive(Debug, Clone)]
+pub struct SubEmitterConfig {
+    pub enabled: bool,
+    pub emission_rate: f32,
+    pub lifetime: f32,
+    pub config: ParticleSystemConfig,
+}
+
+/// 粒子编辑器增强配置
+#[derive(Debug, Clone)]
+pub struct ParticleEditorEnhancedConfig {
+    /// 显示预览
+    pub show_preview: bool,
+    /// 预览大小
+    pub preview_size: f32,
+    /// 启用粒子系统库
+    pub enable_library: bool,
+    /// 启用子发射器
+    pub enable_sub_emitters: bool,
+}
+
+impl Default for ParticleEditorEnhancedConfig {
+    fn default() -> Self {
+        Self {
+            show_preview: true,
+            preview_size: 300.0,
+            enable_library: true,
+            enable_sub_emitters: true,
+        }
+    }
+}
+
 /// 粒子编辑器
 pub struct ParticleEditor {
     /// 粒子系统配置
     pub config: ParticleSystemConfig,
     /// 是否正在播放
     pub is_playing: bool,
+    /// 增强配置
+    pub enhanced_config: ParticleEditorEnhancedConfig,
+    /// 粒子系统库（增强功能）
+    pub particle_library: HashMap<String, ParticleSystemLibraryEntry>,
+    /// 子发射器列表（增强功能）
+    pub sub_emitters: Vec<SubEmitterConfig>,
+    /// 当前粒子数量（模拟，增强功能）
+    pub current_particle_count: usize,
+    /// 系统名称（增强功能）
+    pub system_name: String,
 }
 
 impl ParticleEditor {
     pub fn new() -> Self {
-        Self::default()
+        let mut editor = Self::default();
+        // 初始化预设库
+        if editor.enhanced_config.enable_library {
+            editor.init_presets();
+        }
+        editor
+    }
+
+    /// 初始化预设库（增强功能）
+    fn init_presets(&mut self) {
+        for preset in [
+            ParticlePreset::Fire,
+            ParticlePreset::Smoke,
+            ParticlePreset::Explosion,
+            ParticlePreset::Rain,
+            ParticlePreset::Snow,
+            ParticlePreset::Magic,
+        ] {
+            let entry = ParticleSystemLibraryEntry {
+                name: preset.name().to_string(),
+                config: preset.to_config(),
+                thumbnail_path: None,
+                tags: vec![preset.name().to_string()],
+                description: format!("{} particle system preset", preset.name()),
+            };
+            self.particle_library.insert(preset.name().to_string(), entry);
+        }
     }
 
     /// 加载预设
     pub fn load_preset(&mut self, preset: ParticlePreset) {
         self.config = preset.to_config();
+        if self.enhanced_config.enable_library {
+            self.system_name = format!("{} System", preset.name());
+        }
+    }
+
+    /// 从库加载（增强功能）
+    pub fn load_from_library(&mut self, name: &str) {
+        if let Some(entry) = self.particle_library.get(name) {
+            self.config = entry.config.clone();
+            self.system_name = entry.name.clone();
+        }
+    }
+
+    /// 保存到库（增强功能）
+    pub fn save_to_library(&mut self) {
+        let entry = ParticleSystemLibraryEntry {
+            name: self.system_name.clone(),
+            config: self.config.clone(),
+            thumbnail_path: None,
+            tags: vec!["Custom".to_string()],
+            description: "Custom particle system".to_string(),
+        };
+        self.particle_library.insert(self.system_name.clone(), entry);
+    }
+
+    /// 添加子发射器（增强功能）
+    pub fn add_sub_emitter(&mut self) {
+        if !self.enhanced_config.enable_sub_emitters {
+            return;
+        }
+        let sub_emitter = SubEmitterConfig {
+            enabled: true,
+            emission_rate: 5.0,
+            lifetime: 1.0,
+            config: ParticleSystemConfig::default(),
+        };
+        self.sub_emitters.push(sub_emitter);
     }
 
     /// 渲染粒子编辑器UI
@@ -235,31 +353,39 @@ impl ParticleEditor {
         ui.heading("Particle Editor");
         ui.separator();
 
-        // 预设选择
-        ui.horizontal(|ui| {
-            ui.label("Presets:");
-            if ui.button(ParticlePreset::Fire.name()).clicked() {
-                self.load_preset(ParticlePreset::Fire);
-            }
-            if ui.button(ParticlePreset::Smoke.name()).clicked() {
-                self.load_preset(ParticlePreset::Smoke);
-            }
-            if ui.button(ParticlePreset::Explosion.name()).clicked() {
-                self.load_preset(ParticlePreset::Explosion);
-            }
-        });
+        // 工具栏（增强功能）
+        if self.enhanced_config.enable_library {
+            ui.horizontal(|ui| {
+                ui.label("Name:");
+                ui.text_edit_singleline(&mut self.system_name);
+                if ui.button("💾 Save to Library").clicked() {
+                    self.save_to_library();
+                }
+                ui.checkbox(&mut self.enhanced_config.show_preview, "Preview");
+            });
+            ui.separator();
+        }
 
-        ui.horizontal(|ui| {
-            ui.label("");
-            if ui.button(ParticlePreset::Rain.name()).clicked() {
-                self.load_preset(ParticlePreset::Rain);
-            }
-            if ui.button(ParticlePreset::Snow.name()).clicked() {
-                self.load_preset(ParticlePreset::Snow);
-            }
-            if ui.button(ParticlePreset::Magic.name()).clicked() {
-                self.load_preset(ParticlePreset::Magic);
-            }
+        // 预设选择
+        ui.collapsing("Presets", |ui| {
+            ui.horizontal(|ui| {
+                for preset in [
+                    ParticlePreset::Fire,
+                    ParticlePreset::Smoke,
+                    ParticlePreset::Explosion,
+                ] {
+                    if ui.button(preset.name()).clicked() {
+                        self.load_preset(preset);
+                    }
+                }
+            });
+            ui.horizontal(|ui| {
+                for preset in [ParticlePreset::Rain, ParticlePreset::Snow, ParticlePreset::Magic] {
+                    if ui.button(preset.name()).clicked() {
+                        self.load_preset(preset);
+                    }
+                }
+            });
         });
 
         ui.separator();
@@ -437,17 +563,89 @@ impl ParticleEditor {
 
         ui.separator();
 
+        // 子发射器（增强功能）
+        if self.enhanced_config.enable_sub_emitters {
+            ui.collapsing("Sub Emitters", |ui| {
+                ui.label(format!("Sub Emitters: {}", self.sub_emitters.len()));
+                if ui.button("+ Add Sub Emitter").clicked() {
+                    self.add_sub_emitter();
+                }
+
+                for (i, sub_emitter) in self.sub_emitters.iter_mut().enumerate() {
+                    ui.collapsing(format!("Sub Emitter {}", i), |ui| {
+                        ui.checkbox(&mut sub_emitter.enabled, "Enabled");
+                        ui.horizontal(|ui| {
+                            ui.label("Emission Rate:");
+                            ui.add(egui::Slider::new(&mut sub_emitter.emission_rate, 0.0..=50.0));
+                        });
+                        ui.horizontal(|ui| {
+                            ui.label("Lifetime:");
+                            ui.add(egui::Slider::new(&mut sub_emitter.lifetime, 0.1..=10.0));
+                        });
+                    });
+                }
+            });
+            ui.separator();
+        }
+
+        // 粒子预览（增强功能）
+        if self.enhanced_config.show_preview {
+            ui.collapsing("Preview", |ui| {
+                ui.horizontal(|ui| {
+                    ui.label("Size:");
+                    ui.add(egui::Slider::new(&mut self.enhanced_config.preview_size, 100.0..=500.0));
+                });
+                ui.label(format!("Current Particles: {}", self.current_particle_count));
+                // 预览区域（占位）
+                ui.allocate_ui_with_layout(
+                    egui::Vec2::new(self.enhanced_config.preview_size, self.enhanced_config.preview_size),
+                    egui::Layout::top_down(egui::Align::Center),
+                    |ui| {
+                        ui.label("Particle Preview");
+                        ui.label("(3D particle preview will be displayed here)");
+                    },
+                );
+            });
+            ui.separator();
+        }
+
         // 播放控制
         ui.horizontal(|ui| {
-            if ui.button(if self.is_playing { "Stop" } else { "Play" }).clicked() {
+            if ui.button(if self.is_playing { "⏸ Stop" } else { "▶ Play" }).clicked() {
                 self.is_playing = !self.is_playing;
             }
 
-            if ui.button("Reset").clicked() {
+            if ui.button("🔄 Reset").clicked() {
                 self.config = ParticleSystemConfig::default();
                 self.is_playing = false;
+                self.current_particle_count = 0;
             }
         });
+
+        // 粒子系统库（增强功能）
+        if self.enhanced_config.enable_library {
+            ui.separator();
+            ui.collapsing("Particle Library", |ui| {
+                egui::ScrollArea::vertical()
+                    .max_height(200.0)
+                    .show(ui, |ui| {
+                        let library_entries: Vec<(String, String)> = self.particle_library
+                            .iter()
+                            .map(|(name, entry)| (name.clone(), entry.description.clone()))
+                            .collect();
+                        
+                        for (name, description) in library_entries {
+                            ui.horizontal(|ui| {
+                                let name_clone = name.clone();
+                                if ui.button(&name).clicked() {
+                                    self.load_from_library(&name_clone);
+                                }
+                                ui.label(&description);
+                            });
+                        }
+                    });
+            });
+        }
     }
 }
 
@@ -456,6 +654,11 @@ impl Default for ParticleEditor {
         Self {
             config: ParticleSystemConfig::default(),
             is_playing: false,
+            enhanced_config: ParticleEditorEnhancedConfig::default(),
+            particle_library: HashMap::new(),
+            sub_emitters: Vec::new(),
+            current_particle_count: 0,
+            system_name: "Particle System".to_string(),
         }
     }
 }

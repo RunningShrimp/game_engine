@@ -295,7 +295,7 @@ impl MeshBatchGenerator {
             let hash = hasher.finish();
 
             // 从哈希值提取随机数
-            let r1 = ((hash >> 0) & 0xFFFF) as f32 / 65535.0;
+            let r1 = (hash & 0xFFFF) as f32 / 65535.0;
             let r2 = ((hash >> 16) & 0xFFFF) as f32 / 65535.0;
             let r3 = ((hash >> 32) & 0xFFFF) as f32 / 65535.0;
             let r4 = ((hash >> 48) & 0xFFFF) as f32 / 65535.0;
@@ -389,6 +389,7 @@ pub struct LodMeshConfig {
 }
 
 /// LOD 批次构建器
+#[derive(Default)]
 pub struct LodBatchBuilder {
     /// LOD 网格配置列表（按距离排序）
     lod_meshes: Vec<LodMeshConfig>,
@@ -400,16 +401,6 @@ pub struct LodBatchBuilder {
     instances: Vec<(InstanceData, f32)>, // (数据, 到相机距离)
 }
 
-impl Default for LodBatchBuilder {
-    fn default() -> Self {
-        Self {
-            lod_meshes: Vec::new(),
-            material_bind_group: None,
-            material_id: 0,
-            instances: Vec::new(),
-        }
-    }
-}
 
 impl LodBatchBuilder {
     pub fn new() -> Self {

@@ -77,6 +77,12 @@ impl AnchorId {
     }
 }
 
+impl Default for AnchorId {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// 空间锚点
 ///
 /// 表示XR空间中的一个固定位置点，可以用于持久化空间定位。

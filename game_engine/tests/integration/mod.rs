@@ -21,4 +21,5 @@ mod physics_spatial_partition_test;
 mod ecs_benchmark_test;
 mod physics_benchmark_test;
 mod resource_dependency_hotreload_test;
+mod core_modules_integration_test;
 

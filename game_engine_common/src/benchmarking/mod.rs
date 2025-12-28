@@ -4,11 +4,11 @@
 //!
 //! ## 类型
 //!
-//! - [`OptimizationGoal`]: 定义性能优化目标（基准值、目标值、单位）
-//! - [`OptimizationResult`]: 记录优化结果和达成百分比
-//! - [`CpuGpuComparison`]: 比较 CPU 和 GPU 操作的性能
-//! - [`PerformanceValidationSuite`]: 性能验证套件，管理多个目标和结果
-//! - [`ValidationSummary`]: 性能验证摘要
+//! - [`OptimizationGoal`][]: 定义性能优化目标（基准值、目标值、单位）
+//! - [`OptimizationResult`][]: 记录优化结果和达成百分比
+//! - [`CpuGpuComparison`][]: 比较 CPU 和 GPU 操作的性能
+//! - [`PerformanceValidationSuite`][]: 性能验证套件，管理多个目标和结果
+//! - [`ValidationSummary`][]: 性能验证摘要
 //!
 //! ## 使用示例
 //!

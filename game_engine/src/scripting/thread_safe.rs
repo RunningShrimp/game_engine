@@ -98,50 +98,42 @@ impl ThreadSafeScriptSystem {
     fn script_thread_loop(cmd_rx: Receiver<ScriptCommand>, result_tx: Sender<ScriptResult>) {
         let mut scripts: HashMap<u64, String> = HashMap::new();
 
-        loop {
-            match cmd_rx.recv() {
-                Ok(cmd) => {
-                    match cmd {
-                        ScriptCommand::Execute { script_id, code } => {
-                            // 保存脚本
-                            scripts.insert(script_id, code.clone());
+        while let Ok(cmd) = cmd_rx.recv() {
+            match cmd {
+                ScriptCommand::Execute { script_id, code } => {
+                    // 保存脚本
+                    scripts.insert(script_id, code.clone());
 
-                            // 执行脚本 (简化版)
-                            let result = Self::execute_script(&code);
-                            let _ = result_tx.send(ScriptResult::Success {
-                                script_id,
-                                value: result,
-                            });
-                        }
-                        ScriptCommand::CallFunction {
+                    // 执行脚本 (简化版)
+                    let result = Self::execute_script(&code);
+                    let _ = result_tx.send(ScriptResult::Success {
+                        script_id,
+                        value: result,
+                    });
+                }
+                ScriptCommand::CallFunction {
+                    script_id,
+                    function_name,
+                    args,
+                } => {
+                    // 调用函数 (简化版)
+                    if let Some(_script) = scripts.get(&script_id) {
+                        let result = Self::call_function_internal(&function_name, args);
+                        let _ = result_tx.send(ScriptResult::Success {
                             script_id,
-                            function_name,
-                            args,
-                        } => {
-                            // 调用函数 (简化版)
-                            if let Some(_script) = scripts.get(&script_id) {
-                                let result = Self::call_function_internal(&function_name, args);
-                                let _ = result_tx.send(ScriptResult::Success {
-                                    script_id,
-                                    value: result,
-                                });
-                            } else {
-                                let _ = result_tx.send(ScriptResult::Error {
-                                    script_id,
-                                    message: format!("Script {} not found", script_id),
-                                });
-                            }
-                        }
-                        ScriptCommand::Stop { script_id } => {
-                            scripts.remove(&script_id);
-                        }
-                        ScriptCommand::Shutdown => {
-                            break;
-                        }
+                            value: result,
+                        });
+                    } else {
+                        let _ = result_tx.send(ScriptResult::Error {
+                            script_id,
+                            message: format!("Script {} not found", script_id),
+                        });
                     }
                 }
-                Err(_) => {
-                    // 通道关闭,退出循环
+                ScriptCommand::Stop { script_id } => {
+                    scripts.remove(&script_id);
+                }
+                ScriptCommand::Shutdown => {
                     break;
                 }
             }
@@ -207,6 +199,12 @@ impl ThreadSafeScriptSystem {
         if let Some(handle) = self.script_thread.take() {
             let _ = handle.join();
         }
+    }
+}
+
+impl Default for ThreadSafeScriptSystem {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

@@ -57,6 +57,7 @@ impl std::fmt::Debug for EventTypeRegistry {
 }
 
 /// 事件类型注册表
+#[derive(Default)]
 pub struct EventTypeRegistry {
     /// 事件类型名称 -> 事件工厂
     type_name_to_factory: HashMap<String, Arc<dyn EventFactory>>,
@@ -64,14 +65,6 @@ pub struct EventTypeRegistry {
     type_id_to_name: HashMap<TypeId, String>,
 }
 
-impl Default for EventTypeRegistry {
-    fn default() -> Self {
-        Self {
-            type_name_to_factory: HashMap::new(),
-            type_id_to_name: HashMap::new(),
-        }
-    }
-}
 
 impl EventTypeRegistry {
     /// 创建新的事件类型注册表

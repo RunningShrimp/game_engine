@@ -69,24 +69,20 @@ impl Default for GpuInfo {
 }
 
 //  检测GPU信息
+#[cfg(feature = "wgpu")]
 pub fn detect_gpu() -> GpuInfo {
-    #[cfg(feature = "wgpu")]
     if let Some(wgpu_info) = detect_gpu_wgpu() {
-        return wgpu_info;
-    }
-
-    #[cfg(not(feature = "wgpu"))]
-    {
-        tracing::warn!("GPU detection requires 'wgpu' feature. Returning default values.");
-        return GpuInfo::default();
-    }
-
-    #[cfg(feature = "wgpu")]
-    {
+        wgpu_info
+    } else {
         tracing::warn!("GPU detection returned None. Using default values.");
+        GpuInfo::default()
     }
+}
 
-    #[cfg(feature = "wgpu")]
+//  检测GPU信息
+#[cfg(not(feature = "wgpu"))]
+pub fn detect_gpu() -> GpuInfo {
+    tracing::warn!("GPU detection requires 'wgpu' feature. Returning default values.");
     GpuInfo::default()
 }
 
@@ -105,7 +101,7 @@ pub enum DeviceType {
 fn detect_gpu_wgpu() -> Option<GpuInfo> {
     use wgpu::{Backends, DeviceType as WgpuDeviceType, Instance};
 
-    let instance = Instance::new(wgpu::InstanceDescriptor {
+    let instance = Instance::new(&wgpu::InstanceDescriptor {
         backends: Backends::all(),
         ..Default::default()
     });
@@ -115,14 +111,11 @@ fn detect_gpu_wgpu() -> Option<GpuInfo> {
     for adapter in instance.enumerate_adapters(wgpu::Backends::all()) {
         let adapter_info = adapter.get_info();
 
-        let vendor = match adapter_info.vendor.to_lowercase() {
-            s if s.contains("nvidia") => GpuVendor::Nvidia,
-            s if s.contains("amd")
-                || s.contains("radeon")
-                || s.contains("advanced micro devices") =>
-            {
-                GpuVendor::Amd
-            }
+        // `AdapterInfo.vendor` is a numeric vendor ID; use the adapter name string for text matching
+        let name_lc = adapter_info.name.to_lowercase();
+        let vendor = match name_lc.as_str() {
+            s if s.contains("nvidia") || s.contains("nv") => GpuVendor::Nvidia,
+            s if s.contains("amd") || s.contains("radeon") => GpuVendor::Amd,
             s if s.contains("intel") => GpuVendor::Intel,
             s if s.contains("apple") => GpuVendor::Apple,
             s if s.contains("qualcomm") => GpuVendor::Qualcomm,
@@ -131,7 +124,8 @@ fn detect_gpu_wgpu() -> Option<GpuInfo> {
             _ => GpuVendor::Unknown,
         };
 
-        let tier = classify_gpu_tier(&adapter_info, adapter.get_limits());
+        // adapt to current wgpu API: use `limits()` method
+        let tier = classify_gpu_tier(&adapter_info, &adapter.limits());
 
         let device_type = match adapter_info.device_type {
             WgpuDeviceType::DiscreteGpu => DeviceType::DiscreteGpu,
@@ -141,18 +135,20 @@ fn detect_gpu_wgpu() -> Option<GpuInfo> {
             WgpuDeviceType::Other => DeviceType::Other,
         };
 
+        // AdapterInfo does not always expose VRAM in a cross-platform way; default to 0 when unknown
         info = Some(GpuInfo {
             vendor,
-            name: adapter_info.name,
+            name: adapter_info.name.clone(),
             tier,
             device_type,
-            vram_mb: adapter_info.memory as u64 / (1024 * 1024),
-            driver_version: adapter_info.driver,
-            driver_info: adapter_info.driver_info.unwrap_or_default().description,
+            vram_mb: 0,
+            driver_version: adapter_info.driver.clone(),
+            // `driver_info` is a String on recent wgpu versions
+            driver_info: adapter_info.driver_info.clone(),
             supports_raytracing: supports_raytracing(&adapter_info),
             supports_mesh_shaders: true,
             supports_variable_rate_shading: true,
-            compute_units: compute_units_count(adapter.get_limits()),
+            compute_units: compute_units_count(&adapter.limits()),
         });
 
         break;
@@ -162,23 +158,35 @@ fn detect_gpu_wgpu() -> Option<GpuInfo> {
 }
 
 #[cfg(feature = "wgpu")]
-fn classify_gpu_tier(adapter_info: &wgpu::AdapterInfo, limits: &wgpu::Limits) -> GpuTier {
-    let vram = adapter_info.memory as u64;
+fn classify_gpu_tier(_adapter_info: &wgpu::AdapterInfo, limits: &wgpu::Limits) -> GpuTier {
+    // AdapterInfo often doesn't provide VRAM; classify primarily by max texture size
     let max_texture_2d = limits.max_texture_dimension_2d;
 
-    match (vram, max_texture_2d) {
-        (_, t) if t >= 16384 => GpuTier::Flagship,
-        (_, t) if t >= 8192 => GpuTier::High,
-        (_, t) if t >= 4096 => GpuTier::MediumHigh,
-        (v, _) if v >= 4 * 1024 * 1024 * 1024 => GpuTier::MediumHigh,
-        (v, _) if v >= 2 * 1024 * 1024 * 1024 => GpuTier::Medium,
-        (v, _) if v >= 1 * 1024 * 1024 * 1024 => GpuTier::MediumLow,
+    match max_texture_2d {
+        t if t >= 16384 => GpuTier::Flagship,
+        t if t >= 8192 => GpuTier::High,
+        t if t >= 4096 => GpuTier::MediumHigh,
+        t if t >= 2048 => GpuTier::Medium,
+        t if t >= 1024 => GpuTier::MediumLow,
         _ => GpuTier::Low,
     }
 }
 
 #[cfg(feature = "wgpu")]
 fn supports_raytracing(adapter_info: &wgpu::AdapterInfo) -> bool {
+    // Basic heuristic: detect common model names that indicate hardware RT support
+    let name = adapter_info.name.to_lowercase();
+    if name.contains("rtx") || name.contains("ray") {
+        return true;
+    }
+
+    // Check driver string for keywords
+    let driver = adapter_info.driver.to_lowercase();
+    if driver.contains("nvidia") || driver.contains("amd") {
+        // conservatively assume modern discrete drivers support ray tracing
+        return true;
+    }
+
     false
 }
 

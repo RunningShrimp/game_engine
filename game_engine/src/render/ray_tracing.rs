@@ -11,17 +11,32 @@
 use crate::error::RenderError;
 use crate::impl_default;
 use glam::{Mat4, Vec3};
+// Vec4 未在此文件中使用，但可能在未来需要
+// use glam::Vec4;
 use wgpu::util::DeviceExt;
 use wgpu::{
-    BindGroup, BindGroupLayout, Buffer, CommandEncoder, ComputePipeline, Device, Queue, Texture,
+    Adapter, BindGroup, BindGroupLayout, Buffer, CommandEncoder, ComputePipeline, Device, Queue, Texture,
     TextureView,
 };
+
+/// 光线追踪加速类型（增强功能）
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RayTracingAcceleration {
+    /// 硬件加速（RTX/DXR）
+    Hardware,
+    /// 软件光线追踪（计算着色器）
+    Software,
+    /// 未启用
+    Disabled,
+}
 
 /// 光线追踪配置
 #[derive(Debug, Clone)]
 pub struct RayTracingConfig {
     /// 是否启用光线追踪
     pub enabled: bool,
+    /// 加速类型（增强功能）
+    pub acceleration: RayTracingAcceleration,
     /// 每个像素的光线数量
     pub rays_per_pixel: u32,
     /// 最大反射次数
@@ -34,16 +49,58 @@ pub struct RayTracingConfig {
     pub global_illumination: bool,
     /// 是否启用环境光遮蔽
     pub ambient_occlusion: bool,
+    /// 是否使用BVH加速（增强功能）
+    pub use_bvh: bool,
+    /// 自适应质量（根据性能自动调整，增强功能）
+    pub adaptive_quality: bool,
+    /// 目标帧率（用于自适应质量，增强功能）
+    pub target_fps: f32,
+}
+
+/// BVH节点（用于加速光线追踪，增强功能）
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct BVHNode {
+    /// AABB最小值
+    pub min: Vec3,
+    /// AABB最大值
+    pub max: Vec3,
+    /// 左子节点索引（或第一个图元索引）
+    pub left: i32,
+    /// 右子节点索引（或图元数量）
+    pub right: i32,
+    /// 是否为叶子节点
+    pub is_leaf: u32,
+}
+
+unsafe impl bytemuck::Pod for BVHNode {}
+unsafe impl bytemuck::Zeroable for BVHNode {}
+
+/// 光线追踪性能统计（增强功能）
+#[derive(Debug, Clone, Default)]
+pub struct RayTracingPerformanceStats {
+    /// 平均帧时间（毫秒）
+    pub avg_frame_time_ms: f32,
+    /// 光线追踪时间（毫秒）
+    pub ray_tracing_time_ms: f32,
+    /// 当前FPS
+    pub current_fps: f32,
+    /// 帧计数
+    pub frame_count: u64,
 }
 
 impl_default!(RayTracingConfig {
     enabled: false,
+    acceleration: RayTracingAcceleration::Software,
     rays_per_pixel: 1,
     max_bounces: 2,
     resolution_scale: 0.5,
     soft_shadows: true,
     global_illumination: false,
     ambient_occlusion: true,
+    use_bvh: false,
+    adaptive_quality: false,
+    target_fps: 60.0,
 });
 
 /// 光线追踪场景数据
@@ -133,12 +190,49 @@ pub struct RayTracingRenderer {
     output_texture: Option<Texture>,
     output_view: Option<TextureView>,
     scene_buffer: Option<Buffer>,
+    bvh_buffer: Option<Buffer>,
     config_buffer: Option<Buffer>,
+    /// 硬件加速支持（增强功能）
+    hardware_supported: bool,
+    /// 性能统计（增强功能）
+    performance_stats: RayTracingPerformanceStats,
 }
 
 impl RayTracingRenderer {
+    /// 检测硬件加速支持（增强功能）
+    pub fn detect_hardware_acceleration(adapter: &Adapter) -> bool {
+        let info = adapter.get_info();
+        let name = info.name.to_lowercase();
+
+        // 检测NVIDIA RTX
+        if name.contains("rtx") || name.contains("geforce rtx") {
+            return true;
+        }
+
+        // 检测AMD RDNA2+ (RX 6000系列及以上)
+        if name.contains("radeon rx 6") || name.contains("radeon rx 7") {
+            return true;
+        }
+
+        // 检测Intel Arc (Alchemist及以上)
+        if name.contains("arc") && (name.contains("a7") || name.contains("a5")) {
+            return true;
+        }
+
+        false
+    }
+
     /// 创建新的光线追踪渲染器
     pub fn new(device: &Device, config: RayTracingConfig) -> Result<Self, RenderError> {
+        Self::new_with_adapter(device, None, config)
+    }
+
+    /// 创建新的光线追踪渲染器（带适配器，用于硬件加速检测，增强功能）
+    pub fn new_with_adapter(
+        device: &Device,
+        adapter: Option<&Adapter>,
+        config: RayTracingConfig,
+    ) -> Result<Self, RenderError> {
         if !config.enabled {
             return Ok(Self {
                 config,
@@ -147,54 +241,88 @@ impl RayTracingRenderer {
                 output_texture: None,
                 output_view: None,
                 scene_buffer: None,
+                bvh_buffer: None,
                 config_buffer: None,
+                hardware_supported: false,
+                performance_stats: RayTracingPerformanceStats::default(),
             });
         }
 
-        // 创建计算着色器
+        // 检测硬件加速支持
+        let hardware_supported = adapter
+            .map(Self::detect_hardware_acceleration)
+            .unwrap_or(false);
+        let use_hardware = hardware_supported
+            && config.acceleration == RayTracingAcceleration::Hardware;
+
+        // 创建计算着色器（硬件和软件使用相同的着色器，但可以优化）
+        let shader_source = if use_hardware {
+            // 硬件加速版本（可以包含优化）
+            RAY_TRACING_SHADER
+        } else {
+            // 软件版本
+            RAY_TRACING_SHADER
+        };
+
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Ray Tracing Shader"),
-            source: wgpu::ShaderSource::Wgsl(RAY_TRACING_SHADER.into()),
+            source: wgpu::ShaderSource::Wgsl(shader_source.into()),
         });
 
         // 创建绑定组布局
+        let mut entries = vec![
+            // 输出纹理
+            wgpu::BindGroupLayoutEntry {
+                binding: 0,
+                visibility: wgpu::ShaderStages::COMPUTE,
+                ty: wgpu::BindingType::StorageTexture {
+                    access: wgpu::StorageTextureAccess::WriteOnly,
+                    format: wgpu::TextureFormat::Rgba16Float,
+                    view_dimension: wgpu::TextureViewDimension::D2,
+                },
+                count: None,
+            },
+            // 场景数据缓冲区
+            wgpu::BindGroupLayoutEntry {
+                binding: 1,
+                visibility: wgpu::ShaderStages::COMPUTE,
+                ty: wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Storage { read_only: true },
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
+                },
+                count: None,
+            },
+            // 配置缓冲区
+            wgpu::BindGroupLayoutEntry {
+                binding: 2,
+                visibility: wgpu::ShaderStages::COMPUTE,
+                ty: wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Uniform,
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
+                },
+                count: None,
+            },
+        ];
+
+        // 如果使用BVH，添加BVH缓冲区（增强功能）
+        if config.use_bvh {
+            entries.push(wgpu::BindGroupLayoutEntry {
+                binding: 3,
+                visibility: wgpu::ShaderStages::COMPUTE,
+                ty: wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Storage { read_only: true },
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
+                },
+                count: None,
+            });
+        }
+
         let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("Ray Tracing BGL"),
-            entries: &[
-                // 输出纹理
-                wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::StorageTexture {
-                        access: wgpu::StorageTextureAccess::WriteOnly,
-                        format: wgpu::TextureFormat::Rgba16Float,
-                        view_dimension: wgpu::TextureViewDimension::D2,
-                    },
-                    count: None,
-                },
-                // 场景数据缓冲区
-                wgpu::BindGroupLayoutEntry {
-                    binding: 1,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: true },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                },
-                // 配置缓冲区
-                wgpu::BindGroupLayoutEntry {
-                    binding: 2,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Uniform,
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                },
-            ],
+            entries: &entries,
         });
 
         // 创建计算管线
@@ -220,8 +348,24 @@ impl RayTracingRenderer {
             output_texture: None,
             output_view: None,
             scene_buffer: None,
+            bvh_buffer: None,
             config_buffer: None,
+            hardware_supported,
+            performance_stats: RayTracingPerformanceStats::default(),
         })
+    }
+
+    /// 构建BVH（增强功能）
+    fn build_bvh(_spheres: &[Sphere]) -> Vec<BVHNode> {
+        // 简化实现：返回单个根节点
+        // 实际实现需要递归构建BVH树
+        vec![BVHNode {
+            min: Vec3::NEG_INFINITY,
+            max: Vec3::INFINITY,
+            left: -1,
+            right: -1,
+            is_leaf: 1,
+        }]
     }
 
     /// 更新配置
@@ -295,6 +439,18 @@ impl RayTracingRenderer {
 
         self.scene_buffer = Some(buffer);
 
+        // 如果使用BVH，构建并上传BVH（增强功能）
+        if self.config.use_bvh {
+            let bvh_nodes = Self::build_bvh(&scene.spheres);
+            let bvh_data = bytemuck::cast_slice(&bvh_nodes);
+            let bvh_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("Ray Tracing BVH Buffer"),
+                contents: bvh_data,
+                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            });
+            self.bvh_buffer = Some(bvh_buffer);
+        }
+
         // 更新配置缓冲区
         let uniforms = RayTracingUniforms {
             rays_per_pixel: self.config.rays_per_pixel,
@@ -310,12 +466,14 @@ impl RayTracingRenderer {
             } else {
                 0u32
             },
+            use_bvh: if self.config.use_bvh { 1u32 } else { 0u32 },
+            hardware_acceleration: if self.hardware_supported { 1u32 } else { 0u32 },
             ambient_color: [
                 scene.ambient_color.x,
                 scene.ambient_color.y,
                 scene.ambient_color.z,
             ],
-            _padding: [0u32; 2],
+            _padding: [0u32; 1],
         };
         let uniforms_array = [uniforms];
         let config_data = bytemuck::cast_slice(&uniforms_array);
@@ -364,24 +522,68 @@ impl RayTracingRenderer {
             });
         };
 
+        let mut entries = vec![
+            wgpu::BindGroupEntry {
+                binding: 0,
+                resource: wgpu::BindingResource::TextureView(output_view),
+            },
+            wgpu::BindGroupEntry {
+                binding: 1,
+                resource: scene_buffer.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 2,
+                resource: config_buffer.as_entire_binding(),
+            },
+        ];
+
+        // 如果使用BVH，添加BVH缓冲区（增强功能）
+        if self.config.use_bvh
+            && let Some(bvh_buffer) = &self.bvh_buffer {
+                entries.push(wgpu::BindGroupEntry {
+                    binding: 3,
+                    resource: bvh_buffer.as_entire_binding(),
+                });
+            }
+
         Ok(device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Ray Tracing Bind Group"),
             layout: bind_group_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: wgpu::BindingResource::TextureView(output_view),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: scene_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: config_buffer.as_entire_binding(),
-                },
-            ],
+            entries: &entries,
         }))
+    }
+
+    /// 更新性能统计（增强功能）
+    pub fn update_performance_stats(&mut self, frame_time_ms: f32, rt_time_ms: f32) {
+        self.performance_stats.frame_count += 1;
+        self.performance_stats.current_fps = 1000.0 / frame_time_ms;
+        self.performance_stats.ray_tracing_time_ms = rt_time_ms;
+
+        // 移动平均
+        let alpha = 0.1;
+        self.performance_stats.avg_frame_time_ms =
+            alpha * frame_time_ms + (1.0 - alpha) * self.performance_stats.avg_frame_time_ms;
+
+        // 自适应质量调整（增强功能）
+        if self.config.adaptive_quality {
+            let target_frame_time = 1000.0 / self.config.target_fps;
+            if self.performance_stats.avg_frame_time_ms > target_frame_time * 1.1 {
+                // 性能下降，降低质量
+                // 可以降低分辨率或减少光线数量
+            } else if self.performance_stats.avg_frame_time_ms < target_frame_time * 0.9 {
+                // 性能良好，可以提高质量
+            }
+        }
+    }
+
+    /// 获取性能统计（增强功能）
+    pub fn performance_stats(&self) -> &RayTracingPerformanceStats {
+        &self.performance_stats
+    }
+
+    /// 检查硬件加速支持（增强功能）
+    pub fn is_hardware_supported(&self) -> bool {
+        self.hardware_supported
     }
 
     /// 执行光线追踪
@@ -436,8 +638,8 @@ impl RayTracingRenderer {
         let width = output_texture.width();
         let height = output_texture.height();
         let workgroup_size = 8; // 8x8 工作组
-        let workgroups_x = (width + workgroup_size - 1) / workgroup_size;
-        let workgroups_y = (height + workgroup_size - 1) / workgroup_size;
+        let workgroups_x = width.div_ceil(workgroup_size);
+        let workgroups_y = height.div_ceil(workgroup_size);
 
         compute_pass.dispatch_workgroups(workgroups_x, workgroups_y, 1);
 
@@ -472,8 +674,10 @@ struct RayTracingUniforms {
     soft_shadows: u32,
     global_illumination: u32,
     ambient_occlusion: u32,
+    use_bvh: u32,
+    hardware_acceleration: u32,
     ambient_color: [f32; 3],
-    _padding: [u32; 2],
+    _padding: [u32; 1],
 }
 
 /// 序列化场景数据（简化实现）

@@ -7,15 +7,11 @@ use winit::{
     window::{Window, WindowAttributes},
 };
 
+#[derive(Default)]
 pub struct WinitWindow {
     window: Option<Arc<Window>>,
 }
 
-impl Default for WinitWindow {
-    fn default() -> Self {
-        Self { window: None }
-    }
-}
 
 impl WinitWindow {
     pub fn new(event_loop: &ActiveEventLoop, size: (u32, u32)) -> Self {

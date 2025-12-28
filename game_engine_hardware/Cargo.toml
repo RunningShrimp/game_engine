@@ -13,12 +13,12 @@ keywords = ["hardware", "gpu", "npu", "detection", "optimization"]
 categories = ["hardware-support", "performance"]
 
 [dependencies]
-serde = { version = "1.0.228", features = ["derive"] }
-serde_json = "1.0.145"
-thiserror = "2.0.17"
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
 ort = { version = "2.0.0-rc.10", features = ["download-binaries"], optional = true }
 dirs = "6.0"
-tracing = "0.1.44"
+tracing = { workspace = true }
 wgpu = { workspace = true, optional = true }
 num_cpus = "1.17.0"
 

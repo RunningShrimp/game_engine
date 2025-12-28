@@ -2,14 +2,13 @@
 //
 //  测试资源加载、缓存、异步处理等操作的性能
 
-use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
-use std::path::Path;
+use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 
 fn bench_resource_manager_creation(c: &mut Criterion) {
     let mut group = c.benchmark_group("resource_manager_creation");
 
     group.bench_function("create_hashmap", |b| {
-        b.iter(|| black_box(std::collections::HashMap::<String, Vec<u8>>::new()));
+        b.iter(|| std::hint::black_box(std::collections::HashMap::<String, Vec<u8>>::new()));
     });
 
     group.finish();
@@ -28,7 +27,7 @@ fn bench_texture_loading(c: &mut Criterion) {
             for &byte in &test_data {
                 processed.push(byte.wrapping_add(1));
             }
-            black_box(processed)
+            std::hint::black_box(processed)
         });
     });
 
@@ -44,7 +43,7 @@ fn bench_resource_hashmap_operations(c: &mut Criterion) {
             for i in 0..100 {
                 map.insert(format!("resource_{}", i), vec![i as u8; 1024]);
             }
-            black_box(map)
+            std::hint::black_box(map)
         });
     });
 
@@ -56,7 +55,7 @@ fn bench_resource_hashmap_operations(c: &mut Criterion) {
 
         b.iter(|| {
             for i in 0..50 {
-                black_box(map.get(&format!("resource_{}", i)));
+                std::hint::black_box(map.get(&format!("resource_{}", i)));
             }
         });
     });
@@ -67,9 +66,7 @@ fn bench_resource_hashmap_operations(c: &mut Criterion) {
 fn bench_resource_cache(c: &mut Criterion) {
     let mut group = c.benchmark_group("resource_cache");
 
-    // 模拟资源缓存操作
-    let mut cache: std::collections::HashMap<String, Vec<u8>> = std::collections::HashMap::new();
-
+    // 模拟资源缓存操作，测试不同缓存大小的性能
     for cache_size in [100, 1000, 10000].iter() {
         group.bench_with_input(
             BenchmarkId::from_parameter(format!("cache_{}", cache_size)),
@@ -83,7 +80,7 @@ fn bench_resource_cache(c: &mut Criterion) {
                         let key = format!("resource_{}", i);
                         cache.insert(key, vec![i as u8; 100]);
                     }
-                    black_box(cache.len())
+                    std::hint::black_box(cache.len())
                 });
             },
         );

@@ -88,9 +88,21 @@ impl RequestHandler {
     }
 
     /// 注册响应通道，等待特定消息的响应
-    async fn register(&self, id: super::MessageId, sender: oneshot::Sender<Response>) {
+    pub async fn register(&self, id: super::MessageId, sender: oneshot::Sender<Response>) {
         let mut pending = self.pending_requests.write().await;
         pending.insert(id, sender);
+    }
+
+    /// 检查是否有待处理的请求
+    pub async fn has_pending_request(&self, id: &super::MessageId) -> bool {
+        let pending = self.pending_requests.read().await;
+        pending.contains_key(id)
+    }
+
+    /// 获取待处理请求数量
+    pub async fn pending_count(&self) -> usize {
+        let pending = self.pending_requests.read().await;
+        pending.len()
     }
 
     async fn unregister(&self, id: &super::MessageId) -> Option<oneshot::Sender<Response>> {
@@ -161,12 +173,11 @@ impl IpcChannel {
             let response = match message.message_type {
                 super::MessageType::Request => {
                     let handler_guard = channel.request_handler.read().await;
-                    if let Some(handler) = handler_guard.as_ref() {
-                        if let Some(pending) = handler.unregister(&message_id).await {
+                    if let Some(handler) = handler_guard.as_ref()
+                        && let Some(pending) = handler.unregister(&message_id).await {
                             let response = Response::success(message.clone());
                             let _ = pending.send(response);
                         }
-                    }
                     None
                 }
                 super::MessageType::Response => Some(message),
@@ -223,11 +234,10 @@ impl MessageBus {
         let mut sent = 0;
 
         for (id, sender) in subscribers.iter() {
-            if Some(id) == message.target.as_ref() {
-                if sender.send(message.clone()).is_ok() {
+            if Some(id) == message.target.as_ref()
+                && sender.send(message.clone()).is_ok() {
                     sent += 1;
                 }
-            }
         }
 
         Ok(sent)

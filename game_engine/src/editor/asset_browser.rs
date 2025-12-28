@@ -444,8 +444,8 @@ impl AssetBrowser {
         ui.separator();
 
         // 选中资源的详细信息和预览
-        if let Some(index) = self.selected_asset {
-            if let Some(asset) = self.assets.get(index) {
+        if let Some(index) = self.selected_asset
+            && let Some(asset) = self.assets.get(index) {
                 ui.collapsing("Asset Details", |ui| {
                     ui.label(format!("Name: {}", asset.name));
                     ui.label(format!("Type: {:?}", asset.asset_type));
@@ -463,13 +463,11 @@ impl AssetBrowser {
                 });
 
                 // 预览
-                if let Some(preview_path) = &self.preview_path {
-                    if preview_path == &asset.path {
+                if let Some(preview_path) = &self.preview_path
+                    && preview_path == &asset.path {
                         self.render_preview(ui, asset);
                     }
-                }
             }
-        }
     }
 
     /// 渲染资源预览

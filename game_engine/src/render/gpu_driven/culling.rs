@@ -112,16 +112,13 @@ impl CullingUniforms {
         ];
 
         // 归一化平面
-        for i in 0..6 {
-            let len = (frustum_planes[i][0] * frustum_planes[i][0]
-                + frustum_planes[i][1] * frustum_planes[i][1]
-                + frustum_planes[i][2] * frustum_planes[i][2])
-                .sqrt();
+        for plane in frustum_planes.iter_mut() {
+            let len = (plane[0] * plane[0] + plane[1] * plane[1] + plane[2] * plane[2]).sqrt();
             if len > 0.0 {
-                frustum_planes[i][0] /= len;
-                frustum_planes[i][1] /= len;
-                frustum_planes[i][2] /= len;
-                frustum_planes[i][3] /= len;
+                plane[0] /= len;
+                plane[1] /= len;
+                plane[2] /= len;
+                plane[3] /= len;
             }
         }
 
@@ -423,7 +420,7 @@ impl GpuCuller {
         });
 
         // 执行计算着色器
-        let workgroup_count = (instance_count + self.workgroup_size - 1) / self.workgroup_size;
+        let workgroup_count = instance_count.div_ceil(self.workgroup_size);
 
         tracing::debug!(
             target: "render",
@@ -473,6 +470,7 @@ impl GpuCuller {
 /// - 优化AABB变换（使用更少的矩阵乘法）
 /// - 早期退出优化
 /// - 减少内存访问
+///
 /// 优化的剔除计算着色器（支持间接绘制命令生成）
 ///
 /// 性能优化：
@@ -578,7 +576,7 @@ fn cull_main(@builtin(global_invocation_id) global_id: vec3<u32>) {
 }
 "#;
 #[repr(C)]
-#[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
+#[derive(Debug, Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct GpuInstance {
     pub model: [[f32; 4]; 4],
     pub aabb_min: [f32; 3],

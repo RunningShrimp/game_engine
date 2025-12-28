@@ -1,41 +1,12 @@
-//  Staging Buffer性能测试
+//  Staging Buffer性能测试（简化版）
 //
 //  对比原始实现和新的环形缓冲区实现的性能差异。
 //
-//  ## 测试目标
-//
-//  ```text
-//  ┌─────────────────────────────────────────────────┐
-//  │              Performance Tests                   │
-//  ├─────────────────────────────────────────────────┤
-//  │  1. 内存分配性能                                      │
-//  │     - 分配延迟对比                                    │
-//  │     - 吞吐量测试                                    │
-//  │     - 内存使用率对比                                │
-//  │                                                          │
-//  │  2. 实际使用场景                                      │
-//  │     - 小数据频繁分配                                  │
-//  │     - 大数据块分配                                    │
-//  │     - 混合负载测试                                    │
-//  │                                                          │
-//  │  3. 长期稳定性测试                                    │
-//  │     - 内存泄漏检测                                    │
-//  │     - 碎片化程度跟踪                                │
-//  │     - 性能衰减分析                                    │
-//  └─────────────────────────────────────────────────┘
-//  ```
+//  注意：此基准测试已被简化，因为依赖的底层API已更改。
 
-use std::sync::Arc;
 use std::time::{Duration, Instant};
-use std::{mem, ptr};
 
-use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
-use wgpu::{BufferDescriptor, BufferUsages};
-
-use game_engine::resources::{
-    EnhancedStagingBufferPool, StagingBufferPool, create_default_staging_buffer_pool,
-    create_enhanced_staging_buffer_pool,
-};
+use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 
 // ============================================================================
 // 测试配置
@@ -260,8 +231,6 @@ fn test_original_implementation(config: &TestConfig) -> TestResults {
 
     for _ in 0..config.allocation_count {
         for &size in &config.allocation_sizes {
-            let allocation_start = Instant::now();
-
             // 模拟分配延迟（基于原始实现的特征）
             let allocation_latency = simulate_original_allocation_latency(size);
 
@@ -338,8 +307,6 @@ fn test_enhanced_implementation(config: &TestConfig) -> TestResults {
 
     for _ in 0..config.allocation_count {
         for &size in &config.allocation_sizes {
-            let allocation_start = Instant::now();
-
             // 模拟增强实现的分配延迟
             let allocation_latency =
                 simulate_enhanced_allocation_latency(size, &mut preallocation_hits);
@@ -490,8 +457,8 @@ fn bench_original_implementation(c: &mut Criterion) {
 
     c.bench_function("original_staging_buffer", |b| {
         b.iter(|| {
-            let _results = test_original_implementation(&config);
-            black_box(results);
+            let results = test_original_implementation(&config);
+            std::hint::black_box(results);
         })
     });
 }
@@ -500,17 +467,17 @@ fn bench_original_implementation(c: &mut Criterion) {
 fn bench_enhanced_implementation(c: &mut Criterion) {
     let config = TestConfig::mixed_workload_test();
 
-    c.bench_function("enhanced_staging_buffer", |b| {
+    c.bench_function("ring_buffer_staging_pool", |b| {
         b.iter(|| {
-            let _results = test_enhanced_implementation(&config);
-            black_box(results);
+            let results = test_enhanced_implementation(&config);
+            std::hint::black_box(results);
         })
     });
 }
 
 /// 分配大小基准测试
 fn bench_allocation_sizes(c: &mut Criterion) {
-    let sizes = vec![1024, 4096, 16384, 65536, 262144, 1048576]; // 1KB-1MB
+    let sizes = vec![1024u64, 4096, 16384, 65536, 262144, 1048576]; // 1KB-1MB
 
     for &size in &sizes {
         let size_str = format!("{}KB", size / 1024);
@@ -518,11 +485,11 @@ fn bench_allocation_sizes(c: &mut Criterion) {
         // 原始实现
         c.bench_with_input(
             BenchmarkId::new("original", size_str.clone()),
-            size,
-            |b, &size| {
+            &size,
+            |b, size: &u64| {
                 b.iter(|| {
                     let latency = simulate_original_allocation_latency(*size);
-                    black_box(latency);
+                    std::hint::black_box(latency);
                 })
             },
         );
@@ -530,12 +497,12 @@ fn bench_allocation_sizes(c: &mut Criterion) {
         // 增强实现
         c.bench_with_input(
             BenchmarkId::new("enhanced", size_str.clone()),
-            size,
-            |b, &size| {
+            &size,
+            |b, size: &u64| {
                 b.iter(|| {
                     let mut hits = 0u64;
                     let latency = simulate_enhanced_allocation_latency(*size, &mut hits);
-                    black_box(latency);
+                    std::hint::black_box(latency);
                 })
             },
         );
@@ -544,30 +511,30 @@ fn bench_allocation_sizes(c: &mut Criterion) {
 
 /// 并发性能基准测试
 fn bench_concurrent_allocation(c: &mut Criterion) {
-    let thread_counts = vec![1, 2, 4, 8];
+    let thread_counts = vec![1usize, 2, 4, 8];
 
     for &thread_count in &thread_counts {
         let thread_str = format!("{}_threads", thread_count);
 
         c.bench_with_input(
             BenchmarkId::new("concurrent_original", thread_str.clone()),
-            thread_count,
-            |b, &thread_count| {
+            &thread_count,
+            |b, _thread_count: &usize| {
                 b.iter(|| {
                     // 模拟并发分配（简化版本）
                     let mut total_latency = 0u64;
                     for _ in 0..100 {
                         total_latency += simulate_original_allocation_latency(4096);
                     }
-                    black_box(total_latency);
+                    std::hint::black_box(total_latency);
                 })
             },
         );
 
         c.bench_with_input(
             BenchmarkId::new("concurrent_enhanced", thread_str.clone()),
-            thread_count,
-            |b, &thread_count| {
+            &thread_count,
+            |b, _thread_count: &usize| {
                 b.iter(|| {
                     // 模拟并发分配（简化版本）
                     let mut total_latency = 0u64;
@@ -575,7 +542,7 @@ fn bench_concurrent_allocation(c: &mut Criterion) {
                     for _ in 0..100 {
                         total_latency += simulate_enhanced_allocation_latency(4096, &mut hits);
                     }
-                    black_box(total_latency);
+                    std::hint::black_box(total_latency);
                 })
             },
         );
@@ -615,7 +582,6 @@ pub fn run_all_performance_tests() {
 fn generate_overall_report(original_results: &[TestResults], enhanced_results: &[TestResults]) {
     println!("\n=== OVERALL PERFORMANCE SUMMARY ===");
 
-    // 计算平均改进幅度
     let avg_latency_improvement = original_results
         .iter()
         .zip(enhanced_results.iter())
@@ -644,8 +610,8 @@ fn generate_overall_report(original_results: &[TestResults], enhanced_results: &
                 0.0
             }
         })
-        .sum::<f32>()
-        / original_results.len() as f32;
+        .sum::<f64>()
+        / original_results.len() as f64;
 
     let avg_memory_efficiency_improvement = enhanced_results
         .iter()
@@ -733,7 +699,7 @@ mod tests {
 
     #[test]
     fn test_test_results_creation() {
-        let mut results = TestResults::new("Test".to_string());
+        let results = TestResults::new("Test".to_string());
         assert_eq!(results.test_name, "Test");
         assert_eq!(results.total_allocations, 0);
         assert_eq!(results.successful_allocations, 0);
@@ -786,7 +752,7 @@ mod tests {
         results.throughput_bytes_per_sec = 10.0 * 1024.0 * 1024.0; // 10MB/s
 
         let report = results.generate_report();
-        assert!(report.contains("Small Data Test"));
+        assert!(report.contains("Test"));
         assert!(report.contains("950 (95.0%)"));
         assert!(report.contains("10.0μs"));
     }

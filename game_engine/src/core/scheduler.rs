@@ -18,10 +18,12 @@ use tokio::sync::oneshot;
 
 /// 任务优先级
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Default)]
 pub enum TaskPriority {
     /// 低优先级
     Low = 0,
     /// 普通优先级
+    #[default]
     Normal = 1,
     /// 高优先级
     High = 2,
@@ -29,11 +31,6 @@ pub enum TaskPriority {
     Critical = 3,
 }
 
-impl Default for TaskPriority {
-    fn default() -> Self {
-        Self::Normal
-    }
-}
 
 impl TaskPriority {
     /// 创建默认优先级的任务
@@ -104,11 +101,10 @@ impl TaskHandle {
     /// handle.cancel();
     /// ```
     pub fn cancel(&self) {
-        if let Ok(mut tx_opt) = self.cancel_tx.lock() {
-            if let Some(tx) = tx_opt.take() {
+        if let Ok(mut tx_opt) = self.cancel_tx.lock()
+            && let Some(tx) = tx_opt.take() {
                 let _ = tx.send(());
             }
-        }
     }
 }
 

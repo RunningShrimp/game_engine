@@ -3,7 +3,7 @@
 //  提供Lua和Rust脚本集成，支持运行时脚本执行。
 
 use crate::plugins::{EnginePlugin, App, PluginVersion, PluginDependency};
-use crate::scripting::{ScriptingConfig, ScriptingResource, scripting_system, setup_scripting, ScriptComponent};
+use crate::scripting::{ScriptingConfig, scripting_system, setup_scripting, ScriptComponent};
 use bevy_ecs::prelude::*;
 
 /// 脚本插件
@@ -22,6 +22,12 @@ impl ScriptingPlugin {
     /// 使用自定义配置创建脚本插件
     pub fn with_config(config: ScriptingConfig) -> Self {
         Self { config }
+    }
+}
+
+impl Default for ScriptingPlugin {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -45,14 +51,16 @@ impl EnginePlugin for ScriptingPlugin {
     }
 
     fn build(&self, app: &mut App) {
-        // 初始化脚本系统
-        app.world_mut().insert_resource(self.config.clone());
+        // 初始化脚本系统 - 使用app.world而不是app.world_mut()
+        app.world.insert_resource(self.config.clone());
 
-        // 设置脚本系统
-        setup_scripting(app.world_mut(), self.config.clone());
+        // 设置脚本系统 - 使用app.world而不是app.world_mut()
+        setup_scripting(&mut app.world, self.config.clone());
 
-        // 添加脚本系统
-        app.add_systems(scripting_system);
+        // 添加脚本系统 - 使用闭包包装
+        app.add_systems(|schedule| {
+            schedule.add_systems(scripting_system);
+        });
     }
 
     fn startup(&self, world: &mut bevy_ecs::world::World) {

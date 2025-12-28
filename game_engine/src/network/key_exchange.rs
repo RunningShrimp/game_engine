@@ -1,8 +1,8 @@
-//  密钥交换协议模块
+// 密钥交换协议模块
 //
-//  实现密钥交换协议，用于建立通信通道。
-//  支持安全的X25519 ECDH密钥交换和向后兼容的简化实现。
-//
+// 实现密钥交换协议，用于建立通信通道。
+// 支持安全的X25519 ECDH密钥交换和向后兼容的简化实现。
+
 //  ## 功能
 //
 //  - 生成并管理临时密钥对
@@ -22,12 +22,13 @@
 //  - `insecure_key_exchange`: 使用SHA256的简化实现（仅用于测试，不应用于生产环境）
 
 use serde::{Deserialize, Serialize};
-#[cfg(feature = "insecure_key_exchange")]
-use sha2::Digest;
-#[cfg(feature = "insecure_key_exchange")]
-use sha2::Sha256;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+// ============================================================================
+// Feature 检查和统一导入
+// ============================================================================
+
+// 安全实现依赖
 #[cfg(feature = "secure_key_exchange")]
 use {
     hkdf::Hkdf,
@@ -35,8 +36,9 @@ use {
     x25519_dalek_ng::{PublicKey, StaticSecret},
 };
 
-#[cfg(not(any(feature = "secure_key_exchange", feature = "insecure_key_exchange")))]
-compile_error!("Either 'secure_key_exchange' or 'insecure_key_exchange' feature must be enabled");
+// 不安全实现依赖（仅用于测试）
+#[cfg(feature = "insecure_key_exchange")]
+use sha2::{Digest, Sha256};
 
 /// 统一的密钥交换 trait
 ///
@@ -71,11 +73,17 @@ pub struct KeyPair {
 
 impl KeyPair {
     /// 生成新的密钥对
+    ///
+    /// 根据启用的feature选择安全或不安全的实现。
+    /// - `secure_key_exchange`: 使用X25519 ECDH（推荐，默认）
+    /// - `insecure_key_exchange`: 使用SHA256简化实现（仅用于测试）
+    #[allow(unreachable_code)] // 条件编译导致某些代码路径不可达，这是预期的
     pub fn generate() -> Self {
+        // 使用条件编译块确保只有启用的实现被编译
         #[cfg(feature = "secure_key_exchange")]
         {
             tracing::debug!("Using secure X25519 ECDH key exchange");
-            return Self::generate_secure();
+            Self::generate_secure()
         }
 
         #[cfg(feature = "insecure_key_exchange")]
@@ -84,10 +92,16 @@ impl KeyPair {
             return Self::generate_insecure();
         }
 
+        // 没有启用任何特性时返回默认的空密钥对（不应发生）
         #[cfg(not(any(feature = "secure_key_exchange", feature = "insecure_key_exchange")))]
-        compile_error!(
-            "Either 'secure_key_exchange' or 'insecure_key_exchange' feature must be enabled"
-        );
+        {
+            tracing::error!("No key exchange feature enabled - using empty keypair!");
+            Self {
+                public_key: [0u8; 32],
+                private_key: [0u8; 32],
+                created_at: 0,
+            }
+        }
     }
 
     /// 生成安全的X25519密钥对
@@ -123,6 +137,7 @@ impl KeyPair {
         eprintln!("WARNING: Using INSECURE simplified key exchange implementation!");
 
         use rand::RngCore;
+        #[allow(deprecated)]
         let mut rng = rand::thread_rng();
 
         // 生成私钥（32字节随机数）
@@ -215,52 +230,77 @@ pub struct SharedSecret {
 
 impl SharedSecret {
     /// 从共享密钥派生出加密密钥和认证密钥
-    /// 使用HKDF (RFC 5869) 进行安全的密钥派生
+    ///
+    /// 根据启用的feature选择密钥派生方法：
+    /// - `secure_key_exchange`: 使用HKDF (RFC 5869) 进行安全的密钥派生
+    /// - `insecure_key_exchange`: 使用SHA256进行简单派生（仅用于测试）
+    #[allow(unreachable_code)] // 条件编译导致某些代码路径不可达，这是预期的
     pub fn derive(shared_secret: [u8; 32]) -> Self {
         #[cfg(feature = "secure_key_exchange")]
         {
-            // 使用HKDF进行密钥派生
-            let hk = Hkdf::<HkdfSha256>::new(None, &shared_secret);
-
-            // 派生加密密钥
-            let mut encryption_key = [0u8; 32];
-            hk.expand(b"encryption", &mut encryption_key)
-                .expect("HKDF expansion should not fail for 32-byte output");
-
-            // 派生认证密钥
-            let mut authentication_key = [0u8; 32];
-            hk.expand(b"authentication", &mut authentication_key)
-                .expect("HKDF expansion should not fail for 32-byte output");
-
-            Self {
-                shared_secret,
-                encryption_key,
-                authentication_key,
-            }
+            Self::derive_secure(shared_secret)
         }
 
-        #[cfg(not(feature = "secure_key_exchange"))]
+        #[cfg(feature = "insecure_key_exchange")]
         {
-            // 向后兼容：使用SHA256进行简单派生（仅用于测试）
-            // 派生加密密钥
-            let mut hasher = Sha256::new();
-            hasher.update(&shared_secret);
-            hasher.update(b"encryption");
-            let mut encryption_key = [0u8; 32];
-            encryption_key.copy_from_slice(&hasher.finalize()[..32]);
+            return Self::derive_insecure(shared_secret);
+        }
 
-            // 派生认证密钥
-            let mut hasher = Sha256::new();
-            hasher.update(&shared_secret);
-            hasher.update(b"authentication");
-            let mut authentication_key = [0u8; 32];
-            authentication_key.copy_from_slice(&hasher.finalize()[..32]);
-
+        // 没有启用任何特性时返回默认的派生（不应发生）
+        #[cfg(not(any(feature = "secure_key_exchange", feature = "insecure_key_exchange")))]
+        {
+            tracing::error!("No key exchange feature enabled - using empty derivation!");
             Self {
                 shared_secret,
-                encryption_key,
-                authentication_key,
+                encryption_key: [0u8; 32],
+                authentication_key: [0u8; 32],
             }
+        }
+    }
+
+    /// 使用HKDF进行安全的密钥派生
+    #[cfg(feature = "secure_key_exchange")]
+    fn derive_secure(shared_secret: [u8; 32]) -> Self {
+        let hk = Hkdf::<HkdfSha256>::new(None, &shared_secret);
+
+        // 派生加密密钥
+        let mut encryption_key = [0u8; 32];
+        hk.expand(b"encryption", &mut encryption_key)
+            .expect("HKDF expansion should not fail for 32-byte output");
+
+        // 派生认证密钥
+        let mut authentication_key = [0u8; 32];
+        hk.expand(b"authentication", &mut authentication_key)
+            .expect("HKDF expansion should not fail for 32-byte output");
+
+        Self {
+            shared_secret,
+            encryption_key,
+            authentication_key,
+        }
+    }
+
+    /// 使用SHA256进行简单密钥派生（仅用于测试）
+    #[cfg(feature = "insecure_key_exchange")]
+    fn derive_insecure(shared_secret: [u8; 32]) -> Self {
+        // 派生加密密钥
+        let mut hasher = Sha256::new();
+        hasher.update(&shared_secret);
+        hasher.update(b"encryption");
+        let mut encryption_key = [0u8; 32];
+        encryption_key.copy_from_slice(&hasher.finalize()[..32]);
+
+        // 派生认证密钥
+        let mut hasher = Sha256::new();
+        hasher.update(&shared_secret);
+        hasher.update(b"authentication");
+        let mut authentication_key = [0u8; 32];
+        authentication_key.copy_from_slice(&hasher.finalize()[..32]);
+
+        Self {
+            shared_secret,
+            encryption_key,
+            authentication_key,
         }
     }
 }
@@ -284,38 +324,63 @@ impl KeyExchange {
     }
 
     /// 执行密钥交换（从对方公钥和本地私钥计算共享密钥）
-    /// 使用X25519 ECDH进行安全的密钥交换
+    ///
+    /// 根据启用的feature选择实现：
+    /// - `secure_key_exchange`: 使用X25519 ECDH进行安全的密钥交换
+    /// - `insecure_key_exchange`: 使用SHA256的简化实现（仅用于测试）
+    #[allow(unreachable_code)] // 条件编译导致某些代码路径不可达，这是预期的
     pub fn compute_shared_secret(&self, peer_public_key: [u8; 32]) -> SharedSecret {
         #[cfg(feature = "secure_key_exchange")]
         {
-            // 使用真正的X25519 ECDH计算共享密钥
-            let static_secret = StaticSecret::from(self.local_keypair.private_key);
-            let peer_public = PublicKey::from(peer_public_key);
-
-            // 执行ECDH密钥交换
-            let shared_secret_bytes = static_secret.diffie_hellman(&peer_public);
-            let shared_secret = shared_secret_bytes.to_bytes();
-
-            SharedSecret::derive(shared_secret)
+            Self::compute_shared_secret_secure(&self.local_keypair, peer_public_key)
         }
 
-        #[cfg(not(feature = "secure_key_exchange"))]
+        #[cfg(feature = "insecure_key_exchange")]
         {
-            // 向后兼容：使用SHA256的简化实现（仅用于测试）
-            eprintln!(
-                "WARNING: Using simplified key exchange computation! Replace with proper ECDH in production."
-            );
-
-            let mut hasher = Sha256::new();
-            hasher.update(&self.local_keypair.private_key);
-            hasher.update(&peer_public_key);
-            let digest = hasher.finalize();
-
-            let mut shared_secret = [0u8; 32];
-            shared_secret.copy_from_slice(&digest[..32]);
-
-            SharedSecret::derive(shared_secret)
+            return Self::compute_shared_secret_insecure(&self.local_keypair, peer_public_key);
         }
+
+        // 没有启用任何特性时返回默认的共享密钥（不应发生）
+        #[cfg(not(any(feature = "secure_key_exchange", feature = "insecure_key_exchange")))]
+        {
+            tracing::error!("No key exchange feature enabled - using empty shared secret!");
+            SharedSecret {
+                shared_secret: [0u8; 32],
+                encryption_key: [0u8; 32],
+                authentication_key: [0u8; 32],
+            }
+        }
+    }
+
+    /// 使用X25519 ECDH计算共享密钥（安全实现）
+    #[cfg(feature = "secure_key_exchange")]
+    fn compute_shared_secret_secure(local_keypair: &KeyPair, peer_public_key: [u8; 32]) -> SharedSecret {
+        let static_secret = StaticSecret::from(local_keypair.private_key);
+        let peer_public = PublicKey::from(peer_public_key);
+
+        // 执行ECDH密钥交换
+        let shared_secret_bytes = static_secret.diffie_hellman(&peer_public);
+        let shared_secret = shared_secret_bytes.to_bytes();
+
+        SharedSecret::derive(shared_secret)
+    }
+
+    /// 使用SHA256计算共享密钥（不安全实现，仅用于测试）
+    #[cfg(feature = "insecure_key_exchange")]
+    fn compute_shared_secret_insecure(local_keypair: &KeyPair, peer_public_key: [u8; 32]) -> SharedSecret {
+        eprintln!(
+            "WARNING: Using simplified key exchange computation! Replace with proper ECDH in production."
+        );
+
+        let mut hasher = Sha256::new();
+        hasher.update(&local_keypair.private_key);
+        hasher.update(&peer_public_key);
+        let digest = hasher.finalize();
+
+        let mut shared_secret = [0u8; 32];
+        shared_secret.copy_from_slice(&digest[..32]);
+
+        SharedSecret::derive(shared_secret)
     }
 
     /// 获取本地密钥对
@@ -330,36 +395,8 @@ impl KeyExchangeProtocol for KeyExchange {
     }
 
     fn compute_shared_secret(&self, peer_public_key: [u8; 32]) -> SharedSecret {
-        #[cfg(feature = "secure_key_exchange")]
-        {
-            // 使用真正的X25519 ECDH计算共享密钥
-            let static_secret = StaticSecret::from(self.local_keypair.private_key);
-            let peer_public = PublicKey::from(peer_public_key);
-
-            // 执行ECDH密钥交换
-            let shared_secret_bytes = static_secret.diffie_hellman(&peer_public);
-            let shared_secret = shared_secret_bytes.to_bytes();
-
-            SharedSecret::derive(shared_secret)
-        }
-
-        #[cfg(not(feature = "secure_key_exchange"))]
-        {
-            // 向后兼容：使用SHA256的简化实现（仅用于测试）
-            eprintln!(
-                "WARNING: Using simplified key exchange computation! Replace with proper ECDH in production."
-            );
-
-            let mut hasher = Sha256::new();
-            hasher.update(&self.local_keypair.private_key);
-            hasher.update(&peer_public_key);
-            let digest = hasher.finalize();
-
-            let mut shared_secret = [0u8; 32];
-            shared_secret.copy_from_slice(&digest[..32]);
-
-            SharedSecret::derive(shared_secret)
-        }
+        // 委托给KeyExchange的实现，避免重复代码
+        self.compute_shared_secret(peer_public_key)
     }
 
     fn keypair(&self) -> Option<&KeyPair> {

@@ -9,7 +9,6 @@
 use crate::ecs::{PointLight, PreviousTransform, Sprite, Transform};
 use crate::resources::manager::AssetServer;
 use crate::resources::manager::Handle;
-use crate::scripting::Script;
 use bevy_ecs::prelude::*;
 use glam::{Quat, Vec3};
 
@@ -79,7 +78,7 @@ fn spawn_physics_scene(world: &mut World) {
 
     // 生成下落方块
     for i in 0..10 {
-        let mut entity = world.spawn((
+        let _entity = world.spawn((
             Transform {
                 pos: Vec3::new(400.0 + i as f32 * 10.0, 500.0 + i as f32 * 50.0, 0.0),
                 scale: Vec3::new(30.0, 30.0, 1.0),
@@ -104,13 +103,6 @@ fn spawn_physics_scene(world: &mut World) {
             },
         ));
 
-        // 为第一个方块添加脚本组件
-        if i == 0 {
-            entity.insert(Script {
-                source: "print('Hello from JS! Entity: ' + entity_id);".to_string(),
-                enabled: true,
-            });
-        }
     }
 }
 
@@ -235,18 +227,6 @@ pub fn spawn_additional_entities(world: &mut World, asset_server: &AssetServer) 
             Sprite {
                 color: [0.8, 0.4, 0.9, 1.0],
                 ..Default::default()
-            },
-            Script {
-                source: r#"
-                    // 简单的移动脚本示例
-                    let time = engine.time.elapsed_seconds;
-                    let x = 200.0 + Math.sin(time * 2.0) * 100.0;
-                    let y = 200.0 + Math.cos(time * 2.0) * 100.0;
-                    transform.pos.x = x;
-                    transform.pos.y = y;
-                "#
-                .to_string(),
-                enabled: true,
             },
         ));
         entity.id()

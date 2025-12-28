@@ -163,7 +163,7 @@ impl BottleneckDetector {
     /// 记录阶段性能
     pub fn record_phase(&mut self, phase_name: impl Into<String>, duration: Duration) {
         let name = phase_name.into();
-        let entry = self.phase_history.entry(name).or_insert_with(Vec::new);
+        let entry = self.phase_history.entry(name).or_default();
 
         if entry.len() >= self.max_history_size {
             entry.remove(0);

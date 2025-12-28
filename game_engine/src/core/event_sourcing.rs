@@ -105,7 +105,7 @@ impl std::fmt::Debug for EventBus {
 pub struct EventBus {
     /// 订阅者映射：事件类型ID -> 订阅者回调列表
     subscribers:
-        std::sync::RwLock<std::collections::HashMap<std::any::TypeId, Vec<Box<BoxedCallback>>>>,
+        std::sync::RwLock<std::collections::HashMap<std::any::TypeId, Vec<BoxedCallback>>>,
 }
 
 impl Default for EventBus {
@@ -135,8 +135,8 @@ impl EventBus {
             .expect("Failed to acquire write lock for subscribers");
         subscribers
             .entry(event_type_id)
-            .or_insert_with(Vec::new)
-            .push(Box::new(boxed_callback));
+            .or_default()
+            .push(boxed_callback);
     }
 
     /// 发布事件
@@ -423,7 +423,8 @@ impl EventSourcingManager {
 
         // 序列化事件
         let event_type = event.event_type();
-        let data = bincode::serialize(&event).unwrap();
+        let data = bincode::serialize(&event)
+            .expect("Failed to serialize event for event sourcing");
 
         let stored_event = StoredEvent {
             id: event_id,
@@ -514,11 +515,10 @@ impl EventSourcingManager {
         // 过滤快照之后的事件并重放
         for stored_event in events {
             // 如果有快照，只重放快照之后的事件
-            if let Some(snapshot_id) = snapshot_id {
-                if stored_event.id <= snapshot_id {
+            if let Some(snapshot_id) = snapshot_id
+                && stored_event.id <= snapshot_id {
                     continue;
                 }
-            }
 
             // 使用事件类型注册表反序列化事件
             let event =
@@ -759,7 +759,7 @@ impl DomainEvent for EntityCreatedEvent {
 
         // 示例：遍历world中的实体，尝试找到匹配ID的实体并删除它
         // 注意：在真实实现中，我们需要维护entity_id到Entity的映射
-        for entity_ref in world.query::<bevy_ecs::world::EntityRef>().iter(&world) {
+        for entity_ref in world.query::<bevy_ecs::world::EntityRef>().iter(world) {
             let entity = entity_ref.id();
             // 这里我们假设某种方式能将entity与self.entity_id关联
             // 在实际实现中，我们会有一个映射表来完成这个转换
@@ -795,7 +795,7 @@ impl DomainEvent for EntityTransformChangedEvent {
 
         // 示例：遍历world中的实体，尝试找到匹配ID的实体并更新它
         // 注意：在真实实现中，我们需要维护entity_id到Entity的映射
-        for entity_ref in world.query::<bevy_ecs::world::EntityRef>().iter(&world) {
+        for entity_ref in world.query::<bevy_ecs::world::EntityRef>().iter(world) {
             let entity = entity_ref.id();
             // 这里我们假设某种方式能将entity与self.entity_id关联
             // 在实际实现中，我们会有一个映射表来完成这个转换
@@ -813,7 +813,7 @@ impl DomainEvent for EntityTransformChangedEvent {
 
         // 示例：遍历world中的实体，尝试找到匹配ID的实体并恢复它
         // 注意：在真实实现中，我们需要维护entity_id到Entity的映射
-        for entity_ref in world.query::<bevy_ecs::world::EntityRef>().iter(&world) {
+        for entity_ref in world.query::<bevy_ecs::world::EntityRef>().iter(world) {
             let entity = entity_ref.id();
             // 这里我们假设某种方式能将entity与self.entity_id关联
             // 在实际实现中，我们会有一个映射表来完成这个转换
@@ -851,7 +851,7 @@ impl DomainEvent for EntityDeletedEvent {
 
         // 示例：尝试通过某种方式找到并删除实体
         // 注意：在真实实现中，我们需要维护entity_id到Entity的映射
-        for entity_ref in world.query::<bevy_ecs::world::EntityRef>().iter(&world) {
+        for entity_ref in world.query::<bevy_ecs::world::EntityRef>().iter(world) {
             let entity = entity_ref.id();
             // 这里我们假设某种方式能将entity与self.entity_id关联
             // 在实际实现中，我们会有一个映射表来完成这个转换
@@ -903,7 +903,7 @@ impl DomainEvent for EntityUpdatedEvent {
 
         // 示例：遍历world中的实体，尝试找到匹配ID的实体并更新它
         // 注意：在真实实现中，我们需要维护entity_id到Entity的映射
-        for entity_ref in world.query::<bevy_ecs::world::EntityRef>().iter(&world) {
+        for entity_ref in world.query::<bevy_ecs::world::EntityRef>().iter(world) {
             let entity = entity_ref.id();
             // 这里我们假设某种方式能将entity与self.entity_id关联
             // 在实际实现中，我们会有一个映射表来完成这个转换
@@ -921,7 +921,7 @@ impl DomainEvent for EntityUpdatedEvent {
 
         // 示例：遍历world中的实体，尝试找到匹配ID的实体并恢复它
         // 注意：在真实实现中，我们需要维护entity_id到Entity的映射
-        for entity_ref in world.query::<bevy_ecs::world::EntityRef>().iter(&world) {
+        for entity_ref in world.query::<bevy_ecs::world::EntityRef>().iter(world) {
             let entity = entity_ref.id();
             // 这里我们假设某种方式能将entity与self.entity_id关联
             // 在实际实现中，我们会有一个映射表来完成这个转换

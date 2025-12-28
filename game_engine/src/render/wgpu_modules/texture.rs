@@ -284,8 +284,8 @@ impl TextureManager {
         let (w, h) = rgba.dimensions();
 
         // 检查是否需要压缩（如果启用运行时压缩）
-        if let Some(config) = &self.compression_config {
-            if config.runtime_compression {
+        if let Some(config) = &self.compression_config
+            && config.runtime_compression {
                 let max_size = config.max_uncompressed_size;
                 if w > max_size || h > max_size {
                     tracing::debug!(
@@ -297,7 +297,6 @@ impl TextureManager {
                     // 未来计划：实现纹理运行时压缩，自动压缩超大纹理以节省内存
                 }
             }
-        }
 
         let format = if linear {
             wgpu::TextureFormat::Rgba8Unorm

@@ -1,42 +1,62 @@
-//  AI 系统模块
-//
-//  提供智能代理的决策和导航功能。
-//
-//  ## 功能特性
-//
-//  - 行为树系统
-//  - 状态机系统
-//  - A* 寻路算法
-//  - 导航网格支持
-//
-//  ## 使用示例
-//
-//  ### 寻路示例
-//
-//  ```rust
-//  use game_engine::ai::{PathfindingService, NavigationMesh, PathNode};
-//  use glam::Vec3;
-//
-//  // 创建导航网格
+//! # AI系统模块（Artificial Intelligence）
+//!
+//! 本模块提供游戏AI的基础功能，包括寻路、行为树和导航系统。
+//!
+//! ## 功能特性
+//!
+//! - **寻路系统** - A*算法、导航网格、路径平滑
+//! - **行为树** - AI决策树编辑器和运行时
+//! - **状态机** - 有限状态机实现
+//! - **群体行为** - Boids算法、群组控制
+//!
+//! ## 主要组件
+//!
+//! - [`PathfindingService`] - 寻路服务接口
+//! - [`NavigationMesh`] - 导航网格数据结构
+//! - [`BehaviorTree`] - 行为树定义
+//! - [`DecisionTreeEditor`] - 行为树编辑器
+//!
+//! ## 使用示例
+//!
+//! ### 寻路示例
+//!
+//! ```rust
+//! use game_engine::ai::{PathfindingService, NavigationMesh};
+//! use glam::Vec3;
+//!
+//! // 创建导航网格
+//! let nav_mesh = NavigationMesh::new();
+//!
+//! // 查找路径
+//! let start = Vec3::new(0.0, 0.0, 0.0);
+//! let end = Vec3::new(10.0, 0.0, 10.0);
+//! let path = nav_mesh.find_path(&start, &end);
+//! ```
+//!
+//! ## 性能特性
+//!
+//! - 多线程寻路计算
+//! - 路径缓存和重用
+//! - 动态障碍物避让
 //  let mut nav_mesh = NavigationMesh::new();
 //  nav_mesh.add_node(PathNode::new(0, Vec3::new(0.0, 0.0, 0.0)));
 //  nav_mesh.add_node(PathNode::new(1, Vec3::new(10.0, 0.0, 0.0)));
 //  nav_mesh.add_connection(0, 1, 10.0);
-//
+// 
 //  // 创建寻路服务
 //  let mut pathfinding = PathfindingService::new(nav_mesh);
-//
+// 
 //  // 寻路
 //  let path = pathfinding.find_path(0, 1).unwrap();
 //  assert_eq!(path.len(), 2);
 //  ```
-//
+// 
 //  ### AI组件示例
-//
+// 
 //  ```rust
 //  use game_engine::ai::AI;
 //  use bevy_ecs::prelude::*;
-//
+// 
 //  // 在ECS系统中使用AI组件
 //  fn setup_ai_system(mut commands: Commands) {
 //      commands.spawn(AI {
@@ -50,51 +70,28 @@
 
 /// 行为树系统 - 用于AI决策的行为树实现
 pub mod behavior_tree;
+/// 决策树编辑器 - 用于编辑决策树的可视化工具
+pub mod decision_tree_editor;
 /// 群集系统 - 用于群集行为的寻路和避障
 pub mod flocking;
-/// 增强的群集系统 - 提供更复杂的群体行为
-pub mod flocking_enhanced;
 /// 导航网格 - 用于路径规划的导航网格数据结构
 pub mod navmesh;
-/// 增强的导航网格生成器 - 提供完整的导航网格生成功能
-pub mod navmesh_enhanced;
 /// 寻路系统 - 基于A*算法的路径规划服务
 pub mod pathfinding;
 /// 状态机 - 用于AI状态管理的状态机实现
 pub mod state_machine;
-/// 决策树编辑器 - 提供决策树的可视化编辑和管理
-pub mod decision_tree_editor;
 
 pub use navmesh::{
     ColliderGeometry, NavMesh, NavMeshConfig, NavMeshError, NavMeshGenerator, NavPolygon,
 };
-pub use navmesh_enhanced::{
-    EnhancedNavMeshConfig, EnhancedNavMeshGenerator,
-};
 
 pub use flocking::{Agent, AgentId, FlockConfig, FlockManager, FlockingError, Obstacle};
-pub use flocking_enhanced::{
-    EnhancedFlockConfig, EnhancedFlockManager,
-};
 
-pub use decision_tree_editor::{
-    DecisionNodeData, DecisionNodeType, DecisionTree, DecisionTreeEditor,
-    DecisionTreeError, DecisionTreeNode, NodeUpdates,
-};
-
-// 重新导出寻路相关类型
+// 重新导出寻路相关类型（仅导出非废弃类型）
 pub use pathfinding::{
-    NavigationMesh, PathConnection, PathNode, PathfindingRequest, PathfindingResult,
-    PathfindingService,
+    NavigationMesh, PathConnection, PathNode, PathfindingRequest,
+    PathfindingResult, PathfindingService,
 };
-
-/// 异步协程寻路服务（推荐使用）
-pub mod async_pathfinding;
-pub use async_pathfinding::AsyncPathfindingService;
-
-// 向后兼容：导出已弃用的 ParallelPathfindingService
-#[allow(deprecated)]
-pub use pathfinding::ParallelPathfindingService;
 
 use bevy_ecs::prelude::*;
 use glam::Vec3;
@@ -288,8 +285,8 @@ impl AIService {
         entity: Entity,
         state_machine: &mut StateMachine,
     ) {
-        if let Some(state) = state_machine.states.get(&state_machine.current_state) {
-            if let Some(on_update) = &state.on_update {
+        if let Some(state) = state_machine.states.get(&state_machine.current_state)
+            && let Some(on_update) = &state.on_update {
                 match on_update(world, entity) {
                     StateTransition::To(new_state) => {
                         self.transition_to_state(world, entity, state_machine, new_state);
@@ -300,7 +297,6 @@ impl AIService {
                     StateTransition::None => {}
                 }
             }
-        }
     }
 
     fn transition_to_state(
@@ -310,18 +306,16 @@ impl AIService {
         state_machine: &mut StateMachine,
         new_state: u32,
     ) {
-        if let Some(old_state) = state_machine.states.get(&state_machine.current_state) {
-            if let Some(on_exit) = &old_state.on_exit {
+        if let Some(old_state) = state_machine.states.get(&state_machine.current_state)
+            && let Some(on_exit) = &old_state.on_exit {
                 on_exit(world, entity);
             }
-        }
 
         state_machine.current_state = new_state;
 
-        if let Some(new_state) = state_machine.states.get(&new_state) {
-            if let Some(on_enter) = &new_state.on_enter {
+        if let Some(new_state) = state_machine.states.get(&new_state)
+            && let Some(on_enter) = &new_state.on_enter {
                 on_enter(world, entity);
             }
-        }
     }
 }

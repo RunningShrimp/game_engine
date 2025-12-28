@@ -1,81 +1,94 @@
-//  Performance模块
-//
-//  提供性能优化和集成功能。
-//
-//  ## 模块结构
-//
-//  - `memory/` - 内存优化（引擎核心依赖）
-//  - `rendering/` - 渲染优化（引擎核心依赖）
-//  - `gpu/` - GPU计算（引擎核心依赖）
-//  - `optimization/` - 特定领域优化（引擎核心依赖）
-//  - `sync/` - 同步工具（引擎核心依赖）
-//
-//  ## 性能分析工具
-//
-//  性能分析和基准测试工具在 `crate::profiling` 模块中。
-//  该模块提供：
-//  - 实时性能指标收集
-//  - 低开销计数器和计时器
-//  - 性能数据聚合和分析
-//  - 自动性能报告和告警
+//! # Performance Optimization
+//!
+//! 本模块提供全面的性能优化工具和监控系统。
+//!
+//! ## 功能特性
+//!
+//! - **内存优化** - 高效的内存分配和管理策略
+//! - **GPU计算** - GPU加速的通用计算
+//! - **渲染优化** - 渲染管线性能优化
+//! - **同步工具** - 线程同步和并发优化
+//! - **性能监控** - 实时性能指标收集
+//! - **基准测试** - 性能回归检测
+//!
+//! ## 主要组件
+//!
+//! ### 内存管理
+//! - [`memory::arena::Arena`] - 高性能 arenas
+//! - [`memory::pool::MemoryPool`] - 内存池
+//! - [`memory::allocator::SmartMemoryAllocator`] - 智能内存分配器
+//!
+//! ### GPU计算
+//! - [`gpu::gpu_compute::GpuCompute`] - GPU通用计算
+//! - [`gpu::GpuPerformanceMonitor`] - GPU性能监控
+//!
+//! ### 性能监控
+//! - [`monitoring::SystemMonitor`] - 系统性能监控
+//! - [`tracing_metrics`] - 分布式追踪
+//!
+//! ### 基准测试
+//! - [`benchmarking`] - 性能基准测试框架
+//!
+//! ## 性能分析
+//!
+//! 性能分析和profiling工具已分离到独立的`game_engine_profiling` crate。
+//! 为了向后兼容，这些工具仍然可以通过`crate::profiling`访问。
+//!
+//! ## 使用示例
+//!
+//! ### 内存分配器
+//!
+//! ```rust,no_run
+//! use game_engine::performance::create_default_allocator;
+//!
+//! // 创建默认分配器
+//! let allocator = create_default_allocator();
+//!
+//! // 分配内存
+//! let memory = allocator.allocate(1024).unwrap();
+//! ```
+//!
+//! ### 性能监控
+//!
+//! ```rust,no_run
+//! use game_engine::performance::monitoring::SystemMonitor;
+//!
+//! let monitor = SystemMonitor::new();
+//! monitor.start();
+//!
+//! // 运行游戏循环...
+//!
+//! let stats = monitor.get_stats();
+//! println!("FPS: {}", stats.fps);
+//! println!("Frame time: {:?}", stats.frame_time);
+//! ```
 
 // 引擎核心依赖的模块
-pub mod alerting;
-pub mod benchmark;
 pub mod gpu;
 pub mod memory;
-pub mod metrics_storage;
-pub mod monitoring;
 pub mod optimization;
+pub mod monitoring;
 pub mod rendering;
 pub mod sync;
 pub mod tracing_metrics;
+pub mod benchmarking;
 
-// 重新导出引擎核心模块
-pub use benchmark::*;
+// 注意：profiling模块已在根级别声明，这里不重复声明以避免宏重复定义
+// 使用 crate::profiling 路径访问
+pub use crate::profiling as profiling_api;
+
+// 向后兼容：重新导出常用profiling功能
+pub use crate::profiling::{
+    MetricCollector, HighPrecisionTimer, ProfilingError
+};
+pub use crate::profiling::continuous_profiler;
+
+// GpuPerformanceMonitor 从 profiling 模块重新导出
+pub use crate::profiling::GpuPerformanceMonitor;
+
+// 重新導出引擎核心模块
 pub use gpu::*;
 pub use memory::*;
 pub use optimization::*;
 pub use rendering::*;
 pub use sync::*;
-
-/// 性能优化版本
-pub const PERFORMANCE_VERSION: &str = "1.0.0";
-
-/// 性能优化错误类型
-#[derive(Debug, thiserror::Error)]
-pub enum PerformanceError {
-    #[error("优化错误: {0}")]
-    OptimizationError(String),
-
-    #[error("内存错误: {0}")]
-    MemoryError(String),
-
-    #[error("GPU错误: {0}")]
-    GpuError(String),
-
-    #[error("渲染错误: {0}")]
-    RenderingError(String),
-
-    #[error("同步错误: {0}")]
-    SyncError(String),
-
-    #[error("IO错误: {0}")]
-    IoError(#[from] std::io::Error),
-
-    #[error("序列化错误: {0}")]
-    SerializationError(#[from] serde_json::Error),
-}
-
-/// 性能优化结果类型
-pub type PerformanceResult<T> = Result<T, PerformanceError>;
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_performance_version() {
-        assert_eq!(PERFORMANCE_VERSION, "1.0.0");
-    }
-}

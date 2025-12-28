@@ -1,25 +1,25 @@
 //  OpenXR 手部追踪扩展集成
-//
+// 
 //  实现OpenXR手部追踪扩展（XR_EXT_hand_tracking），提供高精度手部关节追踪。
-//
+// 
 //  ## 功能特性
-//
+// 
 //  - 26个手部关节追踪（每只手）
 //  - 关节位置、旋转和半径
 //  - 手部姿态有效性检测
 //  - 双手独立追踪
-//
+// 
 //  ## 使用示例
-//
+// 
 //  ```rust
 //  use crate::xr::hand_tracking::*;
-//
+// 
 //  // 初始化手部追踪
 //  let mut hand_tracker = HandTracker::new()?;
-//
+// 
 //  // 更新追踪数据
 //  hand_tracker.update()?;
-//
+// 
 //  // 获取左手关节数据
 //  if let Some(joints) = hand_tracker.get_hand_joints(Hand::Left) {
 //      if let Some(palm) = joints.get_joint(HandJointType::Palm) {
@@ -31,8 +31,8 @@
 use super::*;
 use crate::core::utils::current_timestamp_ms;
 use crate::impl_default;
-use glam::Vec3;
 use std::collections::HashMap;
+use glam::Vec3;
 
 /// 手部追踪器 - 管理OpenXR手部追踪扩展，提供双手关节追踪功能
 pub struct HandTracker {
@@ -65,7 +65,7 @@ pub struct HandJoints {
 
 impl HandJoints {
     /// 创建新的手部关节集合
-    ///
+    /// 
     /// # Returns
     /// 返回一个空的、无效的HandJoints实例
     pub fn new() -> Self {
@@ -73,7 +73,7 @@ impl HandJoints {
     }
 
     /// 更新指定关节的数据
-    ///
+    /// 
     /// # Arguments
     /// * `joint_type` - 关节的类型
     /// * `joint` - 新的关节数据
@@ -83,10 +83,10 @@ impl HandJoints {
     }
 
     /// 获取指定关节的数据
-    ///
+    /// 
     /// # Arguments
     /// * `joint_type` - 关节的类型
-    ///
+    /// 
     /// # Returns
     /// 如果关节存在返回引用，否则返回None
     pub fn get_joint(&self, joint_type: HandJointType) -> Option<&HandJoint> {
@@ -94,7 +94,7 @@ impl HandJoints {
     }
 
     /// 获取所有关节的映射表引用
-    ///
+    /// 
     /// # Returns
     /// 返回所有关节映射的引用
     pub fn get_all_joints(&self) -> &HashMap<HandJointType, HandJoint> {
@@ -102,7 +102,7 @@ impl HandJoints {
     }
 
     /// 设置此手部数据的有效性
-    ///
+    /// 
     /// # Arguments
     /// * `valid` - true表示有效，false表示无效
     pub fn set_valid(&mut self, valid: bool) {
@@ -110,7 +110,7 @@ impl HandJoints {
     }
 
     /// 设置追踪置信度
-    ///
+    /// 
     /// # Arguments
     /// * `confidence` - 置信度值，自动限制到0.0-1.0范围
     pub fn set_confidence(&mut self, confidence: f32) {
@@ -118,7 +118,7 @@ impl HandJoints {
     }
 
     /// 检查此手部数据是否有效且有关节
-    ///
+    /// 
     /// # Returns
     /// 只有当标记为有效且至少有一个关节时才返回true
     pub fn is_valid(&self) -> bool {
@@ -126,7 +126,7 @@ impl HandJoints {
     }
 
     /// 获取当前的追踪置信度
-    ///
+    /// 
     /// # Returns
     /// 返回置信度值（0.0-1.0）
     pub fn confidence(&self) -> f32 {
@@ -134,7 +134,7 @@ impl HandJoints {
     }
 
     /// 获取手掌中心位置（如果可用）
-    ///
+    /// 
     /// # Returns
     /// 如果手掌关节有效则返回其位置，否则返回None
     pub fn get_palm_position(&self) -> Option<Vec3> {
@@ -170,19 +170,21 @@ impl HandJoints {
         }
     }
 
+
     /// 获取手腕位置（如果可用）
-    ///
+    /// 
     /// # Returns
     /// 如果手腕关节有效则返回其位置，否则返回None
     pub fn get_wrist_position(&self) -> Option<Vec3> {
-        self.get_joint(HandJointType::Wrist).map(|j| j.pose.position)
+        self.get_joint(HandJointType::Wrist)
+            .map(|j| j.pose.position)
     }
 
     /// 获取指定手指的尖端位置
-    ///
+    /// 
     /// # Arguments
     /// * `finger` - 手指类型
-    ///
+    /// 
     /// # Returns
     /// 如果手指尖端关节有效则返回其位置，否则返回None
     pub fn get_finger_tip(&self, finger: Finger) -> Option<Vec3> {
@@ -197,10 +199,10 @@ impl HandJoints {
     }
 
     /// 计算指定手指的弯曲度
-    ///
+    /// 
     /// # Arguments
     /// * `finger` - 手指类型
-    ///
+    /// 
     /// # Returns
     /// 返回弯曲度值（0.0=完全伸直，1.0=完全弯曲），如果无法计算则返回None
     pub fn get_finger_curl(&self, finger: Finger) -> Option<f32> {
@@ -360,7 +362,7 @@ pub enum HandTrackingState {
 
 impl HandTracker {
     /// 创建新的手部追踪器
-    ///
+    /// 
     /// # Returns
     /// 返回一个新的、未初始化的HandTracker实例
     pub fn new() -> Result<Self, XrError> {
@@ -375,9 +377,9 @@ impl HandTracker {
     }
 
     /// 初始化手部追踪系统（需要OpenXR会话）
-    ///
+    /// 
     /// 检查系统是否支持手部追踪扩展并初始化追踪系统
-    ///
+    /// 
     /// # Returns
     /// 成功时返回Ok(())，如果不支持手部追踪返回Err(XrError::NotSupported)
     pub fn initialize(&mut self) -> Result<(), XrError> {
@@ -405,9 +407,9 @@ impl HandTracker {
     }
 
     /// 更新手部追踪数据
-    ///
+    /// 
     /// 从OpenXR运行时获取最新的手部关节位置和状态
-    ///
+    /// 
     /// # Returns
     /// 成功时返回Ok(())，如果追踪器未初始化返回SessionNotReady
     pub fn update(&mut self) -> Result<(), XrError> {
@@ -446,10 +448,10 @@ impl HandTracker {
     }
 
     /// 获取指定手的关节数据
-    ///
+    /// 
     /// # Arguments
     /// * `hand` - 要查询的手部（左或右）
-    ///
+    /// 
     /// # Returns
     /// 返回该手的HandJoints引用
     pub fn get_hand_joints(&self, hand: Hand) -> Option<&HandJoints> {
@@ -460,10 +462,10 @@ impl HandTracker {
     }
 
     /// 获取指定手的关节数据（可变引用）
-    ///
+    /// 
     /// # Arguments
     /// * `hand` - 要查询的手部（左或右）
-    ///
+    /// 
     /// # Returns
     /// 返回该手的HandJoints可变引用
     pub fn get_hand_joints_mut(&mut self, hand: Hand) -> Option<&mut HandJoints> {
@@ -474,7 +476,7 @@ impl HandTracker {
     }
 
     /// 检查系统是否支持手部追踪
-    ///
+    /// 
     /// # Returns
     /// 如果硬件和OpenXR运行时都支持手部追踪返回true
     pub fn is_supported(&self) -> bool {
@@ -482,10 +484,10 @@ impl HandTracker {
     }
 
     /// 检查指定的手是否正在被追踪
-    ///
+    /// 
     /// # Arguments
     /// * `hand` - 要检查的手部
-    ///
+    /// 
     /// # Returns
     /// 如果该手正在被追踪且数据有效返回true
     pub fn is_tracking(&self, hand: Hand) -> bool {
@@ -500,7 +502,7 @@ impl HandTracker {
     }
 
     /// 获取追踪系统的当前状态
-    ///
+    /// 
     /// # Returns
     /// 返回当前的HandTrackingState
     pub fn tracking_state(&self) -> &HandTrackingState {
@@ -508,10 +510,10 @@ impl HandTracker {
     }
 
     /// 获取指定手的追踪置信度
-    ///
+    /// 
     /// # Arguments
     /// * `hand` - 要查询的手部
-    ///
+    /// 
     /// # Returns
     /// 返回置信度值（0.0-1.0），0.0表示完全不可信，1.0表示完全可信
     pub fn get_confidence(&self, hand: Hand) -> f32 {
@@ -522,7 +524,7 @@ impl HandTracker {
     }
 
     /// 手动设置手部关节数据（用于测试或模拟）
-    ///
+    /// 
     /// # Arguments
     /// * `hand` - 要更新的手部
     /// * `joints` - 新的关节数据

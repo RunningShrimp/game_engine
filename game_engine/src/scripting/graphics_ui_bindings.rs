@@ -44,7 +44,7 @@ impl GraphicsUiBindings {
                 args.get(3),
                 args.get(4),
             ) {
-                let mut world = safe_lock(&world, "GraphicsUiBindings.world").unwrap();
+                let mut world = safe_lock(&world, "GraphicsUiBindings.world").expect("Failed to acquire world lock");
                 let entity = Entity::from_bits(*entity_id as u64);
 
                 if let Some(mut sprite) = world.get_mut::<Sprite>(entity) {
@@ -68,7 +68,7 @@ impl GraphicsUiBindings {
                 Some(ScriptValue::Float(height)),
             ) = (args.first(), args.get(1), args.get(2))
             {
-                let mut world = safe_lock(&world, "GraphicsUiBindings.world").unwrap();
+                let mut world = safe_lock(&world, "GraphicsUiBindings.world").expect("Failed to acquire world lock");
                 let entity = Entity::from_bits(*entity_id as u64);
 
                 if let Some(mut sprite) = world.get_mut::<Sprite>(entity) {

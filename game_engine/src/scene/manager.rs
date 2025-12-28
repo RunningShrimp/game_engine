@@ -41,9 +41,12 @@ pub enum SlideDirection {
     Down,
 }
 
-/// 场景管理器
+/// 场景过渡管理器
+///
+/// 负责场景切换、过渡动画和实体管理。
+/// 与SceneDomainService不同，本管理器专注于场景的视觉过渡效果。
 #[derive(Resource)]
-pub struct SceneManager {
+pub struct SceneTransitionManager {
     scenes: HashMap<SceneId, Scene>,
     current_scene: Option<SceneId>,
     next_id: u64,
@@ -59,7 +62,7 @@ struct SceneTransitionState {
     elapsed: f32,
 }
 
-impl Default for SceneManager {
+impl Default for SceneTransitionManager {
     fn default() -> Self {
         Self {
             scenes: HashMap::new(),
@@ -70,8 +73,8 @@ impl Default for SceneManager {
     }
 }
 
-impl SceneManager {
-    /// 创建新的场景管理器
+impl SceneTransitionManager {
+    /// 创建新的场景过渡管理器
     pub fn new() -> Self {
         Self::default()
     }
@@ -213,12 +216,12 @@ impl SceneManager {
 }
 
 /// 场景系统 - ECS系统函数
-pub fn scene_update_system(mut scene_manager: ResMut<SceneManager>, time: Res<crate::ecs::Time>) {
+pub fn scene_update_system(mut scene_manager: ResMut<SceneTransitionManager>, time: Res<crate::ecs::Time>) {
     scene_manager.update_transition(time.delta_seconds);
 }
 
 /// 场景加载系统
-pub fn scene_load_system(scene_manager: Res<SceneManager>, _commands: Commands) {
+pub fn scene_load_system(scene_manager: Res<SceneTransitionManager>, _commands: Commands) {
     // 加载当前场景的实体
     if let Some(current_scene) = scene_manager.current_scene() {
         // 这里可以实现场景实体的实际加载逻辑
@@ -227,7 +230,7 @@ pub fn scene_load_system(scene_manager: Res<SceneManager>, _commands: Commands) 
 }
 
 /// 场景清理系统
-pub fn scene_cleanup_system(_scene_manager: Res<SceneManager>, _commands: Commands) {
+pub fn scene_cleanup_system(_scene_manager: Res<SceneTransitionManager>, _commands: Commands) {
     // 清理前一个场景的实体
     // 实际实现需要跟踪哪些实体属于哪个场景
 }
@@ -238,7 +241,7 @@ mod tests {
 
     #[test]
     fn test_scene_manager() {
-        let mut manager = SceneManager::new();
+        let mut manager = SceneTransitionManager::new();
 
         // 创建场景
         let scene1_id = manager.create_scene("Main Menu".to_string());

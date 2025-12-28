@@ -96,7 +96,7 @@ impl BC1Format {
         width: usize,
         height: usize,
     ) -> Result<CompressedTexture, CompressionError> {
-        if width % 4 != 0 || height % 4 != 0 {
+        if !width.is_multiple_of(4) || !height.is_multiple_of(4) {
             return Err(CompressionError::InvalidSize);
         }
 
@@ -122,7 +122,7 @@ impl BC1Format {
         _width: usize,
         _height: usize,
     ) -> Result<Vec<u8>, CompressionError> {
-        if data.len() % 8 != 0 {
+        if !data.len().is_multiple_of(8) {
             return Err(CompressionError::InvalidDataLength);
         }
 
@@ -145,7 +145,7 @@ impl BC2Format {
         width: usize,
         height: usize,
     ) -> Result<CompressedTexture, CompressionError> {
-        if width % 4 != 0 || height % 4 != 0 {
+        if !width.is_multiple_of(4) || !height.is_multiple_of(4) {
             return Err(CompressionError::InvalidSize);
         }
 
@@ -171,7 +171,7 @@ impl BC2Format {
         _width: usize,
         _height: usize,
     ) -> Result<Vec<u8>, CompressionError> {
-        if data.len() % 16 != 0 {
+        if !data.len().is_multiple_of(16) {
             return Err(CompressionError::InvalidDataLength);
         }
 
@@ -194,7 +194,7 @@ impl BC3Format {
         width: usize,
         height: usize,
     ) -> Result<CompressedTexture, CompressionError> {
-        if width % 4 != 0 || height % 4 != 0 {
+        if !width.is_multiple_of(4) || !height.is_multiple_of(4) {
             return Err(CompressionError::InvalidSize);
         }
 
@@ -220,7 +220,7 @@ impl BC3Format {
         _width: usize,
         _height: usize,
     ) -> Result<Vec<u8>, CompressionError> {
-        if data.len() % 16 != 0 {
+        if !data.len().is_multiple_of(16) {
             return Err(CompressionError::InvalidDataLength);
         }
 
@@ -307,20 +307,18 @@ impl TextureCompressionManager {
 
     /// 缓存压缩纹理
     pub fn cache_compressed(&self, key: &str, texture: CompressedTexture) {
-        if self.cache_enabled {
-            if let Ok(mut cache) = self.cache.write() {
+        if self.cache_enabled
+            && let Ok(mut cache) = self.cache.write() {
                 cache.insert(key.to_string(), texture);
             }
-        }
     }
 
     /// 获取缓存的压缩纹理
     pub fn get_cached(&self, key: &str) -> Option<CompressedTexture> {
-        if self.cache_enabled {
-            if let Ok(cache) = self.cache.read() {
+        if self.cache_enabled
+            && let Ok(cache) = self.cache.read() {
                 return cache.get(key).cloned();
             }
-        }
         None
     }
 

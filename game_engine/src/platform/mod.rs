@@ -421,7 +421,7 @@ pub struct NativeFilesystem;
 #[cfg(not(target_arch = "wasm32"))]
 impl NativeFilesystem {
     pub fn new() -> Self {
-        Self::default()
+        Self
     }
 }
 

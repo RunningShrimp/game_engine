@@ -337,7 +337,7 @@ mod tests {
 
         let result = engine.execute("engine_integration_test", script);
         match result {
-            Ok(lua_value) => {
+            Ok(_lua_value) => {
                 // 简化测试，只检查是否成功
                 assert!(true); // 如果能执行到这里说明引擎集成基本正常
             }

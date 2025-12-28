@@ -96,49 +96,47 @@ impl ServiceRegistry {
             .await
     }
 
-    fn resolve_dependencies_recursive<'a>(
+    async fn resolve_dependencies_recursive<'a>(
         &'a self,
         service_id: &'a ServiceId,
         visited: &'a mut Vec<ServiceId>,
         visiting: &'a mut Vec<ServiceId>,
-    ) -> impl std::future::Future<Output = Result<Vec<ServiceId>, ServiceRegistryError>> + 'a {
-        async move {
-            if visited.contains(service_id) {
-                return Ok(vec![]);
-            }
-
-            if visiting.contains(service_id) {
-                let mut cycle = visiting.clone();
-                cycle.push(service_id.clone());
-                return Err(ServiceRegistryError::CircularDependency(cycle));
-            }
-
-            visiting.push(service_id.clone());
-
-            let service = self
-                .get(service_id)
-                .await
-                .ok_or_else(|| ServiceRegistryError::NotFound(service_id.as_str().to_string()))?;
-
-            let service_guard = service.lock().await;
-            let dependencies = service_guard.dependencies();
-            drop(service_guard);
-
-            let mut resolved = Vec::new();
-            for dep_id in dependencies {
-                let dep_id_clone = dep_id.clone();
-                resolved.extend(
-                    Box::pin(self.resolve_dependencies_recursive(&dep_id_clone, visited, visiting))
-                        .await?,
-                );
-            }
-
-            visiting.pop();
-            visited.push(service_id.clone());
-            resolved.push(service_id.clone());
-
-            Ok(resolved)
+    ) -> Result<Vec<ServiceId>, ServiceRegistryError> {
+        if visited.contains(service_id) {
+            return Ok(vec![]);
         }
+
+        if visiting.contains(service_id) {
+            let mut cycle = visiting.clone();
+            cycle.push(service_id.clone());
+            return Err(ServiceRegistryError::CircularDependency(cycle));
+        }
+
+        visiting.push(service_id.clone());
+
+        let service = self
+            .get(service_id)
+            .await
+            .ok_or_else(|| ServiceRegistryError::NotFound(service_id.as_str().to_string()))?;
+
+        let service_guard = service.lock().await;
+        let dependencies = service_guard.dependencies();
+        drop(service_guard);
+
+        let mut resolved = Vec::new();
+        for dep_id in dependencies {
+            let dep_id_clone = dep_id.clone();
+            resolved.extend(
+                Box::pin(self.resolve_dependencies_recursive(&dep_id_clone, visited, visiting))
+                    .await?,
+            );
+        }
+
+        visiting.pop();
+        visited.push(service_id.clone());
+        resolved.push(service_id.clone());
+
+        Ok(resolved)
     }
 
     pub async fn get_startup_order(&self) -> Result<Vec<ServiceId>, ServiceRegistryError> {
@@ -153,39 +151,37 @@ impl ServiceRegistry {
         Ok(order)
     }
 
-    fn get_startup_order_recursive<'a>(
+    async fn get_startup_order_recursive<'a>(
         &'a self,
         service_id: &'a ServiceId,
         order: &'a mut Vec<ServiceId>,
         visited: &'a mut std::collections::HashSet<ServiceId>,
-    ) -> impl std::future::Future<Output = Result<(), ServiceRegistryError>> + 'a {
-        async move {
-            if visited.contains(service_id) {
-                return Ok(());
-            }
-
-            visited.insert(service_id.clone());
-
-            let service = self
-                .get(service_id)
-                .await
-                .ok_or_else(|| ServiceRegistryError::NotFound(service_id.as_str().to_string()))?;
-
-            let service_guard = service.lock().await;
-            let dependencies = service_guard.dependencies();
-            drop(service_guard);
-
-            for dep_id in dependencies {
-                let dep_id_clone = dep_id.clone();
-                Box::pin(self.get_startup_order_recursive(&dep_id_clone, order, visited)).await?;
-            }
-
-            if !order.contains(service_id) {
-                order.push(service_id.clone());
-            }
-
-            Ok(())
+    ) -> Result<(), ServiceRegistryError> {
+        if visited.contains(service_id) {
+            return Ok(());
         }
+
+        visited.insert(service_id.clone());
+
+        let service = self
+            .get(service_id)
+            .await
+            .ok_or_else(|| ServiceRegistryError::NotFound(service_id.as_str().to_string()))?;
+
+        let service_guard = service.lock().await;
+        let dependencies = service_guard.dependencies();
+        drop(service_guard);
+
+        for dep_id in dependencies {
+            let dep_id_clone = dep_id.clone();
+            Box::pin(self.get_startup_order_recursive(&dep_id_clone, order, visited)).await?;
+        }
+
+        if !order.contains(service_id) {
+            order.push(service_id.clone());
+        }
+
+        Ok(())
     }
 
     pub async fn start_all(&self) -> Result<(), ServiceRegistryError> {

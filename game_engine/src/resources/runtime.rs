@@ -1,5 +1,5 @@
 //  全局异步运行时
-//
+// 
 //  提供统一的Tokio运行时，避免每个模块创建独立运行时
 
 use std::sync::OnceLock;
@@ -34,7 +34,7 @@ where
 use crate::platform::run_sync;
 
 /// 阻塞执行异步任务（仅在无法避免阻塞时使用）
-pub fn block_on<F: std::future::Future + Send + 'static>(future: F) -> F::Output
+pub fn block_on<F: std::future::Future + Send + 'static>(future: F) -> F::Output 
 where
     F::Output: Send,
 {

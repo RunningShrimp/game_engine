@@ -35,9 +35,9 @@
 use std::collections::VecDeque;
 use std::time::Instant;
 
-//  性能样本
+/// 性能样本
 ///
-//  表示单个时间点的性能指标快照。
+/// 表示单个时间点的性能指标快照。
 #[derive(Debug, Clone)]
 pub struct PerformanceSample {
     /// 样本时间戳
@@ -52,15 +52,15 @@ pub struct PerformanceSample {
     pub memory_mb: f32,
 }
 
-//  持续性能分析器
+/// 持续性能分析器
 ///
-//  持续收集和分析游戏引擎的性能指标，支持性能统计和异常检测。
+/// 持续收集和分析游戏引擎的性能指标，支持性能统计和异常检测。
 ///
-//  ## 性能考虑
+/// ## 性能考虑
 ///
-//  - 采样间隔可配置，减少性能开销
-//  - 使用固定大小的队列，避免内存无限增长
-//  - 所有统计计算都是O(n)时间复杂度
+/// - 采样间隔可配置，减少性能开销
+/// - 使用固定大小的队列，避免内存无限增长
+/// - 所有统计计算都是O(n)时间复杂度
 #[derive(Debug)]
 pub struct ContinuousProfiler {
     /// 性能样本队列

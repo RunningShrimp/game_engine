@@ -4,9 +4,9 @@
 
 use crate::impl_default;
 use serde::{Serialize, Deserialize};
-use std::path::{Path, PathBuf};
 use std::fs;
 use std::collections::HashMap;
+use std::path::PathBuf;
 
 /// 插件配置
 #[derive(Debug, Clone, Serialize, Deserialize)]

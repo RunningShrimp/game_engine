@@ -199,6 +199,9 @@ pub trait BindingAdapter: Send + Sync {
     /// 初始化绑定
     fn init(&mut self);
 
+    /// 绑定引擎API到脚本环境
+    fn bind_engine_api(&mut self);
+
     /// 执行命令（从脚本到引擎）
     fn execute_command(&mut self, cmd: BindingCommand) -> BindingResult;
 

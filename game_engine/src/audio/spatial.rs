@@ -36,8 +36,54 @@ use crate::impl_default;
 use bevy_ecs::prelude::*;
 use glam::{Quat, Vec3};
 use std::collections::HashMap;
+use super::hrtf::{HrtfFilter, HrtfConfig, DopplerCalculator};
 
 /// 距离衰减模型
+///
+/// 定义声音随距离衰减的方式，模拟真实世界中的声音传播特性。
+///
+/// # 变体
+///
+/// - [`None`](Self::None): 无衰减，声音在所有距离保持相同音量
+/// - [`Linear`](Self::Linear): 线性衰减，音量随距离线性下降
+/// - [`Inverse`](Self::Inverse): 反比衰减，符合物理定律（默认）
+/// - [`Exponential`](Self::Exponential): 指数衰减，音量随距离指数下降
+///
+/// # 衰减公式
+///
+/// ## Linear（线性衰减）
+/// ```text
+/// gain = 1 - rolloff * (distance - ref_distance) / (max_distance - ref_distance)
+/// ```
+///
+/// ## Inverse（反比衰减）
+/// ```text
+/// gain = ref_distance / (ref_distance + rolloff * (distance - ref_distance))
+/// ```
+///
+/// ## Exponential（指数衰减）
+/// ```text
+/// gain = (distance / ref_distance) ^ -rolloff
+/// ```
+///
+/// # 示例
+///
+/// ```rust,no_run
+/// use game_engine::audio::DistanceModel;
+///
+/// // 反比衰减 - 适合大多数情况
+/// let model = DistanceModel::Inverse {
+///     ref_distance: 1.0,
+///     rolloff: 1.0,
+/// };
+///
+/// // 线性衰减 - 适合室内环境
+/// let model = DistanceModel::Linear {
+///     ref_distance: 1.0,
+///     max_distance: 50.0,
+///     rolloff: 1.0,
+/// };
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum DistanceModel {
     /// 无衰减 (固定音量)
@@ -124,6 +170,47 @@ impl DistanceModel {
 }
 
 /// 声锥设置 (用于方向性声源)
+///
+/// 模拟真实声源的方向性特征，如聚光灯、扬声器等。
+/// 声音在不同方向上有不同的音量。
+///
+/// # 字段
+///
+/// - `inner_angle`: 内锥角度（弧度），在此角度内音量为100%
+/// - `outer_angle`: 外锥角度（弧度），超过此角度使用外锥增益
+/// - `outer_gain`: 外锥增益（0.0-1.0）
+///
+/// # 工作原理
+///
+/// ```text
+///         内锥 (100% 音量)
+///            ▲
+///           ╱ ╲
+///          ╱   ╲
+///         ╱     ╲
+///        ╱   ●   ╲   ← 声源
+///       ╱─────────╲
+///      ╱  外锥过渡  ╲
+///     ╱             ╲
+///    ────────────────
+///    外锥 (外锥增益)
+/// ```
+///
+/// # 示例
+///
+/// ```rust,no_run
+/// use game_engine::audio::SoundCone;
+///
+/// // 聚光灯效果
+/// let spotlight = SoundCone {
+///     inner_angle: std::f32::consts::PI / 4.0,  // 45度内全音量
+///     outer_angle: std::f32::consts::PI / 2.0,  // 90度外开始衰减
+///     outer_gain: 0.1,                          // 外部只有10%音量
+/// };
+///
+/// // 全向声源（无方向性）
+/// let omnidirectional = SoundCone::omnidirectional();
+/// ```
 #[derive(Debug, Clone, Copy)]
 pub struct SoundCone {
     /// 内锥角度 (弧度) - 在此角度内音量为 100%
@@ -343,7 +430,7 @@ pub struct SpatialAudioParams {
 }
 
 /// 空间音频状态 (Resource)
-#[derive(Resource, Default)]
+#[derive(Resource)]
 pub struct SpatialAudioState {
     /// 监听器位置
     pub listener_position: Vec3,
@@ -361,11 +448,28 @@ pub struct SpatialAudioState {
     pub max_concurrent_sounds: usize,
     /// 源速度缓存 (用于多普勒计算)
     pub source_velocities: HashMap<Entity, Vec3>,
+    /// HRTF滤波器 (可选)
+    pub hrtf_filter: Option<HrtfFilter>,
+    /// 多普勒计算器
+    pub doppler_calculator: DopplerCalculator,
+    /// 启用HRTF
+    pub enable_hrtf: bool,
+}
+
+impl Default for SpatialAudioState {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl SpatialAudioState {
     /// 创建新的空间音频状态
     pub fn new() -> Self {
+        let hrtf_config = HrtfConfig {
+            speed_of_sound: 343.0,
+            ..Default::default()
+        };
+        
         Self {
             listener_position: Vec3::ZERO,
             listener_forward: Vec3::NEG_Z, // 默认看向 -Z
@@ -375,6 +479,21 @@ impl SpatialAudioState {
             global_gain: 1.0,
             max_concurrent_sounds: 32,
             source_velocities: HashMap::new(),
+            hrtf_filter: Some(HrtfFilter::new(hrtf_config)),
+            doppler_calculator: DopplerCalculator::new(343.0, 1.0),
+            enable_hrtf: true,
+        }
+    }
+
+    /// 启用或禁用HRTF
+    pub fn set_hrtf_enabled(&mut self, enabled: bool) {
+        self.enable_hrtf = enabled;
+        if enabled && self.hrtf_filter.is_none() {
+            let hrtf_config = HrtfConfig {
+                speed_of_sound: self.speed_of_sound,
+                ..Default::default()
+            };
+            self.hrtf_filter = Some(HrtfFilter::new(hrtf_config));
         }
     }
 }
@@ -399,7 +518,7 @@ impl SpatialAudioService {
 
     /// 计算空间音频参数
     pub fn calculate_params(
-        state: &SpatialAudioState,
+        state: &mut SpatialAudioState,
         source: &SpatialAudioSource,
         source_position: Vec3,
         source_forward: Vec3,
@@ -422,24 +541,48 @@ impl SpatialAudioService {
         let cone_angle = source_forward.angle_between(to_listener);
         let cone_gain = source.cone.calculate_gain(cone_angle);
 
-        // 计算左右声道定位 (简化的HRTF)
+        // 计算左右声道定位
         let listener_right = state.listener_forward.cross(state.listener_up).normalize_or_zero();
         let direction_to_source = relative_pos.normalize_or_zero();
 
         // 方位角 (水平面内与前方的夹角)
-        let azimuth = listener_right.dot(direction_to_source).asin();
+        let forward_component = direction_to_source.dot(state.listener_forward);
+        let right_component = direction_to_source.dot(listener_right);
+        let azimuth = right_component.atan2(forward_component);
 
         // 仰角
         let elevation = state.listener_up.dot(direction_to_source).asin();
 
-        // 计算左右声道增益 (简化的立体声平移)
-        let pan = (azimuth / std::f32::consts::FRAC_PI_2).clamp(-1.0, 1.0);
-        let left_gain = ((1.0 - pan) / 2.0).sqrt();
-        let right_gain = ((1.0 + pan) / 2.0).sqrt();
+        // 计算左右声道增益
+        let (left_gain, right_gain) = if state.enable_hrtf {
+            // 使用HRTF计算
+            let listener_forward = state.listener_forward;
+            let listener_up = state.listener_up;
+            if let Some(hrtf) = state.hrtf_filter.as_mut() {
+                hrtf.update_from_relative_position(relative_pos, listener_forward, listener_up);
+                hrtf.calculate_ild()
+            } else {
+                // 回退到简化计算
+                let pan = (azimuth / std::f32::consts::FRAC_PI_2).clamp(-1.0, 1.0);
+                let left = ((1.0 - pan) / 2.0).sqrt();
+                let right = ((1.0 + pan) / 2.0).sqrt();
+                (left, right)
+            }
+        } else {
+            // 简化的立体声平移
+            let pan = (azimuth / std::f32::consts::FRAC_PI_2).clamp(-1.0, 1.0);
+            let left = ((1.0 - pan) / 2.0).sqrt();
+            let right = ((1.0 + pan) / 2.0).sqrt();
+            (left, right)
+        };
 
-        // 计算多普勒效果
+        // 计算多普勒效果（使用改进的多普勒计算器）
         let pitch = if source.doppler_factor > 0.0 {
-            Self::calculate_doppler(state, relative_pos, source_velocity, source.doppler_factor)
+            state.doppler_calculator.calculate_pitch_shift(
+                relative_pos,
+                source_velocity,
+                state.listener_velocity,
+            ) * source.doppler_factor + (1.0 - source.doppler_factor)
         } else {
             1.0
         };
@@ -462,28 +605,30 @@ impl SpatialAudioService {
         }
     }
 
-    /// 计算多普勒效果
-    fn calculate_doppler(
-        state: &SpatialAudioState,
-        relative_pos: Vec3,
-        source_velocity: Vec3,
-        doppler_factor: f32,
-    ) -> f32 {
-        let direction = relative_pos.normalize_or_zero();
+    /// 处理单声道音频为立体声（使用HRTF）
+    ///
+    /// # Arguments
+    /// * `state` - 空间音频状态
+    /// * `mono_samples` - 输入单声道音频样本
+    /// * `source_position` - 声源位置
+    ///
+    /// # Returns
+    /// (左声道样本, 右声道样本)
+    pub fn process_mono_with_hrtf(
+        state: &mut SpatialAudioState,
+        mono_samples: &[f32],
+        source_position: Vec3,
+    ) -> Option<(Vec<f32>, Vec<f32>)> {
+        if !state.enable_hrtf {
+            return None;
+        }
 
-        // 计算朝向监听器的相对速度
-        let listener_speed = state.listener_velocity.dot(direction);
-        let source_speed = source_velocity.dot(direction);
-
-        // 多普勒公式: f' = f * (c + v_listener) / (c + v_source)
-        let c = state.speed_of_sound;
-        let numerator = c + listener_speed * doppler_factor;
-        let denominator = c + source_speed * doppler_factor;
-
-        if denominator.abs() < 0.001 {
-            1.0 // 避免除零
+        if let Some(hrtf) = state.hrtf_filter.as_mut() {
+            let relative_pos = source_position - state.listener_position;
+            hrtf.update_from_relative_position(relative_pos, state.listener_forward, state.listener_up);
+            Some(hrtf.process_mono(mono_samples))
         } else {
-            (numerator / denominator).clamp(0.5, 2.0) // 限制音高范围
+            None
         }
     }
 
@@ -621,7 +766,7 @@ mod tests {
 
     #[test]
     fn test_spatial_params_calculation() {
-        let state = SpatialAudioState::new();
+        let mut state = SpatialAudioState::new();
         let source = SpatialAudioSource::new("test").with_volume(1.0).with_distance_model(
             DistanceModel::Inverse {
                 ref_distance: 1.0,
@@ -630,7 +775,7 @@ mod tests {
         );
 
         let params = SpatialAudioService::calculate_params(
-            &state,
+            &mut state,
             &source,
             Vec3::new(5.0, 0.0, 0.0), // 右侧 5 米
             Vec3::NEG_Z,

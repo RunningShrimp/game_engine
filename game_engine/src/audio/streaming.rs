@@ -512,7 +512,7 @@ impl AudioStreamLoader {
         self.next_stream_id += 1;
 
         // 异步初始化解码器
-        let mut stream = AudioStream::new(id, path, config.clone());
+        let stream = AudioStream::new(id, path, config.clone());
         
         // 在阻塞任务中初始化解码器（避免阻塞异步运行时）
         let stream_clone = Arc::new(Mutex::new(stream));
@@ -522,8 +522,7 @@ impl AudioStreamLoader {
             s.initialize_decoder()
         })
         .await
-        .map_err(|e| StreamingError::IoError(e.to_string()))?
-        .map_err(|e| e)?;
+        .map_err(|e| StreamingError::IoError(e.to_string()))??;
 
         self.streams.insert(id, stream_clone);
 
@@ -576,8 +575,7 @@ impl AudioStreamLoader {
 
         // 检查是否有错误
         for result in results {
-            result.map_err(|e| StreamingError::IoError(e.to_string()))?
-                .map_err(|e| e)?;
+            result.map_err(|e| StreamingError::IoError(e.to_string()))??;
         }
 
         Ok(())

@@ -4,11 +4,11 @@ use crate::ecs::{
     Transform,
 };
 use crate::physics::{ColliderDesc, RigidBodyDesc};
-use crate::platform::run_sync;
 use bevy_ecs::prelude::*;
 use glam::{Quat, Vec3};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use crate::platform::run_sync;
 
 /// 序列化的场景数据
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -124,24 +124,15 @@ pub enum SerializedComponent {
 /// 序列化的投影类型
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SerializedProjection {
-    /// 正交投影
     Orthographic {
-        /// 缩放比例
         scale: f32,
-        /// 近裁剪面距离
         near: f32,
-        /// 远裁剪面距离
         far: f32,
     },
-    /// 透视投影
     Perspective {
-        /// 视野角度
         fov: f32,
-        /// 宽高比
         aspect: f32,
-        /// 近裁剪面距离
         near: f32,
-        /// 远裁剪面距离
         far: f32,
     },
 }
@@ -149,22 +140,16 @@ pub enum SerializedProjection {
 /// 序列化的刚体类型
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SerializedRigidBodyType {
-    /// 动态刚体，受物理影响
     Dynamic,
-    /// 固定刚体，不受物理影响
     Fixed,
-    /// 基于位置的运动学刚体
     KinematicPositionBased,
-    /// 基于速度的运动学刚体
     KinematicVelocityBased,
 }
 
 /// 序列化的形状类型
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SerializedShapeType {
-    /// 立方体形状
     Cuboid,
-    /// 球体形状
     Ball,
 }
 
@@ -172,7 +157,6 @@ impl SerializedScene {
     /// 当前序列化版本
     pub const CURRENT_VERSION: u32 = 1;
 
-    /// 创建新的序列化场景
     pub fn new(name: impl Into<String>) -> Self {
         Self {
             name: name.into(),
@@ -371,7 +355,7 @@ impl SerializedScene {
             entity_map.insert(serialized_entity.id, entity);
 
             // 反序列化组件
-            for (_component_name, component_data) in &serialized_entity.components {
+            for component_data in serialized_entity.components.values() {
                 if let Ok(mut entity_mut) = world.get_entity_mut(entity) {
                     match component_data {
                         SerializedComponent::Transform {
@@ -548,8 +532,11 @@ impl SerializedScene {
     /// 清空场景中的所有实体
     pub fn clear_world(world: &mut World) {
         // 收集所有实体ID
-        let entities: Vec<Entity> =
-            world.query::<EntityRef>().iter(world).map(|e| e.id()).collect();
+        let entities: Vec<Entity> = world
+            .query::<EntityRef>()
+            .iter(world)
+            .map(|e| e.id())
+            .collect();
         // 删除所有实体
         for entity in entities {
             world.despawn(entity);
@@ -557,25 +544,18 @@ impl SerializedScene {
     }
 
     /// 保存场景到JSON文件（异步版本）
-    pub async fn save_to_file_async(
-        &self,
-        path: &str,
-    ) -> Result<(), Box<dyn std::error::Error + Send>> {
+    pub async fn save_to_file_async(&self, path: &str) -> Result<(), Box<dyn std::error::Error + Send>> {
         let json = serde_json::to_string_pretty(self)
             .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send>)?;
-        tokio::fs::write(path, json)
-            .await
-            .map_err(|e| Box::new(std::io::Error::from(e)) as Box<dyn std::error::Error + Send>)?;
+        tokio::fs::write(path, json).await
+            .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send>)?;
         Ok(())
     }
 
     /// 从JSON文件加载场景（异步版本）
-    pub async fn load_from_file_async(
-        path: &str,
-    ) -> Result<Self, Box<dyn std::error::Error + Send>> {
-        let json = tokio::fs::read_to_string(path)
-            .await
-            .map_err(|e| Box::new(std::io::Error::from(e)) as Box<dyn std::error::Error + Send>)?;
+    pub async fn load_from_file_async(path: &str) -> Result<Self, Box<dyn std::error::Error + Send>> {
+        let json = tokio::fs::read_to_string(path).await
+            .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send>)?;
         let scene = serde_json::from_str(&json)
             .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send>)?;
         Ok(scene)
@@ -585,13 +565,17 @@ impl SerializedScene {
     pub fn save_to_file(&self, path: &str) -> Result<(), Box<dyn std::error::Error + Send>> {
         let path_clone = path.to_string();
         let self_clone = self.clone();
-        run_sync(async move { self_clone.save_to_file_async(&path_clone).await })
+        run_sync(async move {
+            self_clone.save_to_file_async(&path_clone).await
+        })
     }
 
     /// 从JSON文件加载场景（同步版本，用于向后兼容）
     pub fn load_from_file(path: &str) -> Result<Self, Box<dyn std::error::Error + Send>> {
         let path_clone = path.to_string();
-        run_sync(async move { Self::load_from_file_async(&path_clone).await })
+        run_sync(async move {
+            Self::load_from_file_async(&path_clone).await
+        })
     }
 }
 

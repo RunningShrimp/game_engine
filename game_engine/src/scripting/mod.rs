@@ -41,7 +41,7 @@ pub use system::{ScriptContext, ScriptLanguage, ScriptResult, ScriptSystem, Scri
 use bevy_ecs::prelude::*;
 
 /// 脚本系统配置
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, bevy_ecs::prelude::Resource)]
 pub struct ScriptingConfig {
     /// 是否启用Lua脚本
     pub enable_lua: bool,
@@ -155,7 +155,7 @@ fn should_execute_script(script: &ScriptComponent, time: &crate::ecs::Time) -> b
         ScriptExecutionFrequency::FixedInterval(interval_ms) => {
             // 简化实现：使用elapsed时间的取模
             let elapsed_ms = (time.elapsed_seconds * 1000.0) as u64;
-            elapsed_ms % (interval_ms as u64).max(1) == 0
+            elapsed_ms.is_multiple_of(interval_ms.max(1))
         }
         ScriptExecutionFrequency::OnEvent => false, // 需要事件触发
     }

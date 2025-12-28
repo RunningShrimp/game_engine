@@ -9,12 +9,6 @@ pub struct Schedule {
 }
 
 impl Schedule {
-    pub fn default() -> Self {
-        Self {
-            systems: Vec::new(),
-        }
-    }
-
     pub fn add_system<F>(&mut self, system: F)
     where
         F: FnMut(&mut World) + Send + Sync + 'static,

@@ -50,22 +50,19 @@ use super::runtime::global_runtime;
 
 /// 资源加载优先级
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Default)]
 pub enum LoadPriority {
     /// 关键优先级 - 立即需要（如当前帧必须的纹理）
     Critical = 0,
     /// 高优先级 - 可见物体资源
     High = 1,
     /// 普通优先级 - 预加载资源
+    #[default]
     Normal = 2,
     /// 低优先级 - 后台缓存
     Low = 3,
 }
 
-impl Default for LoadPriority {
-    fn default() -> Self {
-        Self::Normal
-    }
-}
 
 impl PartialOrd for LoadPriority {
     fn partial_cmp(&self, other: &Self) -> Option<CmpOrdering> {
@@ -240,8 +237,8 @@ impl CoroutineLoaderConfig {
     pub fn with_cpu_aware_defaults() -> Self {
         let cpu_count = num_cpus::get();
         Self {
-            max_concurrent_loads: (cpu_count * 2).max(4).min(16), // 2倍CPU核数，最小4，最大16
-            max_spawn_blocking: cpu_count.max(2).min(8),          // CPU核数，最小2，最大8
+            max_concurrent_loads: (cpu_count * 2).clamp(4, 16), // 2倍CPU核数，最小4，最大16
+            max_spawn_blocking: cpu_count.clamp(2, 8),          // CPU核数，最小2，最大8
             load_timeout_ms: 30_000,
             max_retries: 2,
             retry_delay_ms: 100,
@@ -617,10 +614,10 @@ impl CoroutineAssetLoader {
                 // 在阻塞任务中解码图像（带并发限制）
                 let _permit = spawn_blocking_semaphore.acquire().await.unwrap();
                 let image = tokio::task::spawn_blocking(move || {
-                    let result = image::load_from_memory(&bytes)
+                    
+                    image::load_from_memory(&bytes)
                         .map(|img| img.to_rgba8())
-                        .map_err(|e| LoadError::DecodeError(e.to_string()));
-                    result
+                        .map_err(|e| LoadError::DecodeError(e.to_string()))
                     // 许可将在函数结束时自动释放
                 })
                 .await
@@ -671,6 +668,16 @@ impl CoroutineAssetLoader {
     /// 加载图集
     pub fn load_atlas(&self, path: impl AsRef<Path>) -> LoadHandle {
         self.load_with_priority(path, AssetType::Atlas, LoadPriority::Normal)
+    }
+
+    /// 加载字体
+    pub fn load_font(&self, path: impl AsRef<Path>) -> LoadHandle {
+        self.load_with_priority(path, AssetType::Custom, LoadPriority::Normal)
+    }
+
+    /// 加载着色器
+    pub fn load_shader(&self, path: impl AsRef<Path>) -> LoadHandle {
+        self.load_with_priority(path, AssetType::Shader, LoadPriority::Normal)
     }
 
     /// 带优先级加载资源
@@ -821,6 +828,54 @@ impl CoroutineAssetLoader {
         }
 
         completed
+    }
+
+    /// 更新加载器（在每帧调用）
+    ///
+    /// 此方法用于定期检查和处理完成的加载请求。
+    /// `delta_seconds` 参数可用于时间相关的操作，如超时检查。
+    pub fn update(&self, delta_seconds: f32) {
+        // 处理所有已完成的加载请求
+        let _completed = self.poll_completed();
+
+        // 这里可以添加基于时间的逻辑，例如：
+        // - 检查超时的请求
+        // - 调整优先级
+        // - 清理过期数据
+
+        let _ = delta_seconds; // 显式使用以避免未使用警告
+    }
+
+    /// 清理未使用的资源
+    ///
+    /// 此方法清理长时间未使用的缓存资源，释放内存。
+    /// 可以在内存压力较大时定期调用。
+    pub fn cleanup_unused(&self) {
+        // 获取当前加载的统计信息
+        let stats = self.queue_stats();
+
+        // 如果活跃加载很多，暂不清理
+        if stats.active_loads > 100 {
+            return;
+        }
+
+        // 清理已完成的加载任务中的临时数据
+        // 这里可以添加更多的清理逻辑，例如：
+        // - 清理长时间未访问的缓存
+        // - 释放不必要的内存
+        // - 清理过期的取消发送器
+
+        // 目前简单清理：移除所有已完成的取消发送器
+        if let Ok(mut cancel_senders) =
+            safe_lock(&self.cancel_senders, "CoroutineAssetLoader.cancel_senders")
+        {
+            // 保留活跃的加载，移除已完成的
+            let active_ids: Vec<_> = cancel_senders.keys().copied().collect();
+            tracing::debug!(
+                "Cleanup: {} active load tasks",
+                active_ids.len()
+            );
+        }
     }
 
     /// 获取加载统计

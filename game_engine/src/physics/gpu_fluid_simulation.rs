@@ -7,7 +7,8 @@
 //! - 粘性力计算
 //! - 表面张力
 
-use glam::Vec3;
+// glam::Vec3 未在此文件中使用，但可能在未来需要，保留注释说明
+// use glam::Vec3;
 use std::sync::Arc;
 use wgpu::util::DeviceExt;
 
@@ -161,6 +162,8 @@ impl GpuFluidSimulator {
             layout: Some(&pipeline_layout),
             module: &shader,
             entry_point: Some("main"),
+            cache: None,
+            compilation_options: wgpu::PipelineCompilationOptions::default(),
         })
     }
 
@@ -209,6 +212,8 @@ impl GpuFluidSimulator {
             layout: Some(&pipeline_layout),
             module: &shader,
             entry_point: Some("main"),
+            cache: None,
+            compilation_options: wgpu::PipelineCompilationOptions::default(),
         })
     }
 
@@ -257,6 +262,8 @@ impl GpuFluidSimulator {
             layout: Some(&pipeline_layout),
             module: &shader,
             entry_point: Some("main"),
+            cache: None,
+            compilation_options: wgpu::PipelineCompilationOptions::default(),
         })
     }
 
@@ -305,6 +312,8 @@ impl GpuFluidSimulator {
             layout: Some(&pipeline_layout),
             module: &shader,
             entry_point: Some("main"),
+            cache: None,
+            compilation_options: wgpu::PipelineCompilationOptions::default(),
         })
     }
 
@@ -379,11 +388,12 @@ impl GpuFluidSimulator {
 
             let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: Some("Fluid Density Pass"),
+                timestamp_writes: None,
             });
             cpass.set_pipeline(pipeline);
             cpass.set_bind_group(0, &bind_group, &[]);
             cpass.dispatch_workgroups(
-                (particles.len() as u32 + self.config.workgroup_size - 1) / self.config.workgroup_size,
+                (particles.len() as u32).div_ceil(self.config.workgroup_size),
                 1,
                 1,
             );
@@ -408,11 +418,12 @@ impl GpuFluidSimulator {
 
             let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: Some("Fluid Pressure Pass"),
+                timestamp_writes: None,
             });
             cpass.set_pipeline(pipeline);
             cpass.set_bind_group(0, &bind_group, &[]);
             cpass.dispatch_workgroups(
-                (particles.len() as u32 + self.config.workgroup_size - 1) / self.config.workgroup_size,
+                (particles.len() as u32).div_ceil(self.config.workgroup_size),
                 1,
                 1,
             );
@@ -437,11 +448,12 @@ impl GpuFluidSimulator {
 
             let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: Some("Fluid Force Pass"),
+                timestamp_writes: None,
             });
             cpass.set_pipeline(pipeline);
             cpass.set_bind_group(0, &bind_group, &[]);
             cpass.dispatch_workgroups(
-                (particles.len() as u32 + self.config.workgroup_size - 1) / self.config.workgroup_size,
+                (particles.len() as u32).div_ceil(self.config.workgroup_size),
                 1,
                 1,
             );
@@ -466,11 +478,12 @@ impl GpuFluidSimulator {
 
             let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: Some("Fluid Update Pass"),
+                timestamp_writes: None,
             });
             cpass.set_pipeline(pipeline);
             cpass.set_bind_group(0, &bind_group, &[]);
             cpass.dispatch_workgroups(
-                (particles.len() as u32 + self.config.workgroup_size - 1) / self.config.workgroup_size,
+                (particles.len() as u32).div_ceil(self.config.workgroup_size),
                 1,
                 1,
             );

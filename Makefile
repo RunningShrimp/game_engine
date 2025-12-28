@@ -1,6 +1,6 @@
 # Makefile for game_engine project
 
-.PHONY: help test test-all coverage coverage-html coverage-clean benchmark lint format check
+.PHONY: help test test-all coverage coverage-html coverage-clean coverage-baseline benchmark lint format check
 
 help: ## 显示帮助信息
 	@echo "游戏引擎 Makefile 命令:"
@@ -12,6 +12,7 @@ help: ## 显示帮助信息
 	@echo "覆盖率相关:"
 	@echo "  make coverage           - 生成代码覆盖率报告(Lcov格式)"
 	@echo "  make coverage-html       - 生成HTML格式的代码覆盖率报告"
+	@echo "  make coverage-baseline   - 建立代码覆盖率基线"
 	@echo "  make coverage-clean      - 清理覆盖率数据"
 	@echo ""
 	@echo "基准测试:"
@@ -40,6 +41,9 @@ coverage: ## 生成代码覆盖率报告
 
 coverage-html: ## 生成HTML格式的代码覆盖率报告
 	@./scripts/coverage.sh --html
+
+coverage-baseline: ## 建立代码覆盖率基线
+	@./scripts/establish_coverage_baseline.sh
 
 coverage-clean: ## 清理覆盖率数据
 	@./scripts/coverage.sh --clean

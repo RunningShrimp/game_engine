@@ -210,7 +210,7 @@ impl BloomPass {
     /// 计算 mip 级别数量
     fn calculate_mip_count(width: u32, height: u32) -> u32 {
         let min_dim = width.min(height) as f32;
-        ((min_dim.log2()).floor() as u32).min(6).max(1)
+        ((min_dim.log2()).floor() as u32).clamp(1, 6)
     }
 
     /// 创建 mip 纹理链

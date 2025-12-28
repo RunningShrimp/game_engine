@@ -339,8 +339,8 @@ impl XrRenderer {
             compute_pass.set_bind_group(0, &bind_group, &[]);
 
             let workgroup_size = 8;
-            let workgroup_count_x = (resolution.0 + workgroup_size - 1) / workgroup_size;
-            let workgroup_count_y = (resolution.1 + workgroup_size - 1) / workgroup_size;
+            let workgroup_count_x = resolution.0.div_ceil(workgroup_size);
+            let workgroup_count_y = resolution.1.div_ceil(workgroup_size);
 
             compute_pass.dispatch_workgroups(workgroup_count_x, workgroup_count_y, 1);
         }
@@ -474,8 +474,8 @@ impl XrRenderer {
             compute_pass.set_bind_group(0, &bind_group, &[]);
 
             let workgroup_size = 8;
-            let workgroup_count_x = (resolution.0 + workgroup_size - 1) / workgroup_size;
-            let workgroup_count_y = (resolution.1 + workgroup_size - 1) / workgroup_size;
+            let workgroup_count_x = resolution.0.div_ceil(workgroup_size);
+            let workgroup_count_y = resolution.1.div_ceil(workgroup_size);
 
             compute_pass.dispatch_workgroups(workgroup_count_x, workgroup_count_y, 1);
         }

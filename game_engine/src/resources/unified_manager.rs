@@ -14,6 +14,55 @@ use tokio::sync::Mutex;
 ///
 /// 管理所有类型的资源，提供统一的加载、缓存和管理接口。
 /// 支持资源依赖管理、自动依赖加载和正确的加载顺序。
+///
+/// # 核心功能
+///
+/// - **资源缓存**: 已加载的资源存储在内存中，避免重复加载
+/// - **依赖管理**: 自动处理资源之间的依赖关系
+/// - **异步加载**: 支持异步资源加载，不阻塞主线程
+/// - **类型安全**: 使用泛型确保资源类型安全
+///
+/// # 使用流程
+///
+/// 1. 创建管理器实例
+/// 2. 注册资源加载器（`register_loader`）
+/// 3. 设置资源依赖关系（`add_dependency`）
+/// 4. 加载资源（`load`）
+///
+/// # 示例
+///
+/// ```rust,no_run
+/// use game_engine::resources::UnifiedResourceManager;
+/// use game_engine::resources::{TextureLoader, ModelLoader};
+///
+/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// let manager = UnifiedResourceManager::new();
+///
+/// // 注册加载器
+/// manager.register_loader("texture", TextureLoader::new());
+/// manager.register_loader("model", ModelLoader::new());
+///
+/// // 加载纹理
+/// let texture = manager.load(
+///     std::path::Path::new("assets/player.png"),
+///     "texture"
+/// ).await?;
+///
+/// // 加载模型
+/// let model = manager.load(
+///     std::path::Path::new("assets/character.gltf"),
+///     "model"
+/// ).await?;
+/// # Ok(())
+/// # }
+/// ```
+///
+/// # 依赖管理
+///
+/// 资源可能依赖其他资源（如模型依赖纹理），管理器会自动：
+/// - 检测循环依赖
+/// - 按正确顺序加载依赖
+/// - 确保依赖在父资源之前加载完成
 pub struct UnifiedResourceManager {
     /// 资源缓存
     cache: Arc<RwLock<HashMap<PathBuf, Arc<dyn Resource + Send + Sync>>>>,

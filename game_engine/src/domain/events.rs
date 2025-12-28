@@ -382,7 +382,7 @@ impl Clone for AggregateEventQueue {
 }
 
 /// 场景相关领域事件示例
-
+///
 /// 场景加载事件
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SceneLoadedEvent {

@@ -138,12 +138,11 @@ impl CurveEditor {
                 self.curve.add_control_point(0.5, 0.5);
             }
 
-            if ui.button("Remove Point").clicked() {
-                if let Some(index) = self.selected_point {
+            if ui.button("Remove Point").clicked()
+                && let Some(index) = self.selected_point {
                     self.curve.remove_control_point(index);
                     self.selected_point = None;
                 }
-            }
 
             ui.separator();
 
@@ -241,8 +240,8 @@ impl CurveEditor {
         ui.separator();
 
         // 控制点属性编辑
-        if let Some(index) = self.selected_point {
-            if let Some(point) = self.curve.control_points.get_mut(index) {
+        if let Some(index) = self.selected_point
+            && let Some(point) = self.curve.control_points.get_mut(index) {
                 ui.label(format!("Control Point {}", index));
 
                 ui.horizontal(|ui| {
@@ -275,7 +274,6 @@ impl CurveEditor {
                     );
                 });
             }
-        }
     }
 }
 

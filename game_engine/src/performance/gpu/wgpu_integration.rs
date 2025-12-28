@@ -77,6 +77,12 @@ impl GPUComputeDevice {
     }
 }
 
+impl Default for GPUComputeDevice {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// WGSL 着色器源代码
 #[derive(Debug, Clone)]
 pub struct WGSLShader {
@@ -367,7 +373,7 @@ impl ComputePipelineWGPU {
         }
 
         // 验证绑定
-        for (_binding, buffer) in &self.buffers {
+        for buffer in self.buffers.values() {
             if buffer.size > device.get_max_buffer_size() {
                 return Err(format!("缓冲区 {} 大小超过最大值", buffer.name));
             }
@@ -671,21 +677,17 @@ impl GPUProfiler {
         // 简化实现：基于时间查询检测瓶颈
         // 实际实现应该分析各个阶段的GPU时间
 
-        if let Some(vertex_time) = self.time_queries.get("vertex_processing") {
-            if let Some(time) = vertex_time.last_time_ms() {
-                if time > 5.0 {
+        if let Some(vertex_time) = self.time_queries.get("vertex_processing")
+            && let Some(time) = vertex_time.last_time_ms()
+                && time > 5.0 {
                     return PipelineBottleneck::VertexProcessing;
                 }
-            }
-        }
 
-        if let Some(fragment_time) = self.time_queries.get("fragment_processing") {
-            if let Some(time) = fragment_time.last_time_ms() {
-                if time > 5.0 {
+        if let Some(fragment_time) = self.time_queries.get("fragment_processing")
+            && let Some(time) = fragment_time.last_time_ms()
+                && time > 5.0 {
                     return PipelineBottleneck::FragmentProcessing;
                 }
-            }
-        }
 
         PipelineBottleneck::None
     }

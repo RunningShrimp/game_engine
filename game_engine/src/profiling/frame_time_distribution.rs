@@ -308,9 +308,9 @@ impl FrameTimeDistribution {
 
             for bin in &histogram.bins {
                 if bin.count >= threshold {
-                    output.push_str("█");
+                    output.push('█');
                 } else {
-                    output.push_str(" ");
+                    output.push(' ');
                 }
             }
             output.push('\n');

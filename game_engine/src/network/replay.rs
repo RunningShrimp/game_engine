@@ -174,7 +174,7 @@ impl ReplayRecorder {
         self.frames.push_back(frame);
 
         // 检查是否需要创建快照
-        if tick % self.config.snapshot_interval == 0 {
+        if tick.is_multiple_of(self.config.snapshot_interval) {
             self.create_snapshot(tick);
         }
     }
@@ -347,6 +347,16 @@ impl ReplayPlayer {
         })
     }
 
+    /// 获取回放配置
+    pub fn get_config(&self) -> &ReplayConfig {
+        &self.config
+    }
+
+    /// 设置回放配置
+    pub fn set_config(&mut self, config: ReplayConfig) {
+        self.config = config;
+    }
+
     /// 开始播放
     pub fn start_playback(&mut self) {
         self.is_playing = true;
@@ -439,7 +449,7 @@ impl ReplayPlayer {
 
     /// 设置播放速度
     pub fn set_playback_speed(&mut self, speed: f32) {
-        self.playback_speed = speed.max(0.0).min(10.0);
+        self.playback_speed = speed.clamp(0.0, 10.0);
     }
 
     /// 设置循环播放

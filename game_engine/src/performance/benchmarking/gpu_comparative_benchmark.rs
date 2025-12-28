@@ -78,9 +78,8 @@ impl PerformanceBenchmark {
         for _ in 0..self.iterations {
             for i in 0..self.data_size {
                 let pos_i = positions[i];
-                for j in (i + 1)..self.data_size {
-                    let pos_j = positions[j];
-                    let delta = pos_i - pos_j;
+                for pos_j in &positions[(i + 1)..] {
+                    let delta = pos_i - *pos_j;
                     if delta.length() < collision_radius {
                         let _ = true; // Collision detected
                     }
@@ -189,7 +188,7 @@ impl PerformanceBenchmark {
 
         for _ in 0..self.iterations {
             for _ in 0..self.data_size {
-                result = result * m;
+                result *= m;
             }
         }
 
@@ -433,6 +432,12 @@ impl GPUComparativeBenchmarkSuite {
         ));
 
         report
+    }
+}
+
+impl Default for GPUComparativeBenchmarkSuite {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

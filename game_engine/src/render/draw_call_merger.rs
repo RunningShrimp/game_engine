@@ -8,7 +8,6 @@
 
 use crate::render::batch_optimizer::{BatchOptimizer, OptimizedBatch};
 use crate::render::instance_batch::BatchKey;
-use std::collections::HashMap;
 use std::time::Instant;
 
 /// Draw Call合并配置
@@ -70,6 +69,25 @@ impl DrawCallMerger {
             config,
             optimizer,
             merge_stats: MergeStats::default(),
+        }
+    }
+
+    /// 创建批次键（用于测试和调试）
+    pub fn create_batch_key(
+        mesh_id: u64,
+        material_id: u64,
+        pipeline_id: u32,
+        blend_mode: u8,
+        depth_test: bool,
+        render_flags: u32,
+    ) -> BatchKey {
+        BatchKey {
+            mesh_id,
+            material_id,
+            pipeline_id,
+            blend_mode,
+            depth_test,
+            render_flags: render_flags as u16,
         }
     }
 
@@ -206,7 +224,7 @@ impl SceneTraversalOptimizer {
     /// 优化场景遍历和draw call合并
     pub fn optimize(
         &mut self,
-        world: &bevy_ecs::world::World,
+        world: &mut bevy_ecs::world::World,
         view_proj: Option<[[f32; 4]; 4]>,
     ) -> OptimizedSceneResult {
         // 1. 遍历场景
@@ -245,7 +263,8 @@ pub use crate::render::scene_traversal::{
 };
 pub use crate::render::gpu_driven::GpuInstance;
 
-use bevy_ecs::prelude::*;
+// bevy_ecs::prelude 未在此文件中使用，但可能在未来需要
+// use bevy_ecs::prelude::*;
 
 #[cfg(test)]
 mod tests {

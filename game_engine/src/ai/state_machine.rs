@@ -62,6 +62,12 @@ impl WalkingState {
     }
 }
 
+impl Default for WalkingState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl State for WalkingState {
     fn enter(&mut self) {
         tracing::debug!(target: "ai", "Entering walking state");
@@ -133,5 +139,11 @@ impl StateMachine {
                 self.current_state = Some(current);
             }
         }
+    }
+}
+
+impl Default for StateMachine {
+    fn default() -> Self {
+        Self::new()
     }
 }

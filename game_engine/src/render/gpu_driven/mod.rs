@@ -190,8 +190,8 @@ impl GpuDrivenRenderer {
         // 如果启用遮挡剔除，创建Hi-Z剔除器
         let occlusion_culler = if config.occlusion_culling {
             Some(HierarchicalZCulling::new(
-                config.max_instances as u32, // 使用最大实例数作为参考分辨率
-                config.max_instances as u32,
+                config.max_instances, // 使用最大实例数作为参考分辨率
+                config.max_instances,
             ))
         } else {
             None
@@ -484,11 +484,10 @@ impl GpuDrivenRenderer {
         device: &wgpu::Device,
         depth_texture: &wgpu::Texture,
     ) -> Result<(), crate::render::occlusion_culling::OcclusionError> {
-        if let Some(ref occluder) = self.occlusion_culler {
-            if occluder.is_initialized() {
+        if let Some(ref occluder) = self.occlusion_culler
+            && occluder.is_initialized() {
                 occluder.build_hi_z(encoder, device, depth_texture)?;
             }
-        }
         Ok(())
     }
 
@@ -512,11 +511,10 @@ impl GpuDrivenRenderer {
         view_proj: glam::Mat4,
         screen_size: (u32, u32),
     ) -> Result<(), crate::render::occlusion_culling::OcclusionError> {
-        if let Some(ref mut occluder) = self.occlusion_culler {
-            if occluder.is_initialized() {
+        if let Some(ref mut occluder) = self.occlusion_culler
+            && occluder.is_initialized() {
                 occluder.query_occlusion_async(encoder, device, queries, view_proj, screen_size)?;
             }
-        }
         Ok(())
     }
 

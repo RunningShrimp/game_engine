@@ -549,7 +549,7 @@ impl GPUPhysicsSimulator {
 
             // 计算工作组数量
             let workgroups =
-                (body_count + self.config.workgroup_size - 1) / self.config.workgroup_size;
+                body_count.div_ceil(self.config.workgroup_size);
             compute_pass.dispatch_workgroups(workgroups, 1, 1);
         }
 

@@ -269,6 +269,7 @@ impl Default for DirtyTrackingConfig {
 ///
 /// 全局配置和状态管理
 #[derive(Resource, Debug)]
+#[derive(Default)]
 pub struct DirtyTrackingResource {
     /// 配置
     pub config: DirtyTrackingConfig,
@@ -276,14 +277,6 @@ pub struct DirtyTrackingResource {
     pub current_frame: u64,
 }
 
-impl Default for DirtyTrackingResource {
-    fn default() -> Self {
-        Self {
-            config: DirtyTrackingConfig::default(),
-            current_frame: 0,
-        }
-    }
-}
 
 impl DirtyTrackingResource {
     /// 创建新的脏跟踪资源

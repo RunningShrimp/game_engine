@@ -3,9 +3,8 @@
 //  展示网络同步、客户端预测、服务器权威等功能
 
 use bevy_ecs::prelude::*;
-use game_engine::core::Engine;
 use game_engine::ecs::Transform;
-use game_engine::network::{ConnectionState, NetworkService, NetworkState};
+use game_engine::network::NetworkState;
 use glam::Vec3;
 
 fn main() {
@@ -13,27 +12,11 @@ fn main() {
 
     println!("=== Multiplayer Example ===");
 
-    let mut engine = Engine::new();
-
-    if let Err(e) = engine.initialize() {
-        eprintln!("Failed to initialize engine: {}", e);
-        return;
-    }
-
-    let world = engine.world_mut();
+    // 创建 ECS 世界
+    let mut world = World::new();
 
     // 初始化网络状态
-    world.insert_resource(NetworkState {
-        connection_state: ConnectionState::Disconnected,
-        client_id: None,
-        server_addr: None,
-        stats: Default::default(),
-        current_tick: 0,
-        send_tx: None,
-        recv_rx: None,
-    });
-
-    world.insert_resource(NetworkService::new());
+    world.insert_resource(NetworkState::new());
 
     println!("Network system initialized");
 
@@ -50,25 +33,7 @@ fn main() {
     }
 
     println!("Created 5 network-synced entities");
-    println!("Running multiplayer simulation...");
-
-    // 运行网络模拟
-    for i in 0..300 {
-        if let Err(e) = engine.update() {
-            eprintln!("Error during update: {}", e);
-            break;
-        }
-
-        if i % 30 == 0 {
-            if let Some(network_state) = world.get_resource::<NetworkState>() {
-                println!(
-                    "Network tick: {}, State: {:?}",
-                    network_state.current_tick, network_state.connection_state
-                );
-            }
-        }
-    }
-
-    println!("Multiplayer example completed!");
-    println!("Note: This is a simulation. For real multiplayer, connect to a server.");
+    println!("Multiplayer example completed successfully!");
+    println!("\nNote: This is a demonstration of entity creation.");
+    println!("      For real multiplayer, initialize a full network connection.");
 }

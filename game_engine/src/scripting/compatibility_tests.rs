@@ -222,7 +222,7 @@ mod tests {
     /// 测试ScriptSystem的多语言支持
     #[test]
     fn test_script_system_multilanguage_support() {
-        let mut system = ScriptSystem::new();
+        let system = ScriptSystem::new();
 
         // 注册所有支持的脚本语言
         system.register_context(ScriptLanguage::Lua, Box::new(LuaContext::new()));

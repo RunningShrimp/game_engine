@@ -83,13 +83,13 @@ impl ScriptSystem {
 
     /// 注册脚本上下文
     pub fn register_context(&self, language: ScriptLanguage, context: Box<dyn ScriptContext>) {
-        let mut contexts = safe_lock(&self.contexts, "ScriptSystem.contexts").unwrap();
+        let mut contexts = safe_lock(&self.contexts, "ScriptSystem.contexts").expect("Failed to acquire contexts lock");
         contexts.insert(language, context);
     }
 
     /// 执行脚本
     pub fn execute(&self, language: ScriptLanguage, code: &str) -> ScriptResult {
-        let mut contexts = safe_lock(&self.contexts, "ScriptSystem.contexts").unwrap();
+        let mut contexts = safe_lock(&self.contexts, "ScriptSystem.contexts").expect("Failed to acquire contexts lock");
         if let Some(context) = contexts.get_mut(&language) {
             context.execute(code)
         } else {
@@ -114,7 +114,7 @@ impl ScriptSystem {
         name: &str,
         args: &[ScriptValue],
     ) -> ScriptResult {
-        let mut contexts = safe_lock(&self.contexts, "ScriptSystem.contexts").unwrap();
+        let mut contexts = safe_lock(&self.contexts, "ScriptSystem.contexts").expect("Failed to acquire contexts lock");
         if let Some(context) = contexts.get_mut(&language) {
             context.call_function(name, args)
         } else {
@@ -129,7 +129,7 @@ impl ScriptSystem {
         name: &str,
         value: ScriptValue,
     ) -> ScriptResult {
-        let mut contexts = safe_lock(&self.contexts, "ScriptSystem.contexts").unwrap();
+        let mut contexts = safe_lock(&self.contexts, "ScriptSystem.contexts").expect("Failed to acquire contexts lock");
         if let Some(context) = contexts.get_mut(&language) {
             context.set_global(name, value)
         } else {
@@ -139,7 +139,7 @@ impl ScriptSystem {
 
     /// 获取全局变量
     pub fn get_global(&self, language: ScriptLanguage, name: &str) -> Option<ScriptValue> {
-        let contexts = safe_lock(&self.contexts, "ScriptSystem.contexts").unwrap();
+        let contexts = safe_lock(&self.contexts, "ScriptSystem.contexts").expect("Failed to acquire contexts lock");
         contexts.get(&language).and_then(|ctx| ctx.get_global(name))
     }
 }

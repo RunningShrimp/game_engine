@@ -8,6 +8,7 @@
 
 use crate::resources::coroutine_loader::{AssetType, CoroutineAssetLoader, LoadPriority};
 use crate::resources::dependency_manager::DependencyGraph;
+use crate::error::lock_safety::{safe_write, safe_read};
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
@@ -189,13 +190,15 @@ impl PreloadManager {
 
         // 添加到请求队列
         {
-            let mut queue = self.request_queue.write().unwrap();
+            let mut queue = safe_write(&self.request_queue, "request_queue")
+                .expect("Failed to acquire request_queue lock");
             queue.push(request);
         }
 
         // 更新状态
         {
-            let mut status_map = self.status_map.write().unwrap();
+            let mut status_map = safe_write(&self.status_map, "status_map")
+                .expect("Failed to acquire status_map lock");
             status_map.insert(
                 path.clone(),
                 PreloadStatus {
@@ -210,7 +213,8 @@ impl PreloadManager {
 
         // 更新统计
         {
-            let mut stats = self.stats.write().unwrap();
+            let mut stats = safe_write(&self.stats, "stats")
+                .expect("Failed to acquire stats lock");
             stats.total_requests += 1;
         }
     }
@@ -271,9 +275,12 @@ impl PreloadManager {
     ///
     /// * `loader` - 资源加载器
     pub fn update(&self, _loader: &mut CoroutineAssetLoader) {
-        let mut queue = self.request_queue.write().unwrap();
-        let mut loading_set = self.loading_set.write().unwrap();
-        let mut status_map = self.status_map.write().unwrap();
+        let mut queue = safe_write(&self.request_queue, "request_queue")
+            .expect("Failed to acquire request_queue lock");
+        let mut loading_set = safe_write(&self.loading_set, "loading_set")
+            .expect("Failed to acquire loading_set lock");
+        let mut status_map = safe_write(&self.status_map, "status_map")
+            .expect("Failed to acquire status_map lock");
 
         // 按优先级和策略排序
         queue.sort_by(|a, b| match a.strategy.cmp(&b.strategy) {
@@ -291,7 +298,8 @@ impl PreloadManager {
 
                 // 检查依赖是否已加载（如果启用）
                 if self.config.preload_dependencies {
-                    let graph = self.dependency_graph.read().unwrap();
+                    let graph = safe_read(&self.dependency_graph, "dependency_graph")
+                        .expect("Failed to acquire dependency_graph lock");
                     if !graph.can_load(&request.path) {
                         // 依赖未就绪，放回队列
                         queue.push(request);
@@ -316,9 +324,12 @@ impl PreloadManager {
 
     /// 标记预加载完成
     pub fn mark_completed(&self, path: &PathBuf, success: bool) {
-        let mut loading_set = self.loading_set.write().unwrap();
-        let mut status_map = self.status_map.write().unwrap();
-        let mut stats = self.stats.write().unwrap();
+        let mut loading_set = safe_write(&self.loading_set, "loading_set")
+            .expect("Failed to acquire loading_set lock");
+        let mut status_map = safe_write(&self.status_map, "status_map")
+            .expect("Failed to acquire status_map lock");
+        let mut stats = safe_write(&self.stats, "stats")
+            .expect("Failed to acquire stats lock");
 
         loading_set.remove(path);
 
@@ -345,7 +356,8 @@ impl PreloadManager {
 
         // 更新依赖图状态
         {
-            let mut graph = self.dependency_graph.write().unwrap();
+            let mut graph = safe_write(&self.dependency_graph, "dependency_graph")
+                .expect("Failed to acquire dependency_graph lock");
             graph.set_load_state(
                 path,
                 if success {
@@ -359,9 +371,12 @@ impl PreloadManager {
 
     /// 取消预加载
     pub fn cancel_preload(&self, path: &PathBuf) {
-        let mut loading_set = self.loading_set.write().unwrap();
-        let mut status_map = self.status_map.write().unwrap();
-        let mut stats = self.stats.write().unwrap();
+        let mut loading_set = safe_write(&self.loading_set, "loading_set")
+            .expect("Failed to acquire loading_set lock");
+        let mut status_map = safe_write(&self.status_map, "status_map")
+            .expect("Failed to acquire status_map lock");
+        let mut stats = safe_write(&self.stats, "stats")
+            .expect("Failed to acquire stats lock");
 
         loading_set.remove(path);
 
@@ -373,12 +388,16 @@ impl PreloadManager {
 
     /// 获取预加载状态
     pub fn get_status(&self, path: &PathBuf) -> Option<PreloadStatus> {
-        self.status_map.read().unwrap().get(path).cloned()
+        let status_map = safe_read(&self.status_map, "status_map")
+            .expect("Failed to acquire status_map lock");
+        status_map.get(path).cloned()
     }
 
     /// 获取统计信息
     pub fn stats(&self) -> PreloadStats {
-        self.stats.read().unwrap().clone()
+        let stats = safe_read(&self.stats, "stats")
+            .expect("Failed to acquire stats lock");
+        stats.clone()
     }
 
     /// 获取依赖图（用于外部添加依赖关系）
@@ -388,9 +407,15 @@ impl PreloadManager {
 
     /// 清除所有预加载请求
     pub fn clear(&self) {
-        self.request_queue.write().unwrap().clear();
-        self.status_map.write().unwrap().clear();
-        self.loading_set.write().unwrap().clear();
+        safe_write(&self.request_queue, "request_queue")
+            .expect("Failed to acquire request_queue lock")
+            .clear();
+        safe_write(&self.status_map, "status_map")
+            .expect("Failed to acquire status_map lock")
+            .clear();
+        safe_write(&self.loading_set, "loading_set")
+            .expect("Failed to acquire loading_set lock")
+            .clear();
     }
 }
 

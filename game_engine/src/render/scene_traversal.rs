@@ -7,11 +7,10 @@
 //! - 增量更新支持
 
 use bevy_ecs::prelude::*;
-use glam::{Mat4, Vec3};
+use glam::Mat4;
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 use std::collections::HashMap;
-use std::sync::Arc;
 
 use crate::ecs::Transform;
 use crate::render::batch_optimizer::{BatchOptimizer, OptimizedBatch};
@@ -94,7 +93,7 @@ impl OptimizedSceneTraverser {
     /// 场景遍历结果，包含优化的批次和GPU实例数据
     pub fn traverse_scene(
         &mut self,
-        world: &bevy_ecs::world::World,
+        world: &mut bevy_ecs::world::World,
         view_proj: Option<[[f32; 4]; 4]>,
     ) -> SceneTraversalResult {
         let start = std::time::Instant::now();
@@ -132,47 +131,49 @@ impl OptimizedSceneTraverser {
     /// 收集实体数据
     fn collect_entities(
         &self,
-        world: &bevy_ecs::world::World,
+        world: &mut bevy_ecs::world::World,
         _view_proj: Option<[[f32; 4]; 4]>,
     ) -> Vec<EntityData> {
         // 查询所有需要渲染的实体
-        let query = world.query::<(Entity, &Transform, &Mesh3DRenderer)>();
+        // 注意：使用 WorldQuery 而不是直接调用 query()
+        let entities: Vec<EntityData> = world
+            .query::<(Entity, &Transform, &Mesh3DRenderer)>()
+            .iter(world)
+            .map(|(entity, transform, renderer)| {
+                EntityData {
+                    entity,
+                    transform: *transform,
+                    renderer: renderer.clone(),
+                }
+            })
+            .collect();
 
-        #[cfg(feature = "parallel")]
-        if self.config.parallel_traversal {
-            // 并行遍历（需要rayon特性）
-            query
-                .par_iter(world)
-                .map(|(entity, transform, renderer)| EntityData {
-                    entity,
-                    transform: *transform,
-                    renderer: Arc::new(renderer.clone()),
-                })
-                .collect()
-        } else {
-            // 串行遍历
-            query
-                .iter(world)
-                .map(|(entity, transform, renderer)| EntityData {
-                    entity,
-                    transform: *transform,
-                    renderer: Arc::new(renderer.clone()),
-                })
-                .collect()
-        }
+        entities
+    }
 
-        #[cfg(not(feature = "parallel"))]
-        {
-            // 串行遍历（无并行特性时）
-            query
-                .iter(world)
-                .map(|(entity, transform, renderer)| EntityData {
+    /// 并行收集实体数据（当启用parallel特性时）
+    #[cfg(feature = "parallel")]
+    fn collect_entities_parallel(
+        &self,
+        world: &mut bevy_ecs::world::World,
+        _view_proj: Option<[[f32; 4]; 4]>,
+    ) -> Vec<EntityData> {
+        // 查询所有需要渲染的实体
+        let entities: Vec<EntityData> = world
+            .query::<(Entity, &Transform, &Mesh3DRenderer)>()
+            .iter(world)
+            .collect::<Vec<_>>()
+            .into_par_iter()
+            .map(|(entity, transform, renderer)| {
+                EntityData {
                     entity,
                     transform: *transform,
-                    renderer: Arc::new(renderer.clone()),
-                })
-                .collect()
-        }
+                    renderer: renderer.clone(),
+                }
+            })
+            .collect();
+
+        entities
     }
 
     /// 创建批次
@@ -182,7 +183,7 @@ impl OptimizedSceneTraverser {
 
         for entity in entities {
             let key = entity.renderer.batch_key();
-            batch_map.entry(key).or_default().push(entity);
+            batch_map.entry(key).or_default().push(entity.clone());
         }
 
         // 转换为OptimizedBatch
@@ -232,6 +233,7 @@ impl OptimizedSceneTraverser {
                     model: model_matrix.to_cols_array_2d(),
                     aabb_min: [aabb_min.x, aabb_min.y, aabb_min.z],
                     aabb_max: [aabb_max.x, aabb_max.y, aabb_max.z],
+                    flags: 0,
                 }
             })
             .collect()
@@ -243,7 +245,7 @@ impl OptimizedSceneTraverser {
 struct EntityData {
     entity: Entity,
     transform: Transform,
-    renderer: Arc<Mesh3DRenderer>,
+    renderer: Mesh3DRenderer,
 }
 
 /// 增量场景更新器
@@ -274,40 +276,48 @@ impl IncrementalSceneUpdater {
     }
 
     /// 检测变化的实体
-    pub fn detect_changes(&mut self, world: &bevy_ecs::world::World) -> Vec<Entity> {
+    pub fn detect_changes(&mut self, world: &mut bevy_ecs::world::World) -> Vec<Entity> {
         let mut changed = Vec::new();
-        let query = world.query::<(Entity, &Transform, &Mesh3DRenderer)>();
-
-        for (entity, transform, renderer) in query.iter(world) {
-            let current_snapshot = EntitySnapshot {
-                transform: *transform,
-                mesh_id: renderer.mesh_id,
-                material_id: renderer.material_id,
-            };
-
-            // 检查是否变化
-            if let Some(prev) = self.previous_entities.get(&entity) {
+        
+        // 先收集所有当前实体快照
+        // 注意：使用 query_mut 避免借用问题
+        let current_snapshots: Vec<(Entity, EntitySnapshot)> = world
+            .query::<(Entity, &Transform, &Mesh3DRenderer)>()
+            .iter(world)
+            .map(|(entity, transform, renderer)| {
+                let snapshot = EntitySnapshot {
+                    transform: *transform,
+                    mesh_id: renderer.mesh_id,
+                    material_id: renderer.material_id,
+                };
+                (entity, snapshot)
+            })
+            .collect();
+        
+        // 检查变化
+        for (entity, current_snapshot) in &current_snapshots {
+            if let Some(prev) = self.previous_entities.get(entity) {
                 if prev.transform != current_snapshot.transform
                     || prev.mesh_id != current_snapshot.mesh_id
                     || prev.material_id != current_snapshot.material_id
                 {
-                    changed.push(entity);
-                    self.dirty_entities.insert(entity);
+                    changed.push(*entity);
+                    self.dirty_entities.insert(*entity);
                 }
             } else {
                 // 新实体
-                changed.push(entity);
-                self.dirty_entities.insert(entity);
+                changed.push(*entity);
+                self.dirty_entities.insert(*entity);
             }
-
+            
             // 更新快照
-            self.previous_entities.insert(entity, current_snapshot);
+            self.previous_entities.insert(*entity, current_snapshot.clone());
         }
-
+ 
         // 检查已移除的实体
-        let current_entities: std::collections::HashSet<Entity> = query
-            .iter(world)
-            .map(|(entity, _, _)| entity)
+        let current_entities: std::collections::HashSet<Entity> = current_snapshots
+            .iter()
+            .map(|(entity, _)| *entity)
             .collect();
 
         for entity in self.previous_entities.keys() {

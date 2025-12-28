@@ -486,13 +486,12 @@ impl PreallocationManager {
         if let Some(pool) = self.preallocated_pools.get_mut(&block_size) {
             // 寻找大小合适的块
             for i in 0..pool.len() {
-                if let Some(preallocated_block) = pool.get_mut(i) {
-                    if preallocated_block.is_free
+                if let Some(preallocated_block) = pool.get_mut(i)
+                    && preallocated_block.is_free
                         && preallocated_block.block.size >= block_size.size()
                     {
                         return Some(pool.remove(i).unwrap());
                     }
-                }
             }
         }
 
@@ -657,7 +656,7 @@ impl PreallocationManager {
         self.reclaim_unused_blocks();
 
         // 定期整理 (每60帧一次)
-        if self.current_frame % 60 == 0 {
+        if self.current_frame.is_multiple_of(60) {
             self.defragment_pools();
         }
     }

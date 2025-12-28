@@ -12,28 +12,19 @@ use thiserror::Error;
 /// XR 会话状态
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum XrSessionState {
-    /// 空闲状态
     Idle,
-    /// 准备就绪状态
     Ready,
-    /// 同步状态
     Synchronized,
-    /// 可见状态
     Visible,
-    /// 获得焦点状态
     Focused,
-    /// 停止中状态
     Stopping,
-    /// 退出状态
     Exiting,
 }
 
 /// 视图姿态
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct Pose {
-    /// 位置向量
     pub position: Vec3,
-    /// 旋转四元数
     pub orientation: Quat,
 }
 
@@ -43,18 +34,10 @@ impl_default!(Pose {
 });
 
 impl Pose {
-    /// 将姿态转换为变换矩阵
-    ///
-    /// # 返回
-    /// 返回基于位置和旋转的变换矩阵
     pub fn to_matrix(&self) -> Mat4 {
         Mat4::from_rotation_translation(self.orientation, self.position)
     }
 
-    /// 计算姿态的逆变换
-    ///
-    /// # 返回
-    /// 返回逆变换的姿态
     pub fn inverse(&self) -> Self {
         let inv_orientation = self.orientation.inverse();
         Self {
@@ -67,25 +50,13 @@ impl Pose {
 /// 视野参数 (Field of View)
 #[derive(Debug, Clone, Copy)]
 pub struct Fov {
-    /// 左侧视野角度（弧度）
     pub angle_left: f32,
-    /// 右侧视野角度（弧度）
     pub angle_right: f32,
-    /// 上方视野角度（弧度）
     pub angle_up: f32,
-    /// 下方视野角度（弧度）
     pub angle_down: f32,
 }
 
 impl Fov {
-    /// 将视野参数转换为投影矩阵
-    ///
-    /// # 参数
-    /// * `near` - 近裁剪面距离
-    /// * `far` - 远裁剪面距离
-    ///
-    /// # 返回
-    /// 返回对应的投影矩阵
     pub fn to_projection_matrix(&self, near: f32, far: f32) -> Mat4 {
         let tan_left = self.angle_left.tan();
         let tan_right = self.angle_right.tan();
@@ -119,43 +90,20 @@ impl Fov {
 /// XR 视图 (单眼)
 #[derive(Debug, Clone)]
 pub struct XrView {
-    /// 视图的姿态（位置和旋转）
     pub pose: Pose,
-    /// 视图的视野参数
     pub fov: Fov,
-    /// 视图索引（用于立体渲染）
     pub view_index: u32,
 }
 
 impl XrView {
-    /// 获取视图矩阵
-    ///
-    /// # 返回
-    /// 返回基于视图姿态的视图矩阵
     pub fn view_matrix(&self) -> Mat4 {
         self.pose.inverse().to_matrix()
     }
 
-    /// 获取投影矩阵
-    ///
-    /// # 参数
-    /// * `near` - 近裁剪面距离
-    /// * `far` - 远裁剪面距离
-    ///
-    /// # 返回
-    /// 返回基于视野参数的投影矩阵
     pub fn projection_matrix(&self, near: f32, far: f32) -> Mat4 {
         self.fov.to_projection_matrix(near, far)
     }
 
-    /// 获取视图投影矩阵
-    ///
-    /// # 参数
-    /// * `near` - 近裁剪面距离
-    /// * `far` - 远裁剪面距离
-    ///
-    /// # 返回
-    /// 返回视图矩阵与投影矩阵的乘积
     pub fn view_projection_matrix(&self, near: f32, far: f32) -> Mat4 {
         self.projection_matrix(near, far) * self.view_matrix()
     }
@@ -164,22 +112,16 @@ impl XrView {
 /// XR 事件
 #[derive(Debug, Clone)]
 pub enum XrEvent {
-    /// 会话状态改变事件
     SessionStateChanged(XrSessionState),
-    /// 参考空间改变事件
     ReferenceSpaceChanged,
-    /// 交互配置文件改变事件
     InteractionProfileChanged,
 }
 
 /// XR 会话配置
 #[derive(Debug, Clone)]
 pub struct XrConfig {
-    /// 应用程序名称
     pub application_name: String,
-    /// 混合模式
     pub blend_mode: BlendMode,
-    /// 参考空间类型
     pub reference_space: ReferenceSpaceType,
 }
 
@@ -192,85 +134,46 @@ impl_default!(XrConfig {
 /// 混合模式
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BlendMode {
-    /// 不透明模式（VR）
-    Opaque,
-    /// 叠加模式（AR 光学透视）
-    Additive,
-    /// Alpha混合模式（AR 视频透视）
-    AlphaBlend,
+    Opaque,     // VR
+    Additive,   // AR (光学透视)
+    AlphaBlend, // AR (视频透视)
 }
 
 /// 参考空间类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ReferenceSpaceType {
-    /// 头部相对空间
-    View,
-    /// 起始位置空间
-    Local,
-    /// 房间空间
-    Stage,
-    /// 无边界空间 (AR)
-    Unbounded,
+    View,      // 头部相对
+    Local,     // 起始位置
+    Stage,     // 房间空间
+    Unbounded, // 无边界 (AR)
 }
 
 /// XR 会话 trait
 pub trait XrSession: Send + Sync {
-    /// 获取当前会话状态
     fn state(&self) -> XrSessionState;
-    /// 开始渲染帧
-    ///
-    /// # 返回
-    /// 返回帧状态信息
     fn begin_frame(&mut self) -> Result<XrFrameState, XrError>;
-    /// 结束渲染帧并提交图层
-    ///
-    /// # 参数
-    /// * `layers` - 要提交的合成图层列表
-    ///
-    /// # 返回
-    /// 成功时返回Ok(())，失败时返回XrError
     fn end_frame(&mut self, layers: &[XrCompositionLayer]) -> Result<(), XrError>;
-    /// 定位视图（获取当前时间的视图姿态和视野）
-    ///
-    /// # 参数
-    /// * `time` - 预测的时间戳
-    ///
-    /// # 返回
-    /// 成功时返回视图列表，失败时返回XrError
     fn locate_views(&self, time: i64) -> Result<Vec<XrView>, XrError>;
-    /// 轮询并获取XR事件
-    ///
-    /// # 返回
-    /// 当前可用的XR事件列表
     fn poll_events(&mut self) -> Vec<XrEvent>;
 }
 
 /// 帧状态
 #[derive(Debug, Clone)]
 pub struct XrFrameState {
-    /// 预测显示时间
     pub predicted_display_time: i64,
-    /// 预测显示周期
     pub predicted_display_period: i64,
-    /// 是否应该渲染
     pub should_render: bool,
 }
 
 /// 合成层
 #[derive(Debug, Clone)]
 pub enum XrCompositionLayer {
-    /// 投影层
     Projection {
-        /// 投影视图列表
         views: Vec<XrProjectionView>,
     },
-    /// 四边形层
     Quad {
-        /// 位置和姿态
         pose: Pose,
-        /// 尺寸 [width, height]
         size: [f32; 2],
-        /// 交换链索引
         swapchain_index: u32,
     },
 }
@@ -278,14 +181,10 @@ pub enum XrCompositionLayer {
 /// 投影视图
 #[derive(Debug, Clone)]
 pub struct XrProjectionView {
-    /// 视图姿态
     pub pose: Pose,
-    /// 视场角
     pub fov: Fov,
-    /// 交换链索引
     pub swapchain_index: u32,
-    /// 图像矩形 [x, y, width, height]
-    pub image_rect: [i32; 4],
+    pub image_rect: [i32; 4], // x, y, width, height
 }
 
 /// XR 相关错误类型
@@ -410,7 +309,7 @@ pub use openxr_impl::{OpenXrBackend, OpenXrError, OpenXrSwapchain};
 /// 基于手部追踪数据识别常见手势
 pub struct GestureRecognizer {
     /// 手势历史记录
-    gesture_history: std::collections::VecDeque<GestureEvent>,
+    gesture_history: std::collections::VecDeque<hand_tracking::GestureEvent>,
     /// 手势识别阈值
     recognition_threshold: f32,
 }
@@ -432,32 +331,28 @@ impl GestureRecognizer {
     ///
     /// # 返回
     /// 如果识别到手势，返回手势事件
-    pub fn recognize(
-        &mut self,
-        hand_joints: &hand_tracking::HandJoints,
-        hand: Hand,
-    ) -> Option<GestureEvent> {
-        if let Some(hand_gesture) = hand_joints.detect_gesture() {
-            let confidence = hand_joints.confidence();
-            let position = hand_joints.get_palm_position().unwrap_or(Vec3::ZERO);
-            let timestamp = crate::core::utils::current_timestamp_ms();
+    pub fn recognize(&mut self, hand_joints: &hand_tracking::HandJoints, hand: Hand) -> Option<hand_tracking::GestureEvent> {
+    if let Some(gesture) = hand_joints.detect_gesture() {
+        let confidence = hand_joints.confidence();
+        let position = hand_joints.get_palm_position().unwrap_or(Vec3::ZERO);
+        let timestamp = crate::core::utils::current_timestamp_ms();
 
-            // 将 HandGesture 转换为 Gesture
-            let gesture = match hand_gesture {
-                hand_tracking::HandGesture::Fist => hand_tracking::Gesture::Fist,
-                hand_tracking::HandGesture::OpenHand => hand_tracking::Gesture::Open,
-            };
+        // 将 HandGesture 转换为 Gesture
+        let gesture_enum = match gesture {
+            hand_tracking::HandGesture::Fist => hand_tracking::Gesture::Fist,
+            hand_tracking::HandGesture::OpenHand => hand_tracking::Gesture::Open,
+        };
 
-            let event = GestureEvent {
-                gesture,
-                hand,
-                confidence,
-                position,
-                timestamp,
-            };
+        let event = hand_tracking::GestureEvent {
+            gesture: gesture_enum,
+            hand,
+            confidence,
+            position,
+            timestamp,
+        };
 
-            // 记录到历史
-            self.gesture_history.push_back(event.clone());
+        // 记录到历史
+        self.gesture_history.push_back(event.clone());
             if self.gesture_history.len() > 10 {
                 self.gesture_history.pop_front();
             }
@@ -590,9 +485,7 @@ impl EyeTrackingManager {
     /// 启用眼动追踪
     pub fn enable(&mut self) -> Result<(), XrError> {
         if !self.is_supported() {
-            return Err(XrError::FeatureNotSupported(
-                "Eye tracking not supported".to_string(),
-            ));
+            return Err(XrError::FeatureNotSupported("Eye tracking not supported".to_string()));
         }
         self.enabled = true;
         Ok(())
@@ -627,34 +520,24 @@ impl Default for EyeTrackingManager {
 }
 
 /// XR 渲染器模块
-///
-/// 提供XR渲染所需的特殊渲染流程和立体渲染支持
 pub mod renderer;
 pub use renderer::XrRenderer;
 
 /// XR 输入系统模块
-///
-/// 提供XR控制器输入、手部追踪和手势识别功能
 pub mod input;
 pub use input::{
     ControllerButton, HandJoint, HandJointType, HandTrackingData, HapticFeedback, XrInputEvent,
     XrInputEventHandler, XrInputEventQueue, XrInputManager,
 };
 /// XR 手部追踪模块
-///
-/// 提供手部关节追踪和手势识别功能
 pub mod hand_tracking;
 pub use hand_tracking::{Finger, HandJoints, HandTracker, HandTrackingConfig, HandTrackingState};
 
 /// XR 空间锚点模块
-///
-/// 提供在物理空间中固定位置的虚拟对象锚点功能
 pub mod spatial_anchors;
 pub use spatial_anchors::{AnchorId, SpatialAnchor, SpatialAnchorManager};
 
 /// XR 空间映射模块
-///
-/// 提供对物理环境的3D重建和空间理解功能
 pub mod spatial_mapping;
 pub use spatial_mapping::{
     DetectedPlane, MeshId, MeshTriangle, MeshVertex, PlaneId, PlaneType, SpatialMappingConfig,
@@ -662,7 +545,7 @@ pub use spatial_mapping::{
 };
 
 // 重新导出手势识别和眼动追踪
-pub use hand_tracking::{Gesture, GestureEvent};
+// Gesture 和 GestureEvent 已在 hand_tracking.rs 中定义，在此处直接引用
 // GestureRecognizer 已在上面定义，无需重新导出
 // EyeTrackingData, EyeTrackingEvent, EyeTrackingEventType, EyeTrackingManager 已在上面定义，无需重新导出
 
@@ -737,7 +620,6 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
 // Foveated Rendering (注视点渲染)
 // ============================================================================
 
-/// Foveated rendering module for XR applications
 pub mod foveated {
     use crate::impl_default;
 
@@ -846,7 +728,6 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
 // 眼动追踪
 // ============================================================================
 
-/// Eye tracking module for XR applications
 pub mod eye_tracking {
     use super::*;
 
@@ -866,22 +747,15 @@ pub mod eye_tracking {
     }
 
     /// 眼动追踪 trait
-    /// Interface for eye tracking functionality in XR applications
     pub trait EyeTracker: Send + Sync {
-        /// Get gaze data for a specific eye
         fn get_gaze(&self, eye: Eye) -> Option<EyeGazeData>;
-        /// Get combined gaze data from both eyes
         fn get_combined_gaze(&self) -> Option<EyeGazeData>;
-        /// Check if eye tracking is supported on this device
         fn is_supported(&self) -> bool;
     }
 
-    /// Represents the left or right eye for eye tracking
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     pub enum Eye {
-        /// Left eye
         Left,
-        /// Right eye
         Right,
     }
 }
@@ -892,11 +766,8 @@ pub mod eye_tracking {
 
 /// XR 渲染上下文
 pub struct XrRenderContext {
-    /// 视图信息
     pub view: XrView,
-    /// 渲染目标
     pub render_target: Arc<wgpu::TextureView>,
-    /// 深度目标
     pub depth_target: Arc<wgpu::TextureView>,
 }
 

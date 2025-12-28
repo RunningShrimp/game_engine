@@ -6,7 +6,6 @@
 //! - 粒子约束求解
 //! - 大规模粒子系统支持
 
-use glam::Vec3;
 use std::sync::Arc;
 use wgpu::util::DeviceExt;
 
@@ -156,6 +155,8 @@ impl GpuParticlePhysicsAccelerator {
             layout: Some(&pipeline_layout),
             module: &shader,
             entry_point: Some("main"),
+            cache: None,
+            compilation_options: wgpu::PipelineCompilationOptions::default(),
         })
     }
 
@@ -214,6 +215,8 @@ impl GpuParticlePhysicsAccelerator {
             layout: Some(&pipeline_layout),
             module: &shader,
             entry_point: Some("main"),
+            cache: None,
+            compilation_options: wgpu::PipelineCompilationOptions::default(),
         })
     }
 
@@ -262,6 +265,8 @@ impl GpuParticlePhysicsAccelerator {
             layout: Some(&pipeline_layout),
             module: &shader,
             entry_point: Some("main"),
+            cache: None,
+            compilation_options: wgpu::PipelineCompilationOptions::default(),
         })
     }
 
@@ -316,8 +321,8 @@ impl GpuParticlePhysicsAccelerator {
         });
 
         // 执行力场计算
-        if self.config.enable_force_fields {
-            if let Some(pipeline) = &self.force_field_pipeline {
+        if self.config.enable_force_fields
+            && let Some(pipeline) = &self.force_field_pipeline {
                 let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
                     label: Some("Particle Force Field Bind Group"),
                     layout: &pipeline.get_bind_group_layout(0),
@@ -339,20 +344,20 @@ impl GpuParticlePhysicsAccelerator {
 
                 let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                     label: Some("Particle Force Field Pass"),
+                    timestamp_writes: None,
                 });
                 cpass.set_pipeline(pipeline);
                 cpass.set_bind_group(0, &bind_group, &[]);
                 cpass.dispatch_workgroups(
-                    (particles.len() as u32 + self.config.workgroup_size - 1) / self.config.workgroup_size,
+                    (particles.len() as u32).div_ceil(self.config.workgroup_size),
                     1,
                     1,
                 );
             }
-        }
 
         // 执行碰撞检测
-        if self.config.enable_collision {
-            if let Some(pipeline) = &self.collision_pipeline {
+        if self.config.enable_collision
+            && let Some(pipeline) = &self.collision_pipeline {
                 let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
                     label: Some("Particle Collision Bind Group"),
                     layout: &pipeline.get_bind_group_layout(0),
@@ -370,16 +375,16 @@ impl GpuParticlePhysicsAccelerator {
 
                 let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                     label: Some("Particle Collision Pass"),
+                    timestamp_writes: None,
                 });
                 cpass.set_pipeline(pipeline);
                 cpass.set_bind_group(0, &bind_group, &[]);
                 cpass.dispatch_workgroups(
-                    (particles.len() as u32 + self.config.workgroup_size - 1) / self.config.workgroup_size,
+                    (particles.len() as u32).div_ceil(self.config.workgroup_size),
                     1,
                     1,
                 );
             }
-        }
 
         // 执行粒子更新
         if let Some(pipeline) = &self.update_pipeline {
@@ -400,11 +405,12 @@ impl GpuParticlePhysicsAccelerator {
 
             let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: Some("Particle Update Pass"),
+                timestamp_writes: None,
             });
             cpass.set_pipeline(pipeline);
             cpass.set_bind_group(0, &bind_group, &[]);
             cpass.dispatch_workgroups(
-                (particles.len() as u32 + self.config.workgroup_size - 1) / self.config.workgroup_size,
+                (particles.len() as u32).div_ceil(self.config.workgroup_size),
                 1,
                 1,
             );

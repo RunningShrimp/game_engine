@@ -77,7 +77,7 @@ impl InstanceDirtyTracker {
     /// - `initial_capacity`: 初始容量（实例数）
     /// - `chunk_size`: 每个块的大小，建议 64-256
     pub fn new(initial_capacity: usize, chunk_size: usize) -> Self {
-        let chunk_count = (initial_capacity + chunk_size - 1) / chunk_size;
+        let chunk_count = initial_capacity.div_ceil(chunk_size);
         Self {
             chunk_size,
             chunk_dirty: vec![true; chunk_count],
@@ -127,7 +127,7 @@ impl InstanceDirtyTracker {
             self.instance_dirty[i] = true;
         }
         let chunk_start = start / self.chunk_size;
-        let chunk_end = (end + self.chunk_size - 1) / self.chunk_size;
+        let chunk_end = end.div_ceil(self.chunk_size);
         for i in chunk_start..chunk_end.min(self.chunk_dirty.len()) {
             self.chunk_dirty[i] = true;
         }
@@ -150,12 +150,12 @@ impl InstanceDirtyTracker {
         // 调整容量
         if new_count > self.instance_dirty.len() {
             let additional = new_count - self.instance_dirty.len();
-            self.instance_dirty.extend(std::iter::repeat(true).take(additional));
+            self.instance_dirty.extend(std::iter::repeat_n(true, additional));
 
-            let new_chunk_count = (new_count + self.chunk_size - 1) / self.chunk_size;
+            let new_chunk_count = new_count.div_ceil(self.chunk_size);
             if new_chunk_count > self.chunk_dirty.len() {
                 let chunk_additional = new_chunk_count - self.chunk_dirty.len();
-                self.chunk_dirty.extend(std::iter::repeat(true).take(chunk_additional));
+                self.chunk_dirty.extend(std::iter::repeat_n(true, chunk_additional));
             }
         }
 
@@ -200,25 +200,26 @@ impl InstanceDirtyTracker {
 
             // 检查块内每个实例
             let mut chunk_has_changes = false;
-            for i in start..end {
-                let is_dirty = if i < old_count {
-                    !instances[i].equals(&self.prev_instances[i])
+            for (i, instance) in instances[start..end].iter().enumerate() {
+                let idx = start + i;
+                let is_dirty = if idx < old_count {
+                    !instance.equals(&self.prev_instances[idx])
                 } else {
                     true // 新实例总是脏的
                 };
 
                 if is_dirty {
                     chunk_has_changes = true;
-                    self.instance_dirty[i] = true;
+                    self.instance_dirty[idx] = true;
 
                     if range_start.is_none() {
-                        range_start = Some(i as u32);
+                        range_start = Some(idx as u32);
                     }
                 } else {
-                    self.instance_dirty[i] = false;
+                    self.instance_dirty[idx] = false;
 
                     if let Some(start) = range_start {
-                        self.dirty_ranges.push((start, i as u32));
+                        self.dirty_ranges.push((start, idx as u32));
                         range_start = None;
                     }
                 }
@@ -507,7 +508,7 @@ impl DoubleBufferedInstances {
         }
 
         self.count = instances.len() as u32;
-        let byte_size = (instances.len() * std::mem::size_of::<Instance>()) as u64;
+        let byte_size = std::mem::size_of_val(instances) as u64;
 
         // 写入staging buffer
         queue.write_buffer(&self.staging_buffer, 0, bytemuck::cast_slice(instances));
@@ -807,7 +808,7 @@ struct UiOut {
                     ty: wgpu::BufferBindingType::Uniform,
                     has_dynamic_offset: false,
                     min_binding_size: std::num::NonZeroU64::new(
-                        std::mem::size_of::<ScreenUniform>() as wgpu::BufferAddress as u64,
+                        std::mem::size_of::<ScreenUniform>() as u64,
                     ),
                 },
                 count: None,
@@ -1695,7 +1696,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                                 rpass.set_bind_group(2, &self.lights_bind_group, &[]);
                                 rpass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
                                 rpass.set_vertex_buffer(1, self.instance_buffer.slice(..));
-                                let mut use_scissor = scissor.clone();
+                                let mut use_scissor = *scissor;
                                 if use_scissor.is_none() && target_id == 0 {
                                     use_scissor = Self::compute_scissor(
                                         instances,
@@ -1741,8 +1742,8 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         self.queue.submit(std::iter::once(encoder.finish()));
 
         // Handle egui rendering - create a separate encoder to avoid borrowing issues
-        if let Some(renderer) = egui_renderer {
-            if !egui_shapes.is_empty() {
+        if let Some(renderer) = egui_renderer
+            && !egui_shapes.is_empty() {
                 let screen_desc = egui_wgpu::ScreenDescriptor {
                     size_in_pixels: [self.config.width, self.config.height],
                     pixels_per_point: egui_pixels_per_point,
@@ -1766,7 +1767,6 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                 let cmd_buffer = egui_cmd_encoder.finish();
                 self.queue.submit(std::iter::once(cmd_buffer));
             }
-        }
 
         let _present_span = span!(Level::DEBUG, "present_frame").entered();
 
@@ -1787,12 +1787,11 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         let mut draws = 0u32;
         let mut instances = 0u32;
         for cmd in &self.commands {
-            if let crate::render::graph::RenderCommand::Draw { start, end, .. } = cmd {
-                if end > start {
+            if let crate::render::graph::RenderCommand::Draw { start, end, .. } = cmd
+                && end > start {
                     draws += 1;
                     instances += end - start;
                 }
-            }
         }
         (draws, instances)
     }
@@ -2461,8 +2460,8 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
 
         // 优先尝试完全GPU端剔除（使用GpuDrivenRenderer + 间接绘制）
         // 这样可以完全避免CPU读取结果，实现零延迟剔除
-        if let Some(ref mut gpu_driven_renderer) = self.gpu_driven_renderer {
-            if gpu_driven_renderer.config().frustum_culling && self.use_full_gpu_culling {
+        if let Some(ref mut gpu_driven_renderer) = self.gpu_driven_renderer
+            && gpu_driven_renderer.config().frustum_culling && self.use_full_gpu_culling {
                 // 收集GPU实例数据
                 let (instances, mapping) = batch_manager.collect_gpu_instances();
 
@@ -2485,7 +2484,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                         });
 
                     // 执行剔除并生成间接绘制命令（完全GPU端，零CPU读取）
-                    if let Ok(_) = gpu_driven_renderer.cull_with_indirect(
+                    if gpu_driven_renderer.cull_with_indirect(
                         &mut cull_encoder,
                         &self.device,
                         &self.queue,
@@ -2493,7 +2492,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                         instances.len() as u32,
                         0, // vertex_count (not used for indexed drawing)
                         index_count,
-                    ) {
+                    ).is_ok() {
                         // 提交剔除命令到GPU（不等待结果）
                         self.queue.submit(std::iter::once(cull_encoder.finish()));
 
@@ -2503,9 +2502,9 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
 
                         // 存储mapping用于后续遮挡查询（如果需要）
                         // 注意：在完全GPU端剔除模式下，遮挡查询也需要GPU端实现
-                        if let Some(ref gpu_driven_renderer) = self.gpu_driven_renderer {
-                            if let Some(ref occluder) = gpu_driven_renderer.occlusion_culler() {
-                                if occluder.is_initialized() {
+                        if let Some(ref gpu_driven_renderer) = self.gpu_driven_renderer
+                            && let Some(occluder) = gpu_driven_renderer.occlusion_culler()
+                                && occluder.is_initialized() {
                                     // 收集遮挡查询数据（从所有实例，GPU端会过滤）
                                     for (i, instance) in instances.iter().enumerate() {
                                         occlusion_queries.push((
@@ -2517,8 +2516,6 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                                         }
                                     }
                                 }
-                            }
-                        }
 
                         tracing::debug!(
                             target: "render",
@@ -2534,11 +2531,10 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                     }
                 }
             }
-        }
 
         // 如果完全GPU端剔除未使用，尝试传统GPU剔除（需要CPU读取结果）
-        if !used_full_gpu_culling {
-            if let Some(ref mut culling_manager) = self.gpu_culling_manager {
+        if !used_full_gpu_culling
+            && let Some(ref mut culling_manager) = self.gpu_culling_manager {
                 // 收集GPU实例数据
                 let (instances, mapping) = batch_manager.collect_gpu_instances();
 
@@ -2659,11 +2655,9 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                                     // 收集遮挡查询数据（从可见实例）
                                     // 如果启用遮挡剔除，收集AABB用于遮挡查询
                                     if let Some(ref gpu_driven_renderer) = self.gpu_driven_renderer
-                                    {
-                                        if let Some(ref occluder) =
+                                        && let Some(occluder) =
                                             gpu_driven_renderer.occlusion_culler()
-                                        {
-                                            if occluder.is_initialized() {
+                                            && occluder.is_initialized() {
                                                 for &id in &ids {
                                                     if let Some(instance) =
                                                         instances.get(id as usize)
@@ -2684,8 +2678,6 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                                                     }
                                                 }
                                             }
-                                        }
-                                    }
 
                                     // 应用可见实例ID到批次管理器
                                     // 使用简单的apply_visible_ids方法，不依赖间接绘制特性
@@ -2706,7 +2698,6 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                     }
                 }
             }
-        }
 
         // CPU回退：仅在GPU剔除未使用或失败时使用
         // 这提供了向后兼容性和容错性
@@ -2723,9 +2714,9 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         // 步骤1: 构建Hi-Z（在深度预渲染后）
         // 注意：这里简化处理，实际应该在深度预渲染阶段构建Hi-Z
         // 当前实现假设深度缓冲已经渲染完成
-        if let Some(ref mut gpu_driven_renderer) = self.gpu_driven_renderer {
-            if let Some(ref occluder) = gpu_driven_renderer.occlusion_culler() {
-                if occluder.is_initialized() {
+        if let Some(ref mut gpu_driven_renderer) = self.gpu_driven_renderer
+            && let Some(occluder) = gpu_driven_renderer.occlusion_culler()
+                && occluder.is_initialized() {
                     // 创建Hi-Z构建编码器
                     let mut hi_z_encoder =
                         self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -2746,12 +2737,10 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                         }
                     }
                 }
-            }
-        }
 
         // 步骤2: 执行遮挡查询（对可见实例）
-        if !occlusion_queries.is_empty() {
-            if let Some(ref mut gpu_driven_renderer) = self.gpu_driven_renderer {
+        if !occlusion_queries.is_empty()
+            && let Some(ref mut gpu_driven_renderer) = self.gpu_driven_renderer {
                 let view_proj_mat = glam::Mat4::from_cols_array_2d(&view_proj);
                 let screen_size = (self.config.width, self.config.height);
 
@@ -2786,12 +2775,11 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                     );
                 }
             }
-        }
 
         // 步骤3: 读取上一帧的遮挡查询结果（如果有）
         // 使用双缓冲延迟应用结果：当前帧的查询结果在下一帧应用
-        if let Some(ref mut gpu_driven_renderer) = self.gpu_driven_renderer {
-            if let Some(Ok(visibility)) =
+        if let Some(ref mut gpu_driven_renderer) = self.gpu_driven_renderer
+            && let Some(Ok(visibility)) =
                 gpu_driven_renderer.read_occlusion_query_result(&self.device, &self.queue)
             {
                 // 获取上一帧的mapping（与查询结果配对）
@@ -2841,7 +2829,6 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                     );
                 }
             }
-        }
 
         batch_manager.update_buffers(&self.device, &self.queue);
 
@@ -3390,7 +3377,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         let egui_render_pass = wgpu::RenderPassDescriptor {
             label: Some("egui render pass"),
             color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                view: &view,
+                view,
                 resolve_target: None,
                 ops: wgpu::Operations {
                     load: wgpu::LoadOp::Load, // 加载现有内容（在3D渲染之上）

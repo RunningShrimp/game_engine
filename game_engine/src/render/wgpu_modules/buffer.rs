@@ -94,7 +94,7 @@ impl DoubleBufferedInstances {
         }
 
         self.count = instances.len() as u32;
-        let byte_size = (instances.len() * std::mem::size_of::<Instance>()) as wgpu::BufferAddress;
+        let byte_size = std::mem::size_of_val(instances) as wgpu::BufferAddress;
 
         queue.write_buffer(&self.staging_buffer, 0, bytemuck::cast_slice(instances));
 
@@ -176,7 +176,7 @@ impl InstanceDirtyTracker {
 
     /// 创建脏标记追踪器
     pub fn new(initial_capacity: usize, chunk_size: usize) -> Self {
-        let chunk_count = (initial_capacity + chunk_size - 1) / chunk_size;
+        let chunk_count = initial_capacity.div_ceil(chunk_size);
         Self {
             chunk_size,
             chunk_dirty: vec![true; chunk_count],
@@ -223,7 +223,7 @@ impl InstanceDirtyTracker {
             self.instance_dirty[i] = true;
         }
         let chunk_start = start / self.chunk_size;
-        let chunk_end = (end + self.chunk_size - 1) / self.chunk_size;
+        let chunk_end = end.div_ceil(self.chunk_size);
         for i in chunk_start..chunk_end.min(self.chunk_dirty.len()) {
             self.chunk_dirty[i] = true;
         }
@@ -243,12 +243,12 @@ impl InstanceDirtyTracker {
         // 调整容量
         if new_count > self.instance_dirty.len() {
             let additional = new_count - self.instance_dirty.len();
-            self.instance_dirty.extend(std::iter::repeat(true).take(additional));
+            self.instance_dirty.extend(std::iter::repeat_n(true, additional));
 
-            let new_chunk_count = (new_count + self.chunk_size - 1) / self.chunk_size;
+            let new_chunk_count = new_count.div_ceil(self.chunk_size);
             if new_chunk_count > self.chunk_dirty.len() {
                 let chunk_additional = new_chunk_count - self.chunk_dirty.len();
-                self.chunk_dirty.extend(std::iter::repeat(true).take(chunk_additional));
+                self.chunk_dirty.extend(std::iter::repeat_n(true, chunk_additional));
             }
         }
 
@@ -290,25 +290,26 @@ impl InstanceDirtyTracker {
             let end = ((chunk_idx + 1) * self.chunk_size).min(new_count);
 
             let mut chunk_has_changes = false;
-            for i in start..end {
-                let is_dirty = if i < old_count {
-                    !instances[i].equals(&self.prev_instances[i])
+            for (i, instance) in instances[start..end].iter().enumerate() {
+                let idx = start + i;
+                let is_dirty = if idx < old_count {
+                    !instance.equals(&self.prev_instances[idx])
                 } else {
                     true
                 };
 
                 if is_dirty {
                     chunk_has_changes = true;
-                    self.instance_dirty[i] = true;
+                    self.instance_dirty[idx] = true;
 
                     if range_start.is_none() {
-                        range_start = Some(i as u32);
+                        range_start = Some(idx as u32);
                     }
                 } else {
-                    self.instance_dirty[i] = false;
+                    self.instance_dirty[idx] = false;
 
                     if let Some(start) = range_start {
-                        self.dirty_ranges.push((start, i as u32));
+                        self.dirty_ranges.push((start, idx as u32));
                         range_start = None;
                     }
                 }

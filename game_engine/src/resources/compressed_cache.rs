@@ -184,19 +184,20 @@ impl CompressedResourceCache {
             let entries = self.entries.read();
             if let Some(entry) = entries.get(&cache_key) {
                 // 检查原始文件是否已修改
-                if let Ok(metadata) = fs::metadata(resource_path) {
-                    if let Ok(modified) = metadata.modified() {
-                        if modified <= entry.created_at {
+                if let Ok(metadata) = fs::metadata(resource_path)
+                    && let Ok(modified) = metadata.modified() {
+                        let created_at = entry.created_at;
+                        let compressed_path = entry.compressed_path.clone();
+                        drop(entries);
+                        if modified <= created_at {
                             // 缓存有效，更新访问时间
-                            drop(entries);
                             let mut entries = self.entries.write();
                             if let Some(entry) = entries.get_mut(&cache_key) {
                                 entry.last_accessed = SystemTime::now();
                             }
-                            return Ok(entry.compressed_path.clone());
+                            return Ok(compressed_path);
                         }
                     }
-                }
             }
         }
 

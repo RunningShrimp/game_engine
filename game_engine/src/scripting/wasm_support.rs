@@ -21,10 +21,7 @@
 
 use std::collections::HashMap;
 
-#[cfg(feature = "wasm")]
-use wasmtime::{
-    Caller, Engine, Instance, Linker, Memory, Module as WasmtimeModule, Store, TypedFunc,
-};
+// wasmtime 类型通过 wasmtime:: 前缀使用，不需要直接导入
 
 /// WASM 类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

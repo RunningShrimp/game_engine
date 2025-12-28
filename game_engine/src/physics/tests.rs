@@ -11,7 +11,7 @@ mod property_tests {
             x in -1000.0f32..1000.0,
             y in -1000.0f32..1000.0
         ) {
-            let mut service = PhysicsDomainService::new();
+            let service = PhysicsDomainService::new();
             let body_id = RigidBodyId::new(1);
             let body = RigidBody::with_all(
                 body_id,

@@ -520,32 +520,28 @@ impl PhysicsThreadRunner {
                     }
                 }
                 Ok(PhysicsCommand::ApplyForce { id, fx, fy }) => {
-                    if let Some(&handle) = id_to_handle.get(&id) {
-                        if let Some(rb) = rigid_body_set.get_mut(handle) {
+                    if let Some(&handle) = id_to_handle.get(&id)
+                        && let Some(rb) = rigid_body_set.get_mut(handle) {
                             rb.add_force(vector![fx, fy], true);
                         }
-                    }
                 }
                 Ok(PhysicsCommand::ApplyImpulse { id, ix, iy }) => {
-                    if let Some(&handle) = id_to_handle.get(&id) {
-                        if let Some(rb) = rigid_body_set.get_mut(handle) {
+                    if let Some(&handle) = id_to_handle.get(&id)
+                        && let Some(rb) = rigid_body_set.get_mut(handle) {
                             rb.apply_impulse(vector![ix, iy], true);
                         }
-                    }
                 }
                 Ok(PhysicsCommand::SetVelocity { id, vx, vy }) => {
-                    if let Some(&handle) = id_to_handle.get(&id) {
-                        if let Some(rb) = rigid_body_set.get_mut(handle) {
+                    if let Some(&handle) = id_to_handle.get(&id)
+                        && let Some(rb) = rigid_body_set.get_mut(handle) {
                             rb.set_linvel(vector![vx, vy], true);
                         }
-                    }
                 }
                 Ok(PhysicsCommand::SetPosition { id, x, y }) => {
-                    if let Some(&handle) = id_to_handle.get(&id) {
-                        if let Some(rb) = rigid_body_set.get_mut(handle) {
+                    if let Some(&handle) = id_to_handle.get(&id)
+                        && let Some(rb) = rigid_body_set.get_mut(handle) {
                             rb.set_translation(vector![x, y], true);
                         }
-                    }
                 }
                 Ok(PhysicsCommand::Shutdown) => {
                     break;

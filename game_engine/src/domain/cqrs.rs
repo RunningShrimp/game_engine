@@ -295,6 +295,21 @@ impl CqrsManager {
         }
     }
 
+    /// 检查是否启用了事件溯源
+    pub fn has_event_sourcing(&self) -> bool {
+        self.event_sourcing.is_some()
+    }
+
+    /// 获取事件溯源管理器
+    pub fn event_sourcing(&self) -> Option<&Arc<EventSourcingManager>> {
+        self.event_sourcing.as_ref()
+    }
+
+    /// 设置事件溯源管理器
+    pub fn set_event_sourcing(&mut self, event_sourcing: Option<Arc<EventSourcingManager>>) {
+        self.event_sourcing = event_sourcing;
+    }
+
     /// 注册命令处理器
     pub fn register_command_handler<C: Command, H: CommandHandler<C> + 'static>(
         &self,
@@ -415,7 +430,7 @@ mod tests {
         bus.register_handler::<TestQuery, _>(handler).unwrap();
 
         let query = TestQuery { value: 21 };
-        let world = World::new();
+        let mut world = World::new();
         let result: u32 = bus.execute(query, &world).unwrap();
         
         assert_eq!(result, 42);

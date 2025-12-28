@@ -20,7 +20,7 @@ mod audio_domain_service_tests {
 
     #[test]
     fn test_audio_domain_service_create_source() {
-        let mut service = AudioDomainService::new();
+        let service = AudioDomainService::new();
         let id = AudioSourceId::new(1);
         
         let result = service.create_source(id, "assets/test.mp3");
@@ -32,7 +32,7 @@ mod audio_domain_service_tests {
 
     #[test]
     fn test_audio_domain_service_create_duplicate_source() {
-        let mut service = AudioDomainService::new();
+        let service = AudioDomainService::new();
         let id = AudioSourceId::new(1);
         
         service.create_source(id, "assets/test1.mp3").unwrap();
@@ -43,7 +43,7 @@ mod audio_domain_service_tests {
 
     #[test]
     fn test_audio_domain_service_destroy_source() {
-        let mut service = AudioDomainService::new();
+        let service = AudioDomainService::new();
         let id = AudioSourceId::new(1);
         
         service.create_source(id, "assets/test.mp3").unwrap();
@@ -56,7 +56,7 @@ mod audio_domain_service_tests {
 
     #[test]
     fn test_audio_domain_service_destroy_nonexistent_source() {
-        let mut service = AudioDomainService::new();
+        let service = AudioDomainService::new();
         let id = AudioSourceId::new(1);
         
         let result = service.destroy_source(id);
@@ -71,7 +71,7 @@ mod audio_domain_service_tests {
 
     #[test]
     fn test_audio_domain_service_play_source() {
-        let mut service = AudioDomainService::new();
+        let service = AudioDomainService::new();
         let id = AudioSourceId::new(1);
         
         service.create_source(id, "assets/test.mp3").unwrap();
@@ -82,7 +82,7 @@ mod audio_domain_service_tests {
 
     #[test]
     fn test_audio_domain_service_play_nonexistent_source() {
-        let mut service = AudioDomainService::new();
+        let service = AudioDomainService::new();
         let id = AudioSourceId::new(1);
         
         let result = service.play_source(id);
@@ -97,7 +97,7 @@ mod audio_domain_service_tests {
 
     #[test]
     fn test_audio_domain_service_stop_source() {
-        let mut service = AudioDomainService::new();
+        let service = AudioDomainService::new();
         let id = AudioSourceId::new(1);
         
         service.create_source(id, "assets/test.mp3").unwrap();
@@ -109,7 +109,7 @@ mod audio_domain_service_tests {
 
     #[test]
     fn test_audio_domain_service_pause_source() {
-        let mut service = AudioDomainService::new();
+        let service = AudioDomainService::new();
         let id = AudioSourceId::new(1);
         
         service.create_source(id, "assets/test.mp3").unwrap();
@@ -121,7 +121,7 @@ mod audio_domain_service_tests {
 
     #[test]
     fn test_audio_domain_service_resume_source() {
-        let mut service = AudioDomainService::new();
+        let service = AudioDomainService::new();
         let id = AudioSourceId::new(1);
         
         service.create_source(id, "assets/test.mp3").unwrap();
@@ -134,7 +134,7 @@ mod audio_domain_service_tests {
 
     #[test]
     fn test_audio_domain_service_set_source_volume() {
-        let mut service = AudioDomainService::new();
+        let service = AudioDomainService::new();
         let id = AudioSourceId::new(1);
         
         service.create_source(id, "assets/test.mp3").unwrap();
@@ -146,7 +146,7 @@ mod audio_domain_service_tests {
 
     #[test]
     fn test_audio_domain_service_set_source_volume_f32() {
-        let mut service = AudioDomainService::new();
+        let service = AudioDomainService::new();
         let id = AudioSourceId::new(1);
         
         service.create_source(id, "assets/test.mp3").unwrap();
@@ -157,7 +157,7 @@ mod audio_domain_service_tests {
 
     #[test]
     fn test_audio_domain_service_set_source_volume_f32_invalid() {
-        let mut service = AudioDomainService::new();
+        let service = AudioDomainService::new();
         let id = AudioSourceId::new(1);
         
         service.create_source(id, "assets/test.mp3").unwrap();
@@ -173,7 +173,7 @@ mod audio_domain_service_tests {
 
     #[test]
     fn test_audio_domain_service_set_master_volume() {
-        let mut service = AudioDomainService::new();
+        let service = AudioDomainService::new();
         
         let volume = Volume::new(0.8).unwrap();
         let result = service.set_master_volume(volume);
@@ -183,7 +183,7 @@ mod audio_domain_service_tests {
 
     #[test]
     fn test_audio_domain_service_set_master_volume_f32() {
-        let mut service = AudioDomainService::new();
+        let service = AudioDomainService::new();
         
         let result = service.set_master_volume_f32(0.6);
         
@@ -192,7 +192,7 @@ mod audio_domain_service_tests {
 
     #[test]
     fn test_audio_domain_service_set_master_volume_f32_invalid() {
-        let mut service = AudioDomainService::new();
+        let service = AudioDomainService::new();
         
         let result = service.set_master_volume_f32(-0.5);
         
@@ -206,7 +206,7 @@ mod audio_domain_service_tests {
 
     #[test]
     fn test_audio_domain_service_get_source() {
-        let mut service = AudioDomainService::new();
+        let service = AudioDomainService::new();
         let id = AudioSourceId::new(1);
         
         service.create_source(id, "assets/test.mp3").unwrap();
@@ -218,7 +218,7 @@ mod audio_domain_service_tests {
 
     #[test]
     fn test_audio_domain_service_get_source_mut() {
-        let mut service = AudioDomainService::new();
+        let service = AudioDomainService::new();
         let id = AudioSourceId::new(1);
         
         service.create_source(id, "assets/test.mp3").unwrap();
@@ -229,7 +229,7 @@ mod audio_domain_service_tests {
 
     #[test]
     fn test_audio_domain_service_source_ids() {
-        let mut service = AudioDomainService::new();
+        let service = AudioDomainService::new();
         
         service.create_source(AudioSourceId::new(1), "assets/test1.mp3").unwrap();
         service.create_source(AudioSourceId::new(2), "assets/test2.mp3").unwrap();
@@ -244,7 +244,7 @@ mod audio_domain_service_tests {
 
     #[test]
     fn test_audio_domain_service_playing_sources_count() {
-        let mut service = AudioDomainService::new();
+        let service = AudioDomainService::new();
         
         service.create_source(AudioSourceId::new(1), "assets/test1.mp3").unwrap();
         service.create_source(AudioSourceId::new(2), "assets/test2.mp3").unwrap();
@@ -258,7 +258,7 @@ mod audio_domain_service_tests {
 
     #[test]
     fn test_audio_domain_service_stop_all_sources() {
-        let mut service = AudioDomainService::new();
+        let service = AudioDomainService::new();
         
         service.create_source(AudioSourceId::new(1), "assets/test1.mp3").unwrap();
         service.create_source(AudioSourceId::new(2), "assets/test2.mp3").unwrap();
@@ -276,7 +276,7 @@ mod audio_domain_service_tests {
 
     #[test]
     fn test_audio_domain_service_update_listener() {
-        let mut service = AudioDomainService::new();
+        let service = AudioDomainService::new();
         let listener = AudioListener::default();
         
         service.update_listener(listener.clone());
@@ -307,7 +307,7 @@ mod physics_domain_service_tests {
 
     #[test]
     fn test_physics_domain_service_create_body() {
-        let mut service = PhysicsDomainService::new();
+        let service = PhysicsDomainService::new();
         let body = RigidBody::dynamic(RigidBodyId::new(1), Vec3::ZERO);
         
         let result = service.create_body(body);
@@ -318,7 +318,7 @@ mod physics_domain_service_tests {
 
     #[test]
     fn test_physics_domain_service_create_body_alias() {
-        let mut service = PhysicsDomainService::new();
+        let service = PhysicsDomainService::new();
         let body = RigidBody::dynamic(RigidBodyId::new(1), Vec3::ZERO);
         
         let result = service.add_body(body);
@@ -329,7 +329,7 @@ mod physics_domain_service_tests {
 
     #[test]
     fn test_physics_domain_service_destroy_body() {
-        let mut service = PhysicsDomainService::new();
+        let service = PhysicsDomainService::new();
         let body = RigidBody::dynamic(RigidBodyId::new(1), Vec3::ZERO);
         
         service.create_body(body).unwrap();
@@ -341,21 +341,21 @@ mod physics_domain_service_tests {
 
     #[test]
     fn test_physics_domain_service_destroy_nonexistent_body() {
-        let mut service = PhysicsDomainService::new();
+        let service = PhysicsDomainService::new();
         
         let result = service.destroy_body(RigidBodyId::new(1));
         
         assert!(result.is_err());
-        if let Err(DomainError::Physics(PhysicsError::BodyNotFound(msg))) = result {
-            assert!(msg.contains("1"));
+        if let Err(DomainError::Physics(PhysicsError::RigidBodyNotFound { body_id, .. })) = result {
+            assert!(body_id.contains("1"));
         } else {
-            panic!("Expected BodyNotFound error");
+            panic!("Expected RigidBodyNotFound error");
         }
     }
 
     #[test]
     fn test_physics_domain_service_create_collider() {
-        let mut service = PhysicsDomainService::new();
+        let service = PhysicsDomainService::new();
         let body = RigidBody::dynamic(RigidBodyId::new(1), Vec3::ZERO);
         let collider = Collider::cuboid(ColliderId::new(1), Vec3::ONE);
         
@@ -367,7 +367,7 @@ mod physics_domain_service_tests {
 
     #[test]
     fn test_physics_domain_service_create_collider_alias() {
-        let mut service = PhysicsDomainService::new();
+        let service = PhysicsDomainService::new();
         let body = RigidBody::dynamic(RigidBodyId::new(1), Vec3::ZERO);
         let collider = Collider::cuboid(ColliderId::new(1), Vec3::ONE);
         
@@ -379,7 +379,7 @@ mod physics_domain_service_tests {
 
     #[test]
     fn test_physics_domain_service_destroy_collider() {
-        let mut service = PhysicsDomainService::new();
+        let service = PhysicsDomainService::new();
         let body = RigidBody::dynamic(RigidBodyId::new(1), Vec3::ZERO);
         let collider = Collider::cuboid(ColliderId::new(1), Vec3::ONE);
         
@@ -392,7 +392,7 @@ mod physics_domain_service_tests {
 
     #[test]
     fn test_physics_domain_service_destroy_collider_alias() {
-        let mut service = PhysicsDomainService::new();
+        let service = PhysicsDomainService::new();
         let body = RigidBody::dynamic(RigidBodyId::new(1), Vec3::ZERO);
         let collider = Collider::cuboid(ColliderId::new(1), Vec3::ONE);
         
@@ -405,7 +405,7 @@ mod physics_domain_service_tests {
 
     #[test]
     fn test_physics_domain_service_update_body() {
-        let mut service = PhysicsDomainService::new();
+        let service = PhysicsDomainService::new();
         let mut body = RigidBody::dynamic(RigidBodyId::new(1), Vec3::ZERO);
         
         service.create_body(body.clone()).unwrap();
@@ -417,7 +417,7 @@ mod physics_domain_service_tests {
 
     #[test]
     fn test_physics_domain_service_apply_force() {
-        let mut service = PhysicsDomainService::new();
+        let service = PhysicsDomainService::new();
         let body = RigidBody::dynamic(RigidBodyId::new(1), Vec3::ZERO);
         
         service.create_body(body).unwrap();
@@ -428,7 +428,7 @@ mod physics_domain_service_tests {
 
     #[test]
     fn test_physics_domain_service_apply_impulse() {
-        let mut service = PhysicsDomainService::new();
+        let service = PhysicsDomainService::new();
         let body = RigidBody::dynamic(RigidBodyId::new(1), Vec3::ZERO);
         
         service.create_body(body).unwrap();
@@ -439,7 +439,7 @@ mod physics_domain_service_tests {
 
     #[test]
     fn test_physics_domain_service_set_body_position() {
-        let mut service = PhysicsDomainService::new();
+        let service = PhysicsDomainService::new();
         let body = RigidBody::dynamic(RigidBodyId::new(1), Vec3::ZERO);
         
         service.create_body(body).unwrap();
@@ -450,7 +450,7 @@ mod physics_domain_service_tests {
 
     #[test]
     fn test_physics_domain_service_get_body_position() {
-        let mut service = PhysicsDomainService::new();
+        let service = PhysicsDomainService::new();
         let body = RigidBody::dynamic(RigidBodyId::new(1), Vec3::new(1.0, 2.0, 3.0));
         
         service.create_body(body).unwrap();
@@ -467,16 +467,16 @@ mod physics_domain_service_tests {
         let result = service.get_body_position(RigidBodyId::new(1));
         
         assert!(result.is_err());
-        if let Err(DomainError::Physics(PhysicsError::BodyNotFound(msg))) = result {
-            assert!(msg.contains("1"));
+        if let Err(DomainError::Physics(PhysicsError::RigidBodyNotFound { body_id, .. })) = result {
+            assert!(body_id.contains("1"));
         } else {
-            panic!("Expected BodyNotFound error");
+            panic!("Expected RigidBodyNotFound error");
         }
     }
 
     #[test]
     fn test_physics_domain_service_step_simulation() {
-        let mut service = PhysicsDomainService::new();
+        let service = PhysicsDomainService::new();
         let body = RigidBody::dynamic(RigidBodyId::new(1), Vec3::new(0.0, 10.0, 0.0));
         
         service.create_body(body).unwrap();
@@ -487,7 +487,7 @@ mod physics_domain_service_tests {
 
     #[test]
     fn test_physics_domain_service_step_alias() {
-        let mut service = PhysicsDomainService::new();
+        let service = PhysicsDomainService::new();
         let body = RigidBody::dynamic(RigidBodyId::new(1), Vec3::new(0.0, 10.0, 0.0));
         
         service.create_body(body).unwrap();
@@ -500,14 +500,14 @@ mod physics_domain_service_tests {
     fn test_physics_domain_service_get_world() {
         let service = PhysicsDomainService::new();
         
-        let world = service.get_world();
+        let _world = service.get_world();
         
         assert_eq!(world.get_world().bodies.len(), 0);
     }
 
     #[test]
     fn test_physics_domain_service_get_world_mut() {
-        let mut service = PhysicsDomainService::new();
+        let service = PhysicsDomainService::new();
         
         let world = service.get_world_mut();
         
@@ -516,7 +516,7 @@ mod physics_domain_service_tests {
 
     #[test]
     fn test_physics_domain_service_multiple_bodies() {
-        let mut service = PhysicsDomainService::new();
+        let service = PhysicsDomainService::new();
         
         service.create_body(RigidBody::dynamic(RigidBodyId::new(1), Vec3::ZERO)).unwrap();
         service.create_body(RigidBody::dynamic(RigidBodyId::new(2), Vec3::new(1.0, 0.0, 0.0))).unwrap();
@@ -527,7 +527,7 @@ mod physics_domain_service_tests {
 
     #[test]
     fn test_physics_domain_service_fixed_body() {
-        let mut service = PhysicsDomainService::new();
+        let service = PhysicsDomainService::new();
         let body = RigidBody::new(RigidBodyId::new(1), RigidBodyType::Fixed, Vec3::ZERO);
         
         let result = service.create_body(body);
@@ -537,7 +537,7 @@ mod physics_domain_service_tests {
 
     #[test]
     fn test_physics_domain_service_kinematic_body() {
-        let mut service = PhysicsDomainService::new();
+        let service = PhysicsDomainService::new();
         let body = RigidBody::new(RigidBodyId::new(1), RigidBodyType::Kinematic, Vec3::ZERO);
         
         let result = service.create_body(body);
@@ -559,7 +559,7 @@ mod scene_domain_service_tests {
 
     #[test]
     fn test_scene_domain_service_create_scene() {
-        let mut service = SceneDomainService::new();
+        let service = SceneDomainService::new();
         
         let result = service.create_scene(SceneId::new(1), "test_scene");
         
@@ -570,7 +570,7 @@ mod scene_domain_service_tests {
 
     #[test]
     fn test_scene_domain_service_create_multiple_scenes() {
-        let mut service = SceneDomainService::new();
+        let service = SceneDomainService::new();
         
         service.create_scene(SceneId::new(1), "scene1").unwrap();
         service.create_scene(SceneId::new(2), "scene2").unwrap();
@@ -581,7 +581,7 @@ mod scene_domain_service_tests {
 
     #[test]
     fn test_scene_domain_service_delete_scene() {
-        let mut service = SceneDomainService::new();
+        let service = SceneDomainService::new();
         
         service.create_scene(SceneId::new(1), "test_scene").unwrap();
         let result = service.delete_scene(SceneId::new(1));
@@ -593,7 +593,7 @@ mod scene_domain_service_tests {
 
     #[test]
     fn test_scene_domain_service_delete_nonexistent_scene() {
-        let mut service = SceneDomainService::new();
+        let service = SceneDomainService::new();
         
         let result = service.delete_scene(SceneId::new(1));
         
@@ -607,7 +607,7 @@ mod scene_domain_service_tests {
 
     #[test]
     fn test_scene_domain_service_switch_to_scene() {
-        let mut service = SceneDomainService::new();
+        let service = SceneDomainService::new();
         
         service.create_scene(SceneId::new(1), "scene1").unwrap();
         service.create_scene(SceneId::new(2), "scene2").unwrap();
@@ -627,7 +627,7 @@ mod scene_domain_service_tests {
 
     #[test]
     fn test_scene_domain_service_switch_to_nonexistent_scene() {
-        let mut service = SceneDomainService::new();
+        let service = SceneDomainService::new();
         
         let result = service.switch_to_scene(SceneId::new(1));
         
@@ -636,7 +636,7 @@ mod scene_domain_service_tests {
 
     #[test]
     fn test_scene_domain_service_get_scene() {
-        let mut service = SceneDomainService::new();
+        let service = SceneDomainService::new();
         
         service.create_scene(SceneId::new(1), "test_scene").unwrap();
         let scene = service.get_scene(SceneId::new(1));
@@ -647,7 +647,7 @@ mod scene_domain_service_tests {
 
     #[test]
     fn test_scene_domain_service_get_scene_mut() {
-        let mut service = SceneDomainService::new();
+        let service = SceneDomainService::new();
         
         service.create_scene(SceneId::new(1), "test_scene").unwrap();
         let scene = service.get_scene_mut(SceneId::new(1));
@@ -657,7 +657,7 @@ mod scene_domain_service_tests {
 
     #[test]
     fn test_scene_domain_service_get_active_scene() {
-        let mut service = SceneDomainService::new();
+        let service = SceneDomainService::new();
         
         service.create_scene(SceneId::new(1), "test_scene").unwrap();
         service.get_scene_mut(SceneId::new(1)).unwrap().load().unwrap();
@@ -681,7 +681,7 @@ mod scene_domain_service_tests {
 
     #[test]
     fn test_scene_domain_service_scene_ids() {
-        let mut service = SceneDomainService::new();
+        let service = SceneDomainService::new();
         
         service.create_scene(SceneId::new(1), "scene1").unwrap();
         service.create_scene(SceneId::new(2), "scene2").unwrap();
@@ -696,7 +696,7 @@ mod scene_domain_service_tests {
 
     #[test]
     fn test_scene_domain_service_has_scene() {
-        let mut service = SceneDomainService::new();
+        let service = SceneDomainService::new();
         
         service.create_scene(SceneId::new(1), "test_scene").unwrap();
         
@@ -706,7 +706,7 @@ mod scene_domain_service_tests {
 
     #[test]
     fn test_scene_domain_service_scene_count() {
-        let mut service = SceneDomainService::new();
+        let service = SceneDomainService::new();
         
         assert_eq!(service.scene_count(), 0);
         

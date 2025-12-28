@@ -2,7 +2,7 @@
 // 
 //  管理所有已注册的插件。
 
-use super::{EnginePlugin, App, PluginMetadata, PluginDependency};
+use super::{EnginePlugin, App, PluginMetadata};
 use std::collections::{HashMap, HashSet};
 use thiserror::Error;
 
@@ -18,12 +18,6 @@ pub enum PluginError {
 
 pub type PluginResult<T> = Result<T, PluginError>;
 
-pub struct PluginRegistry {
-    plugins: Vec<Box<dyn EnginePlugin>>,
-    metadata: HashMap<String, PluginMetadata>,
-    dependency_graph: HashMap<String, Vec<String>>,
-}
-
 #[derive(Default)]
 pub struct PluginRegistry {
     plugins: Vec<Box<dyn EnginePlugin>>,
@@ -36,7 +30,7 @@ impl PluginRegistry {
         Self::default()
     }
 
-    /// 添加插件
+    /// 添加插件（接受具体类型）
     pub fn add<P: EnginePlugin + 'static>(&mut self, plugin: P) -> PluginResult<&mut Self> {
         let metadata = plugin.metadata();
         let name = metadata.name.clone();
@@ -52,6 +46,29 @@ impl PluginRegistry {
         // 添加到注册表
         self.metadata.insert(name.clone(), metadata);
         self.plugins.push(Box::new(plugin));
+
+        // 构建依赖图
+        self.build_dependency_graph();
+
+        Ok(self)
+    }
+
+    /// 添加插件（接受 trait object，用于动态加载）
+    pub fn add_boxed(&mut self, plugin: Box<dyn EnginePlugin>) -> PluginResult<&mut Self> {
+        let metadata = plugin.metadata();
+        let name = metadata.name.clone();
+
+        // 检查重复插件
+        if self.metadata.contains_key(&name) {
+            return Err(PluginError::DuplicatePlugin(name));
+        }
+
+        // 检查依赖
+        self.check_dependencies(&metadata)?;
+
+        // 添加到注册表
+        self.metadata.insert(name.clone(), metadata);
+        self.plugins.push(plugin);
 
         // 构建依赖图
         self.build_dependency_graph();

@@ -107,20 +107,20 @@ impl EntitySyncInfo {
         };
 
         // 根据优先级和距离建议更新间隔
-        self.suggested_interval = match self.priority {
-            SyncPriority::CRITICAL => 1,      // 每帧更新
-            SyncPriority::HIGH => 2,          // 每2帧
-            SyncPriority::MEDIUM => 4,        // 每4帧
-            SyncPriority::LOW => 8,           // 每8帧
-            SyncPriority::MINIMAL => 16,      // 每16帧
+        self.suggested_interval = match self.priority.0 {
+            255 => 1,      // CRITICAL: 每帧更新
+            200 => 2,      // HIGH: 每2帧
+            128 => 4,       // MEDIUM: 每4帧
+            64 => 8,        // LOW: 每8帧
+            32 => 16,       // MINIMAL: 每16帧
+            _ => 8,         // 默认
         };
     }
 }
 
 impl PartialOrd for EntitySyncInfo {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        // 优先级分数高的排在前面
-        self.priority_score.partial_cmp(&other.priority_score)
+        Some(self.cmp(other))
     }
 }
 
@@ -304,7 +304,7 @@ impl PrioritySyncManager {
         let mut packet = DeltaPacket::new(current_tick, 0);
 
         // 按优先级顺序添加实体，直到带宽预算用完
-        while let Some(mut info) = self.priority_queue.pop() {
+        while let Some(info) = self.priority_queue.pop() {
             // 检查是否需要更新（基于建议的间隔）
             let ticks_since_update = current_tick - info.last_update_tick;
             if ticks_since_update < info.suggested_interval {

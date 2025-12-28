@@ -13,10 +13,12 @@ use tokio::sync::mpsc;
 
 /// 消息优先级
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Default)]
 pub enum MessagePriority {
     /// 低优先级（默认）
     Low = 0,
     /// 正常优先级
+    #[default]
     Normal = 1,
     /// 高优先级
     High = 2,
@@ -24,11 +26,6 @@ pub enum MessagePriority {
     Urgent = 3,
 }
 
-impl Default for MessagePriority {
-    fn default() -> Self {
-        MessagePriority::Normal
-    }
-}
 
 impl MessagePriority {
     /// 创建新的消息优先级
@@ -189,6 +186,12 @@ impl<T> Eq for PrioritizedMessage<T> {}
 impl<T> PartialEq for PrioritizedMessage<T> {
     fn eq(&self, other: &Self) -> bool {
         self.priority == other.priority
+    }
+}
+
+impl Default for ActorSystem {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -365,6 +368,12 @@ pub struct AudioActor {
     ai: Option<AiComponent>,
 }
 
+impl Default for AudioActor {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl AudioActor {
     pub fn new() -> Self {
         Self { ai: None }
@@ -437,6 +446,12 @@ pub struct PhysicsActor {
     ai: Option<AiComponent>,
 }
 
+impl Default for PhysicsActor {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PhysicsActor {
     pub fn new() -> Self {
         Self { ai: None }
@@ -505,6 +520,12 @@ pub enum RenderActorMessage {
 pub struct RenderActor {
     // 这里可以包含渲染状态
     ai: Option<AiComponent>,
+}
+
+impl Default for RenderActor {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl RenderActor {

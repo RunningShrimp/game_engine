@@ -17,6 +17,12 @@ pub struct Input { pub mouse: [f32;2], pub mouse_down: bool }
 
 pub struct EcsApp { pub world: World, pub schedule: Schedule }
 
+impl Default for EcsApp {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl EcsApp {
     pub fn new() -> Self {
         let mut world = World::new();

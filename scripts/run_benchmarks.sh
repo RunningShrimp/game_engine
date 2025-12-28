@@ -85,3 +85,7 @@ echo "🎉 All benchmarks completed successfully!"
 echo ""
 echo "📁 Benchmark results saved in: target/criterion/"
 echo "🔍 Use 'cargo run --bin compare_performance' to compare against baselines"
+
+
+
+

@@ -414,9 +414,9 @@ impl AdaptiveLodConfig {
         let base_adjustment = (frame_time_factor + gpu_factor) * self.bias_adjustment_speed;
         let stability_adjustment = stability_factor * 0.2; // 不稳定时额外调整
         let total_adjustment = base_adjustment + stability_adjustment + predictive;
-        let adjustment = total_adjustment.clamp(-self.max_bias_adjustment, self.max_bias_adjustment);
+        
 
-        adjustment
+        total_adjustment.clamp(-self.max_bias_adjustment, self.max_bias_adjustment)
     }
 
     /// 获取平均帧时间
@@ -778,8 +778,8 @@ impl LodSelector {
         let current = state.current_level;
 
         // 只有当距离变化足够大时才切换
-        if target_level != current {
-            if let Some(current_level_config) = cfg.levels.get(current) {
+        if target_level != current
+            && let Some(current_level_config) = cfg.levels.get(current) {
                 let hysteresis_distance = if target_level > current {
                     // 切换到更低质量：需要超过阈值
                     current_level_config.max_distance * (1.0 + range)
@@ -798,7 +798,6 @@ impl LodSelector {
                     state.current_level = target_level;
                 }
             }
-        }
 
         LodSelection {
             current_level: state.current_level,

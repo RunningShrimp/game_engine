@@ -4,12 +4,10 @@
 
 use crate::impl_default;
 use crate::plugins::{EnginePlugin, App, PluginVersion, PluginDependency};
-use crate::render::wgpu_utils::WgpuRenderer;
-use bevy_ecs::prelude::*;
 use winit::window::Window;
 
 /// 渲染插件配置
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, bevy_ecs::prelude::Resource)]
 pub struct RenderConfig {
     /// 是否启用PBR渲染
     pub enable_pbr: bool,
@@ -58,6 +56,12 @@ impl RenderPlugin {
     pub fn with_window(mut self, window: std::sync::Arc<Window>) -> Self {
         self.window = Some(window);
         self
+    }
+}
+
+impl Default for RenderPlugin {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

@@ -66,11 +66,10 @@ impl HighPrecisionTimer {
     pub fn finish(self) -> Duration {
         let elapsed = self.elapsed();
 
-        if let Some(ref collector) = self.collector {
-            if let Ok(mut collector) = collector.lock() {
+        if let Some(ref collector) = self.collector
+            && let Ok(mut collector) = collector.lock() {
                 collector.record_timing(&self.name, elapsed);
             }
-        }
 
         elapsed
     }
@@ -78,11 +77,10 @@ impl HighPrecisionTimer {
 
 impl Drop for HighPrecisionTimer {
     fn drop(&mut self) {
-        if let Some(collector) = &self.collector {
-            if let Ok(mut collector) = collector.lock() {
+        if let Some(collector) = &self.collector
+            && let Ok(mut collector) = collector.lock() {
                 collector.record_timing(&self.name, self.start_time.elapsed());
             }
-        }
     }
 }
 
@@ -482,13 +480,12 @@ impl MetricCollector {
         };
 
         // 初始化异步传输器
-        if collector.config.enable_async_transfer {
-            if let Some(async_config) = &collector.config.async_transfer_config {
+        if collector.config.enable_async_transfer
+            && let Some(async_config) = &collector.config.async_transfer_config {
                 let mut transmitter = AsyncDataTransmitter::new(async_config.clone());
                 transmitter.start()?;
                 collector.async_transmitter = Some(transmitter);
             }
-        }
 
         Ok(collector)
     }
@@ -502,11 +499,10 @@ impl MetricCollector {
     /// 记录数值数据
     pub fn record_value(&mut self, name: &str, value: f64) {
         // 更新计数器
-        if let Ok(mut registry) = self.registry.lock() {
-            if let Some(counter) = registry.get_counter(name) {
+        if let Ok(mut registry) = self.registry.lock()
+            && let Some(counter) = registry.get_counter(name) {
                 counter.set(value as u64);
             }
-        }
 
         // 更新滑动窗口
         let aggregator = self

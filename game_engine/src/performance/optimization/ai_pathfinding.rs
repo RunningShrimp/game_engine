@@ -82,14 +82,14 @@ impl Eq for PathNode {}
 
 impl PartialOrd for PathNode {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        // 反向排序用于优先级队列 (最小堆)
-        other.f_cost.partial_cmp(&self.f_cost)
+        Some(self.cmp(other))
     }
 }
 
 impl Ord for PathNode {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.partial_cmp(other).unwrap_or(Ordering::Equal)
+        // 反向排序用于优先级队列 (最小堆)
+        other.f_cost.partial_cmp(&self.f_cost).unwrap_or(Ordering::Equal)
     }
 }
 
@@ -501,13 +501,13 @@ impl BatchPathfinder {
             .map(|(agent_id, target)| {
                 // 为每个查询创建独立的 AgentPathfinder
                 // 注意: 这里不使用内部的 agents HashMap，因为 HashMap 不是线程安全的
-                if let Some(agent) = self.agents.get(&agent_id) {
+                if let Some(agent) = self.agents.get(agent_id) {
                     let mut temp_agent = agent.clone();
-                    let result = temp_agent.find_path(*target, self.grid_size);
+                    
 
                     // 如果在主线程中需要缓存路径，可以在这里处理
                     // 但需要注意线程安全
-                    result
+                    temp_agent.find_path(*target, self.grid_size)
                 } else {
                     // 智能体不存在，返回空结果
                     PathfindingResult {

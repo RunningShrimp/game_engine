@@ -247,7 +247,7 @@ impl PerformanceReportGenerator {
             "生成时间: {}\n",
             format_timestamp(report.generated_at)
         ));
-        output.push_str("\n");
+        output.push('\n');
 
         // 摘要
         output.push_str("--- 性能摘要 ---\n");
@@ -282,7 +282,7 @@ impl PerformanceReportGenerator {
             report.summary.total_draw_calls
         ));
         output.push_str(&format!("总三角形数: {}\n", report.summary.total_triangles));
-        output.push_str("\n");
+        output.push('\n');
 
         // 详细指标
         if !report.detailed_metrics.is_empty() {
@@ -302,7 +302,7 @@ impl PerformanceReportGenerator {
                     metric.min_value, metric.max_value, metric.unit
                 ));
             }
-            output.push_str("\n");
+            output.push('\n');
         }
 
         // 优化建议
@@ -320,7 +320,7 @@ impl PerformanceReportGenerator {
                     output.push_str(&format!("   预期改进: {}\n", improvement));
                 }
             }
-            output.push_str("\n");
+            output.push('\n');
         }
 
         output.push_str("====================\n");
@@ -378,7 +378,7 @@ impl PerformanceReportGenerator {
             "| 总三角形数 | {} |\n",
             report.summary.total_triangles
         ));
-        output.push_str("\n");
+        output.push('\n');
 
         // 详细指标
         if !report.detailed_metrics.is_empty() {
@@ -403,7 +403,7 @@ impl PerformanceReportGenerator {
                     "| 最大值 | {:.2} {} |\n",
                     metric.max_value, metric.unit
                 ));
-                output.push_str("\n");
+                output.push('\n');
             }
         }
 

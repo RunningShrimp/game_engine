@@ -23,7 +23,8 @@ impl EcsScriptBindings {
 
         // 创建实体
         api.register_function("create_entity", move |_args| {
-            let mut world = safe_lock(&world, "EcsScriptBindings.world").unwrap();
+            let mut world = safe_lock(&world, "EcsScriptBindings.world")
+                .expect("Failed to acquire world lock in create_entity");
             let entity = world.spawn_empty().id();
             ScriptResult::Success(entity.to_bits().to_string())
         });
@@ -33,7 +34,8 @@ impl EcsScriptBindings {
         // 销毁实体
         api.register_function("destroy_entity", move |args| {
             if let Some(ScriptValue::Int(entity_id)) = args.first() {
-                let mut world = safe_lock(&world, "EcsScriptBindings.world").unwrap();
+                let mut world = safe_lock(&world, "EcsScriptBindings.world")
+                    .expect("Failed to acquire world lock in destroy_entity");
                 let entity = Entity::from_bits(*entity_id as u64);
                 if world.despawn(entity) {
                     ScriptResult::Success("Entity destroyed".to_string())
@@ -50,7 +52,7 @@ impl EcsScriptBindings {
         // 获取Transform组件
         api.register_function("get_transform", move |args| {
             if let Some(ScriptValue::Int(entity_id)) = args.first() {
-                let world = safe_lock(&world, "EcsScriptBindings.world").unwrap();
+                let world = safe_lock(&world, "EcsScriptBindings.world").expect("Failed to acquire world lock");
                 let entity = Entity::from_bits(*entity_id as u64);
 
                 if let Some(transform) = world.get::<Transform>(entity) {
@@ -92,7 +94,7 @@ impl EcsScriptBindings {
                 Some(ScriptValue::Float(z)),
             ) = (args.first(), args.get(1), args.get(2), args.get(3))
             {
-                let mut world = safe_lock(&world, "EcsScriptBindings.world").unwrap();
+                let mut world = safe_lock(&world, "EcsScriptBindings.world").expect("Failed to acquire world lock");
                 let entity = Entity::from_bits(*entity_id as u64);
 
                 if let Some(mut transform) = world.get_mut::<Transform>(entity) {
@@ -117,7 +119,7 @@ impl EcsScriptBindings {
                 Some(ScriptValue::Float(z)),
             ) = (args.first(), args.get(1), args.get(2), args.get(3))
             {
-                let mut world = safe_lock(&world, "EcsScriptBindings.world").unwrap();
+                let mut world = safe_lock(&world, "EcsScriptBindings.world").expect("Failed to acquire world lock");
                 let entity = Entity::from_bits(*entity_id as u64);
 
                 if let Some(mut transform) = world.get_mut::<Transform>(entity) {
@@ -149,7 +151,7 @@ impl EcsScriptBindings {
                 Some(ScriptValue::Float(z)),
             ) = (args.first(), args.get(1), args.get(2), args.get(3))
             {
-                let mut world = safe_lock(&world, "EcsScriptBindings.world").unwrap();
+                let mut world = safe_lock(&world, "EcsScriptBindings.world").expect("Failed to acquire world lock");
                 let entity = Entity::from_bits(*entity_id as u64);
 
                 if let Some(mut transform) = world.get_mut::<Transform>(entity) {
@@ -168,7 +170,7 @@ impl EcsScriptBindings {
         // 添加Transform组件
         api.register_function("add_transform", move |args| {
             if let Some(ScriptValue::Int(entity_id)) = args.first() {
-                let mut world = safe_lock(&world, "EcsScriptBindings.world").unwrap();
+                let mut world = safe_lock(&world, "EcsScriptBindings.world").expect("Failed to acquire world lock");
                 let entity = Entity::from_bits(*entity_id as u64);
 
                 if let Ok(mut entity_mut) = world.get_entity_mut(entity) {

@@ -144,8 +144,8 @@ impl FixedTimestepLoop {
         }
 
         // 计算插值因子（用于平滑渲染）
-        let alpha = self.accumulator.as_secs_f64() / self.fixed_time_step.as_secs_f64();
-        alpha
+        
+        self.accumulator.as_secs_f64() / self.fixed_time_step.as_secs_f64()
     }
 
     /// 更新并返回固定时间步长信息
@@ -240,19 +240,7 @@ pub struct FixedTimestepInfo {
     pub fixed_time_step: Duration,
 }
 
-/// Run a fixed-step update callback for `iterations` steps, sleeping between steps.
-/// This is a small placeholder to satisfy module linkage; replace with production-quality logic.
-///
-/// # 已弃用
-///
-/// 此函数已弃用，请使用`FixedTimestepLoop`代替。
-#[deprecated(note = "Use FixedTimestepLoop instead")]
-pub fn run_fixed_steps<F: FnMut()>(mut update: F, fixed_step: Duration, iterations: usize) {
-    for _ in 0..iterations {
-        update();
-        std::thread::sleep(fixed_step);
-    }
-}
+// run_fixed_steps 已删除 - 请使用 FixedTimestepLoop 代替
 
 #[cfg(test)]
 mod tests {

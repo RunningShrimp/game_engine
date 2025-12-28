@@ -190,7 +190,7 @@ impl Chunk {
         );
         // 安全检查：验证对齐后的地址确实对齐
         debug_assert!(
-            aligned_addr % align == 0,
+            aligned_addr.is_multiple_of(align),
             "地址对齐失败：地址 {:#x} 未按 {} 字节对齐",
             aligned_addr,
             align
@@ -269,7 +269,7 @@ impl<T> TypedArena<T> {
     ///
     /// 返回的引用生命周期与 Arena 绑定。
     /// 调用 `reset()` 后，之前返回的引用将失效。
-    pub fn alloc(&self, value: T) -> Result<&mut T, ArenaError> {
+    pub fn alloc(&mut self, value: T) -> Result<&mut T, ArenaError> {
         let ptr = self.arena.alloc(std::mem::size_of::<T>(), std::mem::align_of::<T>())?;
 
         self.alloc_count.set(self.alloc_count.get() + 1);
@@ -345,7 +345,7 @@ impl<T> TypedArenaWithDrop<T> {
     }
 
     /// 分配单个对象
-    pub fn alloc(&self, value: T) -> Result<&mut T, ArenaError> {
+    pub fn alloc(&mut self, value: T) -> Result<&mut T, ArenaError> {
         let ptr = self.arena.alloc(std::mem::size_of::<T>(), std::mem::align_of::<T>())?;
 
         // SAFETY: ptr 来自 arena.alloc，保证有效且对齐正确
@@ -534,11 +534,10 @@ impl MemoryPoolPreallocator {
         let mut pools = self.pools.borrow_mut();
 
         // 尝试从预分配池中获取
-        if let Some(arenas) = pools.get_mut(&chunk_size) {
-            if let Some(arena) = arenas.pop() {
+        if let Some(arenas) = pools.get_mut(&chunk_size)
+            && let Some(arena) = arenas.pop() {
                 return Ok(arena);
             }
-        }
 
         // 预分配池中没有，创建新的
         Arena::new_with_prealloc(chunk_size, 1)
@@ -553,7 +552,7 @@ impl MemoryPoolPreallocator {
         let chunk_size = arena.chunk_size;
         let mut pools = self.pools.borrow_mut();
 
-        let arenas = pools.entry(chunk_size).or_insert_with(Vec::new);
+        let arenas = pools.entry(chunk_size).or_default();
 
         if arenas.len() < max_pool_size {
             // 重置Arena以便重用
@@ -648,18 +647,23 @@ mod tests {
 
     #[test]
     fn test_typed_arena() {
-        let arena = TypedArena::<i32>::new();
+        let mut arena = TypedArena::<i32>::new();
 
-        // 分配一些对象
-        let val1 = arena.alloc(42).unwrap();
-        let val2 = arena.alloc(100).unwrap();
+        // 分配一些对象（每次使用后释放引用，避免借用冲突）
+        {
+            let val1 = arena.alloc(42).unwrap();
+            assert_eq!(*val1, 42);
+        }
 
-        assert_eq!(*val1, 42);
-        assert_eq!(*val2, 100);
+        {
+            let val2 = arena.alloc(100).unwrap();
+            assert_eq!(*val2, 100);
+        }
 
-        // 修改值
-        *val1 = 50;
-        assert_eq!(*val1, 50);
+        // 修改新分配的值
+        let val3 = arena.alloc(30).unwrap();
+        *val3 = 50;
+        assert_eq!(*val3, 50);
     }
 
     #[test]

@@ -1,9 +1,9 @@
 //  通用错误处理模块
-//
+// 
 //  提供统一的错误类型定义和处理模式，整合基础设施层和领域层错误。
-//
+// 
 //  ## 错误类型层次结构
-//
+// 
 //  ```text
 //  GameEngineError (顶层错误类型)
 //  ├── Infrastructure (基础设施层错误)
@@ -90,19 +90,22 @@ pub enum InfrastructureError {
 }
 
 /// 领域层错误类型
+///
+/// 注意：现在直接使用 src/error/ 中的统一错误类型，
+/// 而不是定义本地版本。这确保了整个引擎使用一致的错误类型。
 #[derive(Error, Debug, Clone)]
 pub enum DomainError {
-    /// 音频领域错误
+    /// 音频领域错误（使用统一的AudioError）
     #[error("Audio domain error: {0}")]
-    Audio(#[from] AudioDomainError),
+    Audio(#[from] crate::error::AudioError),
 
-    /// 物理领域错误
+    /// 物理领域错误（使用统一的PhysicsError）
     #[error("Physics domain error: {0}")]
-    Physics(#[from] PhysicsDomainError),
+    Physics(#[from] crate::error::PhysicsError),
 
-    /// 场景领域错误
+    /// 场景领域错误（使用domain::errors中的SceneError）
     #[error("Scene domain error: {0}")]
-    Scene(#[from] SceneDomainError),
+    Scene(#[from] crate::domain::errors::SceneError),
 
     /// 通用领域错误
     #[error("Domain error: {0}")]
@@ -232,65 +235,9 @@ pub enum CommonPlatformError {
     NotSupported(String),
 }
 
-/// 音频领域错误
-#[derive(Error, Debug, Clone)]
-pub enum AudioDomainError {
-    /// 音频源未找到
-    #[error("Audio source not found: {0}")]
-    SourceNotFound(String),
-
-    /// 音频播放失败
-    #[error("Audio playback failed: {0}")]
-    PlaybackFailed(String),
-
-    /// 无效音频格式
-    #[error("Invalid audio format: {0}")]
-    InvalidFormat(String),
-
-    /// 音频设备错误
-    #[error("Audio device error: {0}")]
-    DeviceError(String),
-
-    /// 音量超出范围
-    #[error("Invalid volume: {0}")]
-    InvalidVolume(f32),
-}
-
-/// 物理领域错误
-#[derive(Error, Debug, Clone)]
-pub enum PhysicsDomainError {
-    /// 刚体未找到
-    #[error("Physics body not found: {0}")]
-    BodyNotFound(String),
-
-    /// 碰撞体未找到
-    #[error("Collider not found: {0}")]
-    ColliderNotFound(String),
-
-    /// 无效物理参数
-    #[error("Invalid physics parameter: {0}")]
-    InvalidParameter(String),
-
-    /// 物理世界未初始化
-    #[error("Physics world not initialized")]
-    WorldNotInitialized,
-
-    /// 关节创建失败
-    #[error("Joint creation failed: {0}")]
-    JointCreationFailed(String),
-
-    /// 无效形状
-    #[error("Invalid shape: {0}")]
-    InvalidShape(String),
-
-    /// 形状创建错误
-    #[error("Shape creation error: {0}")]
-    ShapeCreationError(String),
-
-    /// 锁错误
-    #[error("Lock error: {0}")]
-    LockError(String),
-}
+// 注意：AudioDomainError 和 PhysicsDomainError 已移除
+// 现在直接使用 src/error/ 中的统一错误类型 (AudioError, PhysicsError)
+// 这样确保了整个引擎使用一致的错误类型
 
 /// 场景领域错误
 #[derive(Error, Debug, Clone)]
@@ -298,7 +245,7 @@ pub enum SceneDomainError {
     /// 无效场景名称
     #[error("Invalid scene name: {0}")]
     InvalidName(String),
-
+    
     /// 实体未找到
     #[error("Entity not found: {0}")]
     EntityNotFound(String),
@@ -390,56 +337,18 @@ impl GameEngineError {
     }
 }
 
-// From implementations for legacy domain error types
-impl From<crate::domain::errors::AudioError> for AudioDomainError {
-    fn from(error: crate::domain::errors::AudioError) -> Self {
-        match error {
-            crate::domain::errors::AudioError::SourceNotFound(msg) => Self::SourceNotFound(msg),
-            crate::domain::errors::AudioError::PlaybackFailed(msg) => Self::PlaybackFailed(msg),
-            crate::domain::errors::AudioError::InvalidFormat(msg) => Self::InvalidFormat(msg),
-            crate::domain::errors::AudioError::DeviceError(msg) => Self::DeviceError(msg),
-            crate::domain::errors::AudioError::InvalidVolume(vol) => Self::InvalidVolume(vol),
-        }
-    }
-}
-
-impl From<crate::domain::errors::PhysicsError> for PhysicsDomainError {
-    fn from(error: crate::domain::errors::PhysicsError) -> Self {
-        match error {
-            crate::domain::errors::PhysicsError::BodyNotFound(msg) => Self::BodyNotFound(msg),
-            crate::domain::errors::PhysicsError::ColliderNotFound(msg) => {
-                Self::ColliderNotFound(msg)
-            }
-            crate::domain::errors::PhysicsError::InvalidParameter(msg) => {
-                Self::InvalidParameter(msg)
-            }
-            crate::domain::errors::PhysicsError::WorldNotInitialized => Self::WorldNotInitialized,
-            crate::domain::errors::PhysicsError::JointCreationFailed(msg) => {
-                Self::JointCreationFailed(msg)
-            }
-            crate::domain::errors::PhysicsError::InvalidShape(msg) => Self::InvalidShape(msg),
-            crate::domain::errors::PhysicsError::ShapeCreationError(msg) => {
-                Self::ShapeCreationError(msg)
-            }
-            crate::domain::errors::PhysicsError::LockError(msg) => Self::LockError(msg),
-        }
-    }
-}
+// 注意：移除了 AudioDomainError 和 PhysicsDomainError 的 From impls
+// 因为这些类型已被移除，现在直接使用 crate::error::{AudioError, PhysicsError}
+// SceneDomainError 的 From impl 保留（因为SceneError在domain/errors.rs中）
 
 impl From<crate::domain::errors::SceneError> for SceneDomainError {
     fn from(error: crate::domain::errors::SceneError) -> Self {
         match error {
             crate::domain::errors::SceneError::EntityNotFound(msg) => Self::EntityNotFound(msg),
             crate::domain::errors::SceneError::SceneNotFound(msg) => Self::SceneNotFound(msg),
-            crate::domain::errors::SceneError::ComponentNotFound(msg) => {
-                Self::ComponentNotFound(msg)
-            }
-            crate::domain::errors::SceneError::SerializationFailed(msg) => {
-                Self::SerializationFailed(msg)
-            }
-            crate::domain::errors::SceneError::DeserializationFailed(msg) => {
-                Self::DeserializationFailed(msg)
-            }
+            crate::domain::errors::SceneError::ComponentNotFound(msg) => Self::ComponentNotFound(msg),
+            crate::domain::errors::SceneError::SerializationFailed(msg) => Self::SerializationFailed(msg),
+            crate::domain::errors::SceneError::DeserializationFailed(msg) => Self::DeserializationFailed(msg),
         }
     }
 }
@@ -448,25 +357,13 @@ impl From<crate::domain::errors::SceneError> for SceneDomainError {
 impl From<crate::error::RenderError> for CommonRenderError {
     fn from(error: crate::error::RenderError) -> Self {
         match error {
-            crate::error::RenderError::SurfaceCreation { message, .. } => {
-                Self::SurfaceCreation(message)
-            }
+            crate::error::RenderError::SurfaceCreation { message, .. } => Self::SurfaceCreation(message),
             crate::error::RenderError::Adapter { .. } => Self::NoAdapter,
-            crate::error::RenderError::DeviceCreation { message, .. } => {
-                Self::DeviceRequest(message)
-            }
-            crate::error::RenderError::ShaderCompilation { message, .. } => {
-                Self::ShaderCompilation(message)
-            }
-            crate::error::RenderError::PipelineCreation { message, .. } => {
-                Self::PipelineCreation(message)
-            }
-            crate::error::RenderError::TextureCreation { message, .. } => {
-                Self::TextureCreation(message)
-            }
-            crate::error::RenderError::FrameSubmission { message, .. } => {
-                Self::FrameSubmission(message)
-            }
+            crate::error::RenderError::DeviceCreation { message, .. } => Self::DeviceRequest(message),
+            crate::error::RenderError::ShaderCompilation { message, .. } => Self::ShaderCompilation(message),
+            crate::error::RenderError::PipelineCreation { message, .. } => Self::PipelineCreation(message),
+            crate::error::RenderError::TextureCreation { message, .. } => Self::TextureCreation(message),
+            crate::error::RenderError::FrameSubmission { message, .. } => Self::FrameSubmission(message),
             crate::error::RenderError::InvalidState { message, .. } => Self::InvalidState(message),
             // Handle other variants that might exist
             _ => Self::InvalidState("Unknown render error".to_string()),
@@ -537,13 +434,15 @@ impl From<crate::domain::errors::DomainError> for GameEngineError {
     fn from(error: crate::domain::errors::DomainError) -> Self {
         match error {
             crate::domain::errors::DomainError::Audio(e) => {
-                Self::Domain(DomainError::Audio(AudioDomainError::from(e)))
+                // 直接使用统一的AudioError，不需要转换
+                Self::Domain(DomainError::Audio(e))
             }
             crate::domain::errors::DomainError::Physics(e) => {
-                Self::Domain(DomainError::Physics(PhysicsDomainError::from(e)))
+                // 直接使用统一的PhysicsError，不需要转换
+                Self::Domain(DomainError::Physics(e))
             }
             crate::domain::errors::DomainError::Scene(e) => {
-                Self::Domain(DomainError::Scene(SceneDomainError::from(e)))
+                Self::Domain(DomainError::Scene(e))
             }
             crate::domain::errors::DomainError::General(msg) => {
                 Self::Domain(DomainError::General(msg))
@@ -564,8 +463,11 @@ mod tests {
         let game_err: GameEngineError = infra_err.into();
         assert!(matches!(game_err, GameEngineError::Infrastructure(_)));
 
-        // 测试领域层错误转换
-        let audio_err = AudioDomainError::InvalidVolume(1.5);
+        // 测试领域层错误转换 - 使用统一的AudioError
+        let audio_err = crate::error::AudioError::DeviceConfiguration {
+            message: "test".to_string(),
+            severity: crate::error::ErrorSeverity::Error,
+        };
         let domain_err: DomainError = audio_err.into();
         let game_err: GameEngineError = domain_err.into();
         assert!(matches!(game_err, GameEngineError::Domain(_)));
@@ -573,21 +475,15 @@ mod tests {
 
     #[test]
     fn test_legacy_error_conversion() {
-        // 测试从旧的EngineError转换
+        // 测试从旧的EngineError转换 - 使用general替代Init
         let old_err = crate::error::EngineError::general("test");
         let new_err: GameEngineError = old_err.into();
-        assert!(matches!(
-            new_err,
-            GameEngineError::Infrastructure(InfrastructureError::General(_))
-        ));
+        assert!(matches!(new_err, GameEngineError::Infrastructure(InfrastructureError::General(_))));
 
         // 测试从旧的DomainError转换
         let old_domain_err = crate::domain::errors::DomainError::General("test".to_string());
         let new_err: GameEngineError = old_domain_err.into();
-        assert!(matches!(
-            new_err,
-            GameEngineError::Domain(DomainError::General(_))
-        ));
+        assert!(matches!(new_err, GameEngineError::Domain(DomainError::General(_))));
     }
 
     #[test]

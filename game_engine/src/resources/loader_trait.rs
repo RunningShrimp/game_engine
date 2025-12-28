@@ -3,7 +3,7 @@
 //! 提供常用资源类型的加载器实现，包括纹理、模型、音频等。
 
 use super::resource_trait::{Resource, ResourceError, ResourceLoader, ResourceMetadata};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 /// 纹理资源
 #[derive(Debug, Clone)]

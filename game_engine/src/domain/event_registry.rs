@@ -447,8 +447,8 @@ mod tests {
 
         // 验证正确的事件类型
         let event = TestEvent { value: 42 };
-        let serialized = registry.serialize_event(&event).unwrap();
-        let _deserialized: TestEvent = registry.deserialize_event(&serialized).unwrap();
+        let serialized = registry.serialize(&event).unwrap();
+        let deserialized: Box<dyn DomainEvent> = registry.deserialize("TestEvent", &serialized).unwrap();
         registry.validate_event_type::<TestEvent>("TestEvent").unwrap();
 
         // 验证错误的事件类型名称应该失败

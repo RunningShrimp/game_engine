@@ -37,7 +37,7 @@ aes-gcm = "0.10"
 # ECDH key exchange (secure implementation)
 x25519-dalek-ng = { version = "1.1", optional = true }
 hkdf = { version = "0.12", optional = true }
-tempfile = "3.23"
+tempfile = { version = "3.23", optional = true }
 parking_lot.workspace = true
 
 # Core Architecture
@@ -54,7 +54,7 @@ rayon = "1.11.0"
 game_engine_simd = { path = "../game_engine_simd", version = "0.1.0" }
 
 # Hardware detection and optimization (separated crate)
-game_engine_hardware = { path = "../game_engine_hardware", version = "0.1.0" }
+game_engine_hardware = { path = "../game_engine_hardware", version = "0.1.0", optional = true }
 
 # Performance profiling and benchmarking (separated crate)
 game_engine_performance = { path = "../game_engine_performance", version = "0.1.0" }
@@ -93,45 +93,300 @@ log.workspace = true
 webbrowser = "1.0.6"
 tracing.workspace = true
 tracing-subscriber = { version = "0.3.22", features = ["fmt", "env-filter"] }
-rand = "0.10.0-rc.5"
+rand = "0.9"
 rodio = "0.21.1"
 raw-window-handle = "0.6.2"
 num_cpus = "1.17"
 dirs = "6.0.0"
-ort = { version = "2.0.0-rc.10", features = ["download-binaries"] }
+# ort = { version = "2.0.0-rc.10", features = ["download-binaries"], optional = true }  # REMOVED: 未使用的ML依赖 (~50MB)
 toml = "0.9.10"
-fastrand = "2.3.0"
 # Web framework for profiling dashboard
-warp = "0.3"
+# 已从 warp 迁移为 axum，以解决 base64 版本冲突
+axum = { version = "0.8", features = ["ws"] }
+tower-http = { version = "0.6", features = ["cors", "trace"] }
+tokio-tungstenite = "0.21"
 # Tracy Profiler integration (optional)
 tracy-client = { version = "0.18", optional = true }
+hyper = { version = "1.8", features = ["full"] }
+axum-server = "0.8.0"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = "0.2.106"
-console_error_panic_hook = "0.1.7"
 wasm-bindgen-futures = "0.4.56"
 web-sys = { version = "0.3.83", features = ["Window", "Response", "Headers", "Storage", "CacheStorage", "IdbFactory", "IdbDatabase", "IdbTransaction", "IdbObjectStore", "IdbOpenDbRequest", "IdbRequest"] }
 base64 = "0.22.1"
 
 [features]
-# 启用XR（VR/AR）支持，需要OpenXR
+# ============================================================================
+# 功能特性 (Features)
+# ============================================================================
+#
+# 本项目使用 Cargo features 来控制可选功能。每个特性都有明确的用途和依赖关系。
+#
+# ## 功能特性分类
+#
+### 渲染相关
+## 启用XR（VR/AR/MR）支持
+##
+## 增加的依赖：
+## - openxr = "0.19" (必需依赖，不可选)
+##
+## 使用场景：
+## - VR/AR应用开发
+## - 混合现实体验
+## - 虚拟现实仿真
+##
+## 示例：
+## ```bash
+## cargo build --features xr
+## ```
 xr = []
-# 启用GLTF模型加载支持
+
+## 启用GLTF 2.0模型加载支持
+##
+## 增加的依赖：
+## - gltf = "1.4" (约30MB)
+##
+## 支持的功能：
+## - GLTF 2.0格式加载
+## - 内置资源加载（纹理、材质）
+## - 场景层次结构解析
+##
+## 使用场景：
+## - 加载3D模型和场景
+## - 游戏资源管理
+## - 3D内容创作工具
+##
+## 示例：
+## ```bash
+## cargo build --features gltf
+## ```
 gltf = ["dep:gltf"]
-# 启用WebAssembly运行时支持
+
+### 脚本和运行时
+## 启用WebAssembly运行时支持
+##
+## 增加的依赖：
+## - wasmtime = "39" (约15MB)
+##
+## 支持的功能：
+## - 加载和执行WASM模块
+## - 沙箱化脚本执行
+## - 高性能脚本运行时
+##
+## 使用场景：
+## - 游戏脚本系统
+## - 插件架构
+## - 用户自定义逻辑
+##
+## 安全性：
+## - WASM提供内存隔离和沙箱
+## - 适合运行不受信任的代码
+##
+## 示例：
+## ```bash
+## cargo build --features wasm
+## ```
 wasm = ["dep:wasmtime"]
-# 使用安全的密钥交换协议（ECDH + HKDF）
+
+## 启用Python脚本绑定
+##
+## 增加的依赖：
+## - pyo3 = "0.27" (约10MB)
+##
+## 支持的功能：
+## - Python脚本集成
+## - 从Python调用Rust API
+## - 从Rust调用Python代码
+##
+## 使用场景：
+## - 游戏逻辑脚本化
+## - AI/ML模型集成
+## - 快速原型开发
+##
+## 注意：
+## - 需要Python开发环境
+## - 可能增加编译时间
+##
+## 示例：
+## ```bash
+## cargo build --features pyo3
+## ```
+pyo3 = ["dep:pyo3"]
+
+### 网络安全
+## 启用安全的密钥交换协议（推荐用于生产环境）
+##
+## 增加的依赖：
+## - x25519-dalek-ng = "1.1" (约1MB)
+## - hkdf = "0.12" (约50KB)
+##
+## 安全特性：
+## - X25519 ECDH（椭圆曲线Diffie-Hellman）
+## - HKDF密钥派生（RFC 5869）
+## - 前向安全性（Forward Secrecy）
+## - 抗量子计算攻击
+##
+## 使用场景：
+## - 安全的客户端-服务器通信
+## - 端到端加密
+## - 密钥协商
+##
+## 性能影响：
+## - 密钥交换约0.5ms
+## - 内存开销约1KB
+##
+## 示例：
+## ```bash
+## cargo build --features secure_key_exchange
+## ```
 secure_key_exchange = ["x25519-dalek-ng", "hkdf"]
-# 使用不安全的密钥交换（仅用于测试，生产环境不应使用）
+
+## 启用不安全的密钥交换（仅用于测试和开发）
+##
+## ⚠️ 警告：不应用于生产环境！
+##
+## 依赖：无额外依赖
+##
+## 安全特性：
+## - 使用SHA256的简化实现
+## - 不提供前向安全性
+## - 仅适合本地测试和开发
+##
+## 使用场景：
+## - 单元测试
+## - 集成测试
+## - 开发调试（快速迭代）
+##
+## 安全警告：
+## - ❌ 不可用于生产环境
+## - ❌ 不可用于网络通信
+## - ❌ 不可用于加密真实数据
+##
+## 示例：
+## ```bash
+## cargo build --features insecure_key_exchange
+## ```
 insecure_key_exchange = []
-# 启用Tracy Profiler集成（用于性能分析和火焰图）
+
+### 性能分析
+## 启用Tracy Profiler集成
+##
+## 增加的依赖：
+## - tracy-client = "0.18" (约500KB)
+##
+## 功能特性：
+## - 实时性能分析
+## - 火焰图生成
+## - GPU性能分析
+## - 内存分析
+## - 帧时间监控
+##
+## 使用场景：
+## - 性能优化
+## - 瓶颈分析
+## - 帧率优化
+## - 内存泄漏检测
+##
+## 性能影响：
+## - 运行时开销约1-2%
+## - 仅在启用时才有开销
+## - 可通过环境变量动态启用/禁用
+##
+## 注意：
+## - 需要Tracy Profiler GUI工具
+## - Windows/Linux/macOS均支持
+##
+## 示例：
+## ```bash
+## # 编译时启用
+## cargo build --features tracy
+##
+## # 运行时启用（通过环境变量）
+## export RUST_LOG=trace
+## ./your_game
+## ```
 tracy = ["dep:tracy-client"]
-# 默认特性：包含GLTF支持和安全密钥交换
-# 注意：物理、ECS、SIMD、性能分析等核心功能默认启用，不再使用特性标志
-default = ["gltf", "secure_key_exchange"]
+
+### 核心功能
+## 启用物理引擎特性
+##
+## 此特性用于条件编译某些物理相关功能。
+## 大部分物理功能总是可用的，此特性主要用于：
+## - 物理调试工具
+## - 高级物理特性
+## - 物理可视化
+##
+## 依赖：无额外依赖（使用rapier2d/3d）
+physics = []
+
+## 启用并行处理特性
+##
+## 启用多线程并行处理功能，包括：
+## - 并行物理模拟
+## - 并行路径查找
+## - 并行资源加载
+##
+## 依赖：无额外依赖（使用rayon）
+parallel = []
+
+# ============================================================================
+# 默认特性集
+# ============================================================================
+#
+## 默认启用以下特性：
+##
+## - `gltf`: GLTF模型加载（最常见的3D格式）
+## - `secure_key_exchange`: 安全的密钥交换（生产环境推荐）
+## - `tracy`: 性能分析工具（开发调试必备）
+## - `physics`: 物理引擎（游戏核心功能）
+## - `parallel`: 并行处理（性能优化）
+##
+## 为什么选择这些作为默认特性？
+## 1. 适合大多数使用场景
+## 2. 平衡了功能性和性能
+## 3. 安全默认（使用secure_key_exchange）
+## 4. 开发友好（包含tracy和gltf）
+##
+## 如何自定义特性？
+## ```bash
+## # 最小化构建（无可选功能）
+## cargo build --no-default-features
+##
+## # 仅启用XR和WASM
+## cargo build --no-default-features --features xr,wasm
+##
+## # 生产构建（禁用开发工具）
+## cargo build --no-default-features --features gltf,secure_key_exchange,physics,parallel
+## ```
+##
+default = ["gltf", "secure_key_exchange", "physics", "parallel"]
+
+# ============================================================================
+# Feature 组合验证
+# ============================================================================
+#
+## 以下feature组合是互斥的（编译时会报错）：
+##
+## 1. **密钥交换冲突**:
+##    - `secure_key_exchange` 与 `insecure_key_exchange` 不能同时启用
+##    - 原因：两种实现使用相同的trait，编译时会产生冲突
+##
+## 如果尝试同时启用，编译时会触发build.rs中的验证逻辑并报错。
+##
+## 示例错误：
+## ```bash
+## # ❌ 这会失败
+## cargo build --features secure_key_exchange,insecure_key_exchange
+##
+## # ✅ 正确做法：只选择一种
+## cargo build --features secure_key_exchange  # 推荐
+## # 或
+## cargo build --features insecure_key_exchange  # 仅测试
+## ```
 
 [dev-dependencies]
 anyhow = "1.0.100"

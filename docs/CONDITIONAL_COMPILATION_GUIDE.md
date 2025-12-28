@@ -284,6 +284,111 @@ fn initialize_features() {
 }
 ```
 
+### 示例4: 互斥Feature的统一检查（重构后的key_exchange模式）
+
+```rust
+// 在模块顶部统一检查互斥feature
+#[cfg(not(any(feature = "secure_key_exchange", feature = "insecure_key_exchange")))]
+compile_error!("Either 'secure_key_exchange' or 'insecure_key_exchange' feature must be enabled");
+
+// 安全实现依赖
+#[cfg(feature = "secure_key_exchange")]
+use { hkdf::Hkdf, x25519_dalek_ng::* };
+
+// 不安全实现依赖
+#[cfg(feature = "insecure_key_exchange")]
+use sha2::*;
+
+impl KeyPair {
+    pub fn generate() -> Self {
+        #[cfg(feature = "secure_key_exchange")]
+        {
+            tracing::debug!("Using secure X25519 ECDH key exchange");
+            return Self::generate_secure();
+        }
+
+        #[cfg(feature = "insecure_key_exchange")]
+        {
+            tracing::warn!("Using insecure simplified key exchange - only for testing!");
+            return Self::generate_insecure();
+        }
+
+        // 这个分支不应该被编译（由模块顶部的compile_error!保证）
+        #[allow(unreachable_code)]
+        {
+            compile_error!("Either 'secure_key_exchange' or 'insecure_key_exchange' feature must be enabled");
+            unreachable!()
+        }
+    }
+
+    #[cfg(feature = "secure_key_exchange")]
+    fn generate_secure() -> Self {
+        // 安全实现
+    }
+
+    #[cfg(feature = "insecure_key_exchange")]
+    fn generate_insecure() -> Self {
+        // 不安全实现
+    }
+}
+```
+
+### 示例5: Tracy Profiler的条件编译模式
+
+```rust
+// ✅ 推荐 - 使用宏简化重复的条件编译
+macro_rules! tracy_zone {
+    ($name:expr) => {
+        #[cfg(feature = "tracy")]
+        {
+            tracy_client::span!($name);
+        }
+        #[cfg(not(feature = "tracy"))]
+        {
+            // 空实现，无运行时开销
+        }
+    };
+}
+
+// 使用
+tracy_zone!("render_frame");
+```
+
+### 示例6: 避免结构体字段级条件编译
+
+```rust
+// ❌ 不推荐
+pub struct WasmRuntime {
+    #[cfg(feature = "wasm")]
+    module: Option<wasmtime::Module>,
+}
+
+// ✅ 推荐方式1: 使用Option包装
+pub struct WasmRuntime {
+    wasm_runtime: Option<WasmRuntimeImpl>,
+}
+
+#[cfg(feature = "wasm")]
+struct WasmRuntimeImpl {
+    module: wasmtime::Module,
+    instance: wasmtime::Instance,
+}
+
+// ✅ 推荐方式2: 使用trait抽象
+pub trait WasmRuntimeTrait: Send + Sync {
+    fn execute(&self, script: &str) -> Result<Value, Error>;
+}
+
+pub struct WasmRuntime {
+    runtime: Option<Box<dyn WasmRuntimeTrait>>,
+}
+
+#[cfg(feature = "wasm")]
+impl WasmRuntimeTrait for WasmtimeRuntime {
+    // 实现
+}
+```
+
 ## 反模式
 
 ### 反模式1: 散落的平台检测
@@ -361,6 +466,48 @@ pub fn load_gltf() -> Result<GltfScene, GltfLoadError> {
 // 见示例1
 ```
 
+### 反模式5: 结构体字段级条件编译
+
+```rust
+// ❌ 不推荐 - 结构体字段使用条件编译
+pub struct WasmRuntime {
+    #[cfg(feature = "wasm")]
+    module: Option<wasmtime::Module>,
+    #[cfg(feature = "wasm")]
+    instance: Option<wasmtime::Instance>,
+}
+
+// ✅ 推荐 - 使用Option或trait抽象
+pub struct WasmRuntime {
+    wasm_runtime: Option<Box<dyn WasmRuntimeTrait>>,
+}
+
+// 或使用枚举
+pub enum WasmRuntime {
+    Enabled(wasmtime::Module, wasmtime::Instance),
+    Disabled,
+}
+```
+
+### 反模式6: 重复的compile_error!检查
+
+```rust
+// ❌ 不推荐 - 重复的检查
+#[cfg(not(any(feature = "secure_key_exchange", feature = "insecure_key_exchange")))]
+compile_error!("Either 'secure_key_exchange' or 'insecure_key_exchange' feature must be enabled");
+
+impl KeyPair {
+    pub fn generate() -> Self {
+        #[cfg(not(any(feature = "secure_key_exchange", feature = "insecure_key_exchange")))]
+        compile_error!("Either 'secure_key_exchange' or 'insecure_key_exchange' feature must be enabled");
+        // ...
+    }
+}
+
+// ✅ 推荐 - 在模块顶部统一检查
+// 在模块顶部统一检查（见示例4）
+```
+
 ## 工具和检查
 
 ### 检查条件编译使用
@@ -373,7 +520,17 @@ grep -r "#\[cfg(" game_engine/src --include="*.rs" | wc -l
 
 # 查找嵌套条件编译
 grep -r "#\[cfg(" game_engine/src --include="*.rs" | grep -E "cfg\(.*cfg\("
+
+# 统计feature使用频率
+grep -r "cfg(feature" game_engine/src --include="*.rs" | sed 's/.*feature = "\([^"]*\)".*/\1/' | sort | uniq -c | sort -rn
+
+# 统计target使用频率
+grep -r "cfg(target" game_engine/src --include="*.rs" | sed 's/.*target_\([^=)]*\)[=)]\([^)]*\).*/\1=\2/' | sort | uniq -c | sort -rn
 ```
+
+### 审计报告
+
+定期运行条件编译审计，查看 `docs/CONDITIONAL_COMPILATION_AUDIT.md` 获取详细分析。
 
 ### 代码审查检查清单
 
@@ -456,10 +613,90 @@ cargo test --all-features
 cargo test --features gltf,xr
 ```
 
+## 重构指南
+
+### 重构复杂条件编译文件
+
+对于包含大量条件编译指令的文件（如 `key_exchange.rs`），遵循以下步骤：
+
+1. **统一Feature检查**: 在模块顶部统一检查互斥feature
+2. **分离实现**: 将不同实现分离到独立方法中
+3. **减少重复**: 使用委托模式减少重复代码
+4. **文档化**: 为每个feature添加清晰的文档说明
+
+### 重构前后对比
+
+**重构前** (21个条件编译指令，逻辑分散):
+```rust
+#[cfg(feature = "secure_key_exchange")]
+use { ... };
+
+#[cfg(feature = "insecure_key_exchange")]
+use { ... };
+
+#[cfg(not(any(...)))]
+compile_error!(...);
+
+impl KeyPair {
+    pub fn generate() -> Self {
+        #[cfg(feature = "secure_key_exchange")]
+        { /* 实现 */ }
+        #[cfg(feature = "insecure_key_exchange")]
+        { /* 实现 */ }
+        #[cfg(not(any(...)))]
+        compile_error!(...); // 重复检查
+    }
+}
+```
+
+**重构后** (21个条件编译指令，但结构清晰):
+```rust
+// 模块顶部统一检查
+#[cfg(not(any(feature = "secure_key_exchange", feature = "insecure_key_exchange")))]
+compile_error!("Either 'secure_key_exchange' or 'insecure_key_exchange' feature must be enabled");
+
+// 统一导入
+#[cfg(feature = "secure_key_exchange")]
+use { ... };
+
+#[cfg(feature = "insecure_key_exchange")]
+use { ... };
+
+impl KeyPair {
+    pub fn generate() -> Self {
+        #[cfg(feature = "secure_key_exchange")]
+        { return Self::generate_secure(); }
+        #[cfg(feature = "insecure_key_exchange")]
+        { return Self::generate_insecure(); }
+    }
+
+    #[cfg(feature = "secure_key_exchange")]
+    fn generate_secure() -> Self { /* 实现 */ }
+
+    #[cfg(feature = "insecure_key_exchange")]
+    fn generate_insecure() -> Self { /* 实现 */ }
+}
+```
+
+## Feature使用统计
+
+根据最新审计报告（见 `CONDITIONAL_COMPILATION_AUDIT.md`），当前代码库中的feature使用情况：
+
+| Feature | 使用次数 | 主要文件 | 状态 |
+|---------|---------|---------|------|
+| `tracy` | 23 | `profiling/tracy.rs` | ✅ 良好 |
+| `gltf` | 18 | `resources/manager.rs` | ✅ 良好 |
+| `wasm` | 14 | `scripting/wasm_support.rs` | ⚠️ 需改进 |
+| `secure_key_exchange` | 9 | `network/key_exchange.rs` | ✅ 已重构 |
+| `insecure_key_exchange` | 5 | `network/key_exchange.rs` | ✅ 已重构 |
+| `xr` | 3 | `xr/mod.rs` | ✅ 良好 |
+| `parallel` | 3 | `physics/spatial_partition.rs` | ✅ 良好 |
+
 ## 参考
 
 - [Rust 条件编译文档](https://doc.rust-lang.org/reference/conditional-compilation.html)
 - [Cargo 特性文档](https://doc.rust-lang.org/cargo/reference/features.html)
 - [平台检测模块](../game_engine/src/platform/detection.rs)
 - [特性管理模块](../game_engine/src/compat/features.rs)
+- [条件编译审计报告](./CONDITIONAL_COMPILATION_AUDIT.md)
 

@@ -279,6 +279,12 @@ impl DefaultReportGenerator {
     }
 }
 
+impl Default for DefaultReportGenerator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ErrorReportGenerator for DefaultReportGenerator {
     fn generate_report(&self, monitor: &ErrorMonitor) -> ErrorReport {
         let stats = monitor.get_stats();
@@ -520,11 +526,10 @@ impl ErrorMonitor {
         }
 
         // 严重错误洞察
-        if let Some(critical_count) = stats.errors_by_severity.get(&ErrorSeverity::Critical) {
-            if *critical_count > 5 {
+        if let Some(critical_count) = stats.errors_by_severity.get(&ErrorSeverity::Critical)
+            && *critical_count > 5 {
                 insights.push("Critical error threshold exceeded: > 5 critical errors".to_string());
             }
-        }
 
         // 趋势洞察
         for trend in trends {
@@ -645,6 +650,12 @@ impl ErrorMonitor {
                 }
             }
         });
+    }
+}
+
+impl Default for ErrorMonitor {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

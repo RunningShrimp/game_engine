@@ -4,10 +4,20 @@
 
 use crate::impl_default;
 use crate::plugins::{EnginePlugin, App, PluginVersion, PluginDependency};
-use crate::resources::{CoroutineAssetLoader, CoroutineLoaderConfig, UploadQueue, StagingBufferPool};
+use crate::resources::{UploadQueue, StagingBufferPool};
+use crate::resources::coroutine_loader::{CoroutineAssetLoader, CoroutineLoaderConfig};
+use bevy_ecs::prelude::{Res, ResMut};
+
+// 安全的资源获取宏 - 提供更好的错误消息
+macro_rules! fetch_resource_mut {
+    ($world:expr, $res_type:ty) => {
+        $world.get_resource_mut::<$res_type>()
+            .expect(concat!("Resource ", stringify!($res_type), " not found"))
+    };
+}
 
 /// 资源插件配置
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, bevy_ecs::prelude::Resource)]
 pub struct ResourceConfig {
     /// 资源缓存大小 (MB)
     pub cache_size_mb: usize,
@@ -48,6 +58,12 @@ impl ResourcePlugin {
     }
 }
 
+impl Default for ResourcePlugin {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl EnginePlugin for ResourcePlugin {
     fn name(&self) -> &'static str {
         "ResourcePlugin"
@@ -74,10 +90,12 @@ impl EnginePlugin for ResourcePlugin {
         app.insert_resource(UploadQueue::new());
         app.insert_resource(StagingBufferPool::new());
 
-        // 添加资源系统
-        app.add_systems(resource_loading_system);
-        app.add_systems(resource_upload_system);
-        app.add_systems(resource_cleanup_system);
+        // 添加资源系统 - 使用闭包形式
+        app.add_systems(|schedule| {
+            schedule.add_systems(resource_loading_system);
+            schedule.add_systems(resource_upload_system);
+            schedule.add_systems(resource_cleanup_system);
+        });
     }
 
     fn startup(&self, world: &mut bevy_ecs::world::World) {
@@ -105,7 +123,8 @@ pub fn resource_loading_system(
     mut loader: ResMut<CoroutineAssetLoader>,
     time: Res<crate::ecs::Time>,
 ) {
-    // 更新加载器
+    // 更新加载器 - 处理所有已完成的加载请求
+    // crate::ecs::Time 使用 delta_seconds 字段
     loader.update(time.delta_seconds);
 }
 
@@ -128,18 +147,18 @@ pub fn resource_cleanup_system(
 
 /// 初始化默认资源
 fn initialize_default_resources(world: &mut bevy_ecs::world::World) {
-    let mut loader = world.get_resource_mut::<CoroutineAssetLoader>().unwrap();
+    let mut loader = fetch_resource_mut!(world, CoroutineAssetLoader);
 
     // 加载默认纹理
-    let _ = loader.load_texture("default_white", "assets/textures/default_white.png");
-    let _ = loader.load_texture("default_normal", "assets/textures/default_normal.png");
+    let _ = loader.load_texture("assets/textures/default_white.png");
+    let _ = loader.load_texture("assets/textures/default_normal.png");
 
     // 加载默认字体
-    let _ = loader.load_font("default_font", "assets/fonts/default.ttf");
+    let _ = loader.load_font("assets/fonts/default.ttf");
 
     // 加载默认着色器
-    let _ = loader.load_shader("default_vertex", "assets/shaders/default.vert");
-    let _ = loader.load_shader("default_fragment", "assets/shaders/default.frag");
+    let _ = loader.load_shader("assets/shaders/default.vert");
+    let _ = loader.load_shader("assets/shaders/default.frag");
 
     println!("Initialized default resources");
 }

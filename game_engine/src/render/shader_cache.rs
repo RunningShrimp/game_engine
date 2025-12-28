@@ -455,16 +455,13 @@ impl ShaderCache {
 
         if let Ok(entries) = fs::read_dir(&self.config.cache_dir) {
             for entry in entries.flatten() {
-                if let Ok(metadata) = entry.metadata() {
-                    if metadata.is_file() {
-                        if let Some(ext) = entry.path().extension() {
-                            if ext == "spv" {
+                if let Ok(metadata) = entry.metadata()
+                    && metadata.is_file()
+                        && let Some(ext) = entry.path().extension()
+                            && ext == "spv" {
                                 total_size += metadata.len();
                                 file_count += 1;
                             }
-                        }
-                    }
-                }
             }
         }
 
@@ -489,8 +486,8 @@ impl ShaderCache {
         if let Ok(entries) = fs::read_dir(&self.config.cache_dir) {
             for entry in entries.flatten() {
                 let path = entry.path();
-                if path.extension().and_then(|s| s.to_str()) == Some("meta") {
-                    if let Ok(metadata) = self.load_metadata(&path) {
+                if path.extension().and_then(|s| s.to_str()) == Some("meta")
+                    && let Ok(metadata) = self.load_metadata(&path) {
                         // 获取对应的缓存文件路径
                         if let Some(cache_file) = path.parent().and_then(|p| {
                             path.file_stem().and_then(|stem| {
@@ -502,7 +499,6 @@ impl ShaderCache {
                             cache_files.push((cache_file, metadata.last_accessed));
                         }
                     }
-                }
             }
         }
 
@@ -522,12 +518,11 @@ impl ShaderCache {
                 let file_size = metadata.len();
                 if fs::remove_file(&cache_path).is_ok() {
                     // 删除对应的元数据文件
-                    if let Some(meta_path) = cache_path.parent() {
-                        if let Some(stem) = cache_path.file_stem() {
+                    if let Some(meta_path) = cache_path.parent()
+                        && let Some(stem) = cache_path.file_stem() {
                             let meta_filename = format!("{}.meta", stem.to_string_lossy());
                             let _ = fs::remove_file(meta_path.join(meta_filename));
                         }
-                    }
                     current_size -= file_size;
                 }
             }
@@ -545,9 +540,9 @@ impl ShaderCache {
         if let Ok(entries) = fs::read_dir(&self.config.cache_dir) {
             for entry in entries.flatten() {
                 let path = entry.path();
-                if path.extension().and_then(|s| s.to_str()) == Some("meta") {
-                    if let Ok(metadata) = self.load_metadata(&path) {
-                        if let Some(cache_file) = path.parent().and_then(|p| {
+                if path.extension().and_then(|s| s.to_str()) == Some("meta")
+                    && let Ok(metadata) = self.load_metadata(&path)
+                        && let Some(cache_file) = path.parent().and_then(|p| {
                             path.file_stem().and_then(|stem| {
                                 p.join(format!("{}.spv", stem.to_string_lossy()))
                                     .canonicalize()
@@ -556,8 +551,6 @@ impl ShaderCache {
                         }) {
                             cache_files.push((cache_file, metadata.created_at));
                         }
-                    }
-                }
             }
         }
 
@@ -574,12 +567,11 @@ impl ShaderCache {
             if let Ok(metadata) = fs::metadata(&cache_path) {
                 let file_size = metadata.len();
                 if fs::remove_file(&cache_path).is_ok() {
-                    if let Some(meta_path) = cache_path.parent() {
-                        if let Some(stem) = cache_path.file_stem() {
+                    if let Some(meta_path) = cache_path.parent()
+                        && let Some(stem) = cache_path.file_stem() {
                             let meta_filename = format!("{}.meta", stem.to_string_lossy());
                             let _ = fs::remove_file(meta_path.join(meta_filename));
                         }
-                    }
                     current_size -= file_size;
                 }
             }
@@ -596,11 +588,10 @@ impl ShaderCache {
         if let Ok(entries) = fs::read_dir(&self.config.cache_dir) {
             for entry in entries.flatten() {
                 let path = entry.path();
-                if path.extension().and_then(|s| s.to_str()) == Some("spv") {
-                    if let Ok(metadata) = fs::metadata(&path) {
+                if path.extension().and_then(|s| s.to_str()) == Some("spv")
+                    && let Ok(metadata) = fs::metadata(&path) {
                         cache_files.push((path, metadata.len()));
                     }
-                }
             }
         }
 
@@ -616,12 +607,11 @@ impl ShaderCache {
             }
 
             if fs::remove_file(&cache_path).is_ok() {
-                if let Some(meta_path) = cache_path.parent() {
-                    if let Some(stem) = cache_path.file_stem() {
+                if let Some(meta_path) = cache_path.parent()
+                    && let Some(stem) = cache_path.file_stem() {
                         let meta_filename = format!("{}.meta", stem.to_string_lossy());
                         let _ = fs::remove_file(meta_path.join(meta_filename));
                     }
-                }
                 current_size -= file_size;
             }
         }

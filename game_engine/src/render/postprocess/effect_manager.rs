@@ -143,14 +143,11 @@ impl PostProcessEffect {
 
     /// 检查效果是否可以合并
     fn can_merge_with(&self, other: &PostProcessEffect) -> bool {
-        match (self, other) {
-            (
-                PostProcessEffect::ColorCorrection { .. },
-                PostProcessEffect::ColorCorrection { .. },
-            ) => true,
-            (PostProcessEffect::Tonemap { .. }, PostProcessEffect::Tonemap { .. }) => true,
-            _ => false,
-        }
+        matches!(
+            (self, other),
+            (PostProcessEffect::ColorCorrection { .. }, PostProcessEffect::ColorCorrection { .. })
+                | (PostProcessEffect::Tonemap { .. }, PostProcessEffect::Tonemap { .. })
+        )
     }
 }
 
@@ -304,6 +301,9 @@ impl PostProcessEffectManager {
             PostProcessEffect::Antialiasing { .. } => "antialiasing",
             PostProcessEffect::Bloom { .. } => "bloom",
             PostProcessEffect::SSAO { .. } => "ssao",
+            PostProcessEffect::SSR { .. } => "ssr",
+            PostProcessEffect::VolumetricLighting { .. } => "volumetric_lighting",
+            PostProcessEffect::ProceduralNoise { .. } => "procedural_noise",
             PostProcessEffect::MotionBlur { .. } => "motion_blur",
             PostProcessEffect::DepthOfField { .. } => "depth_of_field",
             PostProcessEffect::ColorCorrection { .. } => "color_correction",
@@ -316,6 +316,9 @@ impl PostProcessEffectManager {
                 PostProcessEffect::Antialiasing { .. } => "antialiasing",
                 PostProcessEffect::Bloom { .. } => "bloom",
                 PostProcessEffect::SSAO { .. } => "ssao",
+                PostProcessEffect::SSR { .. } => "ssr",
+                PostProcessEffect::VolumetricLighting { .. } => "volumetric_lighting",
+                PostProcessEffect::ProceduralNoise { .. } => "procedural_noise",
                 PostProcessEffect::MotionBlur { .. } => "motion_blur",
                 PostProcessEffect::DepthOfField { .. } => "depth_of_field",
                 PostProcessEffect::ColorCorrection { .. } => "color_correction",
@@ -354,6 +357,9 @@ impl PostProcessEffectManager {
                 PostProcessEffect::Antialiasing { .. } => "antialiasing",
                 PostProcessEffect::Bloom { .. } => "bloom",
                 PostProcessEffect::SSAO { .. } => "ssao",
+                PostProcessEffect::SSR { .. } => "ssr",
+                PostProcessEffect::VolumetricLighting { .. } => "volumetric_lighting",
+                PostProcessEffect::ProceduralNoise { .. } => "procedural_noise",
                 PostProcessEffect::MotionBlur { .. } => "motion_blur",
                 PostProcessEffect::DepthOfField { .. } => "depth_of_field",
                 PostProcessEffect::ColorCorrection { .. } => "color_correction",
@@ -400,13 +406,12 @@ impl PostProcessEffectManager {
         // 合并兼容的效果
         let mut merged: Vec<PostProcessEffect> = Vec::new();
         for effect in &self.effect_chain {
-            if let Some(last) = merged.last_mut() {
-                if last.can_merge_with(effect) {
+            if let Some(last) = merged.last_mut()
+                && last.can_merge_with(effect) {
                     // 合并效果（这里简化处理，实际应该合并参数）
                     *last = effect.clone();
                     continue;
                 }
-            }
             merged.push(effect.clone());
         }
         self.effect_chain = merged;
@@ -495,6 +500,36 @@ impl PostProcessEffectManager {
                     self.pipeline.config.ssao_radius = *radius;
                     self.pipeline.config.ssao_intensity = *intensity;
                     self.pipeline.config.ssao_bias = *bias;
+                }
+                PostProcessEffect::SSR {
+                    max_distance,
+                    step_count,
+                    intensity,
+                    edge_fade,
+                } => {
+                    // SSR效果暂未在PostProcessConfig中实现
+                    // 这里只是占位，未来可以添加相应的配置字段
+                    let _ = (*max_distance, *step_count, *intensity, *edge_fade);
+                }
+                PostProcessEffect::VolumetricLighting {
+                    scattering_intensity,
+                    sample_count,
+                    god_ray_intensity,
+                    fog_density,
+                } => {
+                    // 体积光效果暂未在PostProcessConfig中实现
+                    // 这里只是占位，未来可以添加相应的配置字段
+                    let _ = (*scattering_intensity, *sample_count, *god_ray_intensity, *fog_density);
+                }
+                PostProcessEffect::ProceduralNoise {
+                    film_grain_intensity,
+                    chromatic_aberration_intensity,
+                    scanline_intensity,
+                    noise_intensity,
+                } => {
+                    // 程序化噪声效果暂未在PostProcessConfig中实现
+                    // 这里只是占位，未来可以添加相应的配置字段
+                    let _ = (*film_grain_intensity, *chromatic_aberration_intensity, *scanline_intensity, *noise_intensity);
                 }
                 PostProcessEffect::MotionBlur {
                     intensity,

@@ -158,11 +158,10 @@ impl LogFilter {
         }
 
         // 检查搜索关键词
-        if let Some(ref term) = self.search_term {
-            if !entry.message.contains(term) {
+        if let Some(ref term) = self.search_term
+            && !entry.message.contains(term) {
                 return false;
             }
-        }
 
         // 检查来源过滤
         if let Some(ref source_filter) = self.source_filter {

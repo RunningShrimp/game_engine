@@ -841,6 +841,70 @@ pub fn new() -> Self {
 }
 ```
 
+### 条件编译最佳实践
+
+**统一Feature检查**:
+
+```rust
+// ✅ 好的做法：在模块顶部统一检查
+#[cfg(not(any(feature = "secure_key_exchange", feature = "insecure_key_exchange")))]
+compile_error!("Either 'secure_key_exchange' or 'insecure_key_exchange' feature must be enabled");
+
+// ❌ 避免：在多个地方重复检查
+// 在多个函数中重复相同的compile_error!
+```
+
+**避免结构体字段级条件编译**:
+
+```rust
+// ❌ 避免：结构体字段使用条件编译
+pub struct WasmRuntime {
+    #[cfg(feature = "wasm")]
+    module: Option<wasmtime::Module>,
+}
+
+// ✅ 好的做法：使用Option或trait抽象
+pub struct WasmRuntime {
+    wasm_runtime: Option<Box<dyn WasmRuntimeTrait>>,
+}
+```
+
+**分离不同实现**:
+
+```rust
+// ✅ 好的做法：将不同实现分离到独立方法
+impl KeyPair {
+    pub fn generate() -> Self {
+        #[cfg(feature = "secure_key_exchange")]
+        { return Self::generate_secure(); }
+        #[cfg(feature = "insecure_key_exchange")]
+        { return Self::generate_insecure(); }
+    }
+
+    #[cfg(feature = "secure_key_exchange")]
+    fn generate_secure() -> Self { /* 实现 */ }
+
+    #[cfg(feature = "insecure_key_exchange")]
+    fn generate_insecure() -> Self { /* 实现 */ }
+}
+```
+
+**使用宏简化重复模式**:
+
+```rust
+// ✅ 好的做法：使用宏简化重复的条件编译
+macro_rules! tracy_zone {
+    ($name:expr) => {
+        #[cfg(feature = "tracy")]
+        { tracy_client::span!($name); }
+        #[cfg(not(feature = "tracy"))]
+        { /* 空实现 */ }
+    };
+}
+```
+
+详细指南请参考 [条件编译指南](CONDITIONAL_COMPILATION_GUIDE.md) 和 [条件编译审计报告](CONDITIONAL_COMPILATION_AUDIT.md)。
+
 ---
 
 ## 性能监控
@@ -910,6 +974,14 @@ dashboard.record_gpu_time(5.0);
 - [ ] 是否添加了单元测试？
 - [ ] 是否添加了集成测试？
 - [ ] 是否测试了边界条件？
+
+### 条件编译审查
+
+- [ ] 是否在模块顶部统一检查互斥feature？
+- [ ] 是否避免了结构体字段级条件编译？
+- [ ] 是否将不同实现分离到独立方法中？
+- [ ] 是否使用了宏简化重复的条件编译模式？
+- [ ] 是否文档化了所有feature的用途和依赖？
 
 ---
 

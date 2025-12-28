@@ -29,9 +29,9 @@ pub use game_engine_common::benchmarking::{
     ValidationSummary,
 };
 pub use performance_regression_tests::{
-    PerformanceRegressionSuite, PerformanceThresholds, RegressionTestResult,
+    PerformanceRegressionSuite, PerformanceThresholds, RegressionTestResult as PerformanceRegressionTestResult,
 };
 pub use baseline_updater::{
-    BaselineUpdater, PerformanceBaselines, BenchmarkBaseline, SystemInfo,
+    BaselineUpdater, PerformanceBaselines, BenchmarkBaseline as BaselineUpdaterBaseline, SystemInfo,
 };
 

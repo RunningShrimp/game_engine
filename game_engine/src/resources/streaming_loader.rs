@@ -3,7 +3,7 @@
 //! 提供大型资源（如高分辨率纹理）的流式加载功能。
 //! 支持分块加载、渐进式质量提升和内存优化。
 
-use super::resource_trait::{Resource, ResourceError};
+use super::resource_trait::{Resource, ResourceError, ResourceMetadata};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -141,6 +141,16 @@ impl StreamingLoader {
         Self::new(StreamingConfig::default())
     }
 
+    /// 检查资源是否符合Resource trait的要求
+    pub fn validate_resource<R: Resource>(resource: &R) -> bool {
+        resource.is_loaded() && resource.size_bytes() > 0
+    }
+
+    /// 获取资源的元数据（如果资源实现了Resource trait）
+    pub fn get_resource_metadata<R: Resource>(resource: &R) -> ResourceMetadata {
+        resource.metadata().clone()
+    }
+
     /// 开始流式加载资源
     ///
     /// # 参数
@@ -160,7 +170,7 @@ impl StreamingLoader {
         let total_size = metadata.len() as usize;
 
         // 计算块数
-        let total_chunks = (total_size + self.config.chunk_size - 1) / self.config.chunk_size;
+        let total_chunks = total_size.div_ceil(self.config.chunk_size);
 
         // 创建通道
         let (tx, rx) = mpsc::channel(100);
@@ -169,6 +179,10 @@ impl StreamingLoader {
         let loaded_size = Arc::new(AtomicUsize::new(0));
         let received_chunks = Arc::new(AtomicUsize::new(0));
 
+        // 克隆路径用于任务和句柄
+        let path_buf_for_handle = path_buf.clone();
+        let path_buf_for_task = path_buf;
+
         // 启动加载任务
         let config = self.config.clone();
         let semaphore = self.semaphore.clone();
@@ -176,7 +190,7 @@ impl StreamingLoader {
         let received_chunks_clone = received_chunks.clone();
 
         tokio::spawn(async move {
-            let mut file = match File::open(&path_buf).await {
+            let mut file = match File::open(&path_buf_for_task).await {
                 Ok(f) => f,
                 Err(e) => {
                     let _ = tx.send(Err(ResourceError::Io(e))).await;
@@ -205,9 +219,9 @@ impl StreamingLoader {
 
                 // 读取块数据
                 let chunk_result = async {
-                    file.seek(SeekFrom::Start(offset)).await.map_err(|e| ResourceError::Io(e))?;
+                    file.seek(SeekFrom::Start(offset)).await.map_err(ResourceError::Io)?;
                     let mut buffer = vec![0u8; chunk_size];
-                    file.read_exact(&mut buffer).await.map_err(|e| ResourceError::Io(e))?;
+                    file.read_exact(&mut buffer).await.map_err(ResourceError::Io)?;
                     Ok::<ResourceChunk, ResourceError>(ResourceChunk {
                         chunk_index,
                         data: buffer,
@@ -242,7 +256,7 @@ impl StreamingLoader {
             loaded_size,
             total_chunks,
             received_chunks,
-            path: path_buf,
+            path: path_buf_for_handle,
         })
     }
 
@@ -281,8 +295,9 @@ impl StreamingLoader {
 
     /// 设置配置
     pub fn set_config(&mut self, config: StreamingConfig) {
+        let max_concurrent = config.max_concurrent;
         self.config = config;
-        self.semaphore = Arc::new(tokio::sync::Semaphore::new(config.max_concurrent));
+        self.semaphore = Arc::new(tokio::sync::Semaphore::new(max_concurrent));
     }
 }
 

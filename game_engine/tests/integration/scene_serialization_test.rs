@@ -117,3 +117,7 @@ fn test_scene_aggregate_serialization() {
     assert!(validation_result.is_ok(), "Scene validation failed: {:?}", validation_result);
 }
 
+
+
+
+

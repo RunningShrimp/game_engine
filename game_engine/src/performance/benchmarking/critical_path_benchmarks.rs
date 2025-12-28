@@ -155,15 +155,56 @@ fn benchmark_arena_allocation(bench: &mut Benchmark) {
         z: f32,
     }
 
+    impl TestData {
+        /// 计算向量的模
+        fn magnitude(&self) -> f32 {
+            (self.x * self.x + self.y * self.y + self.z * self.z).sqrt()
+        }
+
+        /// 计算向量的点积
+        fn dot(&self, other: &Self) -> f32 {
+            self.x * other.x + self.y * other.y + self.z * other.z
+        }
+
+        /// 归一化向量
+        fn normalize(&self) -> Self {
+            let mag = self.magnitude();
+            if mag > 0.0 {
+                Self {
+                    x: self.x / mag,
+                    y: self.y / mag,
+                    z: self.z / mag,
+                }
+            } else {
+                *self
+            }
+        }
+    }
+
     let result = bench.run("TypedArena::alloc", 10_000, || {
-        let arena = TypedArena::new();
+        let mut arena = TypedArena::new();
+
         for i in 0..100 {
             let _ = arena.alloc(TestData {
                 x: i as f32,
-                y: i as f32,
-                z: i as f32,
+                y: i as f32 * 2.0,
+                z: i as f32 * 3.0,
             });
+
+            // 验证分配的数据
+            let test = TestData {
+                x: 1.0,
+                y: 2.0,
+                z: 3.0,
+            };
+            let _mag = test.magnitude();
+            let _normalized = test.normalize();
         }
+
+        // 计算并使用测试数据，形成逻辑闭环
+        let data1 = TestData { x: 1.0, y: 0.0, z: 0.0 };
+        let data2 = TestData { x: 0.0, y: 1.0, z: 0.0 };
+        let _dot = data1.dot(&data2);
     });
     tracing::info!(target: "benchmark", "{}", result);
 }

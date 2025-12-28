@@ -74,7 +74,7 @@ impl ScriptingService {
 
     /// 获取运行时信息（用于调试）
     pub fn runtime_info(&self) -> String {
-        format!("QuickJS Runtime: <runtime instance>")
+        "QuickJS Runtime: <runtime instance>".to_string()
     }
 
     /// 检查运行时是否有效

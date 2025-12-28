@@ -3,7 +3,7 @@
 //! 本模块包含所有聚合根的不变式验证测试，确保业务规则在边界内执行。
 
 use crate::domain::entity::{EntityFactory, EntityId};
-use crate::domain::errors::DomainError;
+// DomainError 未在测试中实际使用，已删除
 use crate::domain::scene::{Scene, SceneId, SceneState};
 use crate::ecs::Camera;
 use glam::Vec3;
@@ -111,3 +111,7 @@ mod scene_invariants_tests {
         assert_eq!(scene.state, SceneState::Unloaded);
     }
 }
+
+
+
+

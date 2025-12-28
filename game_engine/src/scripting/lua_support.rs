@@ -2,6 +2,7 @@ use super::system::{ScriptContext, ScriptResult, ScriptValue};
 use std::collections::HashMap;
 
 /// Lua脚本上下文 (简化版)
+#[derive(Default)]
 pub struct LuaContext {
     /// 脚本存储
     scripts: HashMap<String, String>,
@@ -9,14 +10,6 @@ pub struct LuaContext {
     variables: HashMap<String, LuaValue>,
 }
 
-impl Default for LuaContext {
-    fn default() -> Self {
-        Self {
-            scripts: HashMap::new(),
-            variables: HashMap::new(),
-        }
-    }
-}
 
 /// Lua值
 #[derive(Debug, Clone, PartialEq)]
@@ -148,6 +141,12 @@ impl LuaEngine {
             // 实际实现需要访问音频系统
             Ok(LuaValue::Nil)
         });
+    }
+}
+
+impl Default for LuaEngine {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

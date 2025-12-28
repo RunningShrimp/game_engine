@@ -1,6 +1,5 @@
 //! UI模块单元测试
 
-use bevy_ecs::prelude::*;
 use game_engine::ui::{UIRoot, UIWidget, UIState, UITheme, UIService, LayoutType, WidgetType};
 use glam::Vec2;
 

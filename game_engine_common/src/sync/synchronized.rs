@@ -1,6 +1,24 @@
 use crossbeam_channel::{Receiver, Sender, unbounded};
+use std::fmt;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
+
+/// 锁操作错误类型
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LockError {
+    /// 锁被污染（由于其他线程在持有锁时发生panic）
+    Poisoned,
+}
+
+impl fmt::Display for LockError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            LockError::Poisoned => write!(f, "锁被污染（由于其他线程在持有锁时发生panic）"),
+        }
+    }
+}
+
+impl std::error::Error for LockError {}
 
 #[derive(Default)]
 pub struct LockMetrics {
@@ -144,7 +162,7 @@ impl<T> RwLockWrapper<T> {
         &self.metrics
     }
 
-    pub fn read(&self) -> Result<RwLockReadGuard<'_, T>, ()> {
+    pub fn read(&self) -> Result<RwLockReadGuard<'_, T>, LockError> {
         let start = std::time::Instant::now();
 
         match self.inner.read() {
@@ -154,12 +172,12 @@ impl<T> RwLockWrapper<T> {
                 self.metrics
                     .wait_time_ns
                     .fetch_add(start.elapsed().as_nanos() as u64, Ordering::Relaxed);
-                Err(())
+                Err(LockError::Poisoned)
             }
         }
     }
 
-    pub fn write(&self) -> Result<RwLockWriteGuard<'_, T>, ()> {
+    pub fn write(&self) -> Result<RwLockWriteGuard<'_, T>, LockError> {
         let start = std::time::Instant::now();
 
         match self.inner.write() {
@@ -169,7 +187,7 @@ impl<T> RwLockWrapper<T> {
                 self.metrics
                     .wait_time_ns
                     .fetch_add(start.elapsed().as_nanos() as u64, Ordering::Relaxed);
-                Err(())
+                Err(LockError::Poisoned)
             }
         }
     }

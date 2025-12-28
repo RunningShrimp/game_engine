@@ -4,7 +4,7 @@
 use crate::domain::audio::{AudioListener, AudioSource, AudioSourceId};
 use crate::domain::errors::{AudioError, DomainError, PhysicsError};
 use crate::domain::physics::{Collider, ColliderId, PhysicsWorld, RigidBody, RigidBodyId};
-use crate::domain::scene::{Scene, SceneId, SceneManager};
+use crate::domain::scene::{Scene, SceneId, SceneRepository};
 use crate::domain::value_objects::Volume;
 use rapier3d::prelude::*;
 use std::any::{Any, TypeId};
@@ -262,10 +262,10 @@ impl AudioDomainService {
     /// 销毁音频源
     pub fn destroy_source(&mut self, id: AudioSourceId) -> Result<AudioSource, DomainError> {
         let source = self.sources.remove(&id).ok_or_else(|| {
-            DomainError::Audio(AudioError::SourceNotFound(format!(
-                "Source {}",
-                id.as_u64()
-            )))
+            DomainError::Audio(AudioError::SourceNotFound {
+                source_id: format!("Source {}", id.as_u64()),
+                severity: crate::error::ErrorSeverity::Error,
+            })
         })?;
         self.last_updated = Self::current_timestamp();
         Ok(source)
@@ -274,10 +274,10 @@ impl AudioDomainService {
     /// 播放音频源
     pub fn play_source(&mut self, id: AudioSourceId) -> Result<(), DomainError> {
         let source = self.sources.get_mut(&id).ok_or_else(|| {
-            DomainError::Audio(AudioError::SourceNotFound(format!(
-                "Source {}",
-                id.as_u64()
-            )))
+            DomainError::Audio(AudioError::SourceNotFound {
+                source_id: format!("Source {}", id.as_u64()),
+                severity: crate::error::ErrorSeverity::Error,
+            })
         })?;
         source.play()?;
         self.last_updated = Self::current_timestamp();
@@ -287,10 +287,10 @@ impl AudioDomainService {
     /// 停止音频源
     pub fn stop_source(&mut self, id: AudioSourceId) -> Result<(), DomainError> {
         let source = self.sources.get_mut(&id).ok_or_else(|| {
-            DomainError::Audio(AudioError::SourceNotFound(format!(
-                "Source {}",
-                id.as_u64()
-            )))
+            DomainError::Audio(AudioError::SourceNotFound {
+                source_id: format!("Source {}", id.as_u64()),
+                severity: crate::error::ErrorSeverity::Error,
+            })
         })?;
         source.stop()?;
         self.last_updated = Self::current_timestamp();
@@ -300,10 +300,10 @@ impl AudioDomainService {
     /// 暂停音频源
     pub fn pause_source(&mut self, id: AudioSourceId) -> Result<(), DomainError> {
         let source = self.sources.get_mut(&id).ok_or_else(|| {
-            DomainError::Audio(AudioError::SourceNotFound(format!(
-                "Source {}",
-                id.as_u64()
-            )))
+            DomainError::Audio(AudioError::SourceNotFound {
+                source_id: format!("Source {}", id.as_u64()),
+                severity: crate::error::ErrorSeverity::Error,
+            })
         })?;
         source.pause()?;
         self.last_updated = Self::current_timestamp();
@@ -313,10 +313,10 @@ impl AudioDomainService {
     /// 恢复音频源
     pub fn resume_source(&mut self, id: AudioSourceId) -> Result<(), DomainError> {
         let source = self.sources.get_mut(&id).ok_or_else(|| {
-            DomainError::Audio(AudioError::SourceNotFound(format!(
-                "Source {}",
-                id.as_u64()
-            )))
+            DomainError::Audio(AudioError::SourceNotFound {
+                source_id: format!("Source {}", id.as_u64()),
+                severity: crate::error::ErrorSeverity::Error,
+            })
         })?;
         source.resume()?;
         self.last_updated = Self::current_timestamp();
@@ -330,10 +330,10 @@ impl AudioDomainService {
         volume: Volume,
     ) -> Result<(), DomainError> {
         let source = self.sources.get_mut(&id).ok_or_else(|| {
-            DomainError::Audio(AudioError::SourceNotFound(format!(
-                "Source {}",
-                id.as_u64()
-            )))
+            DomainError::Audio(AudioError::SourceNotFound {
+                source_id: format!("Source {}", id.as_u64()),
+                severity: crate::error::ErrorSeverity::Error,
+            })
         })?;
         source.set_volume(volume)?;
         self.last_updated = Self::current_timestamp();
@@ -347,7 +347,7 @@ impl AudioDomainService {
         value: f32,
     ) -> Result<(), DomainError> {
         let volume = Volume::new(value)
-            .ok_or_else(|| DomainError::Audio(AudioError::InvalidVolume(value)))?;
+            .ok_or_else(|| DomainError::Audio(AudioError::DeviceConfiguration { message: format!("Invalid volume: {}", value), severity: crate::error::ErrorSeverity::Warning }))?;
         self.set_source_volume(id, volume)
     }
 
@@ -361,7 +361,7 @@ impl AudioDomainService {
     /// 设置主音量（从f32值）
     pub fn set_master_volume_f32(&mut self, value: f32) -> Result<(), DomainError> {
         let volume = Volume::new(value)
-            .ok_or_else(|| DomainError::Audio(AudioError::InvalidVolume(value)))?;
+            .ok_or_else(|| DomainError::Audio(AudioError::DeviceConfiguration { message: format!("Invalid volume: {}", value), severity: crate::error::ErrorSeverity::Warning }))?;
         self.set_master_volume(volume)
     }
 
@@ -407,6 +407,12 @@ impl AudioDomainService {
 
     fn current_timestamp() -> u64 {
         crate::core::utils::current_timestamp()
+    }
+}
+
+impl Default for AudioDomainService {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -584,10 +590,10 @@ impl PhysicsDomainService {
             let pos = rb.translation();
             return Ok(glam::Vec3::new(pos.x, pos.y, pos.z));
         }
-        Err(DomainError::Physics(PhysicsError::BodyNotFound(format!(
-            "Body {}",
-            body_id.as_u64()
-        ))))
+        Err(DomainError::Physics(PhysicsError::RigidBodyNotFound {
+            body_id: format!("Body {}", body_id.as_u64()),
+            severity: crate::error::ErrorSeverity::Error,
+        }))
     }
 
     /// 步进物理模拟
@@ -609,6 +615,12 @@ impl PhysicsDomainService {
 
     fn current_timestamp() -> u64 {
         crate::core::utils::current_timestamp()
+    }
+}
+
+impl Default for PhysicsDomainService {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -652,8 +664,8 @@ impl PhysicsDomainService {
 /// # Ok::<(), game_engine::domain::errors::DomainError>(())
 /// ```
 pub struct SceneDomainService {
-    /// 场景管理器
-    manager: SceneManager,
+    /// 场景仓储
+    repository: SceneRepository,
     /// 最后更新时间戳
     last_updated: u64,
 }
@@ -663,10 +675,10 @@ impl SceneDomainService {
     ///
     /// # 返回
     ///
-    /// 返回一个初始化的`SceneDomainService`实例，包含一个新的场景管理器。
+    /// 返回一个初始化的`SceneDomainService`实例，包含一个新的场景仓储。
     pub fn new() -> Self {
         Self {
-            manager: SceneManager::new(),
+            repository: SceneRepository::new(),
             last_updated: Self::current_timestamp(),
         }
     }
@@ -677,69 +689,75 @@ impl SceneDomainService {
         id: SceneId,
         name: impl Into<String>,
     ) -> Result<(), DomainError> {
-        self.manager.create_scene(id, name)?;
+        self.repository.create_scene(id, name)?;
         self.last_updated = Self::current_timestamp();
         Ok(())
     }
 
     /// 删除场景
     pub fn delete_scene(&mut self, id: SceneId) -> Result<Scene, DomainError> {
-        let scene = self.manager.delete_scene(id)?;
+        let scene = self.repository.delete_scene(id)?;
         self.last_updated = Self::current_timestamp();
         Ok(scene)
     }
 
     /// 切换到场景
     pub fn switch_to_scene(&mut self, id: SceneId) -> Result<(), DomainError> {
-        self.manager.switch_to_scene(id)?;
+        self.repository.switch_to_scene(id)?;
         self.last_updated = Self::current_timestamp();
         Ok(())
     }
 
     /// 获取场景
     pub fn get_scene(&self, id: SceneId) -> Option<&Scene> {
-        self.manager.get_scene(id)
+        self.repository.get_scene(id)
     }
 
     /// 获取场景可变引用
     pub fn get_scene_mut(&mut self, id: SceneId) -> Option<&mut Scene> {
-        self.manager.get_scene_mut(id)
+        self.repository.get_scene_mut(id)
     }
 
     /// 获取活跃场景
     pub fn get_active_scene(&self) -> Option<&Scene> {
-        self.manager.active_scene()
+        self.repository.active_scene()
     }
 
     /// 获取活跃场景可变引用
     pub fn get_active_scene_mut(&mut self) -> Option<&mut Scene> {
-        self.manager.active_scene_mut()
+        self.repository.active_scene_mut()
     }
 
     /// 更新场景
     pub fn update_scenes(&mut self, delta_time: f32) -> Result<(), DomainError> {
-        self.manager.update(delta_time)?;
+        self.repository.update(delta_time)?;
         self.last_updated = Self::current_timestamp();
         Ok(())
     }
 
-    /// 获取场景管理器
-    pub fn get_manager(&self) -> &SceneManager {
-        &self.manager
+    /// 获取场景仓储
+    pub fn get_repository(&self) -> &SceneRepository {
+        &self.repository
     }
 
-    /// 获取场景管理器可变引用
-    pub fn get_manager_mut(&mut self) -> &mut SceneManager {
-        &mut self.manager
+    /// 获取场景仓储可变引用
+    pub fn get_repository_mut(&mut self) -> &mut SceneRepository {
+        &mut self.repository
     }
 
     /// 获取所有场景ID
     pub fn scene_ids(&self) -> Vec<SceneId> {
-        self.manager.scene_ids()
+        self.repository.scene_ids()
     }
 
     fn current_timestamp() -> u64 {
         crate::core::utils::current_timestamp()
+    }
+}
+
+impl Default for SceneDomainService {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -864,15 +882,15 @@ mod tests {
     #[test]
     fn test_scene_domain_service() {
         let mut service = SceneDomainService::new();
-
+        
         // 创建场景
         service.create_scene(SceneId(1), "Test Scene").unwrap();
         service.create_scene(SceneId(2), "Another Scene").unwrap();
-
+        
         // 切换场景
         service.switch_to_scene(SceneId(1)).unwrap();
         assert_eq!(service.get_active_scene().unwrap().id, SceneId(1));
-
+        
         service.switch_to_scene(SceneId(2)).unwrap();
         assert_eq!(service.get_active_scene().unwrap().id, SceneId(2));
     }

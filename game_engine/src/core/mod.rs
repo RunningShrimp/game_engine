@@ -1,15 +1,37 @@
-//  核心模块
-//
-//  包含引擎的核心功能：
-//  - `engine` - 主引擎入口和运行循环
-//  - `systems` - ECS系统定义
-//  - `resources` - ECS资源定义
-//  - `error` - 错误类型定义
-//  - `scheduler` - 任务调度系统
-
-// 引擎模块现在是一个子模块，通过 engine/mod.rs 导入
-// 引擎模块现在是一个子模块，通过 engine/mod.rs 导入
+//! # 核心模块（Core）
+//!
+//! 本模块包含游戏引擎的核心功能和基础设施。
+//!
+//! ## 子模块
+//!
+//! - [`engine`] - 主引擎入口、运行循环和游戏循环
+//! - [`systems`] - ECS系统定义和实现
+//! - [`resources`] - ECS资源定义
+//! - [`scheduler`] - 任务调度系统和异步执行器
+//! - [`error`] - 核心错误类型定义
+//! - [`event_sourcing`] - 事件溯源模式实现
+//! - [`microkernel`] - 微内核架构实现
+//! - [`error_aggregator`] - 错误聚合和报告
+//!
+//! ## 核心功能
+//!
+//! ### 引擎生命周期
+//! - 初始化：[`engine::Engine::new()`]
+//! - 更新循环：[`engine::Engine::update()`]
+//! - 渲染循环：[`engine::Engine::render()`]
+//! - 关闭：[`engine::Engine::shutdown()`]
+//!
+//! ### 任务调度
+//! - 异步任务执行器
+//! - 协程支持
+//! - 并行任务调度
+//!
+//! ### 事件溯源
+//! - 领域事件存储
+//! - 事件重放
+//! - CQRS模式支持
 pub mod engine;
+pub mod editor;
 pub mod error;
 pub mod error_aggregator;
 pub mod event_sourcing;
@@ -32,7 +54,7 @@ pub use crate::error::*;
 pub use error_aggregator::{ErrorAggregator, ErrorRecord, ErrorStats, ErrorSummary};
 
 // 重新导出主要类型
-pub use crate::config::EngineConfig;
+pub use crate::EngineConfig;
 pub use crate::core::engine::Engine;
 pub use resources::{AssetMetrics, Benchmark, LogEvents, RenderStats};
 // 系统模块重新导出以避免循环依赖

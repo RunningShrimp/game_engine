@@ -387,13 +387,12 @@ impl GameEntity {
         }
 
         // 检查变换组件的一致性
-        if let Some(transform) = &self.transform {
-            if transform.scale.x <= 0.0 || transform.scale.y <= 0.0 || transform.scale.z <= 0.0 {
+        if let Some(transform) = &self.transform
+            && (transform.scale.x <= 0.0 || transform.scale.y <= 0.0 || transform.scale.z <= 0.0) {
                 return Err(DomainError::Scene(SceneError::ComponentNotFound(
                     "Transform scale must be positive".to_string(),
                 )));
             }
-        }
 
         Ok(())
     }
@@ -551,8 +550,12 @@ mod tests {
         let mut entity = GameEntity::new(EntityId(1));
 
         // 设置属性
-        entity.set_property("health", serde_json::json!(100)).unwrap();
-        entity.set_property("name", serde_json::json!("Player")).unwrap();
+        entity
+            .set_property("health", serde_json::json!(100))
+            .unwrap();
+        entity
+            .set_property("name", serde_json::json!("Player"))
+            .unwrap();
 
         // 获取属性
         assert_eq!(entity.get_property("health"), Some(&serde_json::json!(100)));

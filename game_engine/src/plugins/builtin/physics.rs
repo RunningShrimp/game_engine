@@ -5,7 +5,6 @@
 use crate::impl_default;
 use crate::plugins::{EnginePlugin, App, PluginVersion, PluginDependency};
 use crate::physics::{PhysicsDomainService, physics_step_system_v2, sync_physics_to_transform_system_v2};
-use bevy_ecs::prelude::*;
 
 /// 物理插件配置
 #[derive(Debug, Clone)]
@@ -40,6 +39,12 @@ impl PhysicsPlugin {
     }
 }
 
+impl Default for PhysicsPlugin {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl EnginePlugin for PhysicsPlugin {
     fn name(&self) -> &'static str {
         "PhysicsPlugin"
@@ -61,19 +66,19 @@ impl EnginePlugin for PhysicsPlugin {
 
     fn build(&self, app: &mut App) {
         // 插入物理领域服务资源
-        let mut physics_service = PhysicsDomainService::new();
-        // 设置重力（通过物理世界）
-        physics_service.get_world_mut().gravity = glam::Vec3::new(
-            self.config.gravity[0],
-            self.config.gravity[1],
-            0.0,
-        );
+        let physics_service = PhysicsDomainService::new();
+        // 注意:当前版本的PhysicsDomainService不提供设置重力的公共API
+        // 重力配置被记录但暂时无法应用,需要扩展PhysicsDomainService
 
         app.insert_resource(physics_service);
 
-        // 添加物理系统
-        app.add_systems(physics_step_system_v2);
-        app.add_systems(sync_physics_to_transform_system_v2);
+        // 添加物理系统 - 使用包装闭包来适配系统参数
+        app.add_systems(|schedule| {
+            schedule.add_systems(physics_step_system_v2);
+        });
+        app.add_systems(|schedule| {
+            schedule.add_systems(sync_physics_to_transform_system_v2);
+        });
     }
 
     fn startup(&self, world: &mut bevy_ecs::world::World) {

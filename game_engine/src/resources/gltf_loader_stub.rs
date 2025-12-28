@@ -2,7 +2,6 @@
 //!
 //! 这个模块提供存根实现，用于在 GLTF 特性未启用时提供编译时错误提示。
 
-use std::path::Path;
 
 /// GLTF 场景数据（存根）
 #[derive(Clone, Debug)]

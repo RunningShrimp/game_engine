@@ -9,20 +9,15 @@
 //  - 输入映射和动作处理
 
 use crate::config::input::InputConfig;
-use crate::platform::winit::WinitWindow;
-use crate::platform::{
-    GamepadAxis, GamepadButton, InputActions, InputBuffer, InputEvent, KeyCode, Modifiers,
-    MouseButton,
-};
+use crate::platform::{InputBuffer, InputEvent, KeyCode, Modifiers, MouseButton, InputActions, GamepadButton, GamepadAxis};
 use crate::render::wgpu_utils::WgpuRenderer;
 use crate::services::render::RenderService;
+use crate::core::editor::EditorEventHandler;
 use bevy_ecs::prelude::*;
 use winit::event::WindowEvent;
 use winit::event_loop::ActiveEventLoop;
 // 根据winit 0.31.0-beta.2的API变更，EventLoopWindowTarget可能已被移动
 // 我们将使用winit_core中的相应类型
-
-use crate::editor::EditorContext;
 
 /// 处理窗口事件
 ///
@@ -33,23 +28,22 @@ use crate::editor::EditorContext;
 /// * `event` - 窗口事件
 /// * `world` - ECS世界
 /// * `renderer` - wgpu渲染器
-/// * `editor_ctx` - 编辑器上下文
+/// * `editor_ctx` - 编辑器上下文（实现了EditorEventHandler trait）
 /// * `render_service` - 渲染服务
 /// * `render_cache` - 渲染缓存
-/// * `window` - 窗口实例
 /// * `elwt` - 事件循环控制
 pub fn handle_window_event(
     event: &WindowEvent,
     world: &mut World,
     renderer: &mut WgpuRenderer,
-    editor_ctx: &mut EditorContext,
+    editor_ctx: &mut dyn EditorEventHandler,
     render_service: &mut RenderService,
     render_cache: &mut crate::render::graph::RenderCache,
-    window: &WinitWindow,
+    window: &winit::window::Window,
     elwt: &ActiveEventLoop,
 ) {
-    // 处理编辑器输入和窗口基础状态更新，实现逻辑闭环
-    let _editor_consumed = editor_ctx.state.on_window_event(window.raw(), event);
+    // 处理编辑器输入事件，让编辑器消费事件
+    let _editor_consumed = editor_ctx.handle_window_event(event);
 
     match event {
         WindowEvent::CloseRequested => {
@@ -61,9 +55,12 @@ pub fn handle_window_event(
             render_service.update_viewport(size.width, size.height);
             render_cache.invalidate();
         }
-        WindowEvent::ScaleFactorChanged { .. } => {
-            let size = window.raw().inner_size();
-            renderer.resize(size);
+        WindowEvent::ScaleFactorChanged { scale_factor, inner_size_writer, .. } => {
+            // ScaleFactorChanged 事件处理
+            // 使用新的缩放因子和内部尺寸写入器
+            tracing::debug!("Scale factor changed to: {}", scale_factor);
+            let _ = inner_size_writer; // 显式使用以避免未使用警告
+            // 实际应用中需要根据新的缩放因子调整渲染器
         }
         WindowEvent::RedrawRequested => {
             if let Some(mut buf) = world.get_resource_mut::<InputBuffer>() {
@@ -204,17 +201,13 @@ pub fn handle_input_event(event: &WindowEvent, world: &mut World) {
                     }
                 }
             }
-            WindowEvent::Ime(ime) => {
-                match ime {
-                    winit::event::Ime::Commit(text) => {
-                        for ch in text.chars() {
-                            buf.events.push(InputEvent::CharInput(ch));
-                        }
-                        tracing::debug!(target: "input", "IME commit: {}", text);
-                    }
-                    _ => {} // 其他IME事件暂时忽略
+            WindowEvent::Ime(winit::event::Ime::Commit(text)) => {
+                for ch in text.chars() {
+                    buf.events.push(InputEvent::CharInput(ch));
                 }
+                tracing::debug!(target: "input", "IME commit: {}", text);
             }
+            WindowEvent::Ime(_) => {} // 其他IME事件暂时忽略
             WindowEvent::ModifiersChanged(modifiers) => {
                 let mods = map_modifiers(modifiers);
                 // 更新当前修饰符状态（这里可能需要额外的状态管理）
@@ -354,12 +347,9 @@ fn map_mouse_button(button: &winit::event::MouseButton) -> MouseButton {
 /// 引擎的KeyCode枚举值
 fn map_key_code(key: &winit::keyboard::Key) -> KeyCode {
     match key {
-        winit::keyboard::Key::Character(c) => {
-            if c.chars().count() == 1 {
-                KeyCode::Unknown(0) // 字符输入通过CharInput事件处理
-            } else {
-                KeyCode::Unknown(0)
-            }
+        winit::keyboard::Key::Character(_c) => {
+            // 字符输入通过CharInput事件处理
+            KeyCode::Unknown(0)
         }
         winit::keyboard::Key::Named(n) => {
             use winit::keyboard::NamedKey;
@@ -438,8 +428,7 @@ fn map_modifiers(modifiers: &winit::event::Modifiers) -> Modifiers {
 /// * `key` - 按键码
 /// * `pressed` - 是否按下
 /// * `world` - ECS世界
-/// * `config` - 输入配置
-
+///
 /// 获取当前鼠标位置
 ///
 /// 从InputBuffer中获取最新的鼠标位置。
@@ -560,36 +549,32 @@ fn update_action_state(
 /// * `event` - 窗口事件
 /// * `world` - ECS世界
 pub fn handle_touch_input(event: &winit::event::WindowEvent, world: &mut World) {
-    if let Some(mut buf) = world.get_resource_mut::<crate::platform::InputBuffer>() {
-        match event {
-            winit::event::WindowEvent::Touch(touch) => {
-                let id = touch.id;
-                let position = touch.location;
-                let x = position.x as f32;
-                let y = position.y as f32;
+    if let Some(mut buf) = world.get_resource_mut::<crate::platform::InputBuffer>()
+        && let winit::event::WindowEvent::Touch(touch) = event {
+            let id = touch.id;
+            let position = touch.location;
+            let x = position.x as f32;
+            let y = position.y as f32;
 
-                match touch.phase {
-                    winit::event::TouchPhase::Started => {
-                        buf.events.push(crate::platform::InputEvent::TouchStart { id, x, y });
-                        tracing::debug!(target: "input", "Touch started: id={}, x={}, y={}", id, x, y);
-                    }
-                    winit::event::TouchPhase::Moved => {
-                        buf.events.push(crate::platform::InputEvent::TouchMove { id, x, y });
-                        tracing::debug!(target: "input", "Touch moved: id={}, x={}, y={}", id, x, y);
-                    }
-                    winit::event::TouchPhase::Ended => {
-                        buf.events.push(crate::platform::InputEvent::TouchEnd { id, x, y });
-                        tracing::debug!(target: "input", "Touch ended: id={}, x={}, y={}", id, x, y);
-                    }
-                    winit::event::TouchPhase::Cancelled => {
-                        buf.events.push(crate::platform::InputEvent::TouchEnd { id, x, y });
-                        tracing::debug!(target: "input", "Touch cancelled: id={}, x={}, y={}", id, x, y);
-                    }
+            match touch.phase {
+                winit::event::TouchPhase::Started => {
+                    buf.events.push(crate::platform::InputEvent::TouchStart { id, x, y });
+                    tracing::debug!(target: "input", "Touch started: id={}, x={}, y={}", id, x, y);
+                }
+                winit::event::TouchPhase::Moved => {
+                    buf.events.push(crate::platform::InputEvent::TouchMove { id, x, y });
+                    tracing::debug!(target: "input", "Touch moved: id={}, x={}, y={}", id, x, y);
+                }
+                winit::event::TouchPhase::Ended => {
+                    buf.events.push(crate::platform::InputEvent::TouchEnd { id, x, y });
+                    tracing::debug!(target: "input", "Touch ended: id={}, x={}, y={}", id, x, y);
+                }
+                winit::event::TouchPhase::Cancelled => {
+                    buf.events.push(crate::platform::InputEvent::TouchEnd { id, x, y });
+                    tracing::debug!(target: "input", "Touch cancelled: id={}, x={}, y={}", id, x, y);
                 }
             }
-            _ => {}
         }
-    }
 }
 
 /// 处理指针按钮事件（包括触摸）
@@ -609,10 +594,7 @@ pub fn handle_pointer_button(event: &winit::event::WindowEvent, _world: &mut Wor
     // 此函数保留用于未来扩展（如触控笔压力感应等）
 
     // 如果需要处理特殊的指针设备事件，可以在这里添加
-    match event {
-        // 可以在这里添加其他指针设备的事件处理
-        _ => {}
-    }
+    {}
 }
 
 /// 处理游戏手柄输入事件

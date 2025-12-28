@@ -346,9 +346,9 @@ impl HierarchicalZCulling {
         }
 
         let build_pipeline =
-            self.build_pipeline.as_ref().ok_or_else(|| OcclusionError::NotInitialized)?;
+            self.build_pipeline.as_ref().ok_or(OcclusionError::NotInitialized)?;
         let hi_z_texture =
-            self.hi_z_texture.as_ref().ok_or_else(|| OcclusionError::NotInitialized)?;
+            self.hi_z_texture.as_ref().ok_or(OcclusionError::NotInitialized)?;
 
         // 重新创建构建绑定组布局（因为我们需要在build_hi_z中使用）
         // 理想情况下应该存储build_bind_group_layout，但为了简化，我们在这里重新创建
@@ -418,8 +418,8 @@ impl HierarchicalZCulling {
             let mip_height = self.height.max(1);
             // 使用16x16 workgroup（与着色器匹配）
             let workgroup_size = 16;
-            let workgroup_x = (mip_width + workgroup_size - 1) / workgroup_size;
-            let workgroup_y = (mip_height + workgroup_size - 1) / workgroup_size;
+            let workgroup_x = mip_width.div_ceil(workgroup_size);
+            let workgroup_y = mip_height.div_ceil(workgroup_size);
 
             let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: Some("Hi-Z Build Mip 0"),
@@ -467,8 +467,8 @@ impl HierarchicalZCulling {
             let mip_height = (self.height >> mip_level).max(1);
             // 使用16x16 workgroup（与着色器匹配）
             let workgroup_size = 16;
-            let workgroup_x = (mip_width + workgroup_size - 1) / workgroup_size;
-            let workgroup_y = (mip_height + workgroup_size - 1) / workgroup_size;
+            let workgroup_x = mip_width.div_ceil(workgroup_size);
+            let workgroup_y = mip_height.div_ceil(workgroup_size);
 
             // 优化：对于小mip级别，可以合并到同一个pass中
             // 但为了简单性和正确性，我们仍然为每个mip级别创建单独的pass
@@ -539,12 +539,12 @@ impl HierarchicalZCulling {
         }
 
         let query_pipeline =
-            self.query_pipeline.as_ref().ok_or_else(|| OcclusionError::NotInitialized)?;
+            self.query_pipeline.as_ref().ok_or(OcclusionError::NotInitialized)?;
         let query_bind_group_layout = self
             .query_bind_group_layout
             .as_ref()
-            .ok_or_else(|| OcclusionError::NotInitialized)?;
-        let hi_z_view = self.hi_z_view.as_ref().ok_or_else(|| OcclusionError::NotInitialized)?;
+            .ok_or(OcclusionError::NotInitialized)?;
+        let hi_z_view = self.hi_z_view.as_ref().ok_or(OcclusionError::NotInitialized)?;
 
         let query_count = queries.len() as u32;
 
@@ -639,7 +639,7 @@ impl HierarchicalZCulling {
             cpass.set_pipeline(query_pipeline);
             cpass.set_bind_group(0, &bind_group, &[]);
 
-            let workgroup_count = (query_count + 63) / 64; // 64个线程每个workgroup
+            let workgroup_count = query_count.div_ceil(64); // 64个线程每个workgroup
             cpass.dispatch_workgroups(workgroup_count, 1, 1);
         }
 
@@ -707,12 +707,12 @@ impl HierarchicalZCulling {
         }
 
         let query_pipeline =
-            self.query_pipeline.as_ref().ok_or_else(|| OcclusionError::NotInitialized)?;
+            self.query_pipeline.as_ref().ok_or(OcclusionError::NotInitialized)?;
         let query_bind_group_layout = self
             .query_bind_group_layout
             .as_ref()
-            .ok_or_else(|| OcclusionError::NotInitialized)?;
-        let hi_z_view = self.hi_z_view.as_ref().ok_or_else(|| OcclusionError::NotInitialized)?;
+            .ok_or(OcclusionError::NotInitialized)?;
+        let hi_z_view = self.hi_z_view.as_ref().ok_or(OcclusionError::NotInitialized)?;
 
         let query_count = queries.len() as u32;
 
@@ -806,7 +806,7 @@ impl HierarchicalZCulling {
             cpass.set_pipeline(query_pipeline);
             cpass.set_bind_group(0, &bind_group, &[]);
 
-            let workgroup_count = (query_count + 63) / 64;
+            let workgroup_count = query_count.div_ceil(64);
             cpass.dispatch_workgroups(workgroup_count, 1, 1);
         }
 

@@ -145,7 +145,7 @@ impl AudioChannelMixer {
 
     /// 添加通道效果
     pub fn add_channel_effect(&mut self, channel: AudioChannel, effect: AudioEffect) {
-        self.channel_effects.entry(channel).or_insert_with(Vec::new).push(effect);
+        self.channel_effects.entry(channel).or_default().push(effect);
     }
 
     /// 计算最终输出增益 (包括通道音量、主音量、效果等)
@@ -266,15 +266,14 @@ impl AudioProcessingPipeline {
         }
 
         // 后处理
-        if self.post_effects_enabled {
-            if let Some(effects) = self.mixer.channel_effects.get(&channel) {
+        if self.post_effects_enabled
+            && let Some(effects) = self.mixer.channel_effects.get(&channel) {
                 for effect in effects {
                     if effect.enabled {
                         self.metrics.effect_applications += 1;
                     }
                 }
             }
-        }
 
         // 更新指标
         let elapsed = start.elapsed().as_secs_f64() * 1000.0;

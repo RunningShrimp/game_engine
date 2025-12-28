@@ -31,7 +31,7 @@ use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 
 use super::ring_buffer_pool::{MemoryBlock, RingBufferPool, align_to};
-use crate::core::current_timestamp_ms;
+use super::time::current_timestamp_ms;
 
 // ============================================================================
 // 常量配置
@@ -405,8 +405,8 @@ impl SmartMemoryAllocator {
         }
 
         // 当前池分配失败，尝试扩展
-        if self.config.enable_auto_expansion {
-            if let Some(result) = self.try_expand_and_allocate(&request) {
+        if self.config.enable_auto_expansion
+            && let Some(result) = self.try_expand_and_allocate(&request) {
                 let latency = start_time.elapsed().as_micros() as f32;
                 let mut final_result = result;
                 final_result.allocation_latency_us = latency;
@@ -416,7 +416,6 @@ impl SmartMemoryAllocator {
 
                 return Some(final_result);
             }
-        }
 
         // 所有分配尝试都失败
         None

@@ -416,14 +416,14 @@ impl AlertingEngine {
     /// 添加告警策略
     pub fn add_strategy(&mut self, metric_name: &str, strategy: AlertStrategy) {
         let strategies =
-            self.alert_strategies.entry(metric_name.to_string()).or_insert_with(Vec::new);
+            self.alert_strategies.entry(metric_name.to_string()).or_default();
         strategies.push(strategy);
     }
 
     /// 更新指标值
     pub fn update_metric(&mut self, metric_name: &str, value: f64) {
         let values =
-            self.metric_values.entry(metric_name.to_string()).or_insert_with(VecDeque::new);
+            self.metric_values.entry(metric_name.to_string()).or_default();
 
         // 添加新值
         values.push_back(value);
@@ -446,8 +446,8 @@ impl AlertingEngine {
 
         // 检查每个指标的告警策略
         for (metric_name, strategies) in &self.alert_strategies {
-            if let Some(values) = self.metric_values.get(metric_name) {
-                if let Some(&current_value) = values.back() {
+            if let Some(values) = self.metric_values.get(metric_name)
+                && let Some(&current_value) = values.back() {
                     for strategy in strategies {
                         if let Some(alert) =
                             self.evaluate_strategy(metric_name, current_value, values, strategy)?
@@ -459,7 +459,6 @@ impl AlertingEngine {
                         }
                     }
                 }
-            }
         }
 
         // 处理新告警
@@ -523,7 +522,7 @@ impl AlertingEngine {
                     metric_name,
                     std::time::SystemTime::now()
                         .duration_since(std::time::UNIX_EPOCH)
-                        .unwrap()
+                        .expect("System time should be after UNIX_EPOCH")
                         .as_millis()
                 ),
                 name: format!("{}阈值告警", metric_name),
@@ -545,11 +544,11 @@ impl AlertingEngine {
                 ),
                 created_at: std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
-                    .unwrap()
+                    .expect("System time should be after UNIX_EPOCH")
                     .as_secs(),
                 updated_at: std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
-                    .unwrap()
+                    .expect("System time should be after UNIX_EPOCH")
                     .as_secs(),
                 acknowledged_at: None,
                 resolved_at: None,
@@ -583,11 +582,10 @@ impl AlertingEngine {
         let trend_direction = self.calculate_trend(&window_data);
 
         // 检查趋势方向匹配
-        if let Some(required_direction) = strategy.trend_direction {
-            if trend_direction != required_direction {
+        if let Some(required_direction) = strategy.trend_direction
+            && trend_direction != required_direction {
                 return Ok(None);
             }
-        }
 
         // 计算变化率和置信度
         let change_rate = self.calculate_change_rate(&window_data);
@@ -603,13 +601,13 @@ impl AlertingEngine {
                     metric_name,
                     std::time::SystemTime::now()
                         .duration_since(std::time::UNIX_EPOCH)
-                        .unwrap()
+                        .expect("System time should be after UNIX_EPOCH")
                         .as_millis()
                 ),
                 name: format!("{}趋势告警", metric_name),
                 level: strategy.level,
                 metric_name: metric_name.to_string(),
-                current_value: *window_data.last().unwrap(),
+                current_value: *window_data.last().unwrap_or(&0.0),
                 condition: format!(
                     "趋势变化率 {:.2}% (置信度: {:.2}%)",
                     change_rate,
@@ -624,11 +622,11 @@ impl AlertingEngine {
                 ),
                 created_at: std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
-                    .unwrap()
+                    .expect("System time should be after UNIX_EPOCH")
                     .as_secs(),
                 updated_at: std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
-                    .unwrap()
+                    .expect("System time should be after UNIX_EPOCH")
                     .as_secs(),
                 acknowledged_at: None,
                 resolved_at: None,
@@ -684,13 +682,13 @@ impl AlertingEngine {
                     metric_name,
                     std::time::SystemTime::now()
                         .duration_since(std::time::UNIX_EPOCH)
-                        .unwrap()
+                        .expect("System time should be after UNIX_EPOCH")
                         .as_millis()
                 ),
                 name: format!("{}异常检测告警", metric_name),
                 level: strategy.level,
                 metric_name: metric_name.to_string(),
-                current_value: *historical_values.back().unwrap(),
+                current_value: *historical_values.back().unwrap_or(&0.0),
                 condition: format!("异常分数 {:.2} (阈值: {:.2})", anomaly_score, threshold),
                 message: format!(
                     "{}检测到异常，异常分数: {:.2}，算法: {:?}",
@@ -698,11 +696,11 @@ impl AlertingEngine {
                 ),
                 created_at: std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
-                    .unwrap()
+                    .expect("System time should be after UNIX_EPOCH")
                     .as_secs(),
                 updated_at: std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
-                    .unwrap()
+                    .expect("System time should be after UNIX_EPOCH")
                     .as_secs(),
                 acknowledged_at: None,
                 resolved_at: None,
@@ -755,8 +753,8 @@ impl AlertingEngine {
             let highest_level = matched_alerts
                 .iter()
                 .map(|a| a.level)
-                .max_by(|a, b| a.partial_cmp(b).unwrap())
-                .unwrap();
+                .max_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
+                .unwrap_or(matched_alerts.first().map(|a| a.level).unwrap_or(matched_alerts[0].level));
 
             let alert = AlertInstance {
                 id: format!(
@@ -764,7 +762,7 @@ impl AlertingEngine {
                     metric_name,
                     std::time::SystemTime::now()
                         .duration_since(std::time::UNIX_EPOCH)
-                        .unwrap()
+                        .expect("System time should be after UNIX_EPOCH")
                         .as_millis()
                 ),
                 name: format!("{}复合告警", metric_name),
@@ -779,11 +777,11 @@ impl AlertingEngine {
                 ),
                 created_at: std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
-                    .unwrap()
+                    .expect("System time should be after UNIX_EPOCH")
                     .as_secs(),
                 updated_at: std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
-                    .unwrap()
+                    .expect("System time should be after UNIX_EPOCH")
                     .as_secs(),
                 acknowledged_at: None,
                 resolved_at: None,
@@ -815,7 +813,7 @@ impl AlertingEngine {
             // 更新现有告警
             existing_alert.updated_at = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
+                .expect("System time should be after UNIX_EPOCH")
                 .as_secs();
             existing_alert.current_value = alert.current_value;
             return;
@@ -841,7 +839,7 @@ impl AlertingEngine {
     fn check_resolved_alerts(&mut self) {
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
+            .expect("System time should be after UNIX_EPOCH")
             .as_secs();
 
         let mut alerts_to_resolve = Vec::new();
@@ -849,17 +847,13 @@ impl AlertingEngine {
         for (alert_id, alert) in &self.active_alerts {
             if alert.status == AlertStatus::Active {
                 // 重新评估告警条件
-                if let Some(historical_values) = self.metric_values.get(&alert.metric_name) {
-                    if let Some(&current_value) = historical_values.back() {
-                        if let Ok(should_resolve) =
+                if let Some(historical_values) = self.metric_values.get(&alert.metric_name)
+                    && let Some(&current_value) = historical_values.back()
+                        && let Ok(should_resolve) =
                             self.should_resolve_alert(alert, current_value, historical_values)
-                        {
-                            if should_resolve {
+                            && should_resolve {
                                 alerts_to_resolve.push((alert_id.clone(), now));
                             }
-                        }
-                    }
-                }
             }
         }
 
@@ -914,7 +908,7 @@ impl AlertingEngine {
     fn cleanup_expired_alerts(&mut self) {
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
+            .expect("System time should be after UNIX_EPOCH")
             .as_secs();
 
         self.active_alerts.retain(|_, alert| {
@@ -1029,7 +1023,7 @@ impl AlertingEngine {
         let variance = values.iter().map(|v| (v - mean).powi(2)).sum::<f64>() / values.len() as f64;
         let std_dev = variance.sqrt();
 
-        let current = *values.back().unwrap();
+        let current = *values.back().unwrap_or(&0.0);
         if std_dev < f64::EPSILON {
             return 0.0;
         }
@@ -1043,14 +1037,14 @@ impl AlertingEngine {
         }
 
         let mut sorted_values: Vec<f64> = values.iter().cloned().collect();
-        sorted_values.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        sorted_values.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
 
         let n = sorted_values.len();
         let q1 = sorted_values[n / 4];
         let q3 = sorted_values[3 * n / 4];
         let iqr = q3 - q1;
 
-        let current = *values.back().unwrap();
+        let current = *values.back().unwrap_or(&0.0);
 
         if current < q1 - 1.5 * iqr || current > q3 + 1.5 * iqr {
             ((current - q1).abs().max((current - q3).abs())) / iqr
@@ -1070,7 +1064,7 @@ impl AlertingEngine {
         }
 
         let window_size = (values.len() / 3).min(20);
-        let current = *values.back().unwrap();
+        let current = *values.back().unwrap_or(&0.0);
 
         let recent_avg: f64 =
             values.iter().rev().take(window_size).sum::<f64>() / window_size as f64;
@@ -1112,18 +1106,17 @@ impl AlertingEngine {
 
     /// 确认告警
     pub fn acknowledge_alert(&mut self, alert_id: &str) -> bool {
-        if let Some(alert) = self.active_alerts.get_mut(alert_id) {
-            if alert.status == AlertStatus::Active {
+        if let Some(alert) = self.active_alerts.get_mut(alert_id)
+            && alert.status == AlertStatus::Active {
                 alert.status = AlertStatus::Acknowledged;
                 alert.acknowledged_at = Some(
                     std::time::SystemTime::now()
                         .duration_since(std::time::UNIX_EPOCH)
-                        .unwrap()
+                        .expect("System time should be after UNIX_EPOCH")
                         .as_secs(),
                 );
                 return true;
             }
-        }
         false
     }
 }
@@ -1148,11 +1141,10 @@ impl NotificationSender {
     /// 发送告警通知
     pub fn send_alert(&mut self, alert: &AlertInstance) -> ProfilingResult<()> {
         // 发送邮件通知
-        if self.config.enable_email {
-            if let Some(ref email_config) = self.config.email_config {
+        if self.config.enable_email
+            && let Some(ref email_config) = self.config.email_config {
                 self.send_email_notification(alert, email_config)?;
             }
-        }
 
         // 发送Webhook通知
         if self.config.enable_webhook {
@@ -1224,6 +1216,12 @@ impl NotificationSender {
     }
 }
 
+impl Default for NotificationSender {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 // ============================================================================
 // 测试
 // ============================================================================
@@ -1278,7 +1276,7 @@ mod tests {
         engine.update_metric("test_metric", 60.0);
 
         // 检查告警
-        let new_alerts = engine.check_alerts().unwrap();
+        let new_alerts = engine.check_alerts().expect("check_alerts should return Ok");
         assert_eq!(new_alerts.len(), 1);
         assert_eq!(new_alerts[0].metric_name, "test_metric");
         assert_eq!(new_alerts[0].level, AlertLevel::Warning);

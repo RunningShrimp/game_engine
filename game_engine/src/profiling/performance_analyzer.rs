@@ -354,6 +354,12 @@ impl PerformanceAnalyzer {
     }
 }
 
+impl Default for PerformanceAnalyzer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

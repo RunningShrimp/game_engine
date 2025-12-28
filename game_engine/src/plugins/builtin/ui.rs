@@ -9,7 +9,7 @@ use bevy_ecs::prelude::*;
 use glam::Vec2;
 
 /// UI插件配置
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, bevy_ecs::prelude::Resource)]
 pub struct UiConfig {
     /// 是否启用抗锯齿
     pub antialiasing: bool,
@@ -47,6 +47,12 @@ impl UiPlugin {
     }
 }
 
+impl Default for UiPlugin {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl EnginePlugin for UiPlugin {
     fn name(&self) -> &'static str {
         "UiPlugin"
@@ -75,19 +81,25 @@ impl EnginePlugin for UiPlugin {
         app.insert_resource(UIState::default());
         app.insert_resource(UITheme::default());
 
-        // 创建UI根节点
+        // 创建UI根节点 - 使用app.world而不是app.world_mut()
         let root = UIRoot {
             width: self.config.root_size.0,
             height: self.config.root_size.1,
             scale_factor: if self.config.high_dpi { 2.0 } else { 1.0 },
             visible: true,
         };
-        app.world_mut().spawn(root);
+        app.world.spawn(root);
 
-        // 添加UI系统
-        app.add_systems(ui_update_system);
-        app.add_systems(ui_layout_system);
-        app.add_systems(ui_event_system);
+        // 添加UI系统 - 使用闭包包装
+        app.add_systems(|schedule| {
+            schedule.add_systems(ui_update_system);
+        });
+        app.add_systems(|schedule| {
+            schedule.add_systems(ui_layout_system);
+        });
+        app.add_systems(|schedule| {
+            schedule.add_systems(ui_event_system);
+        });
     }
 
     fn startup(&self, world: &mut bevy_ecs::world::World) {
@@ -169,14 +181,15 @@ fn create_example_ui(world: &mut World) {
     world.spawn(title_label);
 
     // 创建按钮
-    let mut click_count = 0;
+    let click_count = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    let click_count_clone = click_count.clone();
     let start_button = UIService::create_button(
         "开始游戏".to_string(),
         Vec2::new(10.0, 50.0),
         Vec2::new(120.0, 40.0),
         Some(Box::new(move || {
-            click_count += 1;
-            println!("开始游戏按钮被点击了 {} 次", click_count);
+            let count = click_count_clone.fetch_add(1, std::sync::atomic::Ordering::SeqCst) + 1;
+            println!("开始游戏按钮被点击了 {} 次", count);
         })),
     );
 

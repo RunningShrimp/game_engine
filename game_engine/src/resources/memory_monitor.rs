@@ -32,7 +32,7 @@ use std::time::{Duration, Instant};
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 
-use super::enhanced_staging_buffer::{EnhancedPerformanceMetrics, EnhancedStagingBufferPool};
+use super::ring_buffer_staging_pool::{RingBufferPerformanceMetrics, RingBufferStagingPool};
 use super::memory_allocator::{MemoryPressure, MemoryPressureEvent};
 
 // ============================================================================
@@ -128,7 +128,7 @@ impl MemorySnapshot {
     }
 
     /// 从性能指标创建快照
-    pub fn from_metrics(metrics: &EnhancedPerformanceMetrics, total_capacity: u64) -> Self {
+    pub fn from_metrics(metrics: &RingBufferPerformanceMetrics, total_capacity: u64) -> Self {
         Self {
             timestamp: std::time::SystemTime::now(),
             total_capacity,
@@ -155,6 +155,12 @@ impl MemorySnapshot {
             self.free_bytes as f32 / (1024.0 * 1024.0),
             self.active_allocations
         )
+    }
+}
+
+impl Default for MemorySnapshot {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -251,6 +257,12 @@ impl PerformanceAnalysis {
     }
 }
 
+impl Default for PerformanceAnalysis {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 // ============================================================================
 // 内存泄漏检测
 // ============================================================================
@@ -312,6 +324,12 @@ impl LeakDetectionResult {
     }
 }
 
+impl Default for LeakDetectionResult {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 // ============================================================================
 // 内存监控器
 // ============================================================================
@@ -324,7 +342,7 @@ pub struct MemoryMonitor {
     /// 监控配置
     config: MonitorConfig,
     /// 监控的Staging Buffer池
-    monitored_pools: Vec<Arc<Mutex<EnhancedStagingBufferPool>>>,
+    monitored_pools: Vec<Arc<Mutex<RingBufferStagingPool>>>,
     /// 内存快照历史
     snapshot_history: Arc<Mutex<VecDeque<MemorySnapshot>>>,
     /// 压力事件历史
@@ -364,7 +382,7 @@ impl MemoryMonitor {
     }
 
     /// 添加要监控的池
-    pub fn add_monitored_pool(&mut self, pool: Arc<Mutex<EnhancedStagingBufferPool>>) {
+    pub fn add_monitored_pool(&mut self, pool: Arc<Mutex<RingBufferStagingPool>>) {
         self.monitored_pools.push(pool);
     }
 

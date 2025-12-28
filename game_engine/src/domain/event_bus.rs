@@ -46,10 +46,12 @@ use tokio::sync::mpsc;
 
 /// 事件优先级
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[derive(Default)]
 pub enum EventPriority {
     /// 低优先级事件（如日志、统计）
     Low = 0,
     /// 普通优先级事件（如普通业务事件）
+    #[default]
     Normal = 1,
     /// 高优先级事件（如用户输入、关键状态变更）
     High = 2,
@@ -57,11 +59,6 @@ pub enum EventPriority {
     Critical = 3,
 }
 
-impl Default for EventPriority {
-    fn default() -> Self {
-        Self::Normal
-    }
-}
 
 /// 事件总线统计信息
 #[derive(Debug, Default, Clone)]
@@ -109,9 +106,7 @@ pub struct EventData {
 
 impl EventData {
     /// 创建新的事件数据
-    pub fn new<E: DomainEvent + Serialize>(event: &E, priority: EventPriority) -> Self
-    where
-        E: serde::Serialize,
+    pub fn new<E: DomainEvent + serde::Serialize>(event: &E, priority: EventPriority) -> Self
     {
         let event_type_name = event.event_type().to_string();
         let data = bincode::serialize(event).unwrap_or_else(|_| Vec::new());
@@ -164,13 +159,11 @@ impl EnhancedEventBus {
         }
 
         // 分发到异步处理器
-        if let Some(ref tx) = self.async_tx {
-            if let Ok(async_enabled) = self.async_enabled.lock() {
-                if *async_enabled {
+        if let Some(ref tx) = self.async_tx
+            && let Ok(async_enabled) = self.async_enabled.lock()
+                && *async_enabled {
                     let _ = tx.send(event_data);
                 }
-            }
-        }
     }
 
     /// 增加处理器计数
@@ -259,13 +252,11 @@ impl EnhancedEventBus {
             stats.total_published += 1;
         }
 
-        if let Some(ref tx) = self.async_tx {
-            if let Ok(async_enabled) = self.async_enabled.lock() {
-                if *async_enabled {
+        if let Some(ref tx) = self.async_tx
+            && let Ok(async_enabled) = self.async_enabled.lock()
+                && *async_enabled {
                     let _ = tx.send(event_data);
                 }
-            }
-        }
     }
 }
 

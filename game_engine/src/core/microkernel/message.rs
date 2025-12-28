@@ -9,6 +9,12 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MessageId(u64);
 
+impl Default for MessageId {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MessageId {
     pub fn new() -> Self {
         Self(std::sync::atomic::AtomicU64::new(1).fetch_add(1, std::sync::atomic::Ordering::SeqCst))

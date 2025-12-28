@@ -106,7 +106,7 @@ impl AlignmentOptimizer {
 
     /// 检测是否需要内存对齐
     pub fn needs_alignment(ptr: *const u8, alignment: usize) -> bool {
-        (ptr as usize) % alignment != 0
+        !(ptr as usize).is_multiple_of(alignment)
     }
 
     /// 获取对齐所需的填充字节数

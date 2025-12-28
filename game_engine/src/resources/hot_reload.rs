@@ -24,11 +24,12 @@ pub enum HotReloadEvent {
     ResourceCreated(PathBuf),
 }
 
-/// 热重载管理器
+/// 资源热加载管理器
 ///
 /// 监视资源文件系统变化，并自动触发资源重新加载。
 /// 支持依赖关系处理：当依赖的资源被修改时，自动重新加载依赖它的资源。
-pub struct HotReloadManager {
+/// 与PluginHotReloadManager不同，本管理器专注于资源文件（着色器、纹理等）的监控。
+pub struct ResourceHotReloadManager {
     /// 文件系统监视器
     _watcher: RecommendedWatcher,
     /// 事件接收器
@@ -45,15 +46,15 @@ pub struct HotReloadManager {
     debounce_delay: Duration,
 }
 
-impl HotReloadManager {
-    /// 创建新的热重载管理器
+impl ResourceHotReloadManager {
+    /// 创建新的资源热加载管理器
     ///
     /// # 参数
     /// - `watch_path`: 要监视的目录路径
     /// - `dependency_graph`: 资源依赖图
     ///
     /// # 返回
-    /// 新的热重载管理器实例
+    /// 新的资源热加载管理器实例
     pub fn new(
         watch_path: impl AsRef<Path>,
         dependency_graph: Arc<RwLock<DependencyGraph>>,
@@ -162,7 +163,9 @@ impl HotReloadManager {
         max_batch_size: usize,
         timeout: Duration,
     ) -> Vec<HotReloadEvent> {
-        use tokio::time::{sleep, Instant};
+        use tokio::time::Instant;
+// sleep 未在此文件中使用，但可能在未来需要
+// use tokio::time::{sleep, Instant};
 
         let mut events = Vec::new();
         let start_time = Instant::now();
@@ -205,7 +208,7 @@ impl HotReloadManager {
         reload_fn: F,
     ) -> Vec<Result<(), String>>
     where
-        F: Fn(PathBuf) -> Fut + Send + Sync + 'static,
+        F: Fn(PathBuf) -> Fut + Send + Sync + 'static + Clone,
         Fut: std::future::Future<Output = Result<(), String>> + Send + 'static,
     {
         use futures::future::join_all;
@@ -214,8 +217,9 @@ impl HotReloadManager {
         let reload_tasks: Vec<_> = paths
             .into_iter()
             .map(|path| {
-                let reload_fn = &reload_fn;
+                let reload_fn_clone = std::sync::Arc::new(reload_fn.clone());
                 tokio::task::spawn(async move {
+                    let reload_fn = reload_fn_clone.as_ref();
                     reload_fn(path).await
                 })
             })
@@ -311,8 +315,8 @@ impl HotReloadManager {
     /// 如果需要重新加载则返回true
     pub fn needs_reload(&self, path: &PathBuf) -> bool {
         // 检查文件系统最后修改时间
-        if let Ok(metadata) = std::fs::metadata(path) {
-            if let Ok(modified) = metadata.modified() {
+        if let Ok(metadata) = std::fs::metadata(path)
+            && let Ok(modified) = metadata.modified() {
                 let last_modified = self.last_modified.read().unwrap();
                 if let Some(&last_known) = last_modified.get(path) {
                     if modified > last_known {
@@ -327,7 +331,6 @@ impl HotReloadManager {
                     return false;
                 }
             }
-        }
         false
     }
 
@@ -354,9 +357,9 @@ impl HotReloadManager {
 
 /// 热重载服务（简化版本，向后兼容）
 ///
-/// 这是对旧API的兼容包装，建议使用`HotReloadManager`。
+/// 这是对旧API的兼容包装，建议使用`ResourceHotReloadManager`。
 pub struct HotReloadService {
-    manager: HotReloadManager,
+    manager: ResourceHotReloadManager,
 }
 
 impl HotReloadService {
@@ -369,7 +372,7 @@ impl HotReloadService {
     /// 新的热重载服务实例
     pub fn watch_dir(path: PathBuf) -> NotifyResult<Self> {
         let dependency_graph = Arc::new(RwLock::new(DependencyGraph::new()));
-        let manager = HotReloadManager::new(path, dependency_graph)?;
+        let manager = ResourceHotReloadManager::new(path, dependency_graph)?;
         Ok(Self { manager })
     }
 
@@ -391,12 +394,12 @@ impl HotReloadService {
     }
 
     /// 获取内部管理器（用于高级功能）
-    pub fn manager(&self) -> &HotReloadManager {
+    pub fn manager(&self) -> &ResourceHotReloadManager {
         &self.manager
     }
 
     /// 获取内部管理器（可变，用于高级功能）
-    pub fn manager_mut(&mut self) -> &mut HotReloadManager {
+    pub fn manager_mut(&mut self) -> &mut ResourceHotReloadManager {
         &mut self.manager
     }
 }

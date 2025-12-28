@@ -42,21 +42,21 @@ impl PoolManager {
     pub fn new() -> Self {
         Self {
             vec_u8_pool: Arc::new(SyncObjectPool::new(
-                || Vec::<u8>::new(),
+                Vec::<u8>::new,
                 32,  // 初始大小
                 256, // 最大大小
             )),
-            vec_f32_pool: Arc::new(SyncObjectPool::new(|| Vec::<f32>::new(), 32, 256)),
-            vec_vec3_pool: Arc::new(SyncObjectPool::new(|| Vec::<Vec3>::new(), 16, 128)),
-            vec_mat4_pool: Arc::new(SyncObjectPool::new(|| Vec::<Mat4>::new(), 16, 128)),
-            string_pool: Arc::new(SyncObjectPool::new(|| String::new(), 32, 256)),
+            vec_f32_pool: Arc::new(SyncObjectPool::new(Vec::<f32>::new, 32, 256)),
+            vec_vec3_pool: Arc::new(SyncObjectPool::new(Vec::<Vec3>::new, 16, 128)),
+            vec_mat4_pool: Arc::new(SyncObjectPool::new(Vec::<Mat4>::new, 16, 128)),
+            string_pool: Arc::new(SyncObjectPool::new(String::new, 32, 256)),
             hashmap_string_pool: Arc::new(SyncObjectPool::new(
-                || HashMap::<String, String>::new(),
+                HashMap::<String, String>::new,
                 16,
                 128,
             )),
-            vec_u32_pool: Arc::new(SyncObjectPool::new(|| Vec::<u32>::new(), 32, 256)),
-            vec_vec3_pool_extended: Arc::new(SyncObjectPool::new(|| Vec::<Vec3>::new(), 32, 256)),
+            vec_u32_pool: Arc::new(SyncObjectPool::new(Vec::<u32>::new, 32, 256)),
+            vec_vec3_pool_extended: Arc::new(SyncObjectPool::new(Vec::<Vec3>::new, 32, 256)),
         }
     }
 
@@ -64,42 +64,42 @@ impl PoolManager {
     pub fn with_config(config: PoolConfig) -> Self {
         Self {
             vec_u8_pool: Arc::new(SyncObjectPool::new(
-                || Vec::<u8>::new(),
+                Vec::<u8>::new,
                 config.vec_u8_initial,
                 config.vec_u8_max,
             )),
             vec_f32_pool: Arc::new(SyncObjectPool::new(
-                || Vec::<f32>::new(),
+                Vec::<f32>::new,
                 config.vec_f32_initial,
                 config.vec_f32_max,
             )),
             vec_vec3_pool: Arc::new(SyncObjectPool::new(
-                || Vec::<Vec3>::new(),
+                Vec::<Vec3>::new,
                 config.vec_vec3_initial,
                 config.vec_vec3_max,
             )),
             vec_mat4_pool: Arc::new(SyncObjectPool::new(
-                || Vec::<Mat4>::new(),
+                Vec::<Mat4>::new,
                 config.vec_mat4_initial,
                 config.vec_mat4_max,
             )),
             string_pool: Arc::new(SyncObjectPool::new(
-                || String::new(),
+                String::new,
                 config.string_initial,
                 config.string_max,
             )),
             hashmap_string_pool: Arc::new(SyncObjectPool::new(
-                || HashMap::<String, String>::new(),
+                HashMap::<String, String>::new,
                 config.hashmap_initial,
                 config.hashmap_max,
             )),
             vec_u32_pool: Arc::new(SyncObjectPool::new(
-                || Vec::<u32>::new(),
+                Vec::<u32>::new,
                 config.vec_u32_initial,
                 config.vec_u32_max,
             )),
             vec_vec3_pool_extended: Arc::new(SyncObjectPool::new(
-                || Vec::<Vec3>::new(),
+                Vec::<Vec3>::new,
                 config.vec_vec3_extended_initial,
                 config.vec_vec3_extended_max,
             )),

@@ -13,7 +13,8 @@ use bevy_ecs::prelude::*;
 use rayon::prelude::*;
 
 use super::player::{AnimationPlayer, SkeletonAnimationPlayer};
-use crate::ecs::{Time, Transform};
+use crate::ecs::{Transform};
+use crate::engine::ecs_bevy::{Time};
 
 /// 并行动画更新系统
 ///
@@ -45,7 +46,7 @@ pub fn parallel_animation_system(
     mut query: Query<(Entity, &mut AnimationPlayer, &mut Transform)>,
 ) {
     // 收集所有需要更新的实体数据
-    let delta = time.delta_seconds;
+    let delta = time.delta;
     let entities: Vec<(Entity, AnimationPlayer, Transform)> =
         query.iter_mut().map(|(e, p, t)| (e, p.as_ref().clone(), *t)).collect();
 
@@ -79,7 +80,7 @@ pub fn parallel_skeleton_animation_system(
     time: Res<Time>,
     mut query: Query<(&mut super::skeleton::Skeleton, &mut SkeletonAnimationPlayer)>,
 ) {
-    let delta = time.delta_seconds;
+    let delta = time.delta;
 
     // 收集需要更新的骨骼动画数据
     let skeletons: Vec<(usize, SkeletonAnimationPlayer, super::skeleton::Skeleton)> = query
@@ -160,11 +161,10 @@ fn sample_skeleton_pose_from_clip_parallel(
 
     // 应用变换
     for (bone_id, transform) in bone_transforms {
-        if let Some(transform) = transform {
-            if let Some(bone) = skeleton.get_bone_mut(bone_id) {
+        if let Some(transform) = transform
+            && let Some(bone) = skeleton.get_bone_mut(bone_id) {
                 bone.set_local_transform(transform);
             }
-        }
     }
 }
 

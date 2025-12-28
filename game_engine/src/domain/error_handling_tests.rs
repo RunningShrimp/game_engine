@@ -33,7 +33,7 @@ mod tests {
         };
 
         // 测试重试策略：无效参数错误应该被恢复
-        let error = PhysicsError::InvalidParameter("test".to_string());
+        let error = PhysicsError::invalid_rigid_body_parameter("test", "test");
         let result = body.recover_from_error(&error);
 
         // 重试策略应该成功恢复（重置为默认值）
@@ -55,7 +55,7 @@ mod tests {
         body.linear_velocity = Vec3::new(1.0, 2.0, 3.0);
         body.recovery_strategy = RecoveryStrategy::UseDefault;
 
-        let error = PhysicsError::InvalidParameter("test".to_string());
+        let error = PhysicsError::invalid_rigid_body_parameter("test", "test");
         let result = body.recover_from_error(&error);
 
         assert!(result.is_ok());
@@ -77,7 +77,7 @@ mod tests {
         body.mass = 5.0;
         body.recovery_strategy = RecoveryStrategy::Skip;
 
-        let error = PhysicsError::InvalidParameter("test".to_string());
+        let error = PhysicsError::invalid_rigid_body_parameter("test", "test");
         let result = body.recover_from_error(&error);
 
         assert!(result.is_ok());
@@ -97,7 +97,7 @@ mod tests {
         body.mass = 5.0;
         body.recovery_strategy = RecoveryStrategy::LogAndContinue;
 
-        let error = PhysicsError::InvalidParameter("test".to_string());
+        let error = PhysicsError::invalid_rigid_body_parameter("test", "test");
         let result = body.recover_from_error(&error);
 
         assert!(result.is_ok());
@@ -116,13 +116,13 @@ mod tests {
         );
         body.recovery_strategy = RecoveryStrategy::Fail;
 
-        let error = PhysicsError::InvalidParameter("test".to_string());
+        let error = PhysicsError::invalid_rigid_body_parameter("test", "test");
         let result = body.recover_from_error(&error);
 
         // Fail策略应该返回错误
         assert!(result.is_err());
         if let Err(DomainError::Physics(e)) = result {
-            assert!(matches!(e, PhysicsError::InvalidParameter(_)));
+            assert!(matches!(e, PhysicsError::InvalidRigidBodyParameter { .. }));
         } else {
             panic!("Expected Physics error");
         }
@@ -261,7 +261,11 @@ mod tests {
         );
 
         // 验证JSON数据可以正确访问
-        let pos = action.data.get("position").and_then(|v| v.as_array()).unwrap();
+        let pos = action
+            .data
+            .get("position")
+            .and_then(|v| v.as_array())
+            .unwrap();
         assert_eq!(pos.len(), 3);
         assert_eq!(pos[0].as_f64(), Some(1.0));
 
@@ -535,7 +539,10 @@ mod tests {
             delay_ms: 1,
         };
 
-        let error = PhysicsError::ColliderNotFound("test".to_string());
+        let error = PhysicsError::ColliderNotFound {
+            collider_id: "test".to_string(),
+            severity: crate::error::ErrorSeverity::Error,
+        };
         let result = body.recover_from_error(&error);
 
         // ColliderNotFound错误无法恢复，应该返回错误
@@ -556,7 +563,7 @@ mod tests {
             delay_ms: 1,
         };
 
-        let error = PhysicsError::WorldNotInitialized;
+        let error = PhysicsError::world_not_initialized();
         let result = body.recover_from_error(&error);
 
         // WorldNotInitialized错误无法恢复，应该返回错误
@@ -577,7 +584,7 @@ mod tests {
             delay_ms: 1,
         };
 
-        let error = PhysicsError::JointCreationFailed("test".to_string());
+        let error = PhysicsError::joint_creation("test");
         let result = body.recover_from_error(&error);
 
         // JointCreationFailed错误无法恢复，应该返回错误
@@ -592,10 +599,10 @@ mod tests {
             delay_ms: 1,
         };
 
-        let error = AudioError::InvalidFormat("test".to_string());
+        let error = AudioError::unsupported_format("test", "unknown");
         let result = source.recover_from_error(&error);
 
-        // InvalidFormat错误无法恢复，应该返回错误
+        // UnsupportedFormat错误无法恢复，应该返回错误
         assert!(result.is_err());
     }
 
@@ -607,10 +614,10 @@ mod tests {
             delay_ms: 1,
         };
 
-        let error = AudioError::DeviceError("test".to_string());
+        let error = AudioError::device_initialization("test");
         let result = source.recover_from_error(&error);
 
-        // DeviceError错误无法恢复，应该返回错误
+        // DeviceInitialization错误无法恢复，应该返回错误
         assert!(result.is_err());
     }
 

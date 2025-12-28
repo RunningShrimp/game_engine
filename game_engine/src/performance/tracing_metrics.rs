@@ -6,12 +6,28 @@
 //! - Performance profiling integration
 //! - 集成 game_engine_performance crate
 
-use crate::performance::alerting::PerformanceAlertSystem;
-use crate::performance::metrics_storage::MetricsStorage;
-use crate::performance::monitoring::system_monitor::SystemPerformanceMonitor;
-use crate::profiling::{Bottleneck, ContinuousProfiler, PerformanceAnalysis};
-use std::sync::Arc;
 use std::time::{Duration, Instant};
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
+use crate::performance::monitoring::system_monitor::SystemPerformanceMonitor;
+use crate::profiling::{
+    Bottleneck, ContinuousProfiler, PerformanceAnalysis
+};
+
+/// Metric值类型
+#[derive(Debug, Clone)]
+pub enum MetricValue {
+    Counter(u64),
+    Gauge(f64),
+    Histogram(Vec<f64>),
+}
+
+/// Metric数据点
+#[derive(Debug, Clone)]
+pub struct MetricDataPoint {
+    pub timestamp: Instant,
+    pub value: MetricValue,
+}
 
 /// 统一的tracing和metrics管理器
 #[derive(Debug)]
@@ -19,10 +35,8 @@ pub struct TracingMetricsManager {
     system_monitor: SystemPerformanceMonitor,
     start_time: Instant,
     continuous_profiler: Option<ContinuousProfiler>,
-    /// Metrics存储系统
-    metrics_storage: Arc<MetricsStorage>,
-    /// 性能告警系统
-    alert_system: PerformanceAlertSystem,
+    /// Metrics存储：metric_name -> list of data points
+    metrics_storage: Arc<Mutex<HashMap<String, Vec<MetricDataPoint>>>>,
 }
 
 impl TracingMetricsManager {
@@ -32,8 +46,7 @@ impl TracingMetricsManager {
             system_monitor: SystemPerformanceMonitor::new(),
             start_time: Instant::now(),
             continuous_profiler: Some(ContinuousProfiler::new(300)),
-            metrics_storage: Arc::new(MetricsStorage::new(1000)),
-            alert_system: PerformanceAlertSystem::new(),
+            metrics_storage: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
@@ -67,16 +80,8 @@ impl TracingMetricsManager {
     }
 
     /// 创建着色器编译span
-    #[tracing::instrument(
-        target = "render",
-        skip_all,
-        fields(shader_label, source_size, enable_cache)
-    )]
-    pub fn shader_compile_span(
-        shader_label: &str,
-        source_size: usize,
-        enable_cache: bool,
-    ) -> tracing::Span {
+    #[tracing::instrument(target = "render", skip_all, fields(shader_label, source_size, enable_cache))]
+    pub fn shader_compile_span(shader_label: &str, source_size: usize, enable_cache: bool) -> tracing::Span {
         tracing::info_span!("shader_compile", shader_label, source_size, enable_cache)
     }
 
@@ -86,17 +91,77 @@ impl TracingMetricsManager {
         tracing::info_span!("network_tick", tick)
     }
 
-    /// 记录性能指标
-    pub fn record_metric(&self, name: &str, value: f64) {
+    /// 记录性能指标（计数器类型）
+    pub fn record_counter(&self, name: &str, value: u64) {
+        let timestamp = Instant::now();
         tracing::info!(target: "metrics", %name, value);
-        // 集成到metrics存储系统
-        self.metrics_storage.record(name, value, None);
+
+        let mut storage = self.metrics_storage.lock().unwrap();
+        storage.entry(name.to_string())
+            .or_default()
+            .push(MetricDataPoint {
+                timestamp,
+                value: MetricValue::Counter(value),
+            });
+
+        // 限制存储大小（保留最近1000个数据点）
+        if let Some(metrics) = storage.get_mut(name)
+            && metrics.len() > 1000 {
+                metrics.drain(0..metrics.len() - 1000);
+            }
+    }
+
+    /// 记录性能指标（仪表类型）
+    pub fn record_gauge(&self, name: &str, value: f64) {
+        let timestamp = Instant::now();
+        tracing::info!(target: "metrics", %name, value);
+
+        let mut storage = self.metrics_storage.lock().unwrap();
+        storage.entry(name.to_string())
+            .or_default()
+            .push(MetricDataPoint {
+                timestamp,
+                value: MetricValue::Gauge(value),
+            });
+
+        // 限制存储大小
+        if let Some(metrics) = storage.get_mut(name)
+            && metrics.len() > 1000 {
+                metrics.drain(0..metrics.len() - 1000);
+            }
+    }
+
+    /// 记录性能指标（通用方法，保留向后兼容）
+    pub fn record_metric(&self, name: &str, value: f64) {
+        self.record_gauge(name, value);
+    }
+
+    /// 获取指定metric的所有数据点
+    pub fn get_metric_data(&self, name: &str) -> Option<Vec<MetricDataPoint>> {
+        let storage = self.metrics_storage.lock().unwrap();
+        storage.get(name).cloned()
+    }
+
+    /// 获取指定metric的最新值
+    pub fn get_latest_metric(&self, name: &str) -> Option<MetricDataPoint> {
+        let storage = self.metrics_storage.lock().unwrap();
+        storage.get(name).and_then(|v| v.last().cloned())
+    }
+
+    /// 清除指定metric的所有数据
+    pub fn clear_metric(&self, name: &str) {
+        let mut storage = self.metrics_storage.lock().unwrap();
+        storage.remove(name);
+    }
+
+    /// 获取所有metric名称
+    pub fn get_all_metric_names(&self) -> Vec<String> {
+        let storage = self.metrics_storage.lock().unwrap();
+        storage.keys().cloned().collect()
     }
 
     /// 获取系统性能快照
-    pub fn get_performance_snapshot(
-        &self,
-    ) -> crate::performance::monitoring::system_monitor::PerformanceMetrics {
+    pub fn get_performance_snapshot(&self) -> crate::performance::monitoring::system_monitor::PerformanceMetrics {
         self.system_monitor.get_metrics()
     }
 
@@ -108,35 +173,33 @@ impl TracingMetricsManager {
             if samples.is_empty() {
                 return None;
             }
-
+            
             let avg_fps = profiler.get_average_fps();
             let avg_frame_time = profiler.get_average_frame_time();
             let anomalies = profiler.detect_anomalies();
-
+            
             let mut metrics = std::collections::HashMap::new();
             metrics.insert("avg_fps".to_string(), avg_fps as f64);
-            metrics.insert(
-                "avg_frame_time_ms".to_string(),
-                (avg_frame_time * 1000.0) as f64,
-            );
+            metrics.insert("avg_frame_time_ms".to_string(), (avg_frame_time * 1000.0) as f64);
             metrics.insert("sample_count".to_string(), samples.len() as f64);
-
-            let bottlenecks = anomalies
-                .into_iter()
-                .map(|anomaly| Bottleneck {
+            
+            let bottlenecks = anomalies.into_iter().map(|anomaly| {
+                Bottleneck {
                     name: "Performance Anomaly".to_string(),
                     severity: 50,
                     description: format!("Performance anomaly detected: {:?}", anomaly),
                     suggestion: "Investigate recent changes or system load".to_string(),
-                })
-                .collect();
-
-            Some(PerformanceAnalysis {
+                }
+            }).collect();
+            
+            // 创建一个PerformanceAnalysis实例并返回
+            let analysis = PerformanceAnalysis {
                 name: "engine_runtime".to_string(),
                 metrics,
                 bottlenecks,
                 recommendations: vec!["Monitor performance trends".to_string()],
-            })
+            };
+            Some(analysis)
         } else {
             None
         }
@@ -166,32 +229,6 @@ impl TracingMetricsManager {
         }
     }
 
-    /// 更新性能指标并检查告警
-    pub fn update_and_check_alerts(&mut self) {
-        let snapshot = self.get_performance_snapshot();
-        self.alert_system.update(&snapshot);
-    }
-
-    /// 获取告警系统
-    pub fn alert_system(&self) -> &PerformanceAlertSystem {
-        &self.alert_system
-    }
-
-    /// 获取可变告警系统
-    pub fn alert_system_mut(&mut self) -> &mut PerformanceAlertSystem {
-        &mut self.alert_system
-    }
-
-    /// 获取最近的告警事件
-    pub fn get_recent_alerts(&self, limit: usize) -> Vec<crate::performance::alerting::AlertEvent> {
-        self.alert_system.get_recent_alerts(limit)
-    }
-
-    /// 获取告警统计
-    pub fn get_alert_statistics(&self) -> crate::performance::alerting::AlertStatistics {
-        self.alert_system.get_statistics()
-    }
-
     /// 记录帧时间
     pub fn record_frame_time(&self, frame_time: Duration) {
         self.record_metric("frame_time", frame_time.as_secs_f64() * 1000.0);
@@ -208,63 +245,6 @@ impl TracingMetricsManager {
     pub fn uptime(&self) -> Duration {
         self.start_time.elapsed()
     }
-
-    /// 获取metrics存储系统
-    pub fn metrics_storage(&self) -> Arc<MetricsStorage> {
-        Arc::clone(&self.metrics_storage)
-    }
-
-    /// 查询指定metric的数据
-    ///
-    /// # 参数
-    ///
-    /// * `name` - metric名称
-    ///
-    /// # 返回
-    ///
-    /// metric的所有数据点
-    pub fn query_metrics(
-        &self,
-        name: &str,
-    ) -> Vec<crate::performance::metrics_storage::MetricDataPoint> {
-        self.metrics_storage.get_metrics(name)
-    }
-
-    /// 查询指定metric在时间窗口内的数据
-    ///
-    /// # 参数
-    ///
-    /// * `name` - metric名称
-    /// * `duration` - 时间范围
-    ///
-    /// # 返回
-    ///
-    /// 时间范围内的数据点
-    pub fn query_metrics_in_window(
-        &self,
-        name: &str,
-        duration: Duration,
-    ) -> Vec<crate::performance::metrics_storage::MetricDataPoint> {
-        self.metrics_storage.get_metrics_in_window(name, duration)
-    }
-
-    /// 获取metric的聚合统计
-    ///
-    /// # 参数
-    ///
-    /// * `name` - metric名称
-    /// * `duration` - 可选的时间范围
-    ///
-    /// # 返回
-    ///
-    /// 聚合统计
-    pub fn query_metric_aggregate(
-        &self,
-        name: &str,
-        duration: Option<Duration>,
-    ) -> Option<crate::performance::metrics_storage::MetricAggregate> {
-        self.metrics_storage.aggregate(name, duration)
-    }
 }
 
 impl Default for TracingMetricsManager {
@@ -274,12 +254,11 @@ impl Default for TracingMetricsManager {
 }
 
 /// 全局tracing/metrics管理器实例
-static TRACING_METRICS_MANAGER: std::sync::OnceLock<std::sync::Mutex<TracingMetricsManager>> =
-    std::sync::OnceLock::new();
+static TRACING_METRICS_MANAGER: std::sync::OnceLock<TracingMetricsManager> = std::sync::OnceLock::new();
 
 /// 获取全局tracing/metrics管理器
-pub fn global_tracing_metrics() -> &'static std::sync::Mutex<TracingMetricsManager> {
-    TRACING_METRICS_MANAGER.get_or_init(|| std::sync::Mutex::new(TracingMetricsManager::new()))
+pub fn global_tracing_metrics() -> &'static TracingMetricsManager {
+    TRACING_METRICS_MANAGER.get_or_init(TracingMetricsManager::new)
 }
 
 /// 初始化全局tracing/metrics系统
@@ -313,25 +292,7 @@ mod tests {
     #[test]
     fn test_global_manager() {
         let manager = global_tracing_metrics();
-        if let Ok(m) = manager.lock() {
-            let uptime = m.uptime();
-            assert!(uptime >= Duration::from_secs(0));
-        }
-    }
-
-    #[test]
-    fn test_alert_system_integration() {
-        let mut manager = TracingMetricsManager::new();
-
-        // 更新性能指标并检查告警
-        manager.update_and_check_alerts();
-
-        // 获取告警统计
-        let stats = manager.get_alert_statistics();
-        assert_eq!(stats.total_alerts, 0);
-
-        // 获取最近的告警
-        let alerts = manager.get_recent_alerts(10);
-        assert!(alerts.is_empty());
+        let uptime = manager.uptime();
+        assert!(uptime >= Duration::from_secs(0));
     }
 }

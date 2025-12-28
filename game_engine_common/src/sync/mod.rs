@@ -4,10 +4,10 @@
 //!
 //! ## 类型
 //!
-//! - [`AtomicCounter`]: 原子计数器，线程安全的整数计数
-//! - [`AtomicFlag`]: 原子布尔标志
-//! - [`RwLockWrapper<T>`]: 带指标跟踪的读写锁包装器
-//! - [`SynchronizedQueue<T>`]: 基于通道的同步队列
+//! - [`AtomicCounter`][]: 原子计数器，线程安全的整数计数
+//! - [`AtomicFlag`][]: 原子布尔标志
+//! - [`RwLockWrapper<T>`][]: 带指标跟踪的读写锁包装器
+//! - [`SynchronizedQueue<T>`][]: 基于通道的同步队列
 //!
 //! ## 使用示例
 //!

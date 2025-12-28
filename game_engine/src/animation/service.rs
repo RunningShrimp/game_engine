@@ -168,7 +168,7 @@ mod tests {
             scale: Vec3::ONE * 2.0,
         };
 
-        let blended = t1.blend(&t2, 0.5);
+        let blended = AnimationService::blend_transforms(&t1, &t2, 0.5);
 
         assert!((blended.pos.x - 5.0).abs() < 0.001);
         assert!((blended.scale.x - 1.5).abs() < 0.001);

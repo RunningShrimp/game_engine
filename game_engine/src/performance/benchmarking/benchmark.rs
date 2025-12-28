@@ -102,7 +102,7 @@ impl Benchmark {
     /// 打印所有结果
     pub fn print_results(&self) {
         println!("\n=== Benchmark Results ===\n");
-        for (_, result) in &self.results {
+        for result in self.results.values() {
             println!("{}\n", result);
         }
     }

@@ -4,6 +4,7 @@
 
 use super::*;
 use super::{EntityCreatedEvent, EntityDeletedEvent, EntityUpdatedEvent};
+use crate::domain::EventPriority;
 use crate::error::safe_lock;
 use bevy_ecs::prelude::*;
 use bincode;
@@ -32,7 +33,7 @@ impl Command for CreateEntityCommand {
 
         // 创建事件
         let event = EntityCreatedEvent {
-            entity_id: entity_id as u32,
+            entity_id,
             entity_type: self.entity_type.clone(),
         };
 
@@ -40,7 +41,7 @@ impl Command for CreateEntityCommand {
         event.apply(world)?;
 
         // 序列化事件
-        let data = bincode::serialize(&event).unwrap();
+        let data = bincode::serialize(&event).expect("Failed to serialize event");
 
         Ok((event.event_type().to_string(), data))
     }
@@ -68,7 +69,7 @@ impl Command for DeleteEntityCommand {
         event.apply(world)?;
 
         // 序列化事件
-        let data = bincode::serialize(&event).unwrap();
+        let data = bincode::serialize(&event).expect("Failed to serialize event");
 
         Ok((event.event_type().to_string(), data))
     }
@@ -99,7 +100,7 @@ impl Command for UpdateEntityCommand {
         event.apply(world)?;
 
         // 序列化事件
-        let data = bincode::serialize(&event).unwrap();
+        let data = bincode::serialize(&event).expect("Failed to serialize event");
 
         Ok((event.event_type().to_string(), data))
     }
@@ -109,7 +110,43 @@ impl Command for UpdateEntityCommand {
     }
 }
 
-/// 命令处理器
+/// Event wrapper for new() method
+#[derive(Debug, Clone)]
+pub struct EventWrapper {
+    pub event_type: String,
+    pub data: Vec<u8>,
+    pub aggregate_id: Option<u32>,
+}
+
+impl EventWrapper {
+    pub fn new<E: DomainEvent + serde::Serialize>(event: &E, priority: EventPriority) -> Self {
+        // 根据优先级选择序列化策略
+        // 高优先级事件可能需要更快的序列化，但当前统一使用bincode
+        let data = bincode::serialize(event).unwrap_or_default();
+        
+        // 记录优先级信息（可用于后续的事件处理优化）
+        let _priority_level = priority as u8; // 将优先级转换为数值用于日志或统计
+        
+        Self {
+            event_type: event.event_type().to_string(),
+            data,
+            aggregate_id: None,
+        }
+    }
+    
+    /// 获取事件的优先级（从事件类型推断）
+    pub fn inferred_priority(&self) -> EventPriority {
+        // 根据事件类型推断优先级
+        // 关键事件（如玩家输入、物理同步）通常是高优先级
+        if self.event_type.contains("input") || self.event_type.contains("physics") {
+            EventPriority::High
+        } else if self.event_type.contains("render") || self.event_type.contains("audio") {
+            EventPriority::Normal
+        } else {
+            EventPriority::Low
+        }
+    }
+}
 
 pub struct CommandHandler {
     manager: Arc<EventSourcingManager>,

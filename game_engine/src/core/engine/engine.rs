@@ -55,6 +55,36 @@ impl Engine {
     }
 
     /// 运行引擎
+    ///
+    /// 这是引擎的入口点，执行以下操作：
+    ///
+    /// 1. 初始化tracing和metrics系统
+    /// 2. 创建默认配置
+    /// 3. 初始化引擎实例
+    /// 4. 创建窗口和事件循环
+    /// 5. 初始化ECS世界和渲染器
+    /// 6. 启动游戏主循环
+    ///
+    /// # 返回
+    ///
+    /// 成功时返回`Ok(())`，失败时返回错误信息
+    ///
+    /// # 示例
+    ///
+    /// ```rust,no_run
+    /// use game_engine::core::Engine;
+    ///
+    /// fn main() -> Result<(), Box<dyn std::error::Error>> {
+    ///     Engine::run()
+    /// }
+    /// ```
+    ///
+    /// # 错误
+    ///
+    /// 可能返回以下错误：
+    /// - 窗口创建失败
+    /// - 渲染器初始化失败
+    /// - 编辑器初始化失败
     pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         // 初始化tracing和metrics系统
         crate::performance::tracing_metrics::TracingMetricsManager::init();
@@ -74,6 +104,21 @@ impl Engine {
     }
 
     /// 异步运行引擎
+    ///
+    /// 内部异步运行方法，由`run()`方法调用。
+    /// 执行引擎的主事件循环，处理窗口事件、更新游戏逻辑和渲染。
+    ///
+    /// # 流程
+    ///
+    /// 1. 创建事件循环和窗口
+    /// 2. 初始化ECS世界、渲染器和编辑器
+    /// 3. 进入事件循环：
+    ///    - 处理窗口事件（输入、关闭等）
+    ///    - 更新固定时间步调度器（物理等）
+    ///    - 更新可变时间步调度器（游戏逻辑）
+    ///    - 执行协程任务
+    ///    - 渲染帧
+    /// 4. 退出清理
     #[allow(deprecated)]
     async fn run_async(self) -> Result<(), Box<dyn std::error::Error>> {
         use winit::event::{Event, WindowEvent};
@@ -173,10 +218,6 @@ impl Engine {
 
             match event {
                 Event::WindowEvent { event, window_id } if window_id == window.id() => {
-                    // 创建WinitWindow包装器用于事件处理
-                    let winit_window =
-                        crate::platform::winit::WinitWindow::from_arc(winit_window_arc.clone());
-
                     // 处理窗口事件
                     crate::core::engine::input_handler::handle_window_event(
                         &event,
@@ -185,7 +226,7 @@ impl Engine {
                         &mut editor_ctx,
                         &mut render_service,
                         &mut render_cache,
-                        &winit_window,
+                        &window,
                         elwt,
                     );
 
@@ -235,8 +276,8 @@ impl Engine {
                             // 在实际游戏中，这里可以用于AI寻路、资源加载等异步任务
                             if let Some(time) = world.get_resource::<crate::ecs::Time>() {
                                 let frame_count = (time.elapsed_seconds * 60.0) as u64;
-                                if frame_count % 60 == 0 {
-                                    if let Some(task_manager) = world.get_resource::<crate::core::engine::game_loop_coroutine::CoroutineTaskManager>() {
+                                if frame_count.is_multiple_of(60)
+                                    && let Some(task_manager) = world.get_resource::<crate::core::engine::game_loop_coroutine::CoroutineTaskManager>() {
                                         let task_manager = task_manager.clone();
                                         runtime_handle.spawn(async move {
                                             let _task_id = task_manager.spawn_task(
@@ -251,7 +292,6 @@ impl Engine {
                                             ).await;
                                         });
                                     }
-                                }
                             }
 
                             // 创建WinitWindow包装器用于渲染

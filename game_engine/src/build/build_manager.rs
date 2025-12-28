@@ -8,7 +8,6 @@
 //! - 构建统计（构建时间和资源使用）
 
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -46,7 +45,7 @@ pub enum BuildProfile {
 }
 
 impl BuildProfile {
-    fn to_cargo_args(&self) -> Vec<&str> {
+    fn to_cargo_args(self) -> Vec<&'static str> {
         match self {
             BuildProfile::Debug => vec![],
             BuildProfile::Release => vec!["--release"],
@@ -113,11 +112,15 @@ pub struct BuildManager {
 }
 
 #[derive(Debug, Clone, Default)]
-struct BuildProgress {
-    completed: usize,
-    total: usize,
-    current_packages: Vec<String>,
-    start_time: Option<Instant>,
+pub struct BuildProgress {
+    /// 已完成的任务数
+    pub completed: usize,
+    /// 总任务数
+    pub total: usize,
+    /// 当前正在处理的包列表
+    pub current_packages: Vec<String>,
+    /// 开始时间
+    pub start_time: Option<Instant>,
 }
 
 impl BuildManager {
@@ -151,6 +154,7 @@ impl BuildManager {
         // 并行构建所有包
         let mut tasks = Vec::new();
         for package in packages {
+            let package_clone = package.clone();
             let semaphore = semaphore.clone();
             let config = self.config.clone();
             let progress = self.progress.clone();
@@ -162,25 +166,25 @@ impl BuildManager {
                 // 更新进度
                 {
                     let mut prog = progress.lock().unwrap();
-                    prog.current_packages.push(package.clone());
+                    prog.current_packages.push(package_clone.clone());
                 }
 
-                let result = Self::build_package(&package, &config).await;
+                let result = Self::build_package(&package_clone, &config).await;
 
                 // 更新进度
                 {
                     let mut prog = progress.lock().unwrap();
                     prog.completed += 1;
-                    prog.current_packages.retain(|p| p != &package);
+                    prog.current_packages.retain(|p| p != &package_clone);
                 }
 
                 // 更新缓存
                 if result.success {
                     let mut cache = cache.lock().unwrap();
-                    cache.insert(package.clone(), Instant::now());
+                    cache.insert(package_clone.clone(), Instant::now());
                 }
 
-                result
+                (package_clone, result)
             });
 
             tasks.push((package, task));
@@ -191,9 +195,14 @@ impl BuildManager {
         let mut package_times = HashMap::new();
 
         for (package, task) in tasks {
-            let result = task.await.map_err(|e| BuildError::TaskError(e.to_string()))?;
-            package_times.insert(package.clone(), result.duration);
-            results.push((package, result));
+            let (pkg, result) = task.await.map_err(|e| BuildError::TaskError(e.to_string()))?;
+            // 记录包构建时间统计
+            let duration = result.duration;
+            package_times.insert(pkg.clone(), duration);
+            // 记录包构建完成（用于日志和进度跟踪）
+            tracing::debug!("Package '{}' build completed in {:?}", package, duration);
+            // 记录构建结果，包含包名用于后续处理
+            results.push((pkg.clone(), result));
         }
 
         // 计算统计

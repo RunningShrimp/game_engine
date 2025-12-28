@@ -1,9 +1,9 @@
 //  异步着色器编译系统
-//
+// 
 //  使用异步编译减少主线程阻塞，提升启动性能和响应性。
-//
+// 
 //  ## 设计原则
-//
+// 
 //  1. **异步编译**: 使用`tokio::task::spawn_blocking`在后台线程编译
 //  2. **编译队列**: 优先级队列管理编译任务
 //  3. **进度跟踪**: 实时追踪编译进度
@@ -13,7 +13,6 @@
 use crate::error::RenderError;
 use crate::error::safe_lock;
 use crate::render::shader_cache::{ShaderCache, ShaderCacheKey};
-use num_cpus;
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
 use std::sync::{Arc, Mutex};
@@ -21,28 +20,25 @@ use std::time::{Duration, Instant};
 use thiserror::Error;
 use tokio::sync::{mpsc, oneshot};
 use tokio::time::timeout;
+use num_cpus;
 
 /// 着色器编译优先级
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Default)]
 pub enum ShaderCompilePriority {
     /// 关键优先级 - 立即需要的着色器（如基础渲染着色器）
     Critical = 0,
     /// 高优先级 - 当前帧需要的着色器
     High = 1,
     /// 普通优先级 - 预加载着色器
+    #[default]
     Normal = 2,
     /// 低优先级 - 后台编译
     Low = 3,
 }
 
-impl Default for ShaderCompilePriority {
-    fn default() -> Self {
-        Self::Normal
-    }
-}
 
 impl ShaderCompilePriority {
-    /// 创建默认的着色器编译优先级
     pub fn new() -> Self {
         Self::default()
     }
@@ -172,8 +168,8 @@ impl AsyncShaderCompilerConfig {
     pub fn with_cpu_aware_defaults() -> Self {
         let cpu_count = num_cpus::get();
         Self {
-            max_concurrent_compiles: cpu_count.max(2).min(8), // CPU核数，最小2，最大8
-            max_spawn_blocking: (cpu_count / 2).max(1).min(4), // CPU核数的一半，最小1，最大4（编译较重）
+            max_concurrent_compiles: cpu_count.clamp(2, 8), // CPU核数，最小2，最大8
+            max_spawn_blocking: (cpu_count / 2).clamp(1, 4), // CPU核数的一半，最小1，最大4（编译较重）
             compile_timeout_ms: 5000,
             enable_cache: true,
         }
@@ -184,8 +180,8 @@ impl Default for AsyncShaderCompilerConfig {
     fn default() -> Self {
         let cpu_count = num_cpus::get();
         Self {
-            max_concurrent_compiles: cpu_count.max(2).min(8), // CPU核数，最小2，最大8
-            max_spawn_blocking: (cpu_count / 2).max(1).min(4), // CPU核数的一半，最小1，最大4（编译较重）
+            max_concurrent_compiles: cpu_count.clamp(2, 8), // CPU核数，最小2，最大8
+            max_spawn_blocking: (cpu_count / 2).clamp(1, 4), // CPU核数的一半，最小1，最大4（编译较重）
             compile_timeout_ms: 5000,
             enable_cache: true,
         }
@@ -382,9 +378,7 @@ impl AsyncShaderCompiler {
                         wait_stats.max_wait_time_ms = wait_stats.max_wait_time_ms.max(wait_time_ms);
                         wait_stats.sample_count += 1;
                     } else {
-                        tracing::error!(
-                            "Failed to acquire wait_time_stats lock, skipping statistics update"
-                        );
+                        tracing::error!("Failed to acquire wait_time_stats lock, skipping statistics update");
                     }
                 }
 
@@ -398,7 +392,7 @@ impl AsyncShaderCompiler {
 
                 // 在新任务中执行编译
                 let _span = crate::performance::tracing_metrics::TracingMetricsManager::shader_compile_span(
-                    &label.as_ref().unwrap_or(&"unnamed".to_string()),
+                    label.as_ref().unwrap_or(&"unnamed".to_string()),
                     source.len(),
                     enable_cache
                 ).entered();
@@ -414,7 +408,7 @@ impl AsyncShaderCompiler {
                     // 检查缓存
                     let cached_result = if enable_cache {
                         if let Some(cache) = &cache_clone {
-                            let mut cache_guard = safe_lock(&cache, "shader_cache").unwrap();
+                            let mut cache_guard = safe_lock(cache, "shader_cache").unwrap();
                             cache_guard.get(&cache_key).ok().flatten()
                         } else {
                             None
@@ -433,7 +427,7 @@ impl AsyncShaderCompiler {
                     } else {
                         // 缓存未命中，执行编译
                         // 注意：wgpu的create_shader_module是同步的，需要在阻塞任务中执行
-                        let _permit = spawn_blocking_semaphore.acquire().await.unwrap();
+                        let permit = spawn_blocking_semaphore.acquire().await.unwrap();
                         let compile_future = tokio::task::spawn_blocking(move || {
                             // 许可将在函数结束时自动释放
                             // 这里只是验证和预处理源码
@@ -456,15 +450,13 @@ impl AsyncShaderCompiler {
                     };
 
                     // 如果编译成功，存储到缓存
-                    if let Ok(ref compiled) = result {
-                        if enable_cache {
-                            if let Some(cache) = &cache_clone {
-                                let mut cache_guard = safe_lock(&cache, "shader_cache").unwrap();
+                    if let Ok(ref compiled) = result
+                        && enable_cache
+                            && let Some(cache) = &cache_clone {
+                                let mut cache_guard = safe_lock(cache, "shader_cache").unwrap();
                                 let _ =
                                     cache_guard.put_source(&compiled.cache_key, &compiled.source);
                             }
-                        }
-                    }
 
                     // 发送结果
                     let _ = response_tx.send(result);
@@ -503,9 +495,11 @@ impl AsyncShaderCompiler {
             response_tx,
         };
 
-        self.request_tx.send(request).map_err(|e| RenderError::InvalidState {
-            message: format!("Failed to send compile request: {}", e),
-            severity: crate::error::ErrorSeverity::Error,
+        self.request_tx.send(request).map_err(|e| {
+            RenderError::InvalidState {
+                message: format!("Failed to send compile request: {}", e),
+                severity: crate::error::ErrorSeverity::Error
+            }
         })?;
 
         Ok(response_rx)
@@ -543,7 +537,7 @@ impl AsyncShaderCompiler {
 
     /// 获取缓存（如果启用）
     pub fn cache(&self) -> Option<Arc<Mutex<ShaderCache>>> {
-        self.cache.as_ref().map(|c| Arc::clone(c))
+        self.cache.as_ref().map(Arc::clone)
     }
 
     /// 获取编译器配置
@@ -582,9 +576,12 @@ mod tests {
         let compiler = AsyncShaderCompiler::with_default_config().unwrap();
 
         // 提交不同优先级的请求
-        let rx_low = compiler.compile_async(None, "low", "", ShaderCompilePriority::Low).unwrap();
-        let rx_high =
-            compiler.compile_async(None, "high", "", ShaderCompilePriority::High).unwrap();
+        let rx_low = compiler
+            .compile_async(None, "low", "", ShaderCompilePriority::Low)
+            .unwrap();
+        let rx_high = compiler
+            .compile_async(None, "high", "", ShaderCompilePriority::High)
+            .unwrap();
         let rx_critical = compiler
             .compile_async(None, "critical", "", ShaderCompilePriority::Critical)
             .unwrap();

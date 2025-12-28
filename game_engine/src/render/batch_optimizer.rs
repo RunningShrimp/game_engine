@@ -13,7 +13,7 @@
 //! 3. **性能监控**：实时统计批处理效果
 //! 4. **自适应优化**：根据场景动态调整批处理策略
 
-use crate::render::instance_batch::BatchKey;
+pub use crate::render::instance_batch::BatchKey;
 use std::time::Instant;
 
 /// 渲染状态切换成本权重

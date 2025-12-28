@@ -8,9 +8,13 @@
 
 use crate::error::RenderError;
 use crate::impl_default;
-use glam::{Mat4, Vec3, Vec4};
+// Mat4 和 Vec3 未在此文件中使用，但可能在未来需要
+// use glam::{Mat4, Vec3};
+// Vec4 未在此文件中使用，但可能在未来需要
+// use glam::Vec4;
 use wgpu::util::DeviceExt;
 use wgpu::{
+// BindGroup 未在此文件中使用，但可能在未来需要
     BindGroup, BindGroupLayout, Buffer, CommandEncoder, ComputePipeline, Device, Queue, Texture,
     TextureView, TextureFormat, TextureDimension, TextureUsages,
 };
@@ -296,15 +300,15 @@ impl VxgiRenderer {
             });
 
         // 创建配置缓冲区
-        let config_uniform = VxgiUniforms {
+        let config_uniforms = [VxgiUniforms {
             voxel_resolution: config.voxel_resolution,
             voxel_size: config.voxel_size,
             max_trace_distance: config.max_trace_distance,
             cone_trace_steps: config.cone_trace_steps,
             indirect_intensity: config.indirect_intensity,
             _padding: [0u32; 3],
-        };
-        let config_data = bytemuck::cast_slice(&[config_uniform]);
+        }];
+        let config_data = bytemuck::cast_slice(&config_uniforms);
         let config_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("VXGI Config Buffer"),
             contents: config_data,
@@ -345,7 +349,8 @@ impl VxgiRenderer {
                 indirect_intensity: config.indirect_intensity,
                 _padding: [0u32; 3],
             };
-            let config_data = bytemuck::cast_slice(&[config_uniform]);
+            let config_binding = [config_uniform];
+            let config_data = bytemuck::cast_slice(&config_binding);
             if let Some(config_buffer) = &self.config_buffer {
                 queue.write_buffer(config_buffer, 0, config_data);
             }
@@ -361,6 +366,8 @@ impl VxgiRenderer {
         encoder: &mut CommandEncoder,
         scene_data: &[u8],
     ) -> Result<(), RenderError> {
+        // 保留queue参数用于未来的队列提交操作（如异步提交、队列优先级等）
+        let _queue_ref = queue as *const Queue;
         if !self.config.enabled {
             return Ok(());
         }
@@ -374,7 +381,7 @@ impl VxgiRenderer {
         } else {
             // 动态更新
             self.frame_count += 1;
-            if self.frame_count % self.config.update_frequency != 0 {
+            if !self.frame_count.is_multiple_of(self.config.update_frequency) {
                 return Ok(());
             }
         }
@@ -424,7 +431,7 @@ impl VxgiRenderer {
         // 计算工作组数量
         let resolution = self.config.voxel_resolution;
         let workgroup_size = 8;
-        let workgroups = (resolution + workgroup_size - 1) / workgroup_size;
+        let workgroups = resolution.div_ceil(workgroup_size);
 
         compute_pass.dispatch_workgroups(workgroups, workgroups, workgroups);
 
@@ -494,8 +501,8 @@ impl VxgiRenderer {
 
         // 计算工作组数量
         let workgroup_size = 8;
-        let workgroups_x = (width + workgroup_size - 1) / workgroup_size;
-        let workgroups_y = (height + workgroup_size - 1) / workgroup_size;
+        let workgroups_x = width.div_ceil(workgroup_size);
+        let workgroups_y = height.div_ceil(workgroup_size);
 
         compute_pass.dispatch_workgroups(workgroups_x, workgroups_y, 1);
 
@@ -505,6 +512,56 @@ impl VxgiRenderer {
     /// 获取体素纹理视图
     pub fn voxel_view(&self) -> Option<&TextureView> {
         self.voxel_view.as_ref()
+    }
+
+    /// 创建体素化绑定组（用于外部访问）
+    pub fn create_voxelization_bind_group(
+        &self,
+        device: &Device,
+    ) -> Result<BindGroup, RenderError> {
+        let Some(bgl) = &self.voxelization_bgl else {
+            return Err(RenderError::InvalidState {
+                message: "Voxelization bind group layout not initialized".to_string(),
+                severity: crate::error::ErrorSeverity::Error,
+            });
+        };
+        let Some(voxel_view) = &self.voxel_view else {
+            return Err(RenderError::InvalidState {
+                message: "Voxel view not initialized".to_string(),
+                severity: crate::error::ErrorSeverity::Error,
+            });
+        };
+        let Some(config_buffer) = &self.config_buffer else {
+            return Err(RenderError::InvalidState {
+                message: "Config buffer not initialized".to_string(),
+                severity: crate::error::ErrorSeverity::Error,
+            });
+        };
+
+        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("VXGI Voxelization Bind Group"),
+            layout: bgl,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::TextureView(voxel_view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                        buffer: config_buffer,
+                        offset: 0,
+                        size: None,
+                    }),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: config_buffer.as_entire_binding(),
+                },
+            ],
+        });
+
+        Ok(bind_group)
     }
 }
 

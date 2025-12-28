@@ -294,13 +294,12 @@ impl TerrainEditor {
         }
 
         // 处理点击
-        if response.clicked() {
-            if let Some(pos) = response.interact_pointer_pos() {
+        if response.clicked()
+            && let Some(pos) = response.interact_pointer_pos() {
                 let x = ((pos.x - rect.left()) / cell_width) as usize;
                 let y = ((pos.y - rect.top()) / cell_height) as usize;
                 self.apply_tool(x, y);
             }
-        }
     }
 }
 

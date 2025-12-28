@@ -5,6 +5,7 @@
 use crate::error::{EngineError, ErrorSeverity};
 use std::future::Future;
 use std::time::{Duration, Instant};
+use rand::Rng;
 
 /// 重试配置
 #[derive(Debug)]
@@ -101,7 +102,8 @@ impl RetryConfig {
 
         let delay_with_jitter = if self.jitter_factor > 0.0 {
             let jitter_range = base_delay.mul_f64(self.jitter_factor);
-            let jitter = Duration::from_millis(fastrand::u64(0..=jitter_range.as_millis() as u64));
+            let mut rng = rand::thread_rng();
+            let jitter = Duration::from_millis(rng.gen_range(0..=jitter_range.as_millis() as u64));
             base_delay + jitter
         } else {
             base_delay
@@ -223,14 +225,13 @@ impl RetryExecutor {
             let _ = retry_start; // 确保变量被使用
 
             // 检查是否超时
-            if let Some(timeout) = config.timeout {
-                if state.is_timeout(timeout) {
+            if let Some(timeout) = config.timeout
+                && state.is_timeout(timeout) {
                     return RetryResult::Timeout {
                         attempts: state.attempt - 1,
                         total_duration: state.elapsed(),
                     };
                 }
-            }
 
             state.attempt += 1;
 

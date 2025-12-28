@@ -1,39 +1,184 @@
-//  网络同步模块
-//
-//  提供基础的网络同步框架，支持多人游戏开发。
-//
-//  ## 功能特性
-//
-//  - TCP/UDP 双协议支持
-//  - RPC 框架基础
-//  - 状态同步机制
-//  - 网络延迟补偿
-//  - 客户端预测和回滚
-//
-//  ## 架构设计
-//
-//  ```text
-//  ┌─────────────────┐     ┌─────────────────┐
-//  │     Client      │────►│     Server      │
-//  │                 │◄────│                 │
-//  │  Local State    │     │  Authoritative  │
-//  │  Prediction     │     │  State          │
-//  └─────────────────┘     └─────────────────┘
-//  ```
+//! # 网络同步模块（Network Synchronization）
+//!
+//! 本模块提供完整的多人游戏网络同步框架，支持客户端-服务器架构。
+//!
+//! ## 核心组件
+//!
+//! ### 通信协议（Communication Protocols）
+//! - [`Client`]: 网络客户端
+//! - [`Server`]: 网络服务器
+//! - [`parallel`]: 并行消息处理
+//! - [`webrtc`]: WebRTC P2P通信
+//!
+//! ### 同步机制（Synchronization）
+//! - [`delta_serialization`]: Delta序列化，减少带宽占用
+//! - [`priority_sync`]: 优先级同步，重要状态优先
+//! - [`interpolation`]: 插值算法，平滑移动
+//! - [`prediction`]: 客户端预测
+//! - [`replay`]: 回放系统
+//!
+//! ### 网络优化（Network Optimization）
+//! - [`compression`]: 网络压缩
+//! - [`delay_compensation`]: 延迟补偿
+//! - [`authority`]: 服务器权威
+//!
+//! ### 安全性（Security）
+//! - [`key_exchange`]: 密钥交换（ECDH）
+//! - [`security`]: 消息加密和认证
+//!
+//! ## 架构设计
+//!
+//! ### 客户端-服务器架构
+//!
+//! ```text
+//! ┌─────────────────┐     ┌─────────────────┐
+//!  │     Client      │────►│     Server      │
+//!  │                 │◄────│                 │
+//!  │  Local State    │     │  Authoritative  │
+//!  │  Prediction     │     │  State          │
+//!  └─────────────────┘     └─────────────────┘
+//! ```
+//!
+//! ### 同步流程
+//!
+//! 1. **客户端预测**: 立即应用玩家输入，预测结果
+//! 2. **发送输入**: 将输入发送给服务器
+//! 3. **服务器验证**: 服务器验证并计算权威状态
+//! 4. **状态同步**: 服务器发送权威状态给客户端
+//! 5. **回滚/协调**: 客户端根据服务器状态校正预测
+//!
+//! ## 使用示例
+//!
+//! ### 服务器端
+//!
+//! ```rust,no_run
+//! use game_engine::network::{Server, ServerConfig};
+//!
+//! # async fn start_server() {
+//! let config = ServerConfig::new("127.0.0.1:8080");
+//! let mut server = Server::new(config).await.unwrap();
+//!
+//! // 启动服务器
+//! server.listen().await.unwrap();
+//! # }
+//! ```
+//!
+//! ### 客户端
+//!
+//! ```rust,no_run
+//! use game_engine::network::{Client, ClientConfig};
+//!
+//! # async fn connect_to_server() {
+//! let config = ClientConfig::new("127.0.0.1:8080");
+//! let mut client = Client::new(config).await.unwrap();
+//!
+//! // 连接服务器
+//! client.connect().await.unwrap();
+//!
+//! // 发送输入
+//! client.send_input(input).await;
+//! # }
+//! ```
+//!
+//! ## Delta序列化
+//!
+//! 只同步变化的数据，显著减少带宽占用：
+//!
+//! ```rust,no_run
+//! use game_engine::network::delta_serialization::*;
+//!
+//! # fn serialize_delta() {
+//! // 全量状态: 1000 bytes
+//! let full_state = vec![0u8; 1000];
+//!
+//! // Delta: 只有100 bytes变化
+//! let delta = DeltaEncoder::encode(&full_state, &previous_state);
+//!
+//! // 带宽节省: 90%
+//! # }
+//! ```
+//!
+//! ## 客户端预测
+//!
+//! 客户端预测玩家输入，减少延迟感知：
+//!
+//! ```text
+//! 时间线:
+//! t0: 玩家输入 → 客户端立即预测 → 渲染
+//! t1: 发送到服务器
+//! t2: 服务器处理 → 发回权威状态
+//! t3: 客户端收到 → 回滚到服务器状态 → 重新预测
+//! ```
+//!
+//! ## 延迟补偿
+//!
+//! 服务器补偿客户端延迟，确保公平性：
+//!
+//! ```text
+//! 客户端A (ping 50ms)  →  服务器  → 客户端B (ping 100ms)
+//!     │                                │
+//!   t0                              t0
+//!     │                              │
+//!   t0+50                           t0
+//!     │                              │
+//!   t0+100                          t0+100
+//! ```
+//!
+//! ## 性能优化
+//!
+//! - **Delta序列化**: 减少70-90%带宽
+//! - **优先级同步**: 重要状态优先发送
+//! - **压缩**: 进一步减少数据量
+//! - **批处理**: 减少packet数量
+//! - **插值**: 平滑显示，减少抖动
+//!
+//! ## 安全特性
+//!
+//! - **密钥交换**: ECDH (elliptic-curve Diffie-Hellman)
+//! - **消息加密**: AES加密网络消息
+//! - **防作弊**: 服务器权威验证
+//! - **重放攻击防护**: 时间戳和序列号
+//!
+//! ## WebRTC支持
+//!
+//! 支持点对点连接，适合浏览器游戏：
+//!
+//! ```rust,no_run
+//! use game_engine::network::webrtc::WebRTCConnection;
+//!
+//! # async fn p2p_connect() {
+//! // 创建WebRTC连接
+//! let conn = WebRTCConnection::new().await.unwrap();
+//!
+//! // P2P通信
+//! conn.send(data).await.unwrap();
+//! # }
+//! ```
+//!
+//! ## 相关模块
+//!
+//! - [`crate::domain`]: 领域事件用于网络同步
+//! - [`crate::physics`]: 物理状态同步
+//! - [`crate::ecs`]: ECS网络组件
+//!
 
-pub mod authority;
 pub mod client;
+pub mod bandwidth_optimization;
 pub mod compression;
 pub mod delay_compensation;
 pub mod delta_serialization;
-pub mod delta_serialization_enhanced;
 pub mod interpolation;
 pub mod key_exchange;
+/// 统一网络同步管理器（整合状态和事件同步）
+pub mod network_sync;
+/// 统一网络优化管理器（整合包恢复、带宽和插值）
+pub mod network_optimization;
 /// 并行网络消息处理
 /// 并行功能默认启用，使用线程池进行并行消息处理
 pub mod parallel;
 pub mod prediction;
 pub mod priority_sync;
+pub mod network_sync_enhanced;
 pub mod replay;
 pub mod security;
 pub mod server;
@@ -52,11 +197,27 @@ pub use key_exchange::{
 pub use priority_sync::{
     BandwidthBudget, BandwidthStats, EntitySyncInfo, PrioritySyncManager, SyncPriority,
 };
-
-// Re-export enhanced delta serialization types
-pub use delta_serialization_enhanced::{
-    EnhancedDeltaSerializer, QuantizationConfig, QuantizedEntityDelta, Quantizer,
+pub use network_sync_enhanced::{
+    ClientInterpolator, EnhancedNetworkSync, EnhancedNetworkSyncConfig, InterpolationStats, NetworkQuality,
+    NetworkSyncPerformanceStats, PacketRecoveryStrategy, QualityLevel, RetransmissionStats,
 };
+
+// Re-export delta serialization types (including enhanced features)
+pub use delta_serialization::{
+    BatchDeltaSerializer, DeltaPacket, DeltaSerializer, EntityDelta, QuantizationConfig,
+    QuantizedEntityDelta, Quantizer,
+};
+
+// 向后兼容：Enhanced类型现在指向基础版本的增强功能
+/// 增强的增量序列化器（向后兼容别名）
+/// 
+/// 注意：增强功能已整合到`DeltaSerializer`中，通过`enable_quantization`方法启用。
+/// 保留此类型别名以保持向后兼容。
+#[deprecated(
+    since = "0.1.0",
+    note = "Use DeltaSerializer with quantization enabled instead. This type is kept for backward compatibility only."
+)]
+pub type EnhancedDeltaSerializer = DeltaSerializer;
 
 // Re-export replay types
 pub use replay::{
@@ -75,6 +236,20 @@ pub use webrtc::{
     DataChannelConfig, IceConnectionState, IceGatheringState, IceTransportPolicy, SignalingHandler,
     SignalingMessage, WebRtcConfig, WebRtcConnectionState, WebRtcError, WebRtcManager,
     WebRtcPeerConnection,
+};
+
+// Re-export unified network sync manager (整合状态和事件同步)
+pub use network_sync::{
+    ConflictResolution, ConflictResolutionStrategy, ConflictType, EntitySyncState, EntityState,
+    EventType, NetworkSyncConfig, NetworkSyncManager, NetworkSyncStats, ResolutionAction,
+    SyncStrategy, SyncNetworkEvent,
+};
+
+// Re-export unified network optimization manager (整合包恢复、带宽和插值)
+pub use network_optimization::{
+    InterpolationState, NetworkOptimizationConfig, NetworkOptimizationManager,
+    NetworkOptimizationStats, NetworkQualityMetrics, OptimizationBandwidthStats,
+    PacketLossRecoveryStrategy, PendingPacket, RecoveryStats,
 };
 
 /// 网络错误类型
@@ -134,8 +309,10 @@ pub enum NetworkMessage {
 
 /// 网络连接状态
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Default)]
 pub enum ConnectionState {
     /// 断开连接
+    #[default]
     Disconnected,
     /// 连接中
     Connecting,
@@ -145,11 +322,6 @@ pub enum ConnectionState {
     Reconnecting,
 }
 
-impl Default for ConnectionState {
-    fn default() -> Self {
-        ConnectionState::Disconnected
-    }
-}
 
 /// 网络统计信息
 #[derive(Debug, Clone, Default)]
@@ -250,7 +422,7 @@ impl NetworkManager {
         self.connections.get(&peer_id).map(|conn| ConnectionInfo {
             peer_id: conn.peer_id,
             address: conn.address,
-            state: conn.state.clone(),
+            state: conn.state,
         })
     }
 
@@ -288,11 +460,40 @@ pub struct NetworkState {
     /// 延迟补偿管理器（客户端）
     pub(crate) delay_compensation:
         Option<std::sync::Arc<std::sync::Mutex<delay_compensation::ClientDelayCompensation>>>,
+    /// 重连尝试次数（用于跟踪客户端重连历史）
+    pub(crate) reconnect_attempts: usize,
 }
 
 impl NetworkState {
     pub fn new() -> Self {
-        Self::default()
+        Self {
+            connection_state: ConnectionState::Disconnected,
+            client_id: None,
+            server_addr: None,
+            stats: Default::default(),
+            current_tick: 0,
+            send_tx: None,
+            recv_rx: None,
+            delta_serializer: None,
+            compressor: None,
+            delay_compensation: None,
+            reconnect_attempts: 0,
+        }
+    }
+
+    /// 获取当前重连尝试次数
+    pub fn get_reconnect_attempts(&self) -> usize {
+        self.reconnect_attempts
+    }
+
+    /// 增加重连尝试计数
+    pub fn increment_reconnect_attempts(&mut self) {
+        self.reconnect_attempts += 1;
+    }
+
+    /// 重置重连尝试计数
+    pub fn reset_reconnect_attempts(&mut self) {
+        self.reconnect_attempts = 0;
     }
 }
 
@@ -415,18 +616,17 @@ impl NetworkService {
 
     /// 检查是否需要时间同步
     pub fn should_sync_time(state: &NetworkState) -> bool {
-        state.delay_compensation.as_ref().map_or(false, |c| {
-            c.lock().ok().map_or(false, |guard| guard.should_sync())
+        state.delay_compensation.as_ref().is_some_and(|c| {
+            c.lock().ok().is_some_and(|guard| guard.should_sync())
         })
     }
 
     /// 断开连接
     pub fn disconnect(state: &mut NetworkState) {
-        if let Some(tx) = &state.send_tx {
-            if let Some(client_id) = state.client_id {
+        if let Some(tx) = &state.send_tx
+            && let Some(client_id) = state.client_id {
                 let _ = tx.send(NetworkMessage::Disconnect { client_id });
             }
-        }
 
         state.connection_state = ConnectionState::Disconnected;
         state.client_id = None;
@@ -574,13 +774,11 @@ pub fn network_update_system(mut state: ResMut<NetworkState>) {
             NetworkMessage::StateSync { tick, data } => {
                 let decompressed_data = if let Some(ref compressor) = state.compressor {
                     compressor.decompress_with_flag(&data).unwrap_or_else(|_| data.clone())
+                } else if !data.is_empty() && data[0] == 1 {
+                    let temp_compressor = compression::NetworkCompressor::new();
+                    temp_compressor.decompress_with_flag(&data).unwrap_or_else(|_| data.clone())
                 } else {
-                    if !data.is_empty() && data[0] == 1 {
-                        let temp_compressor = compression::NetworkCompressor::new();
-                        temp_compressor.decompress_with_flag(&data).unwrap_or_else(|_| data.clone())
-                    } else {
-                        data.clone()
-                    }
+                    data.clone()
                 };
 
                 if let Ok(delta_packet) =
@@ -612,11 +810,10 @@ pub fn network_update_system(mut state: ResMut<NetworkState>) {
                 log::debug!("Time sync request from client: {}", client_send_time);
             }
             NetworkMessage::TimeSyncResponse { mut sync } => {
-                if let Some(ref compensation) = state.delay_compensation {
-                    if let Ok(mut guard) = compensation.lock() {
+                if let Some(ref compensation) = state.delay_compensation
+                    && let Ok(mut guard) = compensation.lock() {
                         guard.process_time_sync(&mut sync);
                     }
-                }
             }
             NetworkMessage::EventSync { events } => {
                 for event in events {

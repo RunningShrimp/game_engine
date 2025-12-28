@@ -281,6 +281,15 @@ impl RegressionTestSuite {
         }
     }
 
+    /// 获取测试运行的总时长
+    pub fn get_total_duration(&self) -> Duration {
+        if let (Some(first), Some(last)) = (self.results.first(), self.results.last()) {
+            last.timestamp.duration_since(first.timestamp).unwrap_or(Duration::ZERO)
+        } else {
+            Duration::ZERO
+        }
+    }
+
     /// 生成HTML报告
     pub fn generate_html_report(&self) -> String {
         let summary = self.get_summary();

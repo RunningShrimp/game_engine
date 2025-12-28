@@ -1,6 +1,77 @@
-/// 统一配置系统
-///
-/// 提供TOML/JSON配置文件、环境变量和运行时动态调整
+//! # Configuration System
+//!
+//! 本模块提供统一的引擎配置系统，支持多种配置来源和格式。
+//!
+//! ## 功能特性
+//!
+//! - **多格式支持** - TOML和JSON配置文件
+//! - **环境变量覆盖** - 运行时通过环境变量调整配置
+//! - **分层配置** - 图形、性能、音频、输入等独立模块
+//! - **自动查找** - 智能查找配置文件位置
+//! - **配置验证** - 自动验证配置参数有效性
+//!
+//! ## 主要组件
+//!
+//! - [`EngineConfig`] - 引擎主配置结构
+//! - [`GraphicsConfig`] - 图形渲染配置
+//! - [`PerformanceConfig`] - 性能优化配置
+//! - [`AudioConfig`] - 音频系统配置
+//! - [`InputConfig`] - 输入系统配置
+//! - [`LoggingConfig`] - 日志系统配置
+//! - [`ConfigError`] - 配置错误类型
+//!
+//! ## 使用示例
+//!
+//! ### 加载配置文件
+//!
+//! ```rust,no_run
+//! use game_engine::config::EngineConfig;
+//!
+//! // 从TOML文件加载
+//! let config = EngineConfig::from_toml_file("config.toml").unwrap();
+//!
+//! // 从JSON文件加载
+//! let config = EngineConfig::from_json_file("config.json").unwrap();
+//!
+//! // 自动查找配置文件
+//! let config = EngineConfig::load_or_default();
+//! ```
+//!
+//! ### 环境变量覆盖
+//!
+//! ```bash
+//! # 设置图形配置
+//! export ENGINE_GRAPHICS_WIDTH=1920
+//! export ENGINE_GRAPHICS_HEIGHT=1080
+//! export ENGINE_GRAPHICS_VSYNC=true
+//!
+//! # 设置性能配置
+//! export ENGINE_PERFORMANCE_TARGET_FPS=60
+//! export ENGINE_PERFORMANCE_AUTO_OPTIMIZE=true
+//!
+//! # 设置音频配置
+//! export ENGINE_AUDIO_MASTER_VOLUME=0.8
+//! ```
+//!
+//! ### 运行时调整
+//!
+//! ```rust,no_run
+//! # use game_engine::config::EngineConfig;
+//! let mut config = EngineConfig::new();
+//!
+//! // 应用环境变量覆盖
+//! config.apply_env_overrides();
+//!
+//! // 验证配置
+//! config.validate().unwrap();
+//! ```
+//!
+//! ## 配置文件查找顺序
+//!
+//! 1. `./config.toml` - 当前目录的TOML配置
+//! 2. `./config.json` - 当前目录的JSON配置
+//! 3. `~/.config/game_engine/config.toml` - 用户配置目录
+//! 4. 默认配置 - 如果以上都不存在
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::fs;
@@ -46,6 +117,7 @@ pub type ConfigResult<T> = Result<T, ConfigError>;
 
 /// 引擎主配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct EngineConfig {
     /// 图形配置
     pub graphics: GraphicsConfig,
@@ -64,17 +136,6 @@ pub struct EngineConfig {
     pub logging: LoggingConfig,
 }
 
-impl Default for EngineConfig {
-    fn default() -> Self {
-        Self {
-            graphics: GraphicsConfig::default(),
-            performance: PerformanceConfig::default(),
-            audio: AudioConfig::default(),
-            input: InputConfig::default(),
-            logging: LoggingConfig::default(),
-        }
-    }
-}
 
 impl EngineConfig {
     /// 创建默认配置
@@ -121,36 +182,32 @@ impl EngineConfig {
     /// 从环境变量覆盖配置
     pub fn apply_env_overrides(&mut self) {
         // 图形配置
-        if let Ok(val) = env::var("ENGINE_GRAPHICS_WIDTH") {
-            if let Ok(width) = val.parse() {
+        if let Ok(val) = env::var("ENGINE_GRAPHICS_WIDTH")
+            && let Ok(width) = val.parse() {
                 self.graphics.resolution.width = width;
             }
-        }
-        if let Ok(val) = env::var("ENGINE_GRAPHICS_HEIGHT") {
-            if let Ok(height) = val.parse() {
+        if let Ok(val) = env::var("ENGINE_GRAPHICS_HEIGHT")
+            && let Ok(height) = val.parse() {
                 self.graphics.resolution.height = height;
             }
-        }
         if let Ok(val) = env::var("ENGINE_GRAPHICS_VSYNC") {
             self.graphics.vsync = val.parse().unwrap_or(self.graphics.vsync);
         }
 
         // 性能配置
-        if let Ok(val) = env::var("ENGINE_PERFORMANCE_TARGET_FPS") {
-            if let Ok(fps) = val.parse() {
+        if let Ok(val) = env::var("ENGINE_PERFORMANCE_TARGET_FPS")
+            && let Ok(fps) = val.parse() {
                 self.performance.target_fps = fps;
             }
-        }
         if let Ok(val) = env::var("ENGINE_PERFORMANCE_AUTO_OPTIMIZE") {
             self.performance.auto_optimize = val.parse().unwrap_or(self.performance.auto_optimize);
         }
 
         // 音频配置
-        if let Ok(val) = env::var("ENGINE_AUDIO_MASTER_VOLUME") {
-            if let Ok(volume) = val.parse() {
+        if let Ok(val) = env::var("ENGINE_AUDIO_MASTER_VOLUME")
+            && let Ok(volume) = val.parse() {
                 self.audio.master_volume = volume;
             }
-        }
     }
 
     /// 验证配置

@@ -385,7 +385,7 @@ impl Volume {
     /// 如果音量值有效则返回`Some(Volume)`，否则返回`None`
     pub fn new(value: f32) -> Option<Self> {
         // 验证：音量必须在0.0-1.0范围内且有限
-        if value >= 0.0 && value <= 1.0 && value.is_finite() {
+        if (0.0..=1.0).contains(&value) && value.is_finite() {
             Some(Self { value })
         } else {
             None

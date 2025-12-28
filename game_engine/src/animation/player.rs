@@ -113,11 +113,10 @@ impl AnimationPlayer {
     /// - `time`: 目标时间（秒）
     pub fn seek(&mut self, time: f32) {
         self.current_time = time.max(0.0);
-        if let Some(clip) = &self.current_clip {
-            if self.current_time > clip.duration {
+        if let Some(clip) = &self.current_clip
+            && self.current_time > clip.duration {
                 self.current_time = clip.duration;
             }
-        }
     }
 
     /// 获取当前播放进度 (0.0 - 1.0)
@@ -125,11 +124,10 @@ impl AnimationPlayer {
     /// # 返回
     /// 播放进度，范围 [0.0, 1.0]
     pub fn progress(&self) -> f32 {
-        if let Some(clip) = &self.current_clip {
-            if clip.duration > 0.0 {
+        if let Some(clip) = &self.current_clip
+            && clip.duration > 0.0 {
                 return self.current_time / clip.duration;
             }
-        }
         0.0
     }
 
@@ -138,11 +136,10 @@ impl AnimationPlayer {
     /// # 返回
     /// 如果动画已播放完成（非循环动画）返回 `true`
     pub fn is_finished(&self) -> bool {
-        if let Some(clip) = &self.current_clip {
-            if !clip.looping && self.current_time >= clip.duration {
+        if let Some(clip) = &self.current_clip
+            && !clip.looping && self.current_time >= clip.duration {
                 return true;
             }
-        }
         false
     }
 
@@ -314,25 +311,22 @@ fn sample_skeleton_pose_from_clip(
         let bone_id = bone_index as u64;
 
         // 采样位置
-        if let Some(position) = clip.sample_position(bone_id, time) {
-            if let Some(bone) = skeleton.bones.get_mut(bone_index) {
+        if let Some(position) = clip.sample_position(bone_id, time)
+            && let Some(bone) = skeleton.bones.get_mut(bone_index) {
                 bone.local_transform.translation = position;
             }
-        }
 
         // 采样旋转
-        if let Some(rotation) = clip.sample_rotation(bone_id, time) {
-            if let Some(bone) = skeleton.bones.get_mut(bone_index) {
+        if let Some(rotation) = clip.sample_rotation(bone_id, time)
+            && let Some(bone) = skeleton.bones.get_mut(bone_index) {
                 bone.local_transform.rotation = rotation;
             }
-        }
 
         // 采样缩放
-        if let Some(scale) = clip.sample_scale(bone_id, time) {
-            if let Some(bone) = skeleton.bones.get_mut(bone_index) {
+        if let Some(scale) = clip.sample_scale(bone_id, time)
+            && let Some(bone) = skeleton.bones.get_mut(bone_index) {
                 bone.local_transform.scale = scale;
             }
-        }
     }
 
     skeleton.dirty = true;

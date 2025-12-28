@@ -1,6 +1,22 @@
 use super::pbr::{DirectionalLight, PbrMaterial, PointLight3D};
 use crate::render::mesh::Vertex3D;
 
+/// 3D实例数据
+///
+/// 用于实例化渲染的模型矩阵，表示单个实例在世界空间中的变换。
+///
+/// # 字段
+///
+/// - `model`: 4x4模型变换矩阵
+///
+/// # 用途
+///
+/// 在实例化渲染中，每个实例都有自己的模型矩阵，用于将顶点从局部空间转换到世界空间。
+/// 这允许一次绘制调用渲染多个相同网格的不同位置、旋转和缩放的实例。
+///
+/// # 布局
+///
+/// 该结构体使用`repr(C)`确保内存布局与GPU缓冲区兼容，并实现了`Pod`和`Zeroable`trait。
 #[repr(C)]
 #[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct Instance3D {
@@ -8,6 +24,11 @@ pub struct Instance3D {
 }
 
 impl Instance3D {
+    /// 创建顶点缓冲区布局描述
+    ///
+    /// # 返回
+    ///
+    /// 返回WebGPU顶点缓冲区布局，描述如何在着色器中访问实例数据
     pub fn desc() -> wgpu::VertexBufferLayout<'static> {
         use std::mem;
         wgpu::VertexBufferLayout {
@@ -48,6 +69,25 @@ struct Uniforms3DPBR {
     _pad: f32,
 }
 
+/// PBR材质Uniform数据
+///
+/// 传输给GPU的PBR材质参数，包含所有物理渲染所需的材质属性。
+///
+/// # 字段
+///
+/// - `base_color`: 基础颜色（RGBA）
+/// - `metallic`: 金属度（0.0 = 非金属，1.0 = 金属）
+/// - `roughness`: 粗糙度（0.0 = 光滑，1.0 = 粗糙）
+/// - `ao`: 环境光遮蔽
+/// - `normal_scale`: 法线贴图缩放
+/// - `emissive`: 自发光颜色（RGB）
+/// - `uv_offset`: UV偏移（纹理坐标偏移）
+/// - `uv_scale`: UV缩放
+/// - `uv_rotation`: UV旋转角度
+/// - `clearcoat`: 清漆层强度（车漆等）
+/// - `clearcoat_roughness`: 清漆层粗糙度
+/// - `anisotropy`: 各向异性强度
+/// - `anisotropy_direction`: 各向异性方向
 #[repr(C)]
 #[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct MaterialUniformPBR {
@@ -86,6 +126,32 @@ struct GpuDirectionalLight {
     intensity: f32,
 }
 
+/// PBR渲染器
+///
+/// 基于物理的渲染（PBR）渲染器，提供真实的材质和光照渲染。
+///
+/// # 核心功能
+///
+/// - **PBR材质**: 支持金属度、粗糙度、清漆层等高级材质属性
+/// - **实时光照**: 点光源和方向光
+/// - **纹理支持**: 颜色、法线、金属度、粗糙度、AO等多张贴图
+/// - **实例化渲染**: 高效渲染多个相同对象
+///
+/// # 字段
+///
+/// - `pipeline`: 渲染管线
+/// - `uniform_buffer`: 相机和视图参数的uniform缓冲区
+/// - `material_buffer`: 材质参数缓冲区
+/// - `lights_buffer`: 光源数据缓冲区
+/// - 各种bind_group和布局
+///
+/// # 渲染流程
+///
+/// 1. 设置视图和投影矩阵
+/// 2. 更新材质uniform数据
+/// 3. 更新光源数据
+/// 4. 绑定纹理（颜色、法线、PBR贴图）
+/// 5. 执行绘制调用
 pub struct PbrRenderer {
     pub pipeline: wgpu::RenderPipeline,
     pub uniform_buffer: wgpu::Buffer,
@@ -99,6 +165,24 @@ pub struct PbrRenderer {
     pub textures_bgl: wgpu::BindGroupLayout,
 }
 
+/// PBR纹理集
+///
+/// 包含PBR渲染所需的所有纹理贴图。
+///
+/// # 字段
+///
+/// - `textures`: 5张纹理（颜色、法线、金属度、粗糙度、AO）
+/// - `views`: 纹理的视图
+/// - `sampler`: 纹理采样器
+/// - `bind_group`: GPU bind group
+///
+/// # 纹理顺序
+///
+/// 1. 颜色贴图（Albedo/Base Color）
+/// 2. 法线贴图（Normal Map）
+/// 3. 金属度贴图（Metallic）
+/// 4. 粗糙度贴图（Roughness）
+/// 5. 环境光遮蔽贴图（AO）
 pub struct PbrTextureSet {
     pub textures: [wgpu::Texture; 5],
     pub views: [wgpu::TextureView; 5],
@@ -303,7 +387,7 @@ impl PbrRenderer {
                     ty: wgpu::BufferBindingType::Uniform,
                     has_dynamic_offset: false,
                     min_binding_size: std::num::NonZeroU64::new(
-                        std::mem::size_of::<Uniforms3DPBR>() as wgpu::BufferAddress as u64,
+                        std::mem::size_of::<Uniforms3DPBR>() as u64,
                     ),
                 },
                 count: None,
@@ -338,8 +422,7 @@ impl PbrRenderer {
                     min_binding_size: std::num::NonZeroU64::new(std::mem::size_of::<
                         MaterialUniformPBR,
                     >()
-                        as wgpu::BufferAddress
-                        as u64),
+                        as wgpu::BufferAddress ),
                 },
                 count: None,
             }],
@@ -769,7 +852,7 @@ impl PbrRenderer {
         render_pass.set_bind_group(0, &self.uniform_bind_group, &[]);
         render_pass.set_bind_group(1, &*batch.material_bind_group, &[]);
         render_pass.set_bind_group(2, &self.lights_bind_group, &[]);
-        if let Some(bg) = batch.extra_material_bind_groups.get(0) {
+        if let Some(bg) = batch.extra_material_bind_groups.first() {
             render_pass.set_bind_group(3, &**bg, &[]);
         } else {
             render_pass.set_bind_group(3, &self.textures_bind_group, &[]);
@@ -800,7 +883,7 @@ impl PbrRenderer {
             }
 
             render_pass.set_bind_group(1, &*batch.material_bind_group, &[]);
-            if let Some(bg) = batch.extra_material_bind_groups.get(0) {
+            if let Some(bg) = batch.extra_material_bind_groups.first() {
                 render_pass.set_bind_group(3, &**bg, &[]);
             } else {
                 render_pass.set_bind_group(3, &self.textures_bind_group, &[]);

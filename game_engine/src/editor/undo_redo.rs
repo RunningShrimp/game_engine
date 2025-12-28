@@ -439,12 +439,12 @@ impl<T: Clone + Send + fmt::Debug + 'static> fmt::Debug for PropertyChangeComman
 impl<T: Clone + Send + Sync + fmt::Debug + 'static> Command for PropertyChangeCommand<T> {
     fn execute(&mut self, context: &mut dyn Any) -> Result<(), CommandError> {
         (self.apply_fn)(context, self.target_id, &self.new_value)
-            .map_err(|e| CommandError::ExecutionFailed(e))
+            .map_err(CommandError::ExecutionFailed)
     }
 
     fn undo(&mut self, context: &mut dyn Any) -> Result<(), CommandError> {
         (self.apply_fn)(context, self.target_id, &self.old_value)
-            .map_err(|e| CommandError::UndoFailed(e))
+            .map_err(CommandError::UndoFailed)
     }
 
     fn description(&self) -> &str {
@@ -453,11 +453,10 @@ impl<T: Clone + Send + Sync + fmt::Debug + 'static> Command for PropertyChangeCo
 
     fn can_merge(&self, other: &dyn Command) -> bool {
         // 尝试将 other 转换为相同类型的命令
-        if let Some(cmd_id) = other.command_id() {
-            if let Some(my_id) = self.command_id() {
+        if let Some(cmd_id) = other.command_id()
+            && let Some(my_id) = self.command_id() {
                 return cmd_id == my_id;
             }
-        }
         false
     }
 

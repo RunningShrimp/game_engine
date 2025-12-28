@@ -91,6 +91,7 @@ pub enum BuildResult {
 }
 
 /// 构建工具
+#[derive(Default)]
 pub struct BuildTool {
     /// 当前构建选项
     pub options: BuildOptions,
@@ -304,16 +305,6 @@ impl BuildTool {
     }
 }
 
-impl Default for BuildTool {
-    fn default() -> Self {
-        Self {
-            options: BuildOptions::default(),
-            is_building: false,
-            last_result: None,
-            build_log: Vec::new(),
-        }
-    }
-}
 
 #[cfg(test)]
 mod tests {

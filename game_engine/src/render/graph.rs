@@ -2,6 +2,14 @@ use crate::ecs::{TileChunkConfig, TileSet, Viewport};
 use crate::render::wgpu_utils::Instance;
 use glam::Mat4;
 
+// ECS工具宏定义
+macro_rules! fetch_resource {
+    ($world:expr, $res_type:ty) => {
+        $world.get_resource::<$res_type>()
+            .expect(concat!("Resource ", stringify!($res_type), " not found"))
+    };
+}
+
 // ============================================================================
 // 声明式场景图 (Flutter-like Layer Tree)
 // ============================================================================
@@ -376,7 +384,7 @@ pub fn build_from_world(world: &mut bevy_ecs::world::World) -> LayerTree {
     use crate::ecs::{PreviousTransform, Sprite, TileMap, Time, Transform};
     let mut lt = LayerTree::default();
 
-    let time = world.get_resource::<Time>().unwrap();
+    let time = fetch_resource!(world, Time);
     let alpha = time.alpha as f32;
 
     // Sprites
@@ -450,7 +458,7 @@ pub fn build_from_world(world: &mut bevy_ecs::world::World) -> LayerTree {
         } else {
             tm.chunk_size[1]
         };
-        let chunk_cols = (tm.width + chunk_w - 1) / chunk_w;
+        let chunk_cols = tm.width.div_ceil(chunk_w);
         for y in 0..tm.height {
             for x in 0..tm.width {
                 let idx = (y * tm.width + x) as usize;
@@ -461,8 +469,8 @@ pub fn build_from_world(world: &mut bevy_ecs::world::World) -> LayerTree {
                 if id.is_empty() {
                     continue;
                 }
-                if let Some(ts) = tileset.as_ref() {
-                    if let Some((uv_off, uv_scale)) = ts.tiles.get(id).cloned() {
+                if let Some(ts) = tileset.as_ref()
+                    && let Some((uv_off, uv_scale)) = ts.tiles.get(id).cloned() {
                         let px = base_x + (x as f32 + 0.5) * tm.tile_size[0];
                         let py = base_y + (y as f32 + 0.5) * tm.tile_size[1];
                         if px < view_min_x - tm.tile_size[0]
@@ -489,7 +497,6 @@ pub fn build_from_world(world: &mut bevy_ecs::world::World) -> LayerTree {
                             chunk: chunk_id,
                         });
                     }
-                }
             }
         }
     }
@@ -511,11 +518,10 @@ impl RenderCache {
     }
 
     pub fn update(&mut self, new_tree: LayerTree) -> &Vec<Instance> {
-        if let Some(last) = &self.last_tree {
-            if last == &new_tree {
+        if let Some(last) = &self.last_tree
+            && last == &new_tree {
                 return &self.last_instances;
             }
-        }
         self.last_instances = new_tree.to_instances();
         self.last_tree = Some(new_tree);
         &self.last_instances
@@ -585,7 +591,7 @@ pub fn build_from_world_culled(world: &mut bevy_ecs::world::World) -> (LayerTree
     let mut culled_count = 0u32;
     let mut total_count = 0u32;
 
-    let time = world.get_resource::<Time>().unwrap();
+    let time = fetch_resource!(world, Time);
     let alpha = time.alpha as f32;
 
     // 获取视口信息
@@ -667,7 +673,7 @@ pub fn build_from_world_culled(world: &mut bevy_ecs::world::World) -> (LayerTree
         } else {
             tm.chunk_size[1]
         };
-        let chunk_cols = (tm.width + chunk_w - 1) / chunk_w;
+        let chunk_cols = tm.width.div_ceil(chunk_w);
 
         for y in 0..tm.height {
             for x in 0..tm.width {
@@ -680,8 +686,8 @@ pub fn build_from_world_culled(world: &mut bevy_ecs::world::World) -> (LayerTree
                 if id.is_empty() {
                     continue;
                 }
-                if let Some(ts) = tileset.as_ref() {
-                    if let Some((uv_off, uv_scale)) = ts.tiles.get(id).cloned() {
+                if let Some(ts) = tileset.as_ref()
+                    && let Some((uv_off, uv_scale)) = ts.tiles.get(id).cloned() {
                         let px = base_x + (x as f32 + 0.5) * tm.tile_size[0];
                         let py = base_y + (y as f32 + 0.5) * tm.tile_size[1];
 
@@ -710,7 +716,6 @@ pub fn build_from_world_culled(world: &mut bevy_ecs::world::World) -> (LayerTree
                             chunk: chunk_id,
                         });
                     }
-                }
             }
         }
     }

@@ -211,7 +211,7 @@ impl GpuCommandGenerator {
         cpass.set_push_constants(0, bytemuck::bytes_of(&index_count));
 
         // 计算工作组数量（使用最大实例数，实际数量由计数器决定）
-        let workgroup_count = (self.max_instances + self.workgroup_size - 1) / self.workgroup_size;
+        let workgroup_count = self.max_instances.div_ceil(self.workgroup_size);
         cpass.dispatch_workgroups(workgroup_count, 1, 1);
 
         Ok(())

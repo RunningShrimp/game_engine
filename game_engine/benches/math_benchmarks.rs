@@ -3,10 +3,9 @@
 //  测试向量、矩阵、四元数等数学运算的性能
 //  包含SIMD优化版本的性能对比
 
-use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
+use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 use game_engine_simd::{
-    BoundingVolumeOps, GeometryOps, Mat4Simd, MatrixBatchOps, QuatSimd, SimdBackend, Vec3Simd,
-    Vec4Simd, VectorBatchOps, VectorOps, detect_cpu_features,
+    BoundingVolumeOps, MatrixBatchOps, SimdBackend, Vec3Simd, VectorBatchOps, VectorOps,
 };
 use glam::{Mat4, Quat, Vec3, Vec4};
 
@@ -17,23 +16,23 @@ fn bench_vec3_operations(c: &mut Criterion) {
     let v2 = Vec3::new(4.0, 5.0, 6.0);
 
     group.bench_function("add", |b| {
-        b.iter(|| black_box(v1 + v2));
+        b.iter(|| std::hint::black_box(v1 + v2));
     });
 
     group.bench_function("dot", |b| {
-        b.iter(|| black_box(v1.dot(v2)));
+        b.iter(|| std::hint::black_box(v1.dot(v2)));
     });
 
     group.bench_function("cross", |b| {
-        b.iter(|| black_box(v1.cross(v2)));
+        b.iter(|| std::hint::black_box(v1.cross(v2)));
     });
 
     group.bench_function("normalize", |b| {
-        b.iter(|| black_box(v1.normalize()));
+        b.iter(|| std::hint::black_box(v1.normalize()));
     });
 
     group.bench_function("distance", |b| {
-        b.iter(|| black_box(v1.distance(v2)));
+        b.iter(|| std::hint::black_box(v1.distance(v2)));
     });
 
     group.finish();
@@ -51,19 +50,19 @@ fn bench_matrix_operations(c: &mut Criterion) {
     let _v = Vec4::new(1.0, 2.0, 3.0, 1.0);
 
     group.bench_function("multiply", |b| {
-        b.iter(|| black_box(m1 * m2));
+        b.iter(|| std::hint::black_box(m1 * m2));
     });
 
     group.bench_function("transform_point3", |b| {
-        b.iter(|| black_box(m1.transform_point3(Vec3::new(1.0, 2.0, 3.0))));
+        b.iter(|| std::hint::black_box(m1.transform_point3(Vec3::new(1.0, 2.0, 3.0))));
     });
 
     group.bench_function("transform_vector3", |b| {
-        b.iter(|| black_box(m1.transform_vector3(Vec3::new(1.0, 2.0, 3.0))));
+        b.iter(|| std::hint::black_box(m1.transform_vector3(Vec3::new(1.0, 2.0, 3.0))));
     });
 
     group.bench_function("inverse", |b| {
-        b.iter(|| black_box(m1.inverse()));
+        b.iter(|| std::hint::black_box(m1.inverse()));
     });
 
     group.finish();
@@ -77,19 +76,19 @@ fn bench_quaternion_operations(c: &mut Criterion) {
     let v = Vec3::new(1.0, 2.0, 3.0);
 
     group.bench_function("multiply", |b| {
-        b.iter(|| black_box(q1 * q2));
+        b.iter(|| std::hint::black_box(q1 * q2));
     });
 
     group.bench_function("rotate_vector3", |b| {
-        b.iter(|| black_box(q1 * v));
+        b.iter(|| std::hint::black_box(q1 * v));
     });
 
     group.bench_function("slerp", |b| {
-        b.iter(|| black_box(q1.slerp(q2, 0.5)));
+        b.iter(|| std::hint::black_box(q1.slerp(q2, 0.5)));
     });
 
     group.bench_function("to_euler", |b| {
-        b.iter(|| black_box(q1.to_euler(glam::EulerRot::XYZ)));
+        b.iter(|| std::hint::black_box(q1.to_euler(glam::EulerRot::XYZ)));
     });
 
     group.finish();
@@ -111,7 +110,7 @@ fn bench_simd_math(c: &mut Criterion) {
             b.iter(|| {
                 let mut result = Vec::with_capacity(vecs.len());
                 for v in vecs {
-                    result.push(black_box(v.normalize()));
+                    result.push(std::hint::black_box(v.normalize()));
                 }
                 result
             });
@@ -127,7 +126,7 @@ fn bench_simd_math(c: &mut Criterion) {
                 let mut result = Vec::with_capacity(vecs.len());
                 for v in vecs {
                     let simd_v = Vec3Simd::new(v.x, v.y, v.z);
-                    result.push(black_box(simd_v.normalize()));
+                    result.push(std::hint::black_box(simd_v.normalize()));
                 }
                 result
             });
@@ -146,7 +145,7 @@ fn bench_simd_math(c: &mut Criterion) {
                     v1.push(vecs[i]);
                     v2.push(vecs[i + 1]);
                 }
-                black_box(VectorBatchOps::batch_dot_simd(&v1, &v2))
+                std::hint::black_box(VectorBatchOps::batch_dot_simd(&v1, &v2))
             });
         },
     );
@@ -157,7 +156,7 @@ fn bench_simd_math(c: &mut Criterion) {
         BenchmarkId::new("simd_batch_transform", count),
         &vectors,
         |b, vecs| {
-            b.iter(|| black_box(MatrixBatchOps::batch_mul_vec3_simd(&matrix, vecs)));
+            b.iter(|| std::hint::black_box(MatrixBatchOps::batch_mul_vec3_simd(&matrix, vecs)));
         },
     );
 
@@ -166,7 +165,7 @@ fn bench_simd_math(c: &mut Criterion) {
         BenchmarkId::new("simd_bounding_volume", count),
         &vectors,
         |b, vecs| {
-            b.iter(|| black_box(BoundingVolumeOps::batch_compute_aabb(vecs)));
+            b.iter(|| std::hint::black_box(BoundingVolumeOps::batch_compute_aabb(vecs)));
         },
     );
 
@@ -201,9 +200,9 @@ fn bench_simd_backends(c: &mut Criterion) {
                         for i in 0..vecs.len() - 1 {
                             let a = Vec3Simd::new(vecs[i].x, vecs[i].y, vecs[i].z);
                             let b = Vec3Simd::new(vecs[i + 1].x, vecs[i + 1].y, vecs[i + 1].z);
-                            sum += black_box(a.dot(&b));
+                            sum += std::hint::black_box(a.dot(&b));
                         }
-                        black_box(sum)
+                        std::hint::black_box(sum)
                     });
                 },
             );

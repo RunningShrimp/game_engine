@@ -4,7 +4,7 @@
 
 use crate::domain::entity::{EntityId, EntityFactory, GameEntity};
 use crate::domain::errors::{CompensationAction, DomainError, RecoveryStrategy, SceneError};
-use crate::domain::scene::{Scene, SceneManager, SceneId, SceneMetadata, SceneState};
+use crate::domain::scene::{Scene, SceneRepository, SceneId, SceneMetadata, SceneState};
 use crate::ecs::{Camera, PointLight, Sprite, Transform};
 use glam::Vec3;
 
@@ -537,7 +537,7 @@ mod scene_manager_tests {
 
     #[test]
     fn test_scene_manager_create_scene() {
-        let mut manager = SceneManager::new();
+        let mut manager = SceneRepository::new();
         manager.create_scene(SceneId::new(1), "test_scene").unwrap();
         
         let scene = manager.get_scene(SceneId::new(1));
@@ -547,7 +547,7 @@ mod scene_manager_tests {
 
     #[test]
     fn test_scene_manager_delete_scene() {
-        let mut manager = SceneManager::new();
+        let mut manager = SceneRepository::new();
         manager.create_scene(SceneId::new(1), "test_scene").unwrap();
         
         let result = manager.delete_scene(SceneId::new(1));
@@ -559,7 +559,7 @@ mod scene_manager_tests {
 
     #[test]
     fn test_scene_manager_get_scene() {
-        let mut manager = SceneManager::new();
+        let mut manager = SceneRepository::new();
         manager.create_scene(SceneId::new(1), "test_scene").unwrap();
         
         let scene = manager.get_scene(SceneId::new(1));
@@ -569,7 +569,7 @@ mod scene_manager_tests {
 
     #[test]
     fn test_scene_manager_get_scene_mut() {
-        let mut manager = SceneManager::new();
+        let mut manager = SceneRepository::new();
         manager.create_scene(SceneId::new(1), "test_scene").unwrap();
         
         if let Some(scene) = manager.get_scene_mut(SceneId::new(1)) {
@@ -582,7 +582,7 @@ mod scene_manager_tests {
 
     #[test]
     fn test_scene_manager_switch_to_scene() {
-        let mut manager = SceneManager::new();
+        let mut manager = SceneRepository::new();
         manager.create_scene(SceneId::new(1), "scene1").unwrap();
         manager.create_scene(SceneId::new(2), "scene2").unwrap();
         
@@ -598,7 +598,7 @@ mod scene_manager_tests {
 
     #[test]
     fn test_scene_manager_active_scene() {
-        let mut manager = SceneManager::new();
+        let mut manager = SceneRepository::new();
         manager.create_scene(SceneId::new(1), "test").unwrap();
         
         manager.get_scene_mut(SceneId::new(1)).unwrap().load().unwrap();
@@ -612,7 +612,7 @@ mod scene_manager_tests {
 
     #[test]
     fn test_scene_manager_current_scene() {
-        let mut manager = SceneManager::new();
+        let mut manager = SceneRepository::new();
         manager.create_scene(SceneId::new(1), "test").unwrap();
         
         manager.get_scene_mut(SceneId::new(1)).unwrap().load().unwrap();
@@ -624,7 +624,7 @@ mod scene_manager_tests {
 
     #[test]
     fn test_scene_manager_scene_ids() {
-        let mut manager = SceneManager::new();
+        let mut manager = SceneRepository::new();
         manager.create_scene(SceneId::new(1), "scene1").unwrap();
         manager.create_scene(SceneId::new(2), "scene2").unwrap();
         manager.create_scene(SceneId::new(3), "scene3").unwrap();

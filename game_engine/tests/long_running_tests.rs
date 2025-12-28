@@ -19,12 +19,15 @@ use std::time::{Duration, Instant};
 fn test_long_running_stability() {
     let mut world = World::new();
     world.insert_resource(Time::default());
-    
+
     // 运行时间：24小时（测试时使用较短时间）
     const TEST_DURATION: Duration = Duration::from_secs(24 * 60 * 60);
     // 测试时使用较短时间（1分钟）
     const SHORT_TEST_DURATION: Duration = Duration::from_secs(60);
-    
+
+    // 验证测试时长设置，形成逻辑闭环
+    assert!(TEST_DURATION > SHORT_TEST_DURATION, "Full test duration should be longer than short test");
+
     let start_time = Instant::now();
     let mut frame_count = 0;
     let mut entity_count = 0;

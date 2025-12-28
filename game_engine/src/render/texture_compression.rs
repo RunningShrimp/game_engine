@@ -155,44 +155,44 @@ impl CompressedTextureFormat {
         match self {
             Self::Astc4x4 => {
                 // ASTC 4x4: 每个块16字节，块大小4x4像素
-                let blocks_x = (width + 3) / 4;
-                let blocks_y = (height + 3) / 4;
+                let blocks_x = width.div_ceil(4);
+                let blocks_y = height.div_ceil(4);
                 (blocks_x * blocks_y * 16) as usize
             }
             Self::Astc6x6 => {
                 // ASTC 6x6: 每个块16字节，块大小6x6像素
-                let blocks_x = (width + 5) / 6;
-                let blocks_y = (height + 5) / 6;
+                let blocks_x = width.div_ceil(6);
+                let blocks_y = height.div_ceil(6);
                 (blocks_x * blocks_y * 16) as usize
             }
             Self::Astc8x8 => {
                 // ASTC 8x8: 每个块16字节，块大小8x8像素
-                let blocks_x = (width + 7) / 8;
-                let blocks_y = (height + 7) / 8;
+                let blocks_x = width.div_ceil(8);
+                let blocks_y = height.div_ceil(8);
                 (blocks_x * blocks_y * 16) as usize
             }
             Self::BC1 => {
                 // BC1: 每个块8字节，块大小4x4像素
-                let blocks_x = (width + 3) / 4;
-                let blocks_y = (height + 3) / 4;
+                let blocks_x = width.div_ceil(4);
+                let blocks_y = height.div_ceil(4);
                 (blocks_x * blocks_y * 8) as usize
             }
             Self::BC3 => {
                 // BC3: 每个块16字节，块大小4x4像素
-                let blocks_x = (width + 3) / 4;
-                let blocks_y = (height + 3) / 4;
+                let blocks_x = width.div_ceil(4);
+                let blocks_y = height.div_ceil(4);
                 (blocks_x * blocks_y * 16) as usize
             }
             Self::BC7 => {
                 // BC7: 每个块16字节，块大小4x4像素
-                let blocks_x = (width + 3) / 4;
-                let blocks_y = (height + 3) / 4;
+                let blocks_x = width.div_ceil(4);
+                let blocks_y = height.div_ceil(4);
                 (blocks_x * blocks_y * 16) as usize
             }
             Self::ETC2 => {
                 // ETC2: 每个块8字节，块大小4x4像素
-                let blocks_x = (width + 3) / 4;
-                let blocks_y = (height + 3) / 4;
+                let blocks_x = width.div_ceil(4);
+                let blocks_y = height.div_ceil(4);
                 (blocks_x * blocks_y * 8) as usize
             }
         }
@@ -241,8 +241,8 @@ impl BcDecoder {
     ) -> Result<image::RgbaImage, RenderError> {
         // 使用dxt-compressor库进行BC1解码
         // BC1 (DXT1) 格式：每块4x4像素，占用8字节
-        let block_count_x = (width + 3) / 4;
-        let block_count_y = (height + 3) / 4;
+        let block_count_x = width.div_ceil(4);
+        let block_count_y = height.div_ceil(4);
         let expected_size = (block_count_x * block_count_y * 8) as usize;
 
         if data.len() < expected_size {

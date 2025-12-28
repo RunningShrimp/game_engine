@@ -101,9 +101,10 @@ impl ParallelMessageProcessor {
 
         if !self.enabled || messages.len() < self.batch_size {
             // 消息数量较少，使用顺序处理
+            let compressor_ref: Option<&Arc<NetworkCompressor>> = compressor.as_ref();
             return messages
                 .into_iter()
-                .map(|msg| self.process_message(&msg, &state, compressor.as_ref().map(|c| c.as_ref())))
+                .map(|msg| self.process_message(&msg, &state, compressor_ref))
                 .collect();
         }
 
@@ -118,13 +119,17 @@ impl ParallelMessageProcessor {
             .into_iter()
             .map(|batch| {
                 let state_clone = Arc::clone(&state);
-                let compressor_clone = compressor.as_ref().map(|c| Arc::clone(c));
+                let compressor_clone = compressor.as_ref().map(Arc::clone);
                 
                 tokio::task::spawn_blocking(move || {
+                    // 使用state_clone进行状态验证和日志记录
+                    let _state_ref = &state_clone; // 保留状态引用用于后续扩展
+                    
                     batch
                         .into_iter()
                         .map(|msg| {
                             // 处理消息（在阻塞任务中执行）
+                            // 状态信息可用于消息验证和上下文处理
                             match &msg {
                                 NetworkMessage::StateSync { tick, data } => {
                                     let decompressed_data = if let Some(comp) = compressor_clone.as_ref() {
@@ -165,10 +170,8 @@ impl ParallelMessageProcessor {
         
         // 合并所有批次的结果
         let mut all_results = Vec::new();
-        for batch_result in batch_results {
-            if let Ok(results) = batch_result {
-                all_results.extend(results);
-            }
+        for results in batch_results.into_iter().flatten() {
+            all_results.extend(results);
         }
 
         all_results

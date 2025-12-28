@@ -1,9 +1,9 @@
 //  统一错误处理模块
-//
+// 
 //  提供引擎范围内的统一错误类型定义、错误处理策略和恢复机制。
-//
+// 
 //  ## 架构概览
-//
+// 
 //  ```text
 //  ┌─────────────────────────────────────────────────────────┐
 //  │                  错误处理架构                             │
@@ -35,20 +35,18 @@
 
 /// 音频错误类型 - 音频系统特定的错误
 pub mod audio_error;
-#[cfg(test)]
-pub mod concurrency_tests;
 /// 引擎核心错误 - 统一的错误处理类型
 pub mod engine_error;
-/// 统一错误处理器 - 错误处理、恢复和日志的集成
-pub mod error_handler;
 /// 输入错误类型 - 输入系统特定的错误
 pub mod input_error;
 /// 锁安全工具 - 线程安全的锁包装器
 pub mod lock_safety;
-/// 统一日志管理 - 日志系统和错误处理的集成
-pub mod logging;
+#[cfg(test)]
+pub mod concurrency_tests;
 /// 错误监控 - 错误的监控和统计
 pub mod monitoring;
+/// 错误处理Trait - 减少重复代码的工具trait
+pub mod traits;
 /// 物理错误类型 - 物理系统特定的错误
 pub mod physics_error;
 /// 错误恢复 - 错误恢复策略和管理器
@@ -61,22 +59,30 @@ pub mod resource_error;
 pub mod retry;
 /// 系统错误类型 - 系统级别的错误
 pub mod system_error;
+/// 统一日志管理 - 日志系统和错误处理的集成
+pub mod logging;
+/// 统一错误处理器 - 错误处理、恢复和日志的集成
+pub mod error_handler;
+/// 便捷错误处理工具 - 提供安全的 unwrap 替代方案
+pub mod convenience;
 
 // Serde imports for serialization/deserialization
 use serde::{Deserialize, Serialize};
+// thiserror::Error 未在此文件中使用，但可能在未来需要
+// use thiserror::Error;
 
 // 重新导出所有错误类型
 pub use audio_error::AudioError;
 pub use engine_error::EngineError;
 pub use input_error::InputError;
 pub use physics_error::PhysicsError;
-/// 平台相关错误
-pub use platform_error::PlatformError;
 pub use render_error::RenderError;
 pub use resource_error::ResourceError;
+pub use system_error::SystemError;
 /// 脚本相关错误
 pub use script_error::ScriptError;
-pub use system_error::SystemError;
+/// 平台相关错误
+pub use platform_error::PlatformError;
 
 // 重新导出错误处理策略
 pub use lock_safety::{
@@ -95,12 +101,22 @@ pub use retry::{RetryCondition, RetryConfig, RetryExecutor, RetryPolicy, RetryRe
 
 // Re-export Logging components
 pub use logging::{
-    ConsoleLogSink, FileLogSink, LogEntry, LogLevel, LogSink, Logger, LoggingConfig, init_logger,
-    log, log_error,
+    init_logger, log, log_error, ConsoleLogSink, FileLogSink, LogEntry, LogLevel, Logger,
+    LoggingConfig, LogSink,
 };
 
 // Re-export Error Handler components
 pub use error_handler::{ErrorHandler, ErrorHandlerConfig};
+// Re-export Error Traits
+pub use traits::{ContextError, IoResultExt, OptionExt, ResultExt};
+// Re-export Convenience utilities
+pub use convenience::{
+    check_non_empty_or_err, check_range_or_err, log_option, log_result,
+    map_get_mut_or_err, map_get_or_err, ok_or_else_err, option_to_result,
+    parse_to_number_or_err, safe_unwrap_option, safe_unwrap_result,
+    safe_unwrap_with_log, unwrap_or_context, unwrap_or_default,
+    unwrap_or_else_default, Validator, vec_get_mut_or_err, vec_get_or_err,
+};
 
 /// 错误严重级别 - 表示错误的严重程度
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -119,7 +135,7 @@ pub enum ErrorSeverity {
 
 impl ErrorSeverity {
     /// 获取严重级别的字符串表示
-    ///
+    /// 
     /// # Returns
     /// 返回严重级别的简洁字符串表示（"INFO", "WARNING", "ERROR", "CRITICAL", "FATAL"）
     pub fn as_str(&self) -> &'static str {
@@ -133,13 +149,13 @@ impl ErrorSeverity {
     }
 
     /// 从字符串解析严重级别
-    ///
+    /// 
     /// # Arguments
     /// * `s` - 要解析的字符串（大小写不敏感）
     ///
     /// # Returns
     /// 如果字符串有效返回Some(严重级别)，否则返回None
-    pub fn from_str(s: &str) -> Option<Self> {
+    pub fn from_str_case_insensitive(s: &str) -> Option<Self> {
         match s.to_uppercase().as_str() {
             "INFO" => Some(ErrorSeverity::Info),
             "WARNING" => Some(ErrorSeverity::Warning),
@@ -178,7 +194,7 @@ pub enum ErrorCategory {
 
 impl ErrorCategory {
     /// 获取分类的字符串表示
-    ///
+    /// 
     /// # Returns
     /// 返回分类的简洁字符串表示
     pub fn as_str(&self) -> &'static str {
@@ -221,28 +237,21 @@ pub mod script_error {
     use super::ErrorSeverity;
     use thiserror::Error;
 
-    /// Errors that can occur during script execution
     #[derive(Debug, Error, Clone)]
     pub enum ScriptError {
-        /// Script compilation failed
         #[error("Script compilation failed: {0}")]
         Compilation(String),
-        /// Script runtime error occurred
         #[error("Script runtime error: {0}")]
         Runtime(String),
-        /// Script not found
         #[error("Script not found: {0}")]
         NotFound(String),
-        /// Invalid binding error
         #[error("Invalid binding: {0}")]
         InvalidBinding(String),
-        /// Script timeout error
         #[error("Script timeout: {0} ms")]
         Timeout(u64),
     }
 
     impl ScriptError {
-        /// Gets the severity level of this script error
         pub fn severity(&self) -> ErrorSeverity {
             match self {
                 ScriptError::Compilation(_) | ScriptError::Runtime(_) => ErrorSeverity::Error,
@@ -258,36 +267,25 @@ pub mod platform_error {
     use super::ErrorSeverity;
     use thiserror::Error;
 
-    /// Errors that can occur during platform operations
     #[derive(Debug, Error, Clone)]
     pub enum PlatformError {
-        /// Window creation failed
         #[error("Window creation failed: {0}")]
         WindowCreation(String),
-        /// Event loop error occurred
         #[error("Event loop error: {0}")]
         EventLoop(String),
-        /// Input device error occurred
         #[error("Input device error: {0}")]
         InputDevice(String),
-        /// Filesystem error occurred
         #[error("Filesystem error: {0}")]
         Filesystem(String),
-        /// Platform not supported error
         #[error("Platform not supported: {0}")]
         NotSupported(String),
     }
 
     impl PlatformError {
-        /// Gets the severity level of this platform error
         pub fn severity(&self) -> ErrorSeverity {
             match self {
-                PlatformError::WindowCreation(_) | PlatformError::EventLoop(_) => {
-                    ErrorSeverity::Error
-                }
-                PlatformError::InputDevice(_) | PlatformError::Filesystem(_) => {
-                    ErrorSeverity::Warning
-                }
+                PlatformError::WindowCreation(_) | PlatformError::EventLoop(_) => ErrorSeverity::Error,
+                PlatformError::InputDevice(_) | PlatformError::Filesystem(_) => ErrorSeverity::Warning,
                 PlatformError::NotSupported(_) => ErrorSeverity::Info,
             }
         }

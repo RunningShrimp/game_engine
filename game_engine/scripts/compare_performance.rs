@@ -4,7 +4,6 @@
 //  如果检测到性能回归，返回非零退出码
 
 use std::fs;
-use std::path::Path;
 use std::process;
 use serde_json::Value;
 

@@ -13,6 +13,35 @@ use std::collections::HashMap;
 use std::sync::Mutex;
 
 /// 刚体类型
+///
+/// 定义刚体在物理模拟中的行为模式。
+///
+/// # 变体
+///
+/// - [`Fixed`](Self::Fixed): 静态刚体，不受力影响，不能移动（如地面、墙壁）
+/// - [`Dynamic`](Self::Dynamic): 动态刚体，受力影响，可以移动（如玩家、掉落物）
+/// - [`Kinematic`](Self::Kinematic): 运动学刚体，可以被直接控制移动，但不受力影响（如移动平台、电梯）
+///
+/// # 示例
+///
+/// ```rust,no_run
+/// use game_engine::domain::physics::{RigidBody, RigidBodyId, RigidBodyType};
+/// use glam::Vec3;
+///
+/// // 创建动态刚体（受物理影响）
+/// let dynamic_body = RigidBody::new(
+///     RigidBodyId::new(1),
+///     RigidBodyType::Dynamic,
+///     Vec3::new(0.0, 10.0, 0.0),
+/// );
+///
+/// // 创建静态刚体（不受物理影响）
+/// let static_body = RigidBody::new(
+///     RigidBodyId::new(2),
+///     RigidBodyType::Fixed,
+///     Vec3::ZERO,
+/// );
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum RigidBodyType {
     /// 静态刚体，不受力影响，不能移动
@@ -24,6 +53,40 @@ pub enum RigidBodyType {
 }
 
 /// 形状类型
+///
+/// 定义物理碰撞体的几何形状，用于碰撞检测。
+///
+/// # 变体
+///
+/// - [`Sphere`](Self::Sphere): 球形
+/// - [`Ball`](Self::Ball): 球体（与Sphere相同）
+/// - [`Cuboid`](Self::Cuboid): 立方体/长方体
+/// - [`Capsule`](Self::Capsule): 胶囊体（球体+圆柱）
+/// - [`Cylinder`](Self::Cylinder): 圆柱体
+/// - [`Cone`](Self::Cone): 锥体
+/// - [`ConvexHull`](Self::ConvexHull): 凸多边形（由点集构成）
+/// - [`TriMesh`](Self::TriMesh): 三角网格（复杂静态几何体）
+///
+/// # 性能考虑
+///
+/// - **简单形状**（Sphere、Cuboid）性能最好
+/// - **凸多边形**（ConvexHull）适合中等复杂度
+/// - **三角网格**（TriMesh）仅适合静态物体
+///
+/// # 示例
+///
+/// ```rust,no_run
+/// use game_engine::domain::physics::ShapeType;
+/// use glam::Vec3;
+///
+/// // 创建球体形状
+/// let sphere = ShapeType::Sphere { radius: 1.0 };
+///
+/// // 创建立方体形状
+/// let cuboid = ShapeType::Cuboid {
+///     half_extents: Vec3::new(1.0, 1.0, 1.0),
+/// };
+/// ```
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum ShapeType {
     /// 球形
@@ -48,6 +111,22 @@ pub enum ShapeType {
 }
 
 /// 刚体状态
+///
+/// 表示刚体在某一时刻的完整物理状态，包括位置、旋转和速度。
+///
+/// # 字段
+///
+/// - `position`: 3D空间中的位置坐标
+/// - `rotation`: 旋转四元数
+/// - `linear_velocity`: 线性速度向量
+/// - `angular_velocity`: 角速度向量
+/// - `sleeping`: 是否处于休眠状态（休眠的物体不参与物理计算）
+///
+/// # 用途
+///
+/// - 保存和恢复刚体状态
+/// - 网络同步
+/// - 回滚和重放
 #[derive(Debug, Clone)]
 pub struct RigidBodyState {
     /// 位置
@@ -63,38 +142,129 @@ pub struct RigidBodyState {
 }
 
 /// 刚体ID
+///
+/// 刚体的唯一标识符，用于在整个物理系统中引用特定的刚体。
+///
+/// # 示例
+///
+/// ```rust,no_run
+/// use game_engine::domain::physics::RigidBodyId;
+///
+/// // 创建刚体ID
+/// let body_id = RigidBodyId::new(123);
+///
+/// // 获取数值
+/// let id_value = body_id.as_u64();
+/// assert_eq!(id_value, 123);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct RigidBodyId(pub u64);
 
 impl RigidBodyId {
     /// 创建新的刚体ID
+    ///
+    /// # 参数
+    ///
+    /// * `id`: 唯一标识符数值
     pub fn new(id: u64) -> Self {
         Self(id)
     }
 
     /// 获取ID值
+    ///
+    /// # 返回
+    ///
+    /// 返回内部存储的u64值
     pub fn as_u64(&self) -> u64 {
         self.0
     }
 }
 
 /// 碰撞体ID
+///
+/// 碰撞体的唯一标识符，用于在整个物理系统中引用特定的碰撞体。
+///
+/// # 示例
+///
+/// ```rust,no_run
+/// use game_engine::domain::physics::ColliderId;
+///
+/// // 创建碰撞体ID
+/// let collider_id = ColliderId::new(456);
+///
+/// // 获取数值
+/// let id_value = collider_id.as_u64();
+/// assert_eq!(id_value, 456);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct ColliderId(pub u64);
 
 impl ColliderId {
     /// 创建新的碰撞体ID
+    ///
+    /// # 参数
+    ///
+    /// * `id`: 唯一标识符数值
     pub fn new(id: u64) -> Self {
         Self(id)
     }
 
     /// 获取ID值
+    ///
+    /// # 返回
+    ///
+    /// 返回内部存储的u64值
     pub fn as_u64(&self) -> u64 {
         self.0
     }
 }
 
 /// 刚体领域对象
+///
+/// 表示物理世界中的刚体，封装了刚体的所有物理属性和行为。
+/// 采用富领域对象模式，将业务逻辑封装在对象内部。
+///
+/// # 核心概念
+///
+/// 刚体（Rigid Body）是物理学中的理想化模型，假设物体：
+/// - 完全刚性，不发生形变
+/// - 质量连续分布
+/// - 具有位置和方向
+///
+/// # 字段
+///
+/// - `id`: 刚体唯一标识符
+/// - `body_type`: 刚体类型（固定、动态、运动学）
+/// - `position`: 世界空间位置
+/// - `rotation`: 旋转四元数
+/// - `linear_velocity`: 线性速度
+/// - `angular_velocity`: 角速度
+/// - `mass`: 质量（影响惯性和碰撞响应）
+/// - `friction`: 摩擦系数（0.0 = 无摩擦，1.0 = 完全摩擦）
+/// - `restitution`: 弹性系数（0.0 = 无弹性，1.0 = 完全弹性）
+///
+/// # 示例
+///
+/// ```rust,no_run
+/// use game_engine::domain::physics::{RigidBody, RigidBodyId, RigidBodyType};
+/// use glam::Vec3;
+///
+/// // 创建动态刚体（默认参数）
+/// let body = RigidBody::new(
+///     RigidBodyId::new(1),
+///     RigidBodyType::Dynamic,
+///     Vec3::new(0.0, 10.0, 0.0),
+/// );
+///
+/// // 创建完整的刚体（自定义参数）
+/// let body = RigidBody::with_all(
+///     RigidBodyId::new(2),
+///     RigidBodyType::Dynamic,
+///     Vec3::ZERO,
+///     glam::Quat::IDENTITY,
+///     10.0, // 质量
+/// );
+/// ```
 #[derive(Debug, Clone)]
 pub struct RigidBody {
     /// 刚体ID
@@ -196,9 +366,11 @@ impl RigidBody {
     /// 设置质量
     pub fn set_mass(&mut self, mass: f32) -> Result<(), DomainError> {
         if mass <= 0.0 {
-            return Err(DomainError::Physics(PhysicsError::InvalidParameter(
-                "Mass must be positive".to_string(),
-            )));
+            return Err(DomainError::Physics(PhysicsError::InvalidRigidBodyParameter {
+                parameter: "mass".to_string(),
+                value: mass.to_string(),
+                severity: crate::error::ErrorSeverity::Warning,
+            }));
         }
         self.mass = mass;
         Ok(())
@@ -226,13 +398,16 @@ impl RigidBody {
                     std::thread::sleep(std::time::Duration::from_millis(*delay_ms));
 
                     match error {
-                        PhysicsError::InvalidParameter(_) => {
+                        PhysicsError::InvalidRigidBodyParameter { .. } => {
                             // 尝试重置为默认值
                             self.mass = 1.0;
                             self.position = Vec3::ZERO;
                             return Ok(());
                         }
-                        _ => break,
+                        _ => {
+                            // 对于其他错误类型，继续尝试下一次重试
+                            continue;
+                        }
                     }
                 }
                 Err(DomainError::Physics(error.clone()))
@@ -273,18 +448,17 @@ impl RigidBody {
         &mut self,
         action: &CompensationAction,
     ) -> Result<(), DomainError> {
-        if let Some(pos) = action.data.get("position").and_then(|v| v.as_array()) {
-            if pos.len() == 3 {
+        if let Some(pos) = action.data.get("position").and_then(|v| v.as_array())
+            && pos.len() == 3 {
                 self.position = Vec3::new(
                     pos[0].as_f64().unwrap_or(0.0) as f32,
                     pos[1].as_f64().unwrap_or(0.0) as f32,
                     pos[2].as_f64().unwrap_or(0.0) as f32,
                 );
             }
-        }
 
-        if let Some(rot) = action.data.get("rotation").and_then(|v| v.as_array()) {
-            if rot.len() == 4 {
+        if let Some(rot) = action.data.get("rotation").and_then(|v| v.as_array())
+            && rot.len() == 4 {
                 self.rotation = Quat::from_xyzw(
                     rot[0].as_f64().unwrap_or(0.0) as f32,
                     rot[1].as_f64().unwrap_or(0.0) as f32,
@@ -292,27 +466,24 @@ impl RigidBody {
                     rot[3].as_f64().unwrap_or(1.0) as f32,
                 );
             }
-        }
 
-        if let Some(lv) = action.data.get("linear_velocity").and_then(|v| v.as_array()) {
-            if lv.len() == 3 {
+        if let Some(lv) = action.data.get("linear_velocity").and_then(|v| v.as_array())
+            && lv.len() == 3 {
                 self.linear_velocity = Vec3::new(
                     lv[0].as_f64().unwrap_or(0.0) as f32,
                     lv[1].as_f64().unwrap_or(0.0) as f32,
                     lv[2].as_f64().unwrap_or(0.0) as f32,
                 );
             }
-        }
 
-        if let Some(av) = action.data.get("angular_velocity").and_then(|v| v.as_array()) {
-            if av.len() == 3 {
+        if let Some(av) = action.data.get("angular_velocity").and_then(|v| v.as_array())
+            && av.len() == 3 {
                 self.angular_velocity = Vec3::new(
                     av[0].as_f64().unwrap_or(0.0) as f32,
                     av[1].as_f64().unwrap_or(0.0) as f32,
                     av[2].as_f64().unwrap_or(0.0) as f32,
                 );
             }
-        }
 
         if let Some(mass) = action.data.get("mass").and_then(|v| v.as_f64()) {
             self.mass = mass as f32;
@@ -357,6 +528,43 @@ impl RigidBody {
 }
 
 /// 碰撞体领域对象
+///
+/// 定义物体的碰撞形状，用于物理碰撞检测。
+/// 碰撞体必须关联到刚体上才能参与物理模拟。
+///
+/// # 核心概念
+///
+/// - **形状**: 定义碰撞体的几何形状（球体、立方体等）
+/// - **密度**: 影响质量计算（质量 = 密度 × 体积）
+/// - **材质**: 摩擦力和弹性（ restitution）影响碰撞响应
+///
+/// # 字段
+///
+/// - `id`: 碰撞体唯一标识符
+/// - `body_id`: 关联的刚体ID
+/// - `shape_type`: 形状类型
+/// - `density`: 密度（kg/m³）
+/// - `friction`: 摩擦系数（0.0-1.0）
+/// - `restitution`: 弹性系数（0.0-1.0）
+///
+/// # 示例
+///
+/// ```rust,no_run
+/// use game_engine::domain::physics::{Collider, ColliderId, RigidBodyId};
+/// use glam::Vec3;
+///
+/// // 创建立方体碰撞体
+/// let collider = Collider::cuboid(
+///     ColliderId::new(1),
+///     Vec3::new(1.0, 1.0, 1.0),
+/// );
+///
+/// // 创建球体碰撞体
+/// let collider = Collider::ball(
+///     ColliderId::new(2),
+///     1.0, // 半径
+/// );
+/// ```
 #[derive(Debug, Clone)]
 pub struct Collider {
     /// 碰撞体ID
@@ -470,6 +678,58 @@ impl Collider {
 }
 
 /// 物理世界领域对象
+///
+/// 物理世界是物理模拟的核心容器，管理所有刚体、碰撞体和物理计算。
+///
+/// # 核心功能
+///
+/// - **刚体管理**: 添加、移除、查询刚体
+/// - **碰撞体管理**: 创建和管理碰撞形状
+/// - **物理模拟**: 步进模拟，计算运动和碰撞
+/// - **空间查询**: 射线投射、碰撞检测等
+///
+/// # 使用流程
+///
+/// 1. 创建物理世界
+/// 2. 添加刚体（`add_body`）
+/// 3. 添加碰撞体到刚体（`add_collider_to_body`）
+/// 4. 每帧调用步进（`step`）
+/// 5. 查询刚体状态（`get_body_state`）
+///
+/// # 示例
+///
+/// ```rust,no_run
+/// use game_engine::domain::physics::{PhysicsWorld, RigidBody, RigidBodyId, RigidBodyType, Collider, ColliderId};
+/// use glam::Vec3;
+///
+/// // 创建物理世界
+/// let mut world = PhysicsWorld::new();
+///
+/// // 创建并添加刚体
+/// let body = RigidBody::new(
+///     RigidBodyId::new(1),
+///     RigidBodyType::Dynamic,
+///     Vec3::new(0.0, 10.0, 0.0),
+/// );
+/// world.add_body(body).unwrap();
+///
+/// // 添加碰撞体
+/// let collider = Collider::ball(ColliderId::new(1), 1.0);
+/// world.add_collider_to_body(collider, RigidBodyId::new(1)).unwrap();
+///
+/// // 步进模拟（每帧调用）
+/// world.step(0.016).unwrap();
+///
+/// // 获取刚体位置
+/// let state = world.get_body_state(RigidBodyId::new(1)).unwrap();
+/// println!("Position: {:?}", state.position);
+/// ```
+///
+/// # 性能优化
+///
+/// - **休眠**: 静止物体自动休眠，减少计算
+/// - **空间分区**: 使用高效的数据结构加速碰撞检测
+/// - **多线程**: 支持并行物理计算（见`ParallelPhysicsWorld`）
 pub struct PhysicsWorld {
     /// 重力
     gravity: Vector<Real>,
@@ -590,7 +850,10 @@ impl PhysicsWorld {
             );
             Ok(handle)
         } else {
-            Err(PhysicsError::BodyNotFound(format!("Body {}", id.as_u64())))
+            Err(PhysicsError::RigidBodyNotFound {
+                body_id: format!("Body {}", id.as_u64()),
+                severity: crate::error::ErrorSeverity::Error,
+            })
         }
     }
 
@@ -602,11 +865,14 @@ impl PhysicsWorld {
     ) -> Result<ColliderHandle, PhysicsError> {
         // 获取刚体句柄
         let body_handle = *self.body_handles.get(&body_id).ok_or_else(|| {
-            PhysicsError::BodyNotFound(format!(
-                "Body {} for collider {}",
-                body_id.as_u64(),
-                collider.id().as_u64()
-            ))
+            PhysicsError::RigidBodyNotFound {
+                body_id: format!(
+                    "Body {} for collider {}",
+                    body_id.as_u64(),
+                    collider.id().as_u64()
+                ),
+                severity: crate::error::ErrorSeverity::Error,
+            }
         })?;
 
         // 创建Rapier形状
@@ -620,16 +886,20 @@ impl PhysicsWorld {
             ShapeType::Cone { radius, height } => SharedShape::cone(height / 2.0, radius),
             ShapeType::ConvexHull { points } => {
                 let points: Vec<_> = points.iter().map(|p| Point3::new(p.x, p.y, p.z)).collect();
-                SharedShape::convex_hull(&points).ok_or(PhysicsError::InvalidShape(
-                    "Failed to create convex hull".to_string(),
-                ))?
+                SharedShape::convex_hull(&points).ok_or(PhysicsError::Configuration {
+                    message: "Failed to create convex hull".to_string(),
+                    severity: crate::error::ErrorSeverity::Error,
+                })?
             }
             ShapeType::TriMesh { vertices, indices } => {
                 let vertices: Vec<_> =
                     vertices.iter().map(|v| Point3::new(v.x, v.y, v.z)).collect();
                 let indices: Vec<_> = indices.iter().map(|i| [i[0], i[1], i[2]]).collect();
                 SharedShape::trimesh(vertices, indices).map_err(|e| {
-                    PhysicsError::ShapeCreationError(format!("Failed to create trimesh: {}", e))
+                    PhysicsError::ColliderCreation {
+                        message: format!("Failed to create trimesh: {}", e),
+                        severity: crate::error::ErrorSeverity::Error,
+                    }
                 })?
             }
         };
@@ -660,10 +930,10 @@ impl PhysicsWorld {
             );
             Ok(handle)
         } else {
-            Err(PhysicsError::ColliderNotFound(format!(
-                "Collider {}",
-                id.as_u64()
-            )))
+            Err(PhysicsError::ColliderNotFound {
+                collider_id: format!("Collider {}", id.as_u64()),
+                severity: crate::error::ErrorSeverity::Error,
+            })
         }
     }
 
@@ -706,7 +976,10 @@ impl PhysicsWorld {
         // 执行物理步进
         let mut physics_pipeline =
             safe_lock(&self.physics_pipeline, "PhysicsWorld.physics_pipeline").map_err(|e| {
-                PhysicsError::LockError(format!("Failed to acquire physics pipeline lock: {}", e))
+                PhysicsError::Configuration {
+                    message: format!("Failed to acquire physics pipeline lock: {}", e),
+                    severity: crate::error::ErrorSeverity::Error,
+                }
             })?;
         physics_pipeline.step(
             &self.gravity,
@@ -772,15 +1045,14 @@ impl PhysicsWorld {
 
         if let Some((collider_handle, toi)) = query_pipeline.cast_ray(&ray, max_toi, true) {
             let hit_point = origin + direction * (toi * direction.length());
-            if let Some(collider) = self.collider_set.get(collider_handle) {
-                if let Some(parent_handle) = collider.parent() {
+            if let Some(collider) = self.collider_set.get(collider_handle)
+                && let Some(parent_handle) = collider.parent() {
                     for (id, &h) in self.body_handles.iter() {
                         if h == parent_handle {
                             return Some((*id, toi * direction.length(), hit_point));
                         }
                     }
                 }
-            }
         }
 
         None
@@ -812,10 +1084,16 @@ impl PhysicsWorld {
                 rb.apply_impulse(Vector3::new(impulse.x, impulse.y, impulse.z), true);
                 Ok(())
             } else {
-                Err(PhysicsError::BodyNotFound(format!("Body {}", id.as_u64())))
+                Err(PhysicsError::RigidBodyNotFound {
+                body_id: format!("Body {}", id.as_u64()),
+                severity: crate::error::ErrorSeverity::Error,
+            })
             }
         } else {
-            Err(PhysicsError::BodyNotFound(format!("Body {}", id.as_u64())))
+            Err(PhysicsError::RigidBodyNotFound {
+                body_id: format!("Body {}", id.as_u64()),
+                severity: crate::error::ErrorSeverity::Error,
+            })
         }
     }
 
@@ -832,10 +1110,16 @@ impl PhysicsWorld {
                 rb.set_position(Isometry::from_parts(translation, *rotation), true);
                 Ok(())
             } else {
-                Err(PhysicsError::BodyNotFound(format!("Body {}", id.as_u64())))
+                Err(PhysicsError::RigidBodyNotFound {
+                body_id: format!("Body {}", id.as_u64()),
+                severity: crate::error::ErrorSeverity::Error,
+            })
             }
         } else {
-            Err(PhysicsError::BodyNotFound(format!("Body {}", id.as_u64())))
+            Err(PhysicsError::RigidBodyNotFound {
+                body_id: format!("Body {}", id.as_u64()),
+                severity: crate::error::ErrorSeverity::Error,
+            })
         }
     }
 
@@ -844,7 +1128,10 @@ impl PhysicsWorld {
         if let Some(state) = self.get_body_state(id) {
             Ok(state.position)
         } else {
-            Err(PhysicsError::BodyNotFound(format!("Body {}", id.as_u64())))
+            Err(PhysicsError::RigidBodyNotFound {
+                body_id: format!("Body {}", id.as_u64()),
+                severity: crate::error::ErrorSeverity::Error,
+            })
         }
     }
 
@@ -898,17 +1185,23 @@ impl PhysicsWorld {
 
                 Ok(())
             } else {
-                Err(PhysicsError::BodyNotFound(format!(
-                    "Body {}",
-                    body.id().as_u64()
-                )))
+                Err(PhysicsError::RigidBodyNotFound {
+                    body_id: format!("Body {}", body.id().as_u64()),
+                    severity: crate::error::ErrorSeverity::Error,
+                })
             }
         } else {
-            Err(PhysicsError::BodyNotFound(format!(
-                "Body {}",
-                body.id().as_u64()
-            )))
+            Err(PhysicsError::RigidBodyNotFound {
+                body_id: format!("Body {}", body.id().as_u64()),
+                severity: crate::error::ErrorSeverity::Error,
+            })
         }
+    }
+}
+
+impl Default for PhysicsWorld {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -958,5 +1251,153 @@ mod tests {
         assert_sync_narrow_phase::<NarrowPhase>();
 
         // 其他类型可以类似测试...
+    }
+
+    // ============================================================================
+    // 物理领域对象功能测试
+    // ============================================================================
+
+    #[test]
+    fn test_rigid_body_type_variants() {
+        let fixed = RigidBodyType::Fixed;
+        let dynamic = RigidBodyType::Dynamic;
+        let kinematic = RigidBodyType::Kinematic;
+
+        assert_eq!(fixed, RigidBodyType::Fixed);
+        assert_eq!(dynamic, RigidBodyType::Dynamic);
+        assert_eq!(kinematic, RigidBodyType::Kinematic);
+        assert_ne!(fixed, dynamic);
+    }
+
+    #[test]
+    fn test_shape_type_sphere() {
+        let sphere = ShapeType::Sphere { radius: 1.0 };
+        assert!(matches!(sphere, ShapeType::Sphere { radius: 1.0 }));
+    }
+
+    #[test]
+    fn test_rigid_body_state_creation() {
+        let state = RigidBodyState {
+            position: Vec3::ZERO,
+            rotation: Quat::IDENTITY,
+            linear_velocity: Vec3::ZERO,
+            angular_velocity: Vec3::ZERO,
+            sleeping: false,
+        };
+        assert_eq!(state.position, Vec3::ZERO);
+        assert_eq!(state.rotation, Quat::IDENTITY);
+        assert_eq!(state.linear_velocity, Vec3::ZERO);
+        assert_eq!(state.angular_velocity, Vec3::ZERO);
+        assert_eq!(state.sleeping, false);
+    }
+
+    #[test]
+    fn test_rigid_body_state_with_values() {
+        let state = RigidBodyState {
+            position: Vec3::new(1.0, 2.0, 3.0),
+            rotation: Quat::from_xyzw(0.0, 0.0, 0.0, 1.0),
+            linear_velocity: Vec3::new(1.0, 0.0, 0.0),
+            angular_velocity: Vec3::new(0.0, 1.0, 0.0),
+            sleeping: false,
+        };
+        assert_eq!(state.position, Vec3::new(1.0, 2.0, 3.0));
+        assert_eq!(state.linear_velocity, Vec3::new(1.0, 0.0, 0.0));
+        assert_eq!(state.angular_velocity, Vec3::new(0.0, 1.0, 0.0));
+    }
+
+    #[test]
+    fn test_rigid_body_id_uniqueness() {
+        let id1 = RigidBodyId::new(1);
+        let id2 = RigidBodyId::new(2);
+        assert_ne!(id1, id2);
+    }
+
+    #[test]
+    fn test_collider_id_uniqueness() {
+        let id1 = ColliderId::new(1);
+        let id2 = ColliderId::new(2);
+        assert_ne!(id1, id2);
+    }
+
+    #[test]
+    fn test_rigid_body_creation_with_new() {
+        let id = RigidBodyId::new(1);
+        let body = RigidBody::new(id, RigidBodyType::Dynamic, Vec3::ZERO);
+        assert_eq!(body.body_type(), RigidBodyType::Dynamic);
+        assert_eq!(body.mass(), 1.0);
+        assert_eq!(body.position(), Vec3::ZERO);
+    }
+
+    #[test]
+    fn test_rigid_body_creation_dynamic() {
+        let id = RigidBodyId::new(1);
+        let body = RigidBody::dynamic(id, Vec3::ZERO);
+        assert_eq!(body.body_type(), RigidBodyType::Dynamic);
+        assert_eq!(body.mass(), 1.0);
+    }
+
+    #[test]
+    fn test_rigid_body_creation_with_all() {
+        let id = RigidBodyId::new(1);
+        let body = RigidBody::with_all(
+            id,
+            RigidBodyType::Dynamic,
+            Vec3::new(1.0, 2.0, 3.0),
+            Quat::IDENTITY,
+            10.0,
+        );
+        assert_eq!(body.body_type(), RigidBodyType::Dynamic);
+        assert_eq!(body.mass(), 10.0);
+        assert_eq!(body.position(), Vec3::new(1.0, 2.0, 3.0));
+    }
+
+    #[test]
+    fn test_rigid_body_getters() {
+        let id = RigidBodyId::new(1);
+        let body = RigidBody::new(id, RigidBodyType::Dynamic, Vec3::new(1.0, 2.0, 3.0));
+        assert_eq!(body.id(), id);
+        assert_eq!(body.body_type(), RigidBodyType::Dynamic);
+        assert_eq!(body.position(), Vec3::new(1.0, 2.0, 3.0));
+        assert_eq!(body.rotation(), Quat::IDENTITY);
+        assert_eq!(body.linear_velocity(), Vec3::ZERO);
+        assert_eq!(body.angular_velocity(), Vec3::ZERO);
+    }
+
+    #[test]
+    fn test_rigid_body_set_mass() {
+        let id = RigidBodyId::new(1);
+        let mut body = RigidBody::new(id, RigidBodyType::Dynamic, Vec3::ZERO);
+        let result = body.set_mass(10.0);
+        assert!(result.is_ok());
+        assert_eq!(body.mass(), 10.0);
+    }
+
+    #[test]
+    fn test_fixed_body_type() {
+        let id = RigidBodyId::new(1);
+        let body = RigidBody::new(id, RigidBodyType::Fixed, Vec3::ZERO);
+        assert_eq!(body.body_type(), RigidBodyType::Fixed);
+    }
+
+    #[test]
+    fn test_kinematic_body_type() {
+        let id = RigidBodyId::new(1);
+        let body = RigidBody::new(id, RigidBodyType::Kinematic, Vec3::ZERO);
+        assert_eq!(body.body_type(), RigidBodyType::Kinematic);
+    }
+
+    #[test]
+    fn test_fixed_body_mass() {
+        let id = RigidBodyId::new(1);
+        let body = RigidBody::new(id, RigidBodyType::Fixed, Vec3::ZERO);
+        // Fixed bodies have a default mass (used in collision calculations)
+        assert_eq!(body.mass(), 1.0);
+    }
+
+    #[test]
+    fn test_dynamic_body_has_positive_mass() {
+        let id = RigidBodyId::new(1);
+        let body = RigidBody::new(id, RigidBodyType::Dynamic, Vec3::ZERO);
+        assert!(body.mass() > 0.0);
     }
 }

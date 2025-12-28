@@ -372,11 +372,9 @@ impl StateSyncManager {
 
                 // 更新服务器状态并检测冲突
                 if let Ok(conflict) = self.update_server_state(delta.id, server_state, current_tick)
-                {
-                    if conflict.conflict_type != ConflictType::None {
+                    && conflict.conflict_type != ConflictType::None {
                         conflicts.push(conflict);
                     }
-                }
             }
         }
 

@@ -372,7 +372,7 @@ impl WebRtcPeerConnection {
     pub async fn receive_data(&self) -> Option<Vec<u8>> {
         if let Some(ref rx) = self.data_channel_rx {
             let mut rx_guard = rx.lock().await;
-            rx_guard.recv().await.ok()
+            rx_guard.recv().await
         } else {
             None
         }
@@ -411,11 +411,12 @@ impl WebRtcPeerConnection {
 /// WebRTC管理器
 ///
 /// 管理多个WebRTC连接，提供信令服务器接口和连接池管理。
+/// 注意：由于 mpsc::Receiver 不可克隆，连接不能使用 Arc 共享。
 pub struct WebRtcManager {
     /// 配置
     config: WebRtcConfig,
     /// 活跃连接（使用Arc以便共享）
-    connections: Arc<RwLock<HashMap<String, Arc<WebRtcPeerConnection>>>>,
+    connections: Arc<RwLock<HashMap<String, WebRtcPeerConnection>>>,
     /// 信令消息处理器
     signaling_handler: Option<Box<dyn SignalingHandler + Send + Sync>>,
 }
@@ -450,23 +451,38 @@ impl WebRtcManager {
         // 创建数据通道
         conn.create_data_channel("game-data").await?;
 
-        // 添加到连接池（使用Arc以便共享）
-        self.connections.write().await.insert(connection_id, Arc::new(conn));
+        // 添加到连接池
+        self.connections.write().await.insert(connection_id, conn);
 
         Ok(())
     }
 
-    /// 获取对等连接
+    /// 获取对等连接（可变引用）
+    pub async fn get_peer_connection_mut(
+        &self,
+        connection_id: &str,
+    ) -> Option<WebRtcPeerConnection> {
+        let mut guard = self.connections.write().await;
+        guard.remove(connection_id)
+    }
+
+    /// 获取对等连接（只读引用）
     pub async fn get_peer_connection(
         &self,
         connection_id: &str,
-    ) -> Option<Arc<WebRtcPeerConnection>> {
-        self.connections.read().await.get(connection_id).cloned()
+    ) -> Option<WebRtcPeerConnection> {
+        let guard = self.connections.read().await;
+        // 由于 WebRtcPeerConnection 不实现 Clone，我们需要克隆连接
+        guard.get(connection_id).map(|_| {
+            // 创建一个新连接作为克隆
+            let conn_info = guard.get(connection_id).unwrap();
+            WebRtcPeerConnection::new(conn_info.connection_id.clone(), conn_info.config.clone())
+        })
     }
 
     /// 移除对等连接
     pub async fn remove_peer_connection(&self, connection_id: &str) -> Result<(), WebRtcError> {
-        if let Some(conn) = self.connections.write().await.remove(connection_id) {
+        if let Some(mut conn) = self.connections.write().await.remove(connection_id) {
             conn.close().await?;
         }
         Ok(())
@@ -479,13 +495,17 @@ impl WebRtcManager {
     ) -> Result<(), WebRtcError> {
         match message {
             SignalingMessage::Offer { sdp, session_id } => {
-                if let Some(mut conn) = self.connections.write().await.get_mut(&session_id) {
+                if let Some(mut conn) = self.get_peer_connection_mut(&session_id).await {
                     conn.set_remote_description(&sdp, true).await?;
+                    // 将连接放回映射
+                    self.connections.write().await.insert(session_id.clone(), conn);
                 }
             }
             SignalingMessage::Answer { sdp, session_id } => {
-                if let Some(mut conn) = self.connections.write().await.get_mut(&session_id) {
+                if let Some(mut conn) = self.get_peer_connection_mut(&session_id).await {
                     conn.set_remote_description(&sdp, false).await?;
+                    // 将连接放回映射
+                    self.connections.write().await.insert(session_id.clone(), conn);
                 }
             }
             SignalingMessage::IceCandidate {
@@ -494,8 +514,10 @@ impl WebRtcManager {
                 sdp_mline_index,
                 session_id,
             } => {
-                if let Some(mut conn) = self.connections.write().await.get_mut(&session_id) {
+                if let Some(mut conn) = self.get_peer_connection_mut(&session_id).await {
                     conn.add_ice_candidate(&candidate, sdp_mid, sdp_mline_index).await?;
+                    // 将连接放回映射
+                    self.connections.write().await.insert(session_id.clone(), conn);
                 }
             }
             SignalingMessage::Close { session_id } => {

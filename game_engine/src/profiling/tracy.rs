@@ -27,25 +27,17 @@ impl TracyProfiler {
     /// 启用/禁用分析器
     pub fn set_enabled(&mut self, enabled: bool) {
         #[cfg(feature = "tracy")]
-        {
-            self.enabled = enabled;
-        }
+        { self.enabled = enabled; }
         #[cfg(not(feature = "tracy"))]
-        {
-            let _ = enabled;
-        }
+        { let _ = enabled; }
     }
 
     /// 检查是否启用
     pub fn is_enabled(&self) -> bool {
         #[cfg(feature = "tracy")]
-        {
-            self.enabled
-        }
+        { self.enabled }
         #[cfg(not(feature = "tracy"))]
-        {
-            false
-        }
+        { false }
     }
 }
 
@@ -98,9 +90,7 @@ impl TracyScope {
 impl Drop for TracyScope {
     fn drop(&mut self) {
         #[cfg(feature = "tracy")]
-        {
-            // Span在drop时自动结束
-        }
+        { /* Span在drop时自动结束 */ }
     }
 }
 
@@ -111,45 +101,31 @@ impl TracyMessage {
     /// 发送文本消息
     pub fn text(message: &str) {
         #[cfg(feature = "tracy")]
-        {
-            message!(message);
-        }
+        { message!(message); }
         #[cfg(not(feature = "tracy"))]
-        {
-            let _ = message;
-        }
+        { let _ = message; }
     }
 
     /// 发送带颜色的消息
     pub fn colored(message: &str, color: u32) {
         #[cfg(feature = "tracy")]
-        {
-            message!(message, color);
-        }
+        { message!(message, color); }
         #[cfg(not(feature = "tracy"))]
-        {
-            let _ = (message, color);
-        }
+        { let _ = (message, color); }
     }
 
     /// 发送帧标记
     pub fn frame_mark() {
         #[cfg(feature = "tracy")]
-        {
-            frame_mark!();
-        }
+        { frame_mark!(); }
     }
 
     /// 发送带名称的帧标记
     pub fn frame_mark_named(name: &str) {
         #[cfg(feature = "tracy")]
-        {
-            frame_mark_named!(name);
-        }
+        { frame_mark_named!(name); }
         #[cfg(not(feature = "tracy"))]
-        {
-            let _ = name;
-        }
+        { let _ = name; }
     }
 }
 
@@ -188,9 +164,7 @@ impl TracyGpuContext {
     /// 收集GPU时间戳
     pub fn collect(&self) {
         #[cfg(feature = "tracy")]
-        {
-            self.context.collect();
-        }
+        { self.context.collect(); }
     }
 }
 
@@ -208,9 +182,7 @@ pub struct TracyGpuSpan {
 impl Drop for TracyGpuSpan {
     fn drop(&mut self) {
         #[cfg(feature = "tracy")]
-        {
-            // GpuSpan在drop时自动结束
-        }
+        { /* GpuSpan在drop时自动结束 */ }
     }
 }
 
@@ -221,29 +193,17 @@ impl TracyAllocation {
     /// 记录内存分配
     pub fn alloc(ptr: *mut u8, size: usize) {
         #[cfg(feature = "tracy")]
-        {
-            unsafe {
-                tracy_client::alloc(ptr, size);
-            }
-        }
+        { unsafe { tracy_client::alloc(ptr, size); } }
         #[cfg(not(feature = "tracy"))]
-        {
-            let _ = (ptr, size);
-        }
+        { let _ = (ptr, size); }
     }
 
     /// 记录内存释放
     pub fn free(ptr: *mut u8) {
         #[cfg(feature = "tracy")]
-        {
-            unsafe {
-                tracy_client::free(ptr);
-            }
-        }
+        { unsafe { tracy_client::free(ptr); } }
         #[cfg(not(feature = "tracy"))]
-        {
-            let _ = ptr;
-        }
+        { let _ = ptr; }
     }
 }
 

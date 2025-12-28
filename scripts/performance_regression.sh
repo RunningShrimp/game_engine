@@ -69,8 +69,60 @@ BASELINE_FILE="target/performance_baseline.json"
 if [ -f "$BASELINE_FILE" ]; then
     echo "🔄 Comparing with baseline..."
 
-    # 使用Node.js进行比较（如果可用）
-    if command -v node &> /dev/null; then
+    # 优先使用jq进行比较（CI环境中更常见）
+    if command -v jq &> /dev/null; then
+        echo ""
+        echo "Performance Comparison:"
+        echo "======================"
+        
+        HAS_REGRESSION=false
+        
+        # 获取所有基准测试名称
+        BENCH_NAMES=$(jq -r '.benchmarks | keys[]' "$RESULTS_FILE" 2>/dev/null || echo "")
+        
+        for bench in $BENCH_NAMES; do
+            if [ -z "$bench" ]; then
+                continue
+            fi
+            
+            # 获取当前和基线时间
+            CURRENT_TIME=$(jq -r ".benchmarks[\"$bench\"] // empty" "$RESULTS_FILE" 2>/dev/null)
+            BASELINE_TIME=$(jq -r ".benchmarks[\"$bench\"] // empty" "$BASELINE_FILE" 2>/dev/null)
+            
+            if [ -n "$CURRENT_TIME" ] && [ -n "$BASELINE_TIME" ] && [ "$CURRENT_TIME" != "null" ] && [ "$BASELINE_TIME" != "null" ]; then
+                # 计算回归百分比（使用awk进行浮点运算）
+                REGRESSION=$(awk "BEGIN {printf \"%.1f\", (($CURRENT_TIME - $BASELINE_TIME) / $BASELINE_TIME) * 100}")
+                
+                # 确定状态（使用awk进行比较）
+                REGRESSION_ABS=$(awk "BEGIN {printf \"%.1f\", ($REGRESSION < 0 ? -$REGRESSION : $REGRESSION)}")
+                IS_CRITICAL=$(awk "BEGIN {print ($REGRESSION_ABS > $THRESHOLD_CRITICAL) ? 1 : 0}")
+                IS_WARNING=$(awk "BEGIN {print ($REGRESSION_ABS > $THRESHOLD_WARNING) ? 1 : 0}")
+                
+                if [ "$IS_CRITICAL" = "1" ]; then
+                    STATUS="❌ CRITICAL"
+                    HAS_REGRESSION=true
+                elif [ "$IS_WARNING" = "1" ]; then
+                    STATUS="⚠️  WARNING"
+                    HAS_REGRESSION=true
+                else
+                    STATUS="✅ OK"
+                fi
+                
+                echo "  $bench: ${REGRESSION}% ($STATUS)"
+                echo "    Baseline: ${BASELINE_TIME}ns, Current: ${CURRENT_TIME}ns"
+            fi
+        done
+        
+        echo ""
+        if [ "$HAS_REGRESSION" = true ]; then
+            echo "🚨 Performance regression detected!"
+            exit 1
+        else
+            echo "✅ No significant performance regression."
+        fi
+        
+    # 备选：使用Node.js进行比较
+    elif command -v node &> /dev/null; then
         node -e "
             const fs = require('fs');
             const baseline = JSON.parse(fs.readFileSync('$BASELINE_FILE', 'utf8'));
@@ -83,14 +135,15 @@ if [ -f "$BASELINE_FILE" ]; then
             console.log('Performance Comparison:');
             console.log('======================');
 
-            for (const [bench, currentTime] of Object.entries(current.benchmarks)) {
-                const baselineTime = baseline.benchmarks[bench];
+            for (const [bench, currentTime] of Object.entries(current.benchmarks || {})) {
+                const baselineTime = baseline.benchmarks?.[bench];
                 if (baselineTime && currentTime) {
                     const regression = ((currentTime - baselineTime) / baselineTime) * 100;
                     const status = regression > thresholdCritical ? '❌ CRITICAL' :
                                  regression > thresholdWarning ? '⚠️  WARNING' : '✅ OK';
 
-                    console.log(\`\${bench}: \${regression.toFixed(1)}% (\${status})\`);
+                    console.log(\`  \${bench}: \${regression.toFixed(1)}% (\${status})\`);
+                    console.log(\`    Baseline: \${baselineTime}ns, Current: \${currentTime}ns\`);
 
                     if (regression > thresholdWarning) {
                         hasRegression = true;
@@ -98,23 +151,28 @@ if [ -f "$BASELINE_FILE" ]; then
                 }
             }
 
+            console.log('');
             if (hasRegression) {
-                console.log('');
                 console.log('🚨 Performance regression detected!');
                 process.exit(1);
             } else {
-                console.log('');
                 console.log('✅ No significant performance regression.');
             }
         "
     else
-        echo "⚠️  Node.js not available for comparison. Install Node.js to enable regression detection."
+        echo "⚠️  Neither jq nor Node.js available for comparison."
+        echo "    Install jq or Node.js to enable regression detection."
+        echo "    On Ubuntu/Debian: sudo apt-get install jq"
+        echo "    On macOS: brew install jq"
     fi
 else
     echo "📝 No baseline found. Saving current results as baseline..."
     cp "$RESULTS_FILE" "$BASELINE_FILE"
     echo "💾 Baseline saved to: $BASELINE_FILE"
+    echo ""
+    echo "💡 This baseline will be used for future regression detection."
 fi
 
 echo ""
 echo "🎉 Performance check completed!"
+

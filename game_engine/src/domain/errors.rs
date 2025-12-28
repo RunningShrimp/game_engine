@@ -1,7 +1,15 @@
 //  领域特定错误类型
+//
+//  ## 架构改进 (2025-12-27)
+//
+//  移除了重复的错误定义，统一使用 src/error/ 中的错误类型。
+//  这消除了命名冲突，并确保整个引擎使用一致的错误类型。
 
-use serde::{Deserialize, Serialize};
 use thiserror::Error;
+use serde::{Serialize, Deserialize};
+
+// 重新导出统一错误类型
+pub use crate::error::{AudioError, PhysicsError};
 
 /// 领域层错误枚举
 #[derive(Error, Debug, Clone)]
@@ -18,55 +26,6 @@ pub enum DomainError {
     /// 通用领域错误
     #[error("Domain error: {0}")]
     General(String),
-}
-
-/// 音频领域错误
-#[derive(Error, Debug, Clone)]
-pub enum AudioError {
-    /// 音频源未找到
-    #[error("Audio source not found: {0}")]
-    SourceNotFound(String),
-    /// 音频播放失败
-    #[error("Audio playback failed: {0}")]
-    PlaybackFailed(String),
-    /// 无效音频格式
-    #[error("Invalid audio format: {0}")]
-    InvalidFormat(String),
-    /// 音频设备错误
-    #[error("Audio device error: {0}")]
-    DeviceError(String),
-    /// 音量超出范围
-    #[error("Invalid volume: {0}")]
-    InvalidVolume(f32),
-}
-
-/// 物理领域错误
-#[derive(Error, Debug, Clone)]
-pub enum PhysicsError {
-    /// 刚体未找到
-    #[error("Physics body not found: {0}")]
-    BodyNotFound(String),
-    /// 碰撞体未找到
-    #[error("Collider not found: {0}")]
-    ColliderNotFound(String),
-    /// 无效物理参数
-    #[error("Invalid physics parameter: {0}")]
-    InvalidParameter(String),
-    /// 物理世界未初始化
-    #[error("Physics world not initialized")]
-    WorldNotInitialized,
-    /// 关节创建失败
-    #[error("Joint creation failed: {0}")]
-    JointCreationFailed(String),
-    /// 无效形状
-    #[error("Invalid shape: {0}")]
-    InvalidShape(String),
-    /// 形状创建失败
-    #[error("Shape creation failed: {0}")]
-    ShapeCreationError(String),
-    /// 锁获取失败
-    #[error("Lock acquisition failed: {0}")]
-    LockError(String),
 }
 
 /// 场景领域错误
@@ -136,21 +95,27 @@ mod tests {
 
     #[test]
     fn test_domain_error_from_audio_error() {
-        let audio_error = AudioError::InvalidVolume(1.5);
+        let audio_error = AudioError::DeviceConfiguration {
+            message: "test".to_string(),
+            severity: crate::error::ErrorSeverity::Error,
+        };
         let domain_error: DomainError = audio_error.into();
         assert!(matches!(
             domain_error,
-            DomainError::Audio(AudioError::InvalidVolume(_))
+            DomainError::Audio(AudioError::DeviceConfiguration { .. })
         ));
     }
 
     #[test]
     fn test_domain_error_from_physics_error() {
-        let physics_error = PhysicsError::InvalidParameter("test".to_string());
+        let physics_error = PhysicsError::Configuration {
+            message: "test".to_string(),
+            severity: crate::error::ErrorSeverity::Error,
+        };
         let domain_error: DomainError = physics_error.into();
         assert!(matches!(
             domain_error,
-            DomainError::Physics(PhysicsError::InvalidParameter(_))
+            DomainError::Physics(PhysicsError::Configuration { .. })
         ));
     }
 
@@ -170,53 +135,9 @@ mod tests {
         assert!(matches!(error, DomainError::General(_)));
     }
 
-    #[test]
-    fn test_audio_error_variants() {
-        assert!(matches!(
-            AudioError::SourceNotFound("test".to_string()),
-            AudioError::SourceNotFound(_)
-        ));
-        assert!(matches!(
-            AudioError::PlaybackFailed("test".to_string()),
-            AudioError::PlaybackFailed(_)
-        ));
-        assert!(matches!(
-            AudioError::InvalidFormat("test".to_string()),
-            AudioError::InvalidFormat(_)
-        ));
-        assert!(matches!(
-            AudioError::DeviceError("test".to_string()),
-            AudioError::DeviceError(_)
-        ));
-        assert!(matches!(
-            AudioError::InvalidVolume(1.5),
-            AudioError::InvalidVolume(_)
-        ));
-    }
-
-    #[test]
-    fn test_physics_error_variants() {
-        assert!(matches!(
-            PhysicsError::BodyNotFound("test".to_string()),
-            PhysicsError::BodyNotFound(_)
-        ));
-        assert!(matches!(
-            PhysicsError::ColliderNotFound("test".to_string()),
-            PhysicsError::ColliderNotFound(_)
-        ));
-        assert!(matches!(
-            PhysicsError::InvalidParameter("test".to_string()),
-            PhysicsError::InvalidParameter(_)
-        ));
-        assert!(matches!(
-            PhysicsError::WorldNotInitialized,
-            PhysicsError::WorldNotInitialized
-        ));
-        assert!(matches!(
-            PhysicsError::JointCreationFailed("test".to_string()),
-            PhysicsError::JointCreationFailed(_)
-        ));
-    }
+    // 注意：移除了 test_audio_error_variants 和 test_physics_error_variants
+    // 因为这些错误类型现在是重新导出的 crate::error::{AudioError, PhysicsError}
+    // 它们有自己的测试模块 (src/error/audio_error/tests.rs 等)
 
     #[test]
     fn test_scene_error_variants() {

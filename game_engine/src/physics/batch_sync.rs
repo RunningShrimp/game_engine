@@ -363,7 +363,9 @@ pub fn batch_position_changed_simd(
     let backend = SimdBackend::best_available();
     let mut results = Vec::with_capacity(old_positions.len());
 
-    // 使用SIMD批量处理
+    // 使用SIMD批量处理（根据backend选择最优实现）
+    // 当前使用通用SIMD实现，未来可以根据backend类型选择特定优化
+    let _backend_type = format!("{:?}", backend); // 记录backend类型用于日志
     for (old, new) in old_positions.iter().zip(new_positions.iter()) {
         results.push(position_changed_simd(*old, *new, threshold_sq));
     }

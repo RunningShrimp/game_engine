@@ -128,6 +128,7 @@ impl GameClient {
             } else {
                 None
             },
+            reconnect_attempts: 0,
         };
 
         Self {
@@ -162,7 +163,7 @@ impl GameClient {
                 state_guard.server_addr = Some(addr);
                 state_guard.client_id = Some(rand::random());
 
-                let client_id = state_guard.client_id.unwrap_or_else(|| rand::random());
+                let client_id = state_guard.client_id.unwrap_or_else(rand::random);
                 state_guard.client_id = Some(client_id);
                 let connect_msg = NetworkMessage::Connect {
                     client_id,
@@ -244,13 +245,12 @@ impl GameClient {
             NetworkError::SerializationError(format!("Failed to serialize message: {}", e))
         })?;
 
-        if self.config.enable_compression {
-            if let Some(compressor) = &self.compressor {
+        if self.config.enable_compression
+            && let Some(compressor) = &self.compressor {
                 data = compressor.compress(&data).map_err(|e| {
                     NetworkError::CompressionError(format!("Compression failed: {}", e))
                 })?;
             }
-        }
 
         let mut stream_guard = self.stream.lock().await;
         if let Some(stream) = stream_guard.as_mut() {

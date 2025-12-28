@@ -592,11 +592,25 @@ impl AsyncAudioProcessingService {
     }
 
     /// 取消所有待处理的请求
-    pub async fn cancel_all(&self) {
-        let mut cancel_tx_guard = self.cancel_tx.lock().await;
-        if let Some(tx) = cancel_tx_guard.take() {
-            let _ = tx.send(());
+    pub async fn cancel_all(&self) -> CancelResult {
+        if let Some(cancel_tx) = self.cancel_tx.lock().await.take() {
+            let _ = cancel_tx.send(());
         }
+
+        let pending = self.pending_count.load(Ordering::Relaxed);
+        let completed = self.completed_count.load(Ordering::Relaxed);
+
+        CancelResult {
+            cancelled_requests: pending,
+            completed_requests: completed,
+        }
+    }
+
+    /// 获取信号量配置信息
+    pub fn concurrency_info(&self) -> (usize, usize) {
+        let available = self.semaphore.available_permits();
+        let max_concurrent = self.batch_size;
+        (available, max_concurrent)
     }
 
     /// 获取批量处理大小
@@ -605,23 +619,30 @@ impl AsyncAudioProcessingService {
     }
 }
 
+/// 取消操作结果
+pub struct CancelResult {
+    /// 被取消的请求数量
+    pub cancelled_requests: usize,
+    /// 已完成的请求数量
+    pub completed_requests: usize,
+}
+
 impl Drop for AsyncAudioProcessingService {
     fn drop(&mut self) {
         // 发送取消信号
         // 注意：在Drop中无法使用await，所以使用try_lock
         // 如果无法获取锁，说明可能已经在清理过程中
-        if let Ok(mut cancel_tx_guard) = self.cancel_tx.try_lock() {
-            if let Some(tx) = cancel_tx_guard.take() {
+        if let Ok(mut cancel_tx_guard) = self.cancel_tx.try_lock()
+            && let Some(tx) = cancel_tx_guard.take() {
                 let _ = tx.send(());
             }
-        }
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::audio::effects::{ReverbConfig, ReverbEffect};
+    use crate::audio::effects::ReverbConfig;
 
     #[tokio::test]
     async fn test_process_samples() {

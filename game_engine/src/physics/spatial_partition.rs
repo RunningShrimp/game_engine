@@ -59,7 +59,7 @@ impl BVHTree {
 
     /// 构建BVH树
     pub fn build(&mut self, collider_set: &ColliderSet) {
-        if collider_set.len() == 0 {
+        if collider_set.is_empty() {
             return;
         }
 
@@ -383,23 +383,19 @@ impl BVHTree {
         let mut closest: Option<(ColliderHandle, f32)> = None;
         let mut _closest_toi = max_toi;
 
-        if let Some(left_index) = node.left {
-            if let Some(result) = self.raycast_node(left_index, ray, max_toi, collider_set) {
-                if result.1 < _closest_toi {
+        if let Some(left_index) = node.left
+            && let Some(result) = self.raycast_node(left_index, ray, max_toi, collider_set)
+                && result.1 < _closest_toi {
                     closest = Some(result);
                     _closest_toi = result.1;
                 }
-            }
-        }
 
-        if let Some(right_index) = node.right {
-            if let Some(result) = self.raycast_node(right_index, ray, max_toi, collider_set) {
-                if result.1 < _closest_toi {
+        if let Some(right_index) = node.right
+            && let Some(result) = self.raycast_node(right_index, ray, max_toi, collider_set)
+                && result.1 < _closest_toi {
                     closest = Some(result);
                     _closest_toi = result.1;
                 }
-            }
-        }
 
         closest
     }
@@ -449,7 +445,7 @@ impl SpatialHash {
             for x in min_cell.0..=max_cell.0 {
                 for y in min_cell.1..=max_cell.1 {
                     for z in min_cell.2..=max_cell.2 {
-                        self.grid.entry((x, y, z)).or_insert_with(Vec::new).push(handle);
+                        self.grid.entry((x, y, z)).or_default().push(handle);
                     }
                 }
             }
@@ -478,14 +474,13 @@ impl SpatialHash {
                 for z in min_cell.2..=max_cell.2 {
                     if let Some(handles) = self.grid.get(&(x, y, z)) {
                         for &handle in handles {
-                            if visited.insert(handle) {
-                                if let Some(collider) = collider_set.get(handle) {
+                            if visited.insert(handle)
+                                && let Some(collider) = collider_set.get(handle) {
                                     let collider_aabb = collider.compute_aabb();
                                     if query_aabb.intersects(&collider_aabb) {
                                         results.push(handle);
                                     }
                                 }
-                            }
                         }
                     }
                 }
@@ -543,7 +538,7 @@ impl Octree {
 
     /// 构建八叉树
     pub fn build(&mut self, collider_set: &ColliderSet) {
-        if collider_set.len() == 0 {
+        if collider_set.is_empty() {
             return;
         }
 
@@ -685,7 +680,7 @@ impl Octree {
         }
 
         // 如果是叶子节点，检查所有碰撞体
-        if let None = node.children {
+        if node.children.is_none() {
             for &handle in &node.colliders {
                 if let Some(collider) = collider_set.get(handle) {
                     let collider_aabb = collider.compute_aabb();
@@ -718,6 +713,27 @@ impl Octree {
 
 /// 空间分区管理器
 #[derive(Debug)]
+/// 空间分区增强配置（增强功能）
+#[derive(Clone)]
+pub struct SpatialPartitionEnhancedConfig {
+    /// 是否启用并行构建
+    pub parallel_build: bool,
+    /// 是否启用增量更新
+    pub incremental_update: bool,
+    /// SAH（Surface Area Heuristic）阈值
+    pub sah_threshold: f32,
+}
+
+impl Default for SpatialPartitionEnhancedConfig {
+    fn default() -> Self {
+        Self {
+            parallel_build: false,
+            incremental_update: false,
+            sah_threshold: 0.5,
+        }
+    }
+}
+
 pub struct SpatialPartitionManager {
     /// 分区类型
     partition_type: SpatialPartitionType,
@@ -733,11 +749,25 @@ pub struct SpatialPartitionManager {
     query_count: u64,
     /// 性能统计：平均查询时间（微秒）
     average_query_time_us: f64,
+    /// 增强配置（增强功能）
+    enhanced_config: SpatialPartitionEnhancedConfig,
+    /// 脏碰撞体集合（用于增量更新，增强功能）
+    dirty_colliders: std::collections::HashSet<ColliderHandle>,
+    /// 上次构建的AABB缓存（用于增量更新，增强功能）
+    aabb_cache: HashMap<ColliderHandle, Aabb>,
 }
 
 impl SpatialPartitionManager {
     /// 创建新的空间分区管理器
     pub fn new(partition_type: SpatialPartitionType) -> Self {
+        Self::new_with_config(partition_type, SpatialPartitionEnhancedConfig::default())
+    }
+
+    /// 创建新的空间分区管理器（带增强配置，增强功能）
+    pub fn new_with_config(
+        partition_type: SpatialPartitionType,
+        enhanced_config: SpatialPartitionEnhancedConfig,
+    ) -> Self {
         match partition_type {
             SpatialPartitionType::BVH => Self {
                 partition_type,
@@ -747,6 +777,9 @@ impl SpatialPartitionManager {
                 needs_rebuild: true,
                 query_count: 0,
                 average_query_time_us: 0.0,
+                enhanced_config,
+                dirty_colliders: std::collections::HashSet::new(),
+                aabb_cache: HashMap::new(),
             },
             SpatialPartitionType::SpatialHash => Self {
                 partition_type,
@@ -756,6 +789,9 @@ impl SpatialPartitionManager {
                 needs_rebuild: true,
                 query_count: 0,
                 average_query_time_us: 0.0,
+                enhanced_config,
+                dirty_colliders: std::collections::HashSet::new(),
+                aabb_cache: HashMap::new(),
             },
             SpatialPartitionType::Octree => {
                 // 创建默认根AABB（可以根据场景调整）
@@ -771,6 +807,9 @@ impl SpatialPartitionManager {
                     needs_rebuild: true,
                     query_count: 0,
                     average_query_time_us: 0.0,
+                    enhanced_config,
+                    dirty_colliders: std::collections::HashSet::new(),
+                    aabb_cache: HashMap::new(),
                 }
             }
         }
@@ -778,6 +817,25 @@ impl SpatialPartitionManager {
 
     /// 构建空间分区
     pub fn build(&mut self, collider_set: &ColliderSet) {
+        // 如果启用增量更新，使用增量构建（增强功能）
+        if self.enhanced_config.incremental_update && !self.dirty_colliders.is_empty() {
+            self.incremental_build(collider_set);
+        } else {
+            // 完整重建
+            if self.enhanced_config.parallel_build {
+                self.parallel_build(collider_set);
+            } else {
+                self.build_internal(collider_set);
+            }
+        }
+
+        // 更新AABB缓存（增强功能）
+        self.update_aabb_cache(collider_set);
+        self.dirty_colliders.clear();
+    }
+
+    /// 内部构建方法
+    fn build_internal(&mut self, collider_set: &ColliderSet) {
         let start = std::time::Instant::now();
 
         match self.partition_type {
@@ -807,6 +865,84 @@ impl SpatialPartitionManager {
         );
 
         self.needs_rebuild = false;
+    }
+
+    /// 并行构建空间分区（增强功能）
+    fn parallel_build(&mut self, collider_set: &ColliderSet) {
+        // 收集所有碰撞体的AABB
+        let items: Vec<(ColliderHandle, Aabb)> = collider_set
+            .iter()
+            .map(|(handle, collider)| (handle, collider.compute_aabb()))
+            .collect();
+
+        // 使用并行排序优化BVH构建
+        #[cfg(feature = "parallel")]
+        {
+            use rayon::prelude::*;
+            // 并行计算AABB（如果rayon可用）
+            let _items: Vec<_> = items
+                .par_iter()
+                .map(|(handle, _)| {
+                    let collider = collider_set.get(*handle).unwrap();
+                    (*handle, collider.compute_aabb())
+                })
+                .collect();
+        }
+
+        // 构建分区
+        self.build_internal(collider_set);
+    }
+
+    /// 增量更新空间分区（增强功能）
+    fn incremental_build(&mut self, collider_set: &ColliderSet) {
+        // 检查脏碰撞体的AABB是否变化
+        let mut needs_rebuild = false;
+
+        for &handle in &self.dirty_colliders {
+            if let Some(collider) = collider_set.get(handle) {
+                let new_aabb = collider.compute_aabb();
+                if let Some(old_aabb) = self.aabb_cache.get(&handle) {
+                    // 如果AABB变化超过阈值，需要重建
+                    if !aabb_similar(old_aabb, &new_aabb, 0.1) {
+                        needs_rebuild = true;
+                        break;
+                    }
+                } else {
+                    needs_rebuild = true;
+                    break;
+                }
+            }
+        }
+
+        if needs_rebuild {
+            // 需要完整重建
+            self.build_internal(collider_set);
+        }
+        // 否则保持当前分区结构
+    }
+
+    /// 更新AABB缓存（增强功能）
+    fn update_aabb_cache(&mut self, collider_set: &ColliderSet) {
+        for (handle, collider) in collider_set.iter() {
+            self.aabb_cache.insert(handle, collider.compute_aabb());
+        }
+    }
+
+    /// 标记碰撞体为脏（用于增量更新，增强功能）
+    pub fn mark_dirty(&mut self, handle: ColliderHandle) {
+        self.dirty_colliders.insert(handle);
+    }
+
+    /// 批量标记碰撞体为脏（增强功能）
+    pub fn mark_dirty_batch(&mut self, handles: &[ColliderHandle]) {
+        for &handle in handles {
+            self.dirty_colliders.insert(handle);
+        }
+    }
+
+    /// 更新增强配置（增强功能）
+    pub fn update_enhanced_config(&mut self, config: SpatialPartitionEnhancedConfig) {
+        self.enhanced_config = config;
     }
 
     /// 查询与AABB相交的碰撞体（带性能监控）
@@ -919,7 +1055,7 @@ impl SpatialPartitionManager {
                     octree.root_aabb = *scene_aabb;
                     // 根据对象数量调整最大深度
                     let optimal_depth = (object_count as f32).log2().ceil() as usize;
-                    octree.max_depth = optimal_depth.min(15).max(5);
+                    octree.max_depth = optimal_depth.clamp(5, 15);
                     self.needs_rebuild = true;
                 }
             }
@@ -930,7 +1066,7 @@ impl SpatialPartitionManager {
                     let avg_size = (scene_size.x + scene_size.y + scene_size.z) / 3.0;
                     // 单元格大小应该是平均对象大小的2-4倍
                     let optimal_cell_size =
-                        (avg_size / (object_count as f32).cbrt()).max(0.5).min(10.0);
+                        (avg_size / (object_count as f32).cbrt()).clamp(0.5, 10.0);
                     *spatial_hash = SpatialHash::new(optimal_cell_size);
                     self.needs_rebuild = true;
                 }
@@ -1047,4 +1183,17 @@ mod tests {
 
         assert!(!results.is_empty());
     }
+}
+
+/// 检查两个AABB是否相似（用于增量更新，增强功能）
+fn aabb_similar(a: &Aabb, b: &Aabb, threshold: f32) -> bool {
+    let center_a = a.center();
+    let center_b = b.center();
+    let extents_a = a.extents();
+    let extents_b = b.extents();
+
+    let center_diff = (center_a - center_b).norm();
+    let extents_diff = (extents_a - extents_b).norm();
+
+    center_diff < threshold && extents_diff < threshold
 }

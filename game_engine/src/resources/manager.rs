@@ -93,10 +93,10 @@ impl<T: 'static + Send + Sync> Handle<T> {
     where
         T: Clone,
     {
-        self.container.state.try_read().ok().and_then(|state| match &*state {
-            LoadState::Loaded(v) => Some(LoadState::Loaded(v.clone())),
-            LoadState::Failed(e) => Some(LoadState::Failed(e.clone())),
-            LoadState::Loading => Some(LoadState::Loading),
+        self.container.state.try_read().ok().map(|state| match &*state {
+            LoadState::Loaded(v) => LoadState::Loaded(v.clone()),
+            LoadState::Failed(e) => LoadState::Failed(e.clone()),
+            LoadState::Loading => LoadState::Loading,
         })
     }
 
@@ -238,6 +238,12 @@ pub enum AssetEvent {
     AtlasFailed(Handle<Atlas>, String),
     #[cfg(feature = "gltf")]
     GltfFailed(Handle<GltfScene>, String),
+}
+
+impl Default for AssetServer {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl AssetServer {
@@ -812,11 +818,10 @@ impl Drop for AssetServer {
             let _ = shutdown_tx.send(());
         }
 
-        if let Some(handle) = self.worker_handle.take() {
-            if let Err(e) = handle.join() {
+        if let Some(handle) = self.worker_handle.take()
+            && let Err(e) = handle.join() {
                 log::error!("Asset loader thread panicked: {:?}", e);
             }
-        }
     }
 }
 
@@ -864,8 +869,7 @@ pub fn import_gltf_to_world(
                     texcoord_index = info.tex_coord();
                 }
                 let uvs: Vec<[f32; 2]> = reader
-                    .read_tex_coords(texcoord_index)
-                    .and_then(|tc| Some(tc.into_f32()))
+                    .read_tex_coords(texcoord_index).map(|tc| tc.into_f32())
                     .map(|it| it.collect())
                     .unwrap_or_else(|| vec![[0.0, 0.0]; positions.len()]);
                 let mut tangents: Vec<[f32; 4]> =
@@ -905,34 +909,30 @@ pub fn import_gltf_to_world(
                 // KHR_texture_transform（UV变换）解析（仅 .gltf JSON 可用）
                 let reader = primitive.reader(|buf| Some(&buffers[buf.index()]));
                 let mut final_vertices = vertices;
-                if let Some(ref json) = scene.json {
-                    if let Some(materials) = json.get("materials").and_then(|v| v.as_array()) {
-                        if let Some(mi) = primitive.material().index() {
-                            if let Some(mj) = materials.get(mi) {
-                                if let Some(pbr_json) = mj.get("pbrMetallicRoughness") {
-                                    if let Some(bct) = pbr_json.get("baseColorTexture") {
-                                        if let Some(ext) = bct.get("extensions") {
-                                            if let Some(tt) = ext.get("KHR_texture_transform") {
+                if let Some(ref json) = scene.json
+                    && let Some(materials) = json.get("materials").and_then(|v| v.as_array())
+                        && let Some(mi) = primitive.material().index()
+                            && let Some(mj) = materials.get(mi)
+                                && let Some(pbr_json) = mj.get("pbrMetallicRoughness")
+                                    && let Some(bct) = pbr_json.get("baseColorTexture")
+                                        && let Some(ext) = bct.get("extensions")
+                                            && let Some(tt) = ext.get("KHR_texture_transform") {
                                                 if let Some(off) =
                                                     tt.get("offset").and_then(|x| x.as_array())
-                                                {
-                                                    if off.len() >= 2 {
+                                                    && off.len() >= 2 {
                                                         mat.uv_offset = [
                                                             off[0].as_f64().unwrap_or(0.0) as f32,
                                                             off[1].as_f64().unwrap_or(0.0) as f32,
                                                         ];
                                                     }
-                                                }
                                                 if let Some(scl) =
                                                     tt.get("scale").and_then(|x| x.as_array())
-                                                {
-                                                    if scl.len() >= 2 {
+                                                    && scl.len() >= 2 {
                                                         mat.uv_scale = [
                                                             scl[0].as_f64().unwrap_or(1.0) as f32,
                                                             scl[1].as_f64().unwrap_or(1.0) as f32,
                                                         ];
                                                     }
-                                                }
                                                 if let Some(rot) =
                                                     tt.get("rotation").and_then(|x| x.as_f64())
                                                 {
@@ -943,8 +943,7 @@ pub fn import_gltf_to_world(
                                                 {
                                                     let tc_i = tc as u32;
                                                     let uvs2: Vec<[f32; 2]> = reader
-                                                        .read_tex_coords(tc_i)
-                                                        .and_then(|tc| Some(tc.into_f32()))
+                                                        .read_tex_coords(tc_i).map(|tc| tc.into_f32())
                                                         .map(|it| it.collect())
                                                         .unwrap_or_else(|| {
                                                             // Get original UVs if the alternate set doesn't exist
@@ -974,8 +973,7 @@ pub fn import_gltf_to_world(
                                                                 texcoord_index = info.tex_coord();
                                                             }
                                                             reader
-                                                                .read_tex_coords(texcoord_index)
-                                                                .and_then(|tc| Some(tc.into_f32()))
+                                                                .read_tex_coords(texcoord_index).map(|tc| tc.into_f32())
                                                                 .map(|it| it.collect())
                                                                 .unwrap_or_else(|| {
                                                                     vec![
@@ -992,13 +990,6 @@ pub fn import_gltf_to_world(
                                                     }
                                                 }
                                             }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
 
                 // Store the vertex and index data for later processing
                 let mesh_id = mesh.index() as u64;

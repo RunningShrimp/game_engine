@@ -115,7 +115,7 @@ mod audio_service_tests {
             service.pause_sound("test");
             service.resume_sound("test");
             service.stop_sound("test");
-
+ 
             // 清理
             service.cleanup();
         }
@@ -128,7 +128,7 @@ mod audio_service_tests {
             service.set_volume("test", 0.8);
             service.set_volume("test", 0.0); // 静音
             service.set_volume("test", 1.0); // 最大音量
-
+ 
             service.cleanup();
         }
     }
@@ -183,7 +183,7 @@ mod audio_service_tests {
     fn test_audio_backend_trait() {
         // 测试AudioBackend trait的实现
         // 注意：这个测试需要实际的音频设备，在CI中可能失败
-        if let Some(mut service) = AudioService::new() {
+        if let Some(service) = AudioService::new() {
             // 测试is_playing（不存在的音频）
             assert!(!service.is_playing("nonexistent"));
             assert!(!service.is_paused("nonexistent"));
@@ -231,12 +231,14 @@ mod render_service_tests {
     use crate::render::lod::LodConfig;
     use bevy_ecs::prelude::*;
     use glam::{Mat4, Quat, Vec3};
-    use std::default::Default;
-    use std::sync::Arc;
+// std::default::Default 未在此文件中使用，但可能在未来需要
+// use std::default::Default;
+// Arc 未在此文件中使用，但可能在未来需要
+// use std::sync::Arc;
 
     #[test]
     fn test_render_service_creation() {
-        let service = RenderService::new();
+        let mut service = RenderService::new();
         assert_eq!(service.render_scene().objects().len(), 0);
     }
 
@@ -267,17 +269,19 @@ mod render_service_tests {
 
     #[test]
     fn test_render_service_scene_validation() {
-        let service = RenderService::new();
+        let mut service = RenderService::new();
         assert!(service.validate_scene().is_ok());
     }
 
     #[test]
     fn test_render_service_render_strategy_selection() {
-        use crate::domain::render::{RenderObject, RenderObjectId, RenderStrategy};
-        use crate::ecs::Transform;
-        use crate::render::mesh::GpuMesh;
+// RenderObject、RenderObjectId、Transform、GpuMesh 未在此文件中使用，但可能在未来需要
+        use crate::render::domain_objects::RenderStrategy;
+// use crate::render::domain_objects::{RenderObject, RenderObjectId, RenderStrategy};
+// use crate::ecs::Transform;
+// use crate::render::mesh::GpuMesh;
 
-        let service = RenderService::new();
+        let mut service = RenderService::new();
 
         // 由于 GpuMesh 需要真实的 wgpu Device，此测试验证服务的其他方面
         // GpuMesh 相关的渲染策略选择在集成测试中完整测试
@@ -295,7 +299,7 @@ mod render_service_tests {
 
     #[test]
     fn test_render_service_lod_suggestion_basic() {
-        let service = RenderService::new();
+        let mut service = RenderService::new();
 
         let suggestion = service.suggest_lod_adjustment(16.0, Some(0.8));
         // suggest_lod_adjustment 返回 f32 (LOD调整因子)
@@ -311,7 +315,7 @@ mod render_service_tests {
 
     #[test]
     fn test_render_service_error_stats() {
-        let service = RenderService::new();
+        let mut service = RenderService::new();
         let (total, recovered) = service.get_error_stats();
         assert_eq!(total, 0);
         assert_eq!(recovered, 0);
@@ -326,14 +330,14 @@ mod render_service_tests {
 
     #[test]
     fn test_render_service_renderable_objects_empty() {
-        let service = RenderService::new();
+        let mut service = RenderService::new();
         let renderable: Vec<_> = service.get_renderable_objects().collect();
         assert_eq!(renderable.len(), 0);
     }
 
     #[test]
     fn test_render_service_render_commands_empty() {
-        let service = RenderService::new();
+        let mut service = RenderService::new();
         let commands = service.get_render_commands();
         assert_eq!(commands.len(), 0);
     }
@@ -416,7 +420,7 @@ mod render_service_tests {
 
     #[test]
     fn test_render_service_strategy_selection() {
-        let service = RenderService::new();
+        let mut service = RenderService::new();
 
         // 由于 GpuMesh 需要真实的 wgpu Device，此测试验证服务的其他方面
         // GpuMesh 相关的渲染策略选择在集成测试中完整测试
@@ -429,40 +433,40 @@ mod render_service_tests {
         let strategy = service.select_strategy_for_instances(15, true);
         assert!(matches!(
             strategy,
-            crate::domain::render::RenderStrategy::Instanced
+            crate::render::domain_objects::RenderStrategy::Instanced
         ));
     }
 
     #[test]
     fn test_render_service_instance_strategy_selection() {
-        let service = RenderService::new();
+        let mut service = RenderService::new();
 
         // 测试实例化策略选择
         let instanced_strategy = service.select_strategy_for_instances(15, true);
         assert!(matches!(
             instanced_strategy,
-            crate::domain::render::RenderStrategy::Instanced
+            crate::render::domain_objects::RenderStrategy::Instanced
         ));
 
         let static_strategy = service.select_strategy_for_instances(5, true);
         assert!(matches!(
             static_strategy,
-            crate::domain::render::RenderStrategy::StaticBatch
+            crate::render::domain_objects::RenderStrategy::StaticBatch
         ));
 
         let dynamic_strategy = service.select_strategy_for_instances(5, false);
         assert!(matches!(
             dynamic_strategy,
-            crate::domain::render::RenderStrategy::DynamicBatch
+            crate::render::domain_objects::RenderStrategy::DynamicBatch
         ));
     }
 
     #[test]
     fn test_render_service_instancing_decision() {
-        let service = RenderService::new();
+        let mut service = RenderService::new();
 
-        let instanced = crate::domain::render::RenderStrategy::Instanced;
-        let static_batch = crate::domain::render::RenderStrategy::StaticBatch;
+        let instanced = crate::render::domain_objects::RenderStrategy::Instanced;
+        let static_batch = crate::render::domain_objects::RenderStrategy::StaticBatch;
 
         // 测试实例化决策
         assert!(service.should_use_instancing(&instanced, 15));
@@ -472,7 +476,7 @@ mod render_service_tests {
 
     #[test]
     fn test_render_service_lod_suggestion() {
-        let service = RenderService::new();
+        let mut service = RenderService::new();
 
         // 测试正常帧时间
         let adjustment = service.suggest_lod_adjustment(16.0, Some(0.5));
@@ -576,7 +580,7 @@ mod render_service_tests {
 
     #[test]
     fn test_render_service_new() {
-        let service = RenderService::new();
+        let mut service = RenderService::new();
         // 验证服务创建成功
         assert!(service.render_scene().objects().is_empty());
     }
@@ -627,7 +631,7 @@ mod render_service_tests {
 
     #[test]
     fn test_render_service_get_renderable_objects() {
-        let service = RenderService::new();
+        let mut service = RenderService::new();
         let objects: Vec<_> = service.get_renderable_objects().collect();
         assert_eq!(objects.len(), 0);
     }
@@ -680,7 +684,7 @@ mod render_service_tests {
 
     #[test]
     fn test_render_service_get_render_commands() {
-        let service = RenderService::new();
+        let mut service = RenderService::new();
         let commands = service.get_render_commands();
         // 空场景应该返回空命令列表
         assert_eq!(commands.len(), 0);
@@ -688,7 +692,7 @@ mod render_service_tests {
 
     #[test]
     fn test_render_service_render_scene_access() {
-        let service = RenderService::new();
+        let mut service = RenderService::new();
         let scene = service.render_scene();
         // 验证可以访问渲染场景
         assert_eq!(scene.objects().len(), 0);
@@ -777,7 +781,7 @@ mod render_service_tests {
 
     #[test]
     fn test_render_service_get_render_commands_empty_scene() {
-        let service = RenderService::new();
+        let mut service = RenderService::new();
         let commands = service.get_render_commands();
         assert_eq!(commands.len(), 0);
     }
@@ -821,7 +825,7 @@ mod render_service_tests {
 mod domain_service_tests {
     use crate::domain::audio::AudioSourceId;
     use crate::domain::physics::{RigidBody, RigidBodyId, RigidBodyType};
-    use crate::domain::scene::{SceneId, SceneManager};
+    use crate::domain::scene::{SceneId, SceneRepository};
     use crate::domain::services::{
         AudioDomainService, DIContainer, DomainServiceFactory, PhysicsDomainService,
     };
@@ -953,13 +957,13 @@ mod domain_service_tests {
     fn test_audio_domain_service_error_handling() {
         use crate::domain::services::AudioDomainService;
         let mut service = AudioDomainService::new();
-
+        
         // 测试不存在的音频源操作
         assert!(service.play_source(AudioSourceId(999)).is_err());
         assert!(service.stop_source(AudioSourceId(999)).is_err());
         assert!(service.pause_source(AudioSourceId(999)).is_err());
         assert!(service.resume_source(AudioSourceId(999)).is_err());
-
+        
         // 测试设置不存在音频源的音量
         let volume = crate::domain::value_objects::Volume::new(0.5).unwrap();
         assert!(service.set_source_volume(AudioSourceId(999), volume).is_err());
@@ -969,14 +973,14 @@ mod domain_service_tests {
     fn test_audio_domain_service_boundary_conditions() {
         use crate::domain::services::AudioDomainService;
         let mut service = AudioDomainService::new();
-
+        
         // 测试边界条件：创建多个音频源
         for i in 0..10 {
             service
                 .create_source(AudioSourceId(i as u64), &format!("test{}.wav", i))
                 .unwrap();
         }
-
+        
         assert_eq!(service.source_ids().len(), 10);
     }
 
@@ -984,9 +988,9 @@ mod domain_service_tests {
     fn test_audio_domain_service_invalid_volume() {
         use crate::domain::services::AudioDomainService;
         let mut service = AudioDomainService::new();
-
+        
         service.create_source(AudioSourceId(1), "test.wav").unwrap();
-
+        
         // 测试无效音量值
         let invalid_volume = crate::domain::value_objects::Volume::new(1.5); // 超出范围
         assert!(invalid_volume.is_none());
@@ -996,9 +1000,9 @@ mod domain_service_tests {
     fn test_audio_domain_service_duplicate_source_id() {
         use crate::domain::services::AudioDomainService;
         let mut service = AudioDomainService::new();
-
+        
         service.create_source(AudioSourceId(1), "test1.wav").unwrap();
-
+        
         // 尝试创建重复ID的音频源
         let result = service.create_source(AudioSourceId(1), "test2.wav");
         assert!(result.is_err());
@@ -1160,10 +1164,10 @@ mod domain_service_tests {
 
     #[test]
     fn test_physics_domain_service_get_world() {
-        let service = crate::domain::services::PhysicsDomainService::new();
+        let mut service = crate::domain::services::PhysicsDomainService::new();
 
         // 获取物理世界
-        let world = service.get_world();
+        let _world = service.get_world();
         // 验证获取成功（没有panic）
     }
 
@@ -1186,7 +1190,7 @@ mod domain_service_tests {
         // Use the correct method to update a body's position
         let body = RigidBody::dynamic(RigidBodyId(1), Vec3::ZERO);
         service.add_body(body).unwrap();
-        let mut updated_body = RigidBody::dynamic(RigidBodyId(1), Vec3::new(10.0, 10.0, 10.0));
+        let updated_body = RigidBody::dynamic(RigidBodyId(1), Vec3::new(10.0, 10.0, 10.0));
         assert!(service.update_body(&updated_body).is_ok());
 
         let force = Vec3::new(10.0, 0.0, 0.0);
@@ -1252,7 +1256,7 @@ mod domain_service_tests {
 
     #[test]
     fn test_scene_domain_service_create_scene() {
-        let mut service = crate::domain::scene::SceneManager::new();
+        let mut service = crate::domain::scene::SceneRepository::new();
 
         // SceneDomainService::create_scene 接受 (id, name)
         assert!(service.create_scene(SceneId(1), "TestScene").is_ok());
@@ -1261,7 +1265,7 @@ mod domain_service_tests {
 
     #[test]
     fn test_scene_domain_service_load_scene() {
-        let mut service = crate::domain::scene::SceneManager::new();
+        let mut service = crate::domain::scene::SceneRepository::new();
 
         service.create_scene(SceneId(1), "TestScene").unwrap();
 
@@ -1274,8 +1278,8 @@ mod domain_service_tests {
 
     #[test]
     fn test_scene_domain_service_unload_scene() {
-        use crate::domain::scene::{SceneId, SceneManager};
-        let mut service = SceneManager::new();
+        use crate::domain::scene::{SceneId, SceneRepository};
+        let mut service = SceneRepository::new();
 
         service.create_scene(SceneId(1), "TestScene").unwrap();
         service.switch_to_scene(SceneId(1)).unwrap();
@@ -1288,7 +1292,7 @@ mod domain_service_tests {
 
     #[test]
     fn test_scene_domain_service_get_scene() {
-        let mut service = crate::domain::scene::SceneManager::new();
+        let mut service = crate::domain::scene::SceneRepository::new();
 
         service.create_scene(SceneId(1), "TestScene").unwrap();
 
@@ -1303,7 +1307,7 @@ mod domain_service_tests {
 
     #[test]
     fn test_scene_domain_service_get_scene_mut() {
-        let mut service = crate::domain::scene::SceneManager::new();
+        let mut service = crate::domain::scene::SceneRepository::new();
 
         service.create_scene(SceneId(1), "TestScene").unwrap();
 
@@ -1317,8 +1321,8 @@ mod domain_service_tests {
 
     #[test]
     fn test_scene_domain_service_get_active_scene_mut() {
-        use crate::domain::scene::{SceneId, SceneManager};
-        let mut service = SceneManager::new();
+        use crate::domain::scene::{SceneId, SceneRepository};
+        let mut service = SceneRepository::new();
 
         service.create_scene(SceneId(1), "TestScene").unwrap();
         service.switch_to_scene(SceneId(1)).unwrap();
@@ -1330,7 +1334,7 @@ mod domain_service_tests {
 
     #[test]
     fn test_scene_domain_service_update_scenes() {
-        let mut service = crate::domain::scene::SceneManager::new();
+        let mut service = crate::domain::scene::SceneRepository::new();
 
         service.create_scene(SceneId(1), "TestScene").unwrap();
         service.switch_to_scene(SceneId(1)).unwrap();
@@ -1341,7 +1345,7 @@ mod domain_service_tests {
 
     #[test]
     fn test_scene_domain_service_get_manager() {
-        let _service = crate::domain::scene::SceneManager::new();
+        let _service = crate::domain::scene::SceneRepository::new();
 
         // SceneDomainService 没有 get_manager 方法
         // 这是一个不正确的测试，跳过或修改
@@ -1350,7 +1354,7 @@ mod domain_service_tests {
 
     #[test]
     fn test_scene_domain_service_scene_ids() {
-        let mut service = SceneManager::new();
+        let mut service = SceneRepository::new();
 
         service.create_scene(SceneId(1), "Scene1").unwrap();
         service.create_scene(SceneId(2), "Scene2").unwrap();
@@ -1363,7 +1367,7 @@ mod domain_service_tests {
 
     #[test]
     fn test_scene_domain_service_error_handling() {
-        let mut service = SceneManager::new();
+        let mut service = SceneRepository::new();
 
         // 测试操作不存在的场景
         assert!(service.switch_to_scene(SceneId(999)).is_err());
@@ -1373,7 +1377,7 @@ mod domain_service_tests {
 
     #[test]
     fn test_scene_domain_service_duplicate_scene_id() {
-        let mut service = SceneManager::new();
+        let mut service = SceneRepository::new();
 
         // 创建第一个场景
         assert!(service.create_scene(SceneId(1), "Scene1").is_ok());
@@ -1384,8 +1388,8 @@ mod domain_service_tests {
 
     #[test]
     fn test_scene_domain_service_update_scenes_empty() {
-        use crate::domain::scene::SceneManager;
-        let mut service = SceneManager::new();
+        use crate::domain::scene::SceneRepository;
+        let mut service = SceneRepository::new();
 
         // 更新空场景管理器应该成功
         assert!(service.update(0.016).is_ok());
@@ -1393,8 +1397,8 @@ mod domain_service_tests {
 
     #[test]
     fn test_scene_domain_service_get_active_scene_when_none() {
-        use crate::domain::scene::SceneManager;
-        let mut service = SceneManager::new();
+        use crate::domain::scene::SceneRepository;
+        let mut service = SceneRepository::new();
 
         // 没有活跃场景时应该返回None
         assert!(service.active_scene().is_none());
@@ -1403,7 +1407,7 @@ mod domain_service_tests {
 
     #[test]
     fn test_scene_domain_service_delete_active_scene() {
-        let mut service = crate::domain::scene::SceneManager::new();
+        let mut service = crate::domain::scene::SceneRepository::new();
 
         service.create_scene(SceneId(1), "Scene1").unwrap();
         service.switch_to_scene(SceneId(1)).unwrap();
@@ -1436,8 +1440,8 @@ mod domain_service_tests {
         assert!(physics_service.is_some());
 
         // 解析未注册的服务
-        assert!(!container.is_registered::<SceneManager>());
-        let scene_service = container.resolve::<SceneManager>();
+        assert!(!container.is_registered::<SceneRepository>());
+        let scene_service = container.resolve::<SceneRepository>();
         assert!(scene_service.is_none());
     }
 
@@ -1520,7 +1524,7 @@ mod domain_service_tests {
         let container = DomainServiceFactory::create_di_container();
         assert!(container.is_registered::<AudioDomainService>());
         assert!(container.is_registered::<PhysicsDomainService>());
-        assert!(container.is_registered::<SceneManager>());
+        assert!(container.is_registered::<SceneRepository>());
     }
 }
 
@@ -1530,7 +1534,7 @@ mod scripting_service_tests {
 
     #[test]
     fn test_scripting_service_new() {
-        let _service = ScriptingService::new();
+        let service = ScriptingService::new();
         // 验证创建成功（没有panic）
     }
 

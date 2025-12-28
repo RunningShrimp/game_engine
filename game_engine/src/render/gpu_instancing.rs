@@ -184,7 +184,7 @@ impl GpuInstancingRenderer {
     /// * `instance_data` - 实例数据
     pub fn add_instance(&mut self, key: BatchKey, instance_data: InstanceData) {
         // 将实例添加到对应批次的实例列表
-        self.instances.entry(key).or_insert_with(Vec::new).push(instance_data);
+        self.instances.entry(key).or_default().push(instance_data);
     }
 
     /// 更新实例数据到GPU
@@ -201,7 +201,7 @@ impl GpuInstancingRenderer {
             let mut all_gpu_instances = Vec::new();
             let mut instance_id = 0u32;
 
-            for (_key, instances) in &self.instances {
+            for instances in self.instances.values() {
                 for instance_data in instances {
                     // 计算AABB（简化版本，实际应该从网格获取）
                     let aabb_min = instance_data.position - instance_data.scale * 0.5;

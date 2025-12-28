@@ -6,7 +6,7 @@ use crate::impl_default;
 use crate::plugins::{EnginePlugin, App, PluginVersion, PluginDependency};
 
 /// XR插件配置
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, bevy_ecs::prelude::Resource)]
 pub struct XrConfig {
     /// XR模式
     pub mode: XrMode,
@@ -48,6 +48,12 @@ impl XrPlugin {
     /// 使用自定义配置创建XR插件
     pub fn with_config(config: XrConfig) -> Self {
         Self { config }
+    }
+}
+
+impl Default for XrPlugin {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

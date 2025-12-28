@@ -1,0 +1,163 @@
+name: Code Quality Check
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+  workflow_dispatch:
+
+jobs:
+  unsafe-unwrap-check:
+    name: Check for Unsafe Unwrap
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check production code for unwrap()
+        run: |
+          echo "Checking for unsafe unwrap() calls in production code..."
+          unwrap_count=$(grep -r "unwrap()" src/ \
+            --include="*.rs" \
+            --exclude="*_test.rs" \
+            | grep -v "#\[test\]" \
+            | grep -v "mod.rs" \
+            | grep -v "///" \
+            | grep -v "unwrap_or" \
+            | grep -v "unwrap_or_else" \
+            | grep -v "expect(" \
+            | wc -l)
+
+          echo "Found $unwrap_count unwrap() calls in production code"
+
+          if [ $unwrap_count -gt 100 ]; then
+            echo "::warning::High number of unwrap() calls found: $unwrap_count"
+            echo "Consider migrating to safe error handling patterns:"
+            echo "  - RwLock: use safe_write/safe_read"
+            echo "  - Resources: use fetch_resource!/fetch_resource_mut!"
+            echo "  - SystemTime: use .expect() with message"
+            echo "  - Option: use .unwrap_or() or proper error handling"
+          fi
+
+          # Show detailed report
+          if [ $unwrap_count -gt 0 ]; then
+            echo ""
+            echo "Top 20 files with unwrap() calls:"
+            grep -r "unwrap()" src/ \
+              --include="*.rs" \
+              | grep -v "#\[test\]" \
+              | grep -v "mod.rs" \
+              | grep -v "///" \
+              | grep -v "unwrap_or" \
+              | grep -v "unwrap_or_else" \
+              | cut -d: -f1 \
+              | sort | uniq -c | sort -rn | head -20 || true
+          fi
+
+  dependency-audit:
+    name: Dependency Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+
+      - name: Install cargo-udeps
+        run: cargo install cargo-udeps
+
+      - name: Check for unused dependencies
+        run: |
+          echo "Checking for unused dependencies..."
+          cargo +nightly udeps || echo "Unused dependencies found - review output above"
+
+      - name: Check for duplicate dependencies
+        run: |
+          echo "Checking for duplicate dependencies..."
+          cargo tree -d || echo "Duplicate dependencies found - review output above"
+
+          dup_count=$(cargo tree -d 2>&1 | grep -c "-> " || true)
+          echo "Found $dup_count duplicate dependency groups"
+
+          if [ $dup_count -gt 50 ]; then
+            echo "::warning::High number of duplicate dependencies: $dup_count"
+            echo "Consider unifying versions in workspace"
+          fi
+
+  clippy-check:
+    name: Clippy Linting
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+          components: clippy
+
+      - name: Run clippy
+        run: |
+          echo "Running clippy lints..."
+          cargo clippy --all-targets --all-features -- -D warnings
+
+  format-check:
+    name: Code Format Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+          components: rustfmt
+
+      - name: Check formatting
+        run: |
+          echo "Checking code formatting..."
+          cargo fmt --all -- --check
+          echo "Code formatting check passed!"
+
+  test-coverage:
+    name: Test Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Run tests with coverage
+        run: |
+          echo "Running tests..."
+          cargo test --all-features --workspace
+
+      - name: Generate coverage summary
+        run: |
+          echo "Test coverage summary:"
+          echo "Note: Install tarpaulin for detailed coverage reports:"
+          echo "  cargo install cargo-tarpaulin"
+          echo "  cargo tarpaulin --out Html"
+
+  security-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install cargo-audit
+        run: cargo install cargo-audit
+
+      - name: Run security audit
+        run: |
+          echo "Running security audit..."
+          cargo audit || echo "Security vulnerabilities found - review output above"

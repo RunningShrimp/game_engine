@@ -73,6 +73,7 @@ impl ClipRect {
 }
 
 /// 裁剪栈,用于管理嵌套的裁剪区域
+#[derive(Default)]
 pub struct ClipStack {
     stack: Vec<ClipRect>,
 }
@@ -114,11 +115,6 @@ impl ClipStack {
     }
 }
 
-impl Default for ClipStack {
-    fn default() -> Self {
-        Self { stack: Vec::new() }
-    }
-}
 
 #[cfg(test)]
 mod tests {

@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 
 use super::ProfilingResult;
 use super::storage::*;
+use super::metrics::MetricCategory;
 
 // ============================================================================
 // 图表数据结构
@@ -430,6 +431,21 @@ impl TrendAnalyzer {
         }
 
         anomalies
+    }
+
+    /// 按类别过滤数据点
+    pub fn filter_by_category(&self, data_points: &[DataPoint], category: MetricCategory) -> Vec<DataPoint> {
+        data_points
+            .iter()
+            .filter(|point| point.category == category)
+            .cloned()
+            .collect()
+    }
+
+    /// 分析特定类别的趋势
+    pub fn analyze_category_trend(&self, data_points: &[DataPoint], category: MetricCategory) -> ProfilingResult<TrendAnalysis> {
+        let filtered = self.filter_by_category(data_points, category);
+        self.analyze_trend(&filtered)
     }
 }
 

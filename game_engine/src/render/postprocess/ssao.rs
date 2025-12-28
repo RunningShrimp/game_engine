@@ -281,9 +281,9 @@ impl SsaoPass {
         let mut rng = rand::rngs::ThreadRng::default();
         let mut samples = [[0.0f32; 4]; 64];
 
-        for i in 0..64 {
+        for (i, sample) in samples.iter_mut().enumerate() {
             // 在单位半球内生成随机点
-            let mut sample = [
+            let mut sample_data = [
                 rng.random::<f32>() * 2.0 - 1.0,
                 rng.random::<f32>() * 2.0 - 1.0,
                 rng.random::<f32>(),
@@ -292,19 +292,19 @@ impl SsaoPass {
 
             // 归一化
             let len =
-                (sample[0] * sample[0] + sample[1] * sample[1] + sample[2] * sample[2]).sqrt();
-            sample[0] /= len;
-            sample[1] /= len;
-            sample[2] /= len;
+                (sample_data[0] * sample_data[0] + sample_data[1] * sample_data[1] + sample_data[2] * sample_data[2]).sqrt();
+            sample_data[0] /= len;
+            sample_data[1] /= len;
+            sample_data[2] /= len;
 
             // 使采样点在核心附近更密集
             let scale = (i as f32) / 64.0;
             let scale = 0.1 + scale * scale * 0.9;
-            sample[0] *= scale;
-            sample[1] *= scale;
-            sample[2] *= scale;
+            sample_data[0] *= scale;
+            sample_data[1] *= scale;
+            sample_data[2] *= scale;
 
-            samples[i] = sample;
+            *sample = sample_data;
         }
 
         SsaoKernel { samples }

@@ -497,14 +497,19 @@ impl AsyncWorldGenerator {
         let mut entities = Vec::new();
         let mut rng = SimpleRng::new(12345);
 
+        // 使用配置中的对象密度来调整生成数量
+        let adjusted_count = (object_count as f32 * config.object_density) as usize;
+        let actual_count = adjusted_count.max(1); // 至少生成1个对象
+
         let (region_width, region_height) = region_size.unwrap_or((1000, 1000));
         let (region_x, region_y) = region_position.unwrap_or((0, 0));
 
-        for i in 0..object_count {
+        for i in 0..actual_count {
             let object_type = &object_types[i % object_types.len()];
             let x = region_x as f32 + rng.next_f32() * region_width as f32;
             let z = region_y as f32 + rng.next_f32() * region_height as f32;
-            let y = 0.0; // 简化：假设地面高度为0
+            // 使用配置中的噪声参数来影响Y坐标（地形高度）
+            let y = config.noise_strength * rng.next_f32();
 
             let mut properties = std::collections::HashMap::new();
             match object_type {
@@ -716,11 +721,10 @@ impl SimpleRng {
 
 impl Drop for AsyncWorldGenerator {
     fn drop(&mut self) {
-        if let Ok(mut cancel_tx_guard) = self.cancel_tx.try_lock() {
-            if let Some(tx) = cancel_tx_guard.take() {
+        if let Ok(mut cancel_tx_guard) = self.cancel_tx.try_lock()
+            && let Some(tx) = cancel_tx_guard.take() {
                 let _ = tx.send(());
             }
-        }
     }
 }
 

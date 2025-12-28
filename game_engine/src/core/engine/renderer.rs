@@ -1,5 +1,5 @@
 //  渲染模块
-//
+// 
 //  负责游戏引擎的渲染逻辑，包括：
 //  - 场景渲染
 //  - 光照处理
@@ -8,8 +8,8 @@
 //  - 性能监控
 
 use crate::ecs::{Camera, PointLight, Projection, Transform};
-use crate::platform::run_sync;
 use crate::platform::winit::WinitWindow;
+use crate::platform::run_sync;
 use crate::render::wgpu_utils::{GpuPointLight, WgpuRenderer};
 use crate::services::render::RenderService;
 use bevy_ecs::prelude::*;
@@ -46,15 +46,13 @@ pub fn render(
 ) {
     let _frame_span = crate::performance::tracing_metrics::TracingMetricsManager::frame_span(
         world.entities().len() as usize,
-        window.raw().scale_factor() as f64,
-    )
-    .entered();
+        window.raw().scale_factor()
+    ).entered();
 
     // Editor UI
     editor_ctx.begin_frame(window.raw());
-    // World Inspector UI已实现于game_engine/src/editor/world_inspector.rs
-    // 使用示例: editor_state.world_inspector.render(&editor_ctx.context, world);
-    // 注意：需要在EditorState中先获取可变引用，然后再调用render
+    // TODO: 实现世界检查UI
+    // crate::editor::inspect_world_ui(&editor_ctx.context, world);
     let egui_primitives = editor_ctx.end_frame(window.raw());
     let pixels_per_point = window.raw().scale_factor() as f32;
 
@@ -110,9 +108,9 @@ mod tests {
     #[test]
     fn test_extract_lights_with_point_light() {
         let mut world = World::new();
-
+        
         // 创建一个带点光源的实体
-        world.spawn((
+        let entity = world.spawn((
             Transform {
                 pos: Vec3::new(1.0, 2.0, 3.0),
                 rot: Quat::IDENTITY,
@@ -124,7 +122,7 @@ mod tests {
                 radius: 10.0,
                 falloff: 1.0,
             },
-        ));
+        )).id();
 
         let lights = extract_lights(&mut world);
         assert_eq!(lights.len(), 1);
@@ -133,7 +131,7 @@ mod tests {
 
     #[test]
     fn test_setup_camera_no_camera() {
-        let world = World::new();
+        let mut world = World::new();
         // 没有相机时应该返回默认值
         // 注意：这个测试可能需要mock renderer
     }
@@ -141,7 +139,7 @@ mod tests {
     #[test]
     fn test_setup_camera_with_camera() {
         let mut world = World::new();
-
+        
         // 创建一个带相机的实体
         world.spawn((
             Transform {
@@ -150,13 +148,13 @@ mod tests {
                 scale: Vec3::ONE,
             },
             Camera {
-                is_active: true,
                 projection: Projection::Perspective {
                     fov: 60.0,
                     aspect: 16.0 / 9.0,
                     near: 0.1,
                     far: 100.0,
                 },
+                is_active: true,
             },
         ));
 
@@ -271,20 +269,16 @@ fn render_pbr_scene(
     scene: &crate::services::render::PbrScene,
     view_proj: [[f32; 4]; 4],
     camera_pos: [f32; 3],
-    egui_renderer: Option<&mut egui_wgpu::Renderer>,
+    _egui_renderer: Option<&mut egui_wgpu::Renderer>,
     egui_primitives: &[egui::ClippedPrimitive],
     pixels_per_point: f32,
 ) {
-    let batch_count = world
-        .get_resource::<crate::render::instance_batch::BatchManager>()
-        .map(|bm| bm.stats.total_batches)
-        .unwrap_or(0);
-    let _render_span =
-        crate::performance::tracing_metrics::TracingMetricsManager::render_submit_span(
-            batch_count as usize,
-            egui_primitives.len(),
-        )
-        .entered();
+    let batch_count = world.get_resource::<crate::render::instance_batch::BatchManager>()
+        .map(|bm| bm.stats.total_batches).unwrap_or(0);
+    let _render_span = crate::performance::tracing_metrics::TracingMetricsManager::render_submit_span(
+        batch_count as usize,
+        egui_primitives.len()
+    ).entered();
     if let Some(mut bm) = world.get_resource_mut::<crate::render::instance_batch::BatchManager>() {
         renderer.upload_batches(&mut bm);
         if let Err(e) = render_service.paint_pbr(
@@ -293,7 +287,7 @@ fn render_pbr_scene(
             scene,
             view_proj,
             camera_pos,
-            egui_renderer,
+            _egui_renderer,
             egui_primitives,
             pixels_per_point,
         ) {
@@ -320,17 +314,14 @@ fn update_materials(world: &mut World, renderer: &mut WgpuRenderer) {
         Vec::new()
     };
 
-    if !updates.is_empty() {
-        if let Some(mut reg) =
+    if !updates.is_empty()
+        && let Some(mut reg) =
             world.get_resource_mut::<crate::resources::manager::MaterialRegistry>()
-        {
-            if let Some(ref pbr) = renderer.pbr_renderer {
+            && let Some(ref pbr) = renderer.pbr_renderer {
                 for (id, mat) in updates {
                     reg.update_material_params(renderer.device(), renderer.queue(), pbr, id, &mat);
                 }
             }
-        }
-    }
 }
 
 /// 更新渲染统计
@@ -358,11 +349,10 @@ fn update_render_stats(
     window: &WinitWindow,
 ) {
     // Update GPU timing
-    if let Some((_t0, dt)) = renderer.gpu_timings_ms() {
-        if let Some(mut stats) = world.get_resource_mut::<RenderStats>() {
+    if let Some((_t0, dt)) = renderer.gpu_timings_ms()
+        && let Some(mut stats) = world.get_resource_mut::<RenderStats>() {
             stats.gpu_pass_ms = Some(dt);
         }
-    }
 
     // Update draw call and instance statistics
     let (dc, ic) = renderer.draw_stats();
@@ -409,36 +399,32 @@ fn update_render_stats(
 /// * `stats` - 渲染统计
 fn check_performance_warnings(stats: &mut RenderStats) {
     // Upload time warning
-    if let Some(u) = stats.upload_ms {
-        if u > 2.0 {
+    if let Some(u) = stats.upload_ms
+        && u > 2.0 {
             stats.alerts_upload += 1;
             tracing::warn!(target: "render_perf", "Upload time too high: {:.2}ms", u);
         }
-    }
 
     // Main render time warning
-    if let Some(m) = stats.main_ms {
-        if m > 16.7 {
+    if let Some(m) = stats.main_ms
+        && m > 16.7 {
             stats.alerts_main += 1;
             tracing::warn!(target: "render_perf", "Main render time too high: {:.2}ms", m);
         }
-    }
 
     // UI render time warning
-    if let Some(u) = stats.ui_ms {
-        if u > 4.0 {
+    if let Some(u) = stats.ui_ms
+        && u > 4.0 {
             stats.alerts_ui += 1;
             tracing::warn!(target: "render_perf", "UI render time too high: {:.2}ms", u);
         }
-    }
 
     // Offscreen render time warning
-    if let Some(o) = stats.offscreen_ms {
-        if o > 8.0 {
+    if let Some(o) = stats.offscreen_ms
+        && o > 8.0 {
             stats.alerts_offscreen += 1;
             tracing::warn!(target: "render_perf", "Offscreen render time too high: {:.2}ms", o);
         }
-    }
 }
 
 /// 写入渲染统计CSV
@@ -451,7 +437,7 @@ fn check_performance_warnings(stats: &mut RenderStats) {
 /// * `window` - 窗口实例
 fn write_render_stats_csv(stats: &RenderStats, window: &WinitWindow) {
     let path = std::env::temp_dir().join("render_stats.csv");
-    let _ = (|| {
+    let _ = {
         let line = format!(
             "{},{},{},{},{},{},{},{},{},{},{},{},{}\n",
             stats.draw_calls,
@@ -473,8 +459,11 @@ fn write_render_stats_csv(stats: &RenderStats, window: &WinitWindow) {
         let line_clone = line.clone();
         let _ = run_sync(async move {
             use tokio::io::AsyncWriteExt;
-            if let Ok(mut f) =
-                tokio::fs::OpenOptions::new().create(true).append(true).open(&path_clone).await
+            if let Ok(mut f) = tokio::fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(&path_clone)
+                .await
             {
                 f.write_all(line_clone.as_bytes()).await.ok()
             } else {
@@ -483,7 +472,7 @@ fn write_render_stats_csv(stats: &RenderStats, window: &WinitWindow) {
         });
 
         Some(())
-    })();
+    };
 }
 
 /// 获取渲染信息

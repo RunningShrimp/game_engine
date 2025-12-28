@@ -1,4 +1,33 @@
+//! 延迟渲染管线
+//!
+//! 实现延迟渲染（Deferred Rendering）管线，包括：
+//! - G-Buffer生成（几何阶段）
+//! - 延迟光照计算（光照阶段）
+//! - 支持多光源和CSM阴影
+//!
+//! ## 延迟渲染流程
+//!
+//! 1. **几何阶段（Geometry Pass）**: 渲染场景几何到G-Buffer
+//!    - 位置 + 深度
+//!    - 法线 + 粗糙度
+//!    - 反照率 + 金属度
+//!
+//! 2. **光照阶段（Lighting Pass）**: 从G-Buffer读取数据，计算光照
+//!    - 读取G-Buffer数据
+//!    - 应用PBR光照模型
+//!    - 支持方向光、点光源、CSM阴影
+//!
+//! ## 优势
+//!
+//! - 支持大量动态光源（不受几何复杂度影响）
+//! - 光照计算与几何分离，便于优化
+//! - 适合复杂光照场景
+
 use wgpu::util::DeviceExt;
+use glam::{Mat4, Vec3};
+// Vec4 未在此文件中使用，但可能在未来需要
+// use glam::Vec4;
+use bytemuck::{Pod, Zeroable};
 
 /// G-Buffer纹理
 pub struct GBuffer {
@@ -366,3 +395,247 @@ impl DeferredRenderer {
         self.gbuffer.resize(device, width, height, &self.gbuffer_bind_group_layout);
     }
 }
+
+// ============================================================================
+// 统一缓冲区结构
+// ============================================================================
+
+/// 相机统一缓冲区
+#[repr(C)]
+#[derive(Debug, Clone, Copy, Pod, Zeroable)]
+pub struct CameraUniform {
+    /// 视图投影矩阵
+    pub view_proj: [[f32; 4]; 4],
+    /// 相机位置
+    pub position: [f32; 3],
+    /// 填充对齐
+    pub _pad1: f32,
+    /// 视图矩阵
+    pub view: [[f32; 4]; 4],
+    /// 投影矩阵
+    pub projection: [[f32; 4]; 4],
+}
+
+impl CameraUniform {
+    pub fn new(view: Mat4, proj: Mat4, position: Vec3) -> Self {
+        Self {
+            view_proj: (proj * view).to_cols_array_2d(),
+            position: position.to_array(),
+            _pad1: 0.0,
+            view: view.to_cols_array_2d(),
+            projection: proj.to_cols_array_2d(),
+        }
+    }
+}
+
+/// 光照统一缓冲区
+#[repr(C)]
+#[derive(Debug, Clone, Copy, Pod, Zeroable)]
+pub struct LightingUniform {
+    /// 方向光方向
+    pub light_direction: [f32; 3],
+    /// 方向光强度
+    pub light_intensity: f32,
+    /// 方向光颜色
+    pub light_color: [f32; 3],
+    /// 环境光强度
+    pub ambient_intensity: f32,
+    /// 点光源数量
+    pub point_light_count: u32,
+    /// 填充对齐
+    pub _pad: [u32; 3],
+}
+
+impl Default for LightingUniform {
+    fn default() -> Self {
+        Self {
+            light_direction: [0.0, -1.0, 0.0],
+            light_intensity: 1.0,
+            light_color: [1.0, 1.0, 1.0],
+            ambient_intensity: 0.03,
+            point_light_count: 0,
+            _pad: [0; 3],
+        }
+    }
+}
+
+/// 延迟渲染配置
+#[derive(Debug, Clone)]
+pub struct DeferredConfig {
+    /// 启用延迟渲染
+    pub enabled: bool,
+    /// 启用CSM阴影
+    pub enable_csm: bool,
+    /// 最大点光源数量
+    pub max_point_lights: u32,
+    /// 启用SSAO
+    pub enable_ssao: bool,
+}
+
+impl Default for DeferredConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            enable_csm: true,
+            max_point_lights: 64,
+            enable_ssao: false,
+        }
+    }
+}
+
+/// 延迟渲染器（增强版）
+pub struct DeferredRendererEnhanced {
+    /// 基础延迟渲染器
+    pub renderer: DeferredRenderer,
+    /// 相机统一缓冲区
+    pub camera_uniform: wgpu::Buffer,
+    /// 相机绑定组
+    pub camera_bind_group: wgpu::BindGroup,
+    /// 相机绑定组布局
+    pub camera_bind_group_layout: wgpu::BindGroupLayout,
+    /// 光照统一缓冲区
+    pub lighting_uniform: wgpu::Buffer,
+    /// 光照绑定组
+    pub lighting_bind_group: wgpu::BindGroup,
+    /// 光照绑定组布局
+    pub lighting_bind_group_layout: wgpu::BindGroupLayout,
+    /// 配置
+    pub config: DeferredConfig,
+}
+
+impl DeferredRendererEnhanced {
+    /// 创建增强的延迟渲染器
+    pub fn new(
+        device: &wgpu::Device,
+        width: u32,
+        height: u32,
+        surface_format: wgpu::TextureFormat,
+    ) -> Self {
+        let renderer = DeferredRenderer::new(device, width, height, surface_format);
+
+        // 创建相机统一缓冲区
+        let camera_uniform = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Deferred Camera Uniform"),
+            size: std::mem::size_of::<CameraUniform>() as u64,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
+        // 创建相机绑定组布局
+        let camera_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("Deferred Camera BGL"),
+                entries: &[wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: std::num::NonZeroU64::new(std::mem::size_of::<CameraUniform>() as u64),
+                    },
+                    count: None,
+                }],
+            });
+
+        // 创建相机绑定组
+        let camera_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Deferred Camera Bind Group"),
+            layout: &camera_bind_group_layout,
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: camera_uniform.as_entire_binding(),
+            }],
+        });
+
+        // 创建光照统一缓冲区
+        let lighting_uniform = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Deferred Lighting Uniform"),
+            size: std::mem::size_of::<LightingUniform>() as u64,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
+        // 创建光照绑定组布局
+        let lighting_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("Deferred Lighting BGL"),
+                entries: &[wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: std::num::NonZeroU64::new(std::mem::size_of::<LightingUniform>() as u64),
+                    },
+                    count: None,
+                }],
+            });
+
+        // 创建光照绑定组
+        let lighting_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Deferred Lighting Bind Group"),
+            layout: &lighting_bind_group_layout,
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: lighting_uniform.as_entire_binding(),
+            }],
+        });
+
+        Self {
+            renderer,
+            camera_uniform,
+            camera_bind_group,
+            camera_bind_group_layout,
+            lighting_uniform,
+            lighting_bind_group,
+            lighting_bind_group_layout,
+            config: DeferredConfig::default(),
+        }
+    }
+
+    /// 更新相机参数
+    pub fn update_camera(
+        &self,
+        queue: &wgpu::Queue,
+        view: Mat4,
+        proj: Mat4,
+        position: Vec3,
+    ) {
+        let uniform = CameraUniform::new(view, proj, position);
+        queue.write_buffer(&self.camera_uniform, 0, bytemuck::cast_slice(&[uniform]));
+    }
+
+    /// 更新光照参数
+    pub fn update_lighting(
+        &self,
+        queue: &wgpu::Queue,
+        light_direction: Vec3,
+        light_color: Vec3,
+        light_intensity: f32,
+        ambient_intensity: f32,
+    ) {
+        let uniform = LightingUniform {
+            light_direction: light_direction.to_array(),
+            light_color: light_color.to_array(),
+            light_intensity,
+            ambient_intensity,
+            point_light_count: 0,
+            _pad: [0; 3],
+        };
+        queue.write_buffer(&self.lighting_uniform, 0, bytemuck::cast_slice(&[uniform]));
+    }
+
+    /// 调整大小
+    pub fn resize(&mut self, device: &wgpu::Device, width: u32, height: u32) {
+        self.renderer.resize(device, width, height);
+    }
+}
+
+// ============================================================================
+// 向后兼容导出
+// ============================================================================
+
+/// 延迟渲染器（基础版本）
+/// 
+/// 注意：推荐使用`DeferredRendererEnhanced`以获得完整功能
+pub type DeferredRendererBase = DeferredRenderer;

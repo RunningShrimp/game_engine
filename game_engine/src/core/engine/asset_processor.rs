@@ -61,15 +61,14 @@ pub fn process_asset_events(
 /// * `event` - 资源事件
 /// * `world` - ECS世界
 fn process_atlas_loaded_event(event: &AssetEvent, world: &mut World) {
-    if let AssetEvent::AtlasLoaded(h, _) = &event {
-        if let Some(atlas) = h.get() {
+    if let AssetEvent::AtlasLoaded(h, _) = &event
+        && let Some(atlas) = h.get() {
             let mut ts = world.get_resource_or_insert_with::<TileSet>(Default::default);
             for (name, (uv_off, uv_scale)) in atlas.sprites.iter() {
                 ts.tiles.insert(name.clone(), (*uv_off, *uv_scale));
             }
             tracing::info!(target: "assets", "Atlas loaded with {} sprites", atlas.sprites.len());
         }
-    }
 }
 
 /// 更新资源指标
@@ -225,9 +224,9 @@ pub fn cleanup_asset_cache(world: &mut World, asset_server: &mut AssetServer, fo
 /// * `renderer` - wgpu渲染器
 /// * `resource_paths` - 要预加载的资源路径列表
 #[allow(dead_code)]
-pub async fn preload_resources<'a>(
+pub async fn preload_resources(
     asset_server: &mut AssetServer,
-    renderer: &'a mut WgpuRenderer,
+    renderer: &mut WgpuRenderer,
     resource_paths: Vec<&str>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     tracing::info!(target: "assets", "Preloading {} resources", resource_paths.len());
@@ -291,14 +290,13 @@ pub fn validate_asset_integrity(
 
     // 使用asset_server检查已加载资源的一致性
     let loaded_textures = asset_server.get_loaded_texture_count();
-    if let Some(metrics) = world.get_resource::<AssetMetrics>() {
-        if loaded_textures != metrics.textures_loaded as usize {
+    if let Some(metrics) = world.get_resource::<AssetMetrics>()
+        && loaded_textures != metrics.textures_loaded as usize {
             issues.push(format!(
                 "Texture count mismatch: server reports {} but metrics show {}",
                 loaded_textures, metrics.textures_loaded
             ));
         }
-    }
 
     if issues.is_empty() {
         tracing::info!(target: "assets", "Asset integrity check passed");

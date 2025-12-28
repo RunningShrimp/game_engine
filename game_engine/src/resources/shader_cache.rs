@@ -13,6 +13,8 @@ use std::hash::{Hash, Hasher};
 use std::collections::hash_map::DefaultHasher;
 use serde::{Deserialize, Serialize};
 
+use super::time::current_timestamp_ms;
+
 /// 着色器缓存配置
 #[derive(Debug, Clone)]
 pub struct ShaderCacheConfig {
@@ -62,7 +64,7 @@ impl ShaderCacheKey {
     }
 
     /// 计算缓存键的哈希值
-    pub fn hash(&self) -> u64 {
+    pub fn compute_hash(&self) -> u64 {
         let mut hasher = DefaultHasher::new();
         self.hash(&mut hasher);
         hasher.finish()
@@ -70,7 +72,7 @@ impl ShaderCacheKey {
 
     /// 生成缓存文件路径
     pub fn cache_file_path(&self, cache_dir: &Path) -> PathBuf {
-        let hash = self.hash();
+        let hash = self.compute_hash();
         cache_dir.join(format!("{:016x}_{}.spv", hash, self.shader_type))
     }
 }
@@ -231,8 +233,8 @@ impl ShaderCache {
         // 检查磁盘缓存
         if self.config.enable_disk_cache {
             let cache_file = key.cache_file_path(&self.config.cache_dir);
-            if cache_file.exists() {
-                if let Ok(entry) = self.load_cache_entry_from_disk(&cache_file) {
+            if cache_file.exists()
+                && let Ok(entry) = self.load_cache_entry_from_disk(&cache_file) {
                     // 验证源文件哈希
                     if self.verify_source_hash(key, entry.source_hash) {
                         // 添加到内存缓存
@@ -248,7 +250,6 @@ impl ShaderCache {
                         return Some(entry.spirv);
                     }
                 }
-            }
         }
 
         let mut stats = self.stats.write().unwrap();
@@ -265,7 +266,7 @@ impl ShaderCache {
             key: key.clone(),
             spirv: spirv.clone(),
             source_hash,
-            compile_timestamp: crate::core::utils::current_timestamp_ms() as u64,
+            compile_timestamp: current_timestamp_ms(),
             cache_version: self.config.cache_version,
         };
 
@@ -273,11 +274,10 @@ impl ShaderCache {
         if self.config.enable_memory_cache {
             let mut memory_cache = self.memory_cache.write().unwrap();
             // 如果超过最大条目数，移除最旧的条目（简化实现：随机移除）
-            if memory_cache.len() >= self.config.max_memory_entries {
-                if let Some(oldest_key) = memory_cache.keys().next().cloned() {
+            if memory_cache.len() >= self.config.max_memory_entries
+                && let Some(oldest_key) = memory_cache.keys().next().cloned() {
                     memory_cache.remove(&oldest_key);
                 }
-            }
             memory_cache.insert(key.clone(), entry.clone());
         }
 
@@ -440,7 +440,8 @@ impl std::error::Error for ShaderCacheError {}
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs;
+    // std::fs 未在此文件中使用，但可能在未来需要
+    // use std::fs;
 
     #[test]
     fn test_shader_cache_key_hash() {
@@ -460,8 +461,8 @@ mod tests {
             vec!["OPTION1".to_string()],
         );
 
-        assert_eq!(key1.hash(), key2.hash());
-        assert_ne!(key1.hash(), key3.hash());
+        assert_eq!(key1.compute_hash(), key2.compute_hash());
+        assert_ne!(key1.compute_hash(), key3.compute_hash());
     }
 
     #[test]

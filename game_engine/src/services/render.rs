@@ -1,4 +1,4 @@
-use crate::domain::render::{
+use crate::render::domain_objects::{
     PbrScene as DomainPbrScene, RenderCommand, RenderObject as DomainRenderObject, RenderObjectId,
     RenderScene, RenderStrategy,
 };
@@ -207,7 +207,7 @@ impl RenderService {
     /// 更新视锥体（用于剔除）
     pub fn update_frustum(&mut self, view_proj: Mat4) {
         let frustum = Frustum::from_view_projection(view_proj);
-        self.current_frustum = Some(frustum.clone());
+        self.current_frustum = Some(frustum);
         self.render_scene.set_frustum(frustum);
     }
 
@@ -248,7 +248,7 @@ impl RenderService {
     pub fn update_scene(&mut self, delta_time: f32, camera_pos: Vec3) -> Result<(), RenderError> {
         // 确保视锥体已设置到RenderScene
         if let Some(ref frustum) = self.current_frustum {
-            self.render_scene.set_frustum(frustum.clone());
+            self.render_scene.set_frustum(*frustum);
         }
 
         // 委托给RenderScene聚合根更新场景
@@ -336,7 +336,7 @@ impl RenderService {
     /// use game_engine::render::mesh::GpuMesh;
     /// use std::sync::Arc;
     ///
-    /// let service = RenderService::new();
+    /// let mut service = RenderService::new();
     /// let mesh = Arc::new(GpuMesh::default());
     ///
     /// // 创建静态对象
@@ -381,7 +381,7 @@ impl RenderService {
     /// use game_engine::services::render::RenderService;
     /// use game_engine::domain::render::RenderStrategy;
     ///
-    /// let service = RenderService::new();
+    /// let mut service = RenderService::new();
     ///
     /// // 实例数量超过阈值，使用实例化
     /// let strategy = service.select_strategy_for_instances(15, true);
@@ -428,7 +428,7 @@ impl RenderService {
     /// use game_engine::services::render::RenderService;
     /// use game_engine::domain::render::RenderStrategy;
     ///
-    /// let service = RenderService::new();
+    /// let mut service = RenderService::new();
     ///
     /// // 实例化策略且实例数量超过阈值
     /// assert!(service.should_use_instancing(&RenderStrategy::Instanced, 15));
@@ -602,7 +602,7 @@ impl RenderService {
     /// ```rust
     /// use game_engine::services::render::RenderService;
     ///
-    /// let service = RenderService::new();
+    /// let mut service = RenderService::new();
     ///
     /// // 正常帧时间，不需要调整
     /// let adjustment = service.suggest_lod_adjustment(16.0, Some(0.5));
@@ -723,11 +723,10 @@ impl RenderService {
         let mut recovered_count = 0;
 
         for obj in self.render_scene.objects_mut() {
-            if obj.error_state.is_some() {
-                if obj.recover_from_error().is_ok() {
+            if obj.error_state.is_some()
+                && obj.recover_from_error().is_ok() {
                     recovered_count += 1;
                 }
-            }
         }
 
         recovered_count
@@ -755,7 +754,7 @@ impl RenderService {
     /// ```rust
     /// use game_engine::services::render::RenderService;
     ///
-    /// let service = RenderService::new();
+    /// let mut service = RenderService::new();
     ///
     /// // 获取错误统计
     /// let (errors, total) = service.get_error_stats();
@@ -1036,7 +1035,7 @@ mod tests {
 
     #[test]
     fn test_get_renderable_objects_empty() {
-        let service = RenderService::new();
+        let mut service = RenderService::new();
         let count = service.get_renderable_objects().count();
         assert_eq!(count, 0);
     }

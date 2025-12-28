@@ -10,6 +10,7 @@ use crate::domain::events::{AggregateRoot, DomainEvent, EventError};
 use crate::error::{safe_lock, safe_read, safe_write};
 use bevy_ecs::prelude::*;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex, RwLock};
 use tracing;
 
@@ -127,7 +128,7 @@ impl EventStore for MemoryEventStore {
     fn get_aggregate_events(&self, aggregate_id: &str) -> Vec<StoredEvent> {
         self.events
             .iter()
-            .filter(|e| e.aggregate_id.as_ref().map(|s| s.as_str()) == Some(aggregate_id))
+            .filter(|e| e.aggregate_id.as_deref() == Some(aggregate_id))
             .cloned()
             .collect()
     }
@@ -144,7 +145,7 @@ impl EventStore for MemoryEventStore {
         self.events
             .iter()
             .filter(|e| {
-                e.aggregate_id.as_ref().map(|s| s.as_str()) == Some(aggregate_id)
+                e.aggregate_id.as_deref() == Some(aggregate_id)
                     && e.aggregate_version >= from_version
             })
             .cloned()
@@ -583,6 +584,361 @@ impl EventSourcingManager {
         let snapshot = store.get_latest_snapshot(aggregate_id)?;
         Ok((snapshot.data, snapshot.aggregate_version))
     }
+
+    /// 获取事件存储引用（用于增强功能）
+    pub fn event_store(&self) -> &Arc<RwLock<Box<dyn EventStore>>> {
+        &self.event_store
+    }
+
+    // ============================================================================
+    // 增强功能：事件查询和过滤
+    // ============================================================================
+
+    /// 查询事件（增强功能）
+    pub fn query_events(&self, query: EventQuery) -> Result<Vec<StoredEvent>, EventError> {
+        let store = safe_read(&self.event_store, "event_store")
+            .map_err(|e| EventError::ApplyFailed(format!("Failed to acquire lock: {}", e)))?;
+
+        let mut events = if let Some(agg_id) = &query.aggregate_id {
+            store.get_aggregate_events(agg_id)
+        } else {
+            store.get_all_events()
+        };
+
+        // 应用过滤
+        if let Some(event_type) = &query.event_type {
+            events.retain(|e| e.event_type == *event_type);
+        }
+
+        if let Some(from_time) = query.from_time {
+            events.retain(|e| e.id.timestamp_ns >= from_time);
+        }
+
+        if let Some(to_time) = query.to_time {
+            events.retain(|e| e.id.timestamp_ns <= to_time);
+        }
+
+        if let Some(from_version) = query.from_version {
+            events.retain(|e| e.aggregate_version >= from_version);
+        }
+
+        if let Some(to_version) = query.to_version {
+            events.retain(|e| e.aggregate_version <= to_version);
+        }
+
+        // 排序（按时间戳和序列号）
+        events.sort_by_key(|e| (e.id.timestamp_ns, e.id.sequence));
+
+        // 应用分页
+        let offset = query.offset.unwrap_or(0);
+        let limit = query.limit;
+        
+        let mut result = if offset > 0 {
+            events.into_iter().skip(offset).collect()
+        } else {
+            events
+        };
+
+        if let Some(limit) = limit {
+            result.truncate(limit);
+        }
+
+        Ok(result)
+    }
+
+    /// 时间旅行：重放到指定版本（增强功能）
+    pub fn replay_to_version(
+        &self,
+        world: &mut World,
+        aggregate_id: &str,
+        target_version: u64,
+    ) -> Result<(), EventError> {
+        let events = self.replay_aggregate_events(aggregate_id, Some(0))?;
+        
+        // 过滤出目标版本之前的事件
+        let events_to_replay: Vec<_> = events
+            .into_iter()
+            .filter(|e| e.aggregate_version <= target_version)
+            .collect();
+
+        // 反序列化并应用事件
+        let registry = safe_read(&self.event_registry, "event_registry")
+            .map_err(|e| EventError::ApplyFailed(format!("Failed to acquire lock: {}", e)))?;
+
+        for stored_event in events_to_replay {
+            if let Ok(event) = registry.deserialize(&stored_event.event_type, &stored_event.data) {
+                event.apply(world)?;
+            }
+        }
+
+        Ok(())
+    }
+
+    /// 获取事件统计（增强功能）
+    pub fn get_event_stats(&self, aggregate_id: Option<&str>) -> Result<EventStats, EventError> {
+        let store = safe_read(&self.event_store, "event_store")
+            .map_err(|e| EventError::ApplyFailed(format!("Failed to acquire lock: {}", e)))?;
+
+        let events = if let Some(agg_id) = aggregate_id {
+            store.get_aggregate_events(agg_id)
+        } else {
+            store.get_all_events()
+        };
+
+        let mut stats = EventStats {
+            total_events: events.len(),
+            events_by_type: HashMap::new(),
+            events_by_aggregate: HashMap::new(),
+            oldest_event_time: None,
+            newest_event_time: None,
+        };
+
+        for event in &events {
+            // 按类型统计
+            *stats.events_by_type.entry(event.event_type.clone()).or_insert(0) += 1;
+
+            // 按聚合统计
+            if let Some(agg_id) = &event.aggregate_id {
+                *stats.events_by_aggregate.entry(agg_id.clone()).or_insert(0) += 1;
+            }
+
+            // 时间范围
+            if stats.oldest_event_time.is_none() || event.id.timestamp_ns < stats.oldest_event_time.unwrap() {
+                stats.oldest_event_time = Some(event.id.timestamp_ns);
+            }
+            if stats.newest_event_time.is_none() || event.id.timestamp_ns > stats.newest_event_time.unwrap() {
+                stats.newest_event_time = Some(event.id.timestamp_ns);
+            }
+        }
+
+        Ok(stats)
+    }
+}
+
+// ============================================================================
+// 增强功能：事件查询
+// ============================================================================
+
+/// 事件查询条件（增强功能）
+#[derive(Debug, Clone)]
+pub struct EventQuery {
+    /// 聚合ID过滤
+    pub aggregate_id: Option<String>,
+    /// 事件类型过滤
+    pub event_type: Option<String>,
+    /// 时间范围：开始时间
+    pub from_time: Option<i64>,
+    /// 时间范围：结束时间
+    pub to_time: Option<i64>,
+    /// 版本范围：开始版本
+    pub from_version: Option<u64>,
+    /// 版本范围：结束版本
+    pub to_version: Option<u64>,
+    /// 最大结果数
+    pub limit: Option<usize>,
+    /// 偏移量（用于分页）
+    pub offset: Option<usize>,
+}
+
+impl EventQuery {
+    /// 创建空查询（匹配所有事件）
+    pub fn all() -> Self {
+        Self {
+            aggregate_id: None,
+            event_type: None,
+            from_time: None,
+            to_time: None,
+            from_version: None,
+            to_version: None,
+            limit: None,
+            offset: None,
+        }
+    }
+
+    /// 按聚合ID查询
+    pub fn by_aggregate(aggregate_id: &str) -> Self {
+        Self {
+            aggregate_id: Some(aggregate_id.to_string()),
+            ..Self::all()
+        }
+    }
+
+    /// 按事件类型查询
+    pub fn by_event_type(event_type: &str) -> Self {
+        Self {
+            event_type: Some(event_type.to_string()),
+            ..Self::all()
+        }
+    }
+
+    /// 按时间范围查询
+    pub fn by_time_range(from: i64, to: i64) -> Self {
+        Self {
+            from_time: Some(from),
+            to_time: Some(to),
+            ..Self::all()
+        }
+    }
+
+    /// 按版本范围查询
+    pub fn by_version_range(from: u64, to: u64) -> Self {
+        Self {
+            from_version: Some(from),
+            to_version: Some(to),
+            ..Self::all()
+        }
+    }
+
+    /// 设置限制
+    pub fn with_limit(mut self, limit: usize) -> Self {
+        self.limit = Some(limit);
+        self
+    }
+
+    /// 设置偏移
+    pub fn with_offset(mut self, offset: usize) -> Self {
+        self.offset = Some(offset);
+        self
+    }
+}
+
+/// 事件统计（增强功能）
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EventStats {
+    /// 总事件数
+    pub total_events: usize,
+    /// 按类型统计
+    pub events_by_type: HashMap<String, usize>,
+    /// 按聚合统计
+    pub events_by_aggregate: HashMap<String, usize>,
+    /// 最早事件时间
+    pub oldest_event_time: Option<i64>,
+    /// 最新事件时间
+    pub newest_event_time: Option<i64>,
+}
+
+// ============================================================================
+// 增强功能：事件投影
+// ============================================================================
+
+/// 事件投影trait（增强功能）
+///
+/// 事件投影用于从事件流中构建只读视图
+pub trait EventProjection: Send + Sync {
+    /// 投影名称
+    fn name(&self) -> &str;
+
+    /// 处理事件
+    fn handle_event(&mut self, event: &StoredEvent) -> Result<(), EventError>;
+
+    /// 获取投影状态（序列化）
+    fn get_state(&self) -> Result<Vec<u8>, EventError>;
+
+    /// 从状态恢复
+    fn restore_from_state(&mut self, state: Vec<u8>) -> Result<(), EventError>;
+}
+
+/// 事件投影管理器（增强功能）
+pub struct EventProjectionManager {
+    projections: Arc<RwLock<HashMap<String, Box<dyn EventProjection>>>>,
+}
+
+impl EventProjectionManager {
+    pub fn new() -> Self {
+        Self {
+            projections: Arc::new(RwLock::new(HashMap::new())),
+        }
+    }
+
+    /// 注册投影
+    pub fn register_projection(&self, projection: Box<dyn EventProjection>) -> Result<(), EventError> {
+        let name = projection.name().to_string();
+        let mut projections = safe_write(&self.projections, "projections")
+            .map_err(|e| EventError::ApplyFailed(format!("Failed to acquire lock: {}", e)))?;
+        projections.insert(name, projection);
+        Ok(())
+    }
+
+    /// 处理事件（更新所有投影）
+    pub fn handle_event(&self, event: &StoredEvent) -> Result<(), EventError> {
+        // 注意：由于需要可变引用更新投影，这里简化处理
+        // 实际实现需要使用内部可变性（如RefCell）或重新设计
+        // 或者使用消息传递模式
+        let mut projections = safe_write(&self.projections, "projections")
+            .map_err(|e| EventError::ApplyFailed(format!("Failed to acquire lock: {}", e)))?;
+        
+        for projection in projections.values_mut() {
+            projection.handle_event(event)?;
+        }
+        
+        Ok(())
+    }
+}
+
+impl Default for EventProjectionManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+// ============================================================================
+// 增强功能：事件流处理
+// ============================================================================
+
+/// 事件流处理器（增强功能）
+///
+/// 用于处理事件流，支持过滤、转换和聚合
+pub struct EventStreamProcessor {
+    filters: Vec<Box<dyn Fn(&StoredEvent) -> bool + Send + Sync>>,
+    transformers: Vec<Box<dyn Fn(StoredEvent) -> StoredEvent + Send + Sync>>,
+}
+
+impl EventStreamProcessor {
+    pub fn new() -> Self {
+        Self {
+            filters: Vec::new(),
+            transformers: Vec::new(),
+        }
+    }
+
+    /// 添加过滤器
+    pub fn add_filter<F>(&mut self, filter: F)
+    where
+        F: Fn(&StoredEvent) -> bool + Send + Sync + 'static,
+    {
+        self.filters.push(Box::new(filter));
+    }
+
+    /// 添加转换器
+    pub fn add_transformer<T>(&mut self, transformer: T)
+    where
+        T: Fn(StoredEvent) -> StoredEvent + Send + Sync + 'static,
+    {
+        self.transformers.push(Box::new(transformer));
+    }
+
+    /// 处理事件流
+    pub fn process(&self, events: Vec<StoredEvent>) -> Vec<StoredEvent> {
+        let mut result = events;
+
+        // 应用过滤器
+        for filter in &self.filters {
+            result.retain(|e| filter(e));
+        }
+
+        // 应用转换器
+        for transformer in &self.transformers {
+            result = result.into_iter().map(transformer).collect();
+        }
+
+        result
+    }
+}
+
+impl Default for EventStreamProcessor {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 #[cfg(test)]
@@ -651,5 +1007,45 @@ mod tests {
         let events = manager.replay_aggregate_events("Scene_1", None).unwrap();
 
         assert_eq!(events.len(), 2); // SceneLoaded + SceneActivated
+    }
+
+    #[test]
+    fn test_event_query() {
+        let query = EventQuery::by_aggregate("Scene_1")
+            .with_limit(10)
+            .with_offset(0);
+        
+        assert_eq!(query.aggregate_id, Some("Scene_1".to_string()));
+        assert_eq!(query.limit, Some(10));
+        assert_eq!(query.offset, Some(0));
+    }
+
+    #[test]
+    fn test_event_stream_processor() {
+        let mut processor = EventStreamProcessor::new();
+        
+        // 添加过滤器：只保留特定类型的事件
+        processor.add_filter(|e| e.event_type == "SceneLoaded");
+        
+        let events = vec![
+            StoredEvent {
+                id: EventId::now(1),
+                event_type: "SceneLoaded".to_string(),
+                data: vec![],
+                aggregate_id: Some("Scene_1".to_string()),
+                aggregate_version: 1,
+            },
+            StoredEvent {
+                id: EventId::now(2),
+                event_type: "SceneActivated".to_string(),
+                data: vec![],
+                aggregate_id: Some("Scene_1".to_string()),
+                aggregate_version: 2,
+            },
+        ];
+        
+        let filtered = processor.process(events);
+        assert_eq!(filtered.len(), 1);
+        assert_eq!(filtered[0].event_type, "SceneLoaded");
     }
 }

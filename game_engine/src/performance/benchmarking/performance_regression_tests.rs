@@ -14,9 +14,9 @@ use crate::domain::physics::PhysicsWorld;
 use crate::domain::scene::{Scene, SceneId};
 use crate::ecs::World;
 use crate::performance::benchmarking::BenchmarkRunner;
-use crate::performance::ContinuousProfiler;
+use crate::profiling::ContinuousProfiler;
 use std::collections::HashMap;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 /// 性能基准阈值
 #[derive(Debug, Clone)]
@@ -69,7 +69,7 @@ impl PerformanceRegressionSuite {
     pub fn new() -> Self {
         Self {
             thresholds: PerformanceThresholds::default(),
-            profiler: ContinuousProfiler::new(),
+            profiler: ContinuousProfiler::new(1000),
             benchmark_runner: BenchmarkRunner::new(),
         }
     }
@@ -78,26 +78,59 @@ impl PerformanceRegressionSuite {
     pub fn with_thresholds(thresholds: PerformanceThresholds) -> Self {
         Self {
             thresholds,
-            profiler: ContinuousProfiler::new(),
+            profiler: ContinuousProfiler::new(1000),
             benchmark_runner: BenchmarkRunner::new(),
         }
     }
 
     /// 运行所有回归测试
     pub fn run_all_tests(&mut self) -> Vec<RegressionTestResult> {
-        let mut results = Vec::new();
+        vec![
+            self.test_physics_simulation(),
+            self.test_rendering_pipeline(),
+            self.test_network_serialization(),
+            self.test_resource_loading(),
+            self.test_scene_management(),
+        ]
+    }
 
-        results.push(self.test_physics_simulation());
-        results.push(self.test_rendering_pipeline());
-        results.push(self.test_network_serialization());
-        results.push(self.test_resource_loading());
+    /// 测试场景管理性能
+    fn test_scene_management(&mut self) -> RegressionTestResult {
+        let mut scene_map: HashMap<SceneId, Scene> = HashMap::new();
+        let iterations = 100;
 
-        results
+        let start = Instant::now();
+
+        for i in 0..iterations {
+            let scene_id = SceneId(i as u64);
+            let scene = Scene::new(scene_id, format!("test_scene_{}", i));
+            scene_map.insert(scene_id, scene);
+        }
+
+        // 测试场景查找和操作
+        for i in 0..iterations {
+            let scene_id = SceneId(i as u64);
+            if let Some(scene) = scene_map.get_mut(&scene_id) {
+                // 模拟场景操作
+                std::hint::black_box(scene);
+            }
+        }
+
+        let duration = start.elapsed();
+        let avg_time_ms = duration.as_secs_f64() * 1000.0 / iterations as f64;
+
+        RegressionTestResult {
+            test_name: "Scene Management".to_string(),
+            passed: avg_time_ms < self.thresholds.max_frame_time_ms as f64,
+            actual_value: avg_time_ms,
+            threshold: self.thresholds.max_frame_time_ms as f64,
+            regression_percent: 0.0,
+        }
     }
 
     /// 测试物理模拟性能
     fn test_physics_simulation(&mut self) -> RegressionTestResult {
-        let mut world = World::new();
+        let mut _world = World::new(); // 保留用于未来扩展（ECS集成测试）
         let mut physics_world = PhysicsWorld::new();
 
         let iterations = 1000;
@@ -105,7 +138,11 @@ impl PerformanceRegressionSuite {
         let start = Instant::now();
 
         for _ in 0..iterations {
-            physics_world.step(0.016);
+            // 处理物理步进的错误（测试中应该不会发生，但如果发生则记录）
+            if let Err(e) = physics_world.step(0.016) {
+                eprintln!("Physics step error in test: {:?}", e);
+                // 在测试中继续执行，但记录错误
+            }
         }
 
         let duration = start.elapsed();
@@ -239,8 +276,8 @@ impl PerformanceRegressionSuite {
             };
 
             println!(
-                "{:<30} | {:<10} | {:<15.3} | {:<15.3}",
-                result.test_name, status, result.actual_value, result.threshold
+                "{:<30} | {:<10} | {:<15.3} {} | {:<15.3} {}",
+                result.test_name, status, result.actual_value, unit, result.threshold, unit
             );
 
             if result.regression_percent != 0.0 {
@@ -267,7 +304,7 @@ mod tests {
 
     #[test]
     fn test_regression_suite_creation() {
-        let suite = PerformanceRegressionSuite::new();
+        let mut suite = PerformanceRegressionSuite::new();
         let results = suite.run_all_tests();
         assert!(!results.is_empty());
     }

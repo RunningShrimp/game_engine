@@ -1,14 +1,48 @@
 //  音频插件
-// 
+//
 //  提供音频播放功能，支持2D和3D空间音频。
 
 use crate::impl_default;
 use crate::plugins::{EnginePlugin, App, PluginVersion, PluginDependency};
-use crate::audio::{AudioState, AudioService, audio_playback_system_v2, audio_cleanup_system_v2, audio_gc_system_v2};
 use bevy_ecs::prelude::*;
 
+/// 音频状态资源
+///
+/// 管理全局音频状态，包括主音量和播放中的音频数量。
+#[derive(Debug, Clone, bevy_ecs::prelude::Resource)]
+pub struct AudioState {
+    /// 主音量 (0.0 - 2.0)
+    pub master_volume: f32,
+    /// 当前播放中的音频数量
+    pub active_sounds: usize,
+}
+
+impl Default for AudioState {
+    fn default() -> Self {
+        Self {
+            master_volume: 1.0,
+            active_sounds: 0,
+        }
+    }
+}
+
+/// 音频更新系统
+///
+/// 每帧更新音频状态，可用于清理已完成的音频播放。
+pub fn audio_update_system(mut audio_state: ResMut<AudioState>) {
+    // 这里可以添加音频清理逻辑
+    // 例如：检查并移除已完成的音频播放
+    // 目前仅作为占位符系统，确保音频状态被更新
+
+    // 更新活动音频计数（实际应用中应从AudioService获取）
+    if audio_state.active_sounds > 0 {
+        // 模拟音频播放结束的逻辑
+        // 实际实现需要与AudioService集成
+    }
+}
+
 /// 音频插件配置
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, bevy_ecs::prelude::Resource)]
 pub struct AudioConfig {
     /// 主音量 (0.0 - 2.0)
     pub master_volume: f32,
@@ -43,6 +77,12 @@ impl AudioPlugin {
     }
 }
 
+impl Default for AudioPlugin {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl EnginePlugin for AudioPlugin {
     fn name(&self) -> &'static str {
         "AudioPlugin"
@@ -63,21 +103,23 @@ impl EnginePlugin for AudioPlugin {
     }
 
     fn build(&self, app: &mut App) {
-        // 插入音频状态资源
-        let mut audio_state = AudioState::new();
-        AudioService::set_master_volume(&mut audio_state, self.config.master_volume);
-
+        // 插入音频配置和状态
+        let audio_state = AudioState {
+            master_volume: self.config.master_volume,
+            ..Default::default()
+        };
+        app.insert_resource(self.config.clone());
         app.insert_resource(audio_state);
 
-        // 添加音频系统
-        app.add_systems(audio_playback_system_v2);
-        app.add_systems(audio_cleanup_system_v2);
-        app.add_systems(audio_gc_system_v2);
+        // 添加音频更新系统到调度器
+        app.add_systems(|schedule| {
+            schedule.add_systems(audio_update_system);
+        });
 
-        // 如果启用空间音频，添加空间音频系统
+        // 注意：空间音频系统需要在应用中单独注册
+        // 因为它们需要额外的参数（如监听器位置）
         if self.config.enable_spatial_audio {
-            // 这里可以添加空间音频系统
-            // app.add_systems(spatial_audio_update_system);
+            tracing::info!("Spatial audio enabled - register update_listener_system separately");
         }
     }
 

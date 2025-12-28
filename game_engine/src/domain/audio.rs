@@ -6,6 +6,7 @@ use crate::domain::value_objects::Volume;
 use crate::impl_default_and_new;
 use glam::Vec3;
 use serde::{Deserialize, Serialize};
+use std::fmt;
 
 /// 音频源ID
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -18,6 +19,12 @@ impl AudioSourceId {
 
     pub fn as_u64(&self) -> u64 {
         self.0
+    }
+}
+
+impl fmt::Display for AudioSourceId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
     }
 }
 
@@ -119,10 +126,11 @@ impl AudioSource {
 
         // 验证文件存在
         if !std::path::Path::new(&path_str).exists() {
-            return Err(DomainError::Audio(AudioError::SourceNotFound(format!(
-                "Audio file not found: {}",
-                path_str
-            ))));
+            return Err(DomainError::Audio(AudioError::FileLoading {
+                file: path_str.clone(),
+                message: format!("Audio file not found: {}", path_str),
+                severity: crate::error::ErrorSeverity::Error,
+            }));
         }
 
         self.path = Some(path_str);
@@ -140,10 +148,10 @@ impl AudioSource {
     /// 播放音频
     pub fn play(&mut self) -> Result<(), DomainError> {
         if self.path.is_none() {
-            return Err(DomainError::Audio(AudioError::SourceNotFound(format!(
-                "No audio file loaded for source {}",
-                self.id.as_u64()
-            ))));
+            return Err(DomainError::Audio(AudioError::SourceNotFound {
+                source_id: self.id.to_string(),
+                severity: crate::error::ErrorSeverity::Warning,
+            }));
         }
 
         match self.state {
@@ -158,9 +166,10 @@ impl AudioSource {
                 self.playback_position = 0.0;
             }
             AudioSourceState::Loading => {
-                return Err(DomainError::Audio(AudioError::PlaybackFailed(
-                    "Cannot play while loading".to_string(),
-                )));
+                return Err(DomainError::Audio(AudioError::Playback {
+                    message: "Cannot play while loading".to_string(),
+                    severity: crate::error::ErrorSeverity::Warning,
+                }));
             }
         }
 
@@ -207,7 +216,10 @@ impl AudioSource {
     /// 设置音量（从f32值）
     pub fn set_volume_f32(&mut self, value: f32) -> Result<(), DomainError> {
         let volume = Volume::new(value)
-            .ok_or_else(|| DomainError::Audio(AudioError::InvalidVolume(value)))?;
+            .ok_or_else(|| DomainError::Audio(AudioError::DeviceConfiguration {
+                message: format!("Invalid volume: {}", value),
+                severity: crate::error::ErrorSeverity::Warning,
+            }))?;
         self.set_volume(volume)
     }
 
@@ -220,11 +232,10 @@ impl AudioSource {
 
     /// 获取播放进度 (0.0 - 1.0)
     pub fn get_progress(&self) -> f32 {
-        if let Some(duration) = self.duration {
-            if duration > 0.0 {
+        if let Some(duration) = self.duration
+            && duration > 0.0 {
                 return (self.playback_position / duration).clamp(0.0, 1.0);
             }
-        }
         0.0
     }
 
@@ -235,9 +246,10 @@ impl AudioSource {
             self.last_modified = Self::current_timestamp();
             Ok(())
         } else {
-            Err(DomainError::Audio(AudioError::PlaybackFailed(
-                "Cannot seek: audio duration unknown".to_string(),
-            )))
+            Err(DomainError::Audio(AudioError::Playback {
+                message: "Cannot seek: audio duration unknown".to_string(),
+                severity: crate::error::ErrorSeverity::Warning,
+            }))
         }
     }
 
@@ -271,16 +283,16 @@ impl AudioSource {
 
                     // 尝试重新加载或播放
                     match error {
-                        AudioError::PlaybackFailed(_) => {
-                            if let Err(_) = self.play() {
+                        AudioError::Playback { .. } => {
+                            if self.play().is_err() {
                                 continue;
                             } else {
                                 return Ok(());
                             }
                         }
-                        AudioError::SourceNotFound(_) => {
+                        AudioError::SourceNotFound { .. } => {
                             if let Some(path) = &self.path.clone() {
-                                if let Err(_) = self.load_file(path) {
+                                if self.load_file(path).is_err() {
                                     continue;
                                 } else {
                                     return Ok(());
@@ -338,11 +350,10 @@ impl AudioSource {
             };
         }
 
-        if let Some(volume) = action.data.get("volume").and_then(|v| v.as_f64()) {
-            if let Some(vol) = Volume::new(volume as f32) {
+        if let Some(volume) = action.data.get("volume").and_then(|v| v.as_f64())
+            && let Some(vol) = Volume::new(volume as f32) {
                 self.set_volume(vol)?;
             }
-        }
 
         if let Some(looped) = action.data.get("looped").and_then(|v| v.as_bool()) {
             self.set_looped(looped)?;
@@ -686,7 +697,7 @@ mod tests {
             delay_ms: 1,
         };
 
-        let error = AudioError::PlaybackFailed("test".to_string());
+        let error = AudioError::playback("test");
         // 注意：recover_from_error会尝试调用play()
         // 如果path和duration都存在，play()可能会成功（因为load_file只是检查文件是否存在）
         // 这里主要测试错误恢复逻辑
@@ -713,7 +724,7 @@ mod tests {
             delay_ms: 1,
         };
 
-        let error = AudioError::SourceNotFound("test.wav".to_string());
+        let error = AudioError::source_not_found("test.wav");
         // 由于没有path，恢复应该失败
         let result = source.recover_from_error(&error);
         assert!(result.is_err());
@@ -726,7 +737,7 @@ mod tests {
         source.looped = true;
         source.recovery_strategy = RecoveryStrategy::UseDefault;
 
-        let error = AudioError::PlaybackFailed("test".to_string());
+        let error = AudioError::playback("test");
         let result = source.recover_from_error(&error);
 
         assert!(result.is_ok());
@@ -740,7 +751,7 @@ mod tests {
         source.volume = Volume::new_unchecked(0.8);
         source.recovery_strategy = RecoveryStrategy::Skip;
 
-        let error = AudioError::PlaybackFailed("test".to_string());
+        let error = AudioError::playback("test");
         let result = source.recover_from_error(&error);
 
         assert!(result.is_ok());
@@ -753,7 +764,7 @@ mod tests {
         source.volume = Volume::new_unchecked(0.8);
         source.recovery_strategy = RecoveryStrategy::LogAndContinue;
 
-        let error = AudioError::PlaybackFailed("test".to_string());
+        let error = AudioError::playback("test");
         let result = source.recover_from_error(&error);
 
         assert!(result.is_ok());
@@ -765,12 +776,12 @@ mod tests {
         let mut source = AudioSource::new(AudioSourceId(1));
         source.recovery_strategy = RecoveryStrategy::Fail;
 
-        let error = AudioError::PlaybackFailed("test".to_string());
+        let error = AudioError::playback("test");
         let result = source.recover_from_error(&error);
 
         assert!(result.is_err());
         if let Err(DomainError::Audio(e)) = result {
-            assert!(matches!(e, AudioError::PlaybackFailed(_)));
+            assert!(matches!(e, AudioError::Playback { .. }));
         } else {
             panic!("Expected Audio error");
         }

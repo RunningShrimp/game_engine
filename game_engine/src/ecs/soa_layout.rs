@@ -7,6 +7,7 @@ use bevy_ecs::prelude::*;
 use glam::{Quat, Vec3};
 
 /// SoA布局的Transform组件存储
+#[derive(Default)]
 pub struct SoATransformStorage {
     /// 位置数组
     pub positions: Vec<Vec3>,
@@ -158,19 +159,9 @@ impl SoATransformStorage {
     }
 }
 
-impl Default for SoATransformStorage {
-    fn default() -> Self {
-        Self {
-            positions: Vec::new(),
-            rotations: Vec::new(),
-            scales: Vec::new(),
-            entity_to_index: std::collections::HashMap::new(),
-            index_to_entity: Vec::new(),
-        }
-    }
-}
 
 /// SoA布局的Velocity组件存储
+#[derive(Default)]
 pub struct SoAVelocityStorage {
     /// 线性速度数组
     pub linear_velocities: Vec<Vec3>,
@@ -190,29 +181,24 @@ impl SoAVelocityStorage {
 
     /// 从ECS查询构建SoA布局
     pub fn from_world(_world: &World) -> Self {
-        let storage = Self::new();
+        
 
         // 这里需要Velocity组件的定义
         // 暂时留空
-        storage
+        Self::new()
     }
 
     /// 获取实体数量
     pub fn len(&self) -> usize {
         self.linear_velocities.len()
     }
-}
 
-impl Default for SoAVelocityStorage {
-    fn default() -> Self {
-        Self {
-            linear_velocities: Vec::new(),
-            angular_velocities: Vec::new(),
-            entity_to_index: std::collections::HashMap::new(),
-            index_to_entity: Vec::new(),
-        }
+    /// 检查是否为空
+    pub fn is_empty(&self) -> bool {
+        self.linear_velocities.is_empty()
     }
 }
+
 
 /// SoA布局管理器
 pub struct SoALayoutManager {

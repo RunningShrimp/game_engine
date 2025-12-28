@@ -134,22 +134,20 @@ impl DependencyGraph {
         }
 
         // 添加依赖关系
-        if let Some(node) = self.nodes.get_mut(&resource_path) {
-            if !node.dependencies.iter().any(|d| d.path == resolved_dep_path) {
+        if let Some(node) = self.nodes.get_mut(&resource_path)
+            && !node.dependencies.iter().any(|d| d.path == resolved_dep_path) {
                 node.dependencies.push(ResourceDependency {
                     path: resolved_dep_path.clone(),
                     dependency_type: dependency.dependency_type,
                     required: dependency.required,
                 });
             }
-        }
 
         // 添加反向依赖
-        if let Some(dep_node) = self.nodes.get_mut(&resolved_dep_path) {
-            if !dep_node.dependents.contains(&resource_path) {
+        if let Some(dep_node) = self.nodes.get_mut(&resolved_dep_path)
+            && !dep_node.dependents.contains(&resource_path) {
                 dep_node.dependents.push(resource_path);
             }
-        }
 
         Ok(())
     }

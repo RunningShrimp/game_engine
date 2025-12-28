@@ -154,14 +154,14 @@ impl WorldInspector {
                         near,
                         far,
                     } => {
-                        ui.label(format!("Type: Perspective"));
+                        ui.label("Type: Perspective".to_string());
                         ui.label(format!("FOV: {:.2}°", fov));
                         ui.label(format!("Aspect: {:.2}", aspect));
                         ui.label(format!("Near: {:.2}", near));
                         ui.label(format!("Far: {:.2}", far));
                     }
                     crate::ecs::Projection::Orthographic { scale, near, far } => {
-                        ui.label(format!("Type: Orthographic"));
+                        ui.label("Type: Orthographic".to_string());
                         ui.label(format!("Scale: {:.2}", scale));
                         ui.label(format!("Near: {:.2}", near));
                         ui.label(format!("Far: {:.2}", far));

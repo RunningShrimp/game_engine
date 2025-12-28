@@ -1,5 +1,5 @@
 //  错误恢复机制
-//
+// 
 //  提供统一的错误恢复策略，支持优雅降级、重试和补偿操作。
 
 use crate::error::{EngineError, ErrorCategory, ErrorSeverity};
@@ -132,8 +132,13 @@ pub trait ErrorRecovery {
 /// 默认错误恢复器
 pub struct DefaultErrorRecovery;
 
+impl Default for DefaultErrorRecovery {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DefaultErrorRecovery {
-    /// Creates a new instance of the default error recovery handler
     pub fn new() -> Self {
         Self
     }
@@ -217,8 +222,13 @@ impl ErrorRecovery for DefaultErrorRecovery {
 /// 渲染错误恢复器
 pub struct RenderErrorRecovery;
 
+impl Default for RenderErrorRecovery {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl RenderErrorRecovery {
-    /// Creates a new instance of the render error recovery handler
     pub fn new() -> Self {
         Self
     }
@@ -302,8 +312,13 @@ impl ErrorRecovery for RenderErrorRecovery {
 /// 音频错误恢复器
 pub struct AudioErrorRecovery;
 
+impl Default for AudioErrorRecovery {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl AudioErrorRecovery {
-    /// Creates a new instance of the audio error recovery handler
     pub fn new() -> Self {
         Self
     }
@@ -381,8 +396,13 @@ impl ErrorRecovery for AudioErrorRecovery {
 /// 物理错误恢复器
 pub struct PhysicsErrorRecovery;
 
+impl Default for PhysicsErrorRecovery {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PhysicsErrorRecovery {
-    /// Creates a new instance of the physics error recovery handler
     pub fn new() -> Self {
         Self
     }
@@ -446,8 +466,13 @@ impl ErrorRecovery for PhysicsErrorRecovery {
 /// 资源错误恢复器
 pub struct ResourceErrorRecovery;
 
+impl Default for ResourceErrorRecovery {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ResourceErrorRecovery {
-    /// Creates a new instance of the resource error recovery handler
     pub fn new() -> Self {
         Self
     }
@@ -526,8 +551,13 @@ impl ErrorRecovery for ResourceErrorRecovery {
 /// 输入错误恢复器
 pub struct InputErrorRecovery;
 
+impl Default for InputErrorRecovery {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl InputErrorRecovery {
-    /// Creates a new instance of the input error recovery handler
     pub fn new() -> Self {
         Self
     }
@@ -546,8 +576,7 @@ impl ErrorRecovery for InputErrorRecovery {
                                 default_description: "Using default input mapping".to_string(),
                                 log_warning: true,
                             },
-                            description: "Default input mapping used due to missing device"
-                                .to_string(),
+                            description: "Default input mapping used due to missing device".to_string(),
                             duration: context.start_time.elapsed(),
                             metadata: HashMap::new(),
                         },
@@ -584,8 +613,7 @@ impl ErrorRecovery for InputErrorRecovery {
                                 default_description: "Using default input mapping".to_string(),
                                 log_warning: true,
                             },
-                            description: "Default input mapping used due to mapping error"
-                                .to_string(),
+                            description: "Default input mapping used due to mapping error".to_string(),
                             duration: context.start_time.elapsed(),
                             metadata: HashMap::new(),
                         },
@@ -616,8 +644,13 @@ impl ErrorRecovery for InputErrorRecovery {
 /// 系统错误恢复器
 pub struct SystemErrorRecovery;
 
+impl Default for SystemErrorRecovery {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SystemErrorRecovery {
-    /// Creates a new instance of the system error recovery handler
     pub fn new() -> Self {
         Self
     }
@@ -656,8 +689,7 @@ impl ErrorRecovery for SystemErrorRecovery {
                         // 超过重试次数，跳过操作
                         RecoveryResult::Skipped(RecoveryInfo {
                             strategy: RecoveryStrategy::Skip {
-                                reason: "System timeout after retries, skipping operation"
-                                    .to_string(),
+                                reason: "System timeout after retries, skipping operation".to_string(),
                                 log_warning: true,
                             },
                             description: "Skipping operation due to timeout".to_string(),
@@ -684,9 +716,7 @@ impl ErrorRecovery for SystemErrorRecovery {
                         RecoveryResult::Retry(RetryInfo {
                             attempt: context.recovery_attempts,
                             max_attempts: 3,
-                            next_delay: Duration::from_millis(
-                                100 * (2_u64.pow(context.recovery_attempts)),
-                            ),
+                            next_delay: Duration::from_millis(100 * (2_u64.pow(context.recovery_attempts))),
                             reason: "Concurrency error, retrying operation".to_string(),
                         })
                     } else {
@@ -812,6 +842,12 @@ impl RecoveryManager {
     }
 }
 
+impl Default for RecoveryManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// 便捷的错误恢复函数
 pub fn recover_with_default_strategy<T>(
     result: Result<T, EngineError>,
@@ -866,9 +902,7 @@ mod tests {
             start_time: std::time::Instant::now(),
         };
 
-        let error = EngineError::Render(crate::error::render_error::RenderError::general(
-            "GPU memory full",
-        ));
+        let error = EngineError::Render(crate::error::render_error::RenderError::general("GPU memory full"));
         let result = recovery.recover(&error, &context);
 
         assert!(matches!(result, RecoveryResult::Degraded(_, _)));
@@ -885,10 +919,7 @@ mod tests {
             start_time: std::time::Instant::now(),
         };
 
-        let error = EngineError::Audio(crate::error::audio_error::AudioError::InvalidVolume {
-            value: 1.5,
-            severity: ErrorSeverity::Error,
-        });
+        let error = EngineError::Audio(crate::error::audio_error::AudioError::InvalidVolume { value: 1.5, severity: ErrorSeverity::Error });
         let result = recovery.recover(&error, &context);
 
         assert!(matches!(result, RecoveryResult::Degraded(_, _)));
@@ -905,11 +936,7 @@ mod tests {
             start_time: std::time::Instant::now(),
         };
 
-        let error = EngineError::Physics(
-            crate::error::physics_error::PhysicsError::WorldNotInitialized {
-                severity: ErrorSeverity::Error,
-            },
-        );
+        let error = EngineError::Physics(crate::error::physics_error::PhysicsError::WorldNotInitialized { severity: ErrorSeverity::Error });
         let result = recovery.recover(&error, &context);
 
         assert!(matches!(result, RecoveryResult::Skipped(_)));
@@ -926,10 +953,7 @@ mod tests {
             start_time: std::time::Instant::now(),
         };
 
-        let error = EngineError::Resource(crate::error::resource_error::ResourceError::NotFound {
-            path: "texture.png".to_string(),
-            severity: ErrorSeverity::Error,
-        });
+        let error = EngineError::Resource(crate::error::resource_error::ResourceError::NotFound { path: "texture.png".to_string(), severity: ErrorSeverity::Error });
         let result = recovery.recover(&error, &context);
 
         assert!(matches!(result, RecoveryResult::Degraded(_, _)));
@@ -939,9 +963,7 @@ mod tests {
     fn test_recovery_manager() {
         let mut manager = RecoveryManager::new();
 
-        let error = EngineError::Render(crate::error::render_error::RenderError::general(
-            "GPU memory full",
-        ));
+        let error = EngineError::Render(crate::error::render_error::RenderError::general("GPU memory full"));
         let result = manager.recover(error, "render_test");
 
         assert!(matches!(result, RecoveryResult::Degraded(_, _)));

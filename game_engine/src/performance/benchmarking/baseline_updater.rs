@@ -113,6 +113,7 @@ impl BaselineUpdater {
 
         // 更新基准数据
         baselines.metadata.updated = Self::current_date();
+        baselines.metadata.rust_version = Self::get_rust_version();
         baselines.system_info = system_info;
 
         // 更新各个基准测试的基线值
@@ -162,8 +163,31 @@ impl BaselineUpdater {
             let output = Command::new("lscpu")
                 .arg("--json")
                 .output()?;
-            // 简化处理，实际应该解析JSON
-            "Unknown CPU".to_string()
+            // 解析JSON输出获取CPU信息
+            if output.status.success() {
+                // 简化处理：从JSON中提取Model name字段
+                let output_str = String::from_utf8_lossy(&output.stdout);
+                if let Some(model_start) = output_str.find("\"Model name\":") {
+                    // 提取CPU型号
+                    let model_line = &output_str[model_start..];
+                    if let Some(value_start) = model_line.find('"') {
+                        if let Some(value_end) = model_line[value_start+1..].find('"') {
+                            let cpu_name = &model_line[value_start+1..value_start+1+value_end];
+                            cpu_name.to_string()
+                        } else {
+                            "Unknown CPU".to_string()
+                        }
+                    } else {
+                        "Unknown CPU".to_string()
+                    }
+                } else {
+                    "Unknown CPU".to_string()
+                }
+            } else {
+                // 如果命令失败，记录错误信息用于调试
+                let _error_info = String::from_utf8_lossy(&output.stderr);
+                "Unknown CPU".to_string()
+            }
         } else {
             "Unknown CPU".to_string()
         };
@@ -193,7 +217,7 @@ impl BaselineUpdater {
             format!("{} {}", os_name, arch)
         };
 
-        // 获取Rust版本
+        // 获取Rust版本（用于元数据）
         let rust_version = Command::new("rustc")
             .arg("--version")
             .output()
@@ -204,6 +228,9 @@ impl BaselineUpdater {
                     .to_string()
             })
             .unwrap_or_else(|_| "Unknown".to_string());
+        
+        // 记录Rust版本信息（用于后续的基线元数据更新）
+        tracing::debug!("Detected Rust version: {}", rust_version);
 
         Ok(SystemInfo {
             cpu,
@@ -211,6 +238,20 @@ impl BaselineUpdater {
             gpu: "Unknown".to_string(), // GPU信息需要特殊处理
             os,
         })
+    }
+
+    /// 获取Rust版本信息（用于基线元数据）
+    pub fn get_rust_version() -> String {
+        Command::new("rustc")
+            .arg("--version")
+            .output()
+            .map(|o| {
+                String::from_utf8_lossy(&o.stdout)
+                    .trim()
+                    .replace("rustc ", "")
+                    .to_string()
+            })
+            .unwrap_or_else(|_| "Unknown".to_string())
     }
 
     /// 运行所有基准测试
@@ -277,6 +318,30 @@ impl BaselineUpdater {
         // 从标准输出解析结果（简化实现）
         let stdout = String::from_utf8_lossy(&output.stdout);
         let stderr = String::from_utf8_lossy(&output.stderr);
+        
+        // 记录标准输出和错误输出（用于调试和日志）
+        if !stdout.is_empty() {
+            tracing::debug!("Benchmark {} stdout: {}", bench_name, stdout);
+        }
+        if !stderr.is_empty() {
+            tracing::warn!("Benchmark {} stderr: {}", bench_name, stderr);
+        }
+        
+        // 尝试从stdout中解析简单的性能指标（如果JSON解析失败）
+        if results.is_empty() && !stdout.is_empty() {
+            // 简单的文本解析：查找 "time:" 或 "ns/iter" 等模式
+            for line in stdout.lines() {
+                if line.contains("time:") || line.contains("ns/iter") {
+                    // 尝试提取性能数据
+                    if let Some(time_part) = line.split("time:").nth(1) {
+                        let trimmed = time_part.trim();
+                        if let Some(test_name) = line.split_whitespace().next() {
+                            results.insert(test_name.to_string(), trimmed.to_string());
+                        }
+                    }
+                }
+            }
+        }
 
         // 尝试从Criterion的JSON输出目录读取结果
         let criterion_dir = PathBuf::from("target/criterion")
@@ -287,9 +352,9 @@ impl BaselineUpdater {
             // 读取基准测试结果JSON文件
             if let Ok(entries) = fs::read_dir(&criterion_dir) {
                 for entry in entries.flatten() {
-                    if entry.path().file_name().and_then(|n| n.to_str()) == Some("estimates.json") {
-                        if let Ok(json_content) = fs::read_to_string(entry.path()) {
-                            if let Ok(criterion_result) = serde_json::from_str::<CriterionResult>(&json_content) {
+                    if entry.path().file_name().and_then(|n| n.to_str()) == Some("estimates.json")
+                        && let Ok(json_content) = fs::read_to_string(entry.path())
+                            && let Ok(criterion_result) = serde_json::from_str::<CriterionResult>(&json_content) {
                                 // 提取基准测试名称和结果
                                 let test_name = criterion_result.id;
                                 let mean_ns = criterion_result.mean.point_estimate;
@@ -305,8 +370,6 @@ impl BaselineUpdater {
                                 
                                 results.insert(test_name, formatted);
                             }
-                        }
-                    }
                 }
             }
         }
@@ -392,6 +455,7 @@ impl BaselineUpdater {
 
     /// 创建新的基线结构
     fn create_new_baselines(&self, system_info: SystemInfo) -> Result<PerformanceBaselines, Box<dyn std::error::Error>> {
+        let rust_version = Self::get_rust_version();
         let mut benchmarks = HashMap::new();
 
         // 初始化所有基准测试的默认值
@@ -422,16 +486,7 @@ impl BaselineUpdater {
                 updated: Self::current_date(),
                 description: "游戏引擎性能基准基线 - 用于检测性能回归".to_string(),
                 platform: format!("{} {}", std::env::consts::OS, std::env::consts::ARCH),
-                rust_version: Command::new("rustc")
-                    .arg("--version")
-                    .output()
-                    .map(|o| {
-                        String::from_utf8_lossy(&o.stdout)
-                            .trim()
-                            .replace("rustc ", "")
-                            .to_string()
-                    })
-                    .unwrap_or_else(|_| "Unknown".to_string()),
+                rust_version: rust_version.clone(),
             },
             benchmarks,
             system_info,

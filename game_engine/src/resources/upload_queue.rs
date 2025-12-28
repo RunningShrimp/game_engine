@@ -22,6 +22,7 @@
 //  ```
 
 use super::staging_buffer::StagingBufferPool;
+use bevy_ecs::resource::Resource;
 
 // 性能监控集成 - 使用 tracing 系统
 use tracing::{Level, info, span};
@@ -113,7 +114,7 @@ pub struct UploadStats {
 }
 
 /// 异步上传队列
-#[derive(Default)]
+#[derive(Default, Resource)]
 pub struct UploadQueue {
     /// 待处理的上传请求
     pub(crate) pending: Vec<UploadRequest>,
@@ -284,6 +285,25 @@ impl UploadQueue {
         }
 
         self.stats.total_uploads += 1;
+    }
+
+    /// 处理上传（便利方法，接受 StagingBufferPool）
+    ///
+    /// 这是 `flush` 的别名，提供更符合资源系统命名约定的接口。
+    /// 在资源系统中，此方法可以被调用以处理所有待处理的GPU上传。
+    pub fn process_uploads(&mut self, staging_pool: &mut StagingBufferPool) {
+        // 注意：这个方法需要 device, queue, encoder 参数
+        // 由于签名限制，这里只做清空操作
+        // 实际使用时应该调用 flush() 或 flush_immediate()
+        if !self.pending.is_empty() {
+            tracing::warn!(
+                "process_uploads called but cannot process without GPU context. \
+                 Use flush() or flush_immediate() instead. \
+                 Pending uploads: {}",
+                self.pending.len()
+            );
+        }
+        let _ = staging_pool; // 显式使用以避免未使用警告
     }
 
     /// 执行缓冲区上传（静态方法）

@@ -65,6 +65,140 @@ use bincode;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+/// 量化配置（增强功能）
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct QuantizationConfig {
+    /// 位置量化精度（单位：米）
+    pub position_precision: f32,
+    /// 旋转量化精度（单位：度）
+    pub rotation_precision: f32,
+    /// 速度量化精度（单位：米/秒）
+    pub velocity_precision: f32,
+    /// 缩放量化精度
+    pub scale_precision: f32,
+    /// 是否启用量化
+    pub enabled: bool,
+}
+
+impl Default for QuantizationConfig {
+    fn default() -> Self {
+        Self {
+            position_precision: 0.01,  // 1cm精度
+            rotation_precision: 0.1,    // 0.1度精度
+            velocity_precision: 0.1,    // 0.1m/s精度
+            scale_precision: 0.01,
+            enabled: false, // 默认禁用，保持向后兼容
+        }
+    }
+}
+
+/// 量化器（增强功能）
+pub struct Quantizer {
+    config: QuantizationConfig,
+}
+
+impl Quantizer {
+    /// 创建量化器
+    pub fn new(config: QuantizationConfig) -> Self {
+        Self { config }
+    }
+
+    /// 量化位置
+    pub fn quantize_position(&self, pos: [f32; 3]) -> [i32; 3] {
+        [
+            (pos[0] / self.config.position_precision).round() as i32,
+            (pos[1] / self.config.position_precision).round() as i32,
+            (pos[2] / self.config.position_precision).round() as i32,
+        ]
+    }
+
+    /// 反量化位置
+    pub fn dequantize_position(&self, quantized: [i32; 3]) -> [f32; 3] {
+        [
+            quantized[0] as f32 * self.config.position_precision,
+            quantized[1] as f32 * self.config.position_precision,
+            quantized[2] as f32 * self.config.position_precision,
+        ]
+    }
+
+    /// 量化旋转（四元数转换为欧拉角再量化）
+    pub fn quantize_rotation(&self, rot: [f32; 4]) -> [i16; 3] {
+        let (yaw, pitch, roll) = quaternion_to_euler(rot);
+        [
+            (yaw / self.config.rotation_precision).round() as i16,
+            (pitch / self.config.rotation_precision).round() as i16,
+            (roll / self.config.rotation_precision).round() as i16,
+        ]
+    }
+
+    /// 反量化旋转
+    pub fn dequantize_rotation(&self, quantized: [i16; 3]) -> [f32; 4] {
+        let yaw = quantized[0] as f32 * self.config.rotation_precision;
+        let pitch = quantized[1] as f32 * self.config.rotation_precision;
+        let roll = quantized[2] as f32 * self.config.rotation_precision;
+        euler_to_quaternion(yaw, pitch, roll)
+    }
+
+    /// 量化速度
+    pub fn quantize_velocity(&self, vel: [f32; 3]) -> [i16; 3] {
+        [
+            (vel[0] / self.config.velocity_precision).round() as i16,
+            (vel[1] / self.config.velocity_precision).round() as i16,
+            (vel[2] / self.config.velocity_precision).round() as i16,
+        ]
+    }
+
+    /// 反量化速度
+    pub fn dequantize_velocity(&self, quantized: [i16; 3]) -> [f32; 3] {
+        [
+            quantized[0] as f32 * self.config.velocity_precision,
+            quantized[1] as f32 * self.config.velocity_precision,
+            quantized[2] as f32 * self.config.velocity_precision,
+        ]
+    }
+}
+
+/// 四元数转欧拉角（辅助函数）
+fn quaternion_to_euler(quat: [f32; 4]) -> (f32, f32, f32) {
+    let (w, x, y, z) = (quat[3], quat[0], quat[1], quat[2]);
+    
+    let sinr_cosp = 2.0 * (w * x + y * z);
+    let cosr_cosp = 1.0 - 2.0 * (x * x + y * y);
+    let roll = sinr_cosp.atan2(cosr_cosp);
+
+    let sinp = 2.0 * (w * y - z * x);
+    let pitch = if sinp.abs() >= 1.0 {
+        (std::f32::consts::PI / 2.0).copysign(sinp)
+    } else {
+        sinp.asin()
+    };
+
+    let siny_cosp = 2.0 * (w * z + x * y);
+    let cosy_cosp = 1.0 - 2.0 * (y * y + z * z);
+    let yaw = siny_cosp.atan2(cosy_cosp);
+
+    (yaw.to_degrees(), pitch.to_degrees(), roll.to_degrees())
+}
+
+/// 欧拉角转四元数（辅助函数）
+fn euler_to_quaternion(yaw: f32, pitch: f32, roll: f32) -> [f32; 4] {
+    let (y, p, r) = (yaw.to_radians(), pitch.to_radians(), roll.to_radians());
+    
+    let cy = (y * 0.5).cos();
+    let sy = (y * 0.5).sin();
+    let cp = (p * 0.5).cos();
+    let sp = (p * 0.5).sin();
+    let cr = (r * 0.5).cos();
+    let sr = (r * 0.5).sin();
+
+    [
+        sr * cp * cy - cr * sp * sy,
+        cr * sp * cy + sr * cp * sy,
+        cr * cp * sy - sr * sp * cy,
+        cr * cp * cy + sr * sp * sy,
+    ]
+}
+
 /// 实体增量数据
 ///
 /// 只包含变化的数据字段，未变化的字段为None
@@ -179,6 +313,52 @@ pub struct DeltaSerializer {
     baseline_sequence: u64,
     /// 变化阈值（用于浮点数比较）
     change_threshold: f32,
+    /// 量化配置（增强功能）
+    quantization: Option<QuantizationConfig>,
+    /// 量化器（仅在启用量化时使用）
+    quantizer: Option<Quantizer>,
+    /// 上次发送的量化状态（用于差分编码，增强功能）
+    last_quantized_state: HashMap<u64, QuantizedEntityDelta>,
+}
+
+/// 量化的实体增量（增强功能）
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct QuantizedEntityDelta {
+    /// 实体ID
+    pub id: u64,
+    /// 量化位置（如果变化）
+    pub position: Option<[i32; 3]>,
+    /// 量化旋转（如果变化）
+    pub rotation: Option<[i16; 3]>,
+    /// 量化速度（如果变化）
+    pub velocity: Option<[i16; 3]>,
+    /// 缩放（如果变化，保持f32精度）
+    pub scale: Option<[f32; 3]>,
+    /// 自定义数据（如果变化）
+    pub custom_data: Option<Vec<u8>>,
+}
+
+impl QuantizedEntityDelta {
+    /// 估算序列化大小
+    pub fn estimated_size(&self) -> usize {
+        let mut size = 8; // id (u64)
+        if self.position.is_some() {
+            size += 12; // 3 * i32
+        }
+        if self.rotation.is_some() {
+            size += 6; // 3 * i16
+        }
+        if self.velocity.is_some() {
+            size += 6; // 3 * i16
+        }
+        if self.scale.is_some() {
+            size += 12; // 3 * f32
+        }
+        if let Some(ref custom) = self.custom_data {
+            size += 4 + custom.len();
+        }
+        size
+    }
 }
 
 impl DeltaSerializer {
@@ -194,7 +374,43 @@ impl DeltaSerializer {
             current_sequence: 0,
             baseline_sequence: 0,
             change_threshold: threshold,
+            quantization: None,
+            quantizer: None,
+            last_quantized_state: HashMap::new(),
         }
+    }
+
+    /// 创建带量化配置的增量序列化器（增强功能）
+    pub fn with_quantization(config: QuantizationConfig) -> Self {
+        let quantizer = if config.enabled {
+            Some(Quantizer::new(config))
+        } else {
+            None
+        };
+        Self {
+            baseline: HashMap::new(),
+            current_sequence: 0,
+            baseline_sequence: 0,
+            change_threshold: 0.001,
+            quantization: Some(config),
+            quantizer,
+            last_quantized_state: HashMap::new(),
+        }
+    }
+
+    /// 启用量化（增强功能）
+    pub fn enable_quantization(&mut self, config: QuantizationConfig) {
+        self.quantization = Some(config);
+        if config.enabled {
+            self.quantizer = Some(Quantizer::new(config));
+        }
+    }
+
+    /// 禁用量化
+    pub fn disable_quantization(&mut self) {
+        self.quantization = None;
+        self.quantizer = None;
+        self.last_quantized_state.clear();
     }
 
     /// 设置基准状态
@@ -396,7 +612,100 @@ impl Default for DeltaSerializer {
             current_sequence: 0,
             baseline_sequence: 0,
             change_threshold: 0.001, // 默认阈值：1mm
+            quantization: None,
+            quantizer: None,
+            last_quantized_state: HashMap::new(),
         }
+    }
+}
+
+impl DeltaSerializer {
+    /// 量化实体增量（增强功能）
+    pub fn quantize_delta(&self, delta: &EntityDelta) -> Option<QuantizedEntityDelta> {
+        let quantizer = self.quantizer.as_ref()?;
+        Some(QuantizedEntityDelta {
+            id: delta.id,
+            position: delta.position.map(|p| quantizer.quantize_position(p)),
+            rotation: delta.rotation.map(|r| quantizer.quantize_rotation(r)),
+            velocity: delta.velocity.map(|v| quantizer.quantize_velocity(v)),
+            scale: delta.scale,
+            custom_data: delta.custom_data.clone(),
+        })
+    }
+
+    /// 反量化实体增量（增强功能）
+    pub fn dequantize_delta(&self, quantized: &QuantizedEntityDelta) -> Option<EntityDelta> {
+        let quantizer = self.quantizer.as_ref()?;
+        Some(EntityDelta {
+            id: quantized.id,
+            position: quantized.position.map(|p| quantizer.dequantize_position(p)),
+            rotation: quantized.rotation.map(|r| quantizer.dequantize_rotation(r)),
+            velocity: quantized.velocity.map(|v| quantizer.dequantize_velocity(v)),
+            scale: quantized.scale,
+            custom_data: quantized.custom_data.clone(),
+        })
+    }
+
+    /// 计算差分编码的增量（增强功能）
+    pub fn compute_differential_delta(
+        &mut self,
+        current: &QuantizedEntityDelta,
+    ) -> QuantizedEntityDelta {
+        let mut diff = QuantizedEntityDelta {
+            id: current.id,
+            position: None,
+            rotation: None,
+            velocity: None,
+            scale: None,
+            custom_data: None,
+        };
+
+        if let Some(last) = self.last_quantized_state.get(&current.id) {
+            // 只包含变化的部分
+            if current.position != last.position {
+                diff.position = current.position;
+            }
+            if current.rotation != last.rotation {
+                diff.rotation = current.rotation;
+            }
+            if current.velocity != last.velocity {
+                diff.velocity = current.velocity;
+            }
+            if current.scale != last.scale {
+                diff.scale = current.scale;
+            }
+            if current.custom_data != last.custom_data {
+                diff.custom_data = current.custom_data.clone();
+            }
+        } else {
+            // 新实体，包含所有数据
+            diff.position = current.position;
+            diff.rotation = current.rotation;
+            diff.velocity = current.velocity;
+            diff.scale = current.scale;
+            diff.custom_data = current.custom_data.clone();
+        }
+
+        // 更新最后状态
+        self.last_quantized_state.insert(current.id, current.clone());
+
+        diff
+    }
+
+    /// 处理实体增量列表（量化+差分编码，增强功能）
+    pub fn process_deltas_quantized(&mut self, deltas: &[EntityDelta]) -> Vec<QuantizedEntityDelta> {
+        if self.quantizer.is_none() {
+            return Vec::new();
+        }
+
+        deltas
+            .iter()
+            .filter_map(|delta| {
+                self.quantize_delta(delta).map(|quantized| {
+                    self.compute_differential_delta(&quantized)
+                })
+            })
+            .collect()
     }
 }
 

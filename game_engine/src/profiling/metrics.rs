@@ -366,12 +366,11 @@ impl MetricRegistry {
 
     /// 创建或获取性能计数器
     pub fn get_counter(&mut self, name: &str) -> Option<&PerformanceCounter> {
-        if !self.counters.contains_key(name) {
-            if let Some(def) = self.definitions.get(name) {
+        if !self.counters.contains_key(name)
+            && let Some(def) = self.definitions.get(name) {
                 let counter = PerformanceCounter::new(name, def.category, def.unit);
                 self.counters.insert(name.to_string(), counter);
             }
-        }
         self.counters.get(name)
     }
 

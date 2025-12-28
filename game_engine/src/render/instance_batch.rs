@@ -160,7 +160,7 @@ impl Instance3DDirtyTracker {
     ///
     /// 返回一个初始化的追踪器，所有实例标记为脏。
     pub fn new(initial_capacity: usize, chunk_size: usize) -> Self {
-        let chunk_count = (initial_capacity + chunk_size - 1) / chunk_size;
+        let chunk_count = initial_capacity.div_ceil(chunk_size);
         Self {
             chunk_size,
             chunk_dirty: vec![true; chunk_count],
@@ -226,12 +226,12 @@ impl Instance3DDirtyTracker {
         // 调整容量
         if new_count > self.instance_dirty.len() {
             let additional = new_count - self.instance_dirty.len();
-            self.instance_dirty.extend(std::iter::repeat(true).take(additional));
+            self.instance_dirty.extend(std::iter::repeat_n(true, additional));
 
-            let new_chunk_count = (new_count + self.chunk_size - 1) / self.chunk_size;
+            let new_chunk_count = new_count.div_ceil(self.chunk_size);
             if new_chunk_count > self.chunk_dirty.len() {
                 let chunk_additional = new_chunk_count - self.chunk_dirty.len();
-                self.chunk_dirty.extend(std::iter::repeat(true).take(chunk_additional));
+                self.chunk_dirty.extend(std::iter::repeat_n(true, chunk_additional));
             }
         }
 
@@ -266,7 +266,7 @@ impl Instance3DDirtyTracker {
         }
 
         // 只处理实例数量范围内的块
-        let num_chunks = (new_count + self.chunk_size - 1) / self.chunk_size;
+        let num_chunks = new_count.div_ceil(self.chunk_size);
 
         for chunk_idx in 0..num_chunks {
             let start = chunk_idx * self.chunk_size;
@@ -295,14 +295,15 @@ impl Instance3DDirtyTracker {
                 }
             } else {
                 // 逐个比较实例
-                for i in start..chunk_end {
-                    let is_dirty = !is_equal(&instances[i], &self.prev_instances[i]);
+                for (i, instance) in instances[start..chunk_end].iter().enumerate() {
+                    let idx = start + i;
+                    let is_dirty = !is_equal(instance, &self.prev_instances[idx]);
 
                     if is_dirty {
                         chunk_has_changes = true;
-                        self.instance_dirty[i] = true;
+                        self.instance_dirty[idx] = true;
                     } else {
-                        self.instance_dirty[i] = false;
+                        self.instance_dirty[idx] = false;
                     }
                 }
             }
@@ -325,11 +326,10 @@ impl Instance3DDirtyTracker {
         }
 
         // 处理新添加的实例（超出旧实例数量的部分）
-        if new_count > old_count {
-            if range_start.is_none() {
+        if new_count > old_count
+            && range_start.is_none() {
                 range_start = Some(old_count as u32);
             }
-        }
 
         // 关闭最后一个范围
         if let Some(start) = range_start {
@@ -672,7 +672,7 @@ impl InstanceBatch {
         }
 
         let required_size =
-            (cmds.len() * std::mem::size_of::<DrawIndexedIndirect>()) as wgpu::BufferAddress;
+            std::mem::size_of_val(cmds) as wgpu::BufferAddress;
         // 对齐到256字节边界，提高GPU内存访问效率
         let aligned_size = (required_size + 255) & !255;
 
@@ -710,6 +710,7 @@ impl InstanceBatch {
 
 /// 批次管理器 - 管理所有实例批次
 #[derive(bevy_ecs::prelude::Resource)]
+#[derive(Default)]
 pub struct BatchManager {
     /// 批次映射
     batches: HashMap<BatchKey, InstanceBatch>,
@@ -722,17 +723,6 @@ pub struct BatchManager {
     dynamic_config: DynamicBatchConfig,
 }
 
-impl Default for BatchManager {
-    fn default() -> Self {
-        Self {
-            batches: HashMap::new(),
-            visible_batch_keys: Vec::new(),
-            small_batch_keys: Vec::new(),
-            stats: BatchStats::default(),
-            dynamic_config: DynamicBatchConfig::default(),
-        }
-    }
-}
 
 /// 动态批次配置
 ///
@@ -947,7 +937,7 @@ impl BatchManager {
     fn split_batch(&mut self, batch: InstanceBatch) {
         let instance_count = batch.instance_count() as usize;
         let ideal_size = self.dynamic_config.ideal_batch_size;
-        let num_splits = (instance_count + ideal_size - 1) / ideal_size;
+        let num_splits = instance_count.div_ceil(ideal_size);
 
         tracing::debug!(
             target: "render",
@@ -980,7 +970,7 @@ impl BatchManager {
 
         for (split_idx, (inst_idx, _)) in instance_centers.into_iter().enumerate() {
             let target_batch = split_idx % num_splits;
-            batch_instances[target_batch].push(batch.instances[inst_idx].clone());
+            batch_instances[target_batch].push(batch.instances[inst_idx]);
         }
 
         // 4. 创建新批次
@@ -1045,7 +1035,7 @@ impl BatchManager {
                     batch.key.blend_mode,
                     batch.key.depth_test,
                 );
-                render_state_groups.entry(render_state_key).or_insert_with(Vec::new).push(*key);
+                render_state_groups.entry(render_state_key).or_default().push(*key);
             }
         }
 
@@ -1077,7 +1067,7 @@ impl BatchManager {
         for key in &batch_keys {
             if let Some(batch) = self.batches.get(key) {
                 let mm_key = (batch.key.mesh_id, batch.key.material_id);
-                material_mesh_groups.entry(mm_key).or_insert_with(Vec::new).push(*key);
+                material_mesh_groups.entry(mm_key).or_default().push(*key);
             }
         }
 
@@ -1097,11 +1087,10 @@ impl BatchManager {
             // 如果合并后的批次仍然小于理想大小，则合并
             if total_instances <= self.dynamic_config.ideal_batch_size {
                 // 找到该材质/网格的任意一个批次作为group_key
-                if let Some(first_key) = mm_batch_keys.first() {
-                    if let Some(first_batch) = self.batches.get(first_key) {
+                if let Some(first_key) = mm_batch_keys.first()
+                    && let Some(first_batch) = self.batches.get(first_key) {
                         self.merge_batch_group(first_batch.key, mm_batch_keys);
                     }
-                }
             }
         }
 
@@ -1109,8 +1098,8 @@ impl BatchManager {
         // 重新获取当前批次状态，因为有些批次可能已经被合并
         let mut remaining_batches: Vec<BatchKey> = Vec::new();
         for key in &batch_keys {
-            if self.batches.contains_key(key) {
-                if let Some(batch) = self.batches.get(key) {
+            if self.batches.contains_key(key)
+                && let Some(batch) = self.batches.get(key) {
                     let instance_count = batch.instance_count() as usize;
                     if instance_count < self.dynamic_config.small_batch_threshold
                         && instance_count > 0
@@ -1118,7 +1107,6 @@ impl BatchManager {
                         remaining_batches.push(*key);
                     }
                 }
-            }
         }
 
         // 如果剩余批次数量不足，跳过跨材质合并
@@ -1401,10 +1389,8 @@ impl BatchManager {
                 }
                 if batch.instance_count() < 2 {
                     self.small_batch_keys.push(*key);
-                } else {
-                    if sphere_in_frustum(batch.bounding_center, batch.bounding_radius, &planes) {
-                        filtered.push(*key);
-                    }
+                } else if sphere_in_frustum(batch.bounding_center, batch.bounding_radius, &planes) {
+                    filtered.push(*key);
                 }
             }
         }
@@ -1431,7 +1417,7 @@ impl BatchManager {
         let mut sorted_keys: Vec<_> = self
             .visible_batch_keys
             .iter()
-            .filter(|key| self.batches.get(key).map_or(false, |batch| !batch.instances.is_empty()))
+            .filter(|key| self.batches.get(key).is_some_and(|batch| !batch.instances.is_empty()))
             .cloned()
             .collect();
 
@@ -1455,12 +1441,11 @@ impl BatchManager {
         let mut draw_calls = 0u32;
 
         for key in &self.visible_batch_keys {
-            if let Some(batch) = self.batches.get(key) {
-                if !batch.instances.is_empty() {
+            if let Some(batch) = self.batches.get(key)
+                && !batch.instances.is_empty() {
                     total_instances += batch.instance_count();
                     draw_calls += 1;
                 }
-            }
         }
 
         self.stats = BatchStats {
@@ -1527,11 +1512,10 @@ impl BatchManager {
             HashMap::new();
         for &vid in ids {
             let (key, local_idx) = mapping[vid as usize];
-            if let Some(batch) = self.batches.get(&key) {
-                if let Some(inst) = batch.instances.get(local_idx as usize) {
+            if let Some(batch) = self.batches.get(&key)
+                && let Some(inst) = batch.instances.get(local_idx as usize) {
                     filtered.entry(key).or_default().push(*inst);
                 }
-            }
         }
         for (key, list) in filtered {
             if let Some(batch) = self.batches.get_mut(&key) {
@@ -1592,7 +1576,7 @@ impl BatchManager {
 // ============================================================================
 
 /// 3D 网格渲染组件
-#[derive(bevy_ecs::prelude::Component)]
+#[derive(bevy_ecs::prelude::Component, Clone)]
 pub struct Mesh3DRenderer {
     /// 网格资源
     pub mesh: Arc<GpuMesh>,
@@ -1785,7 +1769,7 @@ pub fn render_batches<'a>(render_pass: &mut wgpu::RenderPass<'a>, batch_manager:
         // 绑定材质
         render_pass.set_bind_group(1, &*batch.material_bind_group, &[]);
         // 可选绑定纹理组（布局3）
-        if let Some(bg) = batch.extra_material_bind_groups.get(0) {
+        if let Some(bg) = batch.extra_material_bind_groups.first() {
             render_pass.set_bind_group(3, &**bg, &[]);
         }
 
@@ -1812,7 +1796,7 @@ pub fn render_small_batches<'a>(
             render_pass.set_vertex_buffer(1, instance_buffer.slice(..));
         }
         render_pass.set_bind_group(1, &*batch.material_bind_group, &[]);
-        if let Some(bg) = batch.extra_material_bind_groups.get(0) {
+        if let Some(bg) = batch.extra_material_bind_groups.first() {
             render_pass.set_bind_group(3, &**bg, &[]);
         }
         // 使用间接绘制优化（默认启用）

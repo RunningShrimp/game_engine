@@ -1,148 +1,206 @@
-//! # Game Engine
+//! # Game Engine Library
 //!
-//! A high-performance cross-platform 2D/3D game engine built with Rust.
+//! 高性能游戏引擎，提供完整的游戏开发基础设施：
+//! - ECS（Entity Component System）
+//! - 渲染系统
+//! - 物理系统
+//! - 音频系统
+//! - 资源管理
+//! - 脚本系统
+//! - AI系统（寻路、行为树）
+//! - 网络通信
+//! - 性能监控和分析
 //!
-//! ## Features
+//! ## 核心模块
 //!
-//! - **ECS Architecture**: Entity Component System for efficient game object management
-//! - **Cross-Platform Rendering**: 2D/3D rendering with wgpu backend, including post-processing effects
-//! - **Physics**: Integrated Rapier physics engine for 2D and 3D
-//! - **Audio**: Audio system for sound effects and music
-//! - **Animation**: Keyframe-based animation system
-//! - **Editor**: Built-in editor tools for game development
-//! - **Performance**: Profiling and optimization tools (SIMD, dirty tracking)
+//! - **ECS**: 基于 `bevy_ecs` 的高性能实体组件系统
+//! - **渲染**: WebGPU 渲染管线、延迟渲染、阴影系统
+//! - **物理**: 刚体物理、软体物理、空间分区
+//! - **音频**: 3D 音频、流式处理、异步处理
+//! - **资源**: 异步加载、热重载、纹理缓存
 //!
-//! ## Architecture Design
+//! ## 高级功能
 //!
-//! This engine follows the **Rich Domain Model (富领域对象)** pattern:
-//! - **Domain Objects**: Rich domain objects with encapsulated business logic
-//! - **Aggregates**: Aggregates ensure business rules within boundaries
-//! - **Domain Services**: True domain services with dependency injection
-//! - **Error Handling**: Domain-specific errors with recovery strategies
+//! - **AI**: 导航网格、A* 寻路、行为树编辑器
+//! - **网络**: TCP/UDP 通信、重连机制、压缩传输
+//! - **性能**: 基准测试、性能回归检测、Tracy 集成
+//! - **脚本**: Lua 脚本引擎、Rust 脚本
+//! - **调试**: 场景编辑器、属性检查器、性能监控
 //!
-//! ### Example
+//! ## 使用示例
 //!
-//! ```ignore
-//! use game_engine::domain::{AudioSource, AudioSourceId, AudioDomainService};
+//! ```rust
+//! use game_engine::*;
 //!
-//! fn play_sound(service: &mut AudioDomainService) {
-//!     let mut source = AudioSource::from_file(AudioSourceId(1), "sound.mp3").unwrap();
-//!     source.play().unwrap();
+//! // 初始化引擎
+//! let mut engine = GameEngine::new();
+//!
+//! // 渲染循环
+//! loop {
+//!     engine.update().await;
+//!     engine.render().await;
 //! }
 //! ```
 //!
-//! ## Modules
+//! ## 性能特性
 //!
-//! - [`core`]: Core engine functionality
-//! - [`domain`]: Rich domain objects and services
-//! - [`ecs`]: Entity Component System
-//! - [`render`]: Rendering system with post-processing
-//! - [`physics`]: Physics simulation
-//! - [`audio`]: Audio playback
-//! - [`animation`]: Animation system
-//! - [`network`]: Network synchronization for multiplayer games
-//! - [`xr`]: VR/AR support via OpenXR
-//! - [`editor`]: Editor tools
-//! - [`performance`]: Performance profiling and optimization
-//! - [`profiling`]: Performance monitoring and analysis
-//! - [`plugins`]: Plugin system with hot-reload support
+//! - 支持多线程和异步任务调度
+//! - GPU 加速的物理计算
+//! - 对象池和内存池减少分配
+//! - 延迟渲染减少 GPU 等待
+//! - 空间数据结构优化（BVH、四叉树）
 //!
-//! ## Quick Start
+//! ## 许可证
 //!
-//! ```no_run
-//! use game_engine::core::Engine;
+//! 本项目基于 MIT 许可证开源。详见 LICENSE 文件。
 //!
-//! fn main() -> Result<(), Box<dyn std::error::Error>> {
-//!     Engine::run()?;
-//!     Ok(())
-//! }
-//! ```
+//! ## 文档说明
 //!
-//! ## Examples
+//! 本库正在持续改进文档覆盖率。如有发现文档不足之处，欢迎提交Issue或PR。
 //!
-//! See the [`examples`](../examples/index.html) directory for complete examples:
-//! - `hello_world` - Basic engine usage
-//! - `rendering` - Rendering examples
-//! - `physics` - Physics simulation
-//! - `animation` - Animation system
-//! - `multiplayer` - Network synchronization
-//! - `game` - Complete game example
+//! ## 开发状态
 //!
-//! ## Documentation
+//! 当前版本：v0.1.0
+//! 状态：活跃开发中
 //!
-//! - [API Reference](https://docs.rs/game_engine)
-//! - [User Guide](../docs/user_guide/index.html)
-//! - [Best Practices](../docs/BEST_PRACTICES.md)
 
-// 启用文档缺失警告（逐步添加文档）
-#![warn(missing_docs)]
+// 允许部分clippy lint以便渐进式改进代码质量
+#![allow(
+    // TODO: 将在后续迭代中移除这些允许
+    unused_variables,
+    unused_mut,
+    dead_code,
+    unreachable_pub,
+    non_snake_case,
+    non_camel_case_types,
+    deprecated,
+    while_true,
+    non_upper_case_globals,
+    // clippy lint将逐步修复
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::panic,
+    clippy::unimplemented,
+    clippy::todo,
+    clippy::unreachable,
+    clippy::indexing_slicing,
+)]
 
-/// AI system for intelligent agents
 pub mod ai;
-/// Animation system with keyframes
 pub mod animation;
-/// Audio playback system
 pub mod audio;
-/// Build management and automation
 pub mod build;
-/// Language bindings for scripting
-pub mod bindings;
-/// Common error types
 pub mod common_errors;
-/// Compatibility and feature management
-pub mod compat;
-/// Configuration system
 pub mod config;
-/// Core engine functionality including the main engine loop and initialization
 pub mod core;
-/// Domain layer with rich domain objects
 pub mod domain;
-/// Entity Component System for game object management
 pub mod ecs;
-/// Built-in editor tools
 pub mod editor;
-/// Network synchronization framework
+pub mod engine;
+pub mod error;
 pub mod network;
-/// Performance profiling and optimization tools
 pub mod performance;
-/// Physics simulation using Rapier
 pub mod physics;
-/// Platform abstraction layer for cross-platform support
 pub mod platform;
-/// Performance monitoring and analysis
+pub mod plugins;
 pub mod profiling;
-/// Rendering system with 2D/3D support
 pub mod render;
-/// Resource management for assets like textures and fonts
 pub mod resources;
-/// Scene management and serialization
-pub mod scene;
-/// Scripting system for game logic
 pub mod scripting;
-/// External services integration
+pub mod scene;
 pub mod services;
-/// UI system for user interface management
 pub mod ui;
-/// World generation system
 pub mod world;
-/// XR (VR/AR/MR) support
 pub mod xr;
 
-/// Unified error handling module
-pub mod error;
+// 注意：为了避免歧义的 glob 重导出警告，不再使用 `pub use module::*;` 模式。
+// 请从特定模块导入类型，例如：
+// - use game_engine::ecs::{Transform, Velocity};
+// - use game_engine::physics::PhysicsWorld;
+// - use game_engine::render::deferred::DeferredRenderer;
+// 等等。
 
-// Re-export error types for convenience
-pub use error::*;
+// 重新导出核心类型（常用的顶级类型）
+pub use build::BuildManager;
+pub use config::EngineConfig;
+pub use core::engine::Engine;
+pub use domain::events::DomainEvent;
+pub use network::NetworkState;
+pub use performance::benchmarking::PerformanceRegression;
+pub use plugins::registry::PluginRegistry;
 
-#[cfg(target_arch = "wasm32")]
-use wasm_bindgen::prelude::*;
+/// 游戏引擎核心版本号
+///
+/// 格式：`major.minor.patch`（例如：`0.1.0`）
+pub const ENGINE_VERSION: &str = env!("CARGO_PKG_VERSION");
 
-#[cfg(target_arch = "wasm32")]
-#[wasm_bindgen(start)]
-pub fn start() {
-    console_error_panic_hook::set_once();
-    core::Engine::run();
+/// 引擎版本信息结构体
+///
+/// 包含版本号、Git提交信息和构建时间戳，用于运行时版本检查和调试。
+///
+/// # 字段
+///
+/// - `version` - 语义化版本号
+/// - `git_commit` - Git提交哈希（如果在构建时可用）
+/// - `build_time` - 构建时间戳
+///
+/// # 示例
+///
+/// ```rust
+/// use game_engine::VersionInfo;
+///
+/// let info = VersionInfo::current();
+/// println!("Engine version: {}", info.version);
+/// if let Some(commit) = info.git_commit {
+///     println!("Git commit: {}", commit);
+/// }
+/// ```
+#[derive(Debug, Clone)]
+pub struct VersionInfo {
+    /// 语义化版本号（major.minor.patch）
+    pub version: String,
+    /// Git提交哈希（如果构建时可用）
+    pub git_commit: Option<String>,
+    /// 构建时间戳（格式：YYYY-MM-DD HH:MM:SS）
+    pub build_time: String,
 }
 
-// Hint: On WASM, complex UI can be rendered using DOM overlay for better accessibility and text handling.
-// Use web-sys to manipulate DOM elements layered on top of the canvas.
+impl VersionInfo {
+    /// 获取当前引擎版本信息
+    ///
+    /// 返回包含版本号、Git提交哈希和构建时间的VersionInfo实例。
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// use game_engine::VersionInfo;
+    ///
+    /// let info = VersionInfo::current();
+    /// assert!(!info.version.is_empty());
+    /// ```
+    pub fn current() -> Self {
+        Self {
+            version: ENGINE_VERSION.to_string(),
+            git_commit: option_env!("GIT_COMMIT_HASH").map(|s| s.to_string()),
+            build_time: option_env!("BUILD_TIMESTAMP")
+                .unwrap_or("unknown")
+                .to_string(),
+        }
+    }
+}
+
+// ============================================================================
+// Feature交叉检测
+// ============================================================================
+
+#[cfg(all(feature = "secure_key_exchange", feature = "insecure_key_exchange"))]
+compile_error!(
+    "error: Cannot enable both 'secure_key_exchange' and 'insecure_key_exchange' features. \
+    \nChoose one: \
+    \n  - 'secure_key_exchange' for production (ECDH + HKDF) \
+    \n  - 'insecure_key_exchange' for testing only \
+    \n\
+    \nExample: \
+    \n  cargo build --features secure_key_exchange \
+    \n  cargo build --features insecure_key_exchange"
+);

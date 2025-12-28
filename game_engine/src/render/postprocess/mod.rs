@@ -375,8 +375,8 @@ impl PostProcessPipeline {
         let mut current_input = scene_view;
 
         // 1. SSAO 通道
-        if self.config.ssao_enabled {
-            if let Some(depth) = depth_view {
+        if self.config.ssao_enabled
+            && let Some(depth) = depth_view {
                 self.ssao_pass.render(
                     encoder,
                     device,
@@ -389,7 +389,6 @@ impl PostProcessPipeline {
                 );
                 current_input = self.ssao_pass.output_view();
             }
-        }
 
         // 2. Bloom 通道
         if self.config.bloom_enabled {
@@ -406,8 +405,8 @@ impl PostProcessPipeline {
         }
 
         // 3. 运动模糊通道
-        if self.config.motion_blur_enabled {
-            if let Some(motion_vectors) = motion_vector_view {
+        if self.config.motion_blur_enabled
+            && let Some(motion_vectors) = motion_vector_view {
                 self.motion_blur_pass.render(
                     encoder,
                     device,
@@ -421,11 +420,10 @@ impl PostProcessPipeline {
                     self.config.motion_blur_max_samples,
                 );
             }
-        }
 
         // 4. 景深通道
-        if self.config.depth_of_field_enabled {
-            if let Some(depth) = depth_view {
+        if self.config.depth_of_field_enabled
+            && let Some(depth) = depth_view {
                 self.depth_of_field_pass.render(
                     encoder,
                     device,
@@ -442,7 +440,6 @@ impl PostProcessPipeline {
                     self.config.max_blur_radius,
                 );
             }
-        }
 
         // 5. 色彩校正通道
         if self.config.color_correction_enabled {

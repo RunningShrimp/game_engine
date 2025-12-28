@@ -550,11 +550,10 @@ impl ProfilingService {
                 state.active_alerts_count = alerting_engine.get_active_alerts().len();
             }
 
-            if let Ok(storage) = self.storage.lock() {
-                if let Ok(storage_stats) = storage.get_storage_stats_sync() {
+            if let Ok(storage) = self.storage.lock()
+                && let Ok(storage_stats) = storage.get_storage_stats_sync() {
                     state.storage_files_count = storage_stats.total_files;
                 }
-            }
         }
     }
 

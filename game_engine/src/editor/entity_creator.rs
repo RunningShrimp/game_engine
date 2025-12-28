@@ -138,14 +138,13 @@ impl EntityCreator {
             }
 
             // 检测拖拽释放
-            if response.drag_stopped() {
-                if let Some(template) = self.dragging_template {
+            if response.drag_stopped()
+                && let Some(template) = self.dragging_template {
                     if let Some(pos) = ui.ctx().pointer_latest_pos() {
                         created_entity = Some((template, pos));
                     }
                     self.dragging_template = None;
                 }
-            }
         }
 
         // 显示拖拽状态

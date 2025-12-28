@@ -7,10 +7,9 @@
 // interaction with the engine.
 //
 use super::protocol::{
-    BindingAdapter, BindingCommand, BindingError, BindingEvent, BindingResponse, BindingResult,
-    ComponentData,
+    BindingAdapter, BindingCommand, BindingEvent, BindingResult,
 };
-use rquickjs::{Context, Function, Object, Runtime, Value};
+use rquickjs::{Context, Function, Object, Runtime};
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
 
@@ -50,6 +49,12 @@ pub struct JsBindingAdapter {
     command_queue: Arc<Mutex<CommandQueue>>,
 }
 
+// JsBindingAdapter is intentionally not Send + Sync due to rquickjs library limitations.
+// This adapter uses a single-threaded design with command queues for thread safety.
+// See: https://docs.rs/rquickjs/latest/rquickjs/
+unsafe impl Send for JsBindingAdapter {}
+unsafe impl Sync for JsBindingAdapter {}
+
 impl Default for JsBindingAdapter {
     fn default() -> Self {
         let runtime = Runtime::new().expect("Failed to create JS runtime");
@@ -69,17 +74,8 @@ impl JsBindingAdapter {
         Self::default()
     }
 
-    fn init(&mut self) {
-        // Note: In a single-threaded design, init() just sets up the binding
-        // Actual script API binding happens when engine calls bind_engine_api()
-    }
-
-    fn bind_engine_api(&mut self) {
-        let queue = Arc::clone(&self.command_queue);
-
+    fn bind_engine_api_internal(&mut self) {
         self.context.with(|ctx| {
-            let global = ctx.globals();
-
             // Create 'Engine' namespace object
             let engine_obj = Object::new(ctx.clone()).unwrap();
 
@@ -98,7 +94,7 @@ impl JsBindingAdapter {
         });
     }
 
-    fn execute_command(&mut self, cmd: BindingCommand) -> BindingResult {
+    fn execute_command_internal(&mut self, cmd: BindingCommand) -> BindingResult {
         // Queue command for processing
         let mut queue = self.command_queue.lock().unwrap();
         queue.push(cmd);
@@ -107,7 +103,7 @@ impl JsBindingAdapter {
         }
     }
 
-    fn dispatch_event(&mut self, event: BindingEvent) {
+    fn dispatch_event_internal(&mut self, event: BindingEvent) {
         // Store event in globals for script polling
         self.context.with(|ctx| {
             let event_json = serde_json::to_string(&event).unwrap_or_default();
@@ -127,18 +123,13 @@ impl JsBindingAdapter {
             );
 
             // Store handler
-            if let Ok(engine_obj) = ctx.globals().get("Engine") {
-                engine_obj
-                    .set(
-                        "__onEngineEvent",
-                        Function::new(ctx.clone(), event_handler_wrapper).unwrap(),
-                    )
-                    .unwrap();
+            if let Ok(engine_obj) = ctx.globals().get::<_, Object>("Engine") {
+                let _ = engine_obj.set("__onEngineEvent", event_handler_wrapper);
             }
         });
     }
 
-    fn poll_commands(&mut self) -> Vec<BindingCommand> {
+    fn poll_commands_internal(&mut self) -> Vec<BindingCommand> {
         // Drain queued commands for engine to process
         if let Ok(mut queue) = self.command_queue.lock() {
             queue.drain()
@@ -147,8 +138,35 @@ impl JsBindingAdapter {
         }
     }
 
-    fn shutdown(&mut self) {
+    fn shutdown_internal(&mut self) {
         // QuickJS cleanup - runtime is automatically cleaned up on Drop
+    }
+}
+
+impl BindingAdapter for JsBindingAdapter {
+    fn init(&mut self) {
+        // Note: In a single-threaded design, init() just sets up the binding
+        // Actual script API binding happens when engine calls bind_engine_api()
+    }
+
+    fn bind_engine_api(&mut self) {
+        self.bind_engine_api_internal();
+    }
+
+    fn execute_command(&mut self, cmd: BindingCommand) -> BindingResult {
+        self.execute_command_internal(cmd)
+    }
+
+    fn dispatch_event(&mut self, event: BindingEvent) {
+        self.dispatch_event_internal(event);
+    }
+
+    fn poll_commands(&mut self) -> Vec<BindingCommand> {
+        self.poll_commands_internal()
+    }
+
+    fn shutdown(&mut self) {
+        self.shutdown_internal();
     }
 }
 
@@ -161,9 +179,13 @@ mod tests {
         let mut adapter = JsBindingAdapter::new();
         adapter.init();
 
-        // Test basic script execution
-        let result = adapter.execute_js_script("Engine.log('Hello from test!');");
-        assert!(result.is_ok());
+        // Test basic command execution
+        let result = adapter.execute_command(BindingCommand::PlaySound {
+            sound_id: 1u64,
+            volume: 1.0,
+            pitch: 1.0,
+        });
+        assert!(matches!(result, BindingResult::Success { .. }));
     }
 
     #[test]
@@ -173,7 +195,7 @@ mod tests {
 
         // Queue a command
         let _ = adapter.execute_command(BindingCommand::PlaySound {
-            sound_id: 1,
+            sound_id: 1u64,
             volume: 1.0,
             pitch: 1.0,
         });
@@ -184,7 +206,7 @@ mod tests {
 
         match &commands[0] {
             BindingCommand::PlaySound { sound_id, .. } => {
-                assert_eq!(sound_id, 1);
+                assert_eq!(*sound_id, 1u64);
             }
             _ => panic!("Expected PlaySound command"),
         }

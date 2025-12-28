@@ -1,67 +1,103 @@
-//  物理系统模块
-//
-//  提供物理模拟功能，基于富领域对象架构。
-//  使用 `crate::domain::physics` 模块中的富领域对象。
-//
-// # 使用示例
-//
-// ## 基础刚体创建
-//
-// ```rust
-// use game_engine::ecs::Transform;
-// use game_engine::physics::{RigidBodyComp, RigidBodyDesc};
-// use game_engine::domain::physics::{RigidBody, RigidBodyId, RigidBodyType};
-// use bevy_ecs::prelude::*;
-// use glam::{Vec3, Quat};
-//
-// fn spawn_physics_entity(mut commands: Commands) {
-//     let entity = commands.spawn((
-//         RigidBodyDesc {
-//             body_type: RigidBodyType::Dynamic,
-//             position: Vec3::new(0.0, 10.0, 0.0),
-//             rotation: Quat::IDENTITY,
-//         },
-//         Transform::default(),
-//     )).id();
-// }
-// ```
-//
-// ## 使用富领域对象
-//
-// ```rust
-// use game_engine::domain::services::PhysicsDomainService;
-// use game_engine::domain::physics::{RigidBody, RigidBodyId, RigidBodyType};
-// use glam::Vec3;
-//
-// fn create_physics_body() {
-//     let mut physics_service = PhysicsDomainService::new();
-//
-//     let body = RigidBody::new(
-//         RigidBodyId::new(1),
-//         RigidBodyType::Dynamic,
-//         Vec3::new(0.0, 10.0, 0.0),
-//     );
-//
-//     physics_service.create_body(body).unwrap();
-// }
-// ```
-//
-// ## 空间分区加速
-//
-// ```rust
-// use game_engine::physics::SpatialPartitionType;
-// use game_engine::physics::SpatialPartitionManager;
-// use glam::Vec3;
-//
-// fn setup_spatial_partition() {
-//     let manager = SpatialPartitionManager::new(SpatialPartitionType::SpatialHash {
-//         cell_size: 10.0,
-//     });
-//
-//     // 插入物体
-//     manager.insert(1, Vec3::new(5.0, 5.0, 5.0), 1.0);
-// }
-// ```
+//! # 物理系统（Physics System）
+//!
+//! 本模块提供完整的物理模拟功能，基于Rapier物理引擎和ECS架构。
+//!
+//! ## 核心组件
+//!
+//! ### 刚体物理（Rigid Body Physics）
+//! - [`RigidBodyComp`]: 刚体ECS组件
+//! - [`RigidBodyDesc`]: 刚体描述符，用于创建刚体
+//! - [`ColliderComp`]: 碰撞体ECS组件
+//! - [`ColliderDesc`]: 碰撞体描述符
+//!
+//! ### 软体物理（Soft Body Physics）
+//! - [`SoftBodyComp`]: 软体组件
+//! - [`ClothSimulation`]: 布料模拟
+//! - [`FluidSimulation`]: 流体模拟
+//!
+//! ### 空间分区（Spatial Partitioning）
+//! - [`SpatialPartition`]: 空间分区trait
+//! - [`SpatialHash`]: 空间哈希实现
+//! - [`BVH`]: Bounding Volume Hierarchy
+//!
+//! ### 批处理和并行（Batching & Parallel）
+//! - [`BatchSync`]: 批量同步系统
+//! - [`ParallelPhysics`]: 并行物理计算
+//! - [`GPUPhysics`]: GPU加速物理
+//!
+//! ## 使用方式
+//!
+//! ### 方式1：使用ECS组件（推荐）
+//!
+//! ```rust,no_run
+//! use game_engine::physics::{RigidBodyDesc, ColliderDesc};
+//! use game_engine::ecs::Transform;
+//! use bevy_ecs::prelude::*;
+//! use glam::Vec3;
+//!
+//! fn spawn_physics_entity(mut commands: Commands) {
+//!     commands.spawn((
+//!         RigidBodyDesc {
+//!             body_type: game_engine::domain::physics::RigidBodyType::Dynamic,
+//!             position: Vec3::new(0.0, 10.0, 0.0),
+//!             rotation: glam::Quat::IDENTITY,
+//!         },
+//!         ColliderDesc::ball(1.0),
+//!         Transform::default(),
+//!     ));
+//! }
+//! ```
+//!
+//! ### 方式2：使用领域服务
+//!
+//! ```rust,no_run
+//! use game_engine::domain::services::PhysicsDomainService;
+//! use game_engine::domain::physics::{RigidBody, RigidBodyId, RigidBodyType};
+//! use glam::Vec3;
+//!
+//! fn create_physics_body() {
+//!     let mut physics_service = PhysicsDomainService::new();
+//!
+//!     let body = RigidBody::new(
+//!         RigidBodyId::new(1),
+//!         RigidBodyType::Dynamic,
+//!         Vec3::new(0.0, 10.0, 0.0),
+//!     );
+//!
+//!     physics_service.create_body(body).unwrap();
+//! }
+//! ```
+//!
+//! ## 空间分区优化
+//!
+//! 物理系统提供多种空间分区数据结构，用于加速碰撞检测：
+//!
+//! - **空间哈希（Spatial Hashing）**: 适合均匀分布的物体
+//! - **BVH**: 适合大小不一的物体
+//! - **网格划分（Grid）**: 简单高效，适合2D
+//! - **四叉树/八叉树**: 适合层次化场景
+//!
+//! ## GPU加速
+//!
+//! 部分物理计算可以卸载到GPU：
+//!
+//! - **粒子物理**: 大规模粒子系统
+//! - **流体模拟**: SPH（平滑粒子流体动力学）
+//! - **碰撞检测**: 宽阶段检测
+//!
+//! ## 性能优化
+//!
+//! - **批量同步**: 减少同步开销
+//! - **空间分区**: 减少碰撞检测对数
+//! - **休眠（Sleeping）**: 静止物体不计算
+//! - **固定物体优化**: 静态物体不移动
+//!
+//! ## 相关模块
+//!
+//! - [`crate::domain::physics`]: 物理领域对象
+//! - [`crate::domain::services::PhysicsDomainService`]: 物理领域服务
+//! - [`crate::render`]: 物理可视化
+//!
 
 use crate::impl_default;
 
@@ -72,11 +108,11 @@ pub mod gpu_acceleration;
 pub mod gpu_particle_physics;
 pub mod gpu_fluid_simulation;
 pub mod joints;
+pub mod multithreaded;
 pub mod parallel;
 pub mod physics3d;
 pub mod soft_body;
 pub mod spatial_partition;
-pub mod spatial_partition_enhanced;
 
 pub use batch_sync::{
     BatchSyncBuffer, BatchSyncManager, BatchSyncResource, batch_collect_physics_state_system,
@@ -90,13 +126,38 @@ pub use dirty_tracker::{
     optimized_physics_sync_system, transform_to_physics_sync_system,
 };
 pub use soft_body::{
-    ClothSoftBody, FluidSoftBody, Particle, SoftBodyComponent, SoftBodyPhysicsWorld,
+    ClothConfig, ClothSoftBody, FluidSoftBody, Particle, SoftBodyComponent, SoftBodyPhysicsWorld,
     SoftBodyType, SphParameters, soft_body_physics_system,
 };
-pub use spatial_partition::{BVHTree, SpatialHash, SpatialPartitionManager, SpatialPartitionType};
-pub use spatial_partition_enhanced::{
-    EnhancedSpatialPartitionConfig, EnhancedSpatialPartitionManager, SAHOptimizedBVH,
+pub use spatial_partition::{
+    BVHTree, SpatialHash, SpatialPartitionEnhancedConfig, SpatialPartitionManager,
+    SpatialPartitionType,
 };
+pub use multithreaded::{
+    MultithreadedPhysicsConfig, MultithreadedPhysicsWorld, PhysicsPerformanceStats,
+    multithreaded_physics_step_system, sync_multithreaded_physics_to_transform_system,
+};
+
+// 向后兼容：Enhanced类型现在指向基础版本的增强功能
+/// 增强的空间分区配置（向后兼容别名）
+/// 
+/// 注意：增强功能已整合到`SpatialPartitionManager`中，通过`SpatialPartitionEnhancedConfig`配置。
+/// 保留此类型别名以保持向后兼容。
+#[deprecated(
+    since = "0.1.0",
+    note = "Use SpatialPartitionEnhancedConfig instead. This type is kept for backward compatibility only."
+)]
+pub type EnhancedSpatialPartitionConfig = SpatialPartitionEnhancedConfig;
+
+/// 增强的空间分区管理器（向后兼容别名）
+/// 
+/// 注意：增强功能已整合到`SpatialPartitionManager`中。
+/// 保留此类型别名以保持向后兼容。
+#[deprecated(
+    since = "0.1.0",
+    note = "Use SpatialPartitionManager with enhanced config instead. This type is kept for backward compatibility only."
+)]
+pub type EnhancedSpatialPartitionManager = SpatialPartitionManager;
 pub use gpu_acceleration::{
     CollisionResult, GpuPhysicsAccelerator, GpuPhysicsConfig, GpuPhysicsError,
     RigidSoftCollisionDetector,

@@ -104,7 +104,7 @@ impl InstanceDataPool {
             mapped_at_creation: false,
         });
 
-        let chunk_count = (max_instances as usize + chunk_size - 1) / chunk_size;
+        let chunk_count = (max_instances as usize).div_ceil(chunk_size);
 
         Self {
             instance_buffer,
@@ -203,7 +203,7 @@ impl InstanceDataPool {
         }
 
         let chunk_start = start_idx / self.chunk_size;
-        let chunk_end = (end_idx + self.chunk_size - 1) / self.chunk_size;
+        let chunk_end = end_idx.div_ceil(self.chunk_size);
         for i in chunk_start..chunk_end.min(self.chunk_dirty.len()) {
             self.chunk_dirty[i] = true;
         }
@@ -234,18 +234,18 @@ impl InstanceDataPool {
         let mut dirty_ranges = Vec::new();
         let mut range_start: Option<usize> = None;
 
-        for i in 0..instances.len().min(self.dirty_bits.len()) {
+        for (i, instance) in instances.iter().enumerate().take(self.dirty_bits.len()) {
             let is_dirty = self.dirty_bits[i]
                 || self
                     .prev_instances
                     .get(i)
                     .map(|prev| {
                         // 比较实例数据
-                        prev.instance_id != instances[i].instance_id
-                            || prev.aabb_min != instances[i].aabb_min
-                            || prev.aabb_max != instances[i].aabb_max
-                            || prev.model != instances[i].model
-                            || prev.flags != instances[i].flags
+                        prev.instance_id != instance.instance_id
+                            || prev.aabb_min != instance.aabb_min
+                            || prev.aabb_max != instance.aabb_max
+                            || prev.model != instance.model
+                            || prev.flags != instance.flags
                     })
                     .unwrap_or(true);
 
@@ -254,11 +254,9 @@ impl InstanceDataPool {
                     range_start = Some(i);
                 }
                 self.dirty_bits[i] = true;
-            } else {
-                if let Some(start) = range_start {
-                    dirty_ranges.push((start as u32, i as u32));
-                    range_start = None;
-                }
+            } else if let Some(start) = range_start {
+                dirty_ranges.push((start as u32, i as u32));
+                range_start = None;
             }
         }
 
@@ -383,7 +381,7 @@ impl InstanceDataPool {
 
         // 扩展脏标记位图
         self.dirty_bits.resize(new_max_instances as usize, false);
-        let chunk_count = (new_max_instances as usize + self.chunk_size - 1) / self.chunk_size;
+        let chunk_count = (new_max_instances as usize).div_ceil(self.chunk_size);
         self.chunk_dirty.resize(chunk_count, false);
 
         self.max_instances = new_max_instances;

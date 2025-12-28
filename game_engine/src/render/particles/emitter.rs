@@ -554,12 +554,11 @@ pub fn particle_emitter_update_system(
         }
 
         // 检查持续时间
-        if let Some(duration) = emitter.config.duration {
-            if emitter.elapsed_time >= duration && !emitter.config.looping {
+        if let Some(duration) = emitter.config.duration
+            && emitter.elapsed_time >= duration && !emitter.config.looping {
                 emitter.enabled = false;
                 continue;
             }
-        }
 
         // 计算发射数（实际发射在 GPU compute shader 中执行）
         let _emit_count = emitter.particles_to_emit(delta);

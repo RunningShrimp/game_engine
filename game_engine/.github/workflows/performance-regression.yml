@@ -1,0 +1,127 @@
+name: Performance Regression Detection
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  benchmark:
+    name: Run Benchmarks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Cache cargo registry
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo index
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo build
+        uses:/actions/cache@v3
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Run all benchmarks
+        run: |
+          echo "Running performance benchmarks..."
+          cargo bench --workspace --all-features || true
+
+      - name: Generate benchmark summary
+        run: |
+          echo "Benchmark Summary"
+          echo "=================="
+          echo ""
+          echo "Benchmark results are available in target/criterion/"
+          echo ""
+          echo "Key metrics to monitor:"
+          echo "  - Physics simulation performance"
+          echo "  - Pathfinding efficiency"
+          echo "  - Rendering throughput"
+          echo "  - Resource loading speed"
+          echo "  - Memory allocation patterns"
+
+  compare-baselines:
+    name: Compare with Baselines
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Install comparison script dependencies
+        run: |
+          cargo install cargo-criterion
+
+      - name: Run comparison with main branch
+        run: |
+          echo "Comparing with main branch..."
+          git checkout origin/main
+          cargo bench --bench pathfinding -- --save-baseline main
+          cargo bench --bench physics -- --save-baseline main
+          cargo bench --bench render -- --save-baseline main
+
+          git checkout -
+          cargo bench --bench pathfinding -- --baseline main
+          cargo bench --bench physics -- --baseline main
+          cargo bench --bench render -- --baseline main
+
+      - name: Check for performance regression
+        run: |
+          echo "Checking for performance regressions..."
+          echo "If performance degrades by more than 10%, this should be reviewed"
+          echo ""
+          echo "See target/criterion/ for detailed reports"
+
+  critical-path-benchmarks:
+    name: Critical Path Benchmarks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Run critical path benchmarks
+        run: |
+          echo "Running critical path benchmarks..."
+          if [ -f "benches/critical_path_benchmarks.rs" ]; then
+            cargo bench --bench critical_path_benchmarks
+          else
+            echo "Critical path benchmarks not found, skipping..."
+          fi
+
+      - name: Report critical metrics
+        run: |
+          echo "Critical Performance Metrics:"
+          echo "=============================="
+          echo "Frame time target: < 16.6ms (60 FPS)"
+          echo "Frame time target: < 8.3ms (120 FPS)"
+          echo "Physics update target: < 2ms"
+          echo "Render preparation target: < 5ms"

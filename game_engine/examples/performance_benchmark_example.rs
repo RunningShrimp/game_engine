@@ -1,115 +1,78 @@
-use game_engine::performance::{
-    BenchmarkResult, BenchmarkSuite, DefaultThresholds, Threshold, ThresholdType,
-};
-use std::thread;
+// 性能基准测试示例 - 简化版
+//
+// 这个示例展示了如何使用基准测试框架进行性能测试
+
+use game_engine::performance::benchmarking::{Benchmark, PerformanceRegression};
 use std::time::Duration;
 
 fn expensive_operation() {
-    thread::sleep(Duration::from_millis(5));
+    std::thread::sleep(Duration::from_millis(5));
 }
 
 fn physics_simulation_step() {
-    thread::sleep(Duration::from_micros(500));
+    std::thread::sleep(Duration::from_micros(500));
 }
 
 fn render_frame() {
-    thread::sleep(Duration::from_millis(1));
+    std::thread::sleep(Duration::from_millis(1));
 }
 
 fn main() {
     println!("=== 性能基准测试示例 ===\n");
 
-    let mut suite = BenchmarkSuite::new();
+    // 创建基准测试器
+    let mut bench = Benchmark::new();
 
+    // 1. 基础基准测试
     println!("1. 基础基准测试");
     println!("----------------------");
-    suite.run_benchmark("expensive_operation", || {
+    let result = bench.run("expensive_operation", 10, || {
         expensive_operation();
     });
+    println!("执行时间: {:.3}ms", result.avg_duration.as_secs_f64() * 1000.0);
+    println!("最小时间: {:.3}ms", result.min_duration.as_secs_f64() * 1000.0);
+    println!("最大时间: {:.3}ms", result.max_duration.as_secs_f64() * 1000.0);
 
-    if let Some(result) = suite.get_benchmark().get_result("expensive_operation") {
-        println!("执行时间: {:.2} {}", result.current_value, result.unit);
-        println!("基准时间: {:.2} {}", result.baseline, result.unit);
-        println!("性能变化: {:.2}%", result.regression_percent);
-        println!(
-            "状态: {}",
-            if result.has_regression {
-                "回退"
-            } else {
-                "正常"
-            }
-        );
-    }
-
-    println!("\n2. 多次运行取平均");
+    // 2. 物理模拟测试
+    println!("\n2. 物理模拟测试");
     println!("----------------------");
-    suite.run_benchmark("physics_step", || {
+    let physics_result = bench.run("physics_step", 100, || {
         physics_simulation_step();
     });
+    println!("物理步进时间: {:.3}μs", physics_result.avg_duration.as_secs_f64() * 1_000_000.0);
 
-    if let Some(result) = suite.get_benchmark().get_result("physics_step") {
-        println!("物理步进时间: {:.3} {}", result.current_value, result.unit);
-    }
-
-    println!("\n3. 自定义阈值配置");
+    // 3. 渲染测试
+    println!("\n3. 渲染帧测试");
     println!("----------------------");
+    let render_result = bench.run("render_frame", 100, || {
+        render_frame();
+    });
+    println!("渲染帧时间: {:.3}μs", render_result.avg_duration.as_secs_f64() * 1_000_000.0);
 
-    let absolute_threshold = Threshold::new_absolute(16.0);
-    println!("绝对阈值示例:");
-    println!("  基准: 16.0ms");
-    println!("  超过此值即认为回退");
-
-    let relative_threshold = Threshold::new_relative(10.0, 20.0);
-    println!("\n相对阈值示例:");
-    println!("  基准: 10.0ms");
-    println!("  允许偏差: 20%");
-    println!("  回退阈值: 12.0ms");
-
-    println!("\n4. 默认阈值配置");
+    // 4. 性能回归检测
+    println!("\n4. 性能回归检测");
     println!("----------------------");
-    let thresholds = DefaultThresholds::get_default_thresholds();
-    println!("引擎默认配置的阈值:");
-    for (name, threshold) in thresholds.iter().take(5) {
-        println!(
-            "  {}: 基准={:.2}ms, 偏差={}%",
-            name, threshold.baseline, threshold.tolerance_percent
-        );
-    }
+    let mut regression = PerformanceRegression::new(0.2); // 20%阈值
 
-    println!("\n5. 性能改进检测");
-    println!("----------------------");
+    // 设置基线
+    regression.set_baseline("render_frame", Duration::from_millis(1));
 
-    let mut benchmark = suite.get_benchmark().clone();
-    benchmark.set_relative_threshold("render_improvement", 20.0, 0.0);
-
-    benchmark.run(
-        "render_improvement",
-        || {
-            render_frame();
-        },
-        "ms",
-    );
-
-    if let Some(result) = benchmark.get_result("render_improvement") {
-        if result.has_improvement() {
-            println!(
-                "性能改进: {:.2}% ({} -> {} {})",
-                (1.0 - result.current_value / result.baseline) * 100.0,
-                result.baseline,
-                result.current_value,
-                result.unit
-            );
-        }
-    }
-
-    println!("\n6. 完整报告");
-    println!("----------------------");
-    println!("{}", suite.generate_report());
-
-    if suite.has_any_regression() {
-        println!("\n警告: 检测到性能回退!");
-        println!("请检查最近的代码更改是否影响了性能。");
+    // 检查当前性能
+    let current_performance = render_result.avg_duration;
+    if regression.check_regression("render_frame", current_performance) {
+        println!("警告: 检测到性能回退!");
     } else {
-        println!("\n所有性能指标正常。");
+        println!("性能正常，无回归。");
     }
+
+    if let Some(percent) = regression.get_regression_percent("render_frame", current_performance) {
+        println!("性能变化: {:.1}%", percent);
+    }
+
+    // 5. 打印所有结果
+    println!("\n5. 完整结果");
+    println!("----------------------");
+    bench.print_results();
+
+    println!("\n示例完成!");
 }

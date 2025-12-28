@@ -274,7 +274,7 @@ impl ClientPredictionManager {
         // 清理已确认的旧命令
         while let Some(front) = self.input_queue.front() {
             if front.confirmed
-                && front.confirmed_tick.map_or(false, |t| t < server_tick.saturating_sub(60))
+                && front.confirmed_tick.is_some_and(|t| t < server_tick.saturating_sub(60))
             {
                 self.input_queue.pop_front();
             } else {
@@ -350,7 +350,7 @@ impl ClientPredictionManager {
 
     /// 检查是否需要创建快照
     pub fn should_create_snapshot(&self) -> bool {
-        self.current_client_tick % self.snapshot_interval == 0
+        self.current_client_tick.is_multiple_of(self.snapshot_interval)
     }
 }
 
@@ -448,7 +448,7 @@ pub fn input_capture_system(
         let input_data: Vec<u8> = relevant_inputs
             .iter()
             .flat_map(|k| {
-                let code = match k {
+                let code: i32 = match k {
                     crate::platform::KeyCode::W => 1,
                     crate::platform::KeyCode::A => 2,
                     crate::platform::KeyCode::S => 3,
@@ -456,7 +456,7 @@ pub fn input_capture_system(
                     crate::platform::KeyCode::Space => 5,
                     _ => 0,
                 };
-                (code as i32).to_le_bytes().to_vec()
+                code.to_le_bytes().to_vec()
             })
             .collect();
 

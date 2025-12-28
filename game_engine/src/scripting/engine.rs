@@ -1,41 +1,12 @@
 // ============================================================================
-// 脚本系统 - 简化版本（向后兼容）
-// 注意：新的代码应使用 ScriptComponent 而不是 Script
+// 脚本系统
 // ============================================================================
 
 use super::system::ScriptValue;
 use bevy_ecs::prelude::*;
 use std::collections::HashMap;
 
-/// 脚本组件（简化版本，向后兼容）
-///
-/// 注意：新代码应使用 `ScriptComponent` 而不是 `Script`
-/// 这个类型保留用于向后兼容
-#[deprecated(
-    since = "0.1.0",
-    note = "Use ScriptComponent instead. This type is kept for backward compatibility only."
-)]
-#[derive(Component, Default)]
-pub struct Script {
-    /// 脚本源代码
-    pub source: String,
-    /// 是否启用脚本
-    pub enabled: bool,
-}
-
-impl Script {
-    /// 创建新的脚本组件
-    #[deprecated(
-        since = "0.1.0",
-        note = "Use ScriptComponent::new() instead"
-    )]
-    pub fn new(source: impl Into<String>) -> Self {
-        Self {
-            source: source.into(),
-            enabled: true,
-        }
-    }
-}
+// Script 已删除 - 请使用 ScriptComponent 替代
 
 /// 脚本资源句柄
 #[derive(Component)]

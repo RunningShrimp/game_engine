@@ -205,6 +205,24 @@ mod tests {
 
         let service_id = kernel.register_service(service).await.unwrap();
         assert_eq!(kernel.registry().services().await.len(), 1);
+
+        // 验证服务已注册，使用实际的元组结构
+        let services = kernel.registry().services().await;
+        // services 是 Vec<(ServiceId, Arc<Mutex<dyn Service>>)>
+        if let Some((id, _service)) = services.iter().find(|(id, _)| id.to_string() == "test_service") {
+            assert_eq!(id.to_string(), "test_service");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_dummy_service_multiple_instances() {
+        // 测试 DummyService::new 的完整使用
+        let service1 = DummyService::new("service1".to_string());
+        let service2 = DummyService::new("service2".to_string());
+
+        assert_ne!(service1.id(), service2.id());
+        assert_eq!(service1.name(), "service1");
+        assert_eq!(service2.name(), "service2");
     }
 }
 

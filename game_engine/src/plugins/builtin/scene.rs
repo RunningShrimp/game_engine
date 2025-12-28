@@ -1,13 +1,21 @@
 //  场景管理器插件
-// 
+//
 //  提供场景管理功能，支持场景加载、保存、切换等。
 
 use crate::impl_default;
 use crate::plugins::{EnginePlugin, App, PluginVersion, PluginDependency};
-use crate::scene::{SceneManager, scene_update_system, scene_load_system, scene_cleanup_system};
+use crate::scene::{SceneTransitionManager, scene_update_system, scene_load_system, scene_cleanup_system};
+
+// 安全的资源获取宏 - 提供更好的错误消息
+macro_rules! fetch_resource_mut {
+    ($world:expr, $res_type:ty) => {
+        $world.get_resource_mut::<$res_type>()
+            .expect(concat!("Resource ", stringify!($res_type), " not found"))
+    };
+}
 
 /// 场景插件配置
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, bevy_ecs::prelude::Resource)]
 pub struct SceneConfig {
     /// 是否启用场景序列化
     pub enable_serialization: bool,
@@ -42,6 +50,12 @@ impl ScenePlugin {
     }
 }
 
+impl Default for ScenePlugin {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl EnginePlugin for ScenePlugin {
     fn name(&self) -> &'static str {
         "ScenePlugin"
@@ -66,14 +80,16 @@ impl EnginePlugin for ScenePlugin {
     }
 
     fn build(&self, app: &mut App) {
-        // 插入场景配置和场景管理器
+        // 插入场景配置和场景过渡管理器
         app.insert_resource(self.config.clone());
-        app.insert_resource(SceneManager::new());
+        app.insert_resource(SceneTransitionManager::new());
 
-        // 添加场景系统
-        app.add_systems(scene_update_system);
-        app.add_systems(scene_load_system);
-        app.add_systems(scene_cleanup_system);
+        // 添加场景系统到调度器
+        app.add_systems(|schedule| {
+            schedule.add_systems(scene_update_system);
+            schedule.add_systems(scene_load_system);
+            schedule.add_systems(scene_cleanup_system);
+        });
     }
 
     fn startup(&self, world: &mut bevy_ecs::world::World) {
@@ -97,7 +113,7 @@ impl EnginePlugin for ScenePlugin {
 
 /// 创建默认场景
 fn create_default_scenes(world: &mut bevy_ecs::world::World) {
-    let mut scene_manager = world.get_resource_mut::<SceneManager>().unwrap();
+    let mut scene_manager = fetch_resource_mut!(world, SceneTransitionManager);
 
     // 创建主菜单场景
     let main_menu_id = scene_manager.create_scene("Main Menu".to_string());

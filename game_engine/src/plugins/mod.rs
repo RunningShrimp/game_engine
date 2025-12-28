@@ -3,7 +3,6 @@
 //  提供模块化的插件架构，允许按需加载功能模块。
 
 use bevy_ecs::prelude::*;
-use std::collections::HashMap;
 
 /// 插件版本信息
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -84,7 +83,7 @@ pub use registry::PluginRegistry;
 
 // 热加载支持
 pub mod hot_reload;
-pub use hot_reload::{HotReloadManager, HotReloadError};
+pub use hot_reload::{PluginHotReloadManager, HotReloadError};
 
 // 配置系统
 pub mod config;
@@ -108,6 +107,12 @@ pub struct App {
     pub plugin_registry: PluginRegistry,
 }
 
+impl Default for App {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl App {
     pub fn new() -> Self {
         Self {
@@ -123,25 +128,32 @@ impl App {
         self
     }
 
-    pub fn add_system<M>(&mut self, system: impl IntoSystemConfigs<M>) -> &mut Self {
-        self.schedule.add_systems(system);
+    /// 添加系统到主调度器
+    ///
+    /// 这是一个简化的实现，直接接受系统配置闭包
+    pub fn add_systems(&mut self, builder: impl FnOnce(&mut Schedule)) -> &mut Self {
+        builder(&mut self.schedule);
         self
     }
 
-    pub fn add_startup_system<M>(&mut self, system: impl IntoSystemConfigs<M>) -> &mut Self {
-        self.startup_schedule.add_systems(system);
+    /// 添加系统到启动调度器
+    pub fn add_startup_systems(&mut self, builder: impl FnOnce(&mut Schedule)) -> &mut Self {
+        builder(&mut self.startup_schedule);
         self
     }
 
     /// 添加插件
     pub fn add_plugin<P: EnginePlugin + 'static>(&mut self, plugin: P) -> &mut Self {
-        self.plugin_registry.add(plugin);
+        let _ = self.plugin_registry.add(plugin);
         self
     }
 
     /// 构建所有插件
     pub fn build_plugins(&mut self) -> &mut Self {
-        self.plugin_registry.build_all(self);
+        // 使用std::mem::take来临时移除plugin_registry,避免借用冲突
+        let mut registry = std::mem::take(&mut self.plugin_registry);
+        registry.build_all(self);
+        self.plugin_registry = registry;
         self
     }
 
