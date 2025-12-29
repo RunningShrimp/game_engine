@@ -292,7 +292,7 @@ impl NetworkSyncManager {
         &mut self,
         entity_id: u64,
         state: EntityState,
-        current_tick: u64,
+        _current_tick: u64,
     ) -> Result<ConflictResolution, NetworkError> {
         if let Some(sync_state) = self.entity_states.get_mut(&entity_id) {
             let old_server_state = sync_state.server_state.clone();
@@ -434,9 +434,10 @@ impl NetworkSyncManager {
                 };
 
                 if let Ok(conflict) = self.update_server_state(delta.id, server_state, current_tick)
-                    && conflict.conflict_type != ConflictType::None {
-                        conflicts.push(conflict);
-                    }
+                    && conflict.conflict_type != ConflictType::None
+                {
+                    conflicts.push(conflict);
+                }
             }
         }
 
@@ -487,9 +488,9 @@ impl NetworkSyncManager {
         // 清理过期的确认记录
         let now = current_timestamp_ms();
         self.confirmed_events.retain(|&id| {
-            self.event_queue
-                .iter()
-                .any(|e| e.event_id == id && now - e.timestamp < self.config.event_confirmation_timeout_ms)
+            self.event_queue.iter().any(|e| {
+                e.event_id == id && now - e.timestamp < self.config.event_confirmation_timeout_ms
+            })
         });
     }
 
@@ -558,7 +559,7 @@ mod tests {
             Vec3::ONE,
             Vec3::ZERO,
         );
-        manager.update_client_state(1, client_state, 5).unwrap();
+        manager.update_client_state(1, client_state, 5).expect("Test: operation should succeed");
 
         let server_state = EntityState::new(
             Vec3::new(1.0, 0.0, 0.0), // 超出阈值
@@ -567,7 +568,7 @@ mod tests {
             Vec3::ZERO,
         );
 
-        let resolution = manager.update_server_state(1, server_state, 5).unwrap();
+        let resolution = manager.update_server_state(1, server_state, 5).expect("Test: operation should succeed");
         assert_eq!(resolution.conflict_type, ConflictType::StateMismatch);
     }
 

@@ -10,7 +10,7 @@
 //
 
 use crate::ecs::{AiComponent, PreviousTransform, Sprite, Transform};
-use crate::engine::ecs_bevy::{Time};
+use crate::engine::ecs_bevy::Time;
 use crate::resources::manager::Handle;
 use bevy_ecs::prelude::*;
 use glam::Quat;
@@ -76,16 +76,18 @@ pub fn ai_system(
 
         // 更新AI组件的行为树或状态机
         if let Some(behavior_tree) = &mut ai.behavior_tree
-            && let Ok(mut bt) = behavior_tree.try_lock() {
-                // 更新行为树状态
-                bt.tick();
-            }
+            && let Ok(mut bt) = behavior_tree.try_lock()
+        {
+            // 更新行为树状态
+            bt.tick();
+        }
 
         if let Some(state_machine) = &mut ai.state_machine
-            && let Ok(mut sm) = state_machine.try_lock() {
-                // 更新状态机状态
-                sm.update(time.delta);
-            }
+            && let Ok(mut sm) = state_machine.try_lock()
+        {
+            // 更新状态机状态
+            sm.update(time.delta);
+        }
     }
 }
 

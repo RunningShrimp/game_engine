@@ -1,4 +1,5 @@
 use glam::{Mat4, Vec2, Vec3, Vec4};
+use tracing::warn;
 use wgpu::{Buffer, BufferUsages, Device, Queue};
 
 /// 精灵实例数据
@@ -86,11 +87,26 @@ impl SpriteBatch {
             return;
         }
 
+        let required_size = (self.instances.len() * std::mem::size_of::<SpriteInstance>()) as u64;
+
         // 创建或更新缓冲区
-        if self.instance_buffer.is_none()
-            || self.instance_buffer.as_ref().unwrap().size()
-                < (self.instances.len() * std::mem::size_of::<SpriteInstance>()) as u64
-        {
+        let needs_new_buffer = match &self.instance_buffer {
+            None => true,
+            Some(buffer) => {
+                if buffer.size() < required_size {
+                    warn!(
+                        "Sprite instance buffer too small (current: {} bytes, required: {} bytes), recreating",
+                        buffer.size(),
+                        required_size
+                    );
+                    true
+                } else {
+                    false
+                }
+            }
+        };
+
+        if needs_new_buffer {
             self.instance_buffer = Some(device.create_buffer(&wgpu::BufferDescriptor {
                 label: Some("Sprite Instance Buffer"),
                 size: (self.max_batch_size * std::mem::size_of::<SpriteInstance>())

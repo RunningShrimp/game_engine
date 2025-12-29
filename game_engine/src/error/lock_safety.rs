@@ -183,7 +183,7 @@ mod tests {
         let mutex = Mutex::new(42);
         let result = safe_lock(&mutex, "test");
         assert!(result.is_ok());
-        assert_eq!(*result.unwrap(), 42);
+        assert_eq!(*result.expect("Test: operation should succeed"), 42);
     }
 
     #[test]
@@ -191,7 +191,7 @@ mod tests {
         let mutex = Mutex::new("hello");
         let result = try_lock(&mutex, "test");
         assert!(result.is_ok());
-        assert_eq!(*result.unwrap(), "hello");
+        assert_eq!(*result.expect("Test: operation should succeed"), "hello");
     }
 
     #[test]
@@ -199,7 +199,7 @@ mod tests {
         let rw_lock = RwLock::new(vec![1, 2, 3]);
         let result = safe_read(&rw_lock, "test");
         assert!(result.is_ok());
-        assert_eq!(result.unwrap().len(), 3);
+        assert_eq!(result.expect("Test: operation should succeed").len(), 3);
     }
 
     #[test]
@@ -207,6 +207,6 @@ mod tests {
         let rw_lock = RwLock::new(String::from("test"));
         let result = safe_write(&rw_lock, "test");
         assert!(result.is_ok());
-        assert_eq!(*result.unwrap(), "test");
+        assert_eq!(*result.expect("Test: operation should succeed"), "test");
     }
 }

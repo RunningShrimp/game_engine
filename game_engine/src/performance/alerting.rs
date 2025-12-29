@@ -461,7 +461,7 @@ impl PerformanceAlertSystem {
                     state.start_time = Some(now);
                 }
 
-                let duration = now.duration_since(state.start_time.unwrap());
+                let duration = now.duration_since(state.start_time.expect("Test: operation should succeed"));
 
                 if duration >= state.rule.duration {
                     if !state.triggered {

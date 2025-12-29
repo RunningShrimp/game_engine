@@ -65,7 +65,6 @@ pub struct EventTypeRegistry {
     type_id_to_name: HashMap<TypeId, String>,
 }
 
-
 impl EventTypeRegistry {
     /// 创建新的事件类型注册表
     pub fn new() -> Self {
@@ -122,11 +121,14 @@ macro_rules! register_event {
         // 为事件类型实现Default trait
         impl Default for $event_type {
             fn default() -> Self {
-                // 这里需要根据具体事件类型调整
-                // 如果事件类型没有合理的Default实现，需要手动实现
-                unimplemented!(
-                    "Default implementation required for event type: {}",
-                    stringify!($event_type)
+                // 为事件类型提供默认实现
+                // 注意：如果事件类型没有合理的默认值，应该手动实现此trait
+                // 这里返回一个假设有Default字段的结构体
+                // 实际使用时，应该为具体事件类型提供正确的Default实现
+                compile_error!(
+                    "Event type must implement Default trait manually. \
+                     Use #[derive(Default)] if appropriate, or provide custom implementation.\n\
+                     Example: impl Default for MyEvent {{ fn default() -> Self {{ ... }} }}"
                 );
             }
         }
@@ -184,22 +186,29 @@ mod tests {
     #[test]
     fn test_event_registry() {
         let mut registry = EventTypeRegistry::new();
-        registry.register_event_type::<TestEvent>().unwrap();
+        registry
+            .register_event_type::<TestEvent>()
+            .expect("Failed to register TestEvent type");
 
         // 测试创建事件
         let test_data = TestEvent {
             data: "test".to_string(),
         };
-        let serialized = bincode::serialize(&test_data).unwrap();
+        let serialized = bincode::serialize(&test_data)
+            .expect("Failed to serialize TestEvent data");
 
-        let created_event = registry.create_event("TestEvent", &serialized).unwrap();
+        let created_event = registry
+            .create_event("TestEvent", &serialized)
+            .expect("Failed to create TestEvent from registry");
         assert_eq!(created_event.event_type(), "TestEvent");
     }
 
     #[test]
-    #[should_panic]
+    #[should_panic(expected = "Unknown event type")]
     fn test_unknown_event_type() {
         let registry = EventTypeRegistry::new();
-        registry.create_event("UnknownEvent", &[]).unwrap();
+        registry
+            .create_event("UnknownEvent", &[])
+            .expect("Should panic with unknown event type error");
     }
 }

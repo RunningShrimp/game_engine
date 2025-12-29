@@ -22,8 +22,8 @@
 //  └─────────────────────────────────────────────────────────┘
 //  ```
 
-use std::collections::VecDeque;
 use bevy_ecs::resource::Resource;
+use std::collections::VecDeque;
 
 // 性能监控集成 - 使用 tracing 系统
 use tracing::{Level, info, span};
@@ -192,14 +192,15 @@ impl StagingBufferPool {
 
         // 小数据尝试使用共享缓冲区
         if size < SMALL_BUFFER_THRESHOLD
-            && let Some(ref mut shared) = self.shared_buffer {
-                // 检查是否能容纳（这里只是检查，实际写入在外部）
-                if shared.can_fit(size, alignment) {
-                    // offset用于返回缓冲区中的对齐偏移量
-                    let aligned_offset = align_to(shared.offset, alignment);
-                    return (0, aligned_offset);
-                }
+            && let Some(ref mut shared) = self.shared_buffer
+        {
+            // 检查是否能容纳（这里只是检查，实际写入在外部）
+            if shared.can_fit(size, alignment) {
+                // offset用于返回缓冲区中的对齐偏移量
+                let aligned_offset = align_to(shared.offset, alignment);
+                return (0, aligned_offset);
             }
+        }
 
         // 尝试复用空闲缓冲区
         if let Some(mut buffer) = self.free_buffers.pop_front() {

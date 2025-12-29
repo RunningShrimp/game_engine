@@ -4,11 +4,11 @@ use crate::ecs::{
     Transform,
 };
 use crate::physics::{ColliderDesc, RigidBodyDesc};
+use crate::platform::run_sync;
 use bevy_ecs::prelude::*;
 use glam::{Quat, Vec3};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use crate::platform::run_sync;
 
 /// 序列化的场景数据
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -532,50 +532,90 @@ impl SerializedScene {
     /// 清空场景中的所有实体
     pub fn clear_world(world: &mut World) {
         // 收集所有实体ID
-        let entities: Vec<Entity> = world
-            .query::<EntityRef>()
-            .iter(world)
-            .map(|e| e.id())
-            .collect();
+        let entities: Vec<Entity> =
+            world.query::<EntityRef>().iter(world).map(|e| e.id()).collect();
         // 删除所有实体
         for entity in entities {
             world.despawn(entity);
         }
     }
 
-    /// 保存场景到JSON文件（异步版本）
-    pub async fn save_to_file_async(&self, path: &str) -> Result<(), Box<dyn std::error::Error + Send>> {
-        let json = serde_json::to_string_pretty(self)
-            .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send>)?;
-        tokio::fs::write(path, json).await
+    /// 保存场景到文件（异步版本，支持多种格式）
+    pub async fn save_to_file_async(
+        &self,
+        path: &str,
+    ) -> Result<(), Box<dyn std::error::Error + Send>> {
+        // 根据文件扩展名选择格式
+        let format = crate::serialization::SerializationFormat::from_path(path);
+
+        let data = match format {
+            crate::serialization::SerializationFormat::Ron => {
+                ron::ser::to_string_pretty(self, ron::ser::PrettyConfig::default())
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send>)?
+            }
+            crate::serialization::SerializationFormat::Bincode => {
+                let bytes = bincode::serialize(self)
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send>)?;
+                tokio::fs::write(path, bytes)
+                    .await
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send>)?;
+                return Ok(());
+            }
+            crate::serialization::SerializationFormat::Json => {
+                serde_json::to_string_pretty(self)
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send>)?
+            }
+        };
+
+        tokio::fs::write(path, data)
+            .await
             .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send>)?;
         Ok(())
     }
 
-    /// 从JSON文件加载场景（异步版本）
-    pub async fn load_from_file_async(path: &str) -> Result<Self, Box<dyn std::error::Error + Send>> {
-        let json = tokio::fs::read_to_string(path).await
+    /// 从文件加载场景（异步版本，支持多种格式）
+    pub async fn load_from_file_async(
+        path: &str,
+    ) -> Result<Self, Box<dyn std::error::Error + Send>> {
+        // 根据文件扩展名选择格式
+        let format = crate::serialization::SerializationFormat::from_path(path);
+        let data = tokio::fs::read(path)
+            .await
             .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send>)?;
-        let scene = serde_json::from_str(&json)
-            .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send>)?;
+
+        let scene = match format {
+            crate::serialization::SerializationFormat::Ron => {
+                let s = std::str::from_utf8(&data)
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send>)?;
+                ron::from_str(s)
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send>)?
+            }
+            crate::serialization::SerializationFormat::Bincode => {
+                bincode::deserialize(&data)
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send>)?
+            }
+            crate::serialization::SerializationFormat::Json => {
+                let s = std::str::from_utf8(&data)
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send>)?;
+                serde_json::from_str(s)
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send>)?
+            }
+        };
+
         Ok(scene)
     }
 
-    /// 保存场景到JSON文件（同步版本，用于向后兼容）
+    /// 保存场景到文件（同步版本，用于向后兼容）
     pub fn save_to_file(&self, path: &str) -> Result<(), Box<dyn std::error::Error + Send>> {
         let path_clone = path.to_string();
         let self_clone = self.clone();
-        run_sync(async move {
-            self_clone.save_to_file_async(&path_clone).await
-        })
+        run_sync(async move { self_clone.save_to_file_async(&path_clone).await })
     }
 
-    /// 从JSON文件加载场景（同步版本，用于向后兼容）
+    /// 从文件加载场景（同步版本，用于向后兼容）
     pub fn load_from_file(path: &str) -> Result<Self, Box<dyn std::error::Error + Send>> {
         let path_clone = path.to_string();
-        run_sync(async move {
-            Self::load_from_file_async(&path_clone).await
-        })
+        run_sync(async move { Self::load_from_file_async(&path_clone).await })
     }
 }
 
@@ -627,17 +667,31 @@ mod tests {
 
         let scene = SerializedScene::from_world(&mut world, "test_scene");
 
-        // 保存到文件
-        let path = "/tmp/test_scene.json";
-        scene.save_to_file(path).unwrap();
-
-        // 从文件加载
-        let loaded_scene = SerializedScene::load_from_file(path).unwrap();
+        // 测试JSON格式
+        let json_path = "/tmp/test_scene.json";
+        scene.save_to_file(json_path).expect("Test: operation should succeed");
+        let loaded_scene = SerializedScene::load_from_file(json_path).expect("Test: operation should succeed");
         assert_eq!(loaded_scene.name, "test_scene");
         assert_eq!(loaded_scene.entities.len(), 1);
 
+        // 测试RON格式
+        let ron_path = "/tmp/test_scene.ron";
+        scene.save_to_file(ron_path).expect("Test: operation should succeed");
+        let loaded_scene_ron = SerializedScene::load_from_file(ron_path).expect("Test: operation should succeed");
+        assert_eq!(loaded_scene_ron.name, "test_scene");
+        assert_eq!(loaded_scene_ron.entities.len(), 1);
+
+        // 测试Bincode格式
+        let bin_path = "/tmp/test_scene.bin";
+        scene.save_to_file(bin_path).expect("Test: operation should succeed");
+        let loaded_scene_bin = SerializedScene::load_from_file(bin_path).expect("Test: operation should succeed");
+        assert_eq!(loaded_scene_bin.name, "test_scene");
+        assert_eq!(loaded_scene_bin.entities.len(), 1);
+
         // 清理测试文件
-        std::fs::remove_file(path).ok();
+        std::fs::remove_file(json_path).ok();
+        std::fs::remove_file(ron_path).ok();
+        std::fs::remove_file(bin_path).ok();
     }
 
     #[tokio::test]
@@ -653,8 +707,8 @@ mod tests {
         let path = "/tmp/test_scene_rt.json";
 
         // Call the synchronous API from inside a runtime; should use block_in_place internally
-        scene.save_to_file(path).unwrap();
-        let loaded_scene = SerializedScene::load_from_file(path).unwrap();
+        scene.save_to_file(path).expect("Test: operation should succeed");
+        let loaded_scene = SerializedScene::load_from_file(path).expect("Test: operation should succeed");
         assert_eq!(loaded_scene.name, "test_scene_rt");
         assert_eq!(loaded_scene.entities.len(), 1);
 

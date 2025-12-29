@@ -67,7 +67,8 @@ impl NavigationMesh {
 
     /// 获取节点的邻居
     pub fn get_neighbors(&self, node_id: u32) -> Vec<(u32, f32)> {
-        self.connections.iter()
+        self.connections
+            .iter()
             .filter(|conn| conn.from == node_id)
             .map(|conn| (conn.to, conn.cost))
             .collect()
@@ -87,8 +88,13 @@ impl NavigationMesh {
             #[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
             {
                 use game_engine_simd::VectorOps;
-                let from_simd = Vec3Simd::new(from_node.position.x, from_node.position.y, from_node.position.z);
-                let to_simd = Vec3Simd::new(to_node.position.x, to_node.position.y, to_node.position.z);
+                let from_simd = Vec3Simd::new(
+                    from_node.position.x,
+                    from_node.position.y,
+                    from_node.position.z,
+                );
+                let to_simd =
+                    Vec3Simd::new(to_node.position.x, to_node.position.y, to_node.position.z);
                 let diff = from_simd.sub(&to_simd);
                 diff.length()
             }
@@ -352,7 +358,8 @@ impl PathfindingService {
             // 计算最大偏离
             let mut max_distance = 0.0;
             for intermediate_point in &path[(anchor + 1)..i] {
-                let distance = Self::point_to_line_distance(*intermediate_point, anchor_point, point);
+                let distance =
+                    Self::point_to_line_distance(*intermediate_point, anchor_point, point);
                 if distance > max_distance {
                     max_distance = distance;
                 }
@@ -449,7 +456,7 @@ mod tests {
             Vec3::new(2.0, 0.0, 0.0),
         );
         assert!(path.is_some());
-        let path = path.unwrap();
+        let path = path.expect("Path should exist in test");
         assert!(path.len() >= 2);
     }
 

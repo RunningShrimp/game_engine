@@ -285,13 +285,15 @@ impl ClientPredictionManager {
 
     /// 创建状态快照
     pub fn create_snapshot(&mut self, tick: u64, entity_states: Vec<(Entity, EntityState)>) {
+        let created_at_ms = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("System time went backwards; cannot create snapshot timestamp")
+            .as_millis() as u64;
+
         let snapshot = StateSnapshot {
             tick,
             entity_states,
-            created_at_ms: std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_millis() as u64,
+            created_at_ms,
         };
 
         self.snapshots.push_back(snapshot);
@@ -648,7 +650,7 @@ mod tests {
 
         let snapshot = manager.get_snapshot(5);
         assert!(snapshot.is_some());
-        assert_eq!(snapshot.unwrap().tick, 5);
+        assert_eq!(snapshot.expect("Test: operation should succeed").tick, 5);
     }
 
     #[test]
@@ -691,7 +693,7 @@ mod tests {
         // 回滚到快照
         let snapshot = manager.rollback_to(5);
         assert!(snapshot.is_some());
-        assert_eq!(snapshot.unwrap().tick, 5);
-        assert_eq!(snapshot.unwrap().entity_states.len(), 1);
+        assert_eq!(snapshot.expect("Test: operation should succeed").tick, 5);
+        assert_eq!(snapshot.expect("Test: operation should succeed").entity_states.len(), 1);
     }
 }

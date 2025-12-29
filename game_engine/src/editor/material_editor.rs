@@ -214,15 +214,16 @@ impl MaterialEditor {
     /// 保存材质到库（增强功能）
     pub fn save_to_library(&mut self, name: String) {
         if let Some(index) = self.selected_material
-            && let Some(material) = self.materials.get(index) {
-                let entry = MaterialLibraryEntry {
-                    name: name.clone(),
-                    material: material.clone(),
-                    thumbnail_path: None,
-                    tags: vec!["Custom".to_string()],
-                };
-                self.material_library.insert(name, entry);
-            }
+            && let Some(material) = self.materials.get(index)
+        {
+            let entry = MaterialLibraryEntry {
+                name: name.clone(),
+                material: material.clone(),
+                thumbnail_path: None,
+                tags: vec!["Custom".to_string()],
+            };
+            self.material_library.insert(name, entry);
+        }
     }
 
     /// 从库加载材质（增强功能）
@@ -286,14 +287,16 @@ impl MaterialEditor {
                 self.selected_material = Some(self.materials.len() - 1);
             }
             if ui.button("📋 Duplicate").clicked()
-                && let Some(index) = self.selected_material {
-                    self.duplicate_material(index);
-                }
+                && let Some(index) = self.selected_material
+            {
+                self.duplicate_material(index);
+            }
             if ui.button("💾 Save to Library").clicked()
-                && let Some(index) = self.selected_material {
-                    let name = self.material_names[index].clone();
-                    self.save_to_library(name);
-                }
+                && let Some(index) = self.selected_material
+            {
+                let name = self.material_names[index].clone();
+                self.save_to_library(name);
+            }
             ui.checkbox(&mut self.show_preview, "Preview");
         });
 
@@ -305,35 +308,33 @@ impl MaterialEditor {
             ui.text_edit_singleline(&mut self.search_filter);
             ui.separator();
 
-            egui::ScrollArea::vertical()
-                .max_height(200.0)
-                .show(ui, |ui| {
-                    // 先收集需要删除的索引
-                    let mut to_delete: Option<usize> = None;
-                    
-                    for (i, name) in self.material_names.iter().enumerate() {
-                        if !self.search_filter.is_empty()
-                            && !name.to_lowercase().contains(&self.search_filter.to_lowercase())
-                        {
-                            continue;
-                        }
+            egui::ScrollArea::vertical().max_height(200.0).show(ui, |ui| {
+                // 先收集需要删除的索引
+                let mut to_delete: Option<usize> = None;
 
-                        let is_selected = self.selected_material == Some(i);
-                        ui.horizontal(|ui| {
-                            if ui.selectable_label(is_selected, name).clicked() {
-                                self.selected_material = Some(i);
-                            }
-                            if ui.button("🗑").clicked() {
-                                to_delete = Some(i);
-                            }
-                        });
+                for (i, name) in self.material_names.iter().enumerate() {
+                    if !self.search_filter.is_empty()
+                        && !name.to_lowercase().contains(&self.search_filter.to_lowercase())
+                    {
+                        continue;
                     }
-                    
-                    // 在循环外处理删除
-                    if let Some(idx) = to_delete {
-                        self.delete_material(idx);
-                    }
-                });
+
+                    let is_selected = self.selected_material == Some(i);
+                    ui.horizontal(|ui| {
+                        if ui.selectable_label(is_selected, name).clicked() {
+                            self.selected_material = Some(i);
+                        }
+                        if ui.button("🗑").clicked() {
+                            to_delete = Some(i);
+                        }
+                    });
+                }
+
+                // 在循环外处理删除
+                if let Some(idx) = to_delete {
+                    self.delete_material(idx);
+                }
+            });
         });
 
         ui.separator();
@@ -381,7 +382,7 @@ impl MaterialEditor {
             let material_name = format!("Editing Material {}", index);
             ui.label(material_name);
             ui.separator();
-            
+
             if let Some(material_full) = self.materials.get_mut(index) {
                 // 获取可变引用到材质
                 let material = &mut material_full.material;
@@ -474,17 +475,26 @@ impl MaterialEditor {
                 });
 
                 ui.separator();
- 
+
                 // 纹理槽
                 ui.label("Textures:");
-                ui.label(format!("  Base Color: {:?}", material_full.textures.base_color_texture));
+                ui.label(format!(
+                    "  Base Color: {:?}",
+                    material_full.textures.base_color_texture
+                ));
                 ui.label(format!(
                     "  Metallic/Roughness: {:?}",
                     material_full.textures.metallic_roughness_texture
                 ));
-                ui.label(format!("  Normal: {:?}", material_full.textures.normal_texture));
+                ui.label(format!(
+                    "  Normal: {:?}",
+                    material_full.textures.normal_texture
+                ));
                 ui.label(format!("  AO: {:?}", material_full.textures.ao_texture));
-                ui.label(format!("  Emissive: {:?}", material_full.textures.emissive_texture));
+                ui.label(format!(
+                    "  Emissive: {:?}",
+                    material_full.textures.emissive_texture
+                ));
 
                 ui.separator();
 
@@ -514,23 +524,22 @@ impl MaterialEditor {
 
         // 材质库（增强功能）
         ui.collapsing("Material Library", |ui| {
-            egui::ScrollArea::vertical()
-                .max_height(200.0)
-                .show(ui, |ui| {
-                    let library_names: Vec<String> = self.material_library.keys().cloned().collect();
-                    for name in library_names {
-                        let name_clone = name.clone();
-                        let entry = self.material_library.get(&name).cloned();
-                        ui.horizontal(|ui| {
-                            if ui.button(&name).clicked() {
-                                let name_for_load = name_clone.clone();
-                                self.load_from_library(&name_for_load);
-                            }
-                            let tags = entry.as_ref().map(|e| e.tags.join(", ")).unwrap_or_else(String::new);
-                            ui.label(format!("Tags: {}", tags));
-                        });
-                    }
-                });
+            egui::ScrollArea::vertical().max_height(200.0).show(ui, |ui| {
+                let library_names: Vec<String> = self.material_library.keys().cloned().collect();
+                for name in library_names {
+                    let name_clone = name.clone();
+                    let entry = self.material_library.get(&name).cloned();
+                    ui.horizontal(|ui| {
+                        if ui.button(&name).clicked() {
+                            let name_for_load = name_clone.clone();
+                            self.load_from_library(&name_for_load);
+                        }
+                        let tags =
+                            entry.as_ref().map(|e| e.tags.join(", ")).unwrap_or_else(String::new);
+                        ui.label(format!("Tags: {}", tags));
+                    });
+                }
+            });
         });
     }
 }

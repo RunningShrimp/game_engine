@@ -46,10 +46,15 @@ where
         let keyframe = Keyframe { time, value };
 
         // 按时间排序插入
-        let index = self
-            .keyframes
-            .binary_search_by(|k| k.time.partial_cmp(&time).unwrap())
-            .unwrap_or_else(|i| i);
+        let index = match self.keyframes.binary_search_by(|k| {
+            k.time.partial_cmp(&time)
+                .unwrap_or({
+                    // Handle NaN by treating it as greater than any time
+                    std::cmp::Ordering::Greater
+                })
+        }) {
+            Ok(i) | Err(i) => i,
+        };
         self.keyframes.insert(index, keyframe);
     }
 
@@ -65,8 +70,9 @@ where
         }
 
         // 如果时间在最后一个关键帧之后
-        if time >= self.keyframes.last().unwrap().time {
-            return Some(self.keyframes.last().unwrap().value.clone());
+        let last_keyframe = self.keyframes.last()?;
+        if time >= last_keyframe.time {
+            return Some(last_keyframe.value.clone());
         }
 
         // 查找相邻的两个关键帧
@@ -103,8 +109,9 @@ impl KeyframeTrack<Vec3> {
             return Some(self.keyframes[0].value);
         }
 
-        if time >= self.keyframes.last().unwrap().time {
-            return Some(self.keyframes.last().unwrap().value);
+        let last_keyframe = self.keyframes.last()?;
+        if time >= last_keyframe.time {
+            return Some(last_keyframe.value);
         }
 
         for i in 0..self.keyframes.len() - 1 {
@@ -145,8 +152,9 @@ impl KeyframeTrack<Quat> {
             return Some(self.keyframes[0].value);
         }
 
-        if time >= self.keyframes.last().unwrap().time {
-            return Some(self.keyframes.last().unwrap().value);
+        let last_keyframe = self.keyframes.last()?;
+        if time >= last_keyframe.time {
+            return Some(last_keyframe.value);
         }
 
         for i in 0..self.keyframes.len() - 1 {
@@ -187,7 +195,7 @@ mod tests {
         track.add_keyframe(1.0, Vec3::new(1.0, 1.0, 1.0));
 
         // 测试插值
-        let value = track.sample_vec3(0.5).unwrap();
+        let value = track.sample_vec3(0.5).expect("Test: operation should succeed");
         assert!((value.x - 0.5).abs() < 0.001);
         assert!((value.y - 0.5).abs() < 0.001);
         assert!((value.z - 0.5).abs() < 0.001);

@@ -488,10 +488,10 @@ impl PreallocationManager {
             for i in 0..pool.len() {
                 if let Some(preallocated_block) = pool.get_mut(i)
                     && preallocated_block.is_free
-                        && preallocated_block.block.size >= block_size.size()
-                    {
-                        return Some(pool.remove(i).unwrap());
-                    }
+                    && preallocated_block.block.size >= block_size.size()
+                {
+                    return Some(pool.remove(i).expect("Failed to remove element at valid index"));
+                }
             }
         }
 

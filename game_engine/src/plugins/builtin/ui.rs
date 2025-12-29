@@ -1,10 +1,10 @@
 //  UI插件
-// 
+//
 //  提供基于wgpu的UI框架，支持现代UI组件和布局。
 
 use crate::impl_default;
-use crate::plugins::{EnginePlugin, App, PluginVersion, PluginDependency};
-use crate::ui::{UIState, UITheme, UIRoot, UIWidget, UIService, WidgetType, LayoutType};
+use crate::plugins::{App, EnginePlugin, PluginDependency, PluginVersion};
+use crate::ui::{LayoutType, UIRoot, UIService, UIState, UITheme, UIWidget, WidgetType};
 use bevy_ecs::prelude::*;
 use glam::Vec2;
 
@@ -67,12 +67,10 @@ impl EnginePlugin for UiPlugin {
     }
 
     fn dependencies(&self) -> Vec<PluginDependency> {
-        vec![
-            PluginDependency {
-                name: "RenderPlugin".to_string(),
-                version_requirement: ">=1.0.0".to_string(),
-            },
-        ]
+        vec![PluginDependency {
+            name: "RenderPlugin".to_string(),
+            version_requirement: ">=1.0.0".to_string(),
+        }]
     }
 
     fn build(&self, app: &mut App) {
@@ -106,7 +104,10 @@ impl EnginePlugin for UiPlugin {
         println!("UI plugin started:");
         println!("  Antialiasing: {}", self.config.antialiasing);
         println!("  High DPI: {}", self.config.high_dpi);
-        println!("  Root size: {}x{}", self.config.root_size.0, self.config.root_size.1);
+        println!(
+            "  Root size: {}x{}",
+            self.config.root_size.0, self.config.root_size.1
+        );
 
         // 创建示例UI
         create_example_ui(world);
@@ -122,12 +123,9 @@ impl EnginePlugin for UiPlugin {
 }
 
 /// UI更新系统
-pub fn ui_update_system(
-    mut ui_state: ResMut<UIState>,
-    mut query: Query<(Entity, &mut UIWidget)>,
-) {
+pub fn ui_update_system(mut ui_state: ResMut<UIState>, mut query: Query<(Entity, &mut UIWidget)>) {
     // 更新UI组件状态
-    for (entity, mut widget) in query.iter_mut() {
+    for (entity, widget) in query.iter_mut() {
         // 检查悬停状态
         if UIService::is_point_inside(&widget, ui_state.cursor_position) {
             if ui_state.hovered_widget != Some(entity) {
@@ -152,8 +150,8 @@ pub fn ui_layout_system(mut query: Query<&mut UIWidget>) {
 
 /// UI事件系统
 pub fn ui_event_system(
-    mut ui_state: ResMut<UIState>,
-    mut query: Query<(Entity, &mut UIWidget)>,
+    _ui_state: ResMut<UIState>,
+    _query: Query<(Entity, &mut UIWidget)>,
     // 这里需要输入事件，暂时简化
 ) {
     // 处理点击事件等
@@ -169,14 +167,11 @@ fn create_example_ui(world: &mut World) {
         Vec2::new(300.0, 400.0),
     );
 
-    let container_entity = world.spawn(main_container);
+    let _container_entity = world.spawn(main_container);
 
     // 创建标题标签
-    let title_label = UIService::create_label(
-        "游戏引擎UI示例".to_string(),
-        Vec2::new(10.0, 10.0),
-        24.0,
-    );
+    let title_label =
+        UIService::create_label("游戏引擎UI示例".to_string(), Vec2::new(10.0, 10.0), 24.0);
 
     world.spawn(title_label);
 
@@ -217,11 +212,8 @@ fn create_example_ui(world: &mut World) {
     world.spawn(input_field);
 
     // 创建状态标签
-    let status_label = UIService::create_label(
-        "状态: 就绪".to_string(),
-        Vec2::new(10.0, 160.0),
-        14.0,
-    );
+    let status_label =
+        UIService::create_label("状态: 就绪".to_string(), Vec2::new(10.0, 160.0), 14.0);
 
     world.spawn(status_label);
 }

@@ -88,7 +88,8 @@ impl TextureDecoder {
 
     /// 异步解码纹理
     pub async fn decode(&self, image_data: Vec<u8>) -> Result<DecodedTexture, TextureDecodeError> {
-        let _permit = self.decode_semaphore.acquire().await.unwrap();
+        let _permit =
+            self.decode_semaphore.acquire().await.expect("Semaphore should not be closed");
 
         if self.config.enable_progressive {
             self.decode_progressive(image_data).await
@@ -98,7 +99,10 @@ impl TextureDecoder {
     }
 
     /// 标准解码（一次性解码）
-    async fn decode_standard(&self, image_data: Vec<u8>) -> Result<DecodedTexture, TextureDecodeError> {
+    async fn decode_standard(
+        &self,
+        image_data: Vec<u8>,
+    ) -> Result<DecodedTexture, TextureDecodeError> {
         let config = self.config.clone();
         spawn_blocking(move || {
             // 检测图像格式
@@ -106,14 +110,10 @@ impl TextureDecoder {
 
             // 根据格式解码
             let image = match format {
-                ImageFormat::Png => {
-                    image::load_from_memory(&image_data)
-                        .map_err(|e| TextureDecodeError::DecodeError(e.to_string()))?
-                }
-                ImageFormat::Jpeg => {
-                    image::load_from_memory(&image_data)
-                        .map_err(|e| TextureDecodeError::DecodeError(e.to_string()))?
-                }
+                ImageFormat::Png => image::load_from_memory(&image_data)
+                    .map_err(|e| TextureDecodeError::DecodeError(e.to_string()))?,
+                ImageFormat::Jpeg => image::load_from_memory(&image_data)
+                    .map_err(|e| TextureDecodeError::DecodeError(e.to_string()))?,
                 ImageFormat::WebP => {
                     // WebP需要特殊处理
                     image::load_from_memory(&image_data)
@@ -148,7 +148,10 @@ impl TextureDecoder {
     }
 
     /// 渐进式解码（流式解码）
-    async fn decode_progressive(&self, image_data: Vec<u8>) -> Result<DecodedTexture, TextureDecodeError> {
+    async fn decode_progressive(
+        &self,
+        image_data: Vec<u8>,
+    ) -> Result<DecodedTexture, TextureDecodeError> {
         // 渐进式解码：先解码低分辨率版本，然后逐步提高
         // 简化实现：使用标准解码
         self.decode_standard(image_data).await
@@ -169,7 +172,8 @@ impl TextureDecoder {
                 let semaphore = semaphore.clone();
                 let config = config.clone();
                 tokio::task::spawn(async move {
-                    let _permit = semaphore.acquire().await.unwrap();
+                    let _permit =
+                        semaphore.acquire().await.expect("Semaphore should not be closed");
                     if enable_progressive {
                         // 渐进式解码：先解码低分辨率版本，然后逐步提高
                         // 简化实现：使用标准解码
@@ -190,21 +194,20 @@ impl TextureDecoder {
     }
 
     /// 标准解码异步实现（辅助函数）
-    async fn decode_standard_async(image_data: Vec<u8>, config: TextureDecodeConfig) -> Result<DecodedTexture, TextureDecodeError> {
+    async fn decode_standard_async(
+        image_data: Vec<u8>,
+        config: TextureDecodeConfig,
+    ) -> Result<DecodedTexture, TextureDecodeError> {
         spawn_blocking(move || {
             // 检测图像格式
             let format = detect_image_format(&image_data)?;
 
             // 根据格式解码
             let image = match format {
-                ImageFormat::Png => {
-                    image::load_from_memory(&image_data)
-                        .map_err(|e| TextureDecodeError::DecodeError(e.to_string()))?
-                }
-                ImageFormat::Jpeg => {
-                    image::load_from_memory(&image_data)
-                        .map_err(|e| TextureDecodeError::DecodeError(e.to_string()))?
-                }
+                ImageFormat::Png => image::load_from_memory(&image_data)
+                    .map_err(|e| TextureDecodeError::DecodeError(e.to_string()))?,
+                ImageFormat::Jpeg => image::load_from_memory(&image_data)
+                    .map_err(|e| TextureDecodeError::DecodeError(e.to_string()))?,
                 ImageFormat::WebP => {
                     // WebP需要特殊处理
                     image::load_from_memory(&image_data)
@@ -340,11 +343,11 @@ mod tests {
     fn test_image_format_detection() {
         // PNG签名
         let png_data = vec![0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
-        assert_eq!(detect_image_format(&png_data).unwrap(), ImageFormat::Png);
+        assert_eq!(detect_image_format(&png_data).expect("Test: operation should succeed"), ImageFormat::Png);
 
         // JPEG签名
         let jpeg_data = vec![0xFF, 0xD8, 0xFF, 0xE0];
-        assert_eq!(detect_image_format(&jpeg_data).unwrap(), ImageFormat::Jpeg);
+        assert_eq!(detect_image_format(&jpeg_data).expect("Test: operation should succeed"), ImageFormat::Jpeg);
     }
 
     #[test]
@@ -355,4 +358,3 @@ mod tests {
         assert!(matches!(format, TextureFormat::Bc1 | TextureFormat::Bc3));
     }
 }
-

@@ -127,7 +127,6 @@ impl Benchmark {
     }
 }
 
-
 /// 性能回归检测
 pub struct PerformanceRegression {
     baseline: HashMap<String, Duration>,

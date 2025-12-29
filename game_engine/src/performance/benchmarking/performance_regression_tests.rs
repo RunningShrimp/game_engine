@@ -235,8 +235,9 @@ impl PerformanceRegressionSuite {
             .iter()
             .zip(baseline_results.iter())
             .map(|(current, baseline)| {
-                let regression_percent =
-                    ((current.actual_value - baseline.actual_value) / baseline.actual_value) * 100.0;
+                let regression_percent = ((current.actual_value - baseline.actual_value)
+                    / baseline.actual_value)
+                    * 100.0;
 
                 RegressionTestResult {
                     test_name: current.test_name.clone(),
@@ -259,15 +260,14 @@ impl PerformanceRegressionSuite {
         println!("Passed: {}/{}", passed, total);
 
         println!("\nDetailed Results:");
-        println!("{:<30} | {:<10} | {:<15} | {:<15}", "Test", "Status", "Actual (ms/us)", "Threshold");
+        println!(
+            "{:<30} | {:<10} | {:<15} | {:<15}",
+            "Test", "Status", "Actual (ms/us)", "Threshold"
+        );
         println!("{}", "-".repeat(80));
 
         for result in results {
-            let status = if result.passed {
-                "PASS"
-            } else {
-                "FAIL"
-            };
+            let status = if result.passed { "PASS" } else { "FAIL" };
 
             let unit = if result.test_name.contains("Serialization") {
                 "us"
@@ -281,10 +281,7 @@ impl PerformanceRegressionSuite {
             );
 
             if result.regression_percent != 0.0 {
-                println!(
-                    "  ↳ Regression: {:+.1}%",
-                    result.regression_percent
-                );
+                println!("  ↳ Regression: {:+.1}%", result.regression_percent);
             }
         }
 
@@ -334,10 +331,7 @@ mod tests {
         let mut suite = PerformanceRegressionSuite::new();
         let result = suite.test_physics_simulation();
 
-        println!(
-            "Physics simulation avg time: {:.3} ms",
-            result.actual_value
-        );
+        println!("Physics simulation avg time: {:.3} ms", result.actual_value);
 
         assert!(result.actual_value >= 0.0);
     }
@@ -359,25 +353,21 @@ mod tests {
     fn test_baseline_comparison() {
         let suite = PerformanceRegressionSuite::new();
 
-        let baseline = vec![
-            RegressionTestResult {
-                test_name: "Physics Simulation".to_string(),
-                passed: true,
-                actual_value: 1.0,
-                threshold: 2.0,
-                regression_percent: 0.0,
-            },
-        ];
+        let baseline = vec![RegressionTestResult {
+            test_name: "Physics Simulation".to_string(),
+            passed: true,
+            actual_value: 1.0,
+            threshold: 2.0,
+            regression_percent: 0.0,
+        }];
 
-        let current = vec![
-            RegressionTestResult {
-                test_name: "Physics Simulation".to_string(),
-                passed: true,
-                actual_value: 1.2,
-                threshold: 2.0,
-                regression_percent: 0.0,
-            },
-        ];
+        let current = vec![RegressionTestResult {
+            test_name: "Physics Simulation".to_string(),
+            passed: true,
+            actual_value: 1.2,
+            threshold: 2.0,
+            regression_percent: 0.0,
+        }];
 
         let compared = suite.compare_baselines(&current, &baseline);
 

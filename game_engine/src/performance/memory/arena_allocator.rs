@@ -89,7 +89,14 @@ impl ArenaAllocator {
             NonNull::new_unchecked(ptr)
         };
 
-        let end = unsafe { NonNull::new_unchecked(start.as_ptr().add(capacity)) };
+        // SAFETY: 计算end指针，添加溢出检查
+        // start.as_ptr()保证有效（刚分配的内存）
+        // capacity在之前已经验证过>0
+        // 使用checked_add防止指针算术溢出
+        let end_ptr = (start.as_ptr() as usize)
+            .checked_add(capacity)
+            .ok_or(ArenaError::SizeTooLarge)?;
+        let end = unsafe { NonNull::new_unchecked(end_ptr as *mut u8) };
 
         Ok(Self {
             start,
@@ -134,7 +141,8 @@ impl ArenaAllocator {
         }
 
         // 更新bump指针
-        let aligned_ptr = unsafe { NonNull::new_unchecked(self.current.as_ptr().add(aligned_addr)) };
+        let aligned_ptr =
+            unsafe { NonNull::new_unchecked(self.current.as_ptr().add(aligned_addr)) };
         self.current = unsafe { NonNull::new_unchecked(new_current) };
         self.used += total_size;
 
@@ -167,9 +175,19 @@ impl ArenaAllocator {
     ///
     /// # Returns
     /// 返回切片的引用，如果空间不足返回None
-    pub fn allocate_array<T>(&mut self, count: usize) -> Option<&mut [T]> {
+    ///
+    /// # Safety
+    ///
+    /// 此函数仅对满足以下条件的类型T是安全的：
+    /// - T实现了Default
+    /// - 使用Default::default()初始化每个元素
+    ///
+    /// 对于非Pod类型（如String, Vec），必须使用此方法而非原始内存操作
+    pub fn allocate_array<T: Default>(&mut self, count: usize) -> Option<&mut [T]> {
         if count == 0 {
-            return Some(unsafe { std::slice::from_raw_parts_mut(self.current.as_ptr().cast(), 0) });
+            return Some(unsafe {
+                std::slice::from_raw_parts_mut(self.current.as_ptr().cast(), 0)
+            });
         }
 
         let size = std::mem::size_of::<T>().checked_mul(count)?;
@@ -179,9 +197,10 @@ impl ArenaAllocator {
 
         unsafe {
             let slice = std::slice::from_raw_parts_mut(ptr.as_ptr().cast(), count);
-            // 默认初始化
+            // 使用Default::default()进行类型安全的初始化
+            // 这对任何实现Default的类型都是安全的，包括String, Vec等
             for elem in slice.iter_mut() {
-                std::ptr::write(elem, std::mem::zeroed());
+                std::ptr::write(elem, T::default());
             }
             Some(slice)
         }
@@ -317,8 +336,16 @@ impl ArenaManager {
             temp_remaining: self.temp_arena.as_ref().map(|a| a.remaining()).unwrap_or(0),
             temp_utilization: self.temp_arena.as_ref().map(|a| a.utilization()).unwrap_or(0.0),
             persistent_used: self.persistent_arena.as_ref().map(|a| a.used()).unwrap_or(0),
-            persistent_remaining: self.persistent_arena.as_ref().map(|a| a.remaining()).unwrap_or(0),
-            persistent_utilization: self.persistent_arena.as_ref().map(|a| a.utilization()).unwrap_or(0.0),
+            persistent_remaining: self
+                .persistent_arena
+                .as_ref()
+                .map(|a| a.remaining())
+                .unwrap_or(0),
+            persistent_utilization: self
+                .persistent_arena
+                .as_ref()
+                .map(|a| a.utilization())
+                .unwrap_or(0.0),
         }
     }
 }
@@ -368,7 +395,7 @@ mod tests {
 
     #[test]
     fn test_arena_create() {
-        let arena = ArenaAllocator::with_capacity(1024).unwrap();
+        let arena = ArenaAllocator::with_capacity(1024).expect("Test: operation should succeed");
         assert_eq!(arena.capacity(), 1024);
         assert_eq!(arena.used(), 0);
         assert_eq!(arena.remaining(), 1024);
@@ -376,7 +403,7 @@ mod tests {
 
     #[test]
     fn test_arena_allocate() {
-        let mut arena = ArenaAllocator::with_capacity(1024).unwrap();
+        let mut arena = ArenaAllocator::with_capacity(1024).expect("Test: operation should succeed");
 
         let ptr1 = arena.allocate(100, 8);
         assert!(ptr1.is_some());
@@ -389,18 +416,18 @@ mod tests {
 
     #[test]
     fn test_arena_allocate_obj() {
-        let mut arena = ArenaAllocator::with_capacity(1024).unwrap();
+        let mut arena = ArenaAllocator::with_capacity(1024).expect("Test: operation should succeed");
 
         let obj = arena.allocate_obj(42u32);
         assert!(obj.is_some());
-        assert_eq!(*obj.unwrap(), 42);
+        assert_eq!(*obj.expect("Test: operation should succeed"), 42);
     }
 
     #[test]
     fn test_arena_reset() {
-        let mut arena = ArenaAllocator::with_capacity(1024).unwrap();
+        let mut arena = ArenaAllocator::with_capacity(1024).expect("Test: operation should succeed");
 
-        arena.allocate(500, 8).unwrap();
+        arena.allocate(500, 8).expect("Test: operation should succeed");
         assert_eq!(arena.used(), 500);
 
         arena.reset();
@@ -410,7 +437,7 @@ mod tests {
 
     #[test]
     fn test_arena_out_of_memory() {
-        let mut arena = ArenaAllocator::with_capacity(100).unwrap();
+        let mut arena = ArenaAllocator::with_capacity(100).expect("Test: operation should succeed");
 
         let ptr1 = arena.allocate(80, 8);
         assert!(ptr1.is_some());
@@ -421,7 +448,7 @@ mod tests {
 
     #[test]
     fn test_arena_manager() {
-        let mut manager = ArenaManager::default_capacity().unwrap();
+        let mut manager = ArenaManager::default_capacity().expect("Test: operation should succeed");
 
         let stats = manager.stats();
         assert_eq!(stats.frame_used, 0);
@@ -430,7 +457,7 @@ mod tests {
 
         // 使用帧Arena
         if let Some(frame) = manager.frame_arena() {
-            frame.allocate(1024, 8).unwrap();
+            frame.allocate(1024, 8).expect("Test: operation should succeed");
         }
 
         let stats = manager.stats();

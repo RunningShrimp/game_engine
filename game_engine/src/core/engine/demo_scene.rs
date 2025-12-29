@@ -102,7 +102,6 @@ fn spawn_physics_scene(world: &mut World) {
                 radius: 0.0,
             },
         ));
-
     }
 }
 

@@ -42,21 +42,21 @@
 //  nav_mesh.add_node(PathNode::new(0, Vec3::new(0.0, 0.0, 0.0)));
 //  nav_mesh.add_node(PathNode::new(1, Vec3::new(10.0, 0.0, 0.0)));
 //  nav_mesh.add_connection(0, 1, 10.0);
-// 
+//
 //  // 创建寻路服务
 //  let mut pathfinding = PathfindingService::new(nav_mesh);
-// 
+//
 //  // 寻路
-//  let path = pathfinding.find_path(0, 1).unwrap();
+//  let path = pathfinding.find_path(0, 1).expect("Test: operation should succeed");
 //  assert_eq!(path.len(), 2);
 //  ```
-// 
+//
 //  ### AI组件示例
-// 
+//
 //  ```rust
 //  use game_engine::ai::AI;
 //  use bevy_ecs::prelude::*;
-// 
+//
 //  // 在ECS系统中使用AI组件
 //  fn setup_ai_system(mut commands: Commands) {
 //      commands.spawn(AI {
@@ -89,8 +89,8 @@ pub use flocking::{Agent, AgentId, FlockConfig, FlockManager, FlockingError, Obs
 
 // 重新导出寻路相关类型（仅导出非废弃类型）
 pub use pathfinding::{
-    NavigationMesh, PathConnection, PathNode, PathfindingRequest,
-    PathfindingResult, PathfindingService,
+    NavigationMesh, PathConnection, PathNode, PathfindingRequest, PathfindingResult,
+    PathfindingService,
 };
 
 use bevy_ecs::prelude::*;
@@ -286,17 +286,18 @@ impl AIService {
         state_machine: &mut StateMachine,
     ) {
         if let Some(state) = state_machine.states.get(&state_machine.current_state)
-            && let Some(on_update) = &state.on_update {
-                match on_update(world, entity) {
-                    StateTransition::To(new_state) => {
-                        self.transition_to_state(world, entity, state_machine, new_state);
-                    }
-                    StateTransition::Pop => {
-                        // NOTE: 状态栈功能待实现，当前仅支持单状态转换
-                    }
-                    StateTransition::None => {}
+            && let Some(on_update) = &state.on_update
+        {
+            match on_update(world, entity) {
+                StateTransition::To(new_state) => {
+                    self.transition_to_state(world, entity, state_machine, new_state);
                 }
+                StateTransition::Pop => {
+                    // NOTE: 状态栈功能待实现，当前仅支持单状态转换
+                }
+                StateTransition::None => {}
             }
+        }
     }
 
     fn transition_to_state(
@@ -307,15 +308,17 @@ impl AIService {
         new_state: u32,
     ) {
         if let Some(old_state) = state_machine.states.get(&state_machine.current_state)
-            && let Some(on_exit) = &old_state.on_exit {
-                on_exit(world, entity);
-            }
+            && let Some(on_exit) = &old_state.on_exit
+        {
+            on_exit(world, entity);
+        }
 
         state_machine.current_state = new_state;
 
         if let Some(new_state) = state_machine.states.get(&new_state)
-            && let Some(on_enter) = &new_state.on_enter {
-                on_enter(world, entity);
-            }
+            && let Some(on_enter) = &new_state.on_enter
+        {
+            on_enter(world, entity);
+        }
     }
 }

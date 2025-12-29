@@ -160,7 +160,7 @@ impl Arena {
 
 impl Chunk {
     fn new(size: usize) -> Result<Self, ArenaError> {
-        let layout = Layout::from_size_align(size, 8).unwrap();
+        let layout = Layout::from_size_align(size, 8).expect("Test: operation should succeed");
         let ptr = Arena::alloc_with_retry(layout, 3)?;
 
         Ok(Self { ptr, used: 0, size })
@@ -206,7 +206,7 @@ impl Chunk {
 
 impl Drop for Chunk {
     fn drop(&mut self) {
-        let layout = Layout::from_size_align(self.size, 8).unwrap();
+        let layout = Layout::from_size_align(self.size, 8).expect("Test: operation should succeed");
         // SAFETY:
         // - self.ptr 是通过 alloc() 分配的，且从未被修改或释放
         // - layout 与分配时使用的 layout 匹配（size 和 align 都是 8 的倍数）
@@ -232,7 +232,7 @@ impl Drop for Chunk {
 /// use game_engine::performance::arena::TypedArena;
 ///
 /// let arena = TypedArena::<i32>::new();
-/// let val = arena.alloc(42).unwrap();
+/// let val = arena.alloc(42).expect("Test: operation should succeed");
 /// assert_eq!(*val, 42);
 /// ```
 pub struct TypedArena<T> {
@@ -324,7 +324,7 @@ impl<T> Default for TypedArena<T> {
 /// use game_engine::performance::arena::TypedArenaWithDrop;
 ///
 /// let arena = TypedArenaWithDrop::<String>::new();
-/// let s = arena.alloc(String::from("Hello")).unwrap();
+/// let s = arena.alloc(String::from("Hello")).expect("Test: operation should succeed");
 /// // 当 arena 被 drop 时，String 的析构函数会被调用
 /// ```
 pub struct TypedArenaWithDrop<T> {
@@ -452,7 +452,7 @@ impl<T: Default> MemoryPool<T> {
 /// preallocator.preallocate_common_sizes();
 ///
 /// // 获取预分配的Arena
-/// let arena = preallocator.get_arena(4096).unwrap();
+/// let arena = preallocator.get_arena(4096).expect("Test: operation should succeed");
 /// ```
 pub struct MemoryPoolPreallocator {
     /// 预分配的Arena池，按块大小索引
@@ -535,9 +535,10 @@ impl MemoryPoolPreallocator {
 
         // 尝试从预分配池中获取
         if let Some(arenas) = pools.get_mut(&chunk_size)
-            && let Some(arena) = arenas.pop() {
-                return Ok(arena);
-            }
+            && let Some(arena) = arenas.pop()
+        {
+            return Ok(arena);
+        }
 
         // 预分配池中没有，创建新的
         Arena::new_with_prealloc(chunk_size, 1)
@@ -603,9 +604,9 @@ mod tests {
         let arena = Arena::new(1024);
 
         // 分配一些内存
-        let _ptr1 = arena.alloc(64, 8).unwrap();
-        let _ptr2 = arena.alloc(128, 8).unwrap();
-        let _ptr3 = arena.alloc(256, 8).unwrap();
+        let _ptr1 = arena.alloc(64, 8).expect("Test: operation should succeed");
+        let _ptr2 = arena.alloc(128, 8).expect("Test: operation should succeed");
+        let _ptr3 = arena.alloc(256, 8).expect("Test: operation should succeed");
 
         // 检查已分配大小
         assert!(arena.allocated_size() > 0);
@@ -619,12 +620,12 @@ mod tests {
     #[test]
     fn test_arena_prealloc() {
         // 创建Arena并预分配3个块
-        let arena = Arena::new_with_prealloc(1024, 3).unwrap();
+        let arena = Arena::new_with_prealloc(1024, 3).expect("Test: operation should succeed");
         assert_eq!(arena.chunk_count(), 3);
         assert_eq!(arena.capacity(), 1024 * 3);
 
         // 预分配额外的块
-        arena.preallocate_chunks(2).unwrap();
+        arena.preallocate_chunks(2).expect("Test: operation should succeed");
         assert_eq!(arena.chunk_count(), 5);
     }
 
@@ -633,10 +634,10 @@ mod tests {
         let preallocator = MemoryPoolPreallocator::new();
 
         // 预分配常用大小
-        preallocator.preallocate_common_sizes(2).unwrap();
+        preallocator.preallocate_common_sizes(2).expect("Test: operation should succeed");
 
         // 获取Arena
-        let arena = preallocator.get_arena(4096).unwrap();
+        let arena = preallocator.get_arena(4096).expect("Test: operation should succeed");
         assert_eq!(arena.chunk_size, 4096);
 
         // 检查统计信息
@@ -651,17 +652,17 @@ mod tests {
 
         // 分配一些对象（每次使用后释放引用，避免借用冲突）
         {
-            let val1 = arena.alloc(42).unwrap();
+            let val1 = arena.alloc(42).expect("Test: operation should succeed");
             assert_eq!(*val1, 42);
         }
 
         {
-            let val2 = arena.alloc(100).unwrap();
+            let val2 = arena.alloc(100).expect("Test: operation should succeed");
             assert_eq!(*val2, 100);
         }
 
         // 修改新分配的值
-        let val3 = arena.alloc(30).unwrap();
+        let val3 = arena.alloc(30).expect("Test: operation should succeed");
         *val3 = 50;
         assert_eq!(*val3, 50);
     }
@@ -671,8 +672,8 @@ mod tests {
         let pool = MemoryPool::<Vec<i32>>::new(10);
 
         // 获取对象
-        let mut obj1 = pool.acquire().unwrap();
-        let mut obj2 = pool.acquire().unwrap();
+        let mut obj1 = pool.acquire().expect("Test: operation should succeed");
+        let mut obj2 = pool.acquire().expect("Test: operation should succeed");
 
         assert_eq!(pool.available(), 8);
 

@@ -218,8 +218,10 @@ mod tests {
         }
 
         let data = TestData { value: 42 };
-        let payload = MessagePayload::serialize(&data).unwrap();
-        let deserialized: TestData = payload.deserialize().unwrap();
+        let payload = MessagePayload::serialize(&data)
+            .expect("Failed to serialize TestData payload");
+        let deserialized: TestData = payload.deserialize()
+            .expect("Failed to deserialize TestData payload");
 
         assert_eq!(deserialized, data);
     }

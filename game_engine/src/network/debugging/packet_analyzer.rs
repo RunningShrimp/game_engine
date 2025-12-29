@@ -1219,10 +1219,14 @@ impl TimelineAnalyzer {
 
         let recent_entries: Vec<_> = self.timeline_data.iter().rev().take(10).collect();
         let packet_counts: Vec<u64> = recent_entries.iter().map(|e| e.packet_count).collect();
-        
+
+        if packet_counts.is_empty() {
+            return;
+        }
+
         let average = packet_counts.iter().sum::<u64>() as f32 / packet_counts.len() as f32;
-        let max = *packet_counts.iter().max().unwrap();
-        let min = *packet_counts.iter().min().unwrap();
+        let max = *packet_counts.iter().max().expect("packet_counts is not empty");
+        let min = *packet_counts.iter().min().expect("packet_counts is not empty");
 
         let now = Instant::now();
 
@@ -1474,7 +1478,7 @@ mod tests {
         );
         
         assert!(result.is_ok());
-        let packet = result.unwrap();
+        let packet = result.expect("Test: operation should succeed");
         assert_eq!(packet.size, data.len());
         assert_eq!(packet.direction, PacketDirection::Outgoing);
         assert_eq!(packet.source_address, "127.0.0.1:8080");
@@ -1485,12 +1489,12 @@ mod tests {
     fn test_network_message_parsing() {
         let parser = NetworkMessageParser::new();
         let message = NetworkMessage::Heartbeat { timestamp: 12345 };
-        let data = bincode::serialize(&message).unwrap();
+        let data = bincode::serialize(&message).expect("Test: operation should succeed");
         
         let result = parser.parse(&data);
         assert!(result.is_ok());
         
-        let content = result.unwrap();
+        let content = result.expect("Test: operation should succeed");
         assert_eq!(content.message_type, Some("Heartbeat".to_string()));
         assert!(content.fields.contains_key("timestamp"));
     }

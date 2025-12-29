@@ -66,11 +66,8 @@ pub trait NoiseGenerator {
         let mut max_value = 0.0;
 
         for _ in 0..octaves {
-            total += self.noise3d(
-                pos.x * frequency,
-                pos.y * frequency,
-                pos.z * frequency,
-            ) * amplitude;
+            total +=
+                self.noise3d(pos.x * frequency, pos.y * frequency, pos.z * frequency) * amplitude;
             max_value += amplitude;
             amplitude *= persistence;
             frequency *= lacunarity;
@@ -176,10 +173,26 @@ impl NoiseGenerator for PerlinNoise {
         let u = self.fade(fx);
         let v = self.fade(fy);
 
-        let aaa = self.grad(self.permutation[(self.permutation[x0 as usize & 255] + y0 as usize) & 255], fx, fy);
-        let baa = self.grad(self.permutation[(self.permutation[x1 as usize & 255] + y0 as usize) & 255], fx - 1.0, fy);
-        let aba = self.grad(self.permutation[(self.permutation[x0 as usize & 255] + y1 as usize) & 255], fx, fy - 1.0);
-        let bba = self.grad(self.permutation[(self.permutation[x1 as usize & 255] + y1 as usize) & 255], fx - 1.0, fy - 1.0);
+        let aaa = self.grad(
+            self.permutation[(self.permutation[x0 as usize & 255] + y0 as usize) & 255],
+            fx,
+            fy,
+        );
+        let baa = self.grad(
+            self.permutation[(self.permutation[x1 as usize & 255] + y0 as usize) & 255],
+            fx - 1.0,
+            fy,
+        );
+        let aba = self.grad(
+            self.permutation[(self.permutation[x0 as usize & 255] + y1 as usize) & 255],
+            fx,
+            fy - 1.0,
+        );
+        let bba = self.grad(
+            self.permutation[(self.permutation[x1 as usize & 255] + y1 as usize) & 255],
+            fx - 1.0,
+            fy - 1.0,
+        );
 
         let x1_lerp = self.lerp(aaa, baa, u);
         let x2_lerp = self.lerp(aba, bba, u);
@@ -219,7 +232,7 @@ impl SimplexNoise {
 
         // 12个3D梯度向量（正二十面体的顶点）
         let sqrt3 = (3.0_f32).sqrt();
-        let sqrt6 = (6.0_f32).sqrt();
+        let _sqrt6 = (6.0_f32).sqrt();
 
         gradients3d.push(Vec3::new(1.0, 1.0, 0.0));
         gradients3d.push(Vec3::new(-1.0, 1.0, 0.0));
@@ -303,21 +316,24 @@ impl NoiseGenerator for SimplexNoise {
         let t0 = 0.5 - x0 * x0 - y0 * y0;
         if t0 >= 0.0 {
             let t0_sq = t0 * t0;
-            let gi0 = &self.gradients3d[self.permutation[i as usize & (255 + j as usize) & 255] % 12];
+            let gi0 =
+                &self.gradients3d[self.permutation[i as usize & (255 + j as usize) & 255] % 12];
             n0 = t0_sq * t0_sq * (gi0.x * x0 + gi0.y * y0);
         }
 
         let t1 = 0.5 - x1 * x1 - y1 * y1;
         if t1 >= 0.0 {
             let t1_sq = t1 * t1;
-            let gi1 = &self.gradients3d[self.permutation[i as usize & (255 + i1 + j as usize) & (255 + j1)] % 12];
+            let gi1 = &self.gradients3d
+                [self.permutation[i as usize & (255 + i1 + j as usize) & (255 + j1)] % 12];
             n1 = t1_sq * t1_sq * (gi1.x * x1 + gi1.y * y1);
         }
 
         let t2 = 0.5 - x2 * x2 - y2 * y2;
         if t2 >= 0.0 {
             let t2_sq = t2 * t2;
-            let gi2 = &self.gradients3d[self.permutation[i as usize & (255 + 1 + j as usize) & (255 + 1)] % 12];
+            let gi2 = &self.gradients3d
+                [self.permutation[i as usize & (255 + 1 + j as usize) & (255 + 1)] % 12];
             n2 = t2_sq * t2_sq * (gi2.x * x2 + gi2.y * y2);
         }
 

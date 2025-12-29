@@ -52,11 +52,17 @@ impl WebInput {
             let closure = Closure::wrap(Box::new(move |event: KeyboardEvent| {
                 if let Some(key_code) = map_key_code(&event.code()) {
                     let modifiers = get_modifiers(&event);
-                    safe_lock(&keys, "WebInput.keys_pressed").unwrap().insert(key_code);
-                    safe_lock(&events, "WebInput.events").unwrap().push(InputEvent::KeyPressed {
-                        key: key_code,
-                        modifiers,
-                    });
+                    if let (Ok(mut keys_guard), Ok(mut events_guard)) = (
+                        safe_lock(&keys, "WebInput.keys_pressed"),
+                        safe_lock(&events, "WebInput.events"),
+                    ) {
+                        keys_guard.insert(key_code);
+                        events_guard.push(InputEvent::KeyPressed {
+                            key: key_code,
+                            modifiers,
+                        });
+                    }
+                    // Lock poison is logged by safe_lock; event is dropped on error
                 }
             }) as Box<dyn FnMut(_)>);
             self.window
@@ -70,11 +76,17 @@ impl WebInput {
             let closure = Closure::wrap(Box::new(move |event: KeyboardEvent| {
                 if let Some(key_code) = map_key_code(&event.code()) {
                     let modifiers = get_modifiers(&event);
-                    safe_lock(&keys, "WebInput.keys_pressed").unwrap().remove(&key_code);
-                    safe_lock(&events, "WebInput.events").unwrap().push(InputEvent::KeyReleased {
-                        key: key_code,
-                        modifiers,
-                    });
+                    if let (Ok(mut keys_guard), Ok(mut events_guard)) = (
+                        safe_lock(&keys, "WebInput.keys_pressed"),
+                        safe_lock(&events, "WebInput.events"),
+                    ) {
+                        keys_guard.remove(&key_code);
+                        events_guard.push(InputEvent::KeyReleased {
+                            key: key_code,
+                            modifiers,
+                        });
+                    }
+                    // Lock poison is logged by safe_lock; event is dropped on error
                 }
             }) as Box<dyn FnMut(_)>);
             self.window
@@ -89,10 +101,14 @@ impl WebInput {
             let closure = Closure::wrap(Box::new(move |event: MouseEvent| {
                 let x = event.offset_x() as f32;
                 let y = event.offset_y() as f32;
-                *safe_lock(&pos, "WebInput.mouse_pos").unwrap() = (x, y);
-                safe_lock(&events, "WebInput.events")
-                    .unwrap()
-                    .push(InputEvent::MouseMoved { x, y });
+                if let (Ok(mut pos_guard), Ok(mut events_guard)) = (
+                    safe_lock(&pos, "WebInput.mouse_pos"),
+                    safe_lock(&events, "WebInput.events"),
+                ) {
+                    *pos_guard = (x, y);
+                    events_guard.push(InputEvent::MouseMoved { x, y });
+                }
+                // Lock poison is logged by safe_lock; event is dropped on error
             }) as Box<dyn FnMut(_)>);
             self.canvas
                 .add_event_listener_with_callback("mousemove", closure.as_ref().unchecked_ref())?;
@@ -106,10 +122,14 @@ impl WebInput {
                 let button = map_mouse_button(event.button());
                 let x = event.offset_x() as f32;
                 let y = event.offset_y() as f32;
-                safe_lock(&buttons, "WebInput.mouse_buttons").unwrap().insert(button);
-                safe_lock(&events, "WebInput.events")
-                    .unwrap()
-                    .push(InputEvent::MouseButtonPressed { button, x, y });
+                if let (Ok(mut buttons_guard), Ok(mut events_guard)) = (
+                    safe_lock(&buttons, "WebInput.mouse_buttons"),
+                    safe_lock(&events, "WebInput.events"),
+                ) {
+                    buttons_guard.insert(button);
+                    events_guard.push(InputEvent::MouseButtonPressed { button, x, y });
+                }
+                // Lock poison is logged by safe_lock; event is dropped on error
             }) as Box<dyn FnMut(_)>);
             self.canvas
                 .add_event_listener_with_callback("mousedown", closure.as_ref().unchecked_ref())?;
@@ -123,10 +143,14 @@ impl WebInput {
                 let button = map_mouse_button(event.button());
                 let x = event.offset_x() as f32;
                 let y = event.offset_y() as f32;
-                safe_lock(&buttons, "WebInput.mouse_buttons").unwrap().remove(&button);
-                safe_lock(&events, "WebInput.events")
-                    .unwrap()
-                    .push(InputEvent::MouseButtonReleased { button, x, y });
+                if let (Ok(mut buttons_guard), Ok(mut events_guard)) = (
+                    safe_lock(&buttons, "WebInput.mouse_buttons"),
+                    safe_lock(&events, "WebInput.events"),
+                ) {
+                    buttons_guard.remove(&button);
+                    events_guard.push(InputEvent::MouseButtonReleased { button, x, y });
+                }
+                // Lock poison is logged by safe_lock; event is dropped on error
             }) as Box<dyn FnMut(_)>);
             self.canvas
                 .add_event_listener_with_callback("mouseup", closure.as_ref().unchecked_ref())?;
@@ -139,9 +163,10 @@ impl WebInput {
             let closure = Closure::wrap(Box::new(move |event: WheelEvent| {
                 let delta_x = event.delta_x() as f32;
                 let delta_y = event.delta_y() as f32;
-                safe_lock(&events, "WebInput.events")
-                    .unwrap()
-                    .push(InputEvent::MouseWheel { delta_x, delta_y });
+                if let Ok(mut events_guard) = safe_lock(&events, "WebInput.events") {
+                    events_guard.push(InputEvent::MouseWheel { delta_x, delta_y });
+                }
+                // Lock poison is logged by safe_lock; event is dropped on error
             }) as Box<dyn FnMut(_)>);
             self.canvas
                 .add_event_listener_with_callback("wheel", closure.as_ref().unchecked_ref())?;
@@ -154,21 +179,27 @@ impl WebInput {
 
 impl Input for WebInput {
     fn poll_events(&mut self) -> Vec<InputEvent> {
-        safe_lock(&self.events, "WebInput.events").unwrap().drain(..).collect()
+        safe_lock(&self.events, "WebInput.events")
+            .map(|mut events| events.drain(..).collect())
+            .unwrap_or_else(|_| Vec::new())
     }
 
     fn is_key_pressed(&self, key: KeyCode) -> bool {
-        safe_lock(&self.keys_pressed, "WebInput.keys_pressed").unwrap().contains(&key)
+        safe_lock(&self.keys_pressed, "WebInput.keys_pressed")
+            .map(|keys| keys.contains(&key))
+            .unwrap_or(false)
     }
 
     fn is_mouse_button_pressed(&self, button: MouseButton) -> bool {
         safe_lock(&self.mouse_buttons, "WebInput.mouse_buttons")
-            .unwrap()
-            .contains(&button)
+            .map(|buttons| buttons.contains(&button))
+            .unwrap_or(false)
     }
 
     fn mouse_position(&self) -> (f32, f32) {
-        *safe_lock(&self.mouse_pos, "WebInput.mouse_pos").unwrap()
+        safe_lock(&self.mouse_pos, "WebInput.mouse_pos")
+            .map(|pos| *pos)
+            .unwrap_or((0.0, 0.0))
     }
 
     fn set_cursor_grab(&mut self, _grab: bool) {

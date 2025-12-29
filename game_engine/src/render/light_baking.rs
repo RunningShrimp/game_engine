@@ -132,11 +132,7 @@ impl LightBaker {
     }
 
     /// 保存光照贴图到文件
-    pub fn save_lightmap(
-        &self,
-        entity_id: u64,
-        path: &PathBuf,
-    ) -> Result<(), RenderError> {
+    pub fn save_lightmap(&self, entity_id: u64, path: &PathBuf) -> Result<(), RenderError> {
         let Some(lightmap) = self.lightmaps.get(&entity_id) else {
             return Err(RenderError::InvalidState {
                 message: format!("Lightmap not found for entity {}", entity_id),
@@ -151,11 +147,7 @@ impl LightBaker {
     }
 
     /// 加载光照贴图
-    pub fn load_lightmap(
-        &mut self,
-        entity_id: u64,
-        path: &PathBuf,
-    ) -> Result<(), RenderError> {
+    pub fn load_lightmap(&mut self, entity_id: u64, path: &PathBuf) -> Result<(), RenderError> {
         // 简化实现
         let _ = (entity_id, path);
         Ok(())
@@ -221,7 +213,11 @@ pub enum LightBakingType {
     /// 点光源
     Point { radius: f32 },
     /// 聚光灯
-    Spot { direction: Vec3, angle: f32, radius: f32 },
+    Spot {
+        direction: Vec3,
+        angle: f32,
+        radius: f32,
+    },
 }
 
 #[cfg(test)]
@@ -242,4 +238,3 @@ mod tests {
         assert_eq!(baker.progress(), 0.0);
     }
 }
-

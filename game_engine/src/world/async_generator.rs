@@ -301,19 +301,20 @@ impl AsyncWorldGenerator {
                         pending_count_clone.fetch_sub(1, Ordering::Relaxed);
 
                         // 获取信号量许可
-                        let permit = semaphore_clone.clone().acquire_owned().await;
-                        if permit.is_err() {
-                            let _ = result_tx.send(WorldGenerationResult {
-                                request_id: req.request_id,
-                                entities: Vec::new(),
-                                terrain_data: None,
-                                navmesh_data: None,
-                                generation_time_ms: 0.0,
-                                error: Some(WorldGenerationError::Other("Failed to acquire semaphore".to_string())),
-                            });
-                            continue;
-                        }
-                        let permit = permit.unwrap();
+                        let permit = match semaphore_clone.clone().acquire_owned().await {
+                            Ok(permit) => permit,
+                            Err(_) => {
+                                let _ = result_tx.send(WorldGenerationResult {
+                                    request_id: req.request_id,
+                                    entities: Vec::new(),
+                                    terrain_data: None,
+                                    navmesh_data: None,
+                                    generation_time_ms: 0.0,
+                                    error: Some(WorldGenerationError::Other("Failed to acquire semaphore".to_string())),
+                                });
+                                continue;
+                            }
+                        };
 
                         let req_id = req.request_id;
                         let req_type = req.generation_type.clone();
@@ -722,9 +723,10 @@ impl SimpleRng {
 impl Drop for AsyncWorldGenerator {
     fn drop(&mut self) {
         if let Ok(mut cancel_tx_guard) = self.cancel_tx.try_lock()
-            && let Some(tx) = cancel_tx_guard.take() {
-                let _ = tx.send(());
-            }
+            && let Some(tx) = cancel_tx_guard.take()
+        {
+            let _ = tx.send(());
+        }
     }
 }
 
@@ -741,9 +743,9 @@ mod tests {
             .await;
 
         assert!(result.is_ok());
-        let result = result.unwrap();
+        let result = result.expect("Test: operation should succeed");
         assert!(result.terrain_data.is_some());
-        let terrain = result.terrain_data.unwrap();
+        let terrain = result.terrain_data.expect("Test: operation should succeed");
         assert_eq!(terrain.width, 256);
         assert_eq!(terrain.height, 256);
         assert_eq!(terrain.heightmap.len(), 256 * 256);
@@ -762,7 +764,7 @@ mod tests {
             .await;
 
         assert!(result.is_ok());
-        let result = result.unwrap();
+        let result = result.expect("Test: operation should succeed");
         assert_eq!(result.entities.len(), 100);
     }
 
@@ -775,7 +777,7 @@ mod tests {
             .await;
 
         assert!(result.is_ok());
-        let result = result.unwrap();
+        let result = result.expect("Test: operation should succeed");
         assert!(result.terrain_data.is_some());
         assert!(result.navmesh_data.is_some());
         assert!(!result.entities.is_empty());

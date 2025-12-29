@@ -443,8 +443,7 @@ impl<T: Clone + Send + Sync + fmt::Debug + 'static> Command for PropertyChangeCo
     }
 
     fn undo(&mut self, context: &mut dyn Any) -> Result<(), CommandError> {
-        (self.apply_fn)(context, self.target_id, &self.old_value)
-            .map_err(CommandError::UndoFailed)
+        (self.apply_fn)(context, self.target_id, &self.old_value).map_err(CommandError::UndoFailed)
     }
 
     fn description(&self) -> &str {
@@ -454,9 +453,10 @@ impl<T: Clone + Send + Sync + fmt::Debug + 'static> Command for PropertyChangeCo
     fn can_merge(&self, other: &dyn Command) -> bool {
         // 尝试将 other 转换为相同类型的命令
         if let Some(cmd_id) = other.command_id()
-            && let Some(my_id) = self.command_id() {
-                return cmd_id == my_id;
-            }
+            && let Some(my_id) = self.command_id()
+        {
+            return cmd_id == my_id;
+        }
         false
     }
 
@@ -583,21 +583,21 @@ mod tests {
                 }),
                 &mut context,
             )
-            .unwrap();
+            .expect("Test: operation should succeed");
 
         assert!(manager.can_undo());
         assert!(!manager.can_redo());
         assert_eq!(manager.undo_count(), 1);
 
         // 撤销
-        manager.undo(&mut context).unwrap();
+        manager.undo(&mut context).expect("Test: operation should succeed");
 
         assert!(!manager.can_undo());
         assert!(manager.can_redo());
         assert_eq!(manager.redo_count(), 1);
 
         // 重做
-        manager.redo(&mut context).unwrap();
+        manager.redo(&mut context).expect("Test: operation should succeed");
 
         assert!(manager.can_undo());
         assert!(!manager.can_redo());
@@ -618,10 +618,10 @@ mod tests {
         let mut context: i32 = 0;
 
         // 执行组合命令
-        composite.execute(&mut context).unwrap();
+        composite.execute(&mut context).expect("Test: operation should succeed");
 
         // 撤销组合命令
-        composite.undo(&mut context).unwrap();
+        composite.undo(&mut context).expect("Test: operation should succeed");
     }
 }
 

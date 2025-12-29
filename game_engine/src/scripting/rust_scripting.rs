@@ -1,5 +1,5 @@
 //  Rust脚本引擎
-// 
+//
 //  提供Rust代码的动态编译和执行功能。
 
 use super::system::{ScriptContext, ScriptResult, ScriptValue};
@@ -82,9 +82,7 @@ impl RustScriptEngine {
         F: Fn() + Send + Sync + 'static,
     {
         if let Ok(mut context) = self.context.lock() {
-            context
-                .compiled_scripts
-                .insert(name.to_string(), Box::new(func));
+            context.compiled_scripts.insert(name.to_string(), Box::new(func));
         }
     }
 
@@ -219,14 +217,25 @@ mod tests {
         let call_count_clone = call_count.clone();
 
         engine.register_function("test_func", move || {
-            let mut count = safe_lock(&call_count_clone, "test_call_count").unwrap();
+            let mut count = match safe_lock(&call_count_clone, "test_call_count") {
+                Ok(c) => c,
+                Err(e) => {
+                    panic!("Failed to acquire test_call_count lock: {}", e);
+                }
+            };
             *count += 1;
         });
 
         // 测试函数调用
         let result = engine.call_function("test_func");
         assert!(result.is_ok());
-        assert_eq!(*safe_lock(&call_count, "test_call_count").unwrap(), 1);
+
+        // Verify call count - test context, safe to panic on lock failure
+        let count = match safe_lock(&call_count, "test_call_count") {
+            Ok(c) => *c,
+            Err(e) => panic!("Failed to acquire test_call_count lock: {}", e),
+        };
+        assert_eq!(count, 1);
     }
 
     #[test]

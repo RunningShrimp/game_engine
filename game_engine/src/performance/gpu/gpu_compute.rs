@@ -1,5 +1,5 @@
 //  GPU 计算着色器资源管理
-// 
+//
 //  用于管理 WGPU 计算管道和着色器资源
 //  - 计算管道创建和管理
 //  - 绑定组管理
@@ -165,7 +165,6 @@ pub struct ComputeResourceManager {
     /// 总 GPU 内存使用量
     total_gpu_memory: u64,
 }
-
 
 impl ComputeResourceManager {
     /// 创建新的资源管理器

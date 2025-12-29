@@ -485,9 +485,10 @@ impl GpuDrivenRenderer {
         depth_texture: &wgpu::Texture,
     ) -> Result<(), crate::render::occlusion_culling::OcclusionError> {
         if let Some(ref occluder) = self.occlusion_culler
-            && occluder.is_initialized() {
-                occluder.build_hi_z(encoder, device, depth_texture)?;
-            }
+            && occluder.is_initialized()
+        {
+            occluder.build_hi_z(encoder, device, depth_texture)?;
+        }
         Ok(())
     }
 
@@ -512,9 +513,10 @@ impl GpuDrivenRenderer {
         screen_size: (u32, u32),
     ) -> Result<(), crate::render::occlusion_culling::OcclusionError> {
         if let Some(ref mut occluder) = self.occlusion_culler
-            && occluder.is_initialized() {
-                occluder.query_occlusion_async(encoder, device, queries, view_proj, screen_size)?;
-            }
+            && occluder.is_initialized()
+        {
+            occluder.query_occlusion_async(encoder, device, queries, view_proj, screen_size)?;
+        }
         Ok(())
     }
 

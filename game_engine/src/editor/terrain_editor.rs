@@ -295,11 +295,12 @@ impl TerrainEditor {
 
         // 处理点击
         if response.clicked()
-            && let Some(pos) = response.interact_pointer_pos() {
-                let x = ((pos.x - rect.left()) / cell_width) as usize;
-                let y = ((pos.y - rect.top()) / cell_height) as usize;
-                self.apply_tool(x, y);
-            }
+            && let Some(pos) = response.interact_pointer_pos()
+        {
+            let x = ((pos.x - rect.left()) / cell_width) as usize;
+            let y = ((pos.y - rect.top()) / cell_height) as usize;
+            self.apply_tool(x, y);
+        }
     }
 }
 
@@ -334,7 +335,7 @@ mod tests {
         editor.apply_tool(5, 5);
 
         // 验证高度已改变
-        let height = editor.terrain.get_height(5, 5).unwrap();
+        let height = editor.terrain.get_height(5, 5).expect("Test: operation should succeed");
         assert!(height > 0.0);
     }
 }

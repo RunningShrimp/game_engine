@@ -1,5 +1,5 @@
 //  全局异步运行时
-// 
+//
 //  提供统一的Tokio运行时，避免每个模块创建独立运行时
 
 use std::sync::OnceLock;
@@ -11,6 +11,9 @@ static GLOBAL_RUNTIME: OnceLock<Runtime> = OnceLock::new();
 /// 获取全局Tokio运行时
 ///
 /// 首次调用时会创建一个多线程运行时，后续调用返回同一实例
+///
+/// # Panics
+/// 如果运行时创建失败会panic
 pub fn global_runtime() -> &'static Runtime {
     GLOBAL_RUNTIME.get_or_init(|| {
         tokio::runtime::Builder::new_multi_thread()
@@ -18,7 +21,9 @@ pub fn global_runtime() -> &'static Runtime {
             .thread_name("asset-io")
             .enable_all()
             .build()
-            .expect("Failed to create global tokio runtime")
+            .unwrap_or_else(|e| {
+                panic!("Failed to create global tokio runtime: {}", e);
+            })
     })
 }
 
@@ -34,7 +39,7 @@ where
 use crate::platform::run_sync;
 
 /// 阻塞执行异步任务（仅在无法避免阻塞时使用）
-pub fn block_on<F: std::future::Future + Send + 'static>(future: F) -> F::Output 
+pub fn block_on<F: std::future::Future + Send + 'static>(future: F) -> F::Output
 where
     F::Output: Send,
 {
@@ -60,7 +65,7 @@ mod tests {
             42
         });
 
-        let result = run_sync(handle).unwrap();
+        let result = run_sync(handle).expect("Test: operation should succeed");
         assert_eq!(result, 42);
     }
 }

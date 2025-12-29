@@ -1,10 +1,63 @@
-//  GPU 计算着色器和物理加速
-//
-//  使用 WGPU 实现 GPU 计算着色器进行并行物理模拟
-//  - 粒子系统模拟
-//  - 碰撞检测
-//  - 约束求解
-//  - 力场计算
+//! # GPU 计算着色器和物理加速
+//!
+//! **API 稳定性**: 实验性 (Experimental) (v0.1.0)
+//!
+//! 使用 WGPU 实现 GPU 计算着色器进行并行物理模拟：
+//! - 粒子系统模拟
+//! - 碰撞检测
+//! - 约束求解
+//! - 力场计算
+//!
+//! ## API 稳定性声明
+//!
+//! **警告**: 此 API 处于实验性阶段，可能会在未来版本中发生破坏性变更。
+//! - **状态**: 实验性 (Experimental) - 部分实现
+//! - **引入版本**: v0.1.0
+//! - **预期稳定版本**: v0.3.0
+//!
+//! ## 功能完整性追踪
+//!
+//! | 功能 | 状态 | 说明 |
+//! |------|------|------|
+//! | GPU 物理体积分 | ✅ 已实现 | 完整的半隐式欧拉积分 |
+//! | 约束求解 | 🚧 开发中 | 距离/球形/胶囊体约束 |
+//! | 碰撞检测 | 🚧 开发中 | 简化的碰撞检测 |
+//! | GPU 资源管理 | ✅ 已实现 | 缓冲区和管线管理完整 |
+//! | CPU 回退 | ✅ 已实现 | 完整的回退逻辑 |
+//! | 异步结果读取 | 🚧 开发中 | 同步读取，需要优化 |
+//! | 高级约束类型 | ⏳ 计划中 | 设计阶段 |
+//!
+//! ## 使用说明
+//!
+//! 此模块提供基于 GPU 计算着色器的物理模拟功能。在 GPU 不可用时自动回退到 CPU 实现。
+//!
+//! ### 示例
+//!
+//! ```rust,no_run
+//! use game_engine::performance::gpu::gpu_physics::{GPUPhysicsSimulator, GPUPhysicsConfig};
+//!
+//! let mut simulator = GPUPhysicsSimulator::with_config(GPUPhysicsConfig::default());
+//! simulator.initialize_gpu(device, queue, 10000);
+//!
+//! let body_idx = simulator.add_body(position, mass);
+//! simulator.step();
+//! ```
+//!
+//! ## 已知限制
+//!
+//! 1. GPU 结果读取为同步操作，影响性能
+//! 2. 约束求解器实现较为简化
+//! 3. 碰撞检测精度有限
+//! 4. 缺少高级约束类型
+//!
+//! ## 未来改进计划
+//!
+//! - [ ] 实现异步 GPU 结果读取
+//! - [ ] 添加更多约束类型
+//! - [ ] 改进碰撞检测精度
+//! - [ ] 优化着色器性能
+//! - [ ] 添加并行约束求解
+//! - [ ] 实现更复杂的物理模型
 
 use glam::Vec3;
 use std::sync::Arc;
@@ -548,8 +601,7 @@ impl GPUPhysicsSimulator {
             compute_pass.set_bind_group(0, &resources.bind_group, &[]);
 
             // 计算工作组数量
-            let workgroups =
-                body_count.div_ceil(self.config.workgroup_size);
+            let workgroups = body_count.div_ceil(self.config.workgroup_size);
             compute_pass.dispatch_workgroups(workgroups, 1, 1);
         }
 
@@ -831,7 +883,7 @@ mod tests {
         sim.apply_force(body_idx, Vec3::new(10.0, 0.0, 0.0));
         sim.step();
 
-        let vel = sim.get_body_velocity(body_idx).unwrap();
+        let vel = sim.get_body_velocity(body_idx).expect("Test: operation should succeed");
         assert!(vel.x > 0.0); // 受力影响
     }
 

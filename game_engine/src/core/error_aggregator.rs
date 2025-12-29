@@ -1,8 +1,11 @@
 //  错误聚合和报告模块
-// 
+//
 //  提供错误统计、聚合和可视化功能。
 
-use crate::{error::{EngineError, safe_lock}, impl_default};
+use crate::{
+    error::{EngineError, safe_lock},
+    impl_default,
+};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -100,10 +103,7 @@ impl ErrorStats {
     /// 返回指定时间窗口内的错误数量。
     pub fn error_trend(&self, seconds: u64) -> u64 {
         let cutoff = Self::current_timestamp().saturating_sub(seconds);
-        self.recent_errors
-            .iter()
-            .filter(|record| record.timestamp >= cutoff)
-            .count() as u64
+        self.recent_errors.iter().filter(|record| record.timestamp >= cutoff).count() as u64
     }
 }
 
@@ -246,7 +246,10 @@ impl ErrorAggregator {
 
         let record = ErrorRecord::new(&error_type, &source_str, &message);
 
-        let stats = &mut safe_lock(&self.stats, "ErrorAggregator.stats").expect("Failed to acquire stats lock");
+        let Ok(mut stats) = safe_lock(&self.stats, "ErrorAggregator.stats") else {
+            tracing::error!("Failed to acquire stats lock in record_error");
+            return;
+        };
         stats.total_count += 1;
 
         // 更新按类型统计
@@ -262,7 +265,7 @@ impl ErrorAggregator {
         }
 
         // 计算错误率
-        stats.error_rate = self.calculate_error_rate(stats);
+        stats.error_rate = self.calculate_error_rate(&stats);
         stats.last_updated = ErrorStats::current_timestamp();
     }
 
@@ -345,21 +348,35 @@ impl ErrorAggregator {
     /// assert_eq!(stats.total_count, 1);
     /// ```
     pub fn get_stats(&self) -> ErrorStats {
-        safe_lock(&self.stats, "ErrorAggregator.stats")
-            .unwrap()
-            .clone()
+        match safe_lock(&self.stats, "ErrorAggregator.stats") {
+            Ok(stats) => stats.clone(),
+            Err(e) => {
+                tracing::error!("Failed to acquire stats lock in get_stats: {:?}", e);
+                // Return empty stats on error to avoid panic
+                ErrorStats::default()
+            }
+        }
     }
 
     /// 获取错误摘要
     pub fn get_summary(&self) -> ErrorSummary {
-        let stats = &safe_lock(&self.stats, "ErrorAggregator.stats").expect("Failed to acquire stats lock");
+        let Ok(stats) = safe_lock(&self.stats, "ErrorAggregator.stats") else {
+            tracing::error!("Failed to acquire stats lock in get_summary");
+            // Return empty summary on error
+            return ErrorSummary {
+                total_errors: 0,
+                error_rate: 0.0,
+                most_common_type: None,
+                most_common_source: None,
+                recent_error_count: 0,
+                last_updated: 0,
+            };
+        };
         ErrorSummary {
             total_errors: stats.total_count,
             error_rate: stats.error_rate,
             most_common_type: stats.most_common_error_type().map(|(t, c)| (t.clone(), *c)),
-            most_common_source: stats
-                .most_common_error_source()
-                .map(|(s, c)| (s.clone(), *c)),
+            most_common_source: stats.most_common_error_source().map(|(s, c)| (s.clone(), *c)),
             recent_error_count: stats.recent_errors.len(),
             last_updated: stats.last_updated,
         }
@@ -466,7 +483,7 @@ impl ErrorSummary {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::error::{RenderError, ErrorSeverity};
+    use crate::error::{ErrorSeverity, RenderError};
 
     #[test]
     fn test_error_aggregator() {
@@ -480,10 +497,11 @@ mod tests {
         aggregator.record_error(&render_err, "render_system");
 
         // Note: AssetError doesn't exist, using a different error for testing
-        let resource_err = EngineError::Resource(crate::error::resource_error::ResourceError::NotFound {
-            path: "test.png".to_string(),
-            severity: ErrorSeverity::Error,
-        });
+        let resource_err =
+            EngineError::Resource(crate::error::resource_error::ResourceError::NotFound {
+                path: "test.png".to_string(),
+                severity: ErrorSeverity::Error,
+            });
         aggregator.record_error(&resource_err, "asset_manager");
 
         // 获取统计
@@ -516,7 +534,8 @@ mod tests {
 
         aggregator.record_custom_error("TestError", "test_module", "Test message", None);
 
-        let report = aggregator.export_report().unwrap();
+        let report = aggregator.export_report()
+            .expect("Failed to export error report: serialization should not fail for valid error data");
         assert!(report.contains("TestError"));
         assert!(report.contains("test_module"));
     }

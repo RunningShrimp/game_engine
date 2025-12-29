@@ -513,9 +513,10 @@ impl TaaPass {
 
     /// 确保历史纹理已创建
     pub fn ensure_history_textures(&mut self, device: &wgpu::Device, width: u32, height: u32) {
-        let need_recreate = self.history_texture_a.as_ref().is_none_or(|t| {
-            t.size().width != width || t.size().height != height
-        });
+        let need_recreate = self
+            .history_texture_a
+            .as_ref()
+            .is_none_or(|t| t.size().width != width || t.size().height != height);
 
         if need_recreate {
             let create_texture = |label: &str| {

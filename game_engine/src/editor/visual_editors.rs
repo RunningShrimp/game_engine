@@ -169,9 +169,10 @@ impl ShaderGraph {
 
         // 更新目标节点的输入连接
         if let Some(node) = self.nodes.get_mut(to_node)
-            && let Some(input) = node.inputs.get_mut(to_port) {
-                input.connection = Some(from_node);
-            }
+            && let Some(input) = node.inputs.get_mut(to_port)
+        {
+            input.connection = Some(from_node);
+        }
     }
 
     /// 生成着色器代码
@@ -233,7 +234,11 @@ pub enum TransitionCondition {
     /// 时间条件
     Time { min_time: f32 },
     /// 参数条件
-    Parameter { param: String, value: f32, comparison: ComparisonOp },
+    Parameter {
+        param: String,
+        value: f32,
+        comparison: ComparisonOp,
+    },
     /// 事件触发
     Event { event: String },
     /// 自定义条件
@@ -315,24 +320,34 @@ impl AnimationStateMachine {
         // 检查所有转换条件
         for transition in &self.transitions {
             if transition.from_state == self.current_state
-                && self.check_transition_condition(transition, dt, events) {
-                    // 触发转换
-                    self.current_state = transition.to_state.clone();
-                    triggered_transitions.push(transition.to_state.clone());
-                }
+                && self.check_transition_condition(transition, dt, events)
+            {
+                // 触发转换
+                self.current_state = transition.to_state.clone();
+                triggered_transitions.push(transition.to_state.clone());
+            }
         }
 
         triggered_transitions
     }
 
     /// 检查转换条件
-    fn check_transition_condition(&self, transition: &StateTransition, dt: f32, events: &[String]) -> bool {
+    fn check_transition_condition(
+        &self,
+        transition: &StateTransition,
+        _dt: f32,
+        events: &[String],
+    ) -> bool {
         match &transition.condition {
-            TransitionCondition::Time { min_time } => {
+            TransitionCondition::Time { min_time: _ } => {
                 // TODO: 需要跟踪当前状态的时间
-                true  // 简化实现
+                true // 简化实现
             }
-            TransitionCondition::Parameter { param, value, comparison } => {
+            TransitionCondition::Parameter {
+                param,
+                value,
+                comparison,
+            } => {
                 if let Some(&param_value) = self.parameters.get(param) {
                     match comparison {
                         ComparisonOp::Equal => (param_value - *value).abs() < 0.001,
@@ -346,9 +361,7 @@ impl AnimationStateMachine {
                     false
                 }
             }
-            TransitionCondition::Event { event } => {
-                events.contains(event)
-            }
+            TransitionCondition::Event { event } => events.contains(event),
             TransitionCondition::Custom { condition: _ } => {
                 // TODO: 解析和执行自定义条件
                 false
@@ -603,9 +616,10 @@ impl EditorManager {
     /// 渲染活跃编辑器
     pub fn render_active_editor(&mut self, ui: &mut egui::Ui) {
         if let Some(editor_type) = self.active_editor
-            && let Some(editor) = self.open_editors.get_mut(&editor_type) {
-                editor.render_ui(ui);
-            }
+            && let Some(editor) = self.open_editors.get_mut(&editor_type)
+        {
+            editor.render_ui(ui);
+        }
     }
 
     /// 更新所有编辑器
@@ -759,8 +773,8 @@ mod tests {
     #[test]
     fn test_json_export_import() {
         let sm = create_default_state_machine();
-        let json = sm.export_json().unwrap();
-        let sm2 = AnimationStateMachine::import_json(&json).unwrap();
+        let json = sm.export_json().expect("Test: operation should succeed");
+        let sm2 = AnimationStateMachine::import_json(&json).expect("Test: operation should succeed");
 
         assert_eq!(sm.name, sm2.name);
         assert_eq!(sm.states.len(), sm2.states.len());

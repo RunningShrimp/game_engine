@@ -445,29 +445,31 @@ impl AssetBrowser {
 
         // 选中资源的详细信息和预览
         if let Some(index) = self.selected_asset
-            && let Some(asset) = self.assets.get(index) {
-                ui.collapsing("Asset Details", |ui| {
-                    ui.label(format!("Name: {}", asset.name));
-                    ui.label(format!("Type: {:?}", asset.asset_type));
-                    ui.label(format!("Path: {}", asset.path.display()));
+            && let Some(asset) = self.assets.get(index)
+        {
+            ui.collapsing("Asset Details", |ui| {
+                ui.label(format!("Name: {}", asset.name));
+                ui.label(format!("Type: {:?}", asset.asset_type));
+                ui.label(format!("Path: {}", asset.path.display()));
 
-                    // 文件大小
-                    if let Ok(metadata) = fs::metadata(&asset.path) {
-                        let size_kb = metadata.len() as f64 / 1024.0;
-                        if size_kb < 1024.0 {
-                            ui.label(format!("Size: {:.2} KB", size_kb));
-                        } else {
-                            ui.label(format!("Size: {:.2} MB", size_kb / 1024.0));
-                        }
+                // 文件大小
+                if let Ok(metadata) = fs::metadata(&asset.path) {
+                    let size_kb = metadata.len() as f64 / 1024.0;
+                    if size_kb < 1024.0 {
+                        ui.label(format!("Size: {:.2} KB", size_kb));
+                    } else {
+                        ui.label(format!("Size: {:.2} MB", size_kb / 1024.0));
                     }
-                });
+                }
+            });
 
-                // 预览
-                if let Some(preview_path) = &self.preview_path
-                    && preview_path == &asset.path {
-                        self.render_preview(ui, asset);
-                    }
+            // 预览
+            if let Some(preview_path) = &self.preview_path
+                && preview_path == &asset.path
+            {
+                self.render_preview(ui, asset);
             }
+        }
     }
 
     /// 渲染资源预览

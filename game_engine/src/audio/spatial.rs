@@ -32,11 +32,11 @@
 //  ));
 //  ```
 
+use super::hrtf::{DopplerCalculator, HrtfConfig, HrtfFilter};
 use crate::impl_default;
 use bevy_ecs::prelude::*;
 use glam::{Quat, Vec3};
 use std::collections::HashMap;
-use super::hrtf::{HrtfFilter, HrtfConfig, DopplerCalculator};
 
 /// 距离衰减模型
 ///
@@ -469,7 +469,7 @@ impl SpatialAudioState {
             speed_of_sound: 343.0,
             ..Default::default()
         };
-        
+
         Self {
             listener_position: Vec3::ZERO,
             listener_forward: Vec3::NEG_Z, // 默认看向 -Z
@@ -582,7 +582,8 @@ impl SpatialAudioService {
                 relative_pos,
                 source_velocity,
                 state.listener_velocity,
-            ) * source.doppler_factor + (1.0 - source.doppler_factor)
+            ) * source.doppler_factor
+                + (1.0 - source.doppler_factor)
         } else {
             1.0
         };
@@ -625,7 +626,11 @@ impl SpatialAudioService {
 
         if let Some(hrtf) = state.hrtf_filter.as_mut() {
             let relative_pos = source_position - state.listener_position;
-            hrtf.update_from_relative_position(relative_pos, state.listener_forward, state.listener_up);
+            hrtf.update_from_relative_position(
+                relative_pos,
+                state.listener_forward,
+                state.listener_up,
+            );
             Some(hrtf.process_mono(mono_samples))
         } else {
             None

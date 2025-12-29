@@ -161,7 +161,7 @@ mod entity_lifecycle_tests {
         // 等待一小段时间确保时间戳不同
         std::thread::sleep(std::time::Duration::from_millis(1));
         
-        entity.set_property("test", serde_json::json!(true)).unwrap();
+        entity.set_property("test", serde_json::json!(true)).expect("Test: operation should succeed");
         
         assert!(entity.last_modified > initial_timestamp);
     }
@@ -197,12 +197,12 @@ mod entity_component_tests {
         // 测试旋转
         let rotation = Quat::from_euler(glam::EulerRot::XYZ, 0.0, 1.0, 0.0);
         assert!(entity.rotate(rotation).is_ok());
-        assert_eq!(entity.transform.as_ref().unwrap().rot, rotation);
+        assert_eq!(entity.transform.as_ref().expect("Test: operation should succeed").rot, rotation);
         
         // 测试缩放
         let scale = Vec3::new(2.0, 2.0, 2.0);
         assert!(entity.scale(scale).is_ok());
-        assert_eq!(entity.transform.as_ref().unwrap().scale, scale);
+        assert_eq!(entity.transform.as_ref().expect("Test: operation should succeed").scale, scale);
     }
 
     #[test]
@@ -241,15 +241,15 @@ mod entity_component_tests {
         let mut entity = EntityFactory::create_basic(EntityId::new(1), Vec3::ZERO);
         
         // 设置负缩放值应该导致验证失败
-        entity.scale(Vec3::new(-1.0, 1.0, 1.0)).unwrap();
+        entity.scale(Vec3::new(-1.0, 1.0, 1.0)).expect("Test: operation should succeed");
         assert!(entity.validate().is_err());
         
         // 设置零缩放值应该导致验证失败
-        entity.scale(Vec3::new(0.0, 1.0, 1.0)).unwrap();
+        entity.scale(Vec3::new(0.0, 1.0, 1.0)).expect("Test: operation should succeed");
         assert!(entity.validate().is_err());
         
         // 设置正缩放值应该验证通过
-        entity.scale(Vec3::new(1.0, 1.0, 1.0)).unwrap();
+        entity.scale(Vec3::new(1.0, 1.0, 1.0)).expect("Test: operation should succeed");
         assert!(entity.validate().is_ok());
     }
 }
@@ -430,7 +430,7 @@ mod entity_validation_tests {
         ];
         
         for scale in test_cases {
-            entity.scale(scale).unwrap();
+            entity.scale(scale).expect("Test: operation should succeed");
             assert!(entity.validate().is_err());
         }
     }
@@ -448,7 +448,7 @@ mod entity_validation_tests {
         ];
         
         for scale in test_cases {
-            entity.scale(scale).unwrap();
+            entity.scale(scale).expect("Test: operation should succeed");
             assert!(entity.validate().is_err());
         }
     }
@@ -466,7 +466,7 @@ mod entity_validation_tests {
         ];
         
         for scale in test_cases {
-            entity.scale(scale).unwrap();
+            entity.scale(scale).expect("Test: operation should succeed");
             assert!(entity.validate().is_ok());
         }
     }
@@ -485,8 +485,8 @@ mod entity_serialization_tests {
         )
         .with_name("Test Entity");
         
-        let serialized = serde_json::to_string(&entity).unwrap();
-        let deserialized: GameEntity = serde_json::from_str(&serialized).unwrap();
+        let serialized = serde_json::to_string(&entity).expect("Test: operation should succeed");
+        let deserialized: GameEntity = serde_json::from_str(&serialized).expect("Test: operation should succeed");
         
         assert_eq!(entity.id, deserialized.id);
         assert_eq!(entity.name, deserialized.name);
@@ -497,8 +497,8 @@ mod entity_serialization_tests {
     #[test]
     fn test_entity_id_serialization() {
         let id = EntityId::new(42);
-        let serialized = serde_json::to_string(&id).unwrap();
-        let deserialized: EntityId = serde_json::from_str(&serialized).unwrap();
+        let serialized = serde_json::to_string(&id).expect("Test: operation should succeed");
+        let deserialized: EntityId = serde_json::from_str(&serialized).expect("Test: operation should succeed");
         
         assert_eq!(id, deserialized);
         assert_eq!(id.as_u64(), deserialized.as_u64());
@@ -602,19 +602,19 @@ mod entity_edge_cases_tests {
             .map(|i| {
                 let entity_clone = Arc::clone(&entity);
                 thread::spawn(move || {
-                    let mut entity = safe_lock(&entity_clone, "entity_test_clone").unwrap();
+                    let mut entity = safe_lock(&entity_clone, "entity_test_clone").expect("Test: operation should succeed");
                     let key = format!("thread_{}", i);
                     let value = serde_json::json!(i);
-                    entity.set_property(&key, value).unwrap();
+                    entity.set_property(&key, value).expect("Test: operation should succeed");
                 })
             })
             .collect();
         
         for handle in handles {
-            handle.join().unwrap();
+            handle.join().expect("Test: operation should succeed");
         }
         
-        let entity = safe_lock(&entity, "entity_test_final").unwrap();
+        let entity = safe_lock(&entity, "entity_test_final").expect("Test: operation should succeed");
         assert_eq!(entity.properties.len(), 10);
         
         for i in 0..10 {

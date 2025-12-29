@@ -3,9 +3,9 @@
 //! 展示如何在Web平台上使用游戏引擎。
 
 #[cfg(target_arch = "wasm32")]
-use game_engine::ecs::{Sprite, Transform};
-#[cfg(target_arch = "wasm32")]
 use bevy_ecs::prelude::*;
+#[cfg(target_arch = "wasm32")]
+use game_engine::ecs::{Sprite, Transform};
 #[cfg(target_arch = "wasm32")]
 use glam::Quat;
 

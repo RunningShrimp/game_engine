@@ -1,9 +1,9 @@
 //  通用错误处理模块
-// 
+//
 //  提供统一的错误类型定义和处理模式，整合基础设施层和领域层错误。
-// 
+//
 //  ## 错误类型层次结构
-// 
+//
 //  ```text
 //  GameEngineError (顶层错误类型)
 //  ├── Infrastructure (基础设施层错误)
@@ -245,7 +245,7 @@ pub enum SceneDomainError {
     /// 无效场景名称
     #[error("Invalid scene name: {0}")]
     InvalidName(String),
-    
+
     /// 实体未找到
     #[error("Entity not found: {0}")]
     EntityNotFound(String),
@@ -346,9 +346,15 @@ impl From<crate::domain::errors::SceneError> for SceneDomainError {
         match error {
             crate::domain::errors::SceneError::EntityNotFound(msg) => Self::EntityNotFound(msg),
             crate::domain::errors::SceneError::SceneNotFound(msg) => Self::SceneNotFound(msg),
-            crate::domain::errors::SceneError::ComponentNotFound(msg) => Self::ComponentNotFound(msg),
-            crate::domain::errors::SceneError::SerializationFailed(msg) => Self::SerializationFailed(msg),
-            crate::domain::errors::SceneError::DeserializationFailed(msg) => Self::DeserializationFailed(msg),
+            crate::domain::errors::SceneError::ComponentNotFound(msg) => {
+                Self::ComponentNotFound(msg)
+            }
+            crate::domain::errors::SceneError::SerializationFailed(msg) => {
+                Self::SerializationFailed(msg)
+            }
+            crate::domain::errors::SceneError::DeserializationFailed(msg) => {
+                Self::DeserializationFailed(msg)
+            }
         }
     }
 }
@@ -357,13 +363,25 @@ impl From<crate::domain::errors::SceneError> for SceneDomainError {
 impl From<crate::error::RenderError> for CommonRenderError {
     fn from(error: crate::error::RenderError) -> Self {
         match error {
-            crate::error::RenderError::SurfaceCreation { message, .. } => Self::SurfaceCreation(message),
+            crate::error::RenderError::SurfaceCreation { message, .. } => {
+                Self::SurfaceCreation(message)
+            }
             crate::error::RenderError::Adapter { .. } => Self::NoAdapter,
-            crate::error::RenderError::DeviceCreation { message, .. } => Self::DeviceRequest(message),
-            crate::error::RenderError::ShaderCompilation { message, .. } => Self::ShaderCompilation(message),
-            crate::error::RenderError::PipelineCreation { message, .. } => Self::PipelineCreation(message),
-            crate::error::RenderError::TextureCreation { message, .. } => Self::TextureCreation(message),
-            crate::error::RenderError::FrameSubmission { message, .. } => Self::FrameSubmission(message),
+            crate::error::RenderError::DeviceCreation { message, .. } => {
+                Self::DeviceRequest(message)
+            }
+            crate::error::RenderError::ShaderCompilation { message, .. } => {
+                Self::ShaderCompilation(message)
+            }
+            crate::error::RenderError::PipelineCreation { message, .. } => {
+                Self::PipelineCreation(message)
+            }
+            crate::error::RenderError::TextureCreation { message, .. } => {
+                Self::TextureCreation(message)
+            }
+            crate::error::RenderError::FrameSubmission { message, .. } => {
+                Self::FrameSubmission(message)
+            }
             crate::error::RenderError::InvalidState { message, .. } => Self::InvalidState(message),
             // Handle other variants that might exist
             _ => Self::InvalidState("Unknown render error".to_string()),
@@ -441,9 +459,7 @@ impl From<crate::domain::errors::DomainError> for GameEngineError {
                 // 直接使用统一的PhysicsError，不需要转换
                 Self::Domain(DomainError::Physics(e))
             }
-            crate::domain::errors::DomainError::Scene(e) => {
-                Self::Domain(DomainError::Scene(e))
-            }
+            crate::domain::errors::DomainError::Scene(e) => Self::Domain(DomainError::Scene(e)),
             crate::domain::errors::DomainError::General(msg) => {
                 Self::Domain(DomainError::General(msg))
             }
@@ -478,12 +494,18 @@ mod tests {
         // 测试从旧的EngineError转换 - 使用general替代Init
         let old_err = crate::error::EngineError::general("test");
         let new_err: GameEngineError = old_err.into();
-        assert!(matches!(new_err, GameEngineError::Infrastructure(InfrastructureError::General(_))));
+        assert!(matches!(
+            new_err,
+            GameEngineError::Infrastructure(InfrastructureError::General(_))
+        ));
 
         // 测试从旧的DomainError转换
         let old_domain_err = crate::domain::errors::DomainError::General("test".to_string());
         let new_err: GameEngineError = old_domain_err.into();
-        assert!(matches!(new_err, GameEngineError::Domain(DomainError::General(_))));
+        assert!(matches!(
+            new_err,
+            GameEngineError::Domain(DomainError::General(_))
+        ));
     }
 
     #[test]

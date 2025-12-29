@@ -1,5 +1,5 @@
 //  XR 输入系统
-// 
+//
 //  实现控制器输入、手部追踪和触觉反馈
 
 use super::*;
@@ -35,7 +35,7 @@ pub struct HandTrackingData {
 
 impl HandTrackingData {
     /// 获取左手所有关节的切片
-    /// 
+    ///
     /// # Returns
     /// 返回左手关节的切片引用
     pub fn left_hand_joints(&self) -> &[HandJoint] {
@@ -43,7 +43,7 @@ impl HandTrackingData {
     }
 
     /// 获取右手所有关节的切片
-    /// 
+    ///
     /// # Returns
     /// 返回右手关节的切片引用
     pub fn right_hand_joints(&self) -> &[HandJoint] {
@@ -51,7 +51,7 @@ impl HandTrackingData {
     }
 
     /// 检查此追踪数据帧是否有效
-    /// 
+    ///
     /// # Returns
     /// 如果追踪有效返回true，否则返回false
     pub fn is_valid(&self) -> bool {
@@ -59,10 +59,10 @@ impl HandTrackingData {
     }
 
     /// 获取指定手的关节数量
-    /// 
+    ///
     /// # Arguments
     /// * `hand` - 要查询的手部（左或右）
-    /// 
+    ///
     /// # Returns
     /// 返回该手部的关节总数
     pub fn joint_count(&self, hand: Hand) -> usize {
@@ -158,7 +158,7 @@ pub struct HapticFeedback {
 
 impl XrInputManager {
     /// 创建新的输入管理器
-    /// 
+    ///
     /// # Returns
     /// 返回一个新初始化的输入管理器实例
     pub fn new() -> Self {
@@ -166,7 +166,7 @@ impl XrInputManager {
     }
 
     /// 更新控制器状态
-    /// 
+    ///
     /// # Arguments
     /// * `hand` - 要更新的控制器手部（左或右）
     /// * `state` - 新的控制器状态
@@ -184,7 +184,7 @@ impl XrInputManager {
     }
 
     /// 更新头部姿态
-    /// 
+    ///
     /// # Arguments
     /// * `pose` - 头部的新姿态
     pub fn update_head_pose(&mut self, pose: Pose) {
@@ -194,7 +194,7 @@ impl XrInputManager {
     }
 
     /// 更新手部追踪数据
-    /// 
+    ///
     /// # Arguments
     /// * `data` - 新的手部追踪数据
     pub fn update_hand_tracking(&mut self, data: HandTrackingData) {
@@ -202,7 +202,7 @@ impl XrInputManager {
     }
 
     /// 从HandTracker更新手部追踪数据
-    /// 
+    ///
     /// # Arguments
     /// * `tracker` - 手部追踪器引用
     pub fn update_from_hand_tracker(&mut self, tracker: &crate::xr::hand_tracking::HandTracker) {
@@ -239,10 +239,10 @@ impl XrInputManager {
     }
 
     /// 获取控制器状态
-    /// 
+    ///
     /// # Arguments
     /// * `hand` - 要获取状态的控制器手部
-    /// 
+    ///
     /// # Returns
     /// 如果控制器已连接返回Some(状态)，否则返回None
     pub fn get_controller(&self, hand: Hand) -> Option<ControllerState> {
@@ -255,7 +255,7 @@ impl XrInputManager {
     }
 
     /// 获取头部姿态
-    /// 
+    ///
     /// # Returns
     /// 返回头部的当前姿态
     pub fn get_head_pose(&self) -> Pose {
@@ -263,7 +263,7 @@ impl XrInputManager {
     }
 
     /// 获取手部追踪数据
-    /// 
+    ///
     /// # Returns
     /// 如果有可用的手部追踪数据返回引用，否则返回None
     pub fn get_hand_tracking(&self) -> Option<&HandTrackingData> {
@@ -271,21 +271,18 @@ impl XrInputManager {
     }
 
     /// 检查控制器是否连接
-    /// 
+    ///
     /// # Arguments
     /// * `hand` - 要检查的控制器手部
-    /// 
+    ///
     /// # Returns
     /// 如果控制器已连接返回true，否则返回false
     pub fn is_controller_connected(&self, hand: Hand) -> bool {
-        self.controller_connected
-            .get(&hand)
-            .copied()
-            .unwrap_or(false)
+        self.controller_connected.get(&hand).copied().unwrap_or(false)
     }
 
     /// 添加触觉反馈请求到队列
-    /// 
+    ///
     /// # Arguments
     /// * `feedback` - 要添加的触觉反馈
     pub fn add_haptic_feedback(&mut self, feedback: HapticFeedback) {
@@ -293,7 +290,7 @@ impl XrInputManager {
     }
 
     /// 处理触觉反馈队列并返回所有待处理的反馈
-    /// 
+    ///
     /// # Returns
     /// 返回触觉反馈队列中的所有项并清空队列
     pub fn process_haptic_queue(&mut self) -> Vec<HapticFeedback> {
@@ -301,7 +298,7 @@ impl XrInputManager {
     }
 
     /// 触发控制器简单的震动反馈
-    /// 
+    ///
     /// # Arguments
     /// * `hand` - 要振动的控制器手部
     /// * `amplitude` - 振幅强度（0.0-1.0）
@@ -316,11 +313,11 @@ impl XrInputManager {
     }
 
     /// 检查按钮是否按下
-    /// 
+    ///
     /// # Arguments
     /// * `hand` - 控制器手部
     /// * `button` - 要检查的按钮
-    /// 
+    ///
     /// # Returns
     /// 如果按钮被按下返回true，否则返回false
     pub fn is_button_pressed(&self, hand: Hand, button: ControllerButton) -> bool {
@@ -341,10 +338,10 @@ impl XrInputManager {
     }
 
     /// 获取触发器值（0.0-1.0）
-    /// 
+    ///
     /// # Arguments
     /// * `hand` - 控制器手部
-    /// 
+    ///
     /// # Returns
     /// 返回触发器的当前值，如果控制器未连接返回0.0
     pub fn get_trigger_value(&self, hand: Hand) -> f32 {
@@ -352,10 +349,10 @@ impl XrInputManager {
     }
 
     /// 获取握力值（0.0-1.0）
-    /// 
+    ///
     /// # Arguments
     /// * `hand` - 控制器手部
-    /// 
+    ///
     /// # Returns
     /// 返回握力的当前值，如果控制器未连接返回0.0
     pub fn get_squeeze_value(&self, hand: Hand) -> f32 {
@@ -363,23 +360,21 @@ impl XrInputManager {
     }
 
     /// 获取摇杆值
-    /// 
+    ///
     /// # Arguments
     /// * `hand` - 控制器手部
-    /// 
+    ///
     /// # Returns
     /// 返回摇杆的[x, y]值，范围-1.0到1.0；如果控制器未连接返回[0.0, 0.0]
     pub fn get_thumbstick_value(&self, hand: Hand) -> [f32; 2] {
-        self.get_controller(hand)
-            .map(|s| s.thumbstick)
-            .unwrap_or([0.0, 0.0])
+        self.get_controller(hand).map(|s| s.thumbstick).unwrap_or([0.0, 0.0])
     }
 
     /// 获取控制器姿态
-    /// 
+    ///
     /// # Arguments
     /// * `hand` - 控制器手部
-    /// 
+    ///
     /// # Returns
     /// 如果控制器已连接返回Some(姿态)，否则返回None
     pub fn get_controller_pose(&self, hand: Hand) -> Option<Pose> {
@@ -387,10 +382,10 @@ impl XrInputManager {
     }
 
     /// 获取瞄准姿态（用于射线投射和指向）
-    /// 
+    ///
     /// # Arguments
     /// * `hand` - 控制器手部
-    /// 
+    ///
     /// # Returns
     /// 如果控制器已连接返回Some(瞄准姿态)，否则返回None
     pub fn get_aim_pose(&self, hand: Hand) -> Option<Pose> {
@@ -398,10 +393,10 @@ impl XrInputManager {
     }
 
     /// 获取握持姿态（用于拿取物体）
-    /// 
+    ///
     /// # Arguments
     /// * `hand` - 控制器手部
-    /// 
+    ///
     /// # Returns
     /// 如果控制器已连接返回Some(握持姿态)，否则返回None
     pub fn get_grip_pose(&self, hand: Hand) -> Option<Pose> {
@@ -487,7 +482,7 @@ pub enum XrInputEvent {
 /// XR 输入事件处理器 - 实现此trait以接收和处理输入事件
 pub trait XrInputEventHandler: Send + Sync {
     /// 处理一个输入事件
-    /// 
+    ///
     /// # Arguments
     /// * `event` - 要处理的输入事件引用
     fn handle_event(&mut self, event: &XrInputEvent);
@@ -509,7 +504,7 @@ impl XrInputEventQueue {
     }
 
     /// 添加事件到队列
-    /// 
+    ///
     /// # Arguments
     /// * `event` - 要添加的输入事件
     pub fn push_event(&mut self, event: XrInputEvent) {
@@ -517,7 +512,7 @@ impl XrInputEventQueue {
     }
 
     /// 注册事件处理器
-    /// 
+    ///
     /// # Arguments
     /// * `handler` - 实现XrInputEventHandler的事件处理器
     pub fn register_handler(&mut self, handler: Box<dyn XrInputEventHandler>) {

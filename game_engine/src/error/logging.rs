@@ -221,7 +221,11 @@ impl FileLogSink {
 
     /// 刷新缓冲区到文件
     pub fn flush(&self) -> std::io::Result<()> {
-        let mut buffer = self.buffer.lock().unwrap();
+        let Ok(mut buffer) = self.buffer.lock() else {
+            return Err(std::io::Error::other(
+                "Failed to acquire buffer lock for flush",
+            ));
+        };
         if buffer.is_empty() {
             return Ok(());
         }
@@ -242,13 +246,25 @@ impl FileLogSink {
 
 impl LogSink for FileLogSink {
     fn log(&self, entry: &LogEntry) {
-        let mut buffer = self.buffer.lock().unwrap();
+        let mut buffer = match self.buffer.lock() {
+            Ok(b) => b,
+            Err(_) => {
+                eprintln!("[ERROR] Failed to acquire buffer lock in FileLogSink::log");
+                return;
+            }
+        };
 
         if buffer.len() >= self.max_buffer_size {
             // 如果缓冲区满了，尝试刷新
             drop(buffer);
             let _ = self.flush();
-            buffer = self.buffer.lock().unwrap();
+            buffer = match self.buffer.lock() {
+                Ok(b) => b,
+                Err(_) => {
+                    eprintln!("[ERROR] Failed to re-acquire buffer lock after flush");
+                    return;
+                }
+            };
         }
 
         buffer.push(entry.clone());
@@ -377,24 +393,26 @@ pub fn init_logger(config: LoggingConfig) {
 pub fn log(level: LogLevel, message: impl Into<String>) {
     if let Some(logger_arc) = GLOBAL_LOGGER.get()
         && let Ok(logger) = logger_arc.lock()
-            && let Some(ref logger) = *logger {
-                match level {
-                    LogLevel::Trace => logger.trace(message),
-                    LogLevel::Debug => logger.debug(message),
-                    LogLevel::Info => logger.info(message),
-                    LogLevel::Warn => logger.warn(message),
-                    LogLevel::Error => logger.error(message),
-                }
-            }
+        && let Some(ref logger) = *logger
+    {
+        match level {
+            LogLevel::Trace => logger.trace(message),
+            LogLevel::Debug => logger.debug(message),
+            LogLevel::Info => logger.info(message),
+            LogLevel::Warn => logger.warn(message),
+            LogLevel::Error => logger.error(message),
+        }
+    }
 }
 
 /// 记录错误（全局函数）
 pub fn log_error(error: &EngineError, message: Option<String>) {
     if let Some(logger_arc) = GLOBAL_LOGGER.get()
         && let Ok(logger) = logger_arc.lock()
-            && let Some(ref logger) = *logger {
-                logger.log_error(error, message);
-            }
+        && let Some(ref logger) = *logger
+    {
+        logger.log_error(error, message);
+    }
 }
 
 #[cfg(test)]

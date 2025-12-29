@@ -227,7 +227,7 @@ impl GpuProfiler {
         }
 
         let mut sorted_queries: Vec<_> = self.queries.iter().collect();
-        sorted_queries.sort_by(|a, b| b.1.partial_cmp(a.1).unwrap());
+        sorted_queries.sort_by(|a, b| b.1.partial_cmp(a.1).unwrap_or(std::cmp::Ordering::Equal));
 
         let total_time: f32 = self.queries.values().sum();
         report.push_str(&format!("Total GPU Time: {:.2}ms\n\n", total_time));

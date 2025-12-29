@@ -63,3 +63,6 @@ pub use crate::domain::audio::{
 };
 
 pub use crate::domain::services::AudioDomainService;
+
+#[cfg(test)]
+mod tests;

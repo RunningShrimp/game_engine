@@ -90,10 +90,11 @@ impl SceneEditor {
 
         // 处理交互
         if response.clicked()
-            && let Some(pos) = response.interact_pointer_pos() {
-                // 检测点击的实体
-                self.handle_click(pos, rect, world);
-            }
+            && let Some(pos) = response.interact_pointer_pos()
+        {
+            // 检测点击的实体
+            self.handle_click(pos, rect, world);
+        }
 
         // 处理相机移动
         if response.dragged() {
@@ -299,17 +300,18 @@ impl SceneEditor {
 
         // 使用screen_to_world进行双向转换验证，形成逻辑闭环
         if let Some(selected) = self.selected_entity
-            && let Some(transform) = world.get::<Transform>(selected) {
-                let world_pos = transform.pos;
-                let screen_pos = self.world_to_screen(world_pos, rect);
-                let back_to_world = self.screen_to_world(screen_pos, rect);
+            && let Some(transform) = world.get::<Transform>(selected)
+        {
+            let world_pos = transform.pos;
+            let screen_pos = self.world_to_screen(world_pos, rect);
+            let back_to_world = self.screen_to_world(screen_pos, rect);
 
-                // 验证转换精度（在合理范围内）
-                let conversion_error = (world_pos - back_to_world).length();
-                if conversion_error > 0.01 {
-                    tracing::warn!("坐标转换精度警告: 误差 {}", conversion_error);
-                }
+            // 验证转换精度（在合理范围内）
+            let conversion_error = (world_pos - back_to_world).length();
+            if conversion_error > 0.01 {
+                tracing::warn!("坐标转换精度警告: 误差 {}", conversion_error);
             }
+        }
     }
 
     /// 移动相机

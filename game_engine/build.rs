@@ -52,11 +52,11 @@ fn check_exclusive_features() {
         println!("cargo:warning=⚠️  insecure_key_exchange已启用 - 仅用于测试，不可用于生产环境！");
     }
 
-    // 检查Python绑定
-    #[cfg(feature = "pyo3")]
-    {
-        println!("cargo:warning=pyo3已启用 - 需要Python开发环境");
-    }
+    // 检查Python绑定 (temporarily disabled)
+    // #[cfg(feature = "pyo3")]
+    // {
+    //     println!("cargo:warning=pyo3已启用 - 需要Python开发环境");
+    // }
 
     // 检查XR支持
     #[cfg(feature = "xr")]

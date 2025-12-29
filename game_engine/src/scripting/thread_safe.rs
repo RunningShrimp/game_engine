@@ -217,8 +217,10 @@ mod tests {
     fn test_thread_safe_script_system() {
         let script_system = ThreadSafeScriptSystem::new();
 
-        // 执行脚本
-        script_system.execute(1, "print('Hello, World!')".to_string()).unwrap();
+        // 执行脚本 - test context, safe to unwrap for channel send
+        if let Err(e) = script_system.execute(1, "print('Hello, World!')".to_string()) {
+            panic!("Failed to execute script: {}", e);
+        }
 
         // 等待结果
         thread::sleep(Duration::from_millis(100));
@@ -235,19 +237,22 @@ mod tests {
     fn test_call_function() {
         let script_system = ThreadSafeScriptSystem::new();
 
-        // 先执行脚本
-        script_system
-            .execute(1, "function add(a, b) { return a + b; }".to_string())
-            .unwrap();
+        // 先执行脚本 - test context, safe to unwrap for channel send
+        if let Err(e) = script_system.execute(
+            1,
+            "function add(a, b) { return a + b; }".to_string(),
+        ) {
+            panic!("Failed to execute script: {}", e);
+        }
 
-        // 调用函数
-        script_system
-            .call_function(
-                1,
-                "add".to_string(),
-                vec![ScriptValue::Number(1.0), ScriptValue::Number(2.0)],
-            )
-            .unwrap();
+        // 调用函数 - test context, safe to unwrap for channel send
+        if let Err(e) = script_system.call_function(
+            1,
+            "add".to_string(),
+            vec![ScriptValue::Number(1.0), ScriptValue::Number(2.0)],
+        ) {
+            panic!("Failed to call function: {}", e);
+        }
 
         // 等待结果
         thread::sleep(Duration::from_millis(100));

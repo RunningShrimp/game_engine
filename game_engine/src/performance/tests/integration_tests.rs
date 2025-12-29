@@ -98,7 +98,7 @@ mod integration_tests {
         assert_eq!(bodies.len(), 3);
         assert!(sim.get_body_position(body1).is_some());
         // 物体应该已经移动
-        let pos = sim.get_body_position(body1).unwrap();
+        let pos = sim.get_body_position(body1).expect("Test: operation should succeed");
         assert!(pos.x > 0.0);
     }
 

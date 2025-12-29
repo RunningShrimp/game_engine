@@ -135,19 +135,21 @@ impl DependencyGraph {
 
         // 添加依赖关系
         if let Some(node) = self.nodes.get_mut(&resource_path)
-            && !node.dependencies.iter().any(|d| d.path == resolved_dep_path) {
-                node.dependencies.push(ResourceDependency {
-                    path: resolved_dep_path.clone(),
-                    dependency_type: dependency.dependency_type,
-                    required: dependency.required,
-                });
-            }
+            && !node.dependencies.iter().any(|d| d.path == resolved_dep_path)
+        {
+            node.dependencies.push(ResourceDependency {
+                path: resolved_dep_path.clone(),
+                dependency_type: dependency.dependency_type,
+                required: dependency.required,
+            });
+        }
 
         // 添加反向依赖
         if let Some(dep_node) = self.nodes.get_mut(&resolved_dep_path)
-            && !dep_node.dependents.contains(&resource_path) {
-                dep_node.dependents.push(resource_path);
-            }
+            && !dep_node.dependents.contains(&resource_path)
+        {
+            dep_node.dependents.push(resource_path);
+        }
 
         Ok(())
     }
@@ -374,7 +376,7 @@ mod tests {
                     required: true,
                 },
             )
-            .unwrap();
+            .expect("Test: operation should succeed");
 
         // 尝试创建循环依赖
         let result = graph.add_dependency(
@@ -411,7 +413,7 @@ mod tests {
                     required: true,
                 },
             )
-            .unwrap();
+            .expect("Test: operation should succeed");
 
         graph
             .add_dependency(
@@ -422,14 +424,14 @@ mod tests {
                     required: true,
                 },
             )
-            .unwrap();
+            .expect("Test: operation should succeed");
 
-        let load_order = graph.get_load_order().unwrap();
+        let load_order = graph.get_load_order().expect("Test: operation should succeed");
 
         // c应该在b之前，b应该在a之前
-        let c_idx = load_order.iter().position(|p| p == &c).unwrap();
-        let b_idx = load_order.iter().position(|p| p == &b).unwrap();
-        let a_idx = load_order.iter().position(|p| p == &a).unwrap();
+        let c_idx = load_order.iter().position(|p| p == &c).expect("Test: operation should succeed");
+        let b_idx = load_order.iter().position(|p| p == &b).expect("Test: operation should succeed");
+        let a_idx = load_order.iter().position(|p| p == &a).expect("Test: operation should succeed");
 
         assert!(c_idx < b_idx);
         assert!(b_idx < a_idx);
@@ -452,7 +454,7 @@ mod tests {
                     required: true,
                 },
             )
-            .unwrap();
+            .expect("Test: operation should succeed");
 
         graph
             .add_dependency(
@@ -463,7 +465,7 @@ mod tests {
                     required: true,
                 },
             )
-            .unwrap();
+            .expect("Test: operation should succeed");
 
         let deps = graph.get_all_dependencies(&a);
         assert!(deps.contains(&b));

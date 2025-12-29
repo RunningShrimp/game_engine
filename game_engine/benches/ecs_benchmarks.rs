@@ -159,7 +159,11 @@ fn bench_schedule_execution(c: &mut Criterion) {
             }
 
             let mut schedule = Schedule::default();
-            schedule.add_systems((system_rotate_entities, system_update_velocity, system_check_health));
+            schedule.add_systems((
+                system_rotate_entities,
+                system_update_velocity,
+                system_check_health,
+            ));
 
             b.iter(|| {
                 let _ = schedule.run(&mut world);
@@ -179,10 +183,7 @@ fn bench_custom_components(c: &mut Criterion) {
             let mut world = World::new();
             // 使用 Position 和 Rotation 组件
             for _ in 0..count {
-                world.spawn((
-                    Position(Vec3::new(0.0, 0.0, 0.0)),
-                    Rotation(Quat::IDENTITY),
-                ));
+                world.spawn((Position(Vec3::new(0.0, 0.0, 0.0)), Rotation(Quat::IDENTITY)));
             }
 
             let mut system = IntoSystem::into_system(system_update_position);

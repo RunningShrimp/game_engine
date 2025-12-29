@@ -77,6 +77,7 @@ use crate::core::editor::EditorEventHandler;
 
 pub mod animation_editor;
 pub mod asset_browser;
+pub mod behavior_tree_editor;
 pub mod build_tool;
 pub mod config;
 pub mod console;
@@ -96,7 +97,6 @@ pub mod scene_editor;
 pub mod shortcuts;
 pub mod terrain_editor;
 pub mod transform_gizmo;
-pub mod behavior_tree_editor;
 pub mod undo_redo;
 pub mod visual_editors;
 pub mod visual_script_editor;
@@ -112,25 +112,24 @@ pub use undo_redo::{
 };
 pub use world_inspector::WorldInspector;
 // 向后兼容：增强功能已整合到基础版本
-pub use particle_editor::{ParticleEditor, ParticleSystemLibraryEntry, SubEmitterConfig};
-pub use animation_editor::{AnimationEditor, TrackType, KeyframeSelection, AnimationEvent};
-pub use material_editor::{MaterialEditor, MaterialPreset, MaterialLibraryEntry};
-pub use scene_editor::SceneEditor;
+pub use animation_editor::{AnimationEditor, AnimationEvent, KeyframeSelection, TrackType};
 pub use behavior_tree_editor::{
     BehaviorNodeType, BehaviorTreeEditor, NodeExecutionStatus, VisualBehaviorNode,
 };
+pub use material_editor::{MaterialEditor, MaterialLibraryEntry, MaterialPreset};
+pub use particle_editor::{ParticleEditor, ParticleSystemLibraryEntry, SubEmitterConfig};
+pub use scene_editor::SceneEditor;
+pub use visual_editors::{
+    AnimationState, AnimationStateMachine, BlendMode, ComparisonOp, Editor, EditorInput,
+    EditorManager, EditorType, EditorUpdateResult, EmitterType, ParticleEmitterConfig,
+    ParticleSystemData, ShaderConnection, ShaderGraph, ShaderNode, ShaderNodeType, StateTransition,
+    TransitionCondition, create_default_particle_system, create_default_shader_graph,
+    create_default_state_machine,
+};
 pub use visual_script_editor::{
     ActionType, BooleanOp, ConditionType, Connection, ConnectionError, ConnectionType, DataType,
-    EventType, FlowType, MathOperation, NodeType, Port, PortType, VariableType,
-    VisualScript, VisualScriptEditor, VisualScriptNode,
-};
-pub use visual_editors::{
-    Editor, EditorManager, EditorInput, EditorType, EditorUpdateResult,
-    ShaderGraph, ShaderNode, ShaderNodeType, ShaderConnection,
-    AnimationStateMachine, AnimationState, StateTransition,
-    TransitionCondition, ComparisonOp, BlendMode,
-    ParticleSystemData, ParticleEmitterConfig, EmitterType,
-    create_default_shader_graph, create_default_state_machine, create_default_particle_system,
+    EventType, FlowType, MathOperation, NodeType, Port, PortType, VariableType, VisualScript,
+    VisualScriptEditor, VisualScriptNode,
 };
 
 // 向后兼容类型别名
@@ -218,7 +217,7 @@ impl EditorContext {
 
 // 实现EditorEventHandler trait，消除core <-> editor循环依赖
 impl EditorEventHandler for EditorContext {
-    fn handle_window_event(&mut self, event: &WindowEvent) -> bool {
+    fn handle_window_event(&mut self, _event: &WindowEvent) -> bool {
         // 使用egui_winit State处理窗口事件
         // 注意：这里需要一个Window引用，但trait签名只有event
         // 这是一个简化的实现，实际使用时可能需要调整

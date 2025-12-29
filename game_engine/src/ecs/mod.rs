@@ -1,36 +1,37 @@
 //! # Entity Component System (ECS)
 //!
-//! 本模块基于Bevy ECS提供高性能的实体组件系统架构。
+//! This module provides a high-performance Entity Component System architecture
+//! based on Bevy ECS.
 //!
-//! ## 功能特性
+//! ## Features
 //!
-//! - **高效组件存储** - 基于Bevy ECS的高性能组件存取
-//! - **SoA布局** - 结构体数组布局优化缓存性能
-//! - **脏标记追踪** - 仅同步变化的组件
-//! - **查询系统** - 灵活的实体查询API
-//! - **系统调度** - 并行系统执行和依赖管理
+//! - **Efficient Component Storage** - High-performance component access via Bevy ECS
+//! - **SoA Layout** - Structure of Arrays layout for cache optimization
+//! - **Dirty Flag Tracking** - Sync only changed components
+//! - **Query System** - Flexible entity query API
+//! - **System Scheduling** - Parallel system execution and dependency management
 //!
-//! ## 主要组件
+//! ## Core Components
 //!
-//! - [`Transform`] - 位置、旋转、缩放组件
-//! - [`Velocity`] - 线性和角速度
-//! - [`Sprite`] - 2D精灵渲染组件
-//! - [`Camera`] - 摄像机组件
-//! - [`Material`] - 材质组件
-//! - [`PbrMaterialComp`] - PBR材质组件
-//! - [`PointLight3D`] - 3D点光源
-//! - [`DirectionalLightComp`] - 方向光
-//! - [`Time`] - 时间资源
+//! - [`Transform`] - Position, rotation, and scale component
+//! - [`Velocity`] - Linear and angular velocity
+//! - [`Sprite`] - 2D sprite rendering component
+//! - [`Camera`] - Camera component
+//! - [`Material`] - Material component
+//! - [`PbrMaterialComp`] - PBR material component
+//! - [`PointLight3D`] - 3D point light
+//! - [`DirectionalLightComp`] - Directional light
+//! - [`Time`] - Time resource
 //!
-//! ## 优化特性
+//! ## Optimization Features
 //!
-//! - [`SoALayoutManager`] - SoA布局管理器
-//! - [`DirtyTrackingResource`] - 脏标记追踪
-//! - [`TileEntityPool`] - 瓦片实体对象池
+//! - [`SoALayoutManager`] - SoA layout manager
+//! - [`DirtyTrackingResource`] - Dirty flag tracking
+//! - [`TileEntityPool`] - Tile entity object pool
 //!
-//! ## 使用示例
+//! ## Examples
 //!
-//! ### 基础实体创建
+//! ### Basic Entity Creation
 //!
 //! ```rust,no_run
 //! use bevy_ecs::prelude::*;
@@ -48,7 +49,7 @@
 //! }
 //! ```
 //!
-//! ### 系统查询
+//! ### System Query
 //!
 //! ```rust,no_run
 //! use bevy_ecs::prelude::*;
@@ -61,6 +62,12 @@
 //! }
 //! ```
 
+// 模块私有实现说明：
+// - 基于Bevy ECS实现实体组件系统
+// - 提供瓦片地图系统的实体池优化
+// - 支持精灵动画（flipbook）系统
+// - 集成SoA布局和脏标记追踪用于性能优化
+
 use crate::impl_default;
 use crate::impl_default_and_new;
 pub use bevy_ecs::prelude::*;
@@ -72,10 +79,16 @@ pub use soa_layout::{SoALayoutManager, SoAStats, SoATransformStorage, SoAVelocit
 pub mod dirty_tracking;
 pub use dirty_tracking::{ComponentDirty, DirtyFlags, DirtyTrackingConfig, DirtyTrackingResource};
 
+/// Transform component representing position, rotation, and scale
+///
+/// This component is used to define the spatial transformation of entities in 3D space.
 #[derive(Component, Clone, Copy, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Transform {
+    /// Position in 3D space
     pub pos: Vec3,
+    /// Rotation as a quaternion
     pub rot: Quat,
+    /// Scale factors along each axis
     pub scale: Vec3,
 }
 
@@ -85,14 +98,20 @@ impl_default_and_new!(Transform {
     scale: Vec3::ONE,
 });
 
+/// Velocity component for linear and angular velocity
+///
+/// This component represents the velocity of an entity, including both linear
+/// and angular components.
 #[derive(Component, Clone, Copy, Debug, Default)]
 pub struct Velocity {
+    /// Linear velocity
     pub lin: Vec3,
+    /// Angular velocity
     pub ang: Vec3,
 }
 
 impl Velocity {
-    /// 创建默认速度
+    /// Creates a new velocity component with default values (zero velocity)
     pub fn new() -> Self {
         Self::default()
     }
@@ -100,13 +119,23 @@ impl Velocity {
 
 // 注意：Velocity已经使用#[derive(Default)]，new()方法调用default()是正确的模式
 
+/// 2D sprite rendering component
+///
+/// This component defines how a 2D sprite is rendered, including its color,
+/// texture coordinates, and rendering layer.
 #[derive(Component, Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Sprite {
+    /// RGBA color
     pub color: [f32; 4],
+    /// Texture index
     pub tex_index: u32,
-    pub normal_tex_index: u32, // 0 means no normal map
+    /// Normal texture index (0 means no normal map)
+    pub normal_tex_index: u32,
+    /// UV offset
     pub uv_off: [f32; 2],
+    /// UV scale
     pub uv_scale: [f32; 2],
+    /// Rendering layer (z-order for 2D)
     pub layer: f32,
 }
 
@@ -200,20 +229,22 @@ impl_default_and_new!(Material {
     roughness: 0.5,
 });
 
-/// PBR材质组件 - 支持完整的物理渲染参数
+/// Physically Based Rendering (PBR) material component
+///
+/// This component defines a PBR material with full physical rendering parameters.
 #[derive(Component, Clone, Debug)]
 pub struct PbrMaterialComp {
-    /// 基础颜色 (RGBA)
+    /// Base color (RGBA)
     pub base_color: [f32; 4],
-    /// 金属度 (0.0 = 非金属, 1.0 = 金属)
+    /// Metallic factor (0.0 = non-metallic, 1.0 = metallic)
     pub metallic: f32,
-    /// 粗糙度 (0.0 = 光滑镜面, 1.0 = 粗糙漫反射)
+    /// Roughness factor (0.0 = smooth mirror, 1.0 = rough diffuse)
     pub roughness: f32,
-    /// 环境光遮蔽
+    /// Ambient occlusion
     pub ambient_occlusion: f32,
-    /// 自发光颜色 (RGB)
+    /// Emissive color (RGB)
     pub emissive: [f32; 3],
-    /// 自发光强度
+    /// Emissive intensity
     pub emissive_strength: f32,
 }
 
@@ -226,11 +257,17 @@ impl_default_and_new!(PbrMaterialComp {
     emissive_strength: 0.0,
 });
 
-/// 3D点光源组件
+/// 3D point light component
+///
+/// This component defines a point light source that emits light in all directions
+/// from a specific position in 3D space.
 #[derive(Component, Clone, Debug)]
 pub struct PointLight3D {
+    /// RGB color
     pub color: [f32; 3],
+    /// Light intensity
     pub intensity: f32,
+    /// Light radius
     pub radius: f32,
 }
 
@@ -240,11 +277,17 @@ impl_default_and_new!(PointLight3D {
     radius: 10.0,
 });
 
-/// 方向光组件 (太阳光等)
+/// Directional light component (e.g., sunlight)
+///
+/// This component defines a directional light source that emits parallel light rays
+/// in a specific direction, typically used to simulate sunlight.
 #[derive(Component, Clone, Debug)]
 pub struct DirectionalLightComp {
+    /// Light direction vector
     pub direction: [f32; 3],
+    /// RGB color
     pub color: [f32; 3],
+    /// Light intensity
     pub intensity: f32,
 }
 
@@ -315,9 +358,7 @@ pub fn tilemap_build_system(
     } else {
         return;
     };
-    let vp = viewport
-        .map(|v| (v.width as f32, v.height as f32))
-        .unwrap_or((800.0, 600.0));
+    let vp = viewport.map(|v| (v.width as f32, v.height as f32)).unwrap_or((800.0, 600.0));
     for (entity, t_base, mut tm) in query.iter_mut() {
         if !tm.dirty {
             continue;
@@ -438,9 +479,7 @@ pub fn tilemap_chunk_system(
     } else {
         return;
     };
-    let (vpw, vph) = viewport
-        .map(|v| (v.width as f32, v.height as f32))
-        .unwrap_or((800.0, 600.0));
+    let (vpw, vph) = viewport.map(|v| (v.width as f32, v.height as f32)).unwrap_or((800.0, 600.0));
     let mut cam_pos = glam::Vec3::new(vpw * 0.5, vph * 0.5, 0.0);
     for (t, c) in cam_q.iter() {
         if c.is_active {
@@ -542,9 +581,7 @@ pub fn tilemap_chunk_system(
         if let Some(mut ch) = opt_chunks {
             ch.visible = new_vis;
         } else {
-            commands
-                .entity(map_e)
-                .insert(TileChunks { visible: new_vis });
+            commands.entity(map_e).insert(TileChunks { visible: new_vis });
         }
     }
 }
@@ -615,3 +652,26 @@ pub struct AiComponent {
 
 #[cfg(test)]
 mod tests;
+
+// ========================================
+// 综合测试模块
+// ========================================
+
+// Temporarily disabled due to missing modules
+// #[cfg(test)]
+// mod entity_manager_tests;
+
+// #[cfg(test)]
+// mod component_validator_tests;
+
+#[cfg(test)]
+mod soa_layout_tests;
+
+#[cfg(test)]
+mod dirty_tracking_tests;
+
+#[cfg(test)]
+mod system_integration_tests;
+
+#[cfg(test)]
+mod extended_tests;

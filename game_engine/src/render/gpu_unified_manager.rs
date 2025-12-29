@@ -180,7 +180,9 @@ impl GpuRenderManager {
         self.instance_buffer = Some(device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("GPU Render Instance Buffer"),
             size: buffer_size,
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::VERTEX,
+            usage: wgpu::BufferUsages::STORAGE
+                | wgpu::BufferUsages::COPY_DST
+                | wgpu::BufferUsages::VERTEX,
             mapped_at_creation: false,
         }));
 
@@ -196,7 +198,9 @@ impl GpuRenderManager {
         self.indirect_buffer = Some(device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("GPU Render Indirect Buffer"),
             size: 20 as wgpu::BufferAddress, // sizeof(wgpu::IndirectDrawIndexed) = 20 bytes
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::INDIRECT | wgpu::BufferUsages::COPY_DST,
+            usage: wgpu::BufferUsages::STORAGE
+                | wgpu::BufferUsages::INDIRECT
+                | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         }));
 
@@ -204,7 +208,9 @@ impl GpuRenderManager {
         self.counter_buffer = Some(device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("GPU Render Counter Buffer"),
             size: 4 as wgpu::BufferAddress,
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::COPY_SRC,
+            usage: wgpu::BufferUsages::STORAGE
+                | wgpu::BufferUsages::COPY_DST
+                | wgpu::BufferUsages::COPY_SRC,
             mapped_at_creation: false,
         }));
 
@@ -247,12 +253,7 @@ impl GpuRenderManager {
     /// * `device` - WGPU设备
     /// * `queue` - WGPU命令队列
     /// * `instances` - 实例数据切片
-    pub fn update_instances(
-        &mut self,
-        device: &Device,
-        queue: &Queue,
-        instances: &[GpuInstance],
-    ) {
+    pub fn update_instances(&mut self, device: &Device, queue: &Queue, instances: &[GpuInstance]) {
         // 确保容量足够
         self.ensure_buffer_capacity(device, instances.len());
 
@@ -263,7 +264,8 @@ impl GpuRenderManager {
 
         // 更新统计
         self.stats.total_instances = instances.len() as u32;
-        self.stats.buffer_utilization = (instances.len() as f32 / self.buffer_capacity as f32).min(1.0);
+        self.stats.buffer_utilization =
+            (instances.len() as f32 / self.buffer_capacity as f32).min(1.0);
     }
 
     /// 执行GPU渲染（剔除 + 绘制）
@@ -282,12 +284,12 @@ impl GpuRenderManager {
     /// 返回渲染统计信息。
     pub fn render(
         &mut self,
-        encoder: &mut CommandEncoder,
-        device: &Device,
+        _encoder: &mut CommandEncoder,
+        _device: &Device,
         queue: &Queue,
-        view_proj: [[f32; 4]; 4],
+        _view_proj: [[f32; 4]; 4],
         instance_count: u32,
-        index_count: u32,
+        _index_count: u32,
     ) -> Result<GpuRenderStats, &'static str> {
         // 重置计数器
         if let Some(counter_buffer) = &self.counter_buffer {
@@ -312,7 +314,8 @@ impl GpuRenderManager {
 
         // 计算剔除率
         if self.stats.total_instances > 0 {
-            self.stats.cull_rate = 1.0 - (self.stats.visible_instances as f32 / self.stats.total_instances as f32);
+            self.stats.cull_rate =
+                1.0 - (self.stats.visible_instances as f32 / self.stats.total_instances as f32);
         }
 
         Ok(self.stats.clone())
@@ -333,10 +336,10 @@ impl GpuRenderManager {
     /// 返回可见实例数量。
     pub fn cull_only(
         &mut self,
-        encoder: &mut CommandEncoder,
-        device: &Device,
+        _encoder: &mut CommandEncoder,
+        _device: &Device,
         queue: &Queue,
-        view_proj: [[f32; 4]; 4],
+        _view_proj: [[f32; 4]; 4],
         instance_count: u32,
     ) -> Result<u32, &'static str> {
         // 重置计数器

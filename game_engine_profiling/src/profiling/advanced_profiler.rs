@@ -118,7 +118,7 @@ impl AdvancedProfiler {
         self.metrics_history
             .iter()
             .map(|m| m.fps)
-            .min_by(|a, b| a.partial_cmp(b).unwrap())
+            .min_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
             .unwrap_or(0.0)
     }
 
@@ -127,7 +127,7 @@ impl AdvancedProfiler {
         self.metrics_history
             .iter()
             .map(|m| m.fps)
-            .max_by(|a, b| a.partial_cmp(b).unwrap())
+            .max_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
             .unwrap_or(0.0)
     }
 

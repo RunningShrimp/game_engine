@@ -455,7 +455,7 @@ mod tests {
 
         let result = benchmark.get_result("test");
         assert!(result.is_some());
-        assert!(!result.unwrap().has_regression);
+        assert!(!result.expect("Test: operation should succeed").has_regression);
     }
 
     #[test]
@@ -472,7 +472,7 @@ mod tests {
 
         let result = benchmark.get_result("test");
         assert!(result.is_some());
-        assert!(result.unwrap().current_value > 0.0);
+        assert!(result.expect("Test: operation should succeed").current_value > 0.0);
     }
 
     #[test]
@@ -488,7 +488,7 @@ mod tests {
             "ms",
         );
 
-        let result = benchmark.get_result("test").unwrap();
+        let result = benchmark.get_result("test").expect("Test: operation should succeed");
         assert!(!result.has_regression);
     }
 

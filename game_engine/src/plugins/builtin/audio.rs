@@ -3,7 +3,7 @@
 //  提供音频播放功能，支持2D和3D空间音频。
 
 use crate::impl_default;
-use crate::plugins::{EnginePlugin, App, PluginVersion, PluginDependency};
+use crate::plugins::{App, EnginePlugin, PluginDependency, PluginVersion};
 use bevy_ecs::prelude::*;
 
 /// 音频状态资源
@@ -29,7 +29,7 @@ impl Default for AudioState {
 /// 音频更新系统
 ///
 /// 每帧更新音频状态，可用于清理已完成的音频播放。
-pub fn audio_update_system(mut audio_state: ResMut<AudioState>) {
+pub fn audio_update_system(audio_state: ResMut<AudioState>) {
     // 这里可以添加音频清理逻辑
     // 例如：检查并移除已完成的音频播放
     // 目前仅作为占位符系统，确保音频状态被更新
@@ -123,8 +123,11 @@ impl EnginePlugin for AudioPlugin {
         }
     }
 
-    fn startup(&self, world: &mut bevy_ecs::world::World) {
-        println!("Audio plugin started with master volume: {}", self.config.master_volume);
+    fn startup(&self, _world: &mut bevy_ecs::world::World) {
+        println!(
+            "Audio plugin started with master volume: {}",
+            self.config.master_volume
+        );
         if self.config.enable_spatial_audio {
             println!("Spatial audio enabled");
         }

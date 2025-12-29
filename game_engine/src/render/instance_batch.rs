@@ -117,6 +117,19 @@ impl Ord for BatchKey {
     }
 }
 
+impl Default for BatchKey {
+    fn default() -> Self {
+        Self {
+            mesh_id: 0,
+            material_id: 0,
+            pipeline_id: 0,
+            blend_mode: 0,
+            depth_test: true,
+            render_flags: 0,
+        }
+    }
+}
+
 /// 实例脏标记追踪器 (针对 Instance3D)
 ///
 /// 追踪实例数据的变化，支持块级和实例级的脏标记，用于增量更新GPU缓冲区。
@@ -326,10 +339,9 @@ impl Instance3DDirtyTracker {
         }
 
         // 处理新添加的实例（超出旧实例数量的部分）
-        if new_count > old_count
-            && range_start.is_none() {
-                range_start = Some(old_count as u32);
-            }
+        if new_count > old_count && range_start.is_none() {
+            range_start = Some(old_count as u32);
+        }
 
         // 关闭最后一个范围
         if let Some(start) = range_start {
@@ -671,8 +683,7 @@ impl InstanceBatch {
             return;
         }
 
-        let required_size =
-            std::mem::size_of_val(cmds) as wgpu::BufferAddress;
+        let required_size = std::mem::size_of_val(cmds) as wgpu::BufferAddress;
         // 对齐到256字节边界，提高GPU内存访问效率
         let aligned_size = (required_size + 255) & !255;
 
@@ -709,8 +720,7 @@ impl InstanceBatch {
 // ============================================================================
 
 /// 批次管理器 - 管理所有实例批次
-#[derive(bevy_ecs::prelude::Resource)]
-#[derive(Default)]
+#[derive(bevy_ecs::prelude::Resource, Default)]
 pub struct BatchManager {
     /// 批次映射
     batches: HashMap<BatchKey, InstanceBatch>,
@@ -722,7 +732,6 @@ pub struct BatchManager {
     /// 动态批次配置
     dynamic_config: DynamicBatchConfig,
 }
-
 
 /// 动态批次配置
 ///
@@ -874,6 +883,11 @@ pub struct BatchStats {
 impl BatchManager {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// 获取当前批次数
+    pub fn batch_count(&self) -> usize {
+        self.batches.len()
     }
 
     /// 使用自定义动态配置创建
@@ -1088,9 +1102,10 @@ impl BatchManager {
             if total_instances <= self.dynamic_config.ideal_batch_size {
                 // 找到该材质/网格的任意一个批次作为group_key
                 if let Some(first_key) = mm_batch_keys.first()
-                    && let Some(first_batch) = self.batches.get(first_key) {
-                        self.merge_batch_group(first_batch.key, mm_batch_keys);
-                    }
+                    && let Some(first_batch) = self.batches.get(first_key)
+                {
+                    self.merge_batch_group(first_batch.key, mm_batch_keys);
+                }
             }
         }
 
@@ -1099,14 +1114,14 @@ impl BatchManager {
         let mut remaining_batches: Vec<BatchKey> = Vec::new();
         for key in &batch_keys {
             if self.batches.contains_key(key)
-                && let Some(batch) = self.batches.get(key) {
-                    let instance_count = batch.instance_count() as usize;
-                    if instance_count < self.dynamic_config.small_batch_threshold
-                        && instance_count > 0
-                    {
-                        remaining_batches.push(*key);
-                    }
+                && let Some(batch) = self.batches.get(key)
+            {
+                let instance_count = batch.instance_count() as usize;
+                if instance_count < self.dynamic_config.small_batch_threshold && instance_count > 0
+                {
+                    remaining_batches.push(*key);
                 }
+            }
         }
 
         // 如果剩余批次数量不足，跳过跨材质合并
@@ -1442,10 +1457,11 @@ impl BatchManager {
 
         for key in &self.visible_batch_keys {
             if let Some(batch) = self.batches.get(key)
-                && !batch.instances.is_empty() {
-                    total_instances += batch.instance_count();
-                    draw_calls += 1;
-                }
+                && !batch.instances.is_empty()
+            {
+                total_instances += batch.instance_count();
+                draw_calls += 1;
+            }
         }
 
         self.stats = BatchStats {
@@ -1513,9 +1529,10 @@ impl BatchManager {
         for &vid in ids {
             let (key, local_idx) = mapping[vid as usize];
             if let Some(batch) = self.batches.get(&key)
-                && let Some(inst) = batch.instances.get(local_idx as usize) {
-                    filtered.entry(key).or_default().push(*inst);
-                }
+                && let Some(inst) = batch.instances.get(local_idx as usize)
+            {
+                filtered.entry(key).or_default().push(*inst);
+            }
         }
         for (key, list) in filtered {
             if let Some(batch) = self.batches.get_mut(&key) {

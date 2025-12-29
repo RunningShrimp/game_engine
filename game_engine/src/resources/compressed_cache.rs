@@ -185,19 +185,20 @@ impl CompressedResourceCache {
             if let Some(entry) = entries.get(&cache_key) {
                 // 检查原始文件是否已修改
                 if let Ok(metadata) = fs::metadata(resource_path)
-                    && let Ok(modified) = metadata.modified() {
-                        let created_at = entry.created_at;
-                        let compressed_path = entry.compressed_path.clone();
-                        drop(entries);
-                        if modified <= created_at {
-                            // 缓存有效，更新访问时间
-                            let mut entries = self.entries.write();
-                            if let Some(entry) = entries.get_mut(&cache_key) {
-                                entry.last_accessed = SystemTime::now();
-                            }
-                            return Ok(compressed_path);
+                    && let Ok(modified) = metadata.modified()
+                {
+                    let created_at = entry.created_at;
+                    let compressed_path = entry.compressed_path.clone();
+                    drop(entries);
+                    if modified <= created_at {
+                        // 缓存有效，更新访问时间
+                        let mut entries = self.entries.write();
+                        if let Some(entry) = entries.get_mut(&cache_key) {
+                            entry.last_accessed = SystemTime::now();
                         }
+                        return Ok(compressed_path);
                     }
+                }
             }
         }
 
@@ -436,64 +437,64 @@ mod tests {
 
         // 测试Gzip
         let gzip = CompressionAlgorithm::Gzip { level: 6 };
-        let compressed = gzip.compress(data).unwrap();
-        let decompressed = gzip.decompress(&compressed).unwrap();
+        let compressed = gzip.compress(data).expect("Test: operation should succeed");
+        let decompressed = gzip.decompress(&compressed).expect("Test: operation should succeed");
         assert_eq!(decompressed, data);
 
         // 测试Zlib
         let zlib = CompressionAlgorithm::Zlib { level: 6 };
-        let compressed = zlib.compress(data).unwrap();
-        let decompressed = zlib.decompress(&compressed).unwrap();
+        let compressed = zlib.compress(data).expect("Test: operation should succeed");
+        let decompressed = zlib.decompress(&compressed).expect("Test: operation should succeed");
         assert_eq!(decompressed, data);
 
         // 测试无压缩
         let none = CompressionAlgorithm::None;
-        let compressed = none.compress(data).unwrap();
-        let decompressed = none.decompress(&compressed).unwrap();
+        let compressed = none.compress(data).expect("Test: operation should succeed");
+        let decompressed = none.decompress(&compressed).expect("Test: operation should succeed");
         assert_eq!(decompressed, data);
     }
 
     #[tokio::test]
     async fn test_cache_get_or_create() {
-        let temp_dir = TempDir::new().unwrap();
-        let cache = CompressedResourceCache::with_default_config(temp_dir.path()).unwrap();
+        let temp_dir = TempDir::new().expect("Test: operation should succeed");
+        let cache = CompressedResourceCache::with_default_config(temp_dir.path()).expect("Test: operation should succeed");
 
         let resource_path = PathBuf::from("test_resource.txt");
         let data = b"Test resource data";
 
         // 创建缓存
-        let cached_path = cache.get_or_create(&resource_path, data).await.unwrap();
+        let cached_path = cache.get_or_create(&resource_path, data).await.expect("Test: operation should succeed");
         assert!(cached_path.exists());
 
         // 再次获取应该返回相同的路径
-        let cached_path2 = cache.get_or_create(&resource_path, data).await.unwrap();
+        let cached_path2 = cache.get_or_create(&resource_path, data).await.expect("Test: operation should succeed");
         assert_eq!(cached_path, cached_path2);
     }
 
     #[tokio::test]
     async fn test_cache_load() {
-        let temp_dir = TempDir::new().unwrap();
-        let cache = CompressedResourceCache::with_default_config(temp_dir.path()).unwrap();
+        let temp_dir = TempDir::new().expect("Test: operation should succeed");
+        let cache = CompressedResourceCache::with_default_config(temp_dir.path()).expect("Test: operation should succeed");
 
         let resource_path = PathBuf::from("test_resource.txt");
         let original_data = b"Test resource data for loading";
 
         // 创建缓存
-        cache.get_or_create(&resource_path, original_data).await.unwrap();
+        cache.get_or_create(&resource_path, original_data).await.expect("Test: operation should succeed");
 
         // 从缓存加载
-        let loaded_data = cache.load(&resource_path).await.unwrap();
+        let loaded_data = cache.load(&resource_path).await.expect("Test: operation should succeed");
         assert_eq!(loaded_data, original_data);
     }
 
     #[tokio::test]
     async fn test_cache_stats() {
-        let temp_dir = TempDir::new().unwrap();
-        let cache = CompressedResourceCache::with_default_config(temp_dir.path()).unwrap();
+        let temp_dir = TempDir::new().expect("Test: operation should succeed");
+        let cache = CompressedResourceCache::with_default_config(temp_dir.path()).expect("Test: operation should succeed");
 
         let data = b"Test data";
-        cache.get_or_create(PathBuf::from("test1.txt"), data).await.unwrap();
-        cache.get_or_create(PathBuf::from("test2.txt"), data).await.unwrap();
+        cache.get_or_create(PathBuf::from("test1.txt"), data).await.expect("Test: operation should succeed");
+        cache.get_or_create(PathBuf::from("test2.txt"), data).await.expect("Test: operation should succeed");
 
         let stats = cache.stats();
         assert_eq!(stats.entry_count, 2);

@@ -24,6 +24,7 @@ use std::collections::HashMap;
 use wgpu::{CommandEncoder, Device, Queue, TextureView};
 
 use super::{AntialiasingMode, PostProcessConfig, PostProcessPipeline, TonemapOperator};
+use tracing::warn;
 
 /// 后处理效果类型
 #[derive(Debug, Clone, PartialEq)]
@@ -145,8 +146,13 @@ impl PostProcessEffect {
     fn can_merge_with(&self, other: &PostProcessEffect) -> bool {
         matches!(
             (self, other),
-            (PostProcessEffect::ColorCorrection { .. }, PostProcessEffect::ColorCorrection { .. })
-                | (PostProcessEffect::Tonemap { .. }, PostProcessEffect::Tonemap { .. })
+            (
+                PostProcessEffect::ColorCorrection { .. },
+                PostProcessEffect::ColorCorrection { .. }
+            ) | (
+                PostProcessEffect::Tonemap { .. },
+                PostProcessEffect::Tonemap { .. }
+            )
         )
     }
 }
@@ -407,11 +413,12 @@ impl PostProcessEffectManager {
         let mut merged: Vec<PostProcessEffect> = Vec::new();
         for effect in &self.effect_chain {
             if let Some(last) = merged.last_mut()
-                && last.can_merge_with(effect) {
-                    // 合并效果（这里简化处理，实际应该合并参数）
-                    *last = effect.clone();
-                    continue;
-                }
+                && last.can_merge_with(effect)
+            {
+                // 合并效果（这里简化处理，实际应该合并参数）
+                *last = effect.clone();
+                continue;
+            }
             merged.push(effect.clone());
         }
         self.effect_chain = merged;
@@ -461,7 +468,15 @@ impl PostProcessEffectManager {
                         .filter(|(_, s)| s.enabled)
                         .map(|(name, stats)| (name.clone(), stats.avg_gpu_time))
                         .collect();
-                    effects_by_time.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+                    effects_by_time.sort_by(|a, b| {
+                        b.1.partial_cmp(&a.1).unwrap_or_else(|| {
+                            warn!(
+                                "Failed to compare GPU times for effect performance stats: {} and {}",
+                                a.0, b.0
+                            );
+                            std::cmp::Ordering::Equal
+                        })
+                    });
 
                     if let Some((worst_effect, _)) = effects_by_time.first() {
                         self.remove_effect(worst_effect);
@@ -519,7 +534,12 @@ impl PostProcessEffectManager {
                 } => {
                     // 体积光效果暂未在PostProcessConfig中实现
                     // 这里只是占位，未来可以添加相应的配置字段
-                    let _ = (*scattering_intensity, *sample_count, *god_ray_intensity, *fog_density);
+                    let _ = (
+                        *scattering_intensity,
+                        *sample_count,
+                        *god_ray_intensity,
+                        *fog_density,
+                    );
                 }
                 PostProcessEffect::ProceduralNoise {
                     film_grain_intensity,
@@ -529,7 +549,12 @@ impl PostProcessEffectManager {
                 } => {
                     // 程序化噪声效果暂未在PostProcessConfig中实现
                     // 这里只是占位，未来可以添加相应的配置字段
-                    let _ = (*film_grain_intensity, *chromatic_aberration_intensity, *scanline_intensity, *noise_intensity);
+                    let _ = (
+                        *film_grain_intensity,
+                        *chromatic_aberration_intensity,
+                        *scanline_intensity,
+                        *noise_intensity,
+                    );
                 }
                 PostProcessEffect::MotionBlur {
                     intensity,

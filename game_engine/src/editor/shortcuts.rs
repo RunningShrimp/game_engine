@@ -286,10 +286,11 @@ impl ShortcutManager {
     /// 处理快捷键输入
     pub fn handle_input(&self, modifiers: Modifiers, key: &str) -> bool {
         if let Some(action) = self.check(modifiers, key)
-            && let Some(callback) = self.action_callbacks.get(&action) {
-                callback();
-                return true;
-            }
+            && let Some(callback) = self.action_callbacks.get(&action)
+        {
+            callback();
+            return true;
+        }
         false
     }
 

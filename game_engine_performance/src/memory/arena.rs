@@ -155,7 +155,8 @@ impl Arena {
 
 impl Chunk {
     fn new(size: usize) -> Result<Self, ArenaError> {
-        let layout = Layout::from_size_align(size, 8).unwrap();
+        let layout = Layout::from_size_align(size, 8)
+            .map_err(|_| ArenaError::AllocationFailed { size, align: 8 })?;
         let ptr = Arena::alloc_with_retry(layout, 3)?;
 
         Ok(Self { ptr, used: 0, size })
@@ -201,7 +202,8 @@ impl Chunk {
 
 impl Drop for Chunk {
     fn drop(&mut self) {
-        let layout = Layout::from_size_align(self.size, 8).unwrap();
+        // Safety: size is always valid since it was validated in new()
+        let layout = unsafe { Layout::from_size_align_unchecked(self.size, 8) };
         unsafe { dealloc(self.ptr.as_ptr(), layout) };
     }
 }

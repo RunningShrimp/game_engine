@@ -115,7 +115,6 @@ impl ClipStack {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -135,7 +134,10 @@ mod tests {
         let rect1 = ClipRect::from_pos_size(Vec2::new(0.0, 0.0), Vec2::new(100.0, 100.0));
         let rect2 = ClipRect::from_pos_size(Vec2::new(50.0, 50.0), Vec2::new(100.0, 100.0));
 
-        let intersection = rect1.intersection(&rect2).unwrap();
+        let intersection = match rect1.intersection(&rect2) {
+            Some(intersection) => intersection,
+            None => panic!("Expected intersection between rect1 and rect2, but got None"),
+        };
         assert_eq!(intersection.min, Vec2::new(50.0, 50.0));
         assert_eq!(intersection.max, Vec2::new(100.0, 100.0));
     }
@@ -153,12 +155,18 @@ mod tests {
             Vec2::new(100.0, 100.0),
         ));
 
-        let current = stack.current().unwrap();
+        let current = match stack.current() {
+            Some(current) => current,
+            None => panic!("Expected current clip rect to exist, but got None"),
+        };
         assert_eq!(current.min, Vec2::new(50.0, 50.0));
         assert_eq!(current.max, Vec2::new(150.0, 150.0));
 
         stack.pop();
-        let current = stack.current().unwrap();
+        let current = match stack.current() {
+            Some(current) => current,
+            None => panic!("Expected current clip rect to exist after pop, but got None"),
+        };
         assert_eq!(current.min, Vec2::new(0.0, 0.0));
         assert_eq!(current.max, Vec2::new(200.0, 200.0));
     }

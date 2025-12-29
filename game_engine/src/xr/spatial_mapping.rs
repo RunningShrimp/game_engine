@@ -572,7 +572,7 @@ mod tests {
 
     #[test]
     fn test_spatial_mapping_manager_creation() {
-        let manager = SpatialMappingManager::new().unwrap();
+        let manager = SpatialMappingManager::new().expect("Test: operation should succeed");
         assert!(!manager.is_initialized());
         assert!(!manager.is_supported());
         assert_eq!(manager.mesh_count(), 0);
@@ -581,7 +581,7 @@ mod tests {
 
     #[test]
     fn test_add_and_get_mesh() {
-        let mut manager = SpatialMappingManager::new().unwrap();
+        let mut manager = SpatialMappingManager::new().expect("Test: operation should succeed");
         let mesh_id = MeshId::new();
         let mesh = SpatialMesh {
             id: mesh_id,
@@ -600,7 +600,7 @@ mod tests {
 
     #[test]
     fn test_add_and_get_plane() {
-        let mut manager = SpatialMappingManager::new().unwrap();
+        let mut manager = SpatialMappingManager::new().expect("Test: operation should succeed");
         let plane_id = PlaneId::new();
         let plane = DetectedPlane {
             id: plane_id,
@@ -621,7 +621,7 @@ mod tests {
 
     #[test]
     fn test_query_planes_by_type() {
-        let mut manager = SpatialMappingManager::new().unwrap();
+        let mut manager = SpatialMappingManager::new().expect("Test: operation should succeed");
 
         let plane1 = DetectedPlane {
             id: PlaneId::new(),

@@ -1,5 +1,5 @@
 //  引擎核心错误类型
-// 
+//
 //  提供统一的错误处理机制，支持错误链、上下文传播和错误分类。
 
 use crate::error::{ErrorCategory, ErrorSeverity};
@@ -99,7 +99,7 @@ impl Clone for EngineError {
                 if backtrace.is_some() {
                     tracing::trace!(target: "error", "Cloning error with backtrace: {}", message);
                 }
-                
+
                 EngineError::General {
                     message: message.clone(),
                     source: None, // 忽略source字段的克隆
@@ -219,11 +219,7 @@ impl EngineError {
             Self::General { severity, .. } => *severity,
             Self::Multiple { errors, .. } => {
                 // 返回最严重的错误级别
-                errors
-                    .iter()
-                    .map(|e| e.severity())
-                    .max()
-                    .unwrap_or(ErrorSeverity::Error)
+                errors.iter().map(|e| e.severity()).max().unwrap_or(ErrorSeverity::Error)
             }
             Self::Chain { source, .. } => source.severity(),
         }
@@ -291,7 +287,7 @@ impl EngineError {
             return Self::general("No errors provided for multiple error aggregation");
         }
         if count == 1 {
-            return errors.into_iter().next().unwrap();
+            return errors.into_iter().next().expect("Test: operation should succeed");
         }
 
         let primary = errors.first().map(|e| Box::new(e.clone()));
@@ -364,11 +360,11 @@ impl EngineError {
 }
 
 // Use canonical error types defined in their respective modules instead of duplicating them here
-use crate::error::render_error::RenderError;
-use crate::error::physics_error::PhysicsError;
 use crate::error::audio_error::AudioError;
-use crate::error::resource_error::ResourceError;
 use crate::error::input_error::InputError;
+use crate::error::physics_error::PhysicsError;
+use crate::error::render_error::RenderError;
+use crate::error::resource_error::ResourceError;
 use crate::error::system_error::SystemError;
 
 // ============================================================================
@@ -404,7 +400,7 @@ impl From<crate::common_errors::GameEngineError> for EngineError {
                             severity: ErrorSeverity::Error,
                         })
                     }
-                    crate::common_errors::InfrastructureError::Physics(physics_err) => {
+                    crate::common_errors::InfrastructureError::Physics(_physics_err) => {
                         EngineError::Physics(PhysicsError::WorldNotInitialized {
                             severity: ErrorSeverity::Error,
                         })
@@ -416,10 +412,16 @@ impl From<crate::common_errors::GameEngineError> for EngineError {
                         })
                     }
                     crate::common_errors::InfrastructureError::Script(script_err) => {
-                        EngineError::System(SystemError::initialization("script", script_err.to_string()))
+                        EngineError::System(SystemError::initialization(
+                            "script",
+                            script_err.to_string(),
+                        ))
                     }
                     crate::common_errors::InfrastructureError::Platform(platform_err) => {
-                        EngineError::System(SystemError::platform("platform", platform_err.to_string()))
+                        EngineError::System(SystemError::platform(
+                            "platform",
+                            platform_err.to_string(),
+                        ))
                     }
                     crate::common_errors::InfrastructureError::Io(io_err) => {
                         EngineError::System(SystemError::filesystem("unknown", io_err.to_string()))
@@ -441,28 +443,24 @@ impl From<crate::common_errors::GameEngineError> for EngineError {
                     }
                 }
             }
-            crate::common_errors::GameEngineError::Domain(domain_err) => {
-                match domain_err {
-                    crate::common_errors::DomainError::Audio(audio_err) => {
-                        EngineError::Audio(AudioError::SourceNotFound {
-                            source_id: format!("{:?}", audio_err),
-                            severity: ErrorSeverity::Error,
-                        })
-                    }
-                    crate::common_errors::DomainError::Physics(physics_err) => {
-                        EngineError::Physics(PhysicsError::RigidBodyNotFound {
-                            body_id: format!("{:?}", physics_err),
-                            severity: ErrorSeverity::Error,
-                        })
-                    }
-                    crate::common_errors::DomainError::Scene(scene_err) => {
-                        EngineError::general(format!("Scene error: {}", scene_err))
-                    }
-                    crate::common_errors::DomainError::General(msg) => {
-                        EngineError::general(msg)
-                    }
+            crate::common_errors::GameEngineError::Domain(domain_err) => match domain_err {
+                crate::common_errors::DomainError::Audio(audio_err) => {
+                    EngineError::Audio(AudioError::SourceNotFound {
+                        source_id: format!("{:?}", audio_err),
+                        severity: ErrorSeverity::Error,
+                    })
                 }
-            }
+                crate::common_errors::DomainError::Physics(physics_err) => {
+                    EngineError::Physics(PhysicsError::RigidBodyNotFound {
+                        body_id: format!("{:?}", physics_err),
+                        severity: ErrorSeverity::Error,
+                    })
+                }
+                crate::common_errors::DomainError::Scene(scene_err) => {
+                    EngineError::general(format!("Scene error: {}", scene_err))
+                }
+                crate::common_errors::DomainError::General(msg) => EngineError::general(msg),
+            },
         }
     }
 }
@@ -486,9 +484,7 @@ impl From<crate::domain::errors::DomainError> for EngineError {
             crate::domain::errors::DomainError::Scene(scene_err) => {
                 EngineError::general(format!("Scene error: {}", scene_err))
             }
-            crate::domain::errors::DomainError::General(msg) => {
-                EngineError::general(msg)
-            }
+            crate::domain::errors::DomainError::General(msg) => EngineError::general(msg),
         }
     }
 }

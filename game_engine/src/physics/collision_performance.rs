@@ -232,7 +232,3 @@ mod tests {
         assert!((stats.spatial_query_hit_rate - 2.0 / 3.0).abs() < 0.001);
     }
 }
-
-
-
-

@@ -132,12 +132,13 @@ impl AllocationTrace {
         self.free_time = Some(std::time::SystemTime::now());
 
         if let Ok(allocation_duration) = self.allocation_time.duration_since(std::time::UNIX_EPOCH)
-            && let Ok(free_duration) = self.free_time.unwrap().duration_since(std::time::UNIX_EPOCH)
-            {
-                let lifetime =
-                    free_duration.as_micros().saturating_sub(allocation_duration.as_micros());
-                self.lifetime_us = Some(lifetime as u64);
-            }
+            && let Some(free_time) = self.free_time
+            && let Ok(free_duration) = free_time.duration_since(std::time::UNIX_EPOCH)
+        {
+            let lifetime =
+                free_duration.as_micros().saturating_sub(allocation_duration.as_micros());
+            self.lifetime_us = Some(lifetime as u64);
+        }
     }
 
     /// 获取生命周期描述
@@ -372,9 +373,10 @@ impl MemoryDebugger {
 
         // 捕获分配堆栈
         if self.config.enable_stack_analysis
-            && let Some(ref capture_fn) = self.stack_capture_fn {
-                trace.allocation_stack = capture_fn();
-            }
+            && let Some(ref capture_fn) = self.stack_capture_fn
+        {
+            trace.allocation_stack = capture_fn();
+        }
 
         // 限制跟踪的分配数量
         {
@@ -414,9 +416,10 @@ impl MemoryDebugger {
 
             // 捕获释放堆栈
             if self.config.enable_stack_analysis
-                && let Some(ref capture_fn) = self.stack_capture_fn {
-                    trace.free_stack = Some(capture_fn());
-                }
+                && let Some(ref capture_fn) = self.stack_capture_fn
+            {
+                trace.free_stack = Some(capture_fn());
+            }
         }
 
         // 记录调试日志

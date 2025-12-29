@@ -307,13 +307,13 @@ mod tests {
     fn test_atomic_flag() {
         let flag = AtomicFlag::new(false);
 
-        assert_eq!(flag.get(), false);
+        assert!(!flag.get());
         flag.set(true);
-        assert_eq!(flag.get(), true);
+        assert!(flag.get());
 
         let old = flag.swap(false);
-        assert_eq!(old, true);
-        assert_eq!(flag.get(), false);
+        assert!(old);
+        assert!(!flag.get());
     }
 
     #[test]

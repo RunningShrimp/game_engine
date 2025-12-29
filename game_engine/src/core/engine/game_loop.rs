@@ -1,5 +1,5 @@
 //  游戏循环模块
-// 
+//
 //  负责处理游戏引擎的主循环，包括：
 //  - 事件循环管理
 //  - 更新循环逻辑
@@ -56,21 +56,41 @@ pub fn run_event_loop(
     let entity_count = app.world.entities().len();
     let has_window = app.window.is_some();
 
-    tracing::debug!("Initial world state: {} entities, window initialized: {}", entity_count, has_window);
+    tracing::debug!(
+        "Initial world state: {} entities, window initialized: {}",
+        entity_count,
+        has_window
+    );
 
     // 创建帧循环span
+    let _entity_count_u32: u32 = match entity_count.try_into() {
+        Ok(count) => count,
+        Err(_) => {
+            tracing::warn!(
+                "Entity count {} exceeds u32::MAX, using max value",
+                entity_count
+            );
+            u32::MAX
+        }
+    };
+    let scale_factor = app
+        .window
+        .as_ref()
+        .and_then(|w| w.raw())
+        .map(|w| w.scale_factor())
+        .unwrap_or(1.0);
     let _frame_span = crate::performance::tracing_metrics::TracingMetricsManager::frame_span(
-        entity_count.try_into().unwrap(),
-        app.window.as_ref().map(|w| w.raw().scale_factor()).unwrap_or(1.0)
+        entity_count as usize,
+        scale_factor,
     );
-    
+
     // 设置初始时间
     app.last_time = std::time::Instant::now();
-    
+
     // 实际实现需要调用 event_loop.run_app(&mut app)
     // 这里我们保持对 event_loop 的引用以满足编译要求
     let _loop_id = format!("{:?}", event_loop);
-    
+
     Ok(())
 }
 

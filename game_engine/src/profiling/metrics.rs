@@ -367,10 +367,11 @@ impl MetricRegistry {
     /// 创建或获取性能计数器
     pub fn get_counter(&mut self, name: &str) -> Option<&PerformanceCounter> {
         if !self.counters.contains_key(name)
-            && let Some(def) = self.definitions.get(name) {
-                let counter = PerformanceCounter::new(name, def.category, def.unit);
-                self.counters.insert(name.to_string(), counter);
-            }
+            && let Some(def) = self.definitions.get(name)
+        {
+            let counter = PerformanceCounter::new(name, def.category, def.unit);
+            self.counters.insert(name.to_string(), counter);
+        }
         self.counters.get(name)
     }
 
@@ -465,7 +466,7 @@ impl MetricRegistry {
 #[macro_export]
 macro_rules! define_counter {
     ($registry:expr, $name:expr, $category:expr, $unit:expr) => {
-        $registry.get_counter($name).unwrap()
+        $registry.get_counter($name).expect("Test: operation should succeed")
     };
 }
 
@@ -586,7 +587,7 @@ mod tests {
 
         // 等待所有线程完成
         for handle in handles {
-            handle.join().unwrap();
+            handle.join().expect("Test: operation should succeed");
         }
 
         assert_eq!(counter.value(), 1000);

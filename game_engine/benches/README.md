@@ -31,29 +31,103 @@
    - 哈希表性能
    - 内存管理效率
 
-### ✅ 已更新基准测试
+### ✅ 新增基准测试
 
 6. **渲染系统基准测试** (`render_benchmarks.rs`)
-   - **状态**: ✅ 已更新到当前wgpu API版本
-   - **内容**: 视锥剔除、批渲染、GPU间接绘制、GPU剔除
-   - **验证**: 参见 [渲染基准测试验证指南](../../docs/guides/render_benchmarks_verification.md)
+   - **状态**: ✅ 已完全重写和增强
+   - **内容**:
+     - 视锥剔除 (100-10000 对象)
+     - 变换计算性能
+     - 渲染排序优化
+     - 批处理性能
+     - MVP矩阵计算
+     - 骨骼动画计算
+
+7. **物理系统基准测试** (`physics_benchmarks.rs`)
+   - **状态**: ✅ 已完全重写，使用Rapier3D API
+   - **内容**:
+     - 物理步进 (10-500 刚体)
+     - 碰撞检测性能
+     - 空间查询 (射线投射)
+     - 刚体创建性能
+     - 物理ECS集成
+     - 连续碰撞检测 (CCD)
+
+8. **序列化基准测试** (`serialization_benchmarks.rs`)
+   - **状态**: ✅ 新增
+   - **内容**:
+     - 网络消息序列化/反序列化
+     - 场景保存/加载
+     - JSON vs Bincode对比
+     - 存档系统性能
+     - 压缩性能 (Gzip/Deflate)
+
+9. **内存基准测试** (`memory_benchmarks.rs`)
+   - **状态**: ✅ 新增
+   - **内容**:
+     - 实体/组件内存分配
+     - 实体池重用
+     - 组件布局效率 (小组件 vs 大组件)
+     - 查询内存访问模式
+     - 批量操作内存效率
+     - 资源内存使用
+     - 内存碎片分析
 
 ## 使用方法
 
-### 运行所有基准测试
+### 快速开始
+
+```bash
+# 运行所有基准测试
+cargo bench --workspace
+
+# 查看HTML报告
+open game_engine/benches/results/report/index.html
+
+# 保存性能基线
+cargo bench --workspace -- --save-baseline main
+
+# 与基线对比
+cargo bench --workspace -- --baseline main
+```
+
+### 运行特定基准测试
+
+```bash
+# ECS性能测试
+cargo bench --bench ecs_benchmarks
+
+# 物理性能测试
+cargo bench --bench physics_benchmarks
+
+# 渲染性能测试
+cargo bench --bench render_benchmarks
+
+# 序列化性能测试
+cargo bench --bench serialization_benchmarks
+
+# 内存性能测试
+cargo bench --bench memory_benchmarks
+
+# 数学运算测试
+cargo bench --bench math_benchmarks
+
+# 网络性能测试
+cargo bench --bench network_benchmarks
+
+# 资源管理测试
+cargo bench --bench resource_benchmarks
+
+# 路径查找测试
+cargo bench --bench pathfinding_benchmarks
+```
+
+### 使用脚本
+
 ```bash
 # 运行完整基准测试套件
 ./scripts/run_benchmarks.sh
 
-# 运行特定基准测试
-cargo bench --package game_engine --bench math_benchmarks
-
-# 运行基准测试验证（快速检查）
-./scripts/verify_benchmarks.sh
-```
-
-### 性能回归检测
-```bash
 # 运行性能回归检测
 ./scripts/performance_regression.sh
 

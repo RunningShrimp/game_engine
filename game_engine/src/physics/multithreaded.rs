@@ -53,10 +53,10 @@ use crate::ecs::Transform;
 use crate::physics::{PhysicsDomainService, RigidBodyComp};
 use bevy_ecs::prelude::*;
 use glam::{Quat, Vec3};
-use rayon::prelude::*;
 use rapier3d::na::{Point3, Vector3};
 use rapier3d::parry::shape::SharedShape;
 use rapier3d::prelude::*;
+use rayon::prelude::*;
 use std::sync::{Arc, RwLock};
 use std::time::{Duration, Instant};
 
@@ -170,9 +170,7 @@ impl MultithreadedPhysicsWorld {
     pub fn new(config: MultithreadedPhysicsConfig) -> Self {
         // 设置rayon线程池
         if config.num_threads > 0 {
-            let _ = rayon::ThreadPoolBuilder::new()
-                .num_threads(config.num_threads)
-                .build_global();
+            let _ = rayon::ThreadPoolBuilder::new().num_threads(config.num_threads).build_global();
         }
 
         let threads_used = if config.num_threads > 0 {
@@ -252,12 +250,20 @@ impl MultithreadedPhysicsWorld {
             self.update_stats(start_time, total_time);
         }
 
-        *self.last_frame_time.write().unwrap() = total_time;
+        // 使用 expect 并提供详细的错误信息，因为锁中毒通常意味着严重的线程安全问题
+        *self.last_frame_time.write().expect(
+            "Physics world lock was poisoned due to a thread panic while updating frame time. \
+            This indicates a critical failure in the physics threading system.",
+        ) = total_time;
     }
 
     /// 更新性能统计
-    fn update_stats(&self, start_time: Instant, total_time: Duration) {
-        let mut stats = self.stats.write().unwrap();
+    fn update_stats(&self, _start_time: Instant, total_time: Duration) {
+        // 使用 expect 并提供详细的错误信息，因为锁中毒通常意味着严重的线程安全问题
+        let mut stats = self.stats.write().expect(
+            "Physics stats lock was poisoned due to a thread panic while updating performance stats. \
+            This indicates a critical failure in the physics threading system."
+        );
 
         stats.total_simulation_time_ms = total_time.as_secs_f64() * 1000.0;
 
@@ -287,16 +293,28 @@ impl MultithreadedPhysicsWorld {
 
     /// 获取性能统计
     pub fn get_stats(&self) -> PhysicsPerformanceStats {
-        self.stats.read().unwrap().clone()
+        // 使用 expect 并提供详细的错误信息，因为锁中毒通常意味着严重的线程安全问题
+        self.stats.read().expect(
+            "Physics stats lock was poisoned due to a thread panic while reading performance stats. \
+            This indicates a critical failure in the physics threading system."
+        ).clone()
     }
 
     /// 获取上次帧时间
     pub fn last_frame_time(&self) -> Duration {
-        *self.last_frame_time.read().unwrap()
+        // 使用 expect 并提供详细的错误信息，因为锁中毒通常意味着严重的线程安全问题
+        *self.last_frame_time.read().expect(
+            "Physics world lock was poisoned due to a thread panic while reading frame time. \
+            This indicates a critical failure in the physics threading system.",
+        )
     }
 
     /// 创建刚体
-    pub fn create_rigid_body(&mut self, body_type: RigidBodyType, position: Vec3) -> RigidBodyHandle {
+    pub fn create_rigid_body(
+        &mut self,
+        body_type: RigidBodyType,
+        position: Vec3,
+    ) -> RigidBodyHandle {
         let rb = RigidBodyBuilder::new(body_type)
             .translation(vector![position.x, position.y, position.z])
             .build();
@@ -336,12 +354,10 @@ impl MultithreadedPhysicsWorld {
 
     /// 获取刚体位置
     pub fn get_rigid_body_position(&self, handle: RigidBodyHandle) -> Option<Vec3> {
-        self.rigid_body_set
-            .get(handle)
-            .map(|rb| {
-                let pos = rb.translation();
-                Vec3::new(pos.x, pos.y, pos.z)
-            })
+        self.rigid_body_set.get(handle).map(|rb| {
+            let pos = rb.translation();
+            Vec3::new(pos.x, pos.y, pos.z)
+        })
     }
 
     /// 获取刚体旋转
@@ -372,20 +388,16 @@ impl MultithreadedPhysicsWorld {
         );
 
         // 检测所有碰撞体
-        
 
-        self
-            .collider_set
-            .iter()
-            .find_map(|(_handle, collider)| {
-                let intersection = collider.shape().cast_ray_and_get_normal(
-                    collider.position(),
-                    &ray,
-                    max_distance,
-                    true,
-                )?;
-                Some(intersection.time_of_impact)
-            })
+        self.collider_set.iter().find_map(|(_handle, collider)| {
+            let intersection = collider.shape().cast_ray_and_get_normal(
+                collider.position(),
+                &ray,
+                max_distance,
+                true,
+            )?;
+            Some(intersection.time_of_impact)
+        })
     }
 
     /// 批量创建刚体（并行优化）
@@ -405,10 +417,7 @@ impl MultithreadedPhysicsWorld {
             .collect();
 
         // 串行插入到集合中（RigidBodySet不是线程安全的）
-        bodies_data
-            .into_iter()
-            .map(|(rb, _)| self.rigid_body_set.insert(rb))
-            .collect()
+        bodies_data.into_iter().map(|(rb, _)| self.rigid_body_set.insert(rb)).collect()
     }
 
     /// 获取所有刚体的位置（并行）
@@ -426,7 +435,10 @@ impl MultithreadedPhysicsWorld {
     /// 批量获取物理状态（并行优化）
     ///
     /// 并行获取多个刚体的位置和旋转，用于批量同步。
-    pub fn batch_get_physics_state(&self, handles: &[RigidBodyHandle]) -> Vec<(RigidBodyHandle, Vec3, Quat)> {
+    pub fn batch_get_physics_state(
+        &self,
+        handles: &[RigidBodyHandle],
+    ) -> Vec<(RigidBodyHandle, Vec3, Quat)> {
         handles
             .par_iter()
             .filter_map(|&handle| {
@@ -496,12 +508,14 @@ impl MultithreadedPhysicsWorld {
                 utilization * 100.0
             );
 
-            let _ = rayon::ThreadPoolBuilder::new()
-                .num_threads(new_threads)
-                .build_global();
+            let _ = rayon::ThreadPoolBuilder::new().num_threads(new_threads).build_global();
 
             self.config.num_threads = new_threads;
-            self.stats.write().unwrap().threads_used = new_threads;
+            // 使用 expect 并提供详细的错误信息，因为锁中毒通常意味着严重的线程安全问题
+            self.stats.write().expect(
+                "Physics stats lock was poisoned due to a thread panic while updating thread count. \
+                This indicates a critical failure in the physics threading system."
+            ).threads_used = new_threads;
         }
 
         new_threads
@@ -564,10 +578,7 @@ pub fn sync_multithreaded_physics_to_transform_system(
     use rayon::prelude::*;
 
     // 收集所有需要更新的刚体ID
-    let body_ids: Vec<_> = query
-        .iter()
-        .map(|(rb_comp, _)| rb_comp.body_id)
-        .collect();
+    let body_ids: Vec<_> = query.iter().map(|(rb_comp, _)| rb_comp.body_id).collect();
 
     // 并行批量获取物理状态
     let physics_states: Vec<_> = body_ids
@@ -577,17 +588,12 @@ pub fn sync_multithreaded_physics_to_transform_system(
             let world = physics_service.get_world();
             let body_state = world.get_body_state(body_id)?;
 
-            Some((
-                body_id,
-                (pos, body_state.rotation),
-            ))
+            Some((body_id, (pos, body_state.rotation)))
         })
         .collect();
 
     // 使用HashMap快速查找
-    let state_map: std::collections::HashMap<_, _> = physics_states
-        .into_iter()
-        .collect();
+    let state_map: std::collections::HashMap<_, _> = physics_states.into_iter().collect();
 
     // 更新Transform
     for (rb_comp, mut transform) in query.iter_mut() {
@@ -650,8 +656,8 @@ mod tests {
 
         // 检查物体是否下落
         let pos = world.get_rigid_body_position(body);
-        assert!(pos.is_some());
-        let pos = pos.unwrap();
+        assert!(pos.is_some(), "Expected rigid body to have a position");
+        let pos = pos.expect("Position should be Some after previous assertion");
         assert!(pos.y < 10.0, "物体应该因重力下落");
     }
 

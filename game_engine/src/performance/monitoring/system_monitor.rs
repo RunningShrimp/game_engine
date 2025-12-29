@@ -1,5 +1,5 @@
 //  系统性能监控器
-// 
+//
 //  实时性能监控和数据收集
 //  - 帧率监控
 //  - 内存跟踪
@@ -154,10 +154,7 @@ impl MemoryMonitor {
 
     /// 获取当前内存使用 (MB)
     pub fn current_memory_mb(&self) -> f32 {
-        self.history
-            .back()
-            .map(|&b| b as f32 / (1024.0 * 1024.0))
-            .unwrap_or(0.0)
+        self.history.back().map(|&b| b as f32 / (1024.0 * 1024.0)).unwrap_or(0.0)
     }
 
     /// 获取平均内存使用 (MB)
@@ -173,11 +170,7 @@ impl MemoryMonitor {
 
     /// 获取峰值内存 (MB)
     pub fn peak_memory_mb(&self) -> f32 {
-        self.history
-            .iter()
-            .max()
-            .map(|&b| b as f32 / (1024.0 * 1024.0))
-            .unwrap_or(0.0)
+        self.history.iter().max().map(|&b| b as f32 / (1024.0 * 1024.0)).unwrap_or(0.0)
     }
 }
 
@@ -271,9 +264,18 @@ impl SystemPerformanceMonitor {
         PerformanceReport {
             current_fps: self.metrics.fps,
             average_frame_time_ms: self.frame_sampler.average_frame_time().as_secs_f32() * 1000.0,
-            min_frame_time_ms: self.frame_sampler.min_frame_time().map(|d| d.as_secs_f32() * 1000.0),
-            max_frame_time_ms: self.frame_sampler.max_frame_time().map(|d| d.as_secs_f32() * 1000.0),
-            p99_frame_time_ms: self.frame_sampler.percentile(99.0).map(|d| d.as_secs_f32() * 1000.0),
+            min_frame_time_ms: self
+                .frame_sampler
+                .min_frame_time()
+                .map(|d| d.as_secs_f32() * 1000.0),
+            max_frame_time_ms: self
+                .frame_sampler
+                .max_frame_time()
+                .map(|d| d.as_secs_f32() * 1000.0),
+            p99_frame_time_ms: self
+                .frame_sampler
+                .percentile(99.0)
+                .map(|d| d.as_secs_f32() * 1000.0),
             current_memory_mb: self.memory_monitor.current_memory_mb(),
             average_memory_mb: self.memory_monitor.average_memory_mb(),
             peak_memory_mb: self.memory_monitor.peak_memory_mb(),
@@ -288,7 +290,13 @@ impl SystemPerformanceMonitor {
     }
 
     /// 更新GPU渲染时间细分
-    pub fn update_gpu_render_times(&mut self, render_time_ms: f32, geometry_time_ms: f32, lighting_time_ms: f32, postprocess_time_ms: f32) {
+    pub fn update_gpu_render_times(
+        &mut self,
+        render_time_ms: f32,
+        geometry_time_ms: f32,
+        lighting_time_ms: f32,
+        postprocess_time_ms: f32,
+    ) {
         self.metrics.gpu_render_time_ms = render_time_ms;
         self.metrics.gpu_geometry_time_ms = geometry_time_ms;
         self.metrics.gpu_lighting_time_ms = lighting_time_ms;
@@ -426,6 +434,6 @@ mod tests {
 
         let p50 = sampler.percentile(50.0);
         assert!(p50.is_some());
-        assert_eq!(p50.unwrap(), Duration::from_millis(16));
+        assert_eq!(p50.expect("Test: operation should succeed"), Duration::from_millis(16));
     }
 }

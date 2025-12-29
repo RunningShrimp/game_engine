@@ -11,8 +11,8 @@ use std::time::Duration;
 use serde::{Deserialize, Serialize};
 
 use super::ProfilingResult;
-use super::storage::*;
 use super::metrics::MetricCategory;
+use super::storage::*;
 
 // ============================================================================
 // 图表数据结构
@@ -248,9 +248,13 @@ impl TrendAnalyzer {
         }
 
         let metric_name = data_points[0].metric_name.clone();
-        let start_time = data_points.first().unwrap().timestamp;
-        let end_time = data_points.last().unwrap().timestamp;
-        let period = Duration::from_millis(end_time - start_time);
+        let start_time = data_points.first()
+            .map(|p| p.timestamp)
+            .unwrap_or_else(|| data_points.first().map(|p| p.timestamp).unwrap_or(0));
+        let end_time = data_points.last()
+            .map(|p| p.timestamp)
+            .unwrap_or_else(|| start_time);
+        let period = Duration::from_millis(end_time.saturating_sub(start_time));
 
         // 提取数值
         let values: Vec<f64> = data_points.iter().map(|p| p.value).collect();
@@ -320,8 +324,14 @@ impl TrendAnalyzer {
             return 0.0;
         }
 
-        let first = values.first().unwrap();
-        let last = values.last().unwrap();
+        let first = match values.first() {
+            Some(v) => *v,
+            None => return 0.0,
+        };
+        let last = match values.last() {
+            Some(v) => *v,
+            None => return 0.0,
+        };
 
         if first.abs() < f64::EPSILON {
             return 0.0;
@@ -434,16 +444,20 @@ impl TrendAnalyzer {
     }
 
     /// 按类别过滤数据点
-    pub fn filter_by_category(&self, data_points: &[DataPoint], category: MetricCategory) -> Vec<DataPoint> {
-        data_points
-            .iter()
-            .filter(|point| point.category == category)
-            .cloned()
-            .collect()
+    pub fn filter_by_category(
+        &self,
+        data_points: &[DataPoint],
+        category: MetricCategory,
+    ) -> Vec<DataPoint> {
+        data_points.iter().filter(|point| point.category == category).cloned().collect()
     }
 
     /// 分析特定类别的趋势
-    pub fn analyze_category_trend(&self, data_points: &[DataPoint], category: MetricCategory) -> ProfilingResult<TrendAnalysis> {
+    pub fn analyze_category_trend(
+        &self,
+        data_points: &[DataPoint],
+        category: MetricCategory,
+    ) -> ProfilingResult<TrendAnalysis> {
         let filtered = self.filter_by_category(data_points, category);
         self.analyze_trend(&filtered)
     }
@@ -586,7 +600,7 @@ impl DataExporter {
                 "# Export Time: {}",
                 std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
-                    .unwrap()
+                    .expect("Test: operation should succeed")
                     .as_secs()
             )?;
         }
@@ -611,7 +625,7 @@ impl DataExporter {
         if config.include_metadata {
             export_data["metadata"] = serde_json::json!({
                 "total_records": data_points.len(),
-                "export_time": std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
+                "export_time": std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).expect("Test: operation should succeed").as_secs(),
                 "format_version": "1.0"
             });
         }
@@ -664,7 +678,7 @@ impl DataExporter {
                 "    <export_time>{}</export_time>",
                 std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
-                    .unwrap()
+                    .expect("Test: operation should succeed")
                     .as_secs()
             )?;
             writeln!(file, "  </metadata>")?;
@@ -756,7 +770,7 @@ mod tests {
             DataPoint::new("test_metric", 20.0, MetricCategory::Render),
         ];
 
-        let analysis = analyzer.analyze_trend(&data_points).unwrap();
+        let analysis = analyzer.analyze_trend(&data_points).expect("Test: operation should succeed");
 
         assert_eq!(analysis.metric_name, "test_metric");
         assert_eq!(analysis.data_points, 5);

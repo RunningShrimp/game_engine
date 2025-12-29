@@ -1,33 +1,34 @@
-//! # 物理系统（Physics System）
+//! # Physics System
 //!
-//! 本模块提供完整的物理模拟功能，基于Rapier物理引擎和ECS架构。
+//! This module provides complete physics simulation functionality based on
+//! the Rapier physics engine and ECS architecture.
 //!
-//! ## 核心组件
+//! ## Core Components
 //!
-//! ### 刚体物理（Rigid Body Physics）
-//! - [`RigidBodyComp`]: 刚体ECS组件
-//! - [`RigidBodyDesc`]: 刚体描述符，用于创建刚体
-//! - [`ColliderComp`]: 碰撞体ECS组件
-//! - [`ColliderDesc`]: 碰撞体描述符
+//! ### Rigid Body Physics
+//! - [`RigidBodyComp`][]: Rigid body ECS component
+//! - [`RigidBodyDesc`][]: Rigid body descriptor for creating rigid bodies
+//! - [`ColliderComp`][]: Collider ECS component
+//! - [`ColliderDesc`][]: Collider descriptor
 //!
-//! ### 软体物理（Soft Body Physics）
-//! - [`SoftBodyComp`]: 软体组件
-//! - [`ClothSimulation`]: 布料模拟
-//! - [`FluidSimulation`]: 流体模拟
+//! ### Soft Body Physics
+//! - [`SoftBodyComp`][]: Soft body component
+//! - [`ClothSimulation`][]: Cloth simulation
+//! - [`FluidSimulation`][]: Fluid simulation
 //!
-//! ### 空间分区（Spatial Partitioning）
-//! - [`SpatialPartition`]: 空间分区trait
-//! - [`SpatialHash`]: 空间哈希实现
-//! - [`BVH`]: Bounding Volume Hierarchy
+//! ### Spatial Partitioning
+//! - [`SpatialPartition`][]: Spatial partition trait
+//! - [`SpatialHash`][]: Spatial hash implementation
+//! - [`BVH`][]: Bounding Volume Hierarchy
 //!
-//! ### 批处理和并行（Batching & Parallel）
-//! - [`BatchSync`]: 批量同步系统
-//! - [`ParallelPhysics`]: 并行物理计算
-//! - [`GPUPhysics`]: GPU加速物理
+//! ### Batching & Parallel
+//! - [`BatchSync`][]: Batch synchronization system
+//! - [`ParallelPhysics`][]: Parallel physics computation
+//! - [`GPUPhysics`][]: GPU-accelerated physics
 //!
-//! ## 使用方式
+//! ## Usage
 //!
-//! ### 方式1：使用ECS组件（推荐）
+//! ### Method 1: Using ECS Components (Recommended)
 //!
 //! ```rust,no_run
 //! use game_engine::physics::{RigidBodyDesc, ColliderDesc};
@@ -48,7 +49,7 @@
 //! }
 //! ```
 //!
-//! ### 方式2：使用领域服务
+//! ### Method 2: Using Domain Services
 //!
 //! ```rust,no_run
 //! use game_engine::domain::services::PhysicsDomainService;
@@ -64,59 +65,75 @@
 //!         Vec3::new(0.0, 10.0, 0.0),
 //!     );
 //!
-//!     physics_service.create_body(body).unwrap();
+//!     physics_service.create_body(body).expect("Test: operation should succeed");
 //! }
 //! ```
 //!
-//! ## 空间分区优化
+//! ## Spatial Partitioning Optimization
 //!
-//! 物理系统提供多种空间分区数据结构，用于加速碰撞检测：
+//! The physics system provides various spatial partitioning data structures
+//! to accelerate collision detection:
 //!
-//! - **空间哈希（Spatial Hashing）**: 适合均匀分布的物体
-//! - **BVH**: 适合大小不一的物体
-//! - **网格划分（Grid）**: 简单高效，适合2D
-//! - **四叉树/八叉树**: 适合层次化场景
+//! - **Spatial Hashing**: Suitable for uniformly distributed objects
+//! - **BVH**: Suitable for objects of varying sizes
+//! - **Grid**: Simple and efficient, suitable for 2D
+//! - **Quadtree/Octree**: Suitable for hierarchical scenes
 //!
-//! ## GPU加速
+//! ## GPU Acceleration
 //!
-//! 部分物理计算可以卸载到GPU：
+//! Some physics computations can be offloaded to GPU:
 //!
-//! - **粒子物理**: 大规模粒子系统
-//! - **流体模拟**: SPH（平滑粒子流体动力学）
-//! - **碰撞检测**: 宽阶段检测
+//! - **Particle Physics**: Large-scale particle systems
+//! - **Fluid Simulation**: SPH (Smoothed Particle Hydrodynamics)
+//! - **Collision Detection**: Broad phase detection
 //!
-//! ## 性能优化
+//! ## Performance Optimization
 //!
-//! - **批量同步**: 减少同步开销
-//! - **空间分区**: 减少碰撞检测对数
-//! - **休眠（Sleeping）**: 静止物体不计算
-//! - **固定物体优化**: 静态物体不移动
+//! - **Batch Synchronization**: Reduce synchronization overhead
+//! - **Spatial Partitioning**: Reduce collision detection pairs
+//! - **Sleeping**: Stationary objects are not calculated
+//! - **Fixed Body Optimization**: Static objects don't move
 //!
-//! ## 相关模块
+//! ## Related Modules
 //!
-//! - [`crate::domain::physics`]: 物理领域对象
-//! - [`crate::domain::services::PhysicsDomainService`]: 物理领域服务
-//! - [`crate::render`]: 物理可视化
-//!
+//! - [`crate::domain::physics`][]: Physics domain objects
+//! - [`crate::domain::services::PhysicsDomainService`][]: Physics domain services
+//! - [`crate::render`][]: Physics visualization
+
+// 模块私有实现说明：
+// - 基于Rapier物理引擎（2D和3D）
+// - 支持刚体和软体物理模拟
+// - 提供空间分区数据结构优化碰撞检测
+// - 支持GPU加速的物理计算
+// - 集成ECS架构用于组件化管理
 
 use crate::impl_default;
 
 pub mod batch_sync;
 pub mod collision_performance;
+pub mod cqrs;
+pub mod cqrs_performance_tests;
 pub mod dirty_tracker;
 pub mod gpu_acceleration;
-pub mod gpu_particle_physics;
 pub mod gpu_fluid_simulation;
+pub mod gpu_particle_physics;
 pub mod joints;
 pub mod multithreaded;
 pub mod parallel;
 pub mod physics3d;
+pub mod simd_integration;
 pub mod soft_body;
 pub mod spatial_partition;
+pub mod test_helpers;
 
 pub use batch_sync::{
     BatchSyncBuffer, BatchSyncManager, BatchSyncResource, batch_collect_physics_state_system,
     batch_physics_to_transform_system, position_changed_simd, rotation_changed_simd,
+};
+pub use simd_integration::{
+    ParentTransform, SimdBackendType, SimdPerformanceMonitor, SimdPerformanceStats,
+    SimdPhysicsState, simd_performance_monitor_system, simd_physics_integrate_system,
+    simd_transform_update_system, PhysicsIntegrateBatch, TransformUpdateBatch,
 };
 pub use collision_performance::{
     CollisionPerformanceMonitor, CollisionPerformanceStats, CollisionProfiler,
@@ -124,6 +141,10 @@ pub use collision_performance::{
 pub use dirty_tracker::{
     BatchSyncData, CachedPhysicsState, PhysicsDirty, PhysicsSyncConfig, PhysicsSyncStats,
     optimized_physics_sync_system, transform_to_physics_sync_system,
+};
+pub use multithreaded::{
+    MultithreadedPhysicsConfig, MultithreadedPhysicsWorld, PhysicsPerformanceStats,
+    multithreaded_physics_step_system, sync_multithreaded_physics_to_transform_system,
 };
 pub use soft_body::{
     ClothConfig, ClothSoftBody, FluidSoftBody, Particle, SoftBodyComponent, SoftBodyPhysicsWorld,
@@ -133,14 +154,10 @@ pub use spatial_partition::{
     BVHTree, SpatialHash, SpatialPartitionEnhancedConfig, SpatialPartitionManager,
     SpatialPartitionType,
 };
-pub use multithreaded::{
-    MultithreadedPhysicsConfig, MultithreadedPhysicsWorld, PhysicsPerformanceStats,
-    multithreaded_physics_step_system, sync_multithreaded_physics_to_transform_system,
-};
 
 // 向后兼容：Enhanced类型现在指向基础版本的增强功能
 /// 增强的空间分区配置（向后兼容别名）
-/// 
+///
 /// 注意：增强功能已整合到`SpatialPartitionManager`中，通过`SpatialPartitionEnhancedConfig`配置。
 /// 保留此类型别名以保持向后兼容。
 #[deprecated(
@@ -150,7 +167,7 @@ pub use multithreaded::{
 pub type EnhancedSpatialPartitionConfig = SpatialPartitionEnhancedConfig;
 
 /// 增强的空间分区管理器（向后兼容别名）
-/// 
+///
 /// 注意：增强功能已整合到`SpatialPartitionManager`中。
 /// 保留此类型别名以保持向后兼容。
 #[deprecated(
@@ -162,13 +179,20 @@ pub use gpu_acceleration::{
     CollisionResult, GpuPhysicsAccelerator, GpuPhysicsConfig, GpuPhysicsError,
     RigidSoftCollisionDetector,
 };
-pub use gpu_particle_physics::{
-    GpuParticle, GpuParticlePhysicsAccelerator, GpuParticlePhysicsConfig,
-    GpuParticlePhysicsError,
-};
 pub use gpu_fluid_simulation::{
-    GpuFluidParticle, GpuFluidSimulator, GpuFluidSimulationConfig,
-    GpuFluidSimulationError,
+    GpuFluidParticle, GpuFluidSimulationConfig, GpuFluidSimulationError, GpuFluidSimulator,
+};
+pub use gpu_particle_physics::{
+    GpuParticle, GpuParticlePhysicsAccelerator, GpuParticlePhysicsConfig, GpuParticlePhysicsError,
+};
+
+// CQRS exports
+pub use cqrs::{
+    ApplyImpulseCommand, ApplyImpulseHandler, CreateRigidBodyCommand, CreateRigidBodyHandler,
+    GetBodiesInRadiusHandler, GetBodiesInRadiusQuery, GetBodyPositionHandler,
+    GetBodyPositionQuery, GetDynamicBodiesHandler, GetDynamicBodiesQuery, PhysicsApplicationService,
+    PhysicsQueryModel, RigidBodySnapshot, RemoveRigidBodyCommand, SetVelocityCommand,
+    UpdatePositionCommand, UpdatePositionHandler,
 };
 
 // 重新导出富领域对象（推荐使用）
@@ -389,3 +413,19 @@ mod tests {
         assert!(position.is_ok());
     }
 }
+
+// ========================================
+// 综合测试模块
+// ========================================
+
+#[cfg(test)]
+mod physics_core_tests;
+
+#[cfg(test)]
+mod spatial_partition_tests;
+
+#[cfg(test)]
+mod gpu_parallel_tests;
+
+#[cfg(test)]
+mod extended_tests;

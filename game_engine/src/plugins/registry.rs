@@ -1,8 +1,8 @@
 //  插件注册表
-// 
+//
 //  管理所有已注册的插件。
 
-use super::{EnginePlugin, App, PluginMetadata};
+use super::{App, EnginePlugin, PluginMetadata};
 use std::collections::{HashMap, HashSet};
 use thiserror::Error;
 
@@ -94,9 +94,7 @@ impl PluginRegistry {
     fn build_dependency_graph(&mut self) {
         self.dependency_graph.clear();
         for (name, metadata) in &self.metadata {
-            let deps: Vec<String> = metadata.dependencies.iter()
-                .map(|d| d.name.clone())
-                .collect();
+            let deps: Vec<String> = metadata.dependencies.iter().map(|d| d.name.clone()).collect();
             self.dependency_graph.insert(name.clone(), deps);
         }
     }
@@ -137,7 +135,13 @@ impl PluginRegistry {
 
         for node in self.dependency_graph.keys() {
             if !visited.contains(node) {
-                visit(node, &self.dependency_graph, &mut visited, &mut temp_visited, &mut order);
+                visit(
+                    node,
+                    &self.dependency_graph,
+                    &mut visited,
+                    &mut temp_visited,
+                    &mut order,
+                );
             }
         }
 
@@ -185,25 +189,28 @@ impl PluginRegistry {
     pub fn has_plugin(&self, name: &str) -> bool {
         self.metadata.contains_key(name)
     }
-    
+
     /// 移除插件（用于热重载）
     pub fn remove_plugin(&mut self, name: &str) -> PluginResult<()> {
         if !self.metadata.contains_key(name) {
-            return Err(PluginError::MissingDependency("".to_string(), name.to_string()));
+            return Err(PluginError::MissingDependency(
+                "".to_string(),
+                name.to_string(),
+            ));
         }
-        
+
         // 移除元数据
         self.metadata.remove(name);
-        
+
         // 移除插件实例
         self.plugins.retain(|p| p.name() != name);
-        
+
         // 重建依赖图
         self.build_dependency_graph();
-        
+
         Ok(())
     }
-    
+
     /// 获取插件数量
     pub fn plugin_count(&self) -> usize {
         self.plugins.len()

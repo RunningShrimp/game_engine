@@ -492,7 +492,7 @@ mod tests {
         let received_clone = received.clone();
 
         bus.subscribe(move |event: &TestEvent| {
-            received_clone.lock().unwrap().push(event.value);
+            received_clone.lock().expect("Test: operation should succeed").push(event.value);
         });
 
         let event = TestEvent { value: 42 };
@@ -501,7 +501,7 @@ mod tests {
         // 给一点时间让事件处理
         std::thread::sleep(std::time::Duration::from_millis(10));
 
-        let values = received.lock().unwrap();
+        let values = received.lock().expect("Test: operation should succeed");
         assert_eq!(values.len(), 1);
         assert_eq!(values[0], 42);
     }
@@ -513,7 +513,7 @@ mod tests {
         let received_clone = received.clone();
 
         bus.subscribe(move |event: &TestEvent| {
-            received_clone.lock().unwrap().push(event.value);
+            received_clone.lock().expect("Test: operation should succeed").push(event.value);
         });
 
         let events = vec![
@@ -526,7 +526,7 @@ mod tests {
 
         std::thread::sleep(std::time::Duration::from_millis(10));
 
-        let values = received.lock().unwrap();
+        let values = received.lock().expect("Test: operation should succeed");
         assert_eq!(values.len(), 3);
         assert_eq!(*values, vec![1, 2, 3]);
     }
@@ -539,7 +539,7 @@ mod tests {
         let received_clone = received.clone();
 
         bus.subscribe(move |event: &TestEvent| {
-            *received_clone.lock().unwrap() = true;
+            *received_clone.lock().expect("Test: operation should succeed") = true;
             assert_eq!(event.value, 100);
         });
 
@@ -548,6 +548,6 @@ mod tests {
 
         std::thread::sleep(std::time::Duration::from_millis(10));
 
-        assert!(*received.lock().unwrap());
+        assert!(*received.lock().expect("Test: operation should succeed"));
     }
 }

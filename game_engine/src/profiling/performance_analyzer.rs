@@ -414,7 +414,7 @@ mod tests {
         assert!(result.is_ok());
         assert!(Path::new(report_path).exists());
 
-        let content = fs::read_to_string(report_path).unwrap();
+        let content = fs::read_to_string(report_path).expect("Test: operation should succeed");
         assert!(content.contains("Performance Analysis Report"));
     }
 }

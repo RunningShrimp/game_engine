@@ -251,7 +251,7 @@ impl PerformanceMonitor {
                     ui.label("No GPU queries recorded");
                 } else {
                     let mut sorted_queries: Vec<_> = queries.iter().collect();
-                    sorted_queries.sort_by(|a, b| b.1.partial_cmp(a.1).unwrap());
+                    sorted_queries.sort_by(|a, b| b.1.partial_cmp(a.1).expect("Test: operation should succeed"));
 
                     let total_time: f32 = queries.values().sum();
                     ui.label(format!("Total GPU Time: {:.2}ms", total_time));

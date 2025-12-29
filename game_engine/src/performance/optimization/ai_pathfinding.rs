@@ -503,7 +503,6 @@ impl BatchPathfinder {
                 // 注意: 这里不使用内部的 agents HashMap，因为 HashMap 不是线程安全的
                 if let Some(agent) = self.agents.get(agent_id) {
                     let mut temp_agent = agent.clone();
-                    
 
                     // 如果在主线程中需要缓存路径，可以在这里处理
                     // 但需要注意线程安全
@@ -632,7 +631,7 @@ mod tests {
 
         // 验证路径包含目标点
         assert!(
-            result.path.contains(&target) || result.path.last().unwrap().distance(target) < 1.0
+            result.path.contains(&target) || result.path.last().expect("Test: operation should succeed").distance(target) < 1.0
         );
     }
 }

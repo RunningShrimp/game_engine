@@ -214,7 +214,7 @@ impl BottleneckDetector {
         bottlenecks.sort_by(|a, b| {
             b.severity
                 .cmp(&a.severity)
-                .then_with(|| b.variance.partial_cmp(&a.variance).unwrap())
+                .then_with(|| b.variance.partial_cmp(&a.variance).expect("Test: operation should succeed"))
         });
         bottlenecks.truncate(count);
         bottlenecks
@@ -381,7 +381,7 @@ mod tests {
         assert!(physics_bottleneck.is_none());
         assert!(render_bottleneck.is_some());
 
-        let render_diag = render_bottleneck.unwrap();
+        let render_diag = render_bottleneck.expect("Test: operation should succeed");
         // Higher variance should trigger at least Medium bottleneck
         assert!(render_diag.severity >= BottleneckSeverity::Medium);
     }

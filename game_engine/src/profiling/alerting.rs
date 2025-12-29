@@ -415,15 +415,13 @@ impl AlertingEngine {
 
     /// 添加告警策略
     pub fn add_strategy(&mut self, metric_name: &str, strategy: AlertStrategy) {
-        let strategies =
-            self.alert_strategies.entry(metric_name.to_string()).or_default();
+        let strategies = self.alert_strategies.entry(metric_name.to_string()).or_default();
         strategies.push(strategy);
     }
 
     /// 更新指标值
     pub fn update_metric(&mut self, metric_name: &str, value: f64) {
-        let values =
-            self.metric_values.entry(metric_name.to_string()).or_default();
+        let values = self.metric_values.entry(metric_name.to_string()).or_default();
 
         // 添加新值
         values.push_back(value);
@@ -447,18 +445,19 @@ impl AlertingEngine {
         // 检查每个指标的告警策略
         for (metric_name, strategies) in &self.alert_strategies {
             if let Some(values) = self.metric_values.get(metric_name)
-                && let Some(&current_value) = values.back() {
-                    for strategy in strategies {
-                        if let Some(alert) =
-                            self.evaluate_strategy(metric_name, current_value, values, strategy)?
-                        {
-                            // 检查去重
-                            if !self.is_duplicate_alert(metric_name, &alert) {
-                                new_alerts.push(alert);
-                            }
+                && let Some(&current_value) = values.back()
+            {
+                for strategy in strategies {
+                    if let Some(alert) =
+                        self.evaluate_strategy(metric_name, current_value, values, strategy)?
+                    {
+                        // 检查去重
+                        if !self.is_duplicate_alert(metric_name, &alert) {
+                            new_alerts.push(alert);
                         }
                     }
                 }
+            }
         }
 
         // 处理新告警
@@ -583,9 +582,10 @@ impl AlertingEngine {
 
         // 检查趋势方向匹配
         if let Some(required_direction) = strategy.trend_direction
-            && trend_direction != required_direction {
-                return Ok(None);
-            }
+            && trend_direction != required_direction
+        {
+            return Ok(None);
+        }
 
         // 计算变化率和置信度
         let change_rate = self.calculate_change_rate(&window_data);
@@ -754,7 +754,9 @@ impl AlertingEngine {
                 .iter()
                 .map(|a| a.level)
                 .max_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
-                .unwrap_or(matched_alerts.first().map(|a| a.level).unwrap_or(matched_alerts[0].level));
+                .unwrap_or(
+                    matched_alerts.first().map(|a| a.level).unwrap_or(matched_alerts[0].level),
+                );
 
             let alert = AlertInstance {
                 id: format!(
@@ -849,11 +851,12 @@ impl AlertingEngine {
                 // 重新评估告警条件
                 if let Some(historical_values) = self.metric_values.get(&alert.metric_name)
                     && let Some(&current_value) = historical_values.back()
-                        && let Ok(should_resolve) =
-                            self.should_resolve_alert(alert, current_value, historical_values)
-                            && should_resolve {
-                                alerts_to_resolve.push((alert_id.clone(), now));
-                            }
+                    && let Ok(should_resolve) =
+                        self.should_resolve_alert(alert, current_value, historical_values)
+                    && should_resolve
+                {
+                    alerts_to_resolve.push((alert_id.clone(), now));
+                }
             }
         }
 
@@ -1107,16 +1110,17 @@ impl AlertingEngine {
     /// 确认告警
     pub fn acknowledge_alert(&mut self, alert_id: &str) -> bool {
         if let Some(alert) = self.active_alerts.get_mut(alert_id)
-            && alert.status == AlertStatus::Active {
-                alert.status = AlertStatus::Acknowledged;
-                alert.acknowledged_at = Some(
-                    std::time::SystemTime::now()
-                        .duration_since(std::time::UNIX_EPOCH)
-                        .expect("System time should be after UNIX_EPOCH")
-                        .as_secs(),
-                );
-                return true;
-            }
+            && alert.status == AlertStatus::Active
+        {
+            alert.status = AlertStatus::Acknowledged;
+            alert.acknowledged_at = Some(
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .expect("System time should be after UNIX_EPOCH")
+                    .as_secs(),
+            );
+            return true;
+        }
         false
     }
 }
@@ -1142,9 +1146,10 @@ impl NotificationSender {
     pub fn send_alert(&mut self, alert: &AlertInstance) -> ProfilingResult<()> {
         // 发送邮件通知
         if self.config.enable_email
-            && let Some(ref email_config) = self.config.email_config {
-                self.send_email_notification(alert, email_config)?;
-            }
+            && let Some(ref email_config) = self.config.email_config
+        {
+            self.send_email_notification(alert, email_config)?;
+        }
 
         // 发送Webhook通知
         if self.config.enable_webhook {

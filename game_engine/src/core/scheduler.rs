@@ -15,10 +15,10 @@ use crossbeam_channel::{Receiver, Sender, unbounded};
 use std::future::Future;
 use std::sync::{Arc, Mutex};
 use tokio::sync::oneshot;
+use crate::error::SystemError;
 
 /// 任务优先级
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub enum TaskPriority {
     /// 低优先级
     Low = 0,
@@ -30,7 +30,6 @@ pub enum TaskPriority {
     /// 关键优先级
     Critical = 3,
 }
-
 
 impl TaskPriority {
     /// 创建默认优先级的任务
@@ -102,9 +101,10 @@ impl TaskHandle {
     /// ```
     pub fn cancel(&self) {
         if let Ok(mut tx_opt) = self.cancel_tx.lock()
-            && let Some(tx) = tx_opt.take() {
-                let _ = tx.send(());
-            }
+            && let Some(tx) = tx_opt.take()
+        {
+            let _ = tx.send(());
+        }
     }
 }
 
@@ -148,7 +148,11 @@ impl TaskScheduler {
     ///
     /// # 参数
     /// - `worker_threads`: 工作线程数量，0 表示使用 CPU 核心数
-    pub fn new(worker_threads: usize) -> Self {
+    ///
+    /// # 错误
+    ///
+    /// 当 Tokio 运行时创建失败时返回 `SystemError::Thread` 错误。
+    pub fn new(worker_threads: usize) -> Result<Self, SystemError> {
         let workers = if worker_threads == 0 {
             num_cpus::get()
         } else {
@@ -159,17 +163,21 @@ impl TaskScheduler {
             .worker_threads(workers)
             .enable_all()
             .build()
-            .expect("Failed to create tokio runtime");
+            .map_err(|e| SystemError::Thread {
+                thread: "TaskScheduler".to_string(),
+                message: format!("Failed to create tokio runtime: {}", e),
+                severity: crate::error::ErrorSeverity::Critical,
+            })?;
 
         let (main_thread_tx, main_thread_rx) = unbounded();
 
-        Self {
+        Ok(Self {
             runtime,
             main_thread_rx,
             main_thread_tx,
             next_task_id: std::sync::atomic::AtomicU64::new(1),
             worker_count: workers,
-        }
+        })
     }
 
     /// 在后台线程执行异步任务
@@ -424,7 +432,10 @@ pub struct TaskSchedulerResource {
 impl Default for TaskSchedulerResource {
     fn default() -> Self {
         Self {
-            scheduler: Arc::new(TaskScheduler::new(0)), // 使用默认线程数
+            scheduler: Arc::new(
+                TaskScheduler::new(0)
+                    .expect("Failed to create TaskScheduler: runtime initialization is critical for engine operation")
+            ), // 使用默认线程数
         }
     }
 }
@@ -508,7 +519,10 @@ impl DelayedTaskQueue {
                 execute_at: self.current_time + delay_seconds,
                 task: Box::new(task),
             });
-            tasks.sort_by(|a, b| a.execute_at.partial_cmp(&b.execute_at).unwrap());
+            // Sort by execution time. partial_cmp handles NaN values gracefully.
+            tasks.sort_by(|a, b| {
+                a.execute_at.partial_cmp(&b.execute_at).unwrap_or(std::cmp::Ordering::Equal)
+            });
         }
     }
 
@@ -593,13 +607,13 @@ mod tests {
 
     #[test]
     fn test_scheduler_creation() {
-        let scheduler = TaskScheduler::new(2);
+        let scheduler = TaskScheduler::new(2).expect("Failed to create scheduler");
         assert_eq!(scheduler.worker_count(), 2);
     }
 
     #[test]
     fn test_main_thread_task() {
-        let scheduler = TaskScheduler::new(1);
+        let scheduler = TaskScheduler::new(1).expect("Failed to create scheduler");
         let counter = Arc::new(std::sync::atomic::AtomicU32::new(0));
         let counter_clone = counter.clone();
 

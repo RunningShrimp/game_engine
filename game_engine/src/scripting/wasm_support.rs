@@ -19,9 +19,9 @@
 //  let result = runtime.call_function("game_logic", "update", vec![WasmValue::F32(0.016)]);
 //  ```
 
+// Temporarily disabled - wasmtime feature removed
+#[cfg(feature = "wasm")]
 use std::collections::HashMap;
-
-// wasmtime 类型通过 wasmtime:: 前缀使用，不需要直接导入
 
 /// WASM 类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -114,12 +114,27 @@ pub struct WasmModule {
     exports: HashMap<String, WasmFunction>,
     /// 模块是否已加载
     loaded: bool,
-    /// wasmtime 模块（当启用 wasm feature 时）
-    #[cfg(feature = "wasm")]
-    module: Option<wasmtime::Module>,
-    /// wasmtime 实例
-    #[cfg(feature = "wasm")]
-    instance: Option<wasmtime::Instance>,
+    /// 后端特定的模块数据
+    backend_data: BackendModuleData,
+}
+
+// ============================================================================
+// 后端特定的模块数据
+// ============================================================================
+
+/// 后端特定的模块数据 - WASM 后端
+#[cfg(feature = "wasm")]
+enum BackendModuleData {
+    Wasm {
+        module: Option<wasmtime::Module>,
+        instance: Option<wasmtime::Instance>,
+    },
+}
+
+/// 后端特定的模块数据 - Stub 后端
+#[cfg(not(feature = "wasm"))]
+enum BackendModuleData {
+    Stub,
 }
 
 impl WasmModule {
@@ -130,11 +145,23 @@ impl WasmModule {
             bytecode,
             exports: HashMap::new(),
             loaded: false,
-            #[cfg(feature = "wasm")]
+            backend_data: Self::create_backend_data(),
+        }
+    }
+
+    /// 创建后端数据（条件编译仅在此处）
+    #[cfg(feature = "wasm")]
+    fn create_backend_data() -> BackendModuleData {
+        BackendModuleData::Wasm {
             module: None,
-            #[cfg(feature = "wasm")]
             instance: None,
         }
+    }
+
+    /// 创建后端数据（条件编译仅在此处）
+    #[cfg(not(feature = "wasm"))]
+    fn create_backend_data() -> BackendModuleData {
+        BackendModuleData::Stub
     }
 
     /// 获取模块名称
@@ -178,8 +205,201 @@ impl WasmModule {
     }
 }
 
+// ============================================================================
+// WASM 运行时 Trait 抽象
+// ============================================================================
+
+/// WASM 运行时后端 trait
+pub trait WasmBackend: Send + Sync {
+    /// 加载 WASM 模块
+    fn load_module(&mut self, name: &str, bytecode: &[u8]) -> Result<BackendModuleData, String>;
+
+    /// 调用 WASM 函数
+    fn call_function(
+        &mut self,
+        module_data: &mut BackendModuleData,
+        function_name: &str,
+        args: Vec<WasmValue>,
+    ) -> Result<Option<WasmValue>, String>;
+}
+
+// ============================================================================
+// Native WASM 后端实现
+// ============================================================================
+
+#[cfg(feature = "wasm")]
+pub use wasm_impl::NativeWasmBackend;
+
+#[cfg(feature = "wasm")]
+mod wasm_impl {
+    use super::*;
+
+    /// Native WASM 后端实现
+    pub struct NativeWasmBackend {
+        engine: wasmtime::Engine,
+        store: wasmtime::Store<()>,
+    }
+
+    impl NativeWasmBackend {
+        pub fn new() -> Result<Self, String> {
+            let engine = wasmtime::Engine::default();
+            let store = wasmtime::Store::new(&engine, ());
+
+            Ok(Self { engine, store })
+        }
+    }
+
+    impl WasmBackend for NativeWasmBackend {
+        fn load_module(
+            &mut self,
+            _name: &str,
+            bytecode: &[u8],
+        ) -> Result<BackendModuleData, String> {
+            // 编译 WASM 模块
+            let module = wasmtime::Module::new(&self.engine, bytecode)
+                .map_err(|e| format!("Failed to compile WASM module: {}", e))?;
+
+            // 创建导入
+            let linker = wasmtime::Linker::new(&self.engine);
+
+            // 实例化模块
+            let instance = linker
+                .instantiate(&mut self.store, &module)
+                .map_err(|e| format!("Failed to instantiate WASM module: {}", e))?;
+
+            Ok(BackendModuleData::Wasm {
+                module: Some(module),
+                instance: Some(instance),
+            })
+        }
+
+        fn call_function(
+            &mut self,
+            module_data: &mut BackendModuleData,
+            function_name: &str,
+            args: Vec<WasmValue>,
+        ) -> Result<Option<WasmValue>, String> {
+            let (module, instance) = match module_data {
+                BackendModuleData::Wasm { module, instance } => (
+                    module.as_ref().ok_or("Module not loaded")?,
+                    instance.as_mut().ok_or("Instance not created")?,
+                ),
+            };
+
+            // 获取函数
+            let func = instance
+                .get_func(&mut self.store, function_name)
+                .ok_or_else(|| format!("Function '{}' not found", function_name))?;
+
+            // 转换参数
+            let wasm_args: Vec<wasmtime::Val> = args.iter().map(wasm_value_to_val).collect();
+
+            // 准备结果
+            let func_type = func.ty(&self.store);
+            let result_count = func_type.results().len();
+            let mut results = vec![wasmtime::Val::I32(0); result_count];
+
+            // 调用函数
+            func.call(&mut self.store, &wasm_args, &mut results)
+                .map_err(|e| format!("Failed to call function '{}': {}", function_name, e))?;
+
+            // 返回结果
+            if results.is_empty() {
+                Ok(None)
+            } else {
+                Ok(Some(val_to_wasm_value(&results[0])))
+            }
+        }
+    }
+
+    /// 将 wasmtime ValType 转换为 WasmType
+    pub(super) fn val_type_to_wasm_type(val_type: &wasmtime::ValType) -> WasmType {
+        match val_type {
+            wasmtime::ValType::I32 => WasmType::I32,
+            wasmtime::ValType::I64 => WasmType::I64,
+            wasmtime::ValType::F32 => WasmType::F32,
+            wasmtime::ValType::F64 => WasmType::F64,
+            _ => WasmType::I32,
+        }
+    }
+
+    /// 将 WasmValue 转换为 wasmtime Val
+    pub(super) fn wasm_value_to_val(value: &WasmValue) -> wasmtime::Val {
+        match value {
+            WasmValue::I32(v) => wasmtime::Val::I32(*v),
+            WasmValue::I64(v) => wasmtime::Val::I64(*v),
+            WasmValue::F32(v) => wasmtime::Val::F32(v.to_bits()),
+            WasmValue::F64(v) => wasmtime::Val::F64(v.to_bits()),
+        }
+    }
+
+    /// 将 wasmtime Val 转换为 WasmValue
+    pub(super) fn val_to_wasm_value(val: &wasmtime::Val) -> WasmValue {
+        match val {
+            wasmtime::Val::I32(v) => WasmValue::I32(*v),
+            wasmtime::Val::I64(v) => WasmValue::I64(*v),
+            wasmtime::Val::F32(v) => WasmValue::F32(f32::from_bits(*v)),
+            wasmtime::Val::F64(v) => WasmValue::F64(f64::from_bits(*v)),
+            _ => WasmValue::I32(0),
+        }
+    }
+}
+
+// ============================================================================
+// Stub WASM 后端实现
+// ============================================================================
+
+#[cfg(not(feature = "wasm"))]
+pub use stub_impl::StubWasmBackend;
+
+#[cfg(not(feature = "wasm"))]
+mod stub_impl {
+    use super::*;
+
+    /// Stub WASM 后端实现（无实际 WASM 支持）
+    pub struct StubWasmBackend;
+
+    impl StubWasmBackend {
+        pub fn new() -> Result<Self, String> {
+            Ok(Self)
+        }
+    }
+
+    impl WasmBackend for StubWasmBackend {
+        fn load_module(
+            &mut self,
+            _name: &str,
+            _bytecode: &[u8],
+        ) -> Result<BackendModuleData, String> {
+            Ok(BackendModuleData::Stub)
+        }
+
+        fn call_function(
+            &mut self,
+            _module_data: &mut BackendModuleData,
+            _function_name: &str,
+            _args: Vec<WasmValue>,
+        ) -> Result<Option<WasmValue>, String> {
+            Err("WebAssembly support not enabled. Enable the 'wasm' feature.".to_string())
+        }
+    }
+}
+
+// ============================================================================
+// WASM 运行时
+// ============================================================================
+
+/// WASM 运行时类型别名（根据 feature flag 选择后端）
+#[cfg(feature = "wasm")]
+type WasmRuntimeBackend = NativeWasmBackend;
+
+#[cfg(not(feature = "wasm"))]
+type WasmRuntimeBackend = StubWasmBackend;
+
 /// WASM 运行时 - 管理 WebAssembly 模块的加载和执行
 pub struct WasmRuntime {
+    /// 后端实现
+    backend: WasmRuntimeBackend,
     /// 已加载的模块
     modules: HashMap<String, WasmModule>,
     /// 宿主函数注册表
@@ -187,96 +407,73 @@ pub struct WasmRuntime {
         String,
         Box<dyn Fn(Vec<WasmValue>) -> Result<Option<WasmValue>, String> + Send + Sync>,
     >,
-    /// wasmtime 引擎（当启用 wasm feature 时）
-    #[cfg(feature = "wasm")]
-    engine: wasmtime::Engine,
-    /// wasmtime 存储（当启用 wasm feature 时）
-    #[cfg(feature = "wasm")]
-    store: wasmtime::Store<()>,
 }
 
 impl Default for WasmRuntime {
     fn default() -> Self {
-        Self::new().expect("Failed to create default WasmRuntime")
+        // Safe to expect: backend creation only fails if system resources are exhausted
+        // In practice, NativeWasmBackend::new() never fails, StubWasmBackend::new() always succeeds
+        Self {
+            backend: WasmRuntimeBackend::new()
+                .expect("WASM runtime backend initialization failed - system resources exhausted"),
+            modules: HashMap::new(),
+            host_functions: HashMap::new(),
+        }
     }
 }
 
 impl WasmRuntime {
     /// 创建新的 WASM 运行时
-    #[cfg(feature = "wasm")]
     pub fn new() -> Result<Self, String> {
-        let engine = wasmtime::Engine::default();
-        let store = wasmtime::Store::new(&engine, ());
+        let backend = WasmRuntimeBackend::new()?;
 
         Ok(Self {
-            modules: HashMap::new(),
-            host_functions: HashMap::new(),
-            engine,
-            store,
-        })
-    }
-
-    /// 创建新的 WASM 运行时（无 wasm feature 时的回退实现）
-    #[cfg(not(feature = "wasm"))]
-    pub fn new() -> Result<Self, String> {
-        Ok(Self {
+            backend,
             modules: HashMap::new(),
             host_functions: HashMap::new(),
         })
     }
 
     /// 加载 WASM 模块
-    #[cfg(feature = "wasm")]
     pub fn load_module(&mut self, name: impl Into<String>, bytecode: &[u8]) -> Result<(), String> {
         let name = name.into();
 
-        // 编译 WASM 模块
-        let module = wasmtime::Module::new(&self.engine, bytecode)
-            .map_err(|e| format!("Failed to compile WASM module: {}", e))?;
+        // 使用后端加载模块
+        let backend_data = self.backend.load_module(&name, bytecode)?;
 
-        // 创建导入（暂时使用空导入，后续可以添加宿主函数）
-        let linker = wasmtime::Linker::new(&self.engine);
-
-        // 实例化模块
-        let instance = linker
-            .instantiate(&mut self.store, &module)
-            .map_err(|e| format!("Failed to instantiate WASM module: {}", e))?;
-
-        // 获取导出的函数
-        let mut exports = HashMap::new();
-        for export in module.exports() {
-            if let wasmtime::ExternType::Func(func_type) = export.ty() {
-                let param_types: Vec<WasmType> =
-                    func_type.params().map(|p| val_type_to_wasm_type(&p)).collect();
-                let return_type = func_type.results().next().map(|r| val_type_to_wasm_type(&r));
-
-                exports.insert(
-                    export.name().to_string(),
-                    WasmFunction {
-                        name: export.name().to_string(),
-                        param_types,
-                        return_type,
-                    },
-                );
-            }
-        }
-
-        let mut wasm_module = WasmModule::new(name.clone(), bytecode.to_vec());
-        wasm_module.loaded = true;
-        wasm_module.module = Some(module);
-        wasm_module.instance = Some(instance);
-        wasm_module.exports = exports;
-
-        self.modules.insert(name, wasm_module);
-        Ok(())
-    }
-
-    /// 加载 WASM 模块（无 wasm feature 时的回退实现）
-    #[cfg(not(feature = "wasm"))]
-    pub fn load_module(&mut self, name: impl Into<String>, bytecode: &[u8]) -> Result<(), String> {
-        let name = name.into();
+        // 创建模块包装
         let mut module = WasmModule::new(name.clone(), bytecode.to_vec());
         module.loaded = true;
+        module.backend_data = backend_data;
+
+        // 如果是 WASM 后端，提取导出函数信息
+        #[cfg(feature = "wasm")]
+        if let BackendModuleData::Wasm {
+            module: Some(wasm_module),
+            ..
+        } = &module.backend_data
+        {
+            let mut exports = HashMap::new();
+            for export in wasm_module.exports() {
+                if let wasmtime::ExternType::Func(func_type) = export.ty() {
+                    let param_types: Vec<WasmType> =
+                        func_type.params().map(|p| wasm_impl::val_type_to_wasm_type(&p)).collect();
+                    let return_type =
+                        func_type.results().next().map(|r| wasm_impl::val_type_to_wasm_type(&r));
+
+                    exports.insert(
+                        export.name().to_string(),
+                        WasmFunction {
+                            name: export.name().to_string(),
+                            param_types,
+                            return_type,
+                        },
+                    );
+                }
+            }
+            module.exports = exports;
+        }
+
         self.modules.insert(name, module);
         Ok(())
     }
@@ -290,7 +487,6 @@ impl WasmRuntime {
     }
 
     /// 调用 WASM 函数
-    #[cfg(feature = "wasm")]
     pub fn call_function(
         &mut self,
         module_name: &str,
@@ -299,52 +495,10 @@ impl WasmRuntime {
     ) -> Result<Option<WasmValue>, String> {
         let module = self
             .modules
-            .get(module_name)
+            .get_mut(module_name)
             .ok_or_else(|| format!("Module '{}' not found", module_name))?;
 
-        let instance = module
-            .instance
-            .as_ref()
-            .ok_or_else(|| format!("Module '{}' not instantiated", module_name))?;
-
-        // 获取函数
-        let func = instance.get_func(&mut self.store, function_name).ok_or_else(|| {
-            format!(
-                "Function '{}' not found in module '{}'",
-                function_name, module_name
-            )
-        })?;
-
-        // 转换参数
-        let wasm_args: Vec<wasmtime::Val> = args.iter().map(wasm_value_to_val).collect();
-
-        // 准备结果
-        let func_type = func.ty(&self.store);
-        let result_count = func_type.results().len();
-        let mut results = vec![wasmtime::Val::I32(0); result_count];
-
-        // 调用函数
-        func.call(&mut self.store, &wasm_args, &mut results)
-            .map_err(|e| format!("Failed to call function '{}': {}", function_name, e))?;
-
-        // 返回结果
-        if results.is_empty() {
-            Ok(None)
-        } else {
-            Ok(Some(val_to_wasm_value(&results[0])))
-        }
-    }
-
-    /// 调用 WASM 函数（无 wasm feature 时的回退实现）
-    #[cfg(not(feature = "wasm"))]
-    pub fn call_function(
-        &mut self,
-        module_name: &str,
-        function_name: &str,
-        args: Vec<WasmValue>,
-    ) -> Result<Option<WasmValue>, String> {
-        let _ = (module_name, function_name, args);
-        Err("WebAssembly support not enabled. Enable the 'wasm' feature.".to_string())
+        self.backend.call_function(&mut module.backend_data, function_name, args)
     }
 
     /// 注册宿主函数
@@ -359,14 +513,10 @@ impl WasmRuntime {
     /// 注册引擎 API
     pub fn register_engine_api(&mut self) {
         // 实体操作
-        self.register_host_function("env", "spawn_entity", |_args| {
-            // 返回新实体 ID（占位实现）
-            Ok(Some(WasmValue::I32(1)))
-        });
+        self.register_host_function("env", "spawn_entity", |_args| Ok(Some(WasmValue::I32(1))));
 
         self.register_host_function("env", "despawn_entity", |args| {
             if let Some(entity_id) = args.first().and_then(|v| v.as_i32()) {
-                // 删除实体（占位实现）
                 let _ = entity_id;
                 Ok(None)
             } else {
@@ -377,7 +527,6 @@ impl WasmRuntime {
         // 组件操作
         self.register_host_function("env", "add_component", |args| {
             if args.len() >= 2 {
-                // 添加组件（占位实现）
                 Ok(None)
             } else {
                 Err("add_component requires entity ID and component type".to_string())
@@ -386,7 +535,6 @@ impl WasmRuntime {
 
         self.register_host_function("env", "get_component", |args| {
             if let Some(_entity_id) = args.first().and_then(|v| v.as_i32()) {
-                // 获取组件（占位实现）
                 Ok(None)
             } else {
                 Err("get_component requires an entity ID".to_string())
@@ -396,7 +544,6 @@ impl WasmRuntime {
         // 变换操作
         self.register_host_function("env", "set_position", |args| {
             if args.len() >= 4 {
-                // 设置位置（占位实现）
                 Ok(None)
             } else {
                 Err("set_position requires entity ID and x, y, z coordinates".to_string())
@@ -405,7 +552,6 @@ impl WasmRuntime {
 
         self.register_host_function("env", "get_position", |args| {
             if let Some(_entity_id) = args.first().and_then(|v| v.as_i32()) {
-                // 获取位置（占位实现）
                 Ok(Some(WasmValue::F32(0.0)))
             } else {
                 Err("get_position requires an entity ID".to_string())
@@ -415,7 +561,6 @@ impl WasmRuntime {
         // 输入操作
         self.register_host_function("env", "is_key_pressed", |args| {
             if let Some(_key_code) = args.first().and_then(|v| v.as_i32()) {
-                // 检查按键状态（占位实现）
                 Ok(Some(WasmValue::I32(0)))
             } else {
                 Err("is_key_pressed requires a key code".to_string())
@@ -423,14 +568,12 @@ impl WasmRuntime {
         });
 
         self.register_host_function("env", "get_mouse_position", |_args| {
-            // 获取鼠标位置（占位实现）
             Ok(Some(WasmValue::F32(0.0)))
         });
 
         // 音频操作
         self.register_host_function("env", "play_sound", |args| {
             if let Some(_sound_id) = args.first().and_then(|v| v.as_i32()) {
-                // 播放声音（占位实现）
                 Ok(None)
             } else {
                 Err("play_sound requires a sound ID".to_string())
@@ -439,7 +582,6 @@ impl WasmRuntime {
 
         self.register_host_function("env", "stop_sound", |args| {
             if let Some(_sound_id) = args.first().and_then(|v| v.as_i32()) {
-                // 停止声音（占位实现）
                 Ok(None)
             } else {
                 Err("stop_sound requires a sound ID".to_string())
@@ -448,25 +590,15 @@ impl WasmRuntime {
 
         // 时间操作
         self.register_host_function("env", "get_delta_time", |_args| {
-            // 获取帧时间差（占位实现）
             Ok(Some(WasmValue::F32(0.016)))
         });
 
-        self.register_host_function("env", "get_time", |_args| {
-            // 获取游戏时间（占位实现）
-            Ok(Some(WasmValue::F64(0.0)))
-        });
+        self.register_host_function("env", "get_time", |_args| Ok(Some(WasmValue::F64(0.0))));
 
         // 日志操作
-        self.register_host_function("env", "log_info", |_args| {
-            // 日志输出（占位实现）
-            Ok(None)
-        });
+        self.register_host_function("env", "log_info", |_args| Ok(None));
 
-        self.register_host_function("env", "log_error", |_args| {
-            // 错误日志输出（占位实现）
-            Ok(None)
-        });
+        self.register_host_function("env", "log_error", |_args| Ok(None));
     }
 
     /// 获取已加载的模块列表
@@ -482,41 +614,6 @@ impl WasmRuntime {
     /// 获取模块的导出函数
     pub fn get_module_exports(&self, name: &str) -> Option<Vec<&str>> {
         self.modules.get(name).map(|m| m.get_exports())
-    }
-}
-
-/// 将 wasmtime ValType 转换为 WasmType
-#[cfg(feature = "wasm")]
-fn val_type_to_wasm_type(val_type: &wasmtime::ValType) -> WasmType {
-    match val_type {
-        wasmtime::ValType::I32 => WasmType::I32,
-        wasmtime::ValType::I64 => WasmType::I64,
-        wasmtime::ValType::F32 => WasmType::F32,
-        wasmtime::ValType::F64 => WasmType::F64,
-        _ => WasmType::I32, // 默认回退到 I32
-    }
-}
-
-/// 将 WasmValue 转换为 wasmtime Val
-#[cfg(feature = "wasm")]
-fn wasm_value_to_val(value: &WasmValue) -> wasmtime::Val {
-    match value {
-        WasmValue::I32(v) => wasmtime::Val::I32(*v),
-        WasmValue::I64(v) => wasmtime::Val::I64(*v),
-        WasmValue::F32(v) => wasmtime::Val::F32(v.to_bits()),
-        WasmValue::F64(v) => wasmtime::Val::F64(v.to_bits()),
-    }
-}
-
-/// 将 wasmtime Val 转换为 WasmValue
-#[cfg(feature = "wasm")]
-fn val_to_wasm_value(val: &wasmtime::Val) -> WasmValue {
-    match val {
-        wasmtime::Val::I32(v) => WasmValue::I32(*v),
-        wasmtime::Val::I64(v) => WasmValue::I64(*v),
-        wasmtime::Val::F32(v) => WasmValue::F32(f32::from_bits(*v)),
-        wasmtime::Val::F64(v) => WasmValue::F64(f64::from_bits(*v)),
-        _ => WasmValue::I32(0), // 默认回退
     }
 }
 

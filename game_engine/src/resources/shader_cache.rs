@@ -6,12 +6,12 @@
 //! - 增量编译（只编译变化的部分）
 //! - 缓存验证（检查着色器源文件是否变化）
 
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
-use std::hash::{Hash, Hasher};
-use std::collections::hash_map::DefaultHasher;
-use serde::{Deserialize, Serialize};
 
 use super::time::current_timestamp_ms;
 
@@ -146,13 +146,12 @@ impl ShaderCache {
                 // 尝试加载缓存条目
                 if let Ok(cache_entry) = self.load_cache_entry_from_disk(&path) {
                     // 验证缓存版本
-                    if cache_entry.cache_version == self.config.cache_version {
-                        let mut memory_cache = self.memory_cache.write().unwrap();
-                        if memory_cache.len() < self.config.max_memory_entries {
-                            memory_cache.insert(cache_entry.key.clone(), cache_entry);
-                            loaded_count += 1;
-                        }
-                    }
+                    if cache_entry.cache_version == self.config.cache_version
+                        && let Ok(mut memory_cache) = self.memory_cache.write()
+                            && memory_cache.len() < self.config.max_memory_entries {
+                                memory_cache.insert(cache_entry.key.clone(), cache_entry);
+                                loaded_count += 1;
+                            }
                 }
             }
         }
@@ -167,23 +166,27 @@ impl ShaderCache {
     }
 
     /// 从磁盘加载缓存条目
-    fn load_cache_entry_from_disk(&self, path: &Path) -> Result<ShaderCacheEntry, ShaderCacheError> {
+    fn load_cache_entry_from_disk(
+        &self,
+        path: &Path,
+    ) -> Result<ShaderCacheEntry, ShaderCacheError> {
         // 读取SPIR-V字节码
-        let spirv = std::fs::read(path).map_err(|e| {
-            ShaderCacheError::IoError(format!("Failed to read cache file: {}", e))
-        })?;
+        let spirv = std::fs::read(path)
+            .map_err(|e| ShaderCacheError::IoError(format!("Failed to read cache file: {}", e)))?;
 
         // 读取元数据文件（如果存在）
         let metadata_path = path.with_extension("meta");
         let (source_hash, compile_timestamp, cache_version) = if metadata_path.exists() {
-            let metadata: ShaderCacheMetadata = serde_json::from_slice(
-                &std::fs::read(&metadata_path).map_err(|e| {
+            let metadata: ShaderCacheMetadata =
+                serde_json::from_slice(&std::fs::read(&metadata_path).map_err(|e| {
                     ShaderCacheError::IoError(format!("Failed to read metadata: {}", e))
-                })?,
-            )
-            .map_err(|e| {
-                ShaderCacheError::DeserializeError(format!("Failed to deserialize metadata: {}", e))
-            })?;
+                })?)
+                .map_err(|e| {
+                    ShaderCacheError::DeserializeError(format!(
+                        "Failed to deserialize metadata: {}",
+                        e
+                    ))
+                })?;
             (
                 metadata.source_hash,
                 metadata.compile_timestamp,
@@ -213,47 +216,50 @@ impl ShaderCache {
     /// 获取缓存的着色器（如果存在）
     pub fn get(&self, key: &ShaderCacheKey) -> Option<Vec<u8>> {
         // 检查内存缓存
-        if self.config.enable_memory_cache {
-            let memory_cache = self.memory_cache.read().unwrap();
-            if let Some(entry) = memory_cache.get(key) {
-                // 验证源文件是否变化
-                if self.verify_source_hash(key, entry.source_hash) {
-                    let mut stats = self.stats.write().unwrap();
-                    stats.hits += 1;
-                    return Some(entry.spirv.clone());
-                } else {
-                    // 源文件已变化，移除缓存
-                    drop(memory_cache);
-                    let mut memory_cache = self.memory_cache.write().unwrap();
-                    memory_cache.remove(key);
+        if self.config.enable_memory_cache
+            && let Ok(memory_cache) = self.memory_cache.read()
+                && let Some(entry) = memory_cache.get(key) {
+                    // 验证源文件是否变化
+                    if self.verify_source_hash(key, entry.source_hash) {
+                        if let Ok(mut stats) = self.stats.write() {
+                            stats.hits += 1;
+                        }
+                        return Some(entry.spirv.clone());
+                    } else {
+                        // 源文件已变化，移除缓存
+                        drop(memory_cache);
+                        if let Ok(mut memory_cache) = self.memory_cache.write() {
+                            memory_cache.remove(key);
+                        }
+                    }
                 }
-            }
-        }
 
         // 检查磁盘缓存
         if self.config.enable_disk_cache {
             let cache_file = key.cache_file_path(&self.config.cache_dir);
             if cache_file.exists()
-                && let Ok(entry) = self.load_cache_entry_from_disk(&cache_file) {
-                    // 验证源文件哈希
-                    if self.verify_source_hash(key, entry.source_hash) {
-                        // 添加到内存缓存
-                        if self.config.enable_memory_cache {
-                            let mut memory_cache = self.memory_cache.write().unwrap();
-                            if memory_cache.len() < self.config.max_memory_entries {
+                && let Ok(entry) = self.load_cache_entry_from_disk(&cache_file)
+            {
+                // 验证源文件哈希
+                if self.verify_source_hash(key, entry.source_hash) {
+                    // 添加到内存缓存
+                    if self.config.enable_memory_cache
+                        && let Ok(mut memory_cache) = self.memory_cache.write()
+                            && memory_cache.len() < self.config.max_memory_entries {
                                 memory_cache.insert(key.clone(), entry.clone());
                             }
-                        }
 
-                        let mut stats = self.stats.write().unwrap();
+                    if let Ok(mut stats) = self.stats.write() {
                         stats.hits += 1;
-                        return Some(entry.spirv);
                     }
+                    return Some(entry.spirv);
                 }
+            }
         }
 
-        let mut stats = self.stats.write().unwrap();
-        stats.misses += 1;
+        if let Ok(mut stats) = self.stats.write() {
+            stats.misses += 1;
+        }
         None
     }
 
@@ -271,23 +277,25 @@ impl ShaderCache {
         };
 
         // 存储到内存缓存
-        if self.config.enable_memory_cache {
-            let mut memory_cache = self.memory_cache.write().unwrap();
-            // 如果超过最大条目数，移除最旧的条目（简化实现：随机移除）
-            if memory_cache.len() >= self.config.max_memory_entries
-                && let Some(oldest_key) = memory_cache.keys().next().cloned() {
+        if self.config.enable_memory_cache
+            && let Ok(mut memory_cache) = self.memory_cache.write() {
+                // 如果超过最大条目数，移除最旧的条目（简化实现：随机移除）
+                if memory_cache.len() >= self.config.max_memory_entries
+                    && let Some(oldest_key) = memory_cache.keys().next().cloned()
+                {
                     memory_cache.remove(&oldest_key);
                 }
-            memory_cache.insert(key.clone(), entry.clone());
-        }
+                memory_cache.insert(key.clone(), entry.clone());
+            }
 
         // 存储到磁盘缓存
         if self.config.enable_disk_cache {
             self.store_to_disk(&entry)?;
         }
 
-        let mut stats = self.stats.write().unwrap();
-        stats.stores += 1;
+        if let Ok(mut stats) = self.stats.write() {
+            stats.stores += 1;
+        }
 
         Ok(())
     }
@@ -297,9 +305,8 @@ impl ShaderCache {
         let cache_file = entry.key.cache_file_path(&self.config.cache_dir);
 
         // 写入SPIR-V字节码
-        std::fs::write(&cache_file, &entry.spirv).map_err(|e| {
-            ShaderCacheError::IoError(format!("Failed to write cache file: {}", e))
-        })?;
+        std::fs::write(&cache_file, &entry.spirv)
+            .map_err(|e| ShaderCacheError::IoError(format!("Failed to write cache file: {}", e)))?;
 
         // 写入元数据
         let metadata = ShaderCacheMetadata {
@@ -311,9 +318,8 @@ impl ShaderCache {
             ShaderCacheError::SerializeError(format!("Failed to serialize metadata: {}", e))
         })?;
         let metadata_path = cache_file.with_extension("meta");
-        std::fs::write(&metadata_path, metadata_json).map_err(|e| {
-            ShaderCacheError::IoError(format!("Failed to write metadata: {}", e))
-        })?;
+        std::fs::write(&metadata_path, metadata_json)
+            .map_err(|e| ShaderCacheError::IoError(format!("Failed to write metadata: {}", e)))?;
 
         Ok(())
     }
@@ -326,9 +332,8 @@ impl ShaderCache {
         let mut hasher = DefaultHasher::new();
 
         // 读取源文件内容
-        let source_content = std::fs::read_to_string(&key.source_path).map_err(|e| {
-            ShaderCacheError::IoError(format!("Failed to read source file: {}", e))
-        })?;
+        let source_content = std::fs::read_to_string(&key.source_path)
+            .map_err(|e| ShaderCacheError::IoError(format!("Failed to read source file: {}", e)))?;
 
         // 哈希源文件内容
         hasher.write(source_content.as_bytes());
@@ -353,8 +358,9 @@ impl ShaderCache {
     pub fn clear(&self) -> Result<(), ShaderCacheError> {
         // 清除内存缓存
         {
-            let mut memory_cache = self.memory_cache.write().unwrap();
-            memory_cache.clear();
+            if let Ok(mut memory_cache) = self.memory_cache.write() {
+                memory_cache.clear();
+            }
         }
 
         // 清除磁盘缓存
@@ -374,15 +380,20 @@ impl ShaderCache {
             }
         }
 
-        let mut stats = self.stats.write().unwrap();
-        *stats = ShaderCacheStats::default();
+        if let Ok(mut stats) = self.stats.write() {
+            *stats = ShaderCacheStats::default();
+        }
 
         Ok(())
     }
 
     /// 获取缓存统计
     pub fn get_stats(&self) -> ShaderCacheStats {
-        self.stats.read().unwrap().clone()
+        if let Ok(stats) = self.stats.read() {
+            stats.clone()
+        } else {
+            ShaderCacheStats::default()
+        }
     }
 }
 
@@ -474,4 +485,3 @@ mod tests {
         assert_eq!(stats.hit_rate(), 0.8);
     }
 }
-

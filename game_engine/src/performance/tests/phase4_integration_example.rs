@@ -167,9 +167,9 @@ fn regression_testing_example() {
     ]);
 
     // 测试当前性能
-    let fps_result = suite.test_metric("fps", 58.0).unwrap();
-    let latency_result = suite.test_metric("latency", 18.0).unwrap();
-    let memory_result = suite.test_metric("memory", 280.0).unwrap();
+    let fps_result = suite.test_metric("fps", 58.0).expect("Test: operation should succeed");
+    let latency_result = suite.test_metric("latency", 18.0).expect("Test: operation should succeed");
+    let memory_result = suite.test_metric("memory", 280.0).expect("Test: operation should succeed");
 
     println!("📋 Regression Test Results:");
     println!("  • FPS: {}", if fps_result.passed() { "✓ PASSED" } else { "✗ FAILED" });
@@ -297,7 +297,7 @@ mod integration_tests {
         // 回归测试
         let mut suite = RegressionTestSuite::new();
         suite.register_baseline(PerformanceBaseline::new("fps", 60.0, "fps"));
-        let result = suite.test_metric("fps", 60.5).unwrap();
+        let result = suite.test_metric("fps", 60.5).expect("Test: operation should succeed");
         assert!(result.passed());
 
         // CI/CD

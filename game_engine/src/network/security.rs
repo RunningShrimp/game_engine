@@ -459,8 +459,8 @@ mod tests {
         let mut encryptor = MessageEncryptor::new(key);
 
         let plaintext = b"Hello, World!";
-        let encrypted = encryptor.encrypt(plaintext).unwrap();
-        let decrypted = encryptor.decrypt(&encrypted).unwrap();
+        let encrypted = encryptor.encrypt(plaintext).expect("Test: operation should succeed");
+        let decrypted = encryptor.decrypt(&encrypted).expect("Test: operation should succeed");
 
         assert_eq!(plaintext, decrypted.as_slice());
     }
@@ -501,8 +501,8 @@ mod tests {
         let mut session = SecureSession::new(1, token, encryption_key, signing_key);
 
         let message = b"Secure message";
-        let signed_encrypted = session.encrypt_and_sign(message).unwrap();
-        let decrypted = session.verify_and_decrypt(&signed_encrypted).unwrap();
+        let signed_encrypted = session.encrypt_and_sign(message).expect("Test: operation should succeed");
+        let decrypted = session.verify_and_decrypt(&signed_encrypted).expect("Test: operation should succeed");
 
         assert_eq!(message, decrypted.as_slice());
     }

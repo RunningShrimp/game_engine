@@ -32,7 +32,9 @@ uuid = { version = "1.19", features = ["v4"] }
 # 在workspace中定义常用依赖版本，减少重复依赖
 
 # 定义统一版本以减少重复依赖
-base64 = "0.21"
+base64 = "0.22"
 getrandom = "0.3"
 hashbrown = "0.16"
 digest = "0.10"
+tower-http = { version = "0.6", features = ["cors", "trace"] }
+rand = "0.9"

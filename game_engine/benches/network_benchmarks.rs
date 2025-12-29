@@ -45,7 +45,11 @@ fn bench_message_serialization(c: &mut Criterion) {
             BenchmarkId::from_parameter(format!("{}_serialize", message_name)),
             &message,
             |b, msg| {
-                b.iter(|| std::hint::black_box(bincode::serialize(msg).unwrap()));
+                b.iter(|| {
+                    std::hint::black_box(
+                        bincode::serialize(msg).expect("Failed to serialize test message"),
+                    )
+                });
             },
         );
 
@@ -53,8 +57,14 @@ fn bench_message_serialization(c: &mut Criterion) {
             BenchmarkId::from_parameter(format!("{}_deserialize", message_name)),
             &message,
             |b, msg| {
-                let serialized = bincode::serialize(msg).unwrap();
-                b.iter(|| std::hint::black_box(bincode::deserialize::<NetworkMessage>(&serialized).unwrap()));
+                let serialized = bincode::serialize(msg)
+                    .expect("Failed to serialize message for deserialize benchmark");
+                b.iter(|| {
+                    std::hint::black_box(
+                        bincode::deserialize::<NetworkMessage>(&serialized)
+                            .expect("Failed to deserialize test message"),
+                    )
+                });
             },
         );
     }
@@ -80,14 +90,22 @@ fn bench_message_encryption(c: &mut Criterion) {
     let test_data = b"Hello, this is a test message for encryption benchmarking!";
 
     group.bench_function("encrypt_message", |b| {
-        b.iter(|| std::hint::black_box(encryptor.encrypt(test_data).unwrap()));
+        b.iter(|| {
+            std::hint::black_box(encryptor.encrypt(test_data).expect("Failed to encrypt test data"))
+        });
     });
 
     // 预加密一个消息用于解密测试
-    let encrypted = encryptor.encrypt(test_data).unwrap();
+    let encrypted = encryptor
+        .encrypt(test_data)
+        .expect("Failed to encrypt test data for decrypt benchmark");
 
     group.bench_function("decrypt_message", |b| {
-        b.iter(|| std::hint::black_box(encryptor.decrypt(&encrypted).unwrap()));
+        b.iter(|| {
+            std::hint::black_box(
+                encryptor.decrypt(&encrypted).expect("Failed to decrypt test data"),
+            )
+        });
     });
 
     group.finish();

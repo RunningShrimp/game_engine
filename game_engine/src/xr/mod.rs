@@ -331,28 +331,32 @@ impl GestureRecognizer {
     ///
     /// # 返回
     /// 如果识别到手势，返回手势事件
-    pub fn recognize(&mut self, hand_joints: &hand_tracking::HandJoints, hand: Hand) -> Option<hand_tracking::GestureEvent> {
-    if let Some(gesture) = hand_joints.detect_gesture() {
-        let confidence = hand_joints.confidence();
-        let position = hand_joints.get_palm_position().unwrap_or(Vec3::ZERO);
-        let timestamp = crate::core::utils::current_timestamp_ms();
+    pub fn recognize(
+        &mut self,
+        hand_joints: &hand_tracking::HandJoints,
+        hand: Hand,
+    ) -> Option<hand_tracking::GestureEvent> {
+        if let Some(gesture) = hand_joints.detect_gesture() {
+            let confidence = hand_joints.confidence();
+            let position = hand_joints.get_palm_position().unwrap_or(Vec3::ZERO);
+            let timestamp = crate::core::utils::current_timestamp_ms();
 
-        // 将 HandGesture 转换为 Gesture
-        let gesture_enum = match gesture {
-            hand_tracking::HandGesture::Fist => hand_tracking::Gesture::Fist,
-            hand_tracking::HandGesture::OpenHand => hand_tracking::Gesture::Open,
-        };
+            // 将 HandGesture 转换为 Gesture
+            let gesture_enum = match gesture {
+                hand_tracking::HandGesture::Fist => hand_tracking::Gesture::Fist,
+                hand_tracking::HandGesture::OpenHand => hand_tracking::Gesture::Open,
+            };
 
-        let event = hand_tracking::GestureEvent {
-            gesture: gesture_enum,
-            hand,
-            confidence,
-            position,
-            timestamp,
-        };
+            let event = hand_tracking::GestureEvent {
+                gesture: gesture_enum,
+                hand,
+                confidence,
+                position,
+                timestamp,
+            };
 
-        // 记录到历史
-        self.gesture_history.push_back(event.clone());
+            // 记录到历史
+            self.gesture_history.push_back(event.clone());
             if self.gesture_history.len() > 10 {
                 self.gesture_history.pop_front();
             }
@@ -485,7 +489,9 @@ impl EyeTrackingManager {
     /// 启用眼动追踪
     pub fn enable(&mut self) -> Result<(), XrError> {
         if !self.is_supported() {
-            return Err(XrError::FeatureNotSupported("Eye tracking not supported".to_string()));
+            return Err(XrError::FeatureNotSupported(
+                "Eye tracking not supported".to_string(),
+            ));
         }
         self.enabled = true;
         Ok(())

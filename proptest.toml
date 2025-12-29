@@ -1,0 +1,23 @@
+# Proptest配置文件
+# 用于Property-Based Testing的配置
+
+# 失败案例保存位置
+casemap = "proptest-regressions"
+
+# 测试用例数量（默认256个，可以根据需要调整）
+test = 256
+
+# 失败后重试次数（缩小失败案例的迭代次数）
+max_shrink_iters = 1000
+
+# 在子进程中运行测试（提高稳定性）
+fork = true
+
+# 单个测试超时时间（秒）
+timeout = 60
+
+# 失败案例的详细程度
+verbose = 1
+
+# 是否在失败时保存种子（用于复现）
+persist_fails = true

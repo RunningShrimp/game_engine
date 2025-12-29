@@ -23,15 +23,13 @@ impl Default for KeyframeSelection {
 }
 
 /// 轨道类型（增强功能）
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum TrackType {
     #[default]
     Position,
     Rotation,
     Scale,
 }
-
 
 impl TrackType {
     pub fn name(&self) -> &'static str {
@@ -105,64 +103,74 @@ impl AnimationEditor {
     /// 添加关键帧（增强功能）
     pub fn add_keyframe(&mut self, entity_id: u64, track_type: TrackType, time: f32) {
         if let Some(index) = self.selected_clip
-            && let Some(clip) = self.clips.get_mut(index) {
-                let time = if self.snap_to_grid {
-                    (time / self.grid_interval).round() * self.grid_interval
-                } else {
-                    time
-                };
+            && let Some(clip) = self.clips.get_mut(index)
+        {
+            let time = if self.snap_to_grid {
+                (time / self.grid_interval).round() * self.grid_interval
+            } else {
+                time
+            };
 
-                match track_type {
-                    TrackType::Position => {
-                        let track = clip
-                            .position_tracks
-                            .entry(entity_id)
-                            .or_insert_with(|| KeyframeTrack::new(InterpolationMode::Linear));
-                        track.add_keyframe(time, Vec3::ZERO);
-                    }
-                    TrackType::Rotation => {
-                        let track = clip
-                            .rotation_tracks
-                            .entry(entity_id)
-                            .or_insert_with(|| KeyframeTrack::new(InterpolationMode::Linear));
-                        track.add_keyframe(time, Quat::IDENTITY);
-                    }
-                    TrackType::Scale => {
-                        let track = clip
-                            .scale_tracks
-                            .entry(entity_id)
-                            .or_insert_with(|| KeyframeTrack::new(InterpolationMode::Linear));
-                        track.add_keyframe(time, Vec3::ONE);
-                    }
+            match track_type {
+                TrackType::Position => {
+                    let track = clip
+                        .position_tracks
+                        .entry(entity_id)
+                        .or_insert_with(|| KeyframeTrack::new(InterpolationMode::Linear));
+                    track.add_keyframe(time, Vec3::ZERO);
+                }
+                TrackType::Rotation => {
+                    let track = clip
+                        .rotation_tracks
+                        .entry(entity_id)
+                        .or_insert_with(|| KeyframeTrack::new(InterpolationMode::Linear));
+                    track.add_keyframe(time, Quat::IDENTITY);
+                }
+                TrackType::Scale => {
+                    let track = clip
+                        .scale_tracks
+                        .entry(entity_id)
+                        .or_insert_with(|| KeyframeTrack::new(InterpolationMode::Linear));
+                    track.add_keyframe(time, Vec3::ONE);
                 }
             }
+        }
     }
 
     /// 删除关键帧（增强功能）
-    pub fn delete_keyframe(&mut self, entity_id: u64, track_type: TrackType, keyframe_index: usize) {
+    pub fn delete_keyframe(
+        &mut self,
+        entity_id: u64,
+        track_type: TrackType,
+        keyframe_index: usize,
+    ) {
         if let Some(index) = self.selected_clip
-            && let Some(clip) = self.clips.get_mut(index) {
-                match track_type {
-                    TrackType::Position => {
-                        if let Some(track) = clip.position_tracks.get_mut(&entity_id)
-                            && keyframe_index < track.keyframes.len() {
-                                track.keyframes.remove(keyframe_index);
-                            }
+            && let Some(clip) = self.clips.get_mut(index)
+        {
+            match track_type {
+                TrackType::Position => {
+                    if let Some(track) = clip.position_tracks.get_mut(&entity_id)
+                        && keyframe_index < track.keyframes.len()
+                    {
+                        track.keyframes.remove(keyframe_index);
                     }
-                    TrackType::Rotation => {
-                        if let Some(track) = clip.rotation_tracks.get_mut(&entity_id)
-                            && keyframe_index < track.keyframes.len() {
-                                track.keyframes.remove(keyframe_index);
-                            }
+                }
+                TrackType::Rotation => {
+                    if let Some(track) = clip.rotation_tracks.get_mut(&entity_id)
+                        && keyframe_index < track.keyframes.len()
+                    {
+                        track.keyframes.remove(keyframe_index);
                     }
-                    TrackType::Scale => {
-                        if let Some(track) = clip.scale_tracks.get_mut(&entity_id)
-                            && keyframe_index < track.keyframes.len() {
-                                track.keyframes.remove(keyframe_index);
-                            }
+                }
+                TrackType::Scale => {
+                    if let Some(track) = clip.scale_tracks.get_mut(&entity_id)
+                        && keyframe_index < track.keyframes.len()
+                    {
+                        track.keyframes.remove(keyframe_index);
                     }
                 }
             }
+        }
     }
 
     /// 添加动画事件（增强功能）
@@ -171,7 +179,7 @@ impl AnimationEditor {
             let events = self.events.entry(index).or_default();
             let event = AnimationEvent { time, name, data };
             events.push(event);
-            events.sort_by(|a, b| a.time.partial_cmp(&b.time).unwrap());
+            events.sort_by(|a, b| a.time.partial_cmp(&b.time).expect("Test: operation should succeed"));
         }
     }
 

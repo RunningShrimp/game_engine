@@ -152,12 +152,18 @@ impl MetricTracker {
 
     /// 获取最大值
     pub fn get_max(&self) -> Option<f64> {
-        self.history.iter().map(|s| s.value).max_by(|a, b| a.partial_cmp(b).unwrap())
+        self.history
+            .iter()
+            .map(|s| s.value)
+            .max_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
     }
 
     /// 获取最小值
     pub fn get_min(&self) -> Option<f64> {
-        self.history.iter().map(|s| s.value).min_by(|a, b| a.partial_cmp(b).unwrap())
+        self.history
+            .iter()
+            .map(|s| s.value)
+            .min_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
     }
 
     /// 计算趋势（上升/下降/平稳）

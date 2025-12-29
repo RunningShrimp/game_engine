@@ -305,7 +305,6 @@ impl BuildTool {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -14,7 +14,7 @@ mod tests {
 
     #[test]
     fn test_event_id_creation() {
-        let event_id = EventId::now(1);
+        let event_id = EventId::now(1).expect("Failed to create EventId");
         assert!(event_id.timestamp_ns > 0);
         assert_eq!(event_id.sequence, 1);
     }
@@ -88,15 +88,15 @@ mod tests {
         let mut store = MemoryEventStore::new();
 
         let event = StoredEvent {
-            id: EventId::now(1),
+            id: EventId::now(1).expect("Failed to create EventId"),
             event_type: "TestEvent".to_string(),
             data: vec![1, 2, 3],
             aggregate_id: Some(123),
         };
 
-        store.save_event(event.clone()).unwrap();
+        store.save_event(event.clone()).expect("Test: operation should succeed");
 
-        let retrieved = store.get_event(event.id).unwrap();
+        let retrieved = store.get_event(event.id).expect("Test: operation should succeed");
         assert_eq!(retrieved.event_type, "TestEvent");
         assert_eq!(retrieved.aggregate_id, Some(123));
     }
@@ -106,15 +106,15 @@ mod tests {
         let mut store = MemorySnapshotStore::new();
 
         let snapshot = Snapshot {
-            id: EventId::now(1),
+            id: EventId::now(1).expect("Failed to create EventId"),
             aggregate_id: 123,
             data: vec![1, 2, 3],
             created_at: 1234567890,
         };
 
-        store.save_snapshot(snapshot.clone()).unwrap();
+        store.save_snapshot(snapshot.clone()).expect("Test: operation should succeed");
 
-        let retrieved = store.get_latest_snapshot(123).unwrap();
+        let retrieved = store.get_latest_snapshot(123).expect("Test: operation should succeed");
         assert_eq!(retrieved.aggregate_id, 123);
         assert_eq!(retrieved.created_at, 1234567890);
     }
@@ -129,9 +129,9 @@ mod tests {
             entity_type: "TestEntity".to_string(),
         };
 
-        let event_id = manager.record_event(event, &world, Some(123)).unwrap();
+        let event_id = manager.record_event(event, &world, Some(123)).expect("Test: operation should succeed");
 
-        let history = manager.get_event_history();
+        let history = manager.get_event_history().expect("Failed to get event history");
         assert_eq!(history.len(), 1);
         assert_eq!(history[0].id, event_id);
     }
@@ -151,10 +151,10 @@ mod tests {
             entity_type: "TestEntity".to_string(),
         };
 
-        manager.record_event(event1, &world, Some(123)).unwrap();
-        manager.record_event(event2, &world, Some(456)).unwrap();
+        manager.record_event(event1, &world, Some(123)).expect("Test: operation should succeed");
+        manager.record_event(event2, &world, Some(456)).expect("Test: operation should succeed");
 
-        let history = manager.get_aggregate_history(123);
+        let history = manager.get_aggregate_history(123).expect("Failed to get aggregate history");
         assert_eq!(history.len(), 1);
         assert_eq!(history[0].aggregate_id, Some(123));
     }
@@ -164,7 +164,7 @@ mod tests {
         let mut registry = super::registry::EventTypeRegistry::new();
 
         // 注册事件类型
-        registry.register_event_type::<EntityCreatedEvent>().unwrap();
+        registry.register_event_type::<EntityCreatedEvent>().expect("Test: operation should succeed");
 
         // 测试创建事件
         let event = EntityCreatedEvent {
@@ -172,8 +172,8 @@ mod tests {
             entity_type: "TestEntity".to_string(),
         };
 
-        let serialized = bincode::serialize(&event).unwrap();
-        let created_event = registry.create_event("EntityCreated", &serialized).unwrap();
+        let serialized = bincode::serialize(&event).expect("Test: operation should succeed");
+        let created_event = registry.create_event("EntityCreated", &serialized).expect("Test: operation should succeed");
 
         assert_eq!(created_event.event_type(), "EntityCreated");
     }
@@ -189,9 +189,9 @@ mod tests {
             initial_data: vec![1, 2, 3],
         };
 
-        let event_id = handler.execute_command(command, &mut world, Some(123)).unwrap();
+        let event_id = handler.execute_command(command, &mut world, Some(123)).expect("Test: operation should succeed");
 
-        let history = manager.get_event_history();
+        let history = manager.get_event_history().expect("Failed to get event history");
         assert_eq!(history.len(), 1);
         assert_eq!(history[0].id, event_id);
     }
@@ -202,7 +202,7 @@ mod tests {
         let mut world = World::new();
 
         // 设置快照间隔为1，确保每个事件都创建快照
-        let mut manager_mut = Arc::try_unwrap(manager).unwrap();
+        let mut manager_mut = Arc::try_unwrap(manager).expect("Test: operation should succeed");
         manager_mut.set_snapshot_interval(1);
         let manager = Arc::new(manager_mut);
 
@@ -212,10 +212,10 @@ mod tests {
         };
 
         let mut world = World::new();
-        manager.record_event(event, &world, Some(123)).unwrap();
+        manager.record_event(event, &world, Some(123)).expect("Test: operation should succeed");
 
         // 验证快照已创建
-        let snapshots = manager.get_aggregate_snapshots(123);
+        let snapshots = manager.get_aggregate_snapshots(123).expect("Failed to get snapshots");
         assert_eq!(snapshots.len(), 1);
     }
 
@@ -230,10 +230,10 @@ mod tests {
             entity_type: "TestEntity".to_string(),
         };
 
-        let event_id = manager.record_event(event, &world, Some(123)).unwrap();
+        let event_id = manager.record_event(event, &world, Some(123)).expect("Test: operation should succeed");
 
         // 测试跳转到时间点
-        debugger.jump_to_time(&mut world, event_id).unwrap();
+        debugger.jump_to_time(&mut world, event_id).expect("Test: operation should succeed");
         assert_eq!(debugger.current_time(), Some(event_id));
     }
 }

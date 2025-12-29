@@ -106,7 +106,7 @@ mod tests {
                 );
 
                 assert_eq!(
-                    get_result.unwrap(),
+                    get_result.expect("Test: operation should succeed"),
                     test_value,
                     "{} get_global should return the correct value",
                     language_name

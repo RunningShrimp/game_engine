@@ -271,7 +271,8 @@ impl PackageDeployManager {
         for entry in fs::read_dir(src).map_err(|e| format!("Failed to read directory: {}", e))? {
             let entry = entry.map_err(|e| format!("Failed to read entry: {}", e))?;
             let path = entry.path();
-            let file_name = path.file_name().unwrap();
+            let file_name = path.file_name()
+                .ok_or_else(|| format!("Invalid path: {:?}", path))?;
             let dst_path = dst.join(file_name);
 
             if path.is_dir() {
@@ -309,12 +310,17 @@ impl PackageDeployManager {
 
     /// 创建tar.gz压缩包
     fn create_tar_gz(&self, src_dir: &Path, tar_path: &Path) -> Result<(), String> {
+        let parent = src_dir.parent()
+            .ok_or_else(|| "Invalid source directory: no parent".to_string())?;
+        let file_name = src_dir.file_name()
+            .ok_or_else(|| "Invalid source directory: no file name".to_string())?;
+
         let output = Command::new("tar")
             .arg("-czf")
             .arg(tar_path)
             .arg("-C")
-            .arg(src_dir.parent().unwrap())
-            .arg(src_dir.file_name().unwrap())
+            .arg(parent)
+            .arg(file_name)
             .output();
 
         match output {

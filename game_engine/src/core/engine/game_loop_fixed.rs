@@ -144,7 +144,7 @@ impl FixedTimestepLoop {
         }
 
         // 计算插值因子（用于平滑渲染）
-        
+
         self.accumulator.as_secs_f64() / self.fixed_time_step.as_secs_f64()
     }
 

@@ -1,18 +1,21 @@
 //  资源管理系统插件
-// 
+//
 //  提供统一的资源加载、管理和缓存功能。
 
 use crate::impl_default;
-use crate::plugins::{EnginePlugin, App, PluginVersion, PluginDependency};
-use crate::resources::{UploadQueue, StagingBufferPool};
+use crate::plugins::{App, EnginePlugin, PluginDependency, PluginVersion};
 use crate::resources::coroutine_loader::{CoroutineAssetLoader, CoroutineLoaderConfig};
+use crate::resources::{StagingBufferPool, UploadQueue};
 use bevy_ecs::prelude::{Res, ResMut};
 
 // 安全的资源获取宏 - 提供更好的错误消息
 macro_rules! fetch_resource_mut {
     ($world:expr, $res_type:ty) => {
-        $world.get_resource_mut::<$res_type>()
-            .expect(concat!("Resource ", stringify!($res_type), " not found"))
+        $world.get_resource_mut::<$res_type>().expect(concat!(
+            "Resource ",
+            stringify!($res_type),
+            " not found"
+        ))
     };
 }
 
@@ -120,7 +123,7 @@ impl EnginePlugin for ResourcePlugin {
 
 /// 资源加载系统
 pub fn resource_loading_system(
-    mut loader: ResMut<CoroutineAssetLoader>,
+    loader: ResMut<CoroutineAssetLoader>,
     time: Res<crate::ecs::Time>,
 ) {
     // 更新加载器 - 处理所有已完成的加载请求
@@ -138,16 +141,14 @@ pub fn resource_upload_system(
 }
 
 /// 资源清理系统
-pub fn resource_cleanup_system(
-    mut loader: ResMut<CoroutineAssetLoader>,
-) {
+pub fn resource_cleanup_system(loader: ResMut<CoroutineAssetLoader>) {
     // 清理未使用的资源
     loader.cleanup_unused();
 }
 
 /// 初始化默认资源
 fn initialize_default_resources(world: &mut bevy_ecs::world::World) {
-    let mut loader = fetch_resource_mut!(world, CoroutineAssetLoader);
+    let loader = fetch_resource_mut!(world, CoroutineAssetLoader);
 
     // 加载默认纹理
     let _ = loader.load_texture("assets/textures/default_white.png");

@@ -298,17 +298,17 @@ impl<T: Send + 'static> Pooled<T> {
 
     /// 获取内部值的引用
     pub fn get(&self) -> &T {
-        self.value.as_ref().unwrap()
+        self.value.as_ref().expect("Pooled value not available")
     }
 
     /// 获取内部值的可变引用
     pub fn get_mut(&mut self) -> &mut T {
-        self.value.as_mut().unwrap()
+        self.value.as_mut().expect("Pooled value not available")
     }
 
     /// 提取内部值（不归还到池中）
     pub fn take(mut self) -> T {
-        self.value.take().unwrap()
+        self.value.take().expect("Pooled value not available")
     }
 }
 
@@ -324,13 +324,13 @@ impl<T: Send + 'static> std::ops::Deref for Pooled<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        self.value.as_ref().unwrap()
+        self.value.as_ref().expect("Pooled value not available")
     }
 }
 
 impl<T: Send + 'static> std::ops::DerefMut for Pooled<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        self.value.as_mut().unwrap()
+        self.value.as_mut().expect("Pooled value not available")
     }
 }
 

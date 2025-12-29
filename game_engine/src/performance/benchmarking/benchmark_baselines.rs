@@ -1,5 +1,5 @@
 //  性能基准测试套件
-// 
+//
 //  建立性能基线并跟踪优化效果
 //  - 关键操作基准测试
 //  - 性能回归检测
@@ -403,7 +403,7 @@ mod tests {
         let report = detector.detect_regression("test_op", 120.0);
         assert!(report.is_some());
 
-        let report = report.unwrap();
+        let report = report.expect("Test: operation should succeed");
         assert!(report.is_regression);
         assert!(report.percent_change > 10.0);
     }
@@ -444,7 +444,7 @@ mod tests {
         let report = detector.detect_regression("test_op", 85.0);
         assert!(report.is_some());
 
-        let report = report.unwrap();
+        let report = report.expect("Test: operation should succeed");
         assert!(!report.is_regression);
         assert_eq!(report.severity, "Improvement");
     }

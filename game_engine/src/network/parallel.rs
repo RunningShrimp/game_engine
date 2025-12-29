@@ -109,10 +109,8 @@ impl ParallelMessageProcessor {
         }
 
         // 将消息分批处理
-        let batches: Vec<_> = messages
-            .chunks(self.batch_size)
-            .map(|chunk| chunk.to_vec())
-            .collect();
+        let batches: Vec<_> =
+            messages.chunks(self.batch_size).map(|chunk| chunk.to_vec()).collect();
 
         // 并发处理所有批次
         let batch_tasks: Vec<_> = batches
@@ -120,11 +118,11 @@ impl ParallelMessageProcessor {
             .map(|batch| {
                 let state_clone = Arc::clone(&state);
                 let compressor_clone = compressor.as_ref().map(Arc::clone);
-                
+
                 tokio::task::spawn_blocking(move || {
                     // 使用state_clone进行状态验证和日志记录
                     let _state_ref = &state_clone; // 保留状态引用用于后续扩展
-                    
+
                     batch
                         .into_iter()
                         .map(|msg| {
@@ -132,11 +130,13 @@ impl ParallelMessageProcessor {
                             // 状态信息可用于消息验证和上下文处理
                             match &msg {
                                 NetworkMessage::StateSync { tick, data } => {
-                                    let decompressed_data = if let Some(comp) = compressor_clone.as_ref() {
-                                        comp.decompress_with_flag(data).unwrap_or_else(|_| data.clone())
-                                    } else {
-                                        data.clone()
-                                    };
+                                    let decompressed_data =
+                                        if let Some(comp) = compressor_clone.as_ref() {
+                                            comp.decompress_with_flag(data)
+                                                .unwrap_or_else(|_| data.clone())
+                                        } else {
+                                            data.clone()
+                                        };
                                     MessageProcessResult::StateSync {
                                         tick: *tick,
                                         data: decompressed_data,
@@ -153,9 +153,7 @@ impl ParallelMessageProcessor {
                                     }
                                 }
                                 NetworkMessage::TimeSyncResponse { sync } => {
-                                    MessageProcessResult::TimeSyncResponse {
-                                        sync: sync.clone(),
-                                    }
+                                    MessageProcessResult::TimeSyncResponse { sync: sync.clone() }
                                 }
                                 _ => MessageProcessResult::Other,
                             }
@@ -167,7 +165,7 @@ impl ParallelMessageProcessor {
 
         // 等待所有批次完成
         let batch_results = join_all(batch_tasks).await;
-        
+
         // 合并所有批次的结果
         let mut all_results = Vec::new();
         for results in batch_results.into_iter().flatten() {

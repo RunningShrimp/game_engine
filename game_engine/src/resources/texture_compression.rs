@@ -270,7 +270,10 @@ impl TextureCompressionManager {
         height: usize,
         format: Option<CompressionFormat>,
     ) -> Result<CompressedTexture, CompressionError> {
-        let format = format.unwrap_or(self.default_format);
+        let format = format.unwrap_or({
+            // Return default format - this is safe as we always have a default
+            self.default_format
+        });
 
         let compressed = match format {
             CompressionFormat::BC1 => BC1Format::compress_rgba(data, width, height)?,
@@ -308,17 +311,19 @@ impl TextureCompressionManager {
     /// 缓存压缩纹理
     pub fn cache_compressed(&self, key: &str, texture: CompressedTexture) {
         if self.cache_enabled
-            && let Ok(mut cache) = self.cache.write() {
-                cache.insert(key.to_string(), texture);
-            }
+            && let Ok(mut cache) = self.cache.write()
+        {
+            cache.insert(key.to_string(), texture);
+        }
     }
 
     /// 获取缓存的压缩纹理
     pub fn get_cached(&self, key: &str) -> Option<CompressedTexture> {
         if self.cache_enabled
-            && let Ok(cache) = self.cache.read() {
-                return cache.get(key).cloned();
-            }
+            && let Ok(cache) = self.cache.read()
+        {
+            return cache.get(key).cloned();
+        }
         None
     }
 
@@ -373,7 +378,7 @@ mod tests {
         let result = BC1Format::compress_rgba(&data, width, height);
         assert!(result.is_ok());
 
-        let compressed = result.unwrap();
+        let compressed = result.expect("Test: operation should succeed");
         assert_eq!(compressed.format, CompressionFormat::BC1);
         assert_eq!(compressed.original_size, data.len());
         assert_eq!(compressed.compressed_size, 8);
@@ -388,7 +393,7 @@ mod tests {
         let result = BC1Format::decompress(&data, width, height);
         assert!(result.is_ok());
 
-        let decompressed = result.unwrap();
+        let decompressed = result.expect("Test: operation should succeed");
         assert_eq!(decompressed.len(), width * height * 4);
     }
 
@@ -425,7 +430,7 @@ mod tests {
         let cached = manager.get_cached("test");
 
         assert!(cached.is_some());
-        assert_eq!(cached.unwrap().compressed_size, 8);
+        assert_eq!(cached.expect("Test: operation should succeed").compressed_size, 8);
         assert_eq!(manager.cache_size(), 1);
 
         manager.clear_cache();

@@ -371,9 +371,9 @@ mod tests {
     #[tokio::test]
     async fn test_streaming_load() {
         // 创建测试文件
-        let mut file = NamedTempFile::new().unwrap();
+        let mut file = NamedTempFile::new().expect("Test: operation should succeed");
         let data = vec![0u8; 5 * 1024 * 1024]; // 5MB
-        file.write_all(&data).unwrap();
+        file.write_all(&data).expect("Test: operation should succeed");
         let path = file.path();
 
         // 创建流式加载器
@@ -385,7 +385,7 @@ mod tests {
         let loader = StreamingLoader::new(config);
 
         // 开始流式加载
-        let mut handle = loader.load_streaming(path).await.unwrap();
+        let mut handle = loader.load_streaming(path).await.expect("Test: operation should succeed");
 
         // 接收所有块
         let mut total_received = 0;
@@ -409,16 +409,16 @@ mod tests {
     #[tokio::test]
     async fn test_load_complete() {
         // 创建测试文件
-        let mut file = NamedTempFile::new().unwrap();
+        let mut file = NamedTempFile::new().expect("Test: operation should succeed");
         let original_data = b"Hello, World! This is a test file for streaming loader.";
-        file.write_all(original_data).unwrap();
+        file.write_all(original_data).expect("Test: operation should succeed");
         let path = file.path();
 
         // 创建流式加载器
         let loader = StreamingLoader::with_default_config();
 
         // 加载完整资源
-        let loaded_data = loader.load_complete(path).await.unwrap();
+        let loaded_data = loader.load_complete(path).await.expect("Test: operation should succeed");
 
         assert_eq!(loaded_data, original_data);
     }

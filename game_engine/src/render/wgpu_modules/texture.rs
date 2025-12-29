@@ -285,18 +285,19 @@ impl TextureManager {
 
         // 检查是否需要压缩（如果启用运行时压缩）
         if let Some(config) = &self.compression_config
-            && config.runtime_compression {
-                let max_size = config.max_uncompressed_size;
-                if w > max_size || h > max_size {
-                    tracing::debug!(
-                        target: "render",
-                        "Texture {}x{} exceeds max uncompressed size {}, but runtime compression not yet implemented",
-                        w, h, max_size
-                    );
-                    // 注意：运行时压缩功能待实现
-                    // 未来计划：实现纹理运行时压缩，自动压缩超大纹理以节省内存
-                }
+            && config.runtime_compression
+        {
+            let max_size = config.max_uncompressed_size;
+            if w > max_size || h > max_size {
+                tracing::debug!(
+                    target: "render",
+                    "Texture {}x{} exceeds max uncompressed size {}, but runtime compression not yet implemented",
+                    w, h, max_size
+                );
+                // 注意：运行时压缩功能待实现
+                // 未来计划：实现纹理运行时压缩，自动压缩超大纹理以节省内存
             }
+        }
 
         let format = if linear {
             wgpu::TextureFormat::Rgba8Unorm

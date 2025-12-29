@@ -352,8 +352,11 @@ impl ErrorMonitor {
 
         // 添加到历史记录
         {
-            let history =
-                &mut safe_lock(&self.error_history, "ErrorMonitor.error_history").unwrap();
+            let Ok(mut history) = safe_lock(&self.error_history, "ErrorMonitor.error_history")
+            else {
+                tracing::error!("Failed to acquire error_history lock in record_error");
+                return;
+            };
             history.push_front(error_detail);
 
             // 限制历史记录大小
@@ -364,7 +367,10 @@ impl ErrorMonitor {
 
         // 更新统计
         {
-            let stats = &mut safe_lock(&self.stats, "ErrorMonitor.stats").unwrap();
+            let Ok(mut stats) = safe_lock(&self.stats, "ErrorMonitor.stats") else {
+                tracing::error!("Failed to acquire stats lock in record_error");
+                return;
+            };
             stats.record_error(&error);
         }
 
@@ -394,8 +400,13 @@ impl ErrorMonitor {
 
         // 添加到历史记录
         {
-            let history =
-                &mut safe_lock(&self.error_history, "ErrorMonitor.error_history").unwrap();
+            let Ok(mut history) = safe_lock(&self.error_history, "ErrorMonitor.error_history")
+            else {
+                tracing::error!(
+                    "Failed to acquire error_history lock in record_error_with_context"
+                );
+                return;
+            };
             history.push_front(error_detail);
 
             // 限制历史记录大小
@@ -407,7 +418,7 @@ impl ErrorMonitor {
         // 更新统计
         {
             let Ok(mut stats) = safe_lock(&self.stats, "ErrorMonitor.stats") else {
-                tracing::error!("Failed to acquire stats lock in record_error");
+                tracing::error!("Failed to acquire stats lock in record_error_with_context");
                 return;
             };
             stats.record_error(&error);
@@ -452,12 +463,19 @@ impl ErrorMonitor {
 
     /// 获取错误统计
     pub fn get_stats(&self) -> ErrorStats {
-        safe_lock(&self.stats, "ErrorMonitor.stats").unwrap().clone()
+        let Ok(stats) = safe_lock(&self.stats, "ErrorMonitor.stats") else {
+            tracing::error!("Failed to acquire stats lock in get_stats");
+            return ErrorStats::default();
+        };
+        stats.clone()
     }
 
     /// 获取最近的错误
     pub fn get_recent_errors(&self, count: usize) -> Vec<ErrorDetail> {
-        let history = &safe_lock(&self.error_history, "ErrorMonitor.error_history").unwrap();
+        let Ok(history) = safe_lock(&self.error_history, "ErrorMonitor.error_history") else {
+            tracing::error!("Failed to acquire error_history lock in get_recent_errors");
+            return Vec::new();
+        };
         history.iter().take(count).cloned().collect()
     }
 
@@ -527,9 +545,10 @@ impl ErrorMonitor {
 
         // 严重错误洞察
         if let Some(critical_count) = stats.errors_by_severity.get(&ErrorSeverity::Critical)
-            && *critical_count > 5 {
-                insights.push("Critical error threshold exceeded: > 5 critical errors".to_string());
-            }
+            && *critical_count > 5
+        {
+            insights.push("Critical error threshold exceeded: > 5 critical errors".to_string());
+        }
 
         // 趋势洞察
         for trend in trends {
@@ -558,14 +577,14 @@ impl ErrorMonitor {
 
         // 检查严重错误阈值
         if error.severity() >= ErrorSeverity::Critical {
-            let critical_count = &safe_lock(&self.stats, "ErrorMonitor.stats")
-                .unwrap()
-                .errors_by_severity
-                .get(&ErrorSeverity::Critical)
-                .copied()
-                .unwrap_or(0);
+            let Ok(stats) = safe_lock(&self.stats, "ErrorMonitor.stats") else {
+                tracing::error!("Failed to acquire stats lock in check_thresholds");
+                return;
+            };
+            let critical_count =
+                stats.errors_by_severity.get(&ErrorSeverity::Critical).copied().unwrap_or(0);
 
-            if *critical_count >= thresholds.critical_error_threshold as u64 {
+            if critical_count >= thresholds.critical_error_threshold as u64 {
                 self.trigger_alert(format!(
                     "Critical error threshold exceeded: {} >= {}",
                     critical_count, thresholds.critical_error_threshold
@@ -574,8 +593,12 @@ impl ErrorMonitor {
         }
 
         // 检查总错误数阈值
-        let total_errors = &safe_lock(&self.stats, "ErrorMonitor.stats").unwrap().total_errors;
-        if *total_errors >= thresholds.total_error_threshold as u64 {
+        let Ok(stats) = safe_lock(&self.stats, "ErrorMonitor.stats") else {
+            tracing::error!("Failed to acquire stats lock in check_thresholds (total)");
+            return;
+        };
+        let total_errors = stats.total_errors;
+        if total_errors >= thresholds.total_error_threshold as u64 {
             self.trigger_alert(format!(
                 "Total error threshold exceeded: {} >= {}",
                 total_errors, thresholds.total_error_threshold
@@ -601,11 +624,26 @@ impl ErrorMonitor {
         }
 
         // 合并多个报告生成器的结果
-        if reports.len() == 1 {
-            reports.into_iter().next().unwrap()
+        if let Some(report) = reports.into_iter().next() {
+            report
         } else {
-            // 简单合并：使用第一个生成器作为主报告
-            reports.into_iter().next().unwrap()
+            // 如果没有报告生成器，返回一个默认报告
+            tracing::warn!("No report generators available, returning default report");
+            ErrorReport {
+                id: format!(
+                    "report_{}",
+                    std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap_or_default()
+                        .as_secs()
+                ),
+                timestamp: std::time::SystemTime::now(),
+                time_range: Duration::from_secs(3600),
+                stats: ErrorStats::default(),
+                recent_errors: Vec::new(),
+                trends: Vec::new(),
+                insights: Vec::new(),
+            }
         }
     }
 
@@ -643,10 +681,13 @@ impl ErrorMonitor {
 
                 // 定期更新统计
                 {
-                    let mut stats = safe_lock(&stats, "ErrorMonitor.stats").unwrap();
+                    let Ok(mut stats_guard) = safe_lock(&stats, "ErrorMonitor.stats") else {
+                        tracing::error!("Failed to acquire stats lock in monitoring thread");
+                        continue;
+                    };
 
                     // 这里可以定期重新计算错误率
-                    stats.update_error_rate();
+                    stats_guard.update_error_rate();
                 }
             }
         });

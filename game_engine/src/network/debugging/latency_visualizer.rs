@@ -1562,8 +1562,17 @@ impl StatisticsAnalyzer {
             return Percentiles::default();
         }
 
-        let mut sorted_latencies = latencies.to_vec();
-        sorted_latencies.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        let mut sorted_latencies: Vec<_> = latencies
+            .iter()
+            .filter(|x| x.is_finite())  // Filter out NaN and infinite values
+            .copied()
+            .collect();
+
+        if sorted_latencies.is_empty() {
+            return Percentiles::default();
+        }
+
+        sorted_latencies.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
 
         let len = sorted_latencies.len();
         let get_percentile = |p: f32| {

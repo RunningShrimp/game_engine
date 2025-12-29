@@ -45,7 +45,7 @@
 //! let allocator = create_default_allocator();
 //!
 //! // 分配内存
-//! let memory = allocator.allocate(1024).unwrap();
+//! let memory = allocator.allocate(1024).expect("Test: operation should succeed");
 //! ```
 //!
 //! ### 性能监控
@@ -64,24 +64,22 @@
 //! ```
 
 // 引擎核心依赖的模块
+pub mod benchmarking;
 pub mod gpu;
 pub mod memory;
-pub mod optimization;
 pub mod monitoring;
+pub mod optimization;
 pub mod rendering;
 pub mod sync;
 pub mod tracing_metrics;
-pub mod benchmarking;
 
 // 注意：profiling模块已在根级别声明，这里不重复声明以避免宏重复定义
 // 使用 crate::profiling 路径访问
 pub use crate::profiling as profiling_api;
 
 // 向后兼容：重新导出常用profiling功能
-pub use crate::profiling::{
-    MetricCollector, HighPrecisionTimer, ProfilingError
-};
 pub use crate::profiling::continuous_profiler;
+pub use crate::profiling::{HighPrecisionTimer, MetricCollector, ProfilingError};
 
 // GpuPerformanceMonitor 从 profiling 模块重新导出
 pub use crate::profiling::GpuPerformanceMonitor;

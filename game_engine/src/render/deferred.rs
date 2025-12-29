@@ -23,8 +23,8 @@
 //! - 光照计算与几何分离，便于优化
 //! - 适合复杂光照场景
 
-use wgpu::util::DeviceExt;
 use glam::{Mat4, Vec3};
+use wgpu::util::DeviceExt;
 // Vec4 未在此文件中使用，但可能在未来需要
 // use glam::Vec4;
 use bytemuck::{Pod, Zeroable};
@@ -531,7 +531,9 @@ impl DeferredRendererEnhanced {
                     ty: wgpu::BindingType::Buffer {
                         ty: wgpu::BufferBindingType::Uniform,
                         has_dynamic_offset: false,
-                        min_binding_size: std::num::NonZeroU64::new(std::mem::size_of::<CameraUniform>() as u64),
+                        min_binding_size: std::num::NonZeroU64::new(
+                            std::mem::size_of::<CameraUniform>() as u64,
+                        ),
                     },
                     count: None,
                 }],
@@ -565,7 +567,10 @@ impl DeferredRendererEnhanced {
                     ty: wgpu::BindingType::Buffer {
                         ty: wgpu::BufferBindingType::Uniform,
                         has_dynamic_offset: false,
-                        min_binding_size: std::num::NonZeroU64::new(std::mem::size_of::<LightingUniform>() as u64),
+                        min_binding_size: std::num::NonZeroU64::new(std::mem::size_of::<
+                            LightingUniform,
+                        >()
+                            as u64),
                     },
                     count: None,
                 }],
@@ -594,13 +599,7 @@ impl DeferredRendererEnhanced {
     }
 
     /// 更新相机参数
-    pub fn update_camera(
-        &self,
-        queue: &wgpu::Queue,
-        view: Mat4,
-        proj: Mat4,
-        position: Vec3,
-    ) {
+    pub fn update_camera(&self, queue: &wgpu::Queue, view: Mat4, proj: Mat4, position: Vec3) {
         let uniform = CameraUniform::new(view, proj, position);
         queue.write_buffer(&self.camera_uniform, 0, bytemuck::cast_slice(&[uniform]));
     }
@@ -636,6 +635,6 @@ impl DeferredRendererEnhanced {
 // ============================================================================
 
 /// 延迟渲染器（基础版本）
-/// 
+///
 /// 注意：推荐使用`DeferredRendererEnhanced`以获得完整功能
 pub type DeferredRendererBase = DeferredRenderer;

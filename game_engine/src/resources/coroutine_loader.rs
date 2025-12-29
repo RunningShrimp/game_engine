@@ -49,8 +49,7 @@ use super::runtime::global_runtime;
 // ============================================================================
 
 /// 资源加载优先级
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum LoadPriority {
     /// 关键优先级 - 立即需要（如当前帧必须的纹理）
     Critical = 0,
@@ -62,7 +61,6 @@ pub enum LoadPriority {
     /// 低优先级 - 后台缓存
     Low = 3,
 }
-
 
 impl PartialOrd for LoadPriority {
     fn partial_cmp(&self, other: &Self) -> Option<CmpOrdering> {
@@ -186,6 +184,9 @@ pub enum LoadError {
     /// 超时
     #[error("Load timeout")]
     Timeout,
+    /// 锁错误
+    #[error("Lock error: {0}")]
+    LockError(String),
 }
 
 // ============================================================================
@@ -392,7 +393,13 @@ impl CoroutineAssetLoader {
                 Some(request) = request_rx.recv() => {
                     // 添加到优先级队列（在独立作用域中持有锁）
                     {
-                        let mut queue = safe_lock(&priority_queue, "CoroutineAssetLoader.priority_queue").unwrap();
+                        let mut queue = match safe_lock(&priority_queue, "CoroutineAssetLoader.priority_queue") {
+                            Ok(q) => q,
+                            Err(e) => {
+                                tracing::error!("Failed to acquire priority_queue lock: {}", e);
+                                continue;
+                            }
+                        };
                         let current_len = queue.len();
 
                         // 检查队列长度限制
@@ -469,10 +476,17 @@ impl CoroutineAssetLoader {
         if let Ok(permit) = semaphore.clone().try_acquire_owned() {
             // 从队列取出最高优先级的请求
             let request = {
-                let mut q = safe_lock(&queue, "CoroutineAssetLoader.queue").unwrap();
-                let req = q.pop();
-                queue_length.store(q.len(), Ordering::Relaxed);
-                req
+                match safe_lock(&queue, "CoroutineAssetLoader.queue") {
+                    Ok(mut q) => {
+                        let req = q.pop();
+                        queue_length.store(q.len(), Ordering::Relaxed);
+                        req
+                    }
+                    Err(e) => {
+                        tracing::error!("Failed to acquire queue lock: {}", e);
+                        return;
+                    }
+                }
             };
 
             if let Some(request) = request {
@@ -612,16 +626,18 @@ impl CoroutineAssetLoader {
                 let is_linear = request.asset_type == AssetType::TextureLinear;
 
                 // 在阻塞任务中解码图像（带并发限制）
-                let _permit = spawn_blocking_semaphore.acquire().await.unwrap();
+                let _permit = spawn_blocking_semaphore
+                    .acquire()
+                    .await
+                    .expect("Semaphore should not be closed");
                 let image = tokio::task::spawn_blocking(move || {
-                    
                     image::load_from_memory(&bytes)
                         .map(|img| img.to_rgba8())
                         .map_err(|e| LoadError::DecodeError(e.to_string()))
                     // 许可将在函数结束时自动释放
                 })
                 .await
-                .unwrap()?;
+                .map_err(|e| LoadError::IoError(format!("Spawn blocking task failed: {}", e)))??;
 
                 Ok(LoadResult::Texture { image, is_linear })
             }
@@ -700,9 +716,13 @@ impl CoroutineAssetLoader {
         };
 
         // 保存取消发送器
-        safe_lock(&self.cancel_senders, "CoroutineAssetLoader.cancel_senders")
-            .unwrap()
-            .insert(id, cancel_tx);
+        if let Ok(mut cancel_senders) =
+            safe_lock(&self.cancel_senders, "CoroutineAssetLoader.cancel_senders")
+        {
+            cancel_senders.insert(id, cancel_tx);
+        } else {
+            tracing::error!("Failed to acquire cancel_senders lock");
+        }
 
         // 发送请求
         let _ = self.request_tx.send(request);
@@ -809,13 +829,21 @@ impl CoroutineAssetLoader {
     /// 仅在无法使用异步上下文的同步代码中使用此方法。
     pub fn poll_completed(&self) -> Vec<LoadComplete> {
         let mut completed = Vec::new();
-        let mut rx = safe_lock(&self.complete_rx, "CoroutineAssetLoader.complete_rx").unwrap();
+        let mut rx = match safe_lock(&self.complete_rx, "CoroutineAssetLoader.complete_rx") {
+            Ok(rx) => rx,
+            Err(e) => {
+                tracing::error!("Failed to acquire complete_rx lock: {}", e);
+                return completed;
+            }
+        };
 
         while let Ok(complete) = rx.try_recv() {
             // 清理取消发送器
-            safe_lock(&self.cancel_senders, "CoroutineAssetLoader.cancel_senders")
-                .unwrap()
-                .remove(&complete.request_id);
+            if let Ok(mut cancel_senders) =
+                safe_lock(&self.cancel_senders, "CoroutineAssetLoader.cancel_senders")
+            {
+                cancel_senders.remove(&complete.request_id);
+            }
 
             // 更新统计
             if complete.result.is_ok() {
@@ -866,21 +894,24 @@ impl CoroutineAssetLoader {
         // - 清理过期的取消发送器
 
         // 目前简单清理：移除所有已完成的取消发送器
-        if let Ok(mut cancel_senders) =
+        if let Ok(cancel_senders) =
             safe_lock(&self.cancel_senders, "CoroutineAssetLoader.cancel_senders")
         {
             // 保留活跃的加载，移除已完成的
             let active_ids: Vec<_> = cancel_senders.keys().copied().collect();
-            tracing::debug!(
-                "Cleanup: {} active load tasks",
-                active_ids.len()
-            );
+            tracing::debug!("Cleanup: {} active load tasks", active_ids.len());
         }
     }
 
     /// 获取加载统计
     pub fn stats(&self) -> LoaderStats {
-        let wait_stats = safe_lock(&self.wait_time_stats, "wait_time_stats").unwrap();
+        let wait_stats = match safe_lock(&self.wait_time_stats, "wait_time_stats") {
+            Ok(stats) => stats,
+            Err(e) => {
+                tracing::error!("Failed to acquire wait_time_stats lock: {}", e);
+                return LoaderStats::default();
+            }
+        };
         let sample_count = wait_stats.sample_count;
 
         LoaderStats {
@@ -927,12 +958,10 @@ pub struct LoadHandle {
 impl LoadHandle {
     /// 取消加载请求
     pub fn cancel(&self) {
-        if let Some(tx) = safe_lock(&self.cancel_senders, "LoadHandle.cancel_senders")
-            .unwrap()
-            .remove(&self.id)
-        {
-            let _ = tx.send(());
-        }
+        if let Ok(mut cancel_senders) = safe_lock(&self.cancel_senders, "LoadHandle.cancel_senders")
+            && let Some(tx) = cancel_senders.remove(&self.id) {
+                let _ = tx.send(());
+            }
     }
 }
 

@@ -174,10 +174,11 @@ impl IpcChannel {
                 super::MessageType::Request => {
                     let handler_guard = channel.request_handler.read().await;
                     if let Some(handler) = handler_guard.as_ref()
-                        && let Some(pending) = handler.unregister(&message_id).await {
-                            let response = Response::success(message.clone());
-                            let _ = pending.send(response);
-                        }
+                        && let Some(pending) = handler.unregister(&message_id).await
+                    {
+                        let response = Response::success(message.clone());
+                        let _ = pending.send(response);
+                    }
                     None
                 }
                 super::MessageType::Response => Some(message),
@@ -234,10 +235,9 @@ impl MessageBus {
         let mut sent = 0;
 
         for (id, sender) in subscribers.iter() {
-            if Some(id) == message.target.as_ref()
-                && sender.send(message.clone()).is_ok() {
-                    sent += 1;
-                }
+            if Some(id) == message.target.as_ref() && sender.send(message.clone()).is_ok() {
+                sent += 1;
+            }
         }
 
         Ok(sent)

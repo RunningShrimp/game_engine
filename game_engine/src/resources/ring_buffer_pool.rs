@@ -388,7 +388,8 @@ impl RingBuffer {
         }
 
         if let Some(index) = best_index {
-            let mut block = free_blocks.remove(index).unwrap();
+            let mut block =
+                free_blocks.remove(index).expect("Failed to remove block at valid index");
             block.mark_writing();
             return Some(block);
         }

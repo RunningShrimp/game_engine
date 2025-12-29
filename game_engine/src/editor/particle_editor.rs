@@ -380,7 +380,11 @@ impl ParticleEditor {
                 }
             });
             ui.horizontal(|ui| {
-                for preset in [ParticlePreset::Rain, ParticlePreset::Snow, ParticlePreset::Magic] {
+                for preset in [
+                    ParticlePreset::Rain,
+                    ParticlePreset::Snow,
+                    ParticlePreset::Magic,
+                ] {
                     if ui.button(preset.name()).clicked() {
                         self.load_preset(preset);
                     }
@@ -576,7 +580,10 @@ impl ParticleEditor {
                         ui.checkbox(&mut sub_emitter.enabled, "Enabled");
                         ui.horizontal(|ui| {
                             ui.label("Emission Rate:");
-                            ui.add(egui::Slider::new(&mut sub_emitter.emission_rate, 0.0..=50.0));
+                            ui.add(egui::Slider::new(
+                                &mut sub_emitter.emission_rate,
+                                0.0..=50.0,
+                            ));
                         });
                         ui.horizontal(|ui| {
                             ui.label("Lifetime:");
@@ -593,12 +600,21 @@ impl ParticleEditor {
             ui.collapsing("Preview", |ui| {
                 ui.horizontal(|ui| {
                     ui.label("Size:");
-                    ui.add(egui::Slider::new(&mut self.enhanced_config.preview_size, 100.0..=500.0));
+                    ui.add(egui::Slider::new(
+                        &mut self.enhanced_config.preview_size,
+                        100.0..=500.0,
+                    ));
                 });
-                ui.label(format!("Current Particles: {}", self.current_particle_count));
+                ui.label(format!(
+                    "Current Particles: {}",
+                    self.current_particle_count
+                ));
                 // 预览区域（占位）
                 ui.allocate_ui_with_layout(
-                    egui::Vec2::new(self.enhanced_config.preview_size, self.enhanced_config.preview_size),
+                    egui::Vec2::new(
+                        self.enhanced_config.preview_size,
+                        self.enhanced_config.preview_size,
+                    ),
                     egui::Layout::top_down(egui::Align::Center),
                     |ui| {
                         ui.label("Particle Preview");
@@ -611,7 +627,14 @@ impl ParticleEditor {
 
         // 播放控制
         ui.horizontal(|ui| {
-            if ui.button(if self.is_playing { "⏸ Stop" } else { "▶ Play" }).clicked() {
+            if ui
+                .button(if self.is_playing {
+                    "⏸ Stop"
+                } else {
+                    "▶ Play"
+                })
+                .clicked()
+            {
                 self.is_playing = !self.is_playing;
             }
 
@@ -626,24 +649,23 @@ impl ParticleEditor {
         if self.enhanced_config.enable_library {
             ui.separator();
             ui.collapsing("Particle Library", |ui| {
-                egui::ScrollArea::vertical()
-                    .max_height(200.0)
-                    .show(ui, |ui| {
-                        let library_entries: Vec<(String, String)> = self.particle_library
-                            .iter()
-                            .map(|(name, entry)| (name.clone(), entry.description.clone()))
-                            .collect();
-                        
-                        for (name, description) in library_entries {
-                            ui.horizontal(|ui| {
-                                let name_clone = name.clone();
-                                if ui.button(&name).clicked() {
-                                    self.load_from_library(&name_clone);
-                                }
-                                ui.label(&description);
-                            });
-                        }
-                    });
+                egui::ScrollArea::vertical().max_height(200.0).show(ui, |ui| {
+                    let library_entries: Vec<(String, String)> = self
+                        .particle_library
+                        .iter()
+                        .map(|(name, entry)| (name.clone(), entry.description.clone()))
+                        .collect();
+
+                    for (name, description) in library_entries {
+                        ui.horizontal(|ui| {
+                            let name_clone = name.clone();
+                            if ui.button(&name).clicked() {
+                                self.load_from_library(&name_clone);
+                            }
+                            ui.label(&description);
+                        });
+                    }
+                });
             });
         }
     }

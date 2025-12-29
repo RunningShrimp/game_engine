@@ -12,8 +12,7 @@ use std::collections::{BinaryHeap, HashMap};
 use tokio::sync::mpsc;
 
 /// 消息优先级
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub enum MessagePriority {
     /// 低优先级（默认）
     Low = 0,
@@ -25,7 +24,6 @@ pub enum MessagePriority {
     /// 紧急优先级
     Urgent = 3,
 }
-
 
 impl MessagePriority {
     /// 创建新的消息优先级
@@ -584,7 +582,7 @@ mod tests {
         let mut system = ActorSystem::new();
 
         // 注册音频Actor
-        let audio_handle = system.register("audio", AudioActor::new()).unwrap();
+        let audio_handle = system.register("audio", AudioActor::new()).expect("Test: operation should succeed");
 
         // 发送消息
         audio_handle
@@ -594,10 +592,10 @@ mod tests {
                 volume: 1.0,
                 looped: false,
             })
-            .unwrap();
+            .expect("Test: operation should succeed");
 
         // 停止Actor
-        audio_handle.stop().unwrap();
+        audio_handle.stop().expect("Test: operation should succeed");
     }
 
     #[test]
@@ -605,18 +603,18 @@ mod tests {
         let mut system = ActorSystem::new();
 
         // 注册多个Actor
-        let audio_handle = system.register("audio", AudioActor::new()).unwrap();
-        let physics_handle = system.register("physics", PhysicsActor::new()).unwrap();
-        let render_handle = system.register("render", RenderActor::new()).unwrap();
+        let audio_handle = system.register("audio", AudioActor::new()).expect("Test: operation should succeed");
+        let physics_handle = system.register("physics", PhysicsActor::new()).expect("Test: operation should succeed");
+        let render_handle = system.register("render", RenderActor::new()).expect("Test: operation should succeed");
 
         // 发送消息到不同Actor
-        audio_handle.send(AudioActorMessage::SetMasterVolume { volume: 0.8 }).unwrap();
-        physics_handle.send(PhysicsActorMessage::Step { delta_time: 0.016 }).unwrap();
-        render_handle.send(RenderActorMessage::RenderFrame).unwrap();
+        audio_handle.send(AudioActorMessage::SetMasterVolume { volume: 0.8 }).expect("Test: operation should succeed");
+        physics_handle.send(PhysicsActorMessage::Step { delta_time: 0.016 }).expect("Test: operation should succeed");
+        render_handle.send(RenderActorMessage::RenderFrame).expect("Test: operation should succeed");
 
         // 停止所有Actor
-        audio_handle.stop().unwrap();
-        physics_handle.stop().unwrap();
-        render_handle.stop().unwrap();
+        audio_handle.stop().expect("Test: operation should succeed");
+        physics_handle.stop().expect("Test: operation should succeed");
+        render_handle.stop().expect("Test: operation should succeed");
     }
 }

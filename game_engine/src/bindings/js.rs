@@ -49,16 +49,41 @@ pub struct JsBindingAdapter {
     command_queue: Arc<Mutex<CommandQueue>>,
 }
 
-// JsBindingAdapter is intentionally not Send + Sync due to rquickjs library limitations.
-// This adapter uses a single-threaded design with command queues for thread safety.
-// See: https://docs.rs/rquickjs/latest/rquickjs/
-unsafe impl Send for JsBindingAdapter {}
-unsafe impl Sync for JsBindingAdapter {}
+// SAFETY: JsBindingAdapter is NOT Send + Sync
+//
+// QuickJS Runtime and Context are NOT thread-safe and cannot be safely shared across threads.
+// The rquickjs library explicitly does not implement Send/Sync for these types.
+//
+// Attempting to make this type Send/Sync is INCORRECT and UNSAFE because:
+// - Runtime/Context contain raw pointers and internal state that is not protected by mutexes
+// - QuickJS was designed for single-threaded use only
+// - Cross-thread access would cause data races and undefined behavior
+//
+// Correct approach for multi-threading:
+// - Keep JsBindingAdapter on a single thread (e.g., the main thread or a dedicated JS thread)
+// - Use channels (mpsc/oneshot) for thread-safe communication
+// - The existing Arc<Mutex<CommandQueue>> is a good pattern for this
+//
+// DO NOT add unsafe impl Send/Sync here. Instead, use a thread-local design or message passing.
+//
+// See: https://docs.rs/rquickjs/latest/rquickjs/ (note lack of Send/Sync)
 
 impl Default for JsBindingAdapter {
     fn default() -> Self {
-        let runtime = Runtime::new().expect("Failed to create JS runtime");
-        let context = Context::full(&runtime).expect("Failed to create JS context");
+        let runtime = match Runtime::new() {
+            Ok(rt) => rt,
+            Err(e) => {
+                tracing::error!("Failed to create JS runtime: {}", e);
+                panic!("Critical: Cannot initialize JavaScript runtime: {}", e);
+            }
+        };
+        let context = match Context::full(&runtime) {
+            Ok(ctx) => ctx,
+            Err(e) => {
+                tracing::error!("Failed to create JS context: {}", e);
+                panic!("Critical: Cannot initialize JavaScript context: {}", e);
+            }
+        };
         let command_queue = Arc::new(Mutex::new(CommandQueue::default()));
 
         Self {
@@ -77,26 +102,43 @@ impl JsBindingAdapter {
     fn bind_engine_api_internal(&mut self) {
         self.context.with(|ctx| {
             // Create 'Engine' namespace object
-            let engine_obj = Object::new(ctx.clone()).unwrap();
+            let engine_obj = match Object::new(ctx.clone()) {
+                Ok(obj) => obj,
+                Err(e) => {
+                    tracing::error!("Failed to create Engine object: {}", e);
+                    return;
+                }
+            };
 
             // Engine.log(msg)
-            engine_obj
-                .set(
-                    "log",
-                    Function::new(ctx.clone(), |msg: String| {
-                        println!("[JS]: {}", msg);
-                    }),
-                )
-                .unwrap();
+            if let Err(e) = engine_obj.set(
+                "log",
+                Function::new(ctx.clone(), |msg: String| {
+                    println!("[JS]: {}", msg);
+                }),
+            ) {
+                tracing::error!("Failed to set Engine.log: {}", e);
+                return;
+            }
 
             // Store engine reference globally
-            ctx.globals().set("Engine", engine_obj).unwrap();
+            if let Err(e) = ctx.globals().set("Engine", engine_obj) {
+                tracing::error!("Failed to set Engine global: {}", e);
+            }
         });
     }
 
     fn execute_command_internal(&mut self, cmd: BindingCommand) -> BindingResult {
         // Queue command for processing
-        let mut queue = self.command_queue.lock().unwrap();
+        let mut queue = match self.command_queue.lock() {
+            Ok(q) => q,
+            Err(e) => {
+                tracing::error!("Failed to acquire command queue lock: {}", e);
+                return BindingResult::Error {
+                    message: "Command queue lock failed".to_string(),
+                };
+            }
+        };
         queue.push(cmd);
         BindingResult::Success {
             data: Some("Command queued".to_string()),

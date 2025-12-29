@@ -7,8 +7,8 @@
 //! - 体积阴影 (Volumetric Shadows)
 
 use crate::impl_default;
-use wgpu::{BindGroupLayout, RenderPipeline};
 use glam::Vec3;
+use wgpu::{BindGroupLayout, RenderPipeline};
 
 /// 体积光配置
 #[derive(Debug, Clone)]
@@ -162,4 +162,3 @@ impl Default for VolumetricLightingUniforms {
         }
     }
 }
-

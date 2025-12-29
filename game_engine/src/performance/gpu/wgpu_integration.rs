@@ -621,7 +621,7 @@ impl GPUProfiler {
         // 模拟时间戳（实际应该从GPU获取）
         let timestamp_ns = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
+            .expect("Test: operation should succeed")
             .as_nanos() as u64;
         query.record_start(timestamp_ns);
     }
@@ -631,7 +631,7 @@ impl GPUProfiler {
         if let Some(query) = self.time_queries.get_mut(name) {
             let timestamp_ns = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
+                .expect("Test: operation should succeed")
                 .as_nanos() as u64;
             query.record_end(timestamp_ns);
         }
@@ -679,15 +679,17 @@ impl GPUProfiler {
 
         if let Some(vertex_time) = self.time_queries.get("vertex_processing")
             && let Some(time) = vertex_time.last_time_ms()
-                && time > 5.0 {
-                    return PipelineBottleneck::VertexProcessing;
-                }
+            && time > 5.0
+        {
+            return PipelineBottleneck::VertexProcessing;
+        }
 
         if let Some(fragment_time) = self.time_queries.get("fragment_processing")
             && let Some(time) = fragment_time.last_time_ms()
-                && time > 5.0 {
-                    return PipelineBottleneck::FragmentProcessing;
-                }
+            && time > 5.0
+        {
+            return PipelineBottleneck::FragmentProcessing;
+        }
 
         PipelineBottleneck::None
     }
@@ -816,7 +818,7 @@ mod tests {
         let mut pipeline = ComputePipelineWGPU::new("physics".to_string(), shader);
 
         pipeline.bind_buffer(0, GPUBuffer::storage("positions".to_string(), 1024 * 1024));
-        pipeline.compile(&device).unwrap();
+        pipeline.compile(&device).expect("Test: operation should succeed");
 
         assert!(pipeline.compiled);
         assert!(pipeline.can_execute());

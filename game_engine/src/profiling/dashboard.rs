@@ -18,18 +18,19 @@
 //  // dashboard.start_server("127.0.0.1:8080").await?;
 //  ```
 
-use futures::stream::SplitSink;
+use axum::extract::ws::{Message as AxumMessage, WebSocket, WebSocketUpgrade};
+use axum::{
+    Json, Router,
+    extract::{Extension, Query},
+    response::IntoResponse,
+    routing::get,
+};
 use futures::{SinkExt, StreamExt};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use tokio::sync::{Mutex, RwLock};
 use tokio::time::interval;
-use axum::{Router, routing::get, extract::{Extension, Query}, response::IntoResponse, Json};
-use axum::extract::ws::{WebSocketUpgrade, WebSocket, Message as AxumMessage};
-use tower_http::cors::{CorsLayer, Any};
-use tower_http::trace::TraceLayer;
-use axum::http::Method;
 
 use super::ProfilingService;
 
@@ -65,10 +66,7 @@ pub struct RealtimeMetrics {
 impl Default for RealtimeMetrics {
     fn default() -> Self {
         Self {
-            timestamp: SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_millis() as u64,
+            timestamp: SystemTime::now().duration_since(UNIX_EPOCH).expect("Test: operation should succeed").as_millis() as u64,
             fps: 0.0,
             frame_time: 0.0,
             cpu_usage: 0.0,
@@ -355,7 +353,7 @@ impl DashboardService {
         });
 
         // 构建路由
-        let mut app = Router::new()
+        let app = Router::new()
             .route("/api/metrics", get(get_metrics_axum))
             .route("/api/chart-data", get(get_chart_data_axum))
             .route("/api/alerts", get(get_alerts_axum))
@@ -364,7 +362,6 @@ impl DashboardService {
 
         // CORS and Trace layers are temporarily disabled to avoid dependency version mismatches.
         // Re-enable `TraceLayer` and `CorsLayer` after updating `tower-http`/`http` to compatible versions.
-
 
         // 启动实时推送任务（如果启用）
         if config.enable_websocket {
@@ -379,9 +376,7 @@ impl DashboardService {
         );
 
         let socket_addr = addr.parse::<std::net::SocketAddr>()?;
-        axum_server::bind(socket_addr)
-            .serve(app.into_make_service())
-            .await?;
+        axum_server::bind(socket_addr).serve(app.into_make_service()).await?;
 
         Ok(())
     }
@@ -391,22 +386,22 @@ impl DashboardService {
         let profiling_service = self.profiling_service.clone();
         let connections = self.websocket_connections.clone();
         let update_interval = Duration::from_millis(100); // 10Hz更新频率
-        
+
         tokio::spawn(async move {
             let mut interval = interval(update_interval);
-            
+
             loop {
                 interval.tick().await;
-                
+
                 // 收集实时指标
                 let realtime_metrics = collect_realtime_metrics(&profiling_service).await;
-                
+
                 // 序列化数据
                 if let Ok(json_data) = serde_json::to_string(&realtime_metrics) {
                     // 广播给所有连接的客户端
                     let mut connections_guard = connections.lock().await;
                     let mut to_remove = Vec::new();
-                    
+
                     for (i, sender) in connections_guard.iter().enumerate() {
                         if sender.sender.send(json_data.clone()).is_err() {
                             // 连接已断开，标记为待移除
@@ -414,7 +409,7 @@ impl DashboardService {
                             tracing::warn!("WebSocket connection {} disconnected", sender.id);
                         }
                     }
-                    
+
                     // 移除断开的连接
                     for &i in to_remove.iter().rev() {
                         connections_guard.remove(i);
@@ -427,28 +422,28 @@ impl DashboardService {
     /// 收集当前性能指标
     async fn collect_metrics(&self) -> MetricsResponse {
         let service = &self.profiling_service;
-        
+
         // 收集渲染指标
         let render = self.collect_render_metrics(service).await;
-        
+
         // 收集内存指标
         let memory = self.collect_memory_metrics(service).await;
-        
+
         // 收集物理指标
         let physics = self.collect_physics_metrics(service).await;
-        
+
         // 收集系统指标
         let system = self.collect_system_metrics(service).await;
-        
+
         // 收集协程指标
         let coroutine = self.collect_coroutine_metrics().await;
-        
+
         // 收集SIMD指标
         let simd = self.collect_simd_metrics().await;
-        
+
         // 检查告警
         let alerts = self.check_alerts(&render, &memory, &physics, &system).await;
-        
+
         MetricsResponse {
             render,
             memory,
@@ -463,7 +458,7 @@ impl DashboardService {
     /// 收集渲染指标
     async fn collect_render_metrics(&self, service: &ProfilingService) -> Option<RenderMetrics> {
         let metrics = service.get_realtime_metrics().ok()?;
-        
+
         Some(RenderMetrics {
             fps: metrics.fps,
             frame_time: metrics.frame_time,
@@ -479,7 +474,7 @@ impl DashboardService {
         let metrics = service.get_realtime_metrics().ok()?;
         let total_memory_mb = 4096.0;
         let usage_percent = (metrics.memory_usage / total_memory_mb) * 100.0;
-        
+
         Some(MemoryMetrics {
             usage_percent,
             allocated_mb: metrics.memory_usage,
@@ -491,7 +486,7 @@ impl DashboardService {
     /// 收集物理指标
     async fn collect_physics_metrics(&self, service: &ProfilingService) -> Option<PhysicsMetrics> {
         let metrics = service.get_realtime_metrics().ok()?;
-        
+
         Some(PhysicsMetrics {
             calc_time: metrics.physics_time,
             collision_count: 0,
@@ -503,7 +498,7 @@ impl DashboardService {
     /// 收集系统指标
     async fn collect_system_metrics(&self, service: &ProfilingService) -> Option<SystemMetrics> {
         let metrics = service.get_realtime_metrics().ok()?;
-        
+
         Some(SystemMetrics {
             cpu_usage: metrics.cpu_usage,
             gpu_usage: metrics.gpu_usage,
@@ -533,7 +528,7 @@ impl DashboardService {
                 game_engine_simd::SimdWidth::W512 => 512,
             };
             let f32_lanes = backend.f32_lanes();
-            
+
             Some(SimdMetrics {
                 backend: backend_name,
                 simd_width,
@@ -567,77 +562,82 @@ impl DashboardService {
     ) -> Vec<AlertInfo> {
         let mut alerts = Vec::new();
         let thresholds = &self.config.alert_thresholds;
-        
+
         // 检查低帧率
         if let Some(render) = render
-            && render.fps < thresholds.low_fps_threshold {
-                alerts.push(AlertInfo {
-                    id: format!("low_fps_{}", current_timestamp()),
-                    severity: "warning".to_string(),
-                    message: format!("低帧率: {:.1} FPS", render.fps),
-                    timestamp: current_timestamp(),
-                    metric_name: Some("fps".to_string()),
-                    current_value: Some(render.fps),
-                    threshold: Some(thresholds.low_fps_threshold),
-                });
-            }
-        
+            && render.fps < thresholds.low_fps_threshold
+        {
+            alerts.push(AlertInfo {
+                id: format!("low_fps_{}", current_timestamp()),
+                severity: "warning".to_string(),
+                message: format!("低帧率: {:.1} FPS", render.fps),
+                timestamp: current_timestamp(),
+                metric_name: Some("fps".to_string()),
+                current_value: Some(render.fps),
+                threshold: Some(thresholds.low_fps_threshold),
+            });
+        }
+
         // 检查高帧时间
         if let Some(render) = render
-            && render.frame_time > thresholds.high_frame_time_threshold {
-                alerts.push(AlertInfo {
-                    id: format!("high_frame_time_{}", current_timestamp()),
-                    severity: "warning".to_string(),
-                    message: format!("高帧时间: {:.2} ms", render.frame_time),
-                    timestamp: current_timestamp(),
-                    metric_name: Some("frame_time".to_string()),
-                    current_value: Some(render.frame_time),
-                    threshold: Some(thresholds.high_frame_time_threshold),
-                });
-            }
-        
+            && render.frame_time > thresholds.high_frame_time_threshold
+        {
+            alerts.push(AlertInfo {
+                id: format!("high_frame_time_{}", current_timestamp()),
+                severity: "warning".to_string(),
+                message: format!("高帧时间: {:.2} ms", render.frame_time),
+                timestamp: current_timestamp(),
+                metric_name: Some("frame_time".to_string()),
+                current_value: Some(render.frame_time),
+                threshold: Some(thresholds.high_frame_time_threshold),
+            });
+        }
+
         // 检查高内存使用率
         if let Some(memory) = memory
-            && memory.usage_percent > thresholds.high_memory_threshold {
-                alerts.push(AlertInfo {
-                    id: format!("high_memory_{}", current_timestamp()),
-                    severity: "error".to_string(),
-                    message: format!("高内存使用率: {:.1}%", memory.usage_percent),
-                    timestamp: current_timestamp(),
-                    metric_name: Some("memory_usage".to_string()),
-                    current_value: Some(memory.usage_percent),
-                    threshold: Some(thresholds.high_memory_threshold),
-                });
-            }
-        
+            && memory.usage_percent > thresholds.high_memory_threshold
+        {
+            alerts.push(AlertInfo {
+                id: format!("high_memory_{}", current_timestamp()),
+                severity: "error".to_string(),
+                message: format!("高内存使用率: {:.1}%", memory.usage_percent),
+                timestamp: current_timestamp(),
+                metric_name: Some("memory_usage".to_string()),
+                current_value: Some(memory.usage_percent),
+                threshold: Some(thresholds.high_memory_threshold),
+            });
+        }
+
         // 检查高CPU使用率
         if let Some(system) = system
-            && system.cpu_usage > thresholds.high_cpu_threshold {
-                alerts.push(AlertInfo {
-                    id: format!("high_cpu_{}", current_timestamp()),
-                    severity: "error".to_string(),
-                    message: format!("高CPU使用率: {:.1}%", system.cpu_usage),
-                    timestamp: current_timestamp(),
-                    metric_name: Some("cpu_usage".to_string()),
-                    current_value: Some(system.cpu_usage),
-                    threshold: Some(thresholds.high_cpu_threshold),
-                });
-            }
-        
+            && system.cpu_usage > thresholds.high_cpu_threshold
+        {
+            alerts.push(AlertInfo {
+                id: format!("high_cpu_{}", current_timestamp()),
+                severity: "error".to_string(),
+                message: format!("高CPU使用率: {:.1}%", system.cpu_usage),
+                timestamp: current_timestamp(),
+                metric_name: Some("cpu_usage".to_string()),
+                current_value: Some(system.cpu_usage),
+                threshold: Some(thresholds.high_cpu_threshold),
+            });
+        }
+
         // 检查高GPU使用率
         if let Some(system) = system
-            && system.gpu_usage > thresholds.high_gpu_threshold {
-                alerts.push(AlertInfo {
-                    id: format!("high_gpu_{}", current_timestamp()),
-                    severity: "error".to_string(),
-                    message: format!("高GPU使用率: {:.1}%", system.gpu_usage),
-                    timestamp: current_timestamp(),
-                    metric_name: Some("gpu_usage".to_string()),
-                    current_value: Some(system.gpu_usage),
-                    threshold: Some(thresholds.high_gpu_threshold),
-                });
-            }
-        
+            && system.gpu_usage > thresholds.high_gpu_threshold
+        {
+            alerts.push(AlertInfo {
+                id: format!("high_gpu_{}", current_timestamp()),
+                severity: "error".to_string(),
+                message: format!("高GPU使用率: {:.1}%", system.gpu_usage),
+                timestamp: current_timestamp(),
+                metric_name: Some("gpu_usage".to_string()),
+                current_value: Some(system.gpu_usage),
+                threshold: Some(thresholds.high_gpu_threshold),
+            });
+        }
+
         alerts
     }
 
@@ -645,21 +645,21 @@ impl DashboardService {
     async fn update_historical_data(&self) {
         let service = &self.profiling_service;
         let mut data = self.historical_data.write().await;
-        
+
         let metrics = match service.get_realtime_metrics() {
             Ok(m) => m,
             Err(_) => return,
         };
-        
+
         add_data_point(&mut data, "fps", metrics.fps);
         add_data_point(&mut data, "frame_time", metrics.frame_time);
         add_data_point(&mut data, "draw_calls", metrics.draw_calls as f64);
         add_data_point(&mut data, "memory_usage", metrics.memory_usage);
         add_data_point(&mut data, "physics_time", metrics.physics_time);
-        
+
         let retention = Duration::from_secs(self.config.data_retention_seconds);
         let cutoff = Instant::now() - retention;
-        
+
         for (_, values) in data.iter_mut() {
             values.retain(|(timestamp, _)| *timestamp >= cutoff);
         }
@@ -683,7 +683,7 @@ async fn handle_websocket_connection(
     _service: Arc<ProfilingService>,
     connections: Arc<Mutex<Vec<WebSocketSender>>>,
 ) {
-    let (mut ws_tx, mut ws_rx) = websocket.split();
+    let (ws_tx, mut ws_rx) = websocket.split();
 
     // 生成唯一连接ID
     let connection_id = format!("ws_{}", &uuid::Uuid::new_v4().to_string()[..8]);
@@ -691,7 +691,10 @@ async fn handle_websocket_connection(
     // mpsc 发送器用于推送 JSON 文本
     let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<String>();
 
-    let sender = WebSocketSender { sender: tx.clone(), id: connection_id.clone() };
+    let sender = WebSocketSender {
+        sender: tx.clone(),
+        id: connection_id.clone(),
+    };
 
     // 添加到连接列表
     {
@@ -813,7 +816,8 @@ async fn ws_handler(
 
 /// API处理器：获取当前性能指标（axum 版本）
 async fn get_metrics_axum(Extension(state): Extension<Arc<AppState>>) -> impl IntoResponse {
-    let dashboard = DashboardService::with_config(state.profiling_service.clone(), state.config.clone());
+    let dashboard =
+        DashboardService::with_config(state.profiling_service.clone(), state.config.clone());
     let metrics = dashboard.collect_metrics().await;
     // 更新历史数据
     dashboard.update_historical_data().await;
@@ -833,7 +837,8 @@ async fn get_chart_data_axum(
 
     // 过滤时间范围
     let cutoff = Instant::now() - Duration::from_secs(range_seconds);
-    let filtered_values: Vec<_> = values.into_iter().filter(|(timestamp, _)| *timestamp >= cutoff).collect();
+    let filtered_values: Vec<_> =
+        values.into_iter().filter(|(timestamp, _)| *timestamp >= cutoff).collect();
 
     // 转换为图表格式
     let (labels, chart_values): (Vec<_>, Vec<_>) = filtered_values
@@ -845,7 +850,10 @@ async fn get_chart_data_axum(
         })
         .unzip();
 
-    let response = ChartDataResponse { labels, values: chart_values };
+    let response = ChartDataResponse {
+        labels,
+        values: chart_values,
+    };
 
     Json(response)
 }

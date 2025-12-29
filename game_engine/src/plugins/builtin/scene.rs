@@ -3,14 +3,19 @@
 //  提供场景管理功能，支持场景加载、保存、切换等。
 
 use crate::impl_default;
-use crate::plugins::{EnginePlugin, App, PluginVersion, PluginDependency};
-use crate::scene::{SceneTransitionManager, scene_update_system, scene_load_system, scene_cleanup_system};
+use crate::plugins::{App, EnginePlugin, PluginDependency, PluginVersion};
+use crate::scene::{
+    SceneTransitionManager, scene_cleanup_system, scene_load_system, scene_update_system,
+};
 
 // 安全的资源获取宏 - 提供更好的错误消息
 macro_rules! fetch_resource_mut {
     ($world:expr, $res_type:ty) => {
-        $world.get_resource_mut::<$res_type>()
-            .expect(concat!("Resource ", stringify!($res_type), " not found"))
+        $world.get_resource_mut::<$res_type>().expect(concat!(
+            "Resource ",
+            stringify!($res_type),
+            " not found"
+        ))
     };
 }
 
@@ -96,7 +101,10 @@ impl EnginePlugin for ScenePlugin {
         println!("Scene plugin started:");
         println!("  Serialization: {}", self.config.enable_serialization);
         println!("  Max cached scenes: {}", self.config.max_cached_scenes);
-        println!("  Default transition: {}s", self.config.default_transition_duration);
+        println!(
+            "  Default transition: {}s",
+            self.config.default_transition_duration
+        );
 
         // 创建默认场景
         create_default_scenes(world);
@@ -118,12 +126,20 @@ fn create_default_scenes(world: &mut bevy_ecs::world::World) {
     // 创建主菜单场景
     let main_menu_id = scene_manager.create_scene("Main Menu".to_string());
     scene_manager.set_scene_metadata(main_menu_id, "type".to_string(), "menu".to_string());
-    scene_manager.set_scene_metadata(main_menu_id, "music".to_string(), "menu_theme.mp3".to_string());
+    scene_manager.set_scene_metadata(
+        main_menu_id,
+        "music".to_string(),
+        "menu_theme.mp3".to_string(),
+    );
 
     // 创建游戏场景
     let game_scene_id = scene_manager.create_scene("Game Level 1".to_string());
     scene_manager.set_scene_metadata(game_scene_id, "type".to_string(), "level".to_string());
-    scene_manager.set_scene_metadata(game_scene_id, "difficulty".to_string(), "normal".to_string());
+    scene_manager.set_scene_metadata(
+        game_scene_id,
+        "difficulty".to_string(),
+        "normal".to_string(),
+    );
 
     // 创建暂停场景
     let pause_scene_id = scene_manager.create_scene("Pause Menu".to_string());

@@ -1,12 +1,65 @@
-//  光线追踪渲染模块
-//
-//  提供基于计算着色器的光线追踪实现，支持：
-//  - 反射和折射
-//  - 软阴影
-//  - 全局光照
-//  - 环境光遮蔽
-//
-//  注意：当前实现使用计算着色器进行软件光线追踪，不依赖硬件RTX支持。
+//! # 光线追踪渲染模块
+//!
+//! **API 稳定性**: 实验性 (Experimental) (v0.1.0)
+//!
+//! 提供基于计算着色器的光线追踪实现，支持：
+//! - 反射和折射
+//! - 软阴影
+//! - 全局光照
+//! - 环境光遮蔽
+//!
+//! ## API 稳定性声明
+//!
+//! **警告**: 此 API 处于实验性阶段，可能会在未来版本中发生破坏性变更。
+//! - **状态**: 实验性 (Experimental)
+//! - **引入版本**: v0.1.0
+//! - **预期稳定版本**: v0.3.0
+//!
+//! ## 功能完整性追踪
+//!
+//! | 功能 | 状态 | 说明 |
+//! |------|------|------|
+//! | 基础光线追踪 | ✅ 已实现 | 核心功能可用，使用计算着色器 |
+//! | 反射和折射 | 🚧 开发中 | 部分实现，需要进一步完善 |
+//! | 软阴影 | 🚧 开发中 | 基础实现存在，质量待优化 |
+//! | 全局光照 | ⏳ 计划中 | 设计阶段 |
+//! | 环境光遮蔽 | ⏳ 计划中 | 设计阶段 |
+//! | BVH 加速 | 🚧 开发中 | 数据结构就绪，构建算法待完善 |
+//! | 硬件加速 (RTX/DXR) | ⏳ 计划中 | 等待 wgpu DXR 支持 |
+//!
+//! ## 使用说明
+//!
+//! 当前实现使用计算着色器进行软件光线追踪，不依赖硬件 RTX 支持。
+//!
+//! ### 示例
+//!
+//! ```rust,no_run
+//! use game_engine::render::ray_tracing::{RayTracingRenderer, RayTracingConfig};
+//!
+//! let config = RayTracingConfig {
+//!     enabled: true,
+//!     rays_per_pixel: 1,
+//!     max_bounces: 2,
+//!     ..Default::default()
+//! };
+//!
+//! let renderer = RayTracingRenderer::new(&device, config)?;
+//! ```
+//!
+//! ## 已知限制
+//!
+//! 1. 性能相比原生硬件光线追踪较低
+//! 2. BVH 构建和遍历未完全优化
+//! 3. 着色器实现较为简化
+//! 4. 缺少高级光照模型
+//!
+//! ## 未来改进计划
+//!
+//! - [ ] 完整的 BVH 实现
+//! - [ ] 优化着色器性能
+//! - [ ] 添加更多材质类型
+//! - [ ] 支持实例渲染
+//! - [ ] 集成硬件光线追踪（当 wgpu 支持时）
 
 use crate::error::RenderError;
 use crate::impl_default;
@@ -15,8 +68,8 @@ use glam::{Mat4, Vec3};
 // use glam::Vec4;
 use wgpu::util::DeviceExt;
 use wgpu::{
-    Adapter, BindGroup, BindGroupLayout, Buffer, CommandEncoder, ComputePipeline, Device, Queue, Texture,
-    TextureView,
+    Adapter, BindGroup, BindGroupLayout, Buffer, CommandEncoder, ComputePipeline, Device, Queue,
+    Texture, TextureView,
 };
 
 /// 光线追踪加速类型（增强功能）
@@ -249,11 +302,9 @@ impl RayTracingRenderer {
         }
 
         // 检测硬件加速支持
-        let hardware_supported = adapter
-            .map(Self::detect_hardware_acceleration)
-            .unwrap_or(false);
-        let use_hardware = hardware_supported
-            && config.acceleration == RayTracingAcceleration::Hardware;
+        let hardware_supported = adapter.map(Self::detect_hardware_acceleration).unwrap_or(false);
+        let use_hardware =
+            hardware_supported && config.acceleration == RayTracingAcceleration::Hardware;
 
         // 创建计算着色器（硬件和软件使用相同的着色器，但可以优化）
         let shader_source = if use_hardware {
@@ -539,12 +590,13 @@ impl RayTracingRenderer {
 
         // 如果使用BVH，添加BVH缓冲区（增强功能）
         if self.config.use_bvh
-            && let Some(bvh_buffer) = &self.bvh_buffer {
-                entries.push(wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: bvh_buffer.as_entire_binding(),
-                });
-            }
+            && let Some(bvh_buffer) = &self.bvh_buffer
+        {
+            entries.push(wgpu::BindGroupEntry {
+                binding: 3,
+                resource: bvh_buffer.as_entire_binding(),
+            });
+        }
 
         Ok(device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Ray Tracing Bind Group"),
@@ -634,7 +686,13 @@ impl RayTracingRenderer {
         compute_pass.set_bind_group(0, bind_group, &[]);
 
         // 计算工作组数量
-        let output_texture = self.output_texture.as_ref().unwrap();
+        let Some(output_texture) = &self.output_texture else {
+            tracing::error!("Ray tracing output texture not available during render");
+            return Err(RenderError::InvalidState {
+                message: "Output texture not initialized".into(),
+                severity: crate::error::ErrorSeverity::Error,
+            });
+        };
         let width = output_texture.width();
         let height = output_texture.height();
         let workgroup_size = 8; // 8x8 工作组

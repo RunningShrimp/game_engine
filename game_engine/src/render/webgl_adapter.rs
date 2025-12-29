@@ -8,6 +8,7 @@
 
 use crate::error::RenderError;
 use std::collections::HashMap;
+use tracing::{error, warn};
 
 /// WebGL适配器配置
 #[derive(Debug, Clone)]
@@ -108,13 +109,19 @@ impl WebGLCapabilities {
         if gl_context.is_none() {
             if let Ok(Some(ctx)) = canvas.get_context("webgl") {
                 if let Some(ctx) = ctx.dyn_ref::<WebGlRenderingContext>() {
-                    gl_context = Some(
-                        ctx.clone().dyn_into::<WebGl2RenderingContext>().unwrap_or_else(|_| {
-                            // 如果无法转换，创建一个包装器（简化实现）
-                            // 实际实现需要更复杂的处理
-                            todo!("WebGL1 to WebGL2 wrapper")
-                        }),
-                    );
+                    match ctx.clone().dyn_into::<WebGl2RenderingContext>() {
+                        Ok(ctx2) => {
+                            gl_context = Some(ctx2);
+                        }
+                        Err(_) => {
+                            error!(
+                                "WebGL1 context detected but not supported in this implementation"
+                            );
+                            return Err(RenderError::Other(
+                                "WebGL1 to WebGL2 context conversion failed".to_string(),
+                            ));
+                        }
+                    }
                 }
             }
         }
@@ -123,45 +130,76 @@ impl WebGLCapabilities {
             .ok_or_else(|| RenderError::Other("Failed to get WebGL context".to_string()))?;
 
         // 获取供应商和渲染器信息
-        let vendor = gl
-            .get_parameter(WebGl2RenderingContext::VENDOR)
-            .as_string()
-            .unwrap_or_else(|| "Unknown".to_string());
+        let vendor =
+            gl.get_parameter(WebGl2RenderingContext::VENDOR).as_string().unwrap_or_else(|| {
+                warn!("Failed to retrieve WebGL VENDOR parameter, using default");
+                "Unknown".to_string()
+            });
         let renderer = gl
             .get_parameter(WebGl2RenderingContext::RENDERER)
             .as_string()
-            .unwrap_or_else(|| "Unknown".to_string());
+            .unwrap_or_else(|| {
+                warn!("Failed to retrieve WebGL RENDERER parameter, using default");
+                "Unknown".to_string()
+            });
         let shading_language_version = gl
             .get_parameter(WebGl2RenderingContext::SHADING_LANGUAGE_VERSION)
             .as_string()
-            .unwrap_or_else(|| "Unknown".to_string());
+            .unwrap_or_else(|| {
+                warn!("Failed to retrieve WebGL SHADING_LANGUAGE_VERSION parameter, using default");
+                "Unknown".to_string()
+            });
 
         // 获取扩展列表
         let extensions: Vec<String> = gl
             .get_supported_extensions()
-            .map(|exts| exts.iter().map(|ext| ext.as_string().unwrap_or_default()).collect())
-            .unwrap_or_default();
+            .map(|exts| {
+                exts.iter()
+                    .map(|ext| {
+                        ext.as_string().unwrap_or_else(|| {
+                            warn!("Extension name conversion failed, using default");
+                            String::default()
+                        })
+                    })
+                    .collect()
+            })
+            .unwrap_or_else(|| {
+                warn!("Failed to retrieve supported extensions list, using empty list");
+                Vec::default()
+            });
 
         // 检测能力
         let max_texture_size = gl
             .get_parameter(WebGl2RenderingContext::MAX_TEXTURE_SIZE)
             .as_f64()
-            .unwrap_or(4096.0) as u32;
+            .unwrap_or_else(|| {
+                warn!("Failed to retrieve MAX_TEXTURE_SIZE, using default 4096");
+                4096.0
+            }) as u32;
 
         let max_vertex_attributes = gl
             .get_parameter(WebGl2RenderingContext::MAX_VERTEX_ATTRIBS)
             .as_f64()
-            .unwrap_or(16.0) as u32;
+            .unwrap_or_else(|| {
+                warn!("Failed to retrieve MAX_VERTEX_ATTRIBS, using default 16");
+                16.0
+            }) as u32;
 
         let max_texture_units = gl
             .get_parameter(WebGl2RenderingContext::MAX_COMBINED_TEXTURE_IMAGE_UNITS)
             .as_f64()
-            .unwrap_or(16.0) as u32;
+            .unwrap_or_else(|| {
+                warn!("Failed to retrieve MAX_COMBINED_TEXTURE_IMAGE_UNITS, using default 16");
+                16.0
+            }) as u32;
 
         let max_uniform_vectors = gl
             .get_parameter(WebGl2RenderingContext::MAX_VERTEX_UNIFORM_VECTORS)
             .as_f64()
-            .unwrap_or(1024.0) as u32;
+            .unwrap_or_else(|| {
+                warn!("Failed to retrieve MAX_VERTEX_UNIFORM_VECTORS, using default 1024");
+                1024.0
+            }) as u32;
 
         let supports_float_textures =
             extensions.iter().any(|ext| ext.contains("OES_texture_float"));
@@ -470,14 +508,20 @@ mod tests {
 
     #[test]
     fn test_wgsl_converter_creation() {
-        let capabilities = WebGLCapabilities::detect().unwrap();
+        let capabilities = WebGLCapabilities::detect().unwrap_or_else(|e| {
+            tracing::error!("Failed to detect WebGL capabilities: {}", e);
+            panic!("WebGL capabilities detection required for test");
+        });
         let converter = WGSLToGLSLConverter::new(capabilities);
         assert_eq!(converter.conversion_cache.len(), 0);
     }
 
     #[test]
     fn test_wgsl_converter_optimize() {
-        let capabilities = WebGLCapabilities::detect().unwrap();
+        let capabilities = WebGLCapabilities::detect().unwrap_or_else(|e| {
+            tracing::error!("Failed to detect WebGL capabilities: {}", e);
+            panic!("WebGL capabilities detection required for test");
+        });
         let mut converter = WGSLToGLSLConverter::new(capabilities);
 
         let wgsl = "fn main() { }";
@@ -493,7 +537,10 @@ mod tests {
 
     #[test]
     fn test_performance_optimizer() {
-        let capabilities = WebGLCapabilities::detect().unwrap();
+        let capabilities = WebGLCapabilities::detect().unwrap_or_else(|e| {
+            tracing::error!("Failed to detect WebGL capabilities: {}", e);
+            panic!("WebGL capabilities detection required for test");
+        });
         let optimizer = WebGLPerformanceOptimizer::new(capabilities);
 
         // 应该有一些优化建议（即使是默认值）
@@ -509,7 +556,10 @@ mod tests {
 
     #[test]
     fn test_texture_atlas_recommendation() {
-        let capabilities = WebGLCapabilities::detect().unwrap();
+        let capabilities = WebGLCapabilities::detect().unwrap_or_else(|e| {
+            tracing::error!("Failed to detect WebGL capabilities: {}", e);
+            panic!("WebGL capabilities detection required for test");
+        });
         let optimizer = WebGLPerformanceOptimizer::new(capabilities);
 
         // 大量纹理应该建议使用图集

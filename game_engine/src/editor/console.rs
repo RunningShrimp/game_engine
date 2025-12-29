@@ -159,9 +159,10 @@ impl LogFilter {
 
         // 检查搜索关键词
         if let Some(ref term) = self.search_term
-            && !entry.message.contains(term) {
-                return false;
-            }
+            && !entry.message.contains(term)
+        {
+            return false;
+        }
 
         // 检查来源过滤
         if let Some(ref source_filter) = self.source_filter {
@@ -247,7 +248,7 @@ mod tests {
         assert!(result.is_ok());
 
         let result = console.execute_command("echo Hello World");
-        assert_eq!(result.unwrap(), "Hello World");
+        assert_eq!(result.expect("Test: operation should succeed"), "Hello World");
 
         let result = console.execute_command("unknown");
         assert!(result.is_err());

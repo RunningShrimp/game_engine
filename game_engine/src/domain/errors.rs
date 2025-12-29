@@ -5,8 +5,8 @@
 //  移除了重复的错误定义，统一使用 src/error/ 中的错误类型。
 //  这消除了命名冲突，并确保整个引擎使用一致的错误类型。
 
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use serde::{Serialize, Deserialize};
 
 // 重新导出统一错误类型
 pub use crate::error::{AudioError, PhysicsError};

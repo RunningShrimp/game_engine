@@ -5,6 +5,6 @@
 pub mod manager;
 pub mod serialization;
 
-pub use manager::{Scene, SceneId, SceneTransitionManager, SceneTransition};
-pub use manager::{scene_update_system, scene_load_system, scene_cleanup_system};
+pub use manager::{Scene, SceneId, SceneTransition, SceneTransitionManager};
+pub use manager::{scene_cleanup_system, scene_load_system, scene_update_system};
 pub use serialization::{SerializedComponent, SerializedEntity, SerializedScene};

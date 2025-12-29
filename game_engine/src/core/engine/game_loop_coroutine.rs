@@ -287,8 +287,7 @@ impl GameTask {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub enum TaskPriority {
     Critical = 4,
     High = 3,
@@ -297,7 +296,6 @@ pub enum TaskPriority {
     Low = 1,
     Background = 0,
 }
-
 
 pub struct CoroutineGameLoop {
     runtime_handle: tokio::runtime::Handle,
@@ -513,12 +511,11 @@ impl CoroutineGameLoop {
             }
         }
 
-        
         self.accumulator.as_secs_f64() / self.fixed_timestep.as_secs_f64()
     }
 
     pub fn update_time_resource(&self, world: &mut World, dt: Duration) {
-        if let Some(mut time) = world.get_resource_mut::<Time>() {
+        if let Some(time) = world.get_resource_mut::<Time>() {
             // Bevy Time 不支持直接设置字段,使用advance_with方法
             // time.advance_with(dt);  // 注意: 这是伪代码,实际需要根据Bevy版本调整
             // 暂时忽略这个操作,因为Bevy的Time有自己的更新机制
@@ -611,9 +608,7 @@ mod tests {
         let mut world = World::new();
 
         // ecs_bevy::Time 只有 delta 字段
-        world.insert_resource(Time {
-            delta: 0.0,
-        });
+        world.insert_resource(Time { delta: 0.0 });
 
         let alpha = loop_.update_fixed_step(&mut world, |world, dt| {
             if let Some(mut time) = world.get_resource_mut::<Time>() {

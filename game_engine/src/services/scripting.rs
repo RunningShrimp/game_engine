@@ -41,8 +41,8 @@ impl ScriptingService {
     ///
     /// 在生产环境中，应该处理这些错误而不是panic。
     pub fn new() -> Self {
-        let runtime = Runtime::new().unwrap();
-        let context = Context::full(&runtime).unwrap();
+        let runtime = Runtime::new().expect("Test: operation should succeed");
+        let context = Context::full(&runtime).expect("Test: operation should succeed");
         Self { runtime, context }
     }
 
@@ -66,7 +66,7 @@ impl ScriptingService {
                         tracing::info!(target: "scripting", "[JS]: {}", msg);
                     }),
                 )
-                .unwrap();
+                .expect("Test: operation should succeed");
 
             // We can add more bindings here later (Entity spawning, etc.)
         });

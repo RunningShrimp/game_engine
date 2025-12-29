@@ -292,7 +292,7 @@ mod tests {
         assert_eq!(phase.phase_name, "render");
         assert_eq!(phase.duration.as_micros(), 1000);
         assert_eq!(phase.net_memory(), 512);
-        assert_eq!(phase.gpu_time.unwrap().as_micros(), 500);
+        assert_eq!(phase.gpu_time.expect("Test: operation should succeed").as_micros(), 500);
         assert_eq!(phase.total_time().as_micros(), 1500);
     }
 
@@ -305,8 +305,8 @@ mod tests {
         assert_eq!(snapshot.phases.len(), 2);
         assert!((snapshot.fps - 62.5).abs() < 0.1);
 
-        assert_eq!(snapshot.phase_percentage("physics").unwrap() as i32, 33);
-        assert_eq!(snapshot.phase_percentage("render").unwrap() as i32, 66);
+        assert_eq!(snapshot.phase_percentage("physics").expect("Test: operation should succeed") as i32, 33);
+        assert_eq!(snapshot.phase_percentage("render").expect("Test: operation should succeed") as i32, 66);
     }
 
     #[test]
@@ -316,25 +316,25 @@ mod tests {
         analyzer.start_frame(0, Duration::from_millis(16));
         analyzer
             .add_phase(PhaseMetrics::new("physics", Duration::from_micros(3000)))
-            .unwrap();
+            .expect("Test: operation should succeed");
         analyzer
             .add_phase(PhaseMetrics::new("render", Duration::from_micros(12000)))
-            .unwrap();
-        analyzer.end_frame().unwrap();
+            .expect("Test: operation should succeed");
+        analyzer.end_frame().expect("Test: operation should succeed");
 
         analyzer.start_frame(1, Duration::from_millis(17));
         analyzer
             .add_phase(PhaseMetrics::new("physics", Duration::from_micros(3100)))
-            .unwrap();
+            .expect("Test: operation should succeed");
         analyzer
             .add_phase(PhaseMetrics::new("render", Duration::from_micros(13000)))
-            .unwrap();
-        analyzer.end_frame().unwrap();
+            .expect("Test: operation should succeed");
+        analyzer.end_frame().expect("Test: operation should succeed");
 
         assert_eq!(analyzer.get_frame_count(), 2);
         assert!((analyzer.average_fps() - 60.0).abs() < 5.0);
 
-        let physics_avg = analyzer.average_phase_time("physics").unwrap();
+        let physics_avg = analyzer.average_phase_time("physics").expect("Test: operation should succeed");
         assert!(physics_avg.as_micros() > 3000 && physics_avg.as_micros() < 3100);
     }
 
@@ -345,7 +345,7 @@ mod tests {
         snapshot.add_phase(PhaseMetrics::new("render", Duration::from_micros(10000)));
         snapshot.add_phase(PhaseMetrics::new("io", Duration::from_micros(500)));
 
-        let bottleneck = snapshot.get_bottleneck_phase().unwrap();
+        let bottleneck = snapshot.get_bottleneck_phase().expect("Test: operation should succeed");
         assert_eq!(bottleneck.phase_name, "render");
     }
 
@@ -358,7 +358,7 @@ mod tests {
         );
         snapshot.add_phase(PhaseMetrics::new("render", Duration::from_micros(14000)));
 
-        let ratio = snapshot.gpu_cpu_ratio().unwrap();
+        let ratio = snapshot.gpu_cpu_ratio().expect("Test: operation should succeed");
         assert!((ratio - 0.266).abs() < 0.01);
     }
 
@@ -375,12 +375,12 @@ mod tests {
                     "render",
                     Duration::from_micros(render_time as u64),
                 ))
-                .unwrap();
-            analyzer.end_frame().unwrap();
+                .expect("Test: operation should succeed");
+            analyzer.end_frame().expect("Test: operation should succeed");
         }
 
         let cv = analyzer.phase_variation_coefficient("render");
         assert!(cv.is_some());
-        assert!(cv.unwrap() > 0.0);
+        assert!(cv.expect("Test: operation should succeed") > 0.0);
     }
 }

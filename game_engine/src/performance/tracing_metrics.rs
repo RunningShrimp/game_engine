@@ -6,13 +6,11 @@
 //! - Performance profiling integration
 //! - 集成 game_engine_performance crate
 
-use std::time::{Duration, Instant};
+use crate::performance::monitoring::system_monitor::SystemPerformanceMonitor;
+use crate::profiling::{Bottleneck, ContinuousProfiler, PerformanceAnalysis};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use crate::performance::monitoring::system_monitor::SystemPerformanceMonitor;
-use crate::profiling::{
-    Bottleneck, ContinuousProfiler, PerformanceAnalysis
-};
+use std::time::{Duration, Instant};
 
 /// Metric值类型
 #[derive(Debug, Clone)]
@@ -80,8 +78,16 @@ impl TracingMetricsManager {
     }
 
     /// 创建着色器编译span
-    #[tracing::instrument(target = "render", skip_all, fields(shader_label, source_size, enable_cache))]
-    pub fn shader_compile_span(shader_label: &str, source_size: usize, enable_cache: bool) -> tracing::Span {
+    #[tracing::instrument(
+        target = "render",
+        skip_all,
+        fields(shader_label, source_size, enable_cache)
+    )]
+    pub fn shader_compile_span(
+        shader_label: &str,
+        source_size: usize,
+        enable_cache: bool,
+    ) -> tracing::Span {
         tracing::info_span!("shader_compile", shader_label, source_size, enable_cache)
     }
 
@@ -96,19 +102,18 @@ impl TracingMetricsManager {
         let timestamp = Instant::now();
         tracing::info!(target: "metrics", %name, value);
 
-        let mut storage = self.metrics_storage.lock().unwrap();
-        storage.entry(name.to_string())
-            .or_default()
-            .push(MetricDataPoint {
-                timestamp,
-                value: MetricValue::Counter(value),
-            });
+        let mut storage = self.metrics_storage.lock().expect("Test: operation should succeed");
+        storage.entry(name.to_string()).or_default().push(MetricDataPoint {
+            timestamp,
+            value: MetricValue::Counter(value),
+        });
 
         // 限制存储大小（保留最近1000个数据点）
         if let Some(metrics) = storage.get_mut(name)
-            && metrics.len() > 1000 {
-                metrics.drain(0..metrics.len() - 1000);
-            }
+            && metrics.len() > 1000
+        {
+            metrics.drain(0..metrics.len() - 1000);
+        }
     }
 
     /// 记录性能指标（仪表类型）
@@ -116,19 +121,18 @@ impl TracingMetricsManager {
         let timestamp = Instant::now();
         tracing::info!(target: "metrics", %name, value);
 
-        let mut storage = self.metrics_storage.lock().unwrap();
-        storage.entry(name.to_string())
-            .or_default()
-            .push(MetricDataPoint {
-                timestamp,
-                value: MetricValue::Gauge(value),
-            });
+        let mut storage = self.metrics_storage.lock().expect("Test: operation should succeed");
+        storage.entry(name.to_string()).or_default().push(MetricDataPoint {
+            timestamp,
+            value: MetricValue::Gauge(value),
+        });
 
         // 限制存储大小
         if let Some(metrics) = storage.get_mut(name)
-            && metrics.len() > 1000 {
-                metrics.drain(0..metrics.len() - 1000);
-            }
+            && metrics.len() > 1000
+        {
+            metrics.drain(0..metrics.len() - 1000);
+        }
     }
 
     /// 记录性能指标（通用方法，保留向后兼容）
@@ -138,30 +142,32 @@ impl TracingMetricsManager {
 
     /// 获取指定metric的所有数据点
     pub fn get_metric_data(&self, name: &str) -> Option<Vec<MetricDataPoint>> {
-        let storage = self.metrics_storage.lock().unwrap();
+        let storage = self.metrics_storage.lock().expect("Test: operation should succeed");
         storage.get(name).cloned()
     }
 
     /// 获取指定metric的最新值
     pub fn get_latest_metric(&self, name: &str) -> Option<MetricDataPoint> {
-        let storage = self.metrics_storage.lock().unwrap();
+        let storage = self.metrics_storage.lock().expect("Test: operation should succeed");
         storage.get(name).and_then(|v| v.last().cloned())
     }
 
     /// 清除指定metric的所有数据
     pub fn clear_metric(&self, name: &str) {
-        let mut storage = self.metrics_storage.lock().unwrap();
+        let mut storage = self.metrics_storage.lock().expect("Test: operation should succeed");
         storage.remove(name);
     }
 
     /// 获取所有metric名称
     pub fn get_all_metric_names(&self) -> Vec<String> {
-        let storage = self.metrics_storage.lock().unwrap();
+        let storage = self.metrics_storage.lock().expect("Test: operation should succeed");
         storage.keys().cloned().collect()
     }
 
     /// 获取系统性能快照
-    pub fn get_performance_snapshot(&self) -> crate::performance::monitoring::system_monitor::PerformanceMetrics {
+    pub fn get_performance_snapshot(
+        &self,
+    ) -> crate::performance::monitoring::system_monitor::PerformanceMetrics {
         self.system_monitor.get_metrics()
     }
 
@@ -173,25 +179,29 @@ impl TracingMetricsManager {
             if samples.is_empty() {
                 return None;
             }
-            
+
             let avg_fps = profiler.get_average_fps();
             let avg_frame_time = profiler.get_average_frame_time();
             let anomalies = profiler.detect_anomalies();
-            
+
             let mut metrics = std::collections::HashMap::new();
             metrics.insert("avg_fps".to_string(), avg_fps as f64);
-            metrics.insert("avg_frame_time_ms".to_string(), (avg_frame_time * 1000.0) as f64);
+            metrics.insert(
+                "avg_frame_time_ms".to_string(),
+                (avg_frame_time * 1000.0) as f64,
+            );
             metrics.insert("sample_count".to_string(), samples.len() as f64);
-            
-            let bottlenecks = anomalies.into_iter().map(|anomaly| {
-                Bottleneck {
+
+            let bottlenecks = anomalies
+                .into_iter()
+                .map(|anomaly| Bottleneck {
                     name: "Performance Anomaly".to_string(),
                     severity: 50,
                     description: format!("Performance anomaly detected: {:?}", anomaly),
                     suggestion: "Investigate recent changes or system load".to_string(),
-                }
-            }).collect();
-            
+                })
+                .collect();
+
             // 创建一个PerformanceAnalysis实例并返回
             let analysis = PerformanceAnalysis {
                 name: "engine_runtime".to_string(),
@@ -254,7 +264,8 @@ impl Default for TracingMetricsManager {
 }
 
 /// 全局tracing/metrics管理器实例
-static TRACING_METRICS_MANAGER: std::sync::OnceLock<TracingMetricsManager> = std::sync::OnceLock::new();
+static TRACING_METRICS_MANAGER: std::sync::OnceLock<TracingMetricsManager> =
+    std::sync::OnceLock::new();
 
 /// 获取全局tracing/metrics管理器
 pub fn global_tracing_metrics() -> &'static TracingMetricsManager {

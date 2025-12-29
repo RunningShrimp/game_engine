@@ -1,5 +1,5 @@
 //  综合基准测试运行器
-// 
+//
 //  运行所有性能基准测试并生成报告
 //  - 基准测试执行
 //  - 结果收集
@@ -315,7 +315,7 @@ mod tests {
         runner.add_result(result);
 
         let path = "/tmp/test_benchmarks.json";
-        runner.save_results(path).unwrap();
+        runner.save_results(path).expect("Test: operation should succeed");
         assert!(Path::new(path).exists());
     }
 }

@@ -1,5 +1,5 @@
 //  错误恢复机制
-// 
+//
 //  提供统一的错误恢复策略，支持优雅降级、重试和补偿操作。
 
 use crate::error::{EngineError, ErrorCategory, ErrorSeverity};
@@ -576,7 +576,8 @@ impl ErrorRecovery for InputErrorRecovery {
                                 default_description: "Using default input mapping".to_string(),
                                 log_warning: true,
                             },
-                            description: "Default input mapping used due to missing device".to_string(),
+                            description: "Default input mapping used due to missing device"
+                                .to_string(),
                             duration: context.start_time.elapsed(),
                             metadata: HashMap::new(),
                         },
@@ -613,7 +614,8 @@ impl ErrorRecovery for InputErrorRecovery {
                                 default_description: "Using default input mapping".to_string(),
                                 log_warning: true,
                             },
-                            description: "Default input mapping used due to mapping error".to_string(),
+                            description: "Default input mapping used due to mapping error"
+                                .to_string(),
                             duration: context.start_time.elapsed(),
                             metadata: HashMap::new(),
                         },
@@ -689,7 +691,8 @@ impl ErrorRecovery for SystemErrorRecovery {
                         // 超过重试次数，跳过操作
                         RecoveryResult::Skipped(RecoveryInfo {
                             strategy: RecoveryStrategy::Skip {
-                                reason: "System timeout after retries, skipping operation".to_string(),
+                                reason: "System timeout after retries, skipping operation"
+                                    .to_string(),
                                 log_warning: true,
                             },
                             description: "Skipping operation due to timeout".to_string(),
@@ -716,7 +719,9 @@ impl ErrorRecovery for SystemErrorRecovery {
                         RecoveryResult::Retry(RetryInfo {
                             attempt: context.recovery_attempts,
                             max_attempts: 3,
-                            next_delay: Duration::from_millis(100 * (2_u64.pow(context.recovery_attempts))),
+                            next_delay: Duration::from_millis(
+                                100 * (2_u64.pow(context.recovery_attempts)),
+                            ),
                             reason: "Concurrency error, retrying operation".to_string(),
                         })
                     } else {
@@ -902,7 +907,9 @@ mod tests {
             start_time: std::time::Instant::now(),
         };
 
-        let error = EngineError::Render(crate::error::render_error::RenderError::general("GPU memory full"));
+        let error = EngineError::Render(crate::error::render_error::RenderError::general(
+            "GPU memory full",
+        ));
         let result = recovery.recover(&error, &context);
 
         assert!(matches!(result, RecoveryResult::Degraded(_, _)));
@@ -919,7 +926,10 @@ mod tests {
             start_time: std::time::Instant::now(),
         };
 
-        let error = EngineError::Audio(crate::error::audio_error::AudioError::InvalidVolume { value: 1.5, severity: ErrorSeverity::Error });
+        let error = EngineError::Audio(crate::error::audio_error::AudioError::InvalidVolume {
+            value: 1.5,
+            severity: ErrorSeverity::Error,
+        });
         let result = recovery.recover(&error, &context);
 
         assert!(matches!(result, RecoveryResult::Degraded(_, _)));
@@ -936,7 +946,11 @@ mod tests {
             start_time: std::time::Instant::now(),
         };
 
-        let error = EngineError::Physics(crate::error::physics_error::PhysicsError::WorldNotInitialized { severity: ErrorSeverity::Error });
+        let error = EngineError::Physics(
+            crate::error::physics_error::PhysicsError::WorldNotInitialized {
+                severity: ErrorSeverity::Error,
+            },
+        );
         let result = recovery.recover(&error, &context);
 
         assert!(matches!(result, RecoveryResult::Skipped(_)));
@@ -953,7 +967,10 @@ mod tests {
             start_time: std::time::Instant::now(),
         };
 
-        let error = EngineError::Resource(crate::error::resource_error::ResourceError::NotFound { path: "texture.png".to_string(), severity: ErrorSeverity::Error });
+        let error = EngineError::Resource(crate::error::resource_error::ResourceError::NotFound {
+            path: "texture.png".to_string(),
+            severity: ErrorSeverity::Error,
+        });
         let result = recovery.recover(&error, &context);
 
         assert!(matches!(result, RecoveryResult::Degraded(_, _)));
@@ -963,7 +980,9 @@ mod tests {
     fn test_recovery_manager() {
         let mut manager = RecoveryManager::new();
 
-        let error = EngineError::Render(crate::error::render_error::RenderError::general("GPU memory full"));
+        let error = EngineError::Render(crate::error::render_error::RenderError::general(
+            "GPU memory full",
+        ));
         let result = manager.recover(error, "render_test");
 
         assert!(matches!(result, RecoveryResult::Degraded(_, _)));

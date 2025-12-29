@@ -31,14 +31,16 @@ impl EventId {
         }
     }
 
-    pub fn now(sequence: u64) -> Self {
-        Self {
-            timestamp_ns: std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_nanos() as i64,
+    pub fn now(sequence: u64) -> Result<Self, EventError> {
+        let timestamp_ns = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_err(|e| EventError::TimeError(format!("Failed to get system time: {}", e)))?
+            .as_nanos() as i64;
+
+        Ok(Self {
+            timestamp_ns,
             sequence,
-        }
+        })
     }
 }
 
@@ -104,8 +106,7 @@ impl std::fmt::Debug for EventBus {
 /// 事件总线
 pub struct EventBus {
     /// 订阅者映射：事件类型ID -> 订阅者回调列表
-    subscribers:
-        std::sync::RwLock<std::collections::HashMap<std::any::TypeId, Vec<BoxedCallback>>>,
+    subscribers: std::sync::RwLock<std::collections::HashMap<std::any::TypeId, Vec<BoxedCallback>>>,
 }
 
 impl Default for EventBus {
@@ -126,27 +127,27 @@ impl EventBus {
     pub fn subscribe<E: DomainEvent + 'static>(
         &self,
         callback: impl FnMut(&E) + Send + Sync + 'static,
-    ) {
+    ) -> Result<(), EventError> {
         let callback = Box::new(callback) as SubscriberCallback<E>;
         let boxed_callback = BoxedCallback::new(callback);
         let event_type_id = std::any::TypeId::of::<E>();
 
         let mut subscribers = safe_write(&self.subscribers, "event subscribers")
-            .expect("Failed to acquire write lock for subscribers");
-        subscribers
-            .entry(event_type_id)
-            .or_default()
-            .push(boxed_callback);
+            .map_err(|e| EventError::LockError(format!("Failed to acquire write lock: {}", e)))?;
+        subscribers.entry(event_type_id).or_default().push(boxed_callback);
+
+        Ok(())
     }
 
     /// 发布事件
-    pub fn publish<E: DomainEvent>(&self, event: &E) {
+    pub fn publish<E: DomainEvent>(&self, event: &E) -> Result<(), EventError> {
         let event_type_id = std::any::TypeId::of::<E>();
 
         // 获取事件类型的订阅者列表的克隆
         let subscribers = {
-            let guard = safe_read(&self.subscribers, "subscribers")
-                .expect("Failed to acquire read lock for subscribers");
+            let guard = safe_read(&self.subscribers, "subscribers").map_err(|e| {
+                EventError::LockError(format!("Failed to acquire read lock: {}", e))
+            })?;
             guard.get(&event_type_id).cloned()
         };
 
@@ -156,6 +157,8 @@ impl EventBus {
                 callback.handle(event);
             }
         }
+
+        Ok(())
     }
 }
 
@@ -193,6 +196,12 @@ pub enum EventError {
     /// 序列化错误
     #[error("Serialization error: {0}")]
     SerializationError(String),
+    /// 时间获取失败
+    #[error("System time error: {0}")]
+    TimeError(String),
+    /// 锁获取失败
+    #[error("Lock acquisition failed: {0}")]
+    LockError(String),
 }
 
 /// 事件存储trait
@@ -416,15 +425,21 @@ impl EventSourcingManager {
         world: &World,
         aggregate_id: Option<u32>,
     ) -> Result<EventId, EventError> {
-        let mut sequence = safe_lock(&self.sequence_generator, "sequence_generator")
-            .expect("Failed to acquire lock for sequence generator");
+        let mut sequence =
+            safe_lock(&self.sequence_generator, "sequence_generator").map_err(|e| {
+                EventError::LockError(format!(
+                    "Failed to acquire lock for sequence generator: {}",
+                    e
+                ))
+            })?;
         *sequence += 1;
-        let event_id = EventId::now(*sequence);
+        let event_id = EventId::now(*sequence)?;
 
         // 序列化事件
         let event_type = event.event_type();
-        let data = bincode::serialize(&event)
-            .expect("Failed to serialize event for event sourcing");
+        let data = bincode::serialize(&event).map_err(|e| {
+            EventError::SerializationError(format!("Failed to serialize event: {}", e))
+        })?;
 
         let stored_event = StoredEvent {
             id: event_id,
@@ -435,16 +450,20 @@ impl EventSourcingManager {
 
         // 保存事件
         safe_lock(&self.event_store, "event_store")
-            .expect("Failed to acquire lock for event store")
+            .map_err(|e| {
+                EventError::LockError(format!("Failed to acquire lock for event store: {}", e))
+            })?
             .save_event(stored_event)?;
 
         // 发布事件到事件总线
-        self.event_bus.publish(&event);
+        self.event_bus.publish(&event)?;
 
         // 检查是否需要创建快照
         if let Some(agg_id) = aggregate_id {
             let event_count = safe_lock(&self.event_store, "event_store")
-                .expect("Failed to acquire lock for event store")
+                .map_err(|e| {
+                    EventError::LockError(format!("Failed to acquire lock for event store: {}", e))
+                })?
                 .get_aggregate_events(agg_id)
                 .len();
 
@@ -471,11 +490,15 @@ impl EventSourcingManager {
     ) -> Result<(), EventError> {
         let events = if let (Some(from_id), Some(to_id)) = (from, to) {
             safe_lock(&self.event_store, "event_store")
-                .expect("Failed to acquire lock for event store")
+                .map_err(|e| {
+                    EventError::LockError(format!("Failed to acquire lock for event store: {}", e))
+                })?
                 .get_events_range(from_id, to_id)
         } else {
             safe_lock(&self.event_store, "event_store")
-                .expect("Failed to acquire lock for event store")
+                .map_err(|e| {
+                    EventError::LockError(format!("Failed to acquire lock for event store: {}", e))
+                })?
                 .get_all_events()
         };
 
@@ -497,7 +520,9 @@ impl EventSourcingManager {
     ) -> Result<(), EventError> {
         // 尝试从快照恢复
         let snapshot_id = if let Ok(snapshot) = safe_lock(&self.snapshot_store, "snapshot_store")
-            .expect("Failed to acquire lock for snapshot store")
+            .map_err(|e| {
+                EventError::LockError(format!("Failed to acquire lock for snapshot store: {}", e))
+            })?
             .get_latest_snapshot(aggregate_id)
         {
             // 从快照恢复状态（简化处理）
@@ -509,16 +534,19 @@ impl EventSourcingManager {
 
         // 重放快照之后的事件
         let events = safe_lock(&self.event_store, "event_store")
-            .expect("Failed to acquire lock for event store")
+            .map_err(|e| {
+                EventError::LockError(format!("Failed to acquire lock for event store: {}", e))
+            })?
             .get_aggregate_events(aggregate_id);
 
         // 过滤快照之后的事件并重放
         for stored_event in events {
             // 如果有快照，只重放快照之后的事件
             if let Some(snapshot_id) = snapshot_id
-                && stored_event.id <= snapshot_id {
-                    continue;
-                }
+                && stored_event.id <= snapshot_id
+            {
+                continue;
+            }
 
             // 使用事件类型注册表反序列化事件
             let event =
@@ -532,7 +560,9 @@ impl EventSourcingManager {
     /// 撤销最后一个事件
     pub fn undo_last_event(&self, world: &mut World) -> Result<Option<EventId>, EventError> {
         let events = safe_lock(&self.event_store, "event_store")
-            .expect("Failed to acquire lock for event store")
+            .map_err(|e| {
+                EventError::LockError(format!("Failed to acquire lock for event store: {}", e))
+            })?
             .get_all_events();
 
         if let Some(last_event) = events.last() {
@@ -549,8 +579,9 @@ impl EventSourcingManager {
 
     /// 清理旧事件
     fn cleanup_old_events(&self) -> Result<(), EventError> {
-        let mut store = safe_lock(&self.event_store, "event store")
-            .expect("Failed to acquire lock for event store");
+        let mut store = safe_lock(&self.event_store, "event store").map_err(|e| {
+            EventError::LockError(format!("Failed to acquire lock for event store: {}", e))
+        })?;
         let events_len = store.get_all_events().len();
 
         if events_len > self.max_history_length {
@@ -568,17 +599,21 @@ impl EventSourcingManager {
     }
 
     /// 获取事件历史
-    pub fn get_event_history(&self) -> Vec<StoredEvent> {
-        safe_lock(&self.event_store, "event store")
-            .expect("Failed to acquire lock for event store")
-            .get_all_events()
+    pub fn get_event_history(&self) -> Result<Vec<StoredEvent>, EventError> {
+        Ok(safe_lock(&self.event_store, "event store")
+            .map_err(|e| {
+                EventError::LockError(format!("Failed to acquire lock for event store: {}", e))
+            })?
+            .get_all_events())
     }
 
     /// 获取聚合事件历史
-    pub fn get_aggregate_history(&self, aggregate_id: u32) -> Vec<StoredEvent> {
-        safe_lock(&self.event_store, "event store")
-            .expect("Failed to acquire lock for event store")
-            .get_aggregate_events(aggregate_id)
+    pub fn get_aggregate_history(&self, aggregate_id: u32) -> Result<Vec<StoredEvent>, EventError> {
+        Ok(safe_lock(&self.event_store, "event store")
+            .map_err(|e| {
+                EventError::LockError(format!("Failed to acquire lock for event store: {}", e))
+            })?
+            .get_aggregate_events(aggregate_id))
     }
 
     /// 创建快照
@@ -600,12 +635,14 @@ impl EventSourcingManager {
             data: snapshot_data,
             created_at: std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
+                .map_err(|e| EventError::TimeError(format!("Failed to get system time: {}", e)))?
                 .as_secs() as i64,
         };
 
         safe_lock(&self.snapshot_store, "snapshot store")
-            .expect("Failed to acquire lock for snapshot store")
+            .map_err(|e| {
+                EventError::LockError(format!("Failed to acquire lock for snapshot store: {}", e))
+            })?
             .save_snapshot(snapshot)?;
 
         Ok(())
@@ -618,7 +655,9 @@ impl EventSourcingManager {
         aggregate_id: u32,
     ) -> Result<(), EventError> {
         let snapshot = safe_lock(&self.snapshot_store, "snapshot_store")
-            .expect("Failed to acquire lock for snapshot store")
+            .map_err(|e| {
+                EventError::LockError(format!("Failed to acquire lock for snapshot store: {}", e))
+            })?
             .get_latest_snapshot(aggregate_id)?;
 
         tracing::info!(target: "event_sourcing", "Restoring aggregate {} from snapshot {}, data size: {}", aggregate_id, snapshot.id.sequence, snapshot.data.len());
@@ -633,10 +672,12 @@ impl EventSourcingManager {
     }
 
     /// 获取聚合的所有快照
-    pub fn get_aggregate_snapshots(&self, aggregate_id: u32) -> Vec<Snapshot> {
-        safe_lock(&self.snapshot_store, "snapshot_store")
-            .expect("Failed to acquire lock for snapshot store")
-            .get_aggregate_snapshots(aggregate_id)
+    pub fn get_aggregate_snapshots(&self, aggregate_id: u32) -> Result<Vec<Snapshot>, EventError> {
+        Ok(safe_lock(&self.snapshot_store, "snapshot_store")
+            .map_err(|e| {
+                EventError::LockError(format!("Failed to acquire lock for snapshot store: {}", e))
+            })?
+            .get_aggregate_snapshots(aggregate_id))
     }
 }
 
@@ -678,7 +719,7 @@ impl TimeTravelDebugger {
 
     /// 前进一个事件
     pub fn step_forward(&mut self, world: &mut World) -> Result<(), EventError> {
-        let events = self.manager.get_event_history();
+        let events = self.manager.get_event_history()?;
 
         if let Some(current) = self.current_time {
             if let Some(next_event) = events.iter().find(|e| e.id > current) {

@@ -135,15 +135,17 @@ impl AsyncPathfindingService {
                         pending_count_clone.fetch_sub(1, Ordering::Relaxed);
 
                         // 获取信号量许可
-                        let permit = semaphore_clone.clone().acquire_owned().await;
-                        if permit.is_err() {
-                            let _ = result_tx.send(PathfindingResult {
-                                request_id: req.request_id,
-                                path: None,
-                            });
-                            continue;
-                        }
-                        let permit = permit.unwrap();
+                        let permit_result = semaphore_clone.clone().acquire_owned().await;
+                        let permit = match permit_result {
+                            Ok(p) => p,
+                            Err(_) => {
+                                let _ = result_tx.send(PathfindingResult {
+                                    request_id: req.request_id,
+                                    path: None,
+                                });
+                                continue;
+                            }
+                        };
 
                         let nav_mesh_task = nav_mesh_clone.clone();
                         let req_id = req.request_id;
@@ -430,7 +432,7 @@ mod tests {
         let path = service.find_path(Vec3::new(0.0, 0.0, 0.0), Vec3::new(2.0, 0.0, 2.0)).await;
 
         assert!(path.is_some());
-        let path = path.unwrap();
+        let path = path.expect("Path should exist after successful find");
         assert!(!path.is_empty());
         assert_eq!(path[0], Vec3::new(0.0, 0.0, 0.0));
     }
@@ -451,7 +453,8 @@ mod tests {
         assert_eq!(results.len(), 3);
         for result in results {
             assert!(result.is_some());
-            assert!(!result.unwrap().is_empty());
+            let path = result.expect("Path should exist in batch test");
+            assert!(!path.is_empty());
         }
     }
 

@@ -2,11 +2,17 @@ use crate::ecs::{TileChunkConfig, TileSet, Viewport};
 use crate::render::wgpu_utils::Instance;
 use glam::Mat4;
 
-// ECS工具宏定义
+// ECS工具宏定义 - 使用安全错误处理
 macro_rules! fetch_resource {
     ($world:expr, $res_type:ty) => {
-        $world.get_resource::<$res_type>()
-            .expect(concat!("Resource ", stringify!($res_type), " not found"))
+        match $world.get_resource::<$res_type>() {
+            Some(resource) => resource,
+            None => {
+                log::error!("Resource {} not found", stringify!($res_type));
+                // 返回一个默认值或使用 panic! 在关键位置
+                panic!("Resource {} not found", stringify!($res_type));
+            }
+        }
     };
 }
 
@@ -279,7 +285,11 @@ impl LayerTree {
         out.sort_by(|a, b| match a.target.cmp(&b.target) {
             std::cmp::Ordering::Equal => match a.tex_index.cmp(&b.tex_index) {
                 std::cmp::Ordering::Equal => {
-                    match a.layer.partial_cmp(&b.layer).unwrap_or(std::cmp::Ordering::Equal) {
+                    // 使用 unwrap_or_or_else 处理 NaN 情况
+                    match a.layer.partial_cmp(&b.layer).unwrap_or({
+                        // 如果 NaN，将该项排在后面
+                        std::cmp::Ordering::Greater
+                    }) {
                         std::cmp::Ordering::Equal => a.chunk.cmp(&b.chunk),
                         other => other,
                     }
@@ -421,11 +431,9 @@ pub fn build_from_world(world: &mut bevy_ecs::world::World) -> LayerTree {
     let vp = world.get_resource::<Viewport>().copied();
     let chunk_cfg = world.get_resource::<TileChunkConfig>().copied();
     let mut cam_q = world.query::<(&crate::ecs::Transform, &crate::ecs::Camera)>();
-    let mut cam_pos = glam::Vec3::new(
-        vp.map(|v| v.width as f32 * 0.5).unwrap_or(400.0),
-        vp.map(|v| v.height as f32 * 0.5).unwrap_or(300.0),
-        0.0,
-    );
+    let (viewport_width, viewport_height) =
+        vp.map(|v| (v.width as f32, v.height as f32)).unwrap_or((800.0, 600.0));
+    let mut cam_pos = glam::Vec3::new(viewport_width * 0.5, viewport_height * 0.5, 0.0);
     for (t, c) in cam_q.iter(world) {
         if c.is_active {
             cam_pos = t.pos;
@@ -433,7 +441,10 @@ pub fn build_from_world(world: &mut bevy_ecs::world::World) -> LayerTree {
         }
     }
     for (t, tm) in query_tm.iter(world) {
-        let (vpw, vph) = vp.map(|v| (v.width as f32, v.height as f32)).unwrap_or((800.0, 600.0));
+        let (vpw, vph) = vp.map(|v| (v.width as f32, v.height as f32)).unwrap_or_else(|| {
+            log::warn!("Viewport not found in build_from_world, using default (800.0, 600.0)");
+            (800.0, 600.0)
+        });
         let half_w = vpw * 0.5;
         let half_h = vph * 0.5;
         let base_x = t.pos.x - (tm.width as f32 * tm.tile_size[0]) * 0.5;
@@ -442,8 +453,14 @@ pub fn build_from_world(world: &mut bevy_ecs::world::World) -> LayerTree {
         let view_max_x = cam_pos.x + half_w;
         let view_min_y = cam_pos.y - half_h;
         let view_max_y = cam_pos.y + half_h;
-        let cfg_w = chunk_cfg.map(|c| c.size[0]).unwrap_or(0);
-        let cfg_h = chunk_cfg.map(|c| c.size[1]).unwrap_or(0);
+        let cfg_w = chunk_cfg.map(|c| c.size[0]).unwrap_or_else(|| {
+            log::debug!("TileChunkConfig not found in build_from_world, using default width 0");
+            0
+        });
+        let cfg_h = chunk_cfg.map(|c| c.size[1]).unwrap_or_else(|| {
+            log::debug!("TileChunkConfig not found in build_from_world, using default height 0");
+            0
+        });
         let chunk_w = if cfg_w != 0 {
             cfg_w
         } else if tm.chunk_size[0] == 0 {
@@ -470,33 +487,34 @@ pub fn build_from_world(world: &mut bevy_ecs::world::World) -> LayerTree {
                     continue;
                 }
                 if let Some(ts) = tileset.as_ref()
-                    && let Some((uv_off, uv_scale)) = ts.tiles.get(id).cloned() {
-                        let px = base_x + (x as f32 + 0.5) * tm.tile_size[0];
-                        let py = base_y + (y as f32 + 0.5) * tm.tile_size[1];
-                        if px < view_min_x - tm.tile_size[0]
-                            || py < view_min_y - tm.tile_size[1]
-                            || px > view_max_x + tm.tile_size[0]
-                            || py > view_max_y + tm.tile_size[1]
-                        {
-                            continue;
-                        }
-                        let cx = x / chunk_w;
-                        let cy = y / chunk_h;
-                        let chunk_id = cy * chunk_cols + cx;
-                        lt.add(LayerItem {
-                            pos: [px, py],
-                            scale: [tm.tile_size[0], tm.tile_size[1]],
-                            rot: 0.0,
-                            color: [1.0, 1.0, 1.0, 1.0],
-                            uv_off,
-                            uv_scale,
-                            tex: tm.atlas_tex_index,
-                            normal_tex: 0,
-                            layer: tm.layer,
-                            target: 0,
-                            chunk: chunk_id,
-                        });
+                    && let Some((uv_off, uv_scale)) = ts.tiles.get(id).cloned()
+                {
+                    let px = base_x + (x as f32 + 0.5) * tm.tile_size[0];
+                    let py = base_y + (y as f32 + 0.5) * tm.tile_size[1];
+                    if px < view_min_x - tm.tile_size[0]
+                        || py < view_min_y - tm.tile_size[1]
+                        || px > view_max_x + tm.tile_size[0]
+                        || py > view_max_y + tm.tile_size[1]
+                    {
+                        continue;
                     }
+                    let cx = x / chunk_w;
+                    let cy = y / chunk_h;
+                    let chunk_id = cy * chunk_cols + cx;
+                    lt.add(LayerItem {
+                        pos: [px, py],
+                        scale: [tm.tile_size[0], tm.tile_size[1]],
+                        rot: 0.0,
+                        color: [1.0, 1.0, 1.0, 1.0],
+                        uv_off,
+                        uv_scale,
+                        tex: tm.atlas_tex_index,
+                        normal_tex: 0,
+                        layer: tm.layer,
+                        target: 0,
+                        chunk: chunk_id,
+                    });
+                }
             }
         }
     }
@@ -519,9 +537,10 @@ impl RenderCache {
 
     pub fn update(&mut self, new_tree: LayerTree) -> &Vec<Instance> {
         if let Some(last) = &self.last_tree
-            && last == &new_tree {
-                return &self.last_instances;
-            }
+            && last == &new_tree
+        {
+            return &self.last_instances;
+        }
         self.last_instances = new_tree.to_instances();
         self.last_tree = Some(new_tree);
         &self.last_instances
@@ -596,7 +615,10 @@ pub fn build_from_world_culled(world: &mut bevy_ecs::world::World) -> (LayerTree
 
     // 获取视口信息
     let vp = world.get_resource::<Viewport>().copied();
-    let (vpw, vph) = vp.map(|v| (v.width as f32, v.height as f32)).unwrap_or((800.0, 600.0));
+    let (vpw, vph) = vp.map(|v| (v.width as f32, v.height as f32)).unwrap_or_else(|| {
+        log::warn!("Viewport not found in build_from_world_culled, using default (800.0, 600.0)");
+        (800.0, 600.0)
+    });
 
     // 获取相机位置
     let mut cam_q = world.query::<(&crate::ecs::Transform, &crate::ecs::Camera)>();
@@ -657,8 +679,18 @@ pub fn build_from_world_culled(world: &mut bevy_ecs::world::World) -> (LayerTree
     for (t, tm) in query_tm.iter(world) {
         let base_x = t.pos.x - (tm.width as f32 * tm.tile_size[0]) * 0.5;
         let base_y = t.pos.y - (tm.height as f32 * tm.tile_size[1]) * 0.5;
-        let cfg_w = chunk_cfg.map(|c| c.size[0]).unwrap_or(0);
-        let cfg_h = chunk_cfg.map(|c| c.size[1]).unwrap_or(0);
+        let cfg_w = chunk_cfg.map(|c| c.size[0]).unwrap_or_else(|| {
+            log::debug!(
+                "TileChunkConfig not found in build_from_world_culled, using default width 0"
+            );
+            0
+        });
+        let cfg_h = chunk_cfg.map(|c| c.size[1]).unwrap_or_else(|| {
+            log::debug!(
+                "TileChunkConfig not found in build_from_world_culled, using default height 0"
+            );
+            0
+        });
         let chunk_w = if cfg_w != 0 {
             cfg_w
         } else if tm.chunk_size[0] == 0 {
@@ -687,35 +719,36 @@ pub fn build_from_world_culled(world: &mut bevy_ecs::world::World) -> (LayerTree
                     continue;
                 }
                 if let Some(ts) = tileset.as_ref()
-                    && let Some((uv_off, uv_scale)) = ts.tiles.get(id).cloned() {
-                        let px = base_x + (x as f32 + 0.5) * tm.tile_size[0];
-                        let py = base_y + (y as f32 + 0.5) * tm.tile_size[1];
+                    && let Some((uv_off, uv_scale)) = ts.tiles.get(id).cloned()
+                {
+                    let px = base_x + (x as f32 + 0.5) * tm.tile_size[0];
+                    let py = base_y + (y as f32 + 0.5) * tm.tile_size[1];
 
-                        // 使用视口剔除器
-                        let half_tile_w = tm.tile_size[0] * 0.5;
-                        let half_tile_h = tm.tile_size[1] * 0.5;
-                        if !culler.is_visible(px, py, half_tile_w, half_tile_h) {
-                            culled_count += 1;
-                            continue;
-                        }
-
-                        let cx = x / chunk_w;
-                        let cy = y / chunk_h;
-                        let chunk_id = cy * chunk_cols + cx;
-                        lt.add(LayerItem {
-                            pos: [px, py],
-                            scale: [tm.tile_size[0], tm.tile_size[1]],
-                            rot: 0.0,
-                            color: [1.0, 1.0, 1.0, 1.0],
-                            uv_off,
-                            uv_scale,
-                            tex: tm.atlas_tex_index,
-                            normal_tex: 0,
-                            layer: tm.layer,
-                            target: 0,
-                            chunk: chunk_id,
-                        });
+                    // 使用视口剔除器
+                    let half_tile_w = tm.tile_size[0] * 0.5;
+                    let half_tile_h = tm.tile_size[1] * 0.5;
+                    if !culler.is_visible(px, py, half_tile_w, half_tile_h) {
+                        culled_count += 1;
+                        continue;
                     }
+
+                    let cx = x / chunk_w;
+                    let cy = y / chunk_h;
+                    let chunk_id = cy * chunk_cols + cx;
+                    lt.add(LayerItem {
+                        pos: [px, py],
+                        scale: [tm.tile_size[0], tm.tile_size[1]],
+                        rot: 0.0,
+                        color: [1.0, 1.0, 1.0, 1.0],
+                        uv_off,
+                        uv_scale,
+                        tex: tm.atlas_tex_index,
+                        normal_tex: 0,
+                        layer: tm.layer,
+                        target: 0,
+                        chunk: chunk_id,
+                    });
+                }
             }
         }
     }

@@ -198,31 +198,27 @@ impl BehaviorTreeEditor {
     }
 
     /// 创建新行为树
-    pub fn create_tree(&mut self, name: String) {
-        self.decision_editor.create_tree(name);
+    pub fn create_tree(&mut self, name: String) -> Result<(), String> {
+        self.decision_editor.create_tree(name).map_err(|e| e.to_string())?;
         self.sync_visual_nodes();
+        Ok(())
     }
 
     /// 加载行为树
     pub fn load_tree(&mut self, name: &str) -> Result<(), String> {
-        self.decision_editor
-            .load_tree(name)
-            .map_err(|e| e.to_string())?;
+        self.decision_editor.load_tree(name).map_err(|e| e.to_string())?;
         self.sync_visual_nodes();
         Ok(())
     }
 
     /// 保存当前行为树
     pub fn save_current_tree(&mut self) -> Result<(), String> {
-        self.decision_editor
-            .save_current_tree()
-            .map_err(|e| e.to_string())
+        self.decision_editor.save_current_tree().map_err(|e| e.to_string())
     }
 
     /// 添加节点
     pub fn add_node(&mut self, node_type: BehaviorNodeType, position: Vec2) -> Result<u64, String> {
-        let tree = self.decision_editor.get_current_tree_mut()
-            .ok_or("No current tree")?;
+        let tree = self.decision_editor.get_current_tree_mut().ok_or("No current tree")?;
 
         let name = match node_type {
             BehaviorNodeType::Selector => "Selector",
@@ -243,11 +239,7 @@ impl BehaviorTreeEditor {
             position
         };
 
-        let id = tree.add_node(
-            node_type,
-            name.to_string(),
-            (snapped_pos.x, snapped_pos.y),
-        );
+        let id = tree.add_node(node_type, name.to_string(), (snapped_pos.x, snapped_pos.y));
 
         self.sync_visual_nodes();
         Ok(id)
@@ -255,8 +247,7 @@ impl BehaviorTreeEditor {
 
     /// 删除选中的节点
     pub fn delete_selected_nodes(&mut self) -> Result<(), String> {
-        let tree = self.decision_editor.get_current_tree_mut()
-            .ok_or("No current tree")?;
+        let tree = self.decision_editor.get_current_tree_mut().ok_or("No current tree")?;
 
         for node_id in &self.selected_nodes {
             tree.remove_node(*node_id).map_err(|e| e.to_string())?;
@@ -269,22 +260,18 @@ impl BehaviorTreeEditor {
 
     /// 添加子节点
     pub fn add_child(&mut self, parent_id: u64, child_id: u64) -> Result<(), String> {
-        let tree = self.decision_editor.get_current_tree_mut()
-            .ok_or("No current tree")?;
+        let tree = self.decision_editor.get_current_tree_mut().ok_or("No current tree")?;
 
-        tree.add_child(parent_id, child_id)
-            .map_err(|e| e.to_string())?;
+        tree.add_child(parent_id, child_id).map_err(|e| e.to_string())?;
         self.sync_visual_nodes();
         Ok(())
     }
 
     /// 移除子节点
     pub fn remove_child(&mut self, parent_id: u64, child_id: u64) -> Result<(), String> {
-        let tree = self.decision_editor.get_current_tree_mut()
-            .ok_or("No current tree")?;
+        let tree = self.decision_editor.get_current_tree_mut().ok_or("No current tree")?;
 
-        tree.remove_child(parent_id, child_id)
-            .map_err(|e| e.to_string())?;
+        tree.remove_child(parent_id, child_id).map_err(|e| e.to_string())?;
         self.sync_visual_nodes();
         Ok(())
     }
@@ -332,7 +319,14 @@ impl BehaviorTreeEditor {
     }
 
     /// 计算三次贝塞尔曲线点
-    fn cubic_bezier(&self, p0: egui::Pos2, p1: egui::Pos2, p2: egui::Pos2, p3: egui::Pos2, t: f32) -> egui::Pos2 {
+    fn cubic_bezier(
+        &self,
+        p0: egui::Pos2,
+        p1: egui::Pos2,
+        p2: egui::Pos2,
+        p3: egui::Pos2,
+        t: f32,
+    ) -> egui::Pos2 {
         let u = 1.0 - t;
         let tt = t * t;
         let uu = u * u;
@@ -361,14 +355,16 @@ impl BehaviorTreeEditor {
 
         ui.separator();
 
-        if ui.button("New").clicked() {
-            self.create_tree("New Behavior Tree".to_string());
-        }
+        if ui.button("New").clicked()
+            && let Err(e) = self.create_tree("New Behavior Tree".to_string()) {
+                tracing::warn!("Failed to create tree: {}", e);
+            }
 
         if ui.button("Save").clicked()
-            && let Err(e) = self.save_current_tree() {
-                tracing::warn!("Failed to save tree: {}", e);
-            }
+            && let Err(e) = self.save_current_tree()
+        {
+            tracing::warn!("Failed to save tree: {}", e);
+        }
 
         ui.separator();
 
@@ -469,7 +465,10 @@ impl BehaviorTreeEditor {
                     node_rect.min.x * self.zoom + self.view_offset.x,
                     node_rect.min.y * self.zoom + self.view_offset.y,
                 ),
-                egui::vec2(node_rect.width() * self.zoom, node_rect.height() * self.zoom),
+                egui::vec2(
+                    node_rect.width() * self.zoom,
+                    node_rect.height() * self.zoom,
+                ),
             );
 
             // 只绘制可见的节点
@@ -588,40 +587,38 @@ impl BehaviorTreeEditor {
             points.push(point);
         }
 
-        painter.add(egui::Shape::line(
-            points,
-            egui::Stroke::new(2.0, color),
-        ));
+        painter.add(egui::Shape::line(points, egui::Stroke::new(2.0, color)));
     }
 
     /// 处理交互
     fn handle_interaction(&mut self, response: &egui::Response, _viewport: egui::Rect) {
         // 处理点击
         if response.clicked()
-            && let Some(click_pos) = response.interact_pointer_pos() {
-                let graph_pos = egui::pos2(
-                    (click_pos.x - self.view_offset.x) / self.zoom,
-                    (click_pos.y - self.view_offset.y) / self.zoom,
-                );
+            && let Some(click_pos) = response.interact_pointer_pos()
+        {
+            let graph_pos = egui::pos2(
+                (click_pos.x - self.view_offset.x) / self.zoom,
+                (click_pos.y - self.view_offset.y) / self.zoom,
+            );
 
-                // 检查是否点击了节点
-                let mut clicked_node = None;
-                for node in self.visual_nodes.values() {
-                    if node.rect().contains(graph_pos) {
-                        clicked_node = Some(node.id);
-                        break;
-                    }
-                }
-
-                if let Some(node_id) = clicked_node {
-                    if !response.ctx.input(|i| i.modifiers.ctrl) {
-                        self.selected_nodes.clear();
-                    }
-                    if !self.selected_nodes.contains(&node_id) {
-                        self.selected_nodes.push(node_id);
-                    }
+            // 检查是否点击了节点
+            let mut clicked_node = None;
+            for node in self.visual_nodes.values() {
+                if node.rect().contains(graph_pos) {
+                    clicked_node = Some(node.id);
+                    break;
                 }
             }
+
+            if let Some(node_id) = clicked_node {
+                if !response.ctx.input(|i| i.modifiers.ctrl) {
+                    self.selected_nodes.clear();
+                }
+                if !self.selected_nodes.contains(&node_id) {
+                    self.selected_nodes.push(node_id);
+                }
+            }
+        }
 
         // 处理拖拽
         if response.dragged() {
@@ -632,16 +629,14 @@ impl BehaviorTreeEditor {
                 // 预先计算 snap_to_grid 和 grid_size，避免借用冲突
                 let snap_enabled = self.snap_to_grid;
                 let grid_size = self.grid_size;
-    
+
                 // 预先获取节点的当前位置，避免借用冲突
-                let current_position = self.visual_nodes
-                    .get(&dragging_node_id)
-                    .map(|n| n.position);
-    
+                let current_position = self.visual_nodes.get(&dragging_node_id).map(|n| n.position);
+
                 // 更新节点位置
                 if let Some(pos) = current_position {
                     let mut new_position = pos + graph_delta;
-    
+
                     // 应用网格吸附
                     if snap_enabled {
                         new_position = Vec2::new(
@@ -649,12 +644,12 @@ impl BehaviorTreeEditor {
                             (new_position.y / grid_size).round() * grid_size,
                         );
                     }
-    
+
                     // 更新可视化节点位置
                     if let Some(node) = self.visual_nodes.get_mut(&dragging_node_id) {
                         node.position = new_position;
                     }
-    
+
                     // 同步到决策树
                     if let Some(tree) = self.decision_editor.get_current_tree_mut() {
                         let updates = NodeUpdates {
@@ -676,21 +671,22 @@ impl BehaviorTreeEditor {
 
         // 开始拖拽
         if response.drag_started()
-            && let Some(click_pos) = response.interact_pointer_pos() {
-                let graph_pos = egui::pos2(
-                    (click_pos.x - self.view_offset.x) / self.zoom,
-                    (click_pos.y - self.view_offset.y) / self.zoom,
-                );
+            && let Some(click_pos) = response.interact_pointer_pos()
+        {
+            let graph_pos = egui::pos2(
+                (click_pos.x - self.view_offset.x) / self.zoom,
+                (click_pos.y - self.view_offset.y) / self.zoom,
+            );
 
-                // 检查是否开始拖拽节点
-                for node in self.visual_nodes.values() {
-                    if node.rect().contains(graph_pos) {
-                        self.dragging_node = Some(node.id);
-                        self.drag_start = Some(Vec2::new(graph_pos.x, graph_pos.y));
-                        break;
-                    }
+            // 检查是否开始拖拽节点
+            for node in self.visual_nodes.values() {
+                if node.rect().contains(graph_pos) {
+                    self.dragging_node = Some(node.id);
+                    self.drag_start = Some(Vec2::new(graph_pos.x, graph_pos.y));
+                    break;
                 }
             }
+        }
 
         // 结束拖拽
         if response.drag_stopped() {
@@ -700,9 +696,10 @@ impl BehaviorTreeEditor {
 
         // 处理删除键
         if response.ctx.input(|i| i.key_pressed(egui::Key::Delete))
-            && let Err(e) = self.delete_selected_nodes() {
-                tracing::warn!("Failed to delete nodes: {}", e);
-            }
+            && let Err(e) = self.delete_selected_nodes()
+        {
+            tracing::warn!("Failed to delete nodes: {}", e);
+        }
     }
 }
 
@@ -713,14 +710,18 @@ mod tests {
     #[test]
     fn test_behavior_tree_editor_creation() {
         let mut editor = BehaviorTreeEditor::new();
-        editor.create_tree("Test Tree".to_string());
+        editor
+            .create_tree("Test Tree".to_string())
+            .expect("Failed to create tree in test");
         assert!(editor.decision_editor.get_current_tree().is_some());
     }
 
     #[test]
     fn test_add_node() {
         let mut editor = BehaviorTreeEditor::new();
-        editor.create_tree("Test Tree".to_string());
+        editor
+            .create_tree("Test Tree".to_string())
+            .expect("Failed to create tree in test");
         let result = editor.add_node(BehaviorNodeType::Selector, Vec2::new(100.0, 100.0));
         assert!(result.is_ok());
         assert_eq!(editor.visual_nodes.len(), 1);

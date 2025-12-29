@@ -406,16 +406,17 @@ impl SmartMemoryAllocator {
 
         // 当前池分配失败，尝试扩展
         if self.config.enable_auto_expansion
-            && let Some(result) = self.try_expand_and_allocate(&request) {
-                let latency = start_time.elapsed().as_micros() as f32;
-                let mut final_result = result;
-                final_result.allocation_latency_us = latency;
+            && let Some(result) = self.try_expand_and_allocate(&request)
+        {
+            let latency = start_time.elapsed().as_micros() as f32;
+            let mut final_result = result;
+            final_result.allocation_latency_us = latency;
 
-                // 更新统计信息
-                self.update_allocation_stats(&final_result);
+            // 更新统计信息
+            self.update_allocation_stats(&final_result);
 
-                return Some(final_result);
-            }
+            return Some(final_result);
+        }
 
         // 所有分配尝试都失败
         None

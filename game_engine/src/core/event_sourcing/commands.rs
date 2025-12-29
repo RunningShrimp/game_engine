@@ -41,7 +41,13 @@ impl Command for CreateEntityCommand {
         event.apply(world)?;
 
         // 序列化事件
-        let data = bincode::serialize(&event).expect("Failed to serialize event");
+        let data = bincode::serialize(&event).map_err(|e| {
+            EventError::SerializationError(format!(
+                "Failed to serialize {}: {}",
+                event.event_type(),
+                e
+            ))
+        })?;
 
         Ok((event.event_type().to_string(), data))
     }
@@ -69,7 +75,13 @@ impl Command for DeleteEntityCommand {
         event.apply(world)?;
 
         // 序列化事件
-        let data = bincode::serialize(&event).expect("Failed to serialize event");
+        let data = bincode::serialize(&event).map_err(|e| {
+            EventError::SerializationError(format!(
+                "Failed to serialize {}: {}",
+                event.event_type(),
+                e
+            ))
+        })?;
 
         Ok((event.event_type().to_string(), data))
     }
@@ -100,7 +112,13 @@ impl Command for UpdateEntityCommand {
         event.apply(world)?;
 
         // 序列化事件
-        let data = bincode::serialize(&event).expect("Failed to serialize event");
+        let data = bincode::serialize(&event).map_err(|e| {
+            EventError::SerializationError(format!(
+                "Failed to serialize {}: {}",
+                event.event_type(),
+                e
+            ))
+        })?;
 
         Ok((event.event_type().to_string(), data))
     }
@@ -123,17 +141,17 @@ impl EventWrapper {
         // 根据优先级选择序列化策略
         // 高优先级事件可能需要更快的序列化，但当前统一使用bincode
         let data = bincode::serialize(event).unwrap_or_default();
-        
+
         // 记录优先级信息（可用于后续的事件处理优化）
         let _priority_level = priority as u8; // 将优先级转换为数值用于日志或统计
-        
+
         Self {
             event_type: event.event_type().to_string(),
             data,
             aggregate_id: None,
         }
     }
-    
+
     /// 获取事件的优先级（从事件类型推断）
     pub fn inferred_priority(&self) -> EventPriority {
         // 根据事件类型推断优先级
@@ -169,9 +187,14 @@ impl CommandHandler {
 
         // 创建存储事件
         let mut sequence = safe_lock(&self.manager.sequence_generator, "sequence_generator")
-            .expect("Failed to acquire lock for sequence generator");
+            .map_err(|e| {
+                EventError::LockError(format!(
+                    "Failed to acquire lock for sequence_generator: {}",
+                    e
+                ))
+            })?;
         *sequence += 1;
-        let event_id = EventId::now(*sequence);
+        let event_id = EventId::now(*sequence)?;
         drop(sequence);
 
         let stored_event = StoredEvent {
@@ -183,7 +206,9 @@ impl CommandHandler {
 
         // 保存事件
         safe_lock(&self.manager.event_store, "event_store")
-            .expect("Failed to acquire lock for event store")
+            .map_err(|e| {
+                EventError::LockError(format!("Failed to acquire lock for event_store: {}", e))
+            })?
             .save_event(stored_event)?;
 
         Ok(event_id)

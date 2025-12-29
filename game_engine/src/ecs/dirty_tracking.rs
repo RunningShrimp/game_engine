@@ -268,15 +268,13 @@ impl Default for DirtyTrackingConfig {
 /// 脏跟踪资源
 ///
 /// 全局配置和状态管理
-#[derive(Resource, Debug)]
-#[derive(Default)]
+#[derive(Resource, Debug, Default)]
 pub struct DirtyTrackingResource {
     /// 配置
     pub config: DirtyTrackingConfig,
     /// 当前帧号
     pub current_frame: u64,
 }
-
 
 impl DirtyTrackingResource {
     /// 创建新的脏跟踪资源

@@ -94,6 +94,20 @@ impl Filesystem for WebFilesystem {
 
 impl Default for WebFilesystem {
     fn default() -> Self {
-        Self::new().expect("Failed to create WebFilesystem")
+        Self::new().unwrap_or_else(|_| {
+            // In a real application, we would log this error
+            // For now, create a minimal instance that will fail gracefully
+            // This can happen in environments without window object (e.g., SSR)
+            #[cfg(target_arch = "wasm32")]
+            {
+                // Attempt to get window again, returning a dummy that will fail on first use
+                if let Ok(window) = web_sys::window() {
+                    return Self { window };
+                }
+            }
+            // Last resort: panic in Default only since this is a programming error
+            // to use WebFilesystem in a non-WASM environment
+            panic!("WebFilesystem::default() called in an environment without window object")
+        })
     }
 }

@@ -30,8 +30,8 @@
 //! - 领域事件存储
 //! - 事件重放
 //! - CQRS模式支持
-pub mod engine;
 pub mod editor;
+pub mod engine;
 pub mod error;
 pub mod error_aggregator;
 pub mod event_sourcing;
@@ -46,6 +46,19 @@ pub mod macros;
 
 #[cfg(test)]
 mod tests;
+
+// ========================================
+// 综合测试模块
+// ========================================
+
+#[cfg(test)]
+mod core_module_tests;
+
+#[cfg(test)]
+mod utils_tests;
+
+#[cfg(test)]
+mod error_aggregator_tests;
 
 // 重新导出错误类型
 pub use crate::error::*;

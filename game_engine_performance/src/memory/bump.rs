@@ -226,7 +226,8 @@ impl BumpAllocator {
 
 impl Drop for BumpAllocator {
     fn drop(&mut self) {
-        let layout = Layout::from_size_align(self.size, 1).unwrap();
+        // Safety: size is always valid since it was validated in new()
+        let layout = unsafe { Layout::from_size_align_unchecked(self.size, 1) };
         unsafe {
             dealloc(self.start.as_ptr(), layout);
         }

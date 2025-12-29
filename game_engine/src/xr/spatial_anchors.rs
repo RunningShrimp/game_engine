@@ -743,76 +743,76 @@ mod tests {
 
     #[test]
     fn test_create_anchor() {
-        let mut manager = SpatialAnchorManager::new().unwrap();
+        let mut manager = SpatialAnchorManager::new().expect("Test: operation should succeed");
 
         let pose = Pose {
             position: Vec3::new(0.0, 0.0, -1.0),
             orientation: Quat::IDENTITY,
         };
 
-        let id = manager.create_anchor(pose, "TestAnchor").unwrap();
+        let id = manager.create_anchor(pose, "TestAnchor").expect("Test: operation should succeed");
         assert!(manager.get_anchor(id).is_some());
         assert_eq!(manager.anchor_count(), 1);
     }
 
     #[test]
     fn test_destroy_anchor() {
-        let mut manager = SpatialAnchorManager::new().unwrap();
+        let mut manager = SpatialAnchorManager::new().expect("Test: operation should succeed");
 
         let pose = Pose::default();
-        let id = manager.create_anchor(pose, "TestAnchor").unwrap();
+        let id = manager.create_anchor(pose, "TestAnchor").expect("Test: operation should succeed");
 
         assert_eq!(manager.anchor_count(), 1);
-        manager.destroy_anchor(id).unwrap();
+        manager.destroy_anchor(id).expect("Test: operation should succeed");
         assert_eq!(manager.anchor_count(), 0);
     }
 
     #[test]
     fn test_update_anchor_pose() {
-        let mut manager = SpatialAnchorManager::new().unwrap();
+        let mut manager = SpatialAnchorManager::new().expect("Test: operation should succeed");
 
         let pose1 = Pose {
             position: Vec3::new(0.0, 0.0, -1.0),
             orientation: Quat::IDENTITY,
         };
-        let id = manager.create_anchor(pose1, "TestAnchor").unwrap();
+        let id = manager.create_anchor(pose1, "TestAnchor").expect("Test: operation should succeed");
 
         let pose2 = Pose {
             position: Vec3::new(1.0, 0.0, -1.0),
             orientation: Quat::IDENTITY,
         };
-        manager.update_anchor_pose(id, pose2).unwrap();
+        manager.update_anchor_pose(id, pose2).expect("Test: operation should succeed");
 
-        let anchor = manager.get_anchor(id).unwrap();
+        let anchor = manager.get_anchor(id).expect("Test: operation should succeed");
         assert_eq!(anchor.pose.position, Vec3::new(1.0, 0.0, -1.0));
     }
 
     #[test]
     fn test_find_anchor_by_name() {
-        let mut manager = SpatialAnchorManager::new().unwrap();
+        let mut manager = SpatialAnchorManager::new().expect("Test: operation should succeed");
 
         let pose = Pose::default();
-        let _id = manager.create_anchor(pose, "MyAnchor").unwrap();
+        let _id = manager.create_anchor(pose, "MyAnchor").expect("Test: operation should succeed");
 
-        let anchor = manager.find_anchor_by_name("MyAnchor").unwrap();
+        let anchor = manager.find_anchor_by_name("MyAnchor").expect("Test: operation should succeed");
         assert_eq!(anchor.name, "MyAnchor");
     }
 
     #[test]
     fn test_find_anchors_near() {
-        let mut manager = SpatialAnchorManager::new().unwrap();
+        let mut manager = SpatialAnchorManager::new().expect("Test: operation should succeed");
 
         let pose1 = Pose {
             position: Vec3::new(0.0, 0.0, -1.0),
             orientation: Quat::IDENTITY,
         };
-        let _id1 = manager.create_anchor(pose1, "Anchor1").unwrap();
+        let _id1 = manager.create_anchor(pose1, "Anchor1").expect("Test: operation should succeed");
 
         let pose2 = Pose {
             position: Vec3::new(10.0, 0.0, -1.0),
             orientation: Quat::IDENTITY,
         };
-        let _id2 = manager.create_anchor(pose2, "Anchor2").unwrap();
+        let _id2 = manager.create_anchor(pose2, "Anchor2").expect("Test: operation should succeed");
 
         let nearby = manager.find_anchors_near(Vec3::new(0.5, 0.0, -1.0), 1.0);
         assert_eq!(nearby.len(), 1);
@@ -821,12 +821,12 @@ mod tests {
 
     #[test]
     fn test_anchor_metadata() {
-        let mut manager = SpatialAnchorManager::new().unwrap();
+        let mut manager = SpatialAnchorManager::new().expect("Test: operation should succeed");
 
         let pose = Pose::default();
-        let id = manager.create_anchor(pose, "TestAnchor").unwrap();
+        let id = manager.create_anchor(pose, "TestAnchor").expect("Test: operation should succeed");
 
-        let anchor = manager.get_anchor_mut(id).unwrap();
+        let anchor = manager.get_anchor_mut(id).expect("Test: operation should succeed");
         anchor.set_metadata("type".to_string(), "waypoint".to_string());
 
         assert_eq!(anchor.get_metadata("type"), Some(&"waypoint".to_string()));

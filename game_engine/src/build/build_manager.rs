@@ -7,13 +7,13 @@
 //! - 构建缓存（避免重复构建）
 //! - 构建统计（构建时间和资源使用）
 
+use serde_json;
 use std::collections::HashMap;
 use std::process::{Command, Stdio};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use tokio::process::Command as TokioCommand;
 use tokio::sync::Semaphore;
-use serde_json;
 
 /// 构建配置
 #[derive(Debug, Clone)]
@@ -142,7 +142,8 @@ impl BuildManager {
 
         // 初始化进度
         {
-            let mut progress = self.progress.lock().unwrap();
+            let mut progress = self.progress.lock()
+                .map_err(|e| BuildError::TaskError(format!("Failed to acquire progress lock: {}", e)))?;
             progress.total = packages.len();
             progress.completed = 0;
             progress.start_time = Some(Instant::now());
@@ -161,11 +162,33 @@ impl BuildManager {
             let cache = self.build_cache.clone();
 
             let task = tokio::spawn(async move {
-                let _permit = semaphore.acquire().await.unwrap();
+                let _permit = match semaphore.acquire().await {
+                    Ok(permit) => permit,
+                    Err(e) => {
+                        return (package_clone.clone(), BuildResult {
+                            package: package_clone.clone(),
+                            success: false,
+                            duration: 0.0,
+                            error: Some(format!("Failed to acquire semaphore permit: {}", e)),
+                            output_size: None,
+                        });
+                    }
+                };
 
                 // 更新进度
                 {
-                    let mut prog = progress.lock().unwrap();
+                    let mut prog = match progress.lock() {
+                        Ok(g) => g,
+                        Err(e) => {
+                            return (package_clone.clone(), BuildResult {
+                                package: package_clone.clone(),
+                                success: false,
+                                duration: 0.0,
+                                error: Some(format!("Failed to acquire progress lock: {}", e)),
+                                output_size: None,
+                            });
+                        }
+                    };
                     prog.current_packages.push(package_clone.clone());
                 }
 
@@ -173,16 +196,22 @@ impl BuildManager {
 
                 // 更新进度
                 {
-                    let mut prog = progress.lock().unwrap();
+                    let mut prog = match progress.lock() {
+                        Ok(g) => g,
+                        Err(e) => {
+                            eprintln!("Failed to acquire progress lock: {}", e);
+                            return (package_clone, result);
+                        }
+                    };
                     prog.completed += 1;
                     prog.current_packages.retain(|p| p != &package_clone);
                 }
 
                 // 更新缓存
-                if result.success {
-                    let mut cache = cache.lock().unwrap();
-                    cache.insert(package_clone.clone(), Instant::now());
-                }
+                if result.success
+                    && let Ok(mut cache) = cache.lock() {
+                        cache.insert(package_clone.clone(), Instant::now());
+                    }
 
                 (package_clone, result)
             });
@@ -229,7 +258,11 @@ impl BuildManager {
                 .iter()
                 .filter_map(|(pkg, r)| {
                     if !r.success {
-                        Some(format!("{}: {}", pkg, r.error.as_deref().unwrap_or("Unknown error")))
+                        Some(format!(
+                            "{}: {}",
+                            pkg,
+                            r.error.as_deref().unwrap_or("Unknown error")
+                        ))
                     } else {
                         None
                     }
@@ -257,7 +290,9 @@ impl BuildManager {
             .map_err(|e| BuildError::CommandError(e.to_string()))?;
 
         if !output.status.success() {
-            return Err(BuildError::CommandError("Failed to get workspace metadata".to_string()));
+            return Err(BuildError::CommandError(
+                "Failed to get workspace metadata".to_string(),
+            ));
         }
 
         let metadata: serde_json::Value = serde_json::from_slice(&output.stdout)
@@ -286,7 +321,8 @@ impl BuildManager {
         // 简化实现：对于增量构建，暂时返回所有包
         // 实际实现应该检查源文件的修改时间
         // 这里使用简化的逻辑：如果缓存存在且时间较近，跳过构建
-        let cache = self.build_cache.lock().unwrap();
+        let cache = self.build_cache.lock()
+            .expect("Build cache lock poisoned");
         let mut changed = Vec::new();
 
         for package in packages {
@@ -384,14 +420,20 @@ impl BuildManager {
         println!("📦 构建完成");
         println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
         println!("总时间: {:.2}秒", stats.total_time);
-        println!("成功: {} | 失败: {}", stats.success_count, stats.failure_count);
+        println!(
+            "成功: {} | 失败: {}",
+            stats.success_count, stats.failure_count
+        );
         println!("并行度: {}", stats.parallelism);
         println!();
 
         // 显示各包构建时间
         println!("各包构建时间:");
         let mut sorted_results: Vec<_> = results.iter().collect();
-        sorted_results.sort_by(|a, b| b.1.duration.partial_cmp(&a.1.duration).unwrap());
+        sorted_results.sort_by(|a, b| {
+            b.1.duration.partial_cmp(&a.1.duration)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
 
         for (package, result) in sorted_results.iter().take(10) {
             let status = if result.success { "✓" } else { "✗" };
@@ -401,7 +443,8 @@ impl BuildManager {
 
     /// 获取当前构建进度
     pub fn get_progress(&self) -> (usize, usize, Vec<String>) {
-        let progress = self.progress.lock().unwrap();
+        let progress = self.progress.lock()
+            .expect("Progress lock poisoned");
         (
             progress.completed,
             progress.total,
@@ -457,4 +500,3 @@ mod tests {
         assert!(config.show_progress);
     }
 }
-

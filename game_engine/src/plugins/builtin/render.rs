@@ -1,9 +1,9 @@
 //  渲染插件
-// 
+//
 //  提供基于wgpu的渲染功能，支持2D/3D渲染、PBR材质、阴影等。
 
 use crate::impl_default;
-use crate::plugins::{EnginePlugin, App, PluginVersion, PluginDependency};
+use crate::plugins::{App, EnginePlugin, PluginDependency, PluginVersion};
 use winit::window::Window;
 
 /// 渲染插件配置
@@ -86,7 +86,7 @@ impl EnginePlugin for RenderPlugin {
 
     fn build(&self, app: &mut App) {
         // 需要窗口来创建渲染器
-        if let Some(window) = &self.window {
+        if let Some(_window) = &self.window {
             // 在实际应用中，这里需要异步创建渲染器
             // 由于插件系统是同步的，我们在这里只插入占位符
             // 实际的渲染器创建应该在应用启动后进行
@@ -101,9 +101,11 @@ impl EnginePlugin for RenderPlugin {
         }
     }
 
-    fn startup(&self, world: &mut bevy_ecs::world::World) {
-        println!("Render plugin started with PBR: {}, Shadows: {}",
-                 self.config.enable_pbr, self.config.enable_shadows);
+    fn startup(&self, _world: &mut bevy_ecs::world::World) {
+        println!(
+            "Render plugin started with PBR: {}, Shadows: {}",
+            self.config.enable_pbr, self.config.enable_shadows
+        );
 
         // 在这里可以创建实际的渲染器
         // let renderer = pollster::block_on(WgpuRenderer::new(window));

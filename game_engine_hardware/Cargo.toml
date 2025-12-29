@@ -16,7 +16,7 @@ categories = ["hardware-support", "performance"]
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
-ort = { version = "2.0.0-rc.10", features = ["download-binaries"], optional = true }
+# ort = { version = "2.0.0-rc.10", features = ["download-binaries"], optional = true }  # Removed: unused ML dependency
 dirs = "6.0"
 tracing = { workspace = true }
 wgpu = { workspace = true, optional = true }
@@ -31,7 +31,7 @@ path = "src/lib.rs"
 
 [features]
 default = []
-onnx = ["ort"]
+# onnx = ["ort"]  # Temporarily disabled - unused in current codebase
 wgpu = ["dep:wgpu"]
 cuda = []
 tensorrt = []

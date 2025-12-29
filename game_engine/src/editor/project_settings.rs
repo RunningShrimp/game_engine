@@ -205,7 +205,7 @@ impl ProjectSettingsManager {
                 .map_err(|e| format!("Failed to parse settings file: {}", e))?;
             Ok(Some(settings))
         });
-        
+
         match result {
             Ok(Some(settings)) => {
                 self.settings = settings;
@@ -240,40 +240,28 @@ impl ProjectSettingsManager {
         ui.collapsing("Project Info", |ui| {
             ui.horizontal(|ui| {
                 ui.label("Name:");
-                if ui
-                    .text_edit_singleline(&mut self.settings.project_name)
-                    .changed()
-                {
+                if ui.text_edit_singleline(&mut self.settings.project_name).changed() {
                     self.has_unsaved_changes = true;
                 }
             });
 
             ui.horizontal(|ui| {
                 ui.label("Version:");
-                if ui
-                    .text_edit_singleline(&mut self.settings.project_version)
-                    .changed()
-                {
+                if ui.text_edit_singleline(&mut self.settings.project_version).changed() {
                     self.has_unsaved_changes = true;
                 }
             });
 
             ui.horizontal(|ui| {
                 ui.label("Author:");
-                if ui
-                    .text_edit_singleline(&mut self.settings.project_author)
-                    .changed()
-                {
+                if ui.text_edit_singleline(&mut self.settings.project_author).changed() {
                     self.has_unsaved_changes = true;
                 }
             });
 
             ui.horizontal(|ui| {
                 ui.label("Description:");
-                if ui
-                    .text_edit_multiline(&mut self.settings.project_description)
-                    .changed()
-                {
+                if ui.text_edit_multiline(&mut self.settings.project_description).changed() {
                     self.has_unsaved_changes = true;
                 }
             });
@@ -314,10 +302,7 @@ impl ProjectSettingsManager {
                 self.has_unsaved_changes = true;
             }
 
-            if ui
-                .checkbox(&mut self.settings.render_settings.vsync, "VSync")
-                .changed()
-            {
+            if ui.checkbox(&mut self.settings.render_settings.vsync, "VSync").changed() {
                 self.has_unsaved_changes = true;
             }
 
@@ -480,9 +465,10 @@ impl ProjectSettingsManager {
         // 保存按钮
         ui.horizontal(|ui| {
             if ui.button("Save Settings").clicked()
-                && let Err(e) = self.save() {
-                    eprintln!("Failed to save settings: {}", e);
-                }
+                && let Err(e) = self.save()
+            {
+                eprintln!("Failed to save settings: {}", e);
+            }
 
             if self.has_unsaved_changes {
                 ui.label("⚠ Unsaved changes");
@@ -506,8 +492,8 @@ mod tests {
     #[test]
     fn test_settings_serialization() {
         let settings = ProjectSettings::default();
-        let json = serde_json::to_string(&settings).unwrap();
-        let deserialized: ProjectSettings = serde_json::from_str(&json).unwrap();
+        let json = serde_json::to_string(&settings).expect("Test: operation should succeed");
+        let deserialized: ProjectSettings = serde_json::from_str(&json).expect("Test: operation should succeed");
         assert_eq!(deserialized.project_name, settings.project_name);
     }
 
@@ -520,12 +506,12 @@ mod tests {
         manager.settings.project_name = "Test Project".to_string();
 
         // 保存
-        manager.save().unwrap();
+        manager.save().expect("Test: operation should succeed");
         assert!(!manager.has_unsaved_changes);
 
         // 加载
         let mut manager2 = ProjectSettingsManager::new(settings_path.clone());
-        manager2.load().unwrap();
+        manager2.load().expect("Test: operation should succeed");
         assert_eq!(manager2.settings.project_name, "Test Project");
 
         // 清理
@@ -541,12 +527,12 @@ mod tests {
         manager.settings.project_name = "RT Project".to_string();
 
         // 保存 (在运行时内调用同步封装)
-        manager.save().unwrap();
+        manager.save().expect("Test: operation should succeed");
         assert!(!manager.has_unsaved_changes);
 
         // 加载
         let mut manager2 = ProjectSettingsManager::new(settings_path.clone());
-        manager2.load().unwrap();
+        manager2.load().expect("Test: operation should succeed");
         assert_eq!(manager2.settings.project_name, "RT Project");
 
         // 清理

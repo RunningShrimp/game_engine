@@ -1,4 +1,6 @@
-//! GPU加速流体模拟（SPH - Smoothed Particle Hydrodynamics）
+//! # GPU 加速流体模拟 (SPH - Smoothed Particle Hydrodynamics)
+//!
+//! **API 稳定性**: 实验性 (Experimental) (v0.1.0)
 //!
 //! 提供GPU加速的流体模拟功能：
 //! - SPH粒子模拟
@@ -6,6 +8,60 @@
 //! - 压力计算
 //! - 粘性力计算
 //! - 表面张力
+//!
+//! ## API 稳定性声明
+//!
+//! **警告**: 此 API 处于实验性阶段，可能会在未来版本中发生破坏性变更。
+//! - **状态**: 实验性 (Experimental) - 部分实现
+//! - **引入版本**: v0.1.0
+//! - **预期稳定版本**: v0.3.0
+//!
+//! ## 功能完整性追踪
+//!
+//! | 功能 | 状态 | 说明 |
+//! |------|------|------|
+//! | 密度计算管线 | ✅ 已实现 | 着色器和管线完整 |
+//! | 压力计算管线 | ✅ 已实现 | SPH 压力模型实现 |
+//! | 力计算管线 | ✅ 已实现 | 粘性力和表面张力 |
+//! | 粒子更新管线 | ✅ 已实现 | 时间积分和位置更新 |
+//! | 粒子缓冲区管理 | ✅ 已实现 | 完整的 GPU 缓冲区管理 |
+//! | 空间分区加速 | ⏳ 计划中 | 设计阶段 |
+//! | 边界条件处理 | ⏳ 计划中 | 设计阶段 |
+//! | 多相流模拟 | ⏳ 计划中 | 设计阶段 |
+//!
+//! ## 使用说明
+//!
+//! 此模块使用平滑粒子流体动力学 (SPH) 方法在 GPU 上模拟流体行为。
+//!
+//! ### 示例
+//!
+//! ```rust,no_run
+//! use game_engine::physics::gpu_fluid_simulation::{GpuFluidSimulator, GpuFluidSimulationConfig};
+//!
+//! let config = GpuFluidSimulationConfig {
+//!     enabled: true,
+//!     max_particles: 16384,
+//!     ..Default::default()
+//! };
+//!
+//! let simulator = GpuFluidSimulator::new(device, queue, config)?;
+//! ```
+//!
+//! ## 已知限制
+//!
+//! 1. 着色器文件需要在正确的路径
+//! 2. 缺少空间分区优化（空间哈希等）
+//! 3. 边界条件处理较为简化
+//! 4. 性能随粒子数非线性增长
+//!
+//! ## 未来改进计划
+//!
+//! - [ ] 实现空间哈希加速
+//! - [ ] 添加更好的边界条件
+//! - [ ] 优化 SPH 参数调整
+//! - [ ] 添加自适应时间步长
+//! - [ ] 实现多相流支持
+//! - [ ] 添加流体-刚体耦合
 
 // glam::Vec3 未在此文件中使用，但可能在未来需要，保留注释说明
 // use glam::Vec3;
@@ -125,31 +181,32 @@ impl GpuFluidSimulator {
             source: wgpu::ShaderSource::Wgsl(shader_source.into()),
         });
 
-        let bind_group_layout = self.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("Fluid Density BGL"),
-            entries: &[
-                wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: false },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
+        let bind_group_layout =
+            self.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("Fluid Density BGL"),
+                entries: &[
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: false },
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
                     },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 1,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Uniform,
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Uniform,
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
                     },
-                    count: None,
-                },
-            ],
-        });
+                ],
+            });
 
         let pipeline_layout = self.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("Fluid Density Pipeline Layout"),
@@ -175,31 +232,32 @@ impl GpuFluidSimulator {
             source: wgpu::ShaderSource::Wgsl(shader_source.into()),
         });
 
-        let bind_group_layout = self.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("Fluid Pressure BGL"),
-            entries: &[
-                wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: false },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
+        let bind_group_layout =
+            self.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("Fluid Pressure BGL"),
+                entries: &[
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: false },
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
                     },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 1,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Uniform,
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Uniform,
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
                     },
-                    count: None,
-                },
-            ],
-        });
+                ],
+            });
 
         let pipeline_layout = self.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("Fluid Pressure Pipeline Layout"),
@@ -225,31 +283,32 @@ impl GpuFluidSimulator {
             source: wgpu::ShaderSource::Wgsl(shader_source.into()),
         });
 
-        let bind_group_layout = self.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("Fluid Force BGL"),
-            entries: &[
-                wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: false },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
+        let bind_group_layout =
+            self.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("Fluid Force BGL"),
+                entries: &[
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: false },
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
                     },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 1,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Uniform,
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Uniform,
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
                     },
-                    count: None,
-                },
-            ],
-        });
+                ],
+            });
 
         let pipeline_layout = self.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("Fluid Force Pipeline Layout"),
@@ -275,31 +334,32 @@ impl GpuFluidSimulator {
             source: wgpu::ShaderSource::Wgsl(shader_source.into()),
         });
 
-        let bind_group_layout = self.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("Fluid Update BGL"),
-            entries: &[
-                wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: false },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
+        let bind_group_layout =
+            self.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("Fluid Update BGL"),
+                entries: &[
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: false },
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
                     },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 1,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Uniform,
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Uniform,
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
                     },
-                    count: None,
-                },
-            ],
-        });
+                ],
+            });
 
         let pipeline_layout = self.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("Fluid Update Pipeline Layout"),
@@ -321,8 +381,11 @@ impl GpuFluidSimulator {
     fn initialize_buffers(&mut self) {
         self.particle_buffer = Some(self.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("GPU Fluid Particle Buffer"),
-            size: (self.config.max_particles as u64) * std::mem::size_of::<GpuFluidParticle>() as u64,
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::COPY_SRC,
+            size: (self.config.max_particles as u64)
+                * std::mem::size_of::<GpuFluidParticle>() as u64,
+            usage: wgpu::BufferUsages::STORAGE
+                | wgpu::BufferUsages::COPY_DST
+                | wgpu::BufferUsages::COPY_SRC,
             mapped_at_creation: false,
         }));
 
@@ -370,14 +433,16 @@ impl GpuFluidSimulator {
         });
 
         // 1. 计算密度
-        if let Some(pipeline) = &self.density_pipeline {
+        if let (Some(pipeline), Some(particle_buffer)) =
+            (&self.density_pipeline, &self.particle_buffer)
+        {
             let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
                 label: Some("Fluid Density Bind Group"),
                 layout: &pipeline.get_bind_group_layout(0),
                 entries: &[
                     wgpu::BindGroupEntry {
                         binding: 0,
-                        resource: self.particle_buffer.as_ref().unwrap().as_entire_binding(),
+                        resource: particle_buffer.as_entire_binding(),
                     },
                     wgpu::BindGroupEntry {
                         binding: 1,
@@ -397,17 +462,22 @@ impl GpuFluidSimulator {
                 1,
                 1,
             );
+        } else if self.density_pipeline.is_some() {
+            tracing::error!("Density pipeline exists but particle buffer is not initialized");
+            return Err(GpuFluidSimulationError::BufferNotInitialized);
         }
 
         // 2. 计算压力
-        if let Some(pipeline) = &self.pressure_pipeline {
+        if let (Some(pipeline), Some(particle_buffer)) =
+            (&self.pressure_pipeline, &self.particle_buffer)
+        {
             let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
                 label: Some("Fluid Pressure Bind Group"),
                 layout: &pipeline.get_bind_group_layout(0),
                 entries: &[
                     wgpu::BindGroupEntry {
                         binding: 0,
-                        resource: self.particle_buffer.as_ref().unwrap().as_entire_binding(),
+                        resource: particle_buffer.as_entire_binding(),
                     },
                     wgpu::BindGroupEntry {
                         binding: 1,
@@ -427,17 +497,22 @@ impl GpuFluidSimulator {
                 1,
                 1,
             );
+        } else if self.pressure_pipeline.is_some() {
+            tracing::error!("Pressure pipeline exists but particle buffer is not initialized");
+            return Err(GpuFluidSimulationError::BufferNotInitialized);
         }
 
         // 3. 计算力
-        if let Some(pipeline) = &self.force_pipeline {
+        if let (Some(pipeline), Some(particle_buffer)) =
+            (&self.force_pipeline, &self.particle_buffer)
+        {
             let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
                 label: Some("Fluid Force Bind Group"),
                 layout: &pipeline.get_bind_group_layout(0),
                 entries: &[
                     wgpu::BindGroupEntry {
                         binding: 0,
-                        resource: self.particle_buffer.as_ref().unwrap().as_entire_binding(),
+                        resource: particle_buffer.as_entire_binding(),
                     },
                     wgpu::BindGroupEntry {
                         binding: 1,
@@ -457,17 +532,22 @@ impl GpuFluidSimulator {
                 1,
                 1,
             );
+        } else if self.force_pipeline.is_some() {
+            tracing::error!("Force pipeline exists but particle buffer is not initialized");
+            return Err(GpuFluidSimulationError::BufferNotInitialized);
         }
 
         // 4. 更新粒子
-        if let Some(pipeline) = &self.update_pipeline {
+        if let (Some(pipeline), Some(particle_buffer)) =
+            (&self.update_pipeline, &self.particle_buffer)
+        {
             let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
                 label: Some("Fluid Update Bind Group"),
                 layout: &pipeline.get_bind_group_layout(0),
                 entries: &[
                     wgpu::BindGroupEntry {
                         binding: 0,
-                        resource: self.particle_buffer.as_ref().unwrap().as_entire_binding(),
+                        resource: particle_buffer.as_entire_binding(),
                     },
                     wgpu::BindGroupEntry {
                         binding: 1,
@@ -487,6 +567,9 @@ impl GpuFluidSimulator {
                 1,
                 1,
             );
+        } else if self.update_pipeline.is_some() {
+            tracing::error!("Update pipeline exists but particle buffer is not initialized");
+            return Err(GpuFluidSimulationError::BufferNotInitialized);
         }
 
         Ok(())
@@ -554,4 +637,3 @@ mod tests {
         assert_eq!(config.max_particles, 16384);
     }
 }
-

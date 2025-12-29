@@ -154,15 +154,11 @@ impl BaselineUpdater {
 
         // 获取CPU信息（平台特定）
         let cpu = if cfg!(target_os = "macos") {
-            let output = Command::new("sysctl")
-                .arg("-n")
-                .arg("machdep.cpu.brand_string")
-                .output()?;
+            let output =
+                Command::new("sysctl").arg("-n").arg("machdep.cpu.brand_string").output()?;
             String::from_utf8_lossy(&output.stdout).trim().to_string()
         } else if cfg!(target_os = "linux") {
-            let output = Command::new("lscpu")
-                .arg("--json")
-                .output()?;
+            let output = Command::new("lscpu").arg("--json").output()?;
             // 解析JSON输出获取CPU信息
             if output.status.success() {
                 // 简化处理：从JSON中提取Model name字段
@@ -171,8 +167,9 @@ impl BaselineUpdater {
                     // 提取CPU型号
                     let model_line = &output_str[model_start..];
                     if let Some(value_start) = model_line.find('"') {
-                        if let Some(value_end) = model_line[value_start+1..].find('"') {
-                            let cpu_name = &model_line[value_start+1..value_start+1+value_end];
+                        if let Some(value_end) = model_line[value_start + 1..].find('"') {
+                            let cpu_name =
+                                &model_line[value_start + 1..value_start + 1 + value_end];
                             cpu_name.to_string()
                         } else {
                             "Unknown CPU".to_string()
@@ -194,14 +191,8 @@ impl BaselineUpdater {
 
         // 获取内存信息
         let memory = if cfg!(target_os = "macos") {
-            let output = Command::new("sysctl")
-                .arg("-n")
-                .arg("hw.memsize")
-                .output()?;
-            let bytes: u64 = String::from_utf8_lossy(&output.stdout)
-                .trim()
-                .parse()
-                .unwrap_or(0);
+            let output = Command::new("sysctl").arg("-n").arg("hw.memsize").output()?;
+            let bytes: u64 = String::from_utf8_lossy(&output.stdout).trim().parse().unwrap_or(0);
             format!("{}GB", bytes / 1024 / 1024 / 1024)
         } else {
             "Unknown".to_string()
@@ -209,9 +200,7 @@ impl BaselineUpdater {
 
         // 获取OS版本
         let os = if cfg!(target_os = "macos") {
-            let output = Command::new("sw_vers")
-                .arg("-productVersion")
-                .output()?;
+            let output = Command::new("sw_vers").arg("-productVersion").output()?;
             format!("macOS {}", String::from_utf8_lossy(&output.stdout).trim())
         } else {
             format!("{} {}", os_name, arch)
@@ -221,14 +210,9 @@ impl BaselineUpdater {
         let rust_version = Command::new("rustc")
             .arg("--version")
             .output()
-            .map(|o| {
-                String::from_utf8_lossy(&o.stdout)
-                    .trim()
-                    .replace("rustc ", "")
-                    .to_string()
-            })
+            .map(|o| String::from_utf8_lossy(&o.stdout).trim().replace("rustc ", "").to_string())
             .unwrap_or_else(|_| "Unknown".to_string());
-        
+
         // 记录Rust版本信息（用于后续的基线元数据更新）
         tracing::debug!("Detected Rust version: {}", rust_version);
 
@@ -245,12 +229,7 @@ impl BaselineUpdater {
         Command::new("rustc")
             .arg("--version")
             .output()
-            .map(|o| {
-                String::from_utf8_lossy(&o.stdout)
-                    .trim()
-                    .replace("rustc ", "")
-                    .to_string()
-            })
+            .map(|o| String::from_utf8_lossy(&o.stdout).trim().replace("rustc ", "").to_string())
             .unwrap_or_else(|_| "Unknown".to_string())
     }
 
@@ -318,7 +297,7 @@ impl BaselineUpdater {
         // 从标准输出解析结果（简化实现）
         let stdout = String::from_utf8_lossy(&output.stdout);
         let stderr = String::from_utf8_lossy(&output.stderr);
-        
+
         // 记录标准输出和错误输出（用于调试和日志）
         if !stdout.is_empty() {
             tracing::debug!("Benchmark {} stdout: {}", bench_name, stdout);
@@ -326,7 +305,7 @@ impl BaselineUpdater {
         if !stderr.is_empty() {
             tracing::warn!("Benchmark {} stderr: {}", bench_name, stderr);
         }
-        
+
         // 尝试从stdout中解析简单的性能指标（如果JSON解析失败）
         if results.is_empty() && !stdout.is_empty() {
             // 简单的文本解析：查找 "time:" 或 "ns/iter" 等模式
@@ -344,9 +323,7 @@ impl BaselineUpdater {
         }
 
         // 尝试从Criterion的JSON输出目录读取结果
-        let criterion_dir = PathBuf::from("target/criterion")
-            .join(bench_name)
-            .join("new");
+        let criterion_dir = PathBuf::from("target/criterion").join(bench_name).join("new");
 
         if criterion_dir.exists() {
             // 读取基准测试结果JSON文件
@@ -354,22 +331,24 @@ impl BaselineUpdater {
                 for entry in entries.flatten() {
                     if entry.path().file_name().and_then(|n| n.to_str()) == Some("estimates.json")
                         && let Ok(json_content) = fs::read_to_string(entry.path())
-                            && let Ok(criterion_result) = serde_json::from_str::<CriterionResult>(&json_content) {
-                                // 提取基准测试名称和结果
-                                let test_name = criterion_result.id;
-                                let mean_ns = criterion_result.mean.point_estimate;
-                                
-                                // 转换为可读格式
-                                let formatted = if mean_ns < 1000.0 {
-                                    format!("{:.2} ns/iter", mean_ns)
-                                } else if mean_ns < 1_000_000.0 {
-                                    format!("{:.2} µs/iter", mean_ns / 1000.0)
-                                } else {
-                                    format!("{:.2} ms/iter", mean_ns / 1_000_000.0)
-                                };
-                                
-                                results.insert(test_name, formatted);
-                            }
+                        && let Ok(criterion_result) =
+                            serde_json::from_str::<CriterionResult>(&json_content)
+                    {
+                        // 提取基准测试名称和结果
+                        let test_name = criterion_result.id;
+                        let mean_ns = criterion_result.mean.point_estimate;
+
+                        // 转换为可读格式
+                        let formatted = if mean_ns < 1000.0 {
+                            format!("{:.2} ns/iter", mean_ns)
+                        } else if mean_ns < 1_000_000.0 {
+                            format!("{:.2} µs/iter", mean_ns / 1000.0)
+                        } else {
+                            format!("{:.2} ms/iter", mean_ns / 1_000_000.0)
+                        };
+
+                        results.insert(test_name, formatted);
+                    }
                 }
             }
         }
@@ -397,13 +376,19 @@ impl BaselineUpdater {
                 let mut map = HashMap::new();
                 map.insert("vec3_operations".to_string(), "5.2 ns/iter".to_string());
                 map.insert("matrix_operations".to_string(), "12.8 ns/iter".to_string());
-                map.insert("simd_batch_transform".to_string(), "45.3 ns/element".to_string());
+                map.insert(
+                    "simd_batch_transform".to_string(),
+                    "45.3 ns/element".to_string(),
+                );
                 map
             }
             "render_benchmarks" => {
                 let mut map = HashMap::new();
                 map.insert("draw_call_batch".to_string(), "1.5 ms/frame".to_string());
-                map.insert("shader_compilation".to_string(), "25.6 ms/shader".to_string());
+                map.insert(
+                    "shader_compilation".to_string(),
+                    "25.6 ms/shader".to_string(),
+                );
                 map.insert("texture_upload".to_string(), "3.2 ms/texture".to_string());
                 map.insert("scene_traversal".to_string(), "0.8 ms/frame".to_string());
                 map.insert("draw_call_merging".to_string(), "0.5 ms/frame".to_string());
@@ -411,35 +396,59 @@ impl BaselineUpdater {
             }
             "physics_benchmarks" => {
                 let mut map = HashMap::new();
-                map.insert("collision_detection".to_string(), "8.7 ms/frame".to_string());
+                map.insert(
+                    "collision_detection".to_string(),
+                    "8.7 ms/frame".to_string(),
+                );
                 map.insert("rigid_body_update".to_string(), "4.2 ms/frame".to_string());
                 map.insert("joint_constraints".to_string(), "2.9 ms/frame".to_string());
-                map.insert("spatial_partition_query".to_string(), "0.3 ms/query".to_string());
-                map.insert("gpu_collision_detection".to_string(), "1.2 ms/frame".to_string());
+                map.insert(
+                    "spatial_partition_query".to_string(),
+                    "0.3 ms/query".to_string(),
+                );
+                map.insert(
+                    "gpu_collision_detection".to_string(),
+                    "1.2 ms/frame".to_string(),
+                );
                 map
             }
             "resource_benchmarks" => {
                 let mut map = HashMap::new();
                 map.insert("asset_loading".to_string(), "15.3 ms/asset".to_string());
-                map.insert("texture_compression".to_string(), "8.9 ms/texture".to_string());
+                map.insert(
+                    "texture_compression".to_string(),
+                    "8.9 ms/texture".to_string(),
+                );
                 map.insert("mesh_optimization".to_string(), "12.4 ms/mesh".to_string());
                 map.insert("shader_cache_hit".to_string(), "0.1 ms/shader".to_string());
-                map.insert("texture_decode_parallel".to_string(), "2.5 ms/texture".to_string());
+                map.insert(
+                    "texture_decode_parallel".to_string(),
+                    "2.5 ms/texture".to_string(),
+                );
                 map
             }
             "pathfinding_benchmarks" => {
                 let mut map = HashMap::new();
                 map.insert("a_star_search".to_string(), "2.5 ms/path".to_string());
-                map.insert("parallel_pathfinding".to_string(), "1.8 ms/path".to_string());
+                map.insert(
+                    "parallel_pathfinding".to_string(),
+                    "1.8 ms/path".to_string(),
+                );
                 map.insert("async_pathfinding".to_string(), "1.2 ms/path".to_string());
                 map
             }
             "network_benchmarks" => {
                 let mut map = HashMap::new();
-                map.insert("message_serialization".to_string(), "0.5 ms/message".to_string());
+                map.insert(
+                    "message_serialization".to_string(),
+                    "0.5 ms/message".to_string(),
+                );
                 map.insert("delta_compression".to_string(), "0.3 ms/delta".to_string());
                 map.insert("priority_sync".to_string(), "0.8 ms/frame".to_string());
-                map.insert("quantized_serialization".to_string(), "0.2 ms/delta".to_string());
+                map.insert(
+                    "quantized_serialization".to_string(),
+                    "0.2 ms/delta".to_string(),
+                );
                 map
             }
             _ => HashMap::new(),
@@ -454,7 +463,10 @@ impl BaselineUpdater {
     }
 
     /// 创建新的基线结构
-    fn create_new_baselines(&self, system_info: SystemInfo) -> Result<PerformanceBaselines, Box<dyn std::error::Error>> {
+    fn create_new_baselines(
+        &self,
+        system_info: SystemInfo,
+    ) -> Result<PerformanceBaselines, Box<dyn std::error::Error>> {
         let rust_version = Self::get_rust_version();
         let mut benchmarks = HashMap::new();
 
@@ -500,7 +512,10 @@ impl BaselineUpdater {
     }
 
     /// 保存基线
-    fn save_baselines(&self, baselines: &PerformanceBaselines) -> Result<(), Box<dyn std::error::Error>> {
+    fn save_baselines(
+        &self,
+        baselines: &PerformanceBaselines,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let json = serde_json::to_string_pretty(baselines)?;
         fs::write(&self.baseline_file, json)?;
         Ok(())
@@ -510,17 +525,14 @@ impl BaselineUpdater {
     fn current_date() -> String {
         // 使用标准库获取日期（简化实现）
         // 实际项目中可以使用chrono或time crate
-        let now = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_secs();
-        
+        let now = SystemTime::now().duration_since(UNIX_EPOCH).expect("Test: operation should succeed").as_secs();
+
         // 简单的日期格式化（UTC）
         let days_since_epoch = now / 86400;
         let epoch_year = 1970;
         let mut year = epoch_year;
         let mut days = days_since_epoch;
-        
+
         // 计算年份（简化实现，不考虑闰年等）
         while days >= 365 {
             if (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0) {
@@ -535,11 +547,11 @@ impl BaselineUpdater {
                 year += 1;
             }
         }
-        
+
         // 计算月份和日期（简化实现）
         let month = 1 + (days / 30).min(11);
         let day = 1 + (days % 30);
-        
+
         format!("{:04}-{:02}-{:02}", year, month, day)
     }
 }
@@ -556,4 +568,3 @@ mod tests {
         assert!(values.contains_key("entity_creation"));
     }
 }
-

@@ -227,7 +227,7 @@ mod tests {
         for i in 0..5 {
             let context_clone = Arc::clone(&context);
             let handle = thread::spawn(move || {
-                let mut ctx = safe_lock(&context_clone, "test_lua_thread_safety.context").unwrap();
+                let mut ctx = safe_lock(&context_clone, "test_lua_thread_safety.context").expect("Test: operation should succeed");
                 let script = format!(
                     r#"
                     return "thread_{}"
@@ -248,7 +248,7 @@ mod tests {
 
         // 等待所有线程完成
         for handle in handles {
-            handle.join().unwrap();
+            handle.join().expect("Test: operation should succeed");
         }
     }
 

@@ -159,7 +159,6 @@ impl SoATransformStorage {
     }
 }
 
-
 /// SoA布局的Velocity组件存储
 #[derive(Default)]
 pub struct SoAVelocityStorage {
@@ -181,8 +180,6 @@ impl SoAVelocityStorage {
 
     /// 从ECS查询构建SoA布局
     pub fn from_world(_world: &World) -> Self {
-        
-
         // 这里需要Velocity组件的定义
         // 暂时留空
         Self::new()
@@ -198,7 +195,6 @@ impl SoAVelocityStorage {
         self.linear_velocities.is_empty()
     }
 }
-
 
 /// SoA布局管理器
 pub struct SoALayoutManager {
@@ -265,7 +261,7 @@ mod tests {
         let mut storage = SoATransformStorage::new();
 
         // 创建测试实体
-        let entity = Entity::from_raw_u32(1).unwrap();
+        let entity = Entity::from_raw_u32(1).expect("Test: operation should succeed");
 
         let transform = Transform {
             pos: Vec3::new(1.0, 2.0, 3.0),
@@ -279,7 +275,7 @@ mod tests {
         assert!(!storage.is_empty());
 
         // 测试获取变换
-        let retrieved = storage.get_transform(entity).unwrap();
+        let retrieved = storage.get_transform(entity).expect("Test: operation should succeed");
         assert_eq!(retrieved.pos, transform.pos);
 
         // 测试设置变换
@@ -290,7 +286,7 @@ mod tests {
         };
         assert!(storage.set_transform(entity, new_transform));
 
-        let retrieved = storage.get_transform(entity).unwrap();
+        let retrieved = storage.get_transform(entity).expect("Test: operation should succeed");
         assert_eq!(retrieved.pos, new_transform.pos);
 
         // 测试移除实体

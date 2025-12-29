@@ -1743,30 +1743,31 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
 
         // Handle egui rendering - create a separate encoder to avoid borrowing issues
         if let Some(renderer) = egui_renderer
-            && !egui_shapes.is_empty() {
-                let screen_desc = egui_wgpu::ScreenDescriptor {
-                    size_in_pixels: [self.config.width, self.config.height],
-                    pixels_per_point: egui_pixels_per_point,
-                };
+            && !egui_shapes.is_empty()
+        {
+            let screen_desc = egui_wgpu::ScreenDescriptor {
+                size_in_pixels: [self.config.width, self.config.height],
+                pixels_per_point: egui_pixels_per_point,
+            };
 
-                // Create a new encoder for egui to avoid borrowing conflicts
-                let mut egui_cmd_encoder =
-                    self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                        label: Some("egui render pass encoder"),
-                    });
+            // Create a new encoder for egui to avoid borrowing conflicts
+            let mut egui_cmd_encoder =
+                self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                    label: Some("egui render pass encoder"),
+                });
 
-                // Update buffers and render egui content
-                renderer.update_buffers(
-                    &self.device,
-                    &self.queue,
-                    &mut egui_cmd_encoder,
-                    egui_shapes,
-                    &screen_desc,
-                );
+            // Update buffers and render egui content
+            renderer.update_buffers(
+                &self.device,
+                &self.queue,
+                &mut egui_cmd_encoder,
+                egui_shapes,
+                &screen_desc,
+            );
 
-                let cmd_buffer = egui_cmd_encoder.finish();
-                self.queue.submit(std::iter::once(cmd_buffer));
-            }
+            let cmd_buffer = egui_cmd_encoder.finish();
+            self.queue.submit(std::iter::once(cmd_buffer));
+        }
 
         let _present_span = span!(Level::DEBUG, "present_frame").entered();
 
@@ -1788,10 +1789,11 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         let mut instances = 0u32;
         for cmd in &self.commands {
             if let crate::render::graph::RenderCommand::Draw { start, end, .. } = cmd
-                && end > start {
-                    draws += 1;
-                    instances += end - start;
-                }
+                && end > start
+            {
+                draws += 1;
+                instances += end - start;
+            }
         }
         (draws, instances)
     }
@@ -2461,30 +2463,33 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         // 优先尝试完全GPU端剔除（使用GpuDrivenRenderer + 间接绘制）
         // 这样可以完全避免CPU读取结果，实现零延迟剔除
         if let Some(ref mut gpu_driven_renderer) = self.gpu_driven_renderer
-            && gpu_driven_renderer.config().frustum_culling && self.use_full_gpu_culling {
-                // 收集GPU实例数据
-                let (instances, mapping) = batch_manager.collect_gpu_instances();
+            && gpu_driven_renderer.config().frustum_culling
+            && self.use_full_gpu_culling
+        {
+            // 收集GPU实例数据
+            let (instances, mapping) = batch_manager.collect_gpu_instances();
 
-                if !instances.is_empty() {
-                    // 获取第一个batch的index_count（假设所有实例使用相同的mesh）
-                    // 注意：如果不同batch使用不同mesh，需要为每个batch单独处理
-                    let index_count = batch_manager
-                        .visible_batches()
-                        .next()
-                        .map(|batch| batch.mesh.index_count)
-                        .unwrap_or(36); // 默认值
+            if !instances.is_empty() {
+                // 获取第一个batch的index_count（假设所有实例使用相同的mesh）
+                // 注意：如果不同batch使用不同mesh，需要为每个batch单独处理
+                let index_count = batch_manager
+                    .visible_batches()
+                    .next()
+                    .map(|batch| batch.mesh.index_count)
+                    .unwrap_or(36); // 默认值
 
-                    // 更新实例数据到GPU
-                    gpu_driven_renderer.update_instances(&self.queue, &instances);
+                // 更新实例数据到GPU
+                gpu_driven_renderer.update_instances(&self.queue, &instances);
 
-                    // 创建剔除编码器
-                    let mut cull_encoder =
-                        self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                            label: Some("Full GPU Culling Encoder"),
-                        });
+                // 创建剔除编码器
+                let mut cull_encoder =
+                    self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                        label: Some("Full GPU Culling Encoder"),
+                    });
 
-                    // 执行剔除并生成间接绘制命令（完全GPU端，零CPU读取）
-                    if gpu_driven_renderer.cull_with_indirect(
+                // 执行剔除并生成间接绘制命令（完全GPU端，零CPU读取）
+                if gpu_driven_renderer
+                    .cull_with_indirect(
                         &mut cull_encoder,
                         &self.device,
                         &self.queue,
@@ -2492,212 +2497,204 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                         instances.len() as u32,
                         0, // vertex_count (not used for indexed drawing)
                         index_count,
-                    ).is_ok() {
-                        // 提交剔除命令到GPU（不等待结果）
-                        self.queue.submit(std::iter::once(cull_encoder.finish()));
+                    )
+                    .is_ok()
+                {
+                    // 提交剔除命令到GPU（不等待结果）
+                    self.queue.submit(std::iter::once(cull_encoder.finish()));
 
-                        // 标记使用完全GPU端剔除
-                        used_full_gpu_culling = true;
-                        used_gpu_cull = true;
+                    // 标记使用完全GPU端剔除
+                    used_full_gpu_culling = true;
+                    used_gpu_cull = true;
 
-                        // 存储mapping用于后续遮挡查询（如果需要）
-                        // 注意：在完全GPU端剔除模式下，遮挡查询也需要GPU端实现
-                        if let Some(ref gpu_driven_renderer) = self.gpu_driven_renderer
-                            && let Some(occluder) = gpu_driven_renderer.occlusion_culler()
-                                && occluder.is_initialized() {
-                                    // 收集遮挡查询数据（从所有实例，GPU端会过滤）
-                                    for (i, instance) in instances.iter().enumerate() {
-                                        occlusion_queries.push((
-                                            glam::Vec3::from_array(instance.aabb_min),
-                                            glam::Vec3::from_array(instance.aabb_max),
-                                        ));
-                                        if let Some(mapping_entry) = mapping.get(i) {
-                                            occlusion_mapping.push(*mapping_entry);
+                    // 存储mapping用于后续遮挡查询（如果需要）
+                    // 注意：在完全GPU端剔除模式下，遮挡查询也需要GPU端实现
+                    if let Some(ref gpu_driven_renderer) = self.gpu_driven_renderer
+                        && let Some(occluder) = gpu_driven_renderer.occlusion_culler()
+                        && occluder.is_initialized()
+                    {
+                        // 收集遮挡查询数据（从所有实例，GPU端会过滤）
+                        for (i, instance) in instances.iter().enumerate() {
+                            occlusion_queries.push((
+                                glam::Vec3::from_array(instance.aabb_min),
+                                glam::Vec3::from_array(instance.aabb_max),
+                            ));
+                            if let Some(mapping_entry) = mapping.get(i) {
+                                occlusion_mapping.push(*mapping_entry);
+                            }
+                        }
+                    }
+
+                    tracing::debug!(
+                        target: "render",
+                        "Full GPU culling enabled: {} instances, index_count: {}",
+                        instances.len(),
+                        index_count
+                    );
+                } else {
+                    tracing::warn!(
+                        target: "render",
+                        "Full GPU culling failed, falling back to traditional GPU culling"
+                    );
+                }
+            }
+        }
+
+        // 如果完全GPU端剔除未使用，尝试传统GPU剔除（需要CPU读取结果）
+        if !used_full_gpu_culling && let Some(ref mut culling_manager) = self.gpu_culling_manager {
+            // 收集GPU实例数据
+            let (instances, mapping) = batch_manager.collect_gpu_instances();
+
+            if !instances.is_empty() && culling_manager.is_enabled() {
+                // 创建专用的剔除命令编码器
+                let mut encoder =
+                    self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                        label: Some("GPU Culling Encoder"),
+                    });
+
+                // 执行GPU剔除
+                if culling_manager
+                    .cull_instances(
+                        &self.device,
+                        &self.queue,
+                        &mut encoder,
+                        &instances,
+                        view_proj,
+                    )
+                    .is_some()
+                {
+                    // 提交剔除命令到GPU
+                    self.queue.submit(std::iter::once(encoder.finish()));
+
+                    // 读取可见实例数量（同步读取，但这是必要的）
+                    // 注意：未来可以优化为异步读取，使用双缓冲或延迟应用结果
+                    if let Some(counter_buffer) = culling_manager.counter_buffer() {
+                        let read_counter = self.device.create_buffer(&wgpu::BufferDescriptor {
+                            label: Some("Read Counter"),
+                            size: std::mem::size_of::<u32>() as wgpu::BufferAddress,
+                            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+                            mapped_at_creation: false,
+                        });
+
+                        let mut read_encoder =
+                            self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                                label: Some("Read Counter Copy"),
+                            });
+                        read_encoder.copy_buffer_to_buffer(
+                            counter_buffer,
+                            0,
+                            &read_counter,
+                            0,
+                            std::mem::size_of::<u32>() as wgpu::BufferAddress,
+                        );
+                        self.queue.submit(std::iter::once(read_encoder.finish()));
+                        let _ = self.device.poll(wgpu::PollType::Wait {
+                            submission_index: None,
+                            timeout: Some(std::time::Duration::from_millis(100)),
+                        });
+
+                        let count_slice = read_counter.slice(..);
+                        count_slice.map_async(wgpu::MapMode::Read, |_| {});
+                        let _ = self.device.poll(wgpu::PollType::Wait {
+                            submission_index: None,
+                            timeout: Some(std::time::Duration::from_millis(100)),
+                        });
+
+                        let count_data = count_slice.get_mapped_range();
+                        let visible_count =
+                            u32::from_le_bytes(count_data[..4].try_into().unwrap_or([0, 0, 0, 0]));
+                        drop(count_data);
+                        read_counter.unmap();
+
+                        if visible_count > 0 {
+                            // 读取可见实例数据
+                            if let Some(output_buffer) = culling_manager.output_buffer() {
+                                let read_output =
+                                    self.device.create_buffer(&wgpu::BufferDescriptor {
+                                        label: Some("Read Output"),
+                                        size: (visible_count as usize
+                                            * std::mem::size_of::<Instance>())
+                                            as wgpu::BufferAddress,
+                                        usage: wgpu::BufferUsages::MAP_READ
+                                            | wgpu::BufferUsages::COPY_DST,
+                                        mapped_at_creation: false,
+                                    });
+
+                                let mut read_encoder = self.device.create_command_encoder(
+                                    &wgpu::CommandEncoderDescriptor {
+                                        label: Some("Read Output Copy"),
+                                    },
+                                );
+                                read_encoder.copy_buffer_to_buffer(
+                                    output_buffer,
+                                    0,
+                                    &read_output,
+                                    0,
+                                    (visible_count as usize * std::mem::size_of::<Instance>())
+                                        as wgpu::BufferAddress,
+                                );
+                                self.queue.submit(std::iter::once(read_encoder.finish()));
+                                let _ = self.device.poll(wgpu::PollType::Wait {
+                                    submission_index: None,
+                                    timeout: Some(std::time::Duration::from_millis(100)),
+                                });
+
+                                let out_slice = read_output.slice(..);
+                                out_slice.map_async(wgpu::MapMode::Read, |_| {});
+                                let _ = self.device.poll(wgpu::PollType::Wait {
+                                    submission_index: None,
+                                    timeout: Some(std::time::Duration::from_millis(100)),
+                                });
+
+                                let out_data = out_slice.get_mapped_range();
+                                let visible_instances: &[Instance] =
+                                    bytemuck::cast_slice(&out_data);
+                                let ids: Vec<u32> = visible_instances
+                                    .iter()
+                                    .enumerate()
+                                    .map(|(i, _)| i as u32)
+                                    .collect();
+                                drop(out_data);
+                                read_output.unmap();
+
+                                // 收集遮挡查询数据（从可见实例）
+                                // 如果启用遮挡剔除，收集AABB用于遮挡查询
+                                if let Some(ref gpu_driven_renderer) = self.gpu_driven_renderer
+                                    && let Some(occluder) = gpu_driven_renderer.occlusion_culler()
+                                    && occluder.is_initialized()
+                                {
+                                    for &id in &ids {
+                                        if let Some(instance) = instances.get(id as usize) {
+                                            occlusion_queries.push((
+                                                glam::Vec3::from_array(instance.aabb_min),
+                                                glam::Vec3::from_array(instance.aabb_max),
+                                            ));
+                                            if let Some(mapping_entry) = mapping.get(id as usize) {
+                                                occlusion_mapping.push(*mapping_entry);
+                                            }
                                         }
                                     }
                                 }
 
-                        tracing::debug!(
-                            target: "render",
-                            "Full GPU culling enabled: {} instances, index_count: {}",
-                            instances.len(),
-                            index_count
-                        );
-                    } else {
-                        tracing::warn!(
-                            target: "render",
-                            "Full GPU culling failed, falling back to traditional GPU culling"
-                        );
-                    }
-                }
-            }
+                                // 应用可见实例ID到批次管理器
+                                // 使用简单的apply_visible_ids方法，不依赖间接绘制特性
+                                batch_manager.apply_visible_ids(&mapping, &ids);
+                                used_gpu_cull = true;
 
-        // 如果完全GPU端剔除未使用，尝试传统GPU剔除（需要CPU读取结果）
-        if !used_full_gpu_culling
-            && let Some(ref mut culling_manager) = self.gpu_culling_manager {
-                // 收集GPU实例数据
-                let (instances, mapping) = batch_manager.collect_gpu_instances();
-
-                if !instances.is_empty() && culling_manager.is_enabled() {
-                    // 创建专用的剔除命令编码器
-                    let mut encoder =
-                        self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                            label: Some("GPU Culling Encoder"),
-                        });
-
-                    // 执行GPU剔除
-                    if culling_manager
-                        .cull_instances(
-                            &self.device,
-                            &self.queue,
-                            &mut encoder,
-                            &instances,
-                            view_proj,
-                        )
-                        .is_some()
-                    {
-                        // 提交剔除命令到GPU
-                        self.queue.submit(std::iter::once(encoder.finish()));
-
-                        // 读取可见实例数量（同步读取，但这是必要的）
-                        // 注意：未来可以优化为异步读取，使用双缓冲或延迟应用结果
-                        if let Some(counter_buffer) = culling_manager.counter_buffer() {
-                            let read_counter = self.device.create_buffer(&wgpu::BufferDescriptor {
-                                label: Some("Read Counter"),
-                                size: std::mem::size_of::<u32>() as wgpu::BufferAddress,
-                                usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
-                                mapped_at_creation: false,
-                            });
-
-                            let mut read_encoder = self.device.create_command_encoder(
-                                &wgpu::CommandEncoderDescriptor {
-                                    label: Some("Read Counter Copy"),
-                                },
-                            );
-                            read_encoder.copy_buffer_to_buffer(
-                                counter_buffer,
-                                0,
-                                &read_counter,
-                                0,
-                                std::mem::size_of::<u32>() as wgpu::BufferAddress,
-                            );
-                            self.queue.submit(std::iter::once(read_encoder.finish()));
-                            let _ = self.device.poll(wgpu::PollType::Wait {
-                                submission_index: None,
-                                timeout: Some(std::time::Duration::from_millis(100)),
-                            });
-
-                            let count_slice = read_counter.slice(..);
-                            count_slice.map_async(wgpu::MapMode::Read, |_| {});
-                            let _ = self.device.poll(wgpu::PollType::Wait {
-                                submission_index: None,
-                                timeout: Some(std::time::Duration::from_millis(100)),
-                            });
-
-                            let count_data = count_slice.get_mapped_range();
-                            let visible_count = u32::from_le_bytes(
-                                count_data[..4].try_into().unwrap_or([0, 0, 0, 0]),
-                            );
-                            drop(count_data);
-                            read_counter.unmap();
-
-                            if visible_count > 0 {
-                                // 读取可见实例数据
-                                if let Some(output_buffer) = culling_manager.output_buffer() {
-                                    let read_output =
-                                        self.device.create_buffer(&wgpu::BufferDescriptor {
-                                            label: Some("Read Output"),
-                                            size: (visible_count as usize
-                                                * std::mem::size_of::<Instance>())
-                                                as wgpu::BufferAddress,
-                                            usage: wgpu::BufferUsages::MAP_READ
-                                                | wgpu::BufferUsages::COPY_DST,
-                                            mapped_at_creation: false,
-                                        });
-
-                                    let mut read_encoder = self.device.create_command_encoder(
-                                        &wgpu::CommandEncoderDescriptor {
-                                            label: Some("Read Output Copy"),
-                                        },
-                                    );
-                                    read_encoder.copy_buffer_to_buffer(
-                                        output_buffer,
-                                        0,
-                                        &read_output,
-                                        0,
-                                        (visible_count as usize * std::mem::size_of::<Instance>())
-                                            as wgpu::BufferAddress,
-                                    );
-                                    self.queue.submit(std::iter::once(read_encoder.finish()));
-                                    let _ = self.device.poll(wgpu::PollType::Wait {
-                                        submission_index: None,
-                                        timeout: Some(std::time::Duration::from_millis(100)),
-                                    });
-
-                                    let out_slice = read_output.slice(..);
-                                    out_slice.map_async(wgpu::MapMode::Read, |_| {});
-                                    let _ = self.device.poll(wgpu::PollType::Wait {
-                                        submission_index: None,
-                                        timeout: Some(std::time::Duration::from_millis(100)),
-                                    });
-
-                                    let out_data = out_slice.get_mapped_range();
-                                    let visible_instances: &[Instance] =
-                                        bytemuck::cast_slice(&out_data);
-                                    let ids: Vec<u32> = visible_instances
-                                        .iter()
-                                        .enumerate()
-                                        .map(|(i, _)| i as u32)
-                                        .collect();
-                                    drop(out_data);
-                                    read_output.unmap();
-
-                                    // 收集遮挡查询数据（从可见实例）
-                                    // 如果启用遮挡剔除，收集AABB用于遮挡查询
-                                    if let Some(ref gpu_driven_renderer) = self.gpu_driven_renderer
-                                        && let Some(occluder) =
-                                            gpu_driven_renderer.occlusion_culler()
-                                            && occluder.is_initialized() {
-                                                for &id in &ids {
-                                                    if let Some(instance) =
-                                                        instances.get(id as usize)
-                                                    {
-                                                        occlusion_queries.push((
-                                                            glam::Vec3::from_array(
-                                                                instance.aabb_min,
-                                                            ),
-                                                            glam::Vec3::from_array(
-                                                                instance.aabb_max,
-                                                            ),
-                                                        ));
-                                                        if let Some(mapping_entry) =
-                                                            mapping.get(id as usize)
-                                                        {
-                                                            occlusion_mapping.push(*mapping_entry);
-                                                        }
-                                                    }
-                                                }
-                                            }
-
-                                    // 应用可见实例ID到批次管理器
-                                    // 使用简单的apply_visible_ids方法，不依赖间接绘制特性
-                                    batch_manager.apply_visible_ids(&mapping, &ids);
-                                    used_gpu_cull = true;
-
-                                    tracing::debug!(
-                                        target: "render",
-                                        "GPU culling completed: {} visible out of {} instances",
-                                        visible_count,
-                                        instances.len()
-                                    );
-                                }
-                            } else {
-                                tracing::debug!(target: "render", "GPU culling: no visible instances");
+                                tracing::debug!(
+                                    target: "render",
+                                    "GPU culling completed: {} visible out of {} instances",
+                                    visible_count,
+                                    instances.len()
+                                );
                             }
+                        } else {
+                            tracing::debug!(target: "render", "GPU culling: no visible instances");
                         }
                     }
                 }
             }
+        }
 
         // CPU回退：仅在GPU剔除未使用或失败时使用
         // 这提供了向后兼容性和容错性
@@ -2716,119 +2713,121 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         // 当前实现假设深度缓冲已经渲染完成
         if let Some(ref mut gpu_driven_renderer) = self.gpu_driven_renderer
             && let Some(occluder) = gpu_driven_renderer.occlusion_culler()
-                && occluder.is_initialized() {
-                    // 创建Hi-Z构建编码器
-                    let mut hi_z_encoder =
-                        self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                            label: Some("Hi-Z Build Encoder"),
-                        });
+            && occluder.is_initialized()
+        {
+            // 创建Hi-Z构建编码器
+            let mut hi_z_encoder =
+                self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                    label: Some("Hi-Z Build Encoder"),
+                });
 
-                    // 构建Hi-Z（使用当前深度缓冲）
-                    if let Some(ref depth_tex) = self.depth_texture_raw {
-                        if let Err(e) = gpu_driven_renderer.perform_occlusion_culling(
-                            &mut hi_z_encoder,
-                            &self.device,
-                            depth_tex,
-                        ) {
-                            tracing::warn!(target: "render", "Failed to build Hi-Z: {}", e);
-                        } else {
-                            // 提交Hi-Z构建命令
-                            self.queue.submit(std::iter::once(hi_z_encoder.finish()));
-                        }
-                    }
+            // 构建Hi-Z（使用当前深度缓冲）
+            if let Some(ref depth_tex) = self.depth_texture_raw {
+                if let Err(e) = gpu_driven_renderer.perform_occlusion_culling(
+                    &mut hi_z_encoder,
+                    &self.device,
+                    depth_tex,
+                ) {
+                    tracing::warn!(target: "render", "Failed to build Hi-Z: {}", e);
+                } else {
+                    // 提交Hi-Z构建命令
+                    self.queue.submit(std::iter::once(hi_z_encoder.finish()));
                 }
+            }
+        }
 
         // 步骤2: 执行遮挡查询（对可见实例）
         if !occlusion_queries.is_empty()
-            && let Some(ref mut gpu_driven_renderer) = self.gpu_driven_renderer {
-                let view_proj_mat = glam::Mat4::from_cols_array_2d(&view_proj);
-                let screen_size = (self.config.width, self.config.height);
+            && let Some(ref mut gpu_driven_renderer) = self.gpu_driven_renderer
+        {
+            let view_proj_mat = glam::Mat4::from_cols_array_2d(&view_proj);
+            let screen_size = (self.config.width, self.config.height);
 
-                // 创建遮挡查询编码器
-                let mut occlusion_encoder =
-                    self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                        label: Some("Occlusion Query Encoder"),
-                    });
+            // 创建遮挡查询编码器
+            let mut occlusion_encoder =
+                self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                    label: Some("Occlusion Query Encoder"),
+                });
 
-                // 执行异步遮挡查询
-                if let Err(e) = gpu_driven_renderer.query_occlusion_async(
-                    &mut occlusion_encoder,
-                    &self.device,
-                    &occlusion_queries,
-                    view_proj_mat,
-                    screen_size,
-                ) {
-                    tracing::warn!(target: "render", "Occlusion query failed: {}", e);
-                } else {
-                    // 存储当前帧的mapping（用于下一帧应用结果）
-                    self.occlusion_mapping_buffer[self.occlusion_mapping_index] =
-                        Some(occlusion_mapping.clone());
-                    self.occlusion_mapping_index = (self.occlusion_mapping_index + 1) % 2;
+            // 执行异步遮挡查询
+            if let Err(e) = gpu_driven_renderer.query_occlusion_async(
+                &mut occlusion_encoder,
+                &self.device,
+                &occlusion_queries,
+                view_proj_mat,
+                screen_size,
+            ) {
+                tracing::warn!(target: "render", "Occlusion query failed: {}", e);
+            } else {
+                // 存储当前帧的mapping（用于下一帧应用结果）
+                self.occlusion_mapping_buffer[self.occlusion_mapping_index] =
+                    Some(occlusion_mapping.clone());
+                self.occlusion_mapping_index = (self.occlusion_mapping_index + 1) % 2;
 
-                    // 提交遮挡查询命令
-                    self.queue.submit(std::iter::once(occlusion_encoder.finish()));
+                // 提交遮挡查询命令
+                self.queue.submit(std::iter::once(occlusion_encoder.finish()));
 
-                    tracing::debug!(
-                        target: "render",
-                        "Occlusion query submitted: {} queries",
-                        occlusion_queries.len()
-                    );
-                }
+                tracing::debug!(
+                    target: "render",
+                    "Occlusion query submitted: {} queries",
+                    occlusion_queries.len()
+                );
             }
+        }
 
         // 步骤3: 读取上一帧的遮挡查询结果（如果有）
         // 使用双缓冲延迟应用结果：当前帧的查询结果在下一帧应用
         if let Some(ref mut gpu_driven_renderer) = self.gpu_driven_renderer
             && let Some(Ok(visibility)) =
                 gpu_driven_renderer.read_occlusion_query_result(&self.device, &self.queue)
-            {
-                // 获取上一帧的mapping（与查询结果配对）
-                let prev_mapping_index = (self.occlusion_mapping_index + 1) % 2;
+        {
+            // 获取上一帧的mapping（与查询结果配对）
+            let prev_mapping_index = (self.occlusion_mapping_index + 1) % 2;
 
-                if let Some(ref prev_mapping) = self.occlusion_mapping_buffer[prev_mapping_index] {
-                    // 应用遮挡查询结果
-                    // 将visibility结果映射回实例ID，然后过滤不可见实例
-                    if visibility.len() == prev_mapping.len() {
-                        let mut visible_ids = Vec::new();
-                        for (i, &visible) in visibility.iter().enumerate() {
-                            if visible {
-                                // 使用查询ID作为索引
-                                visible_ids.push(i as u32);
-                            }
+            if let Some(ref prev_mapping) = self.occlusion_mapping_buffer[prev_mapping_index] {
+                // 应用遮挡查询结果
+                // 将visibility结果映射回实例ID，然后过滤不可见实例
+                if visibility.len() == prev_mapping.len() {
+                    let mut visible_ids = Vec::new();
+                    for (i, &visible) in visibility.iter().enumerate() {
+                        if visible {
+                            // 使用查询ID作为索引
+                            visible_ids.push(i as u32);
                         }
-
-                        // 应用可见实例ID到批次管理器
-                        if !visible_ids.is_empty() {
-                            batch_manager.apply_visible_ids(prev_mapping, &visible_ids);
-
-                            let visible_count = visible_ids.len();
-                            tracing::debug!(
-                                target: "render",
-                                "Occlusion query results applied: {} visible out of {}",
-                                visible_count,
-                                visibility.len()
-                            );
-                        } else {
-                            tracing::debug!(target: "render", "Occlusion query: no visible instances");
-                        }
-
-                        // 清理已使用的mapping
-                        self.occlusion_mapping_buffer[prev_mapping_index] = None;
-                    } else {
-                        tracing::warn!(
-                            target: "render",
-                            "Occlusion query result size mismatch: {} vs {}",
-                            visibility.len(),
-                            prev_mapping.len()
-                        );
                     }
+
+                    // 应用可见实例ID到批次管理器
+                    if !visible_ids.is_empty() {
+                        batch_manager.apply_visible_ids(prev_mapping, &visible_ids);
+
+                        let visible_count = visible_ids.len();
+                        tracing::debug!(
+                            target: "render",
+                            "Occlusion query results applied: {} visible out of {}",
+                            visible_count,
+                            visibility.len()
+                        );
+                    } else {
+                        tracing::debug!(target: "render", "Occlusion query: no visible instances");
+                    }
+
+                    // 清理已使用的mapping
+                    self.occlusion_mapping_buffer[prev_mapping_index] = None;
                 } else {
-                    tracing::debug!(
+                    tracing::warn!(
                         target: "render",
-                        "Occlusion query result available but no mapping found (first frame?)"
+                        "Occlusion query result size mismatch: {} vs {}",
+                        visibility.len(),
+                        prev_mapping.len()
                     );
                 }
+            } else {
+                tracing::debug!(
+                    target: "render",
+                    "Occlusion query result available but no mapping found (first frame?)"
+                );
             }
+        }
 
         batch_manager.update_buffers(&self.device, &self.queue);
 

@@ -202,16 +202,18 @@ impl AsyncAudioProcessingService {
 
                         // 获取信号量许可
                         let permit = semaphore_clone.clone().acquire_owned().await;
-                        if permit.is_err() {
-                            let _ = result_tx.send(AudioProcessingResult {
-                                request_id: req.request_id,
-                                processed_samples: Vec::new(),
-                                processing_time_ms: 0.0,
-                                error: Some(AudioProcessingError::Other("Failed to acquire semaphore".to_string())),
-                            });
-                            continue;
-                        }
-                        let permit = permit.unwrap();
+                        let permit = match permit {
+                            Ok(p) => p,
+                            Err(_) => {
+                                let _ = result_tx.send(AudioProcessingResult {
+                                    request_id: req.request_id,
+                                    processed_samples: Vec::new(),
+                                    processing_time_ms: 0.0,
+                                    error: Some(AudioProcessingError::Other("Failed to acquire semaphore".to_string())),
+                                });
+                                continue;
+                            }
+                        };
 
                         let req_id = req.request_id;
                         let req_path = req.audio_path.clone();
@@ -633,9 +635,10 @@ impl Drop for AsyncAudioProcessingService {
         // 注意：在Drop中无法使用await，所以使用try_lock
         // 如果无法获取锁，说明可能已经在清理过程中
         if let Ok(mut cancel_tx_guard) = self.cancel_tx.try_lock()
-            && let Some(tx) = cancel_tx_guard.take() {
-                let _ = tx.send(());
-            }
+            && let Some(tx) = cancel_tx_guard.take()
+        {
+            let _ = tx.send(());
+        }
     }
 }
 
@@ -652,7 +655,7 @@ mod tests {
         let result = service.process_samples(samples.clone(), None, 44100, 2).await;
 
         assert!(result.is_ok());
-        let processed = result.unwrap();
+        let processed = result.expect("Failed to process samples");
         assert_eq!(processed.len(), samples.len());
     }
 
@@ -668,7 +671,7 @@ mod tests {
         let result = service.process_samples(samples.clone(), Some(effect_config), 44100, 2).await;
 
         assert!(result.is_ok());
-        let processed = result.unwrap();
+        let processed = result.expect("Failed to process samples with effects");
         assert_eq!(processed.len(), samples.len());
     }
 

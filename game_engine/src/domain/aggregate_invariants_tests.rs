@@ -24,10 +24,10 @@ mod scene_invariants_tests {
     #[test]
     fn test_scene_entity_id_uniqueness() {
         let mut scene = Scene::new(SceneId(1), "Test Scene");
-        scene.load().unwrap();
+        scene.load().expect("Test: operation should succeed");
 
         let entity1 = EntityFactory::create_basic(EntityId(1), Vec3::ZERO);
-        scene.add_entity(entity1).unwrap();
+        scene.add_entity(entity1).expect("Test: operation should succeed");
 
         // 尝试添加重复ID的实体应该失败
         let entity2 = EntityFactory::create_basic(EntityId(1), Vec3::new(1.0, 1.0, 1.0));
@@ -39,8 +39,8 @@ mod scene_invariants_tests {
     #[test]
     fn test_scene_active_camera_limit() {
         let mut scene = Scene::new(SceneId(1), "Test Scene");
-        scene.load().unwrap();
-        scene.activate().unwrap();
+        scene.load().expect("Test: operation should succeed");
+        scene.activate().expect("Test: operation should succeed");
 
         // 添加第一个相机（应该成功）
         let entity1 = EntityFactory::create_camera(EntityId(1), Vec3::ZERO, Camera::default());
@@ -58,11 +58,11 @@ mod scene_invariants_tests {
     #[test]
     fn test_scene_active_entities_must_be_active() {
         let mut scene = Scene::new(SceneId(1), "Test Scene");
-        scene.load().unwrap();
+        scene.load().expect("Test: operation should succeed");
 
         // 添加一个非活跃实体
         let mut entity = EntityFactory::create_basic(EntityId(1), Vec3::ZERO);
-        entity.deactivate().unwrap();
+        entity.deactivate().expect("Test: operation should succeed");
         scene.entities.insert(EntityId(1), entity);
 
         // 激活场景（应该自动激活所有实体）
@@ -70,14 +70,14 @@ mod scene_invariants_tests {
         assert!(scene.validate().is_ok());
 
         // 验证实体已激活
-        assert!(scene.get_entity(EntityId(1)).unwrap().is_active());
+        assert!(scene.get_entity(EntityId(1)).expect("Test: operation should succeed").is_active());
     }
 
     /// 测试所有实体必须有效的不变式
     #[test]
     fn test_scene_all_entities_must_be_valid() {
         let mut scene = Scene::new(SceneId(1), "Test Scene");
-        scene.load().unwrap();
+        scene.load().expect("Test: operation should succeed");
 
         // 创建一个违反实体不变式的实体（同时有Sprite和Camera）
         let mut invalid_entity =
@@ -111,7 +111,3 @@ mod scene_invariants_tests {
         assert_eq!(scene.state, SceneState::Unloaded);
     }
 }
-
-
-
-

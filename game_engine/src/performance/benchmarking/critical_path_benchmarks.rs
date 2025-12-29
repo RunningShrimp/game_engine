@@ -202,8 +202,16 @@ fn benchmark_arena_allocation(bench: &mut Benchmark) {
         }
 
         // 计算并使用测试数据，形成逻辑闭环
-        let data1 = TestData { x: 1.0, y: 0.0, z: 0.0 };
-        let data2 = TestData { x: 0.0, y: 1.0, z: 0.0 };
+        let data1 = TestData {
+            x: 1.0,
+            y: 0.0,
+            z: 0.0,
+        };
+        let data2 = TestData {
+            x: 0.0,
+            y: 1.0,
+            z: 0.0,
+        };
         let _dot = data1.dot(&data2);
     });
     tracing::info!(target: "benchmark", "{}", result);

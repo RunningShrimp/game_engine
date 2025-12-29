@@ -415,7 +415,11 @@ impl NavMesh {
             smoothed.push(curr);
         }
 
-        smoothed.push(*path.last().unwrap());
+        if let Some(&last) = path.last() {
+            smoothed.push(last);
+        } else {
+            smoothed.push(path[0]);
+        }
         smoothed
     }
 
@@ -679,7 +683,8 @@ impl NavMeshGenerator {
                 continue;
             }
 
-            let voxel_pos = voxel_to_world((*x, *y, *z), voxel_grid.bounds_min, voxel_grid.voxel_size);
+            let voxel_pos =
+                voxel_to_world((*x, *y, *z), voxel_grid.bounds_min, voxel_grid.voxel_size);
             let half_size = voxel_grid.voxel_size * 0.5;
 
             // 检查每个面是否暴露（相邻体素不可通行或不存在）
@@ -693,20 +698,14 @@ impl NavMeshGenerator {
             ];
 
             for ((nx, ny, nz), normal) in neighbors {
-                let neighbor_walkable = voxel_grid
-                    .voxels
-                    .get(&(nx, ny, nz))
-                    .copied()
-                    .unwrap_or(false);
+                let neighbor_walkable =
+                    voxel_grid.voxels.get(&(nx, ny, nz)).copied().unwrap_or(false);
 
                 if !neighbor_walkable {
                     // 生成这个面的多边形
                     let face_vertices = generate_face_vertices(voxel_pos, normal, half_size);
-                    let face_poly = create_polygon_from_face(
-                        &face_vertices,
-                        &mut vertices,
-                        &mut vertex_map,
-                    );
+                    let face_poly =
+                        create_polygon_from_face(&face_vertices, &mut vertices, &mut vertex_map);
                     polygons.push(face_poly);
                 }
             }
@@ -761,9 +760,9 @@ impl NavMeshGenerator {
 
         // 验证体素密度
         let total_voxels = voxel_grid.voxels.len();
-        let _expected_voxels = (size.x / voxel_grid.voxel_size).ceil() as usize *
-                           (size.y / voxel_grid.voxel_size).ceil() as usize *
-                           (size.z / voxel_grid.voxel_size).ceil() as usize;
+        let _expected_voxels = (size.x / voxel_grid.voxel_size).ceil() as usize
+            * (size.y / voxel_grid.voxel_size).ceil() as usize
+            * (size.z / voxel_grid.voxel_size).ceil() as usize;
 
         if total_voxels == 0 {
             return Err(NavMeshError::InvalidGeometry(
@@ -773,18 +772,16 @@ impl NavMeshGenerator {
 
         tracing::debug!(
             "Validated voxel grid: {} voxels, size {:?}, center {:?}",
-            total_voxels, size, center
+            total_voxels,
+            size,
+            center
         );
 
         Ok(())
     }
 
     /// 简化网格（增强功能）
-    fn simplify_mesh(
-        polygons: &mut Vec<NavPolygon>,
-        vertices: &mut [Vec3],
-        threshold: f32,
-    ) {
+    fn simplify_mesh(polygons: &mut Vec<NavPolygon>, vertices: &mut [Vec3], threshold: f32) {
         // 简化算法：合并共面的相邻多边形
         let mut merged = HashSet::new();
         let mut new_polygons = Vec::new();
@@ -859,7 +856,8 @@ impl NavMeshGenerator {
                     for &neighbor_idx in &poly.neighbors {
                         if neighbor_idx < polygons.len() {
                             let neighbor_region = polygons[neighbor_idx].region_id;
-                            let neighbor_size = region_sizes.get(&neighbor_region).copied().unwrap_or(0);
+                            let neighbor_size =
+                                region_sizes.get(&neighbor_region).copied().unwrap_or(0);
                             if neighbor_size > max_size {
                                 max_size = neighbor_size;
                                 best_region = neighbor_region;
@@ -1086,7 +1084,7 @@ mod tests {
         let navmesh = generator.generate(NavMeshConfig::default());
         assert!(navmesh.is_ok());
 
-        let navmesh = navmesh.unwrap();
+        let navmesh = navmesh.expect("Failed to generate navmesh in test");
         assert!(navmesh.polygon_count() > 0);
     }
 
@@ -1108,7 +1106,9 @@ mod tests {
 
         generator.add_collider(geometry);
 
-        let navmesh = generator.generate(NavMeshConfig::default()).unwrap();
+        let navmesh = generator
+            .generate(NavMeshConfig::default())
+            .expect("Failed to generate navmesh for pathfinding test");
 
         let start = Vec3::new(1.0, 0.0, 1.0);
         let end = Vec3::new(9.0, 0.0, 9.0);
@@ -1116,7 +1116,7 @@ mod tests {
         let path = navmesh.find_path(start, end);
         assert!(path.is_ok());
 
-        let path = path.unwrap();
+        let path = path.expect("Failed to find path in test");
         assert!(path.len() >= 2);
         assert_eq!(path[0], start);
         assert_eq!(path[path.len() - 1], end);

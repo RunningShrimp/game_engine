@@ -8,9 +8,8 @@
 //  - 线程本地池
 
 use glam::{Mat4, Quat, Vec3, Vec4};
-use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
-use std::time::{Duration, Instant};
+use std::time::Instant;
 use tracing;
 
 /// 内存池配置
@@ -200,7 +199,9 @@ impl AdvancedMemoryPool {
         let utilization = current_usage as f32 / self.current_capacity as f32;
 
         // 使用率过低，考虑收缩
-        if utilization < self.config.shrink_threshold && self.current_capacity > self.config.initial_capacity {
+        if utilization < self.config.shrink_threshold
+            && self.current_capacity > self.config.initial_capacity
+        {
             let new_capacity = (self.current_capacity as f32 * 0.75) as usize;
             self.current_capacity = new_capacity.max(self.config.initial_capacity);
 
@@ -227,7 +228,9 @@ impl AdvancedMemoryPool {
     /// 更新全局统计
     pub fn update_stats(&mut self) {
         let now = Instant::now();
-        if now.duration_since(self.last_stats_update).as_secs() < self.config.stats_update_interval_secs {
+        if now.duration_since(self.last_stats_update).as_secs()
+            < self.config.stats_update_interval_secs
+        {
             return;
         }
 
@@ -306,7 +309,10 @@ impl AdvancedMemoryPool {
         let current_usage = self.currently_allocated.load(Ordering::Relaxed);
 
         if current_usage < self.config.initial_capacity / 2 {
-            tracing::debug!("Low usage ({} objects), considering pool cleanup", current_usage);
+            tracing::debug!(
+                "Low usage ({} objects), considering pool cleanup",
+                current_usage
+            );
         }
     }
 
@@ -364,7 +370,7 @@ pub fn memory_pool_auto_tune_system(mut pool_res: ResMut<AdvancedMemoryPoolResou
 pub fn memory_pool_report_system(pool_res: Res<AdvancedMemoryPoolResource>) {
     let stats = pool_res.pool.get_global_stats();
 
-    if stats.total_allocations % 1000 == 0 && stats.total_allocations > 0 {
+    if stats.total_allocations.is_multiple_of(1000) && stats.total_allocations > 0 {
         tracing::info!(
             "Memory Pool: {} allocations, {} current objects, {:.1}% hit rate",
             stats.total_allocations,

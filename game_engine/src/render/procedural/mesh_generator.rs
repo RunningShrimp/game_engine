@@ -20,8 +20,8 @@
 //     - 自动法线生成
 //     - 平滑/硬边切换
 
+use super::noise::{NoiseConfig, NoiseGenerator, PerlinNoise};
 use glam::{Vec2, Vec3};
-use super::noise::{NoiseGenerator, PerlinNoise, NoiseConfig};
 
 /// 程序化网格顶点
 #[derive(Debug, Clone)]
@@ -70,29 +70,37 @@ impl PrimitiveGenerator {
         let mut indices = Vec::new();
 
         // 8个顶点
-        let positions = [Vec3::new(-half, -half, -half),
-            Vec3::new( half, -half, -half),
-            Vec3::new( half,  half, -half),
-            Vec3::new(-half,  half, -half),
-            Vec3::new(-half, -half,  half),
-            Vec3::new( half, -half,  half),
-            Vec3::new( half,  half,  half),
-            Vec3::new(-half,  half,  half)];
+        let positions = [
+            Vec3::new(-half, -half, -half),
+            Vec3::new(half, -half, -half),
+            Vec3::new(half, half, -half),
+            Vec3::new(-half, half, -half),
+            Vec3::new(-half, -half, half),
+            Vec3::new(half, -half, half),
+            Vec3::new(half, half, half),
+            Vec3::new(-half, half, half),
+        ];
 
         // 6个面，每个面2个三角形
         let faces = vec![
             // Front
-            [4, 5, 6], [4, 6, 7],
+            [4, 5, 6],
+            [4, 6, 7],
             // Back
-            [1, 0, 3], [1, 3, 2],
+            [1, 0, 3],
+            [1, 3, 2],
             // Top
-            [7, 6, 2], [7, 2, 3],
+            [7, 6, 2],
+            [7, 2, 3],
             // Bottom
-            [0, 1, 5], [0, 5, 4],
+            [0, 1, 5],
+            [0, 5, 4],
             // Right
-            [5, 1, 2], [5, 2, 6],
+            [5, 1, 2],
+            [5, 2, 6],
             // Left
-            [0, 4, 7], [0, 7, 3],
+            [0, 4, 7],
+            [0, 7, 3],
         ];
 
         let normals = [
@@ -148,10 +156,7 @@ impl PrimitiveGenerator {
 
                 let position = Vec3::new(x, y, z) * radius;
                 let normal = Vec3::new(x, y, z);
-                let uv = Vec2::new(
-                    segment as f32 / segments as f32,
-                    ring as f32 / rings as f32,
-                );
+                let uv = Vec2::new(segment as f32 / segments as f32, ring as f32 / rings as f32);
 
                 vertices.push(ProceduralVertex {
                     position,
@@ -248,10 +253,7 @@ impl PrimitiveGenerator {
                 vertices.push(ProceduralVertex {
                     position: Vec3::new(x, y, z),
                     normal: Vec3::new(0.0, *y_sign, 0.0),
-                    uv: Vec2::new(
-                        0.5 + angle.cos() * 0.5,
-                        0.5 + angle.sin() * 0.5,
-                    ),
+                    uv: Vec2::new(0.5 + angle.cos() * 0.5, 0.5 + angle.sin() * 0.5),
                     tangent: Vec3::X,
                     bitangent: Vec3::Y,
                     color: [1.0, 1.0, 1.0, 1.0],
@@ -297,10 +299,7 @@ impl PrimitiveGenerator {
                 vertices.push(ProceduralVertex {
                     position: Vec3::new(px, 0.0, pz),
                     normal: Vec3::Y,
-                    uv: Vec2::new(
-                        x as f32 / segments_x as f32,
-                        z as f32 / segments_z as f32,
-                    ),
+                    uv: Vec2::new(x as f32 / segments_x as f32, z as f32 / segments_z as f32),
                     tangent: Vec3::X,
                     bitangent: Vec3::Y,
                     color: [1.0, 1.0, 1.0, 1.0],
@@ -352,12 +351,7 @@ impl TerrainGenerator {
 
     /// 使用默认配置创建
     pub fn default_config() -> Self {
-        Self::new(
-            NoiseConfig::default(),
-            100.0,
-            20.0,
-            100,
-        )
+        Self::new(NoiseConfig::default(), 100.0, 20.0, 100)
     }
 
     /// 生成地形网格
@@ -483,11 +477,7 @@ impl CaveGenerator {
 
     /// 使用默认配置创建
     pub fn default_config() -> Self {
-        Self::new(
-            NoiseConfig::default(),
-            50.0,
-            0.3,
-        )
+        Self::new(NoiseConfig::default(), 50.0, 0.3)
     }
 
     /// 生成3D噪声场
@@ -553,12 +543,8 @@ mod tests {
         assert!(!terrain.indices.is_empty());
 
         // 检查高度变化
-        let min_y = terrain.vertices.iter()
-            .map(|v| v.position.y)
-            .fold(f32::INFINITY, f32::min);
-        let max_y = terrain.vertices.iter()
-            .map(|v| v.position.y)
-            .fold(f32::NEG_INFINITY, f32::max);
+        let min_y = terrain.vertices.iter().map(|v| v.position.y).fold(f32::INFINITY, f32::min);
+        let max_y = terrain.vertices.iter().map(|v| v.position.y).fold(f32::NEG_INFINITY, f32::max);
 
         assert!(max_y > min_y);
     }

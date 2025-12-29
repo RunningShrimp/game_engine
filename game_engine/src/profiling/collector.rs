@@ -67,9 +67,10 @@ impl HighPrecisionTimer {
         let elapsed = self.elapsed();
 
         if let Some(ref collector) = self.collector
-            && let Ok(mut collector) = collector.lock() {
-                collector.record_timing(&self.name, elapsed);
-            }
+            && let Ok(mut collector) = collector.lock()
+        {
+            collector.record_timing(&self.name, elapsed);
+        }
 
         elapsed
     }
@@ -78,9 +79,10 @@ impl HighPrecisionTimer {
 impl Drop for HighPrecisionTimer {
     fn drop(&mut self) {
         if let Some(collector) = &self.collector
-            && let Ok(mut collector) = collector.lock() {
-                collector.record_timing(&self.name, self.start_time.elapsed());
-            }
+            && let Ok(mut collector) = collector.lock()
+        {
+            collector.record_timing(&self.name, self.start_time.elapsed());
+        }
     }
 }
 
@@ -206,7 +208,7 @@ impl SlidingWindowAggregator {
         }
 
         let mut sorted: Vec<f64> = self.samples.iter().take(count).cloned().collect();
-        sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        sorted.sort_by(|a, b| a.partial_cmp(b).expect("Test: operation should succeed"));
 
         let index = ((p / 100.0) * (count - 1) as f64) as usize;
         sorted[index.min(count - 1)]
@@ -481,11 +483,12 @@ impl MetricCollector {
 
         // 初始化异步传输器
         if collector.config.enable_async_transfer
-            && let Some(async_config) = &collector.config.async_transfer_config {
-                let mut transmitter = AsyncDataTransmitter::new(async_config.clone());
-                transmitter.start()?;
-                collector.async_transmitter = Some(transmitter);
-            }
+            && let Some(async_config) = &collector.config.async_transfer_config
+        {
+            let mut transmitter = AsyncDataTransmitter::new(async_config.clone());
+            transmitter.start()?;
+            collector.async_transmitter = Some(transmitter);
+        }
 
         Ok(collector)
     }
@@ -500,9 +503,10 @@ impl MetricCollector {
     pub fn record_value(&mut self, name: &str, value: f64) {
         // 更新计数器
         if let Ok(mut registry) = self.registry.lock()
-            && let Some(counter) = registry.get_counter(name) {
-                counter.set(value as u64);
-            }
+            && let Some(counter) = registry.get_counter(name)
+        {
+            counter.set(value as u64);
+        }
 
         // 更新滑动窗口
         let aggregator = self
@@ -667,7 +671,7 @@ mod tests {
         };
 
         let mut transmitter = AsyncDataTransmitter::new(config);
-        transmitter.start().unwrap();
+        transmitter.start().expect("Test: operation should succeed");
 
         // 发送测试数据
         for i in 0..5 {
@@ -677,14 +681,14 @@ mod tests {
                 timestamp: Instant::now(),
                 tags: HashMap::new(),
             };
-            transmitter.send(item).unwrap();
+            transmitter.send(item).expect("Test: operation should succeed");
         }
 
         // 等待处理
         thread::sleep(Duration::from_millis(100));
 
         assert!(transmitter.transmitted_count() > 0);
-        transmitter.stop().unwrap();
+        transmitter.stop().expect("Test: operation should succeed");
     }
 
     #[test]
@@ -694,7 +698,7 @@ mod tests {
             ..Default::default()
         };
 
-        let mut collector = MetricCollector::new(config).unwrap();
+        let mut collector = MetricCollector::new(config).expect("Test: operation should succeed");
 
         // 记录一些测试数据
         collector.record_value("test_metric", 42.0);
@@ -703,7 +707,7 @@ mod tests {
         // 检查统计信息
         let stats = collector.get_window_stats("test_metric");
         assert!(stats.is_some());
-        assert_eq!(stats.unwrap().average, 42.0);
+        assert_eq!(stats.expect("Test: operation should succeed").average, 42.0);
 
         let current_values = collector.get_current_values();
         assert!(current_values.contains_key("test_metric"));
@@ -716,7 +720,7 @@ mod tests {
             ..Default::default()
         };
 
-        let mut collector = MetricCollector::new(config).unwrap();
+        let mut collector = MetricCollector::new(config).expect("Test: operation should succeed");
         let collector = Arc::new(Mutex::new(collector));
 
         let mut handles = Vec::new();
@@ -736,7 +740,7 @@ mod tests {
 
         // 等待所有线程完成
         for handle in handles {
-            handle.join().unwrap();
+            handle.join().expect("Test: operation should succeed");
         }
 
         // 验证数据已记录

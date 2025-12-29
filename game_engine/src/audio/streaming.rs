@@ -513,12 +513,14 @@ impl AudioStreamLoader {
 
         // 异步初始化解码器
         let stream = AudioStream::new(id, path, config.clone());
-        
+
         // 在阻塞任务中初始化解码器（避免阻塞异步运行时）
         let stream_clone = Arc::new(Mutex::new(stream));
         let stream_for_init = Arc::clone(&stream_clone);
         tokio::task::spawn_blocking(move || {
-            let mut s = stream_for_init.lock().unwrap();
+            let mut s = stream_for_init
+                .lock()
+                .map_err(|_| StreamingError::IoError("Mutex poisoned".to_string()))?;
             s.initialize_decoder()
         })
         .await
@@ -560,11 +562,15 @@ impl AudioStreamLoader {
         use futures::future::join_all;
 
         // 收集所有更新任务
-        let update_tasks: Vec<_> = self.streams.values()
+        let update_tasks: Vec<_> = self
+            .streams
+            .values()
             .map(|stream| {
                 let stream = Arc::clone(stream);
                 tokio::task::spawn(async move {
-                    let mut s = stream.lock().unwrap();
+                    let mut s = stream
+                        .lock()
+                        .map_err(|_| StreamingError::IoError("Mutex poisoned".to_string()))?;
                     s.update()
                 })
             })
@@ -600,7 +606,7 @@ mod tests {
         assert!(!buffer.filled);
 
         let test_data = vec![0.5; 2000];
-        buffer.fill(&test_data).unwrap();
+        buffer.fill(&test_data).expect("Failed to fill buffer with test data");
 
         assert!(buffer.filled);
         assert_eq!(buffer.data.len(), 2000);
@@ -616,10 +622,10 @@ mod tests {
 
         assert_eq!(*stream.state(), StreamState::Initializing);
 
-        stream.initialize_decoder().unwrap();
+        stream.initialize_decoder().expect("Failed to initialize decoder");
         assert!(matches!(*stream.state(), StreamState::Loading));
 
-        stream.update().unwrap();
+        stream.update().expect("Failed to update stream");
         // 更新后应该变为Ready状态（如果缓冲区已填充）
     }
 

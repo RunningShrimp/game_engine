@@ -93,22 +93,24 @@ impl ErrorHandler {
 
         // 监控错误
         if self.config.enable_monitoring
-            && let Some(ref monitor) = self.monitor {
-                monitor.record_error(error.clone());
-            }
+            && let Some(ref monitor) = self.monitor
+        {
+            monitor.record_error(error.clone());
+        }
 
         // 尝试恢复
         if self.config.auto_recover
-            && let Some(ref recovery) = self.recovery {
-                let context = RecoveryContext {
-                    operation: "error_handling".to_string(),
-                    error_history: vec![error.clone()],
-                    recovery_attempts: 0,
-                    context_data: std::collections::HashMap::new(),
-                    start_time: std::time::Instant::now(),
-                };
-                return Some(recovery.recover(error, &context));
-            }
+            && let Some(ref recovery) = self.recovery
+        {
+            let context = RecoveryContext {
+                operation: "error_handling".to_string(),
+                error_history: vec![error.clone()],
+                recovery_attempts: 0,
+                context_data: std::collections::HashMap::new(),
+                start_time: std::time::Instant::now(),
+            };
+            return Some(recovery.recover(error, &context));
+        }
 
         None
     }
@@ -155,7 +157,7 @@ impl Default for ErrorHandler {
 #[cfg(test)]
 mod tests {
     use super::*;
-// ErrorSeverity 未在此文件中使用，但可能在未来需要
+    // ErrorSeverity 未在此文件中使用，但可能在未来需要
     // use crate::error::ErrorSeverity;
 
     #[test]

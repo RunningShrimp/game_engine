@@ -291,7 +291,7 @@ mod enhanced_event_bus_tests {
         let received = rx.try_recv();
         assert!(received.is_ok());
         
-        let event_data = received.unwrap();
+        let event_data = received.expect("Test: operation should succeed");
         assert_eq!(event_data.event_type_name, "TestEvent");
     }
 

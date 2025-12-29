@@ -28,10 +28,12 @@
 //! use game_engine::config::EngineConfig;
 //!
 //! // 从TOML文件加载
-//! let config = EngineConfig::from_toml_file("config.toml").unwrap();
+//! let config = EngineConfig::from_toml_file("config.toml")
+//!     .expect("Failed to load config.toml");
 //!
 //! // 从JSON文件加载
-//! let config = EngineConfig::from_json_file("config.json").unwrap();
+//! let config = EngineConfig::from_json_file("config.json")
+//!     .expect("Failed to load config.json");
 //!
 //! // 自动查找配置文件
 //! let config = EngineConfig::load_or_default();
@@ -63,7 +65,7 @@
 //! config.apply_env_overrides();
 //!
 //! // 验证配置
-//! config.validate().unwrap();
+//! config.validate().expect("Invalid configuration");
 //! ```
 //!
 //! ## 配置文件查找顺序
@@ -116,8 +118,7 @@ pub enum ConfigError {
 pub type ConfigResult<T> = Result<T, ConfigError>;
 
 /// 引擎主配置
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct EngineConfig {
     /// 图形配置
     pub graphics: GraphicsConfig,
@@ -135,7 +136,6 @@ pub struct EngineConfig {
     #[serde(default)]
     pub logging: LoggingConfig,
 }
-
 
 impl EngineConfig {
     /// 创建默认配置
@@ -183,31 +183,37 @@ impl EngineConfig {
     pub fn apply_env_overrides(&mut self) {
         // 图形配置
         if let Ok(val) = env::var("ENGINE_GRAPHICS_WIDTH")
-            && let Ok(width) = val.parse() {
-                self.graphics.resolution.width = width;
-            }
-        if let Ok(val) = env::var("ENGINE_GRAPHICS_HEIGHT")
-            && let Ok(height) = val.parse() {
-                self.graphics.resolution.height = height;
-            }
-        if let Ok(val) = env::var("ENGINE_GRAPHICS_VSYNC") {
-            self.graphics.vsync = val.parse().unwrap_or(self.graphics.vsync);
+            && let Ok(width) = val.parse()
+        {
+            self.graphics.resolution.width = width;
         }
+        if let Ok(val) = env::var("ENGINE_GRAPHICS_HEIGHT")
+            && let Ok(height) = val.parse()
+        {
+            self.graphics.resolution.height = height;
+        }
+        if let Ok(val) = env::var("ENGINE_GRAPHICS_VSYNC")
+            && let Ok(vsync) = val.parse::<bool>() {
+                self.graphics.vsync = vsync;
+            }
 
         // 性能配置
         if let Ok(val) = env::var("ENGINE_PERFORMANCE_TARGET_FPS")
-            && let Ok(fps) = val.parse() {
-                self.performance.target_fps = fps;
-            }
-        if let Ok(val) = env::var("ENGINE_PERFORMANCE_AUTO_OPTIMIZE") {
-            self.performance.auto_optimize = val.parse().unwrap_or(self.performance.auto_optimize);
+            && let Ok(fps) = val.parse()
+        {
+            self.performance.target_fps = fps;
         }
+        if let Ok(val) = env::var("ENGINE_PERFORMANCE_AUTO_OPTIMIZE")
+            && let Ok(auto_optimize) = val.parse::<bool>() {
+                self.performance.auto_optimize = auto_optimize;
+            }
 
         // 音频配置
         if let Ok(val) = env::var("ENGINE_AUDIO_MASTER_VOLUME")
-            && let Ok(volume) = val.parse() {
-                self.audio.master_volume = volume;
-            }
+            && let Ok(volume) = val.parse()
+        {
+            self.audio.master_volume = volume;
+        }
     }
 
     /// 验证配置
@@ -309,8 +315,8 @@ mod tests {
     #[test]
     fn test_toml_serialization() {
         let config = EngineConfig::default();
-        let toml_str = toml::to_string(&config).unwrap();
-        let parsed: EngineConfig = toml::from_str(&toml_str).unwrap();
+        let toml_str = toml::to_string(&config).expect("Failed to serialize config to TOML");
+        let parsed: EngineConfig = toml::from_str(&toml_str).expect("Failed to parse TOML");
         assert_eq!(
             config.graphics.resolution.width,
             parsed.graphics.resolution.width
@@ -320,8 +326,8 @@ mod tests {
     #[test]
     fn test_json_serialization() {
         let config = EngineConfig::default();
-        let json_str = serde_json::to_string(&config).unwrap();
-        let parsed: EngineConfig = serde_json::from_str(&json_str).unwrap();
+        let json_str = serde_json::to_string(&config).expect("Failed to serialize config to JSON");
+        let parsed: EngineConfig = serde_json::from_str(&json_str).expect("Failed to parse JSON");
         assert_eq!(
             config.graphics.resolution.width,
             parsed.graphics.resolution.width

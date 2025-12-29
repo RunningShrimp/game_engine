@@ -1,9 +1,9 @@
 //  脚本插件
-// 
+//
 //  提供Lua和Rust脚本集成，支持运行时脚本执行。
 
-use crate::plugins::{EnginePlugin, App, PluginVersion, PluginDependency};
-use crate::scripting::{ScriptingConfig, scripting_system, setup_scripting, ScriptComponent};
+use crate::plugins::{App, EnginePlugin, PluginDependency, PluginVersion};
+use crate::scripting::{ScriptComponent, ScriptingConfig, scripting_system, setup_scripting};
 use bevy_ecs::prelude::*;
 
 /// 脚本插件

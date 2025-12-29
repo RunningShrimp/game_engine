@@ -1,9 +1,9 @@
 //  XR插件
-// 
+//
 //  提供VR/AR功能扩展，支持OpenXR标准。
 
 use crate::impl_default;
-use crate::plugins::{EnginePlugin, App, PluginVersion, PluginDependency};
+use crate::plugins::{App, EnginePlugin, PluginDependency, PluginVersion};
 
 /// XR插件配置
 #[derive(Debug, Clone, bevy_ecs::prelude::Resource)]
@@ -71,12 +71,10 @@ impl EnginePlugin for XrPlugin {
     }
 
     fn dependencies(&self) -> Vec<PluginDependency> {
-        vec![
-            PluginDependency {
-                name: "RenderPlugin".to_string(),
-                version_requirement: ">=1.0.0".to_string(),
-            },
-        ]
+        vec![PluginDependency {
+            name: "RenderPlugin".to_string(),
+            version_requirement: ">=1.0.0".to_string(),
+        }]
     }
 
     fn build(&self, app: &mut App) {

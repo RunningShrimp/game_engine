@@ -34,9 +34,8 @@
 //  - 渲染性能提升: 20-30%
 
 use crate::render::batch_optimizer::{BatchOptimizer, OptimizedBatch};
-use crate::render::draw_call_merger::{DrawCallMerger, DrawCallMergeConfig, MergeStats};
-use crate::render::instance_batch::BatchKey;
-use crate::render::material_sort::{MaterialSorter, MaterialSortConfig, SortStats};
+use crate::render::draw_call_merger::{DrawCallMergeConfig, DrawCallMerger, MergeStats};
+use crate::render::material_sort::{MaterialSorter, SortStats};
 use std::time::{Duration, Instant};
 
 /// 渲染管线优化器配置
@@ -140,7 +139,10 @@ impl RenderPipelineOptimizer {
     /// 1. 材质排序
     /// 2. Draw call合并
     /// 3. 实例批处理
-    pub fn optimize_pipeline(&mut self, batches: &mut Vec<OptimizedBatch>) -> PipelineOptimizationResult {
+    pub fn optimize_pipeline(
+        &mut self,
+        batches: &mut Vec<OptimizedBatch>,
+    ) -> PipelineOptimizationResult {
         let start = Instant::now();
         let original_count = batches.len();
 
@@ -191,7 +193,7 @@ impl RenderPipelineOptimizer {
         }
 
         // 性能报告
-        let should_report = self.frame_count % self.config.performance_monitor_interval == 0;
+        let should_report = self.frame_count.is_multiple_of(self.config.performance_monitor_interval);
         self.frame_count += 1;
 
         PipelineOptimizationResult {
@@ -199,7 +201,7 @@ impl RenderPipelineOptimizer {
             final_draw_calls: final_count,
             draw_call_reduction: original_count.saturating_sub(final_count),
             draw_call_reduction_ratio: if original_count > 0 {
-                (original_count.saturating_sub(final_count) as f32 / original_count as f32)
+                original_count.saturating_sub(final_count) as f32 / original_count as f32
             } else {
                 0.0
             },
@@ -217,7 +219,7 @@ impl RenderPipelineOptimizer {
         original_count: usize,
         final_count: usize,
         sort_stats: &SortStats,
-        merge_stats: &MergeStats,
+        _merge_stats: &MergeStats,
         optimization_time: Duration,
     ) {
         self.performance_stats.total_frames += 1;
@@ -229,31 +231,37 @@ impl RenderPipelineOptimizer {
         self.performance_stats.total_material_switches_after +=
             sort_stats.material_switches_after as u64 + sort_stats.texture_binds_after as u64;
 
-        self.performance_stats.total_optimization_time_ms += optimization_time.as_secs_f64() * 1000.0;
+        self.performance_stats.total_optimization_time_ms +=
+            optimization_time.as_secs_f64() * 1000.0;
 
         // 计算平均值
         let frames = self.performance_stats.total_frames as f64;
         self.performance_stats.average_optimization_time_ms =
             self.performance_stats.total_optimization_time_ms / frames;
 
-        self.performance_stats.average_draw_call_reduction = if self.performance_stats.total_draw_calls_before > 0 {
-            (self.performance_stats.total_draw_calls_before - self.performance_stats.total_draw_calls_after) as f32
-                / self.performance_stats.total_draw_calls_before as f32
-        } else {
-            0.0
-        };
+        self.performance_stats.average_draw_call_reduction =
+            if self.performance_stats.total_draw_calls_before > 0 {
+                (self.performance_stats.total_draw_calls_before
+                    - self.performance_stats.total_draw_calls_after) as f32
+                    / self.performance_stats.total_draw_calls_before as f32
+            } else {
+                0.0
+            };
 
-        self.performance_stats.average_material_switch_reduction = if self.performance_stats.total_material_switches_before > 0 {
-            (self.performance_stats.total_material_switches_before - self.performance_stats.total_material_switches_after) as f32
-                / self.performance_stats.total_material_switches_before as f32
-        } else {
-            0.0
-        };
+        self.performance_stats.average_material_switch_reduction =
+            if self.performance_stats.total_material_switches_before > 0 {
+                (self.performance_stats.total_material_switches_before
+                    - self.performance_stats.total_material_switches_after) as f32
+                    / self.performance_stats.total_material_switches_before as f32
+            } else {
+                0.0
+            };
 
         // 整体性能提升
         let dc_reduction = self.performance_stats.average_draw_call_reduction;
         let ms_reduction = self.performance_stats.average_material_switch_reduction;
-        self.performance_stats.overall_improvement_percentage = (dc_reduction * 0.6 + ms_reduction * 0.4) * 100.0;
+        self.performance_stats.overall_improvement_percentage =
+            (dc_reduction * 0.6 + ms_reduction * 0.4) * 100.0;
     }
 
     /// 自动调优优化参数
@@ -376,17 +384,11 @@ impl Default for RenderPipelineOptimizerResource {
 
 /// 批次资源（用于ECS）
 #[derive(Resource)]
+#[derive(Default)]
 pub struct OptimizedBatchesResource {
     pub batches: Vec<OptimizedBatch>,
 }
 
-impl Default for OptimizedBatchesResource {
-    fn default() -> Self {
-        Self {
-            batches: Vec::new(),
-        }
-    }
-}
 
 /// 渲染管线优化系统
 ///
@@ -417,6 +419,7 @@ pub fn render_pipeline_optimization_system(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::render::instance_batch::BatchKey;
 
     #[test]
     fn test_optimizer_creation() {
@@ -464,10 +467,7 @@ mod tests {
                 render_flags: 0,
             };
 
-            batches = vec![
-                OptimizedBatch::new(key, 10),
-                OptimizedBatch::new(key, 20),
-            ];
+            batches = vec![OptimizedBatch::new(key, 10), OptimizedBatch::new(key, 20)];
 
             optimizer.optimize_pipeline(&mut batches);
         }

@@ -6,6 +6,13 @@ use rapier3d::parry::bounding_volume::Aabb;
 use rapier3d::parry::shape::SharedShape;
 use rapier3d::prelude::*;
 
+/// 占位符实体常量
+///
+/// 注意：这是简化的实现中使用的占位符。
+/// TODO: 实现proper handle -> Entity映射，使用实际的Entity关联
+const PLACEHOLDER_ENTITY: Entity = Entity::from_raw_u32(0)
+    .expect("Invalid placeholder entity: from_raw_u32(0) should always succeed");
+
 // --- Components ---
 
 #[derive(Component)]
@@ -113,7 +120,7 @@ impl PhysicsWorld3D {
                     let distance = distance_to_center - ball.radius;
                     if distance >= 0.0 && distance < closest_distance && distance <= max_distance {
                         let hit_point = origin + direction * distance;
-                        closest_hit = Some((Entity::from_raw_u32(0).unwrap(), distance, hit_point));
+                        closest_hit = Some((PLACEHOLDER_ENTITY, distance, hit_point));
                         closest_distance = distance;
                     }
                 }
@@ -164,7 +171,7 @@ impl PhysicsWorld3D {
             let final_distance = adjusted_distance * (1.0 + direction_factor);
 
             if final_distance < closest_distance && final_distance <= max_distance {
-                closest_hit = Some((Entity::from_raw_u32(0).unwrap(), final_distance));
+                closest_hit = Some((PLACEHOLDER_ENTITY, final_distance));
                 closest_distance = final_distance;
             }
         }
@@ -190,10 +197,9 @@ impl PhysicsWorld3D {
             let collider_aabb = collider.compute_aabb();
             // 检查两个AABB是否相交
             if aabb.intersects(&collider_aabb) {
-                // 使用 collider_handle 创建更真实的实体ID映射
-                // 这里使用简单的映射，实际实现应该维护 handle -> entity 的映射
-                // 由于类型限制，使用固定ID作为示例
-                hit_entities.push(Entity::from_raw_u32(0).unwrap());
+                // TODO: 使用 collider_handle 创建更真实的实体ID映射
+                // 这里使用占位符，实际实现应该维护 handle -> entity 的映射
+                hit_entities.push(PLACEHOLDER_ENTITY);
             }
         }
 
@@ -366,7 +372,7 @@ mod tests {
         }
 
         // 检查刚体是否下落
-        let rb = world.rigid_body_set.get(rb_handle).unwrap();
+        let rb = world.rigid_body_set.get(rb_handle).expect("Test: operation should succeed");
         assert!(rb.translation().y < 10.0);
     }
 

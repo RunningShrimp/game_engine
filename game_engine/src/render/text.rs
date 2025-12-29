@@ -312,10 +312,22 @@ impl TextLayouter {
 
             let glyph_data = match font.get_glyph(ch) {
                 Some(g) => g,
-                None => font.get_glyph('?').unwrap_or_else(|| {
-                    // 回退到空格
-                    font.get_glyph(' ').unwrap()
-                }),
+                None => {
+                    // Try '?' as fallback, then space, then skip character
+                    if let Some(g) = font.get_glyph('?') {
+                        g
+                    } else if let Some(g) = font.get_glyph(' ') {
+                        g
+                    } else {
+                        // No suitable glyph found, log warning and skip
+                        log::warn!(
+                            "No glyph found for character '{}' (U+{:04X})",
+                            ch,
+                            ch as u32
+                        );
+                        continue;
+                    }
+                }
             };
 
             // 应用字距调整
@@ -705,7 +717,8 @@ mod tests {
         let layout = layouter.layout_text("A A", "test", &style, None);
 
         assert!(layout.is_some());
-        let layout = layout.unwrap();
-        assert!(!layout.glyphs.is_empty());
+        if let Some(layout) = layout {
+            assert!(!layout.glyphs.is_empty());
+        }
     }
 }

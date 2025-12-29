@@ -152,12 +152,30 @@ impl MetricTracker {
 
     /// 获取最大值
     pub fn get_max(&self) -> Option<f64> {
-        self.history.iter().map(|s| s.value).max_by(|a, b| a.partial_cmp(b).unwrap())
+        self.history.iter().map(|s| s.value).max_by(|a, b| {
+            a.partial_cmp(b).unwrap_or_else(|| {
+                // When NaN comparison fails, treat NaN as smaller
+                if a.is_nan() {
+                    std::cmp::Ordering::Less
+                } else {
+                    std::cmp::Ordering::Greater
+                }
+            })
+        })
     }
 
     /// 获取最小值
     pub fn get_min(&self) -> Option<f64> {
-        self.history.iter().map(|s| s.value).min_by(|a, b| a.partial_cmp(b).unwrap())
+        self.history.iter().map(|s| s.value).min_by(|a, b| {
+            a.partial_cmp(b).unwrap_or_else(|| {
+                // When NaN comparison fails, treat NaN as larger
+                if a.is_nan() {
+                    std::cmp::Ordering::Greater
+                } else {
+                    std::cmp::Ordering::Less
+                }
+            })
+        })
     }
 
     /// 计算趋势（上升/下降/平稳）

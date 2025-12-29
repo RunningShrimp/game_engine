@@ -724,7 +724,7 @@ impl PerformanceReportGenerator {
             generated_at: report
                 .generated_at
                 .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
+                .expect("Test: operation should succeed")
                 .as_secs(),
             summary: report.summary.clone(),
             detailed_metrics: report.detailed_metrics.clone(),

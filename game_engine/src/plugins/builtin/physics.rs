@@ -1,10 +1,12 @@
 //  物理插件
-// 
+//
 //  提供物理模拟功能，基于 Rapier 物理引擎。
 
 use crate::impl_default;
-use crate::plugins::{EnginePlugin, App, PluginVersion, PluginDependency};
-use crate::physics::{PhysicsDomainService, physics_step_system_v2, sync_physics_to_transform_system_v2};
+use crate::physics::{
+    PhysicsDomainService, physics_step_system_v2, sync_physics_to_transform_system_v2,
+};
+use crate::plugins::{App, EnginePlugin, PluginDependency, PluginVersion};
 
 /// 物理插件配置
 #[derive(Debug, Clone)]
@@ -81,9 +83,12 @@ impl EnginePlugin for PhysicsPlugin {
         });
     }
 
-    fn startup(&self, world: &mut bevy_ecs::world::World) {
+    fn startup(&self, _world: &mut bevy_ecs::world::World) {
         // 初始化物理世界
-        println!("Physics plugin started with gravity: {:?}", self.config.gravity);
+        println!(
+            "Physics plugin started with gravity: {:?}",
+            self.config.gravity
+        );
     }
 
     fn update(&self, _world: &mut bevy_ecs::world::World) {

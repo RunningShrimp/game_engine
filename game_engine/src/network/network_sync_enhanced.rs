@@ -7,8 +7,8 @@
 //  - 网络质量自适应
 //  - 性能监控和报告
 
-use crate::network::delta_serialization::{DeltaPacket, EntityDelta};
-use crate::network::priority_sync::{BandwidthStats, PrioritySyncManager, SyncPriority};
+use crate::network::delta_serialization::DeltaPacket;
+use crate::network::priority_sync::{BandwidthStats, PrioritySyncManager};
 use glam::Vec3;
 use std::collections::{HashMap, VecDeque};
 use std::time::{Duration, Instant};
@@ -110,10 +110,8 @@ impl NetworkQuality {
         };
 
         // 综合评分（加权平均）
-        self.quality_score = latency_score * 0.3
-            + jitter_score * 0.2
-            + loss_score * 0.3
-            + bandwidth_score * 0.2;
+        self.quality_score =
+            latency_score * 0.3 + jitter_score * 0.2 + loss_score * 0.3 + bandwidth_score * 0.2;
 
         self.last_update = Instant::now();
     }
@@ -277,16 +275,19 @@ impl PacketRecoveryStrategy {
         }
 
         // 计算平均重传次数
-        let total_retransmissions: u32 = self.pending_retransmissions
+        let total_retransmissions: u32 = self
+            .pending_retransmissions
             .values()
             .map(|info| info.retransmission_count as u32)
             .sum();
 
-        let counted_packets = self.pending_retransmissions.len() + self.retransmission_stats.acknowledged_packets as usize
+        let counted_packets = self.pending_retransmissions.len()
+            + self.retransmission_stats.acknowledged_packets as usize
             + self.retransmission_stats.timeout_packets as usize;
 
         if counted_packets > 0 {
-            self.retransmission_stats.average_retransmissions = total_retransmissions as f32 / counted_packets as f32;
+            self.retransmission_stats.average_retransmissions =
+                total_retransmissions as f32 / counted_packets as f32;
         }
     }
 
@@ -356,13 +357,18 @@ impl ClientInterpolator {
     }
 
     /// 添加状态快照
-    pub fn add_snapshot(&mut self, entity_id: u64, timestamp: f32, position: Vec3, rotation: [f32; 4], velocity: Vec3) {
-        let buffer = self.entity_buffers
-            .entry(entity_id)
-            .or_insert_with(|| InterpolationBuffer {
-                snapshots: VecDeque::new(),
-                last_interpolation_time: 0.0,
-            });
+    pub fn add_snapshot(
+        &mut self,
+        entity_id: u64,
+        timestamp: f32,
+        position: Vec3,
+        rotation: [f32; 4],
+        velocity: Vec3,
+    ) {
+        let buffer = self.entity_buffers.entry(entity_id).or_insert_with(|| InterpolationBuffer {
+            snapshots: VecDeque::new(),
+            last_interpolation_time: 0.0,
+        });
 
         let snapshot = StateSnapshot {
             timestamp,
@@ -381,7 +387,11 @@ impl ClientInterpolator {
     }
 
     /// 获取插值状态
-    pub fn get_interpolated_state(&mut self, entity_id: u64, current_time: f32) -> Option<(Vec3, [f32; 4])> {
+    pub fn get_interpolated_state(
+        &mut self,
+        entity_id: u64,
+        current_time: f32,
+    ) -> Option<(Vec3, [f32; 4])> {
         let buffer = self.entity_buffers.get_mut(&entity_id)?;
 
         // 计算插值时间点
@@ -448,10 +458,7 @@ impl ClientInterpolator {
 
     /// 更新缓冲区统计
     fn update_buffer_stats(&mut self) {
-        let total_size: usize = self.entity_buffers
-            .values()
-            .map(|b| b.snapshots.len())
-            .sum();
+        let total_size: usize = self.entity_buffers.values().map(|b| b.snapshots.len()).sum();
 
         let count = self.entity_buffers.len();
         if count > 0 {
@@ -588,9 +595,12 @@ impl EnhancedNetworkSync {
         self.client_interpolator.cleanup_old_snapshots(current_time);
 
         // 获取所有实体的插值状态
-        let entity_ids: Vec<_> = self.packet_recovery.pending_retransmissions.keys().copied().collect();
+        let entity_ids: Vec<_> =
+            self.packet_recovery.pending_retransmissions.keys().copied().collect();
         for entity_id in entity_ids {
-            if let Some(state) = self.client_interpolator.get_interpolated_state(entity_id, current_time) {
+            if let Some(state) =
+                self.client_interpolator.get_interpolated_state(entity_id, current_time)
+            {
                 interpolated_states.insert(entity_id, state);
             }
         }
@@ -707,13 +717,19 @@ mod tests {
 
         // 添加两个快照
         interpolator.add_snapshot(1, 0.0, Vec3::ZERO, [0.0, 0.0, 0.0, 1.0], Vec3::ZERO);
-        interpolator.add_snapshot(1, 1.0, Vec3::new(1.0, 0.0, 0.0), [0.0, 0.0, 0.0, 1.0], Vec3::ZERO);
+        interpolator.add_snapshot(
+            1,
+            1.0,
+            Vec3::new(1.0, 0.0, 0.0),
+            [0.0, 0.0, 0.0, 1.0],
+            Vec3::ZERO,
+        );
 
         // 插值（时间点0.5）
         let state = interpolator.get_interpolated_state(1, 0.6); // 0.6 - 0.1 (delay) = 0.5
 
         assert!(state.is_some());
-        let (pos, _) = state.unwrap();
+        let (pos, _) = state.expect("Test: operation should succeed");
         assert!((pos.x - 0.5).abs() < 0.01); // 应该接近中间位置
     }
 }

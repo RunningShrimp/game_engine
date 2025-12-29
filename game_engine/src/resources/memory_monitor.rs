@@ -32,8 +32,8 @@ use std::time::{Duration, Instant};
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 
-use super::ring_buffer_staging_pool::{RingBufferPerformanceMetrics, RingBufferStagingPool};
 use super::memory_allocator::{MemoryPressure, MemoryPressureEvent};
+use super::ring_buffer_staging_pool::{RingBufferPerformanceMetrics, RingBufferStagingPool};
 
 // ============================================================================
 // 监控配置
@@ -575,16 +575,22 @@ impl MemoryMonitor {
 
         // 检查最近10个快照的趋势
         let recent_snapshots: Vec<_> = history.iter().rev().take(10).collect();
-        let first_usage = recent_snapshots.first().unwrap().used_bytes;
-        let last_usage = recent_snapshots.last().unwrap().used_bytes;
+
+        // Safe to unwrap because we take(10) from non-empty iterator
+        let first = recent_snapshots.first().expect(
+            "recent_snapshots should have at least one element when taking from non-empty history",
+        );
+        let last = recent_snapshots
+            .last()
+            .expect("recent_snapshots should have at least one element");
+
+        let first_usage = first.used_bytes;
+        let last_usage = last.used_bytes;
 
         let usage_increase = last_usage.saturating_sub(first_usage);
-        let allocation_increase = snapshot
-            .allocation_count
-            .saturating_sub(recent_snapshots.first().unwrap().allocation_count);
-        let deallocation_increase = snapshot
-            .deallocation_count
-            .saturating_sub(recent_snapshots.first().unwrap().deallocation_count);
+        let allocation_increase = snapshot.allocation_count.saturating_sub(first.allocation_count);
+        let deallocation_increase =
+            snapshot.deallocation_count.saturating_sub(first.deallocation_count);
 
         let mut result = LeakDetectionResult::new();
 

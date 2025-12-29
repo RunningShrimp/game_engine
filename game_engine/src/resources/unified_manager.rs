@@ -97,9 +97,13 @@ impl UnifiedResourceManager {
         &self,
         resource_type: impl Into<String>,
         loader: L,
-    ) {
-        let mut loaders = self.loaders.write().unwrap();
+    ) -> Result<(), ResourceError> {
+        let mut loaders = self
+            .loaders
+            .write()
+            .map_err(|e| ResourceError::Other(format!("Failed to acquire loaders lock: {}", e)))?;
         loaders.register(resource_type, loader);
+        Ok(())
     }
 
     /// 获取依赖图（用于外部操作）
@@ -120,7 +124,12 @@ impl UnifiedResourceManager {
         resource_path: PathBuf,
         dependency: ResourceDependency,
     ) -> Result<(), DependencyError> {
-        let mut graph = self.dependency_graph.write().unwrap();
+        let mut graph = self.dependency_graph.write().map_err(|e| {
+            DependencyError::ResolutionFailed(format!(
+                "Failed to acquire dependency graph lock: {}",
+                e
+            ))
+        })?;
         graph.add_dependency(resource_path, dependency)
     }
 
@@ -129,20 +138,38 @@ impl UnifiedResourceManager {
     /// # 返回
     /// 按依赖顺序排序的资源路径列表
     pub fn get_load_order(&self) -> Result<Vec<PathBuf>, DependencyError> {
-        let graph = self.dependency_graph.read().unwrap();
+        let graph = self.dependency_graph.read().map_err(|e| {
+            DependencyError::ResolutionFailed(format!(
+                "Failed to acquire dependency graph lock: {}",
+                e
+            ))
+        })?;
         graph.get_load_order()
     }
 
     /// 获取资源的所有依赖（递归）
-    pub fn get_all_dependencies(&self, resource_path: &PathBuf) -> Vec<PathBuf> {
-        let graph = self.dependency_graph.read().unwrap();
-        graph.get_all_dependencies(resource_path)
+    pub fn get_all_dependencies(
+        &self,
+        resource_path: &PathBuf,
+    ) -> Result<Vec<PathBuf>, DependencyError> {
+        let graph = self.dependency_graph.read().map_err(|e| {
+            DependencyError::ResolutionFailed(format!(
+                "Failed to acquire dependency graph lock: {}",
+                e
+            ))
+        })?;
+        Ok(graph.get_all_dependencies(resource_path))
     }
 
     /// 检查资源是否可以加载（所有必需依赖是否已加载）
-    pub fn can_load(&self, resource_path: &PathBuf) -> bool {
-        let graph = self.dependency_graph.read().unwrap();
-        graph.can_load(resource_path)
+    pub fn can_load(&self, resource_path: &PathBuf) -> Result<bool, DependencyError> {
+        let graph = self.dependency_graph.read().map_err(|e| {
+            DependencyError::ResolutionFailed(format!(
+                "Failed to acquire dependency graph lock: {}",
+                e
+            ))
+        })?;
+        Ok(graph.can_load(resource_path))
     }
 
     /// 加载资源（如果已缓存则直接返回）
@@ -167,7 +194,9 @@ impl UnifiedResourceManager {
 
         // 检查缓存
         {
-            let cache = self.cache.read().unwrap();
+            let cache = self.cache.read().map_err(|e| {
+                ResourceError::Other(format!("Failed to acquire cache lock: {}", e))
+            })?;
             if let Some(resource) = cache.get(&path_buf) {
                 // 尝试向下转型并克隆Arc
                 if let Some(_typed_resource) = resource.as_any().downcast_ref::<R>() {
@@ -190,14 +219,18 @@ impl UnifiedResourceManager {
 
         // 检查并加载依赖
         {
-            let graph = self.dependency_graph.read().unwrap();
+            let graph = self.dependency_graph.read().map_err(|e| {
+                ResourceError::Other(format!("Failed to acquire dependency graph lock: {}", e))
+            })?;
             let dependencies = graph.get_all_dependencies(&path_buf);
             drop(graph);
 
             // 加载所有依赖（简化实现，实际应该并行加载）
             for dep_path in dependencies {
                 // 检查依赖是否已加载
-                let graph = self.dependency_graph.read().unwrap();
+                let graph = self.dependency_graph.read().map_err(|e| {
+                    ResourceError::Other(format!("Failed to acquire dependency graph lock: {}", e))
+                })?;
                 let dep_state = graph.get_load_state(&dep_path);
                 drop(graph);
 
@@ -210,13 +243,18 @@ impl UnifiedResourceManager {
 
         // 更新加载状态
         {
-            let mut graph = self.dependency_graph.write().unwrap();
+            let mut graph = self.dependency_graph.write().map_err(|e| {
+                ResourceError::Other(format!("Failed to acquire dependency graph lock: {}", e))
+            })?;
             graph.set_load_state(&path_buf, LoadState::Loading);
         }
 
         // 加载资源（简化实现，实际应该使用注册的加载器）
         // 注意：这里需要根据resource_type查找对应的加载器
-        let loaders = self.loaders.read().unwrap();
+        let loaders = self
+            .loaders
+            .read()
+            .map_err(|e| ResourceError::Other(format!("Failed to acquire loaders lock: {}", e)))?;
         if let Some(_loader) = loaders.get(resource_type) {
             // 实际加载逻辑
             // 由于类型擦除的限制，这里需要更复杂的实现
@@ -224,7 +262,9 @@ impl UnifiedResourceManager {
 
         // 更新加载状态为失败（因为未实现完整加载逻辑）
         {
-            let mut graph = self.dependency_graph.write().unwrap();
+            let mut graph = self.dependency_graph.write().map_err(|e| {
+                ResourceError::Other(format!("Failed to acquire dependency graph lock: {}", e))
+            })?;
             graph.set_load_state(&path_buf, LoadState::Failed);
         }
 
@@ -254,7 +294,16 @@ impl UnifiedResourceManager {
         // 收集所有依赖
         let mut all_paths = paths.to_vec();
         {
-            let graph = self.dependency_graph.read().unwrap();
+            let graph = match self.dependency_graph.read() {
+                Ok(g) => g,
+                Err(_) => {
+                    // If lock acquisition fails, return empty result
+                    // We can't create multiple errors without Clone, so just return empty vec
+                    // The calling code will handle empty results appropriately
+                    return Vec::new();
+                }
+            };
+
             for path in paths {
                 let deps = graph.get_all_dependencies(path);
                 for dep in deps {
@@ -312,8 +361,11 @@ impl UnifiedResourceManager {
     }
 
     /// 获取缓存统计信息
-    pub fn cache_stats(&self) -> CacheStats {
-        let cache = self.cache.read().unwrap();
+    pub fn cache_stats(&self) -> Result<CacheStats, ResourceError> {
+        let cache = self
+            .cache
+            .read()
+            .map_err(|e| ResourceError::Other(format!("Failed to acquire cache lock: {}", e)))?;
         let mut total_size = 0;
         let mut type_counts = HashMap::new();
 
@@ -323,17 +375,21 @@ impl UnifiedResourceManager {
             *type_counts.entry(resource_type).or_insert(0) += 1;
         }
 
-        CacheStats {
+        Ok(CacheStats {
             total_resources: cache.len(),
             total_size_bytes: total_size,
             type_counts,
-        }
+        })
     }
 
     /// 清空缓存
-    pub fn clear_cache(&self) {
-        let mut cache = self.cache.write().unwrap();
+    pub fn clear_cache(&self) -> Result<(), ResourceError> {
+        let mut cache = self
+            .cache
+            .write()
+            .map_err(|e| ResourceError::Other(format!("Failed to acquire cache lock: {}", e)))?;
         cache.clear();
+        Ok(())
     }
 }
 

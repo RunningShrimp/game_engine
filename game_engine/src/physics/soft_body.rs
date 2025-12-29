@@ -169,12 +169,7 @@ pub struct ClothSoftBody {
 
 impl ClothSoftBody {
     /// 创建矩形布料
-    pub fn new_rectangular(
-        width: usize,
-        height: usize,
-        spacing: f32,
-        mass: f32,
-    ) -> Self {
+    pub fn new_rectangular(width: usize, height: usize, spacing: f32, mass: f32) -> Self {
         let mut particles = Vec::new();
         let mut structural_springs = Vec::new();
         let mut shear_springs = Vec::new();
@@ -279,7 +274,7 @@ impl ClothSoftBody {
         cloth.config = config;
         cloth.gravity = cloth.config.gravity;
         cloth.air_damping = cloth.config.air_damping;
-        
+
         // 更新弹簧参数
         for spring in &mut cloth.structural_springs {
             spring.stiffness = cloth.config.structural_stiffness;
@@ -293,7 +288,7 @@ impl ClothSoftBody {
             spring.stiffness = cloth.config.bending_stiffness;
             spring.damping = cloth.config.spring_damping;
         }
-        
+
         cloth
     }
 
@@ -321,21 +316,9 @@ impl ClothSoftBody {
         }
 
         // 应用弹簧力
-        Self::apply_spring_forces_to_particles(
-            &mut self.particles,
-            &self.structural_springs,
-            dt,
-        );
-        Self::apply_spring_forces_to_particles(
-            &mut self.particles,
-            &self.shear_springs,
-            dt,
-        );
-        Self::apply_spring_forces_to_particles(
-            &mut self.particles,
-            &self.bending_springs,
-            dt,
-        );
+        Self::apply_spring_forces_to_particles(&mut self.particles, &self.structural_springs, dt);
+        Self::apply_spring_forces_to_particles(&mut self.particles, &self.shear_springs, dt);
+        Self::apply_spring_forces_to_particles(&mut self.particles, &self.bending_springs, dt);
 
         // 更新位置
         for particle in &mut self.particles {
@@ -349,12 +332,12 @@ impl ClothSoftBody {
     /// 使用Verlet积分更新（更稳定）
     fn update_verlet(&mut self, dt: f32) {
         let dt_sq = dt * dt;
-        
+
         // 确保previous_positions已初始化
         if self.previous_positions.len() != self.particles.len() {
             self.previous_positions = self.particles.iter().map(|p| p.position).collect();
         }
-        
+
         for (i, particle) in self.particles.iter_mut().enumerate() {
             if particle.fixed {
                 self.previous_positions[i] = particle.position;
@@ -366,20 +349,19 @@ impl ClothSoftBody {
 
             // Verlet积分: x(t+dt) = 2*x(t) - x(t-dt) + a*dt^2
             let temp = particle.position;
-            particle.position = particle.position * 2.0 
-                - self.previous_positions[i] 
-                + acceleration * dt_sq;
+            particle.position =
+                particle.position * 2.0 - self.previous_positions[i] + acceleration * dt_sq;
             self.previous_positions[i] = temp;
 
             // 更新速度（用于阻尼和显示）
             particle.velocity = (particle.position - self.previous_positions[i]) / dt;
         }
-        
+
         // 应用弹簧约束（约束投影方法）
         for _ in 0..self.config.constraint_iterations {
             self.project_constraints();
         }
-        
+
         // 应用阻尼
         for particle in &mut self.particles {
             if !particle.fixed {
@@ -392,34 +374,37 @@ impl ClothSoftBody {
     fn project_constraints(&mut self) {
         // 收集所有修正值
         let mut corrections: Vec<(usize, Vec3A)> = Vec::new();
-        
+
         // 投影结构弹簧约束
         for spring in &self.structural_springs {
             if let Some((idx_a, correction_a, idx_b, correction_b)) =
-                self.calculate_spring_constraint_correction(spring) {
+                self.calculate_spring_constraint_correction(spring)
+            {
                 corrections.push((idx_a, correction_a));
                 corrections.push((idx_b, correction_b));
             }
         }
-        
+
         // 投影剪切弹簧约束
         for spring in &self.shear_springs {
             if let Some((idx_a, correction_a, idx_b, correction_b)) =
-                self.calculate_spring_constraint_correction(spring) {
+                self.calculate_spring_constraint_correction(spring)
+            {
                 corrections.push((idx_a, correction_a));
                 corrections.push((idx_b, correction_b));
             }
         }
-        
+
         // 投影弯曲弹簧约束
         for spring in &self.bending_springs {
             if let Some((idx_a, correction_a, idx_b, correction_b)) =
-                self.calculate_spring_constraint_correction(spring) {
+                self.calculate_spring_constraint_correction(spring)
+            {
                 corrections.push((idx_a, correction_a));
                 corrections.push((idx_b, correction_b));
             }
         }
-        
+
         // 应用所有修正值
         for (idx, correction) in corrections {
             if idx < self.particles.len() {
@@ -429,7 +414,10 @@ impl ClothSoftBody {
     }
 
     /// 计算弹簧约束的修正值
-    fn calculate_spring_constraint_correction(&self, spring: &Spring) -> Option<(usize, Vec3A, usize, Vec3A)> {
+    fn calculate_spring_constraint_correction(
+        &self,
+        spring: &Spring,
+    ) -> Option<(usize, Vec3A, usize, Vec3A)> {
         let (idx_a, idx_b) = spring.particles;
         if idx_a >= self.particles.len() || idx_b >= self.particles.len() {
             return None;
@@ -444,7 +432,7 @@ impl ClothSoftBody {
 
         let delta = particle_b.position - particle_a.position;
         let length = delta.length();
-        
+
         if length < 0.0001 {
             return None;
         }
@@ -457,7 +445,7 @@ impl ClothSoftBody {
             let total_mass = particle_a.mass + particle_b.mass;
             let ratio_a = particle_b.mass / total_mass;
             let ratio_b = particle_a.mass / total_mass;
-            
+
             Some((idx_a, correction * ratio_a, idx_b, -correction * ratio_b))
         } else if !particle_a.fixed {
             Some((idx_a, correction, idx_b, Vec3A::ZERO))
@@ -471,7 +459,7 @@ impl ClothSoftBody {
     /// 解决自碰撞
     fn resolve_self_collisions(&mut self) {
         let radius_sq = self.config.self_collision_radius * self.config.self_collision_radius;
-        
+
         for i in 0..self.particles.len() {
             if self.particles[i].fixed {
                 continue;
@@ -489,7 +477,7 @@ impl ClothSoftBody {
                     let distance = distance_sq.sqrt();
                     let direction = delta / distance;
                     let overlap = self.config.self_collision_radius - distance;
-                    
+
                     // 分离粒子
                     let correction = direction * overlap * 0.5;
                     self.particles[i].position -= correction;
@@ -502,7 +490,7 @@ impl ClothSoftBody {
     /// 检测与球体的碰撞
     pub fn collide_with_sphere(&mut self, center: Vec3A, radius: f32) {
         let radius_sq = radius * radius;
-        
+
         for particle in &mut self.particles {
             if particle.fixed {
                 continue;
@@ -518,10 +506,10 @@ impl ClothSoftBody {
                 } else {
                     Vec3A::Y // 默认向上
                 };
-                
+
                 // 将粒子推到球体表面
                 particle.position = center + direction * radius;
-                
+
                 // 更新速度（反弹）
                 let normal_velocity = particle.velocity.dot(direction);
                 if normal_velocity < 0.0 {
@@ -534,7 +522,7 @@ impl ClothSoftBody {
     /// 检测与平面的碰撞
     pub fn collide_with_plane(&mut self, point: Vec3A, normal: Vec3A) {
         let normal = normal.normalize();
-        
+
         for particle in &mut self.particles {
             if particle.fixed {
                 continue;
@@ -546,7 +534,7 @@ impl ClothSoftBody {
             if distance < 0.0 {
                 // 粒子在平面下方，推回
                 particle.position -= normal * distance;
-                
+
                 // 更新速度（反弹）
                 let normal_velocity = particle.velocity.dot(normal);
                 if normal_velocity < 0.0 {
@@ -661,7 +649,9 @@ impl FluidSoftBody {
     /// 创建流体
     pub fn new(particle_count: usize, parameters: SphParameters) -> Self {
         let mut particles = Vec::new();
-        let mass = parameters.rest_density * (4.0 / 3.0) * std::f32::consts::PI
+        let mass = parameters.rest_density
+            * (4.0 / 3.0)
+            * std::f32::consts::PI
             * parameters.particle_radius.powi(3);
 
         // 创建初始粒子分布（简单立方体）
@@ -674,11 +664,8 @@ impl FluidSoftBody {
                     if particles.len() >= particle_count {
                         break;
                     }
-                    let position = Vec3A::new(
-                        x as f32 * spacing,
-                        y as f32 * spacing,
-                        z as f32 * spacing,
-                    );
+                    let position =
+                        Vec3A::new(x as f32 * spacing, y as f32 * spacing, z as f32 * spacing);
                     particles.push(Particle::new(position, mass));
                 }
                 if particles.len() >= particle_count {
@@ -691,7 +678,7 @@ impl FluidSoftBody {
         }
 
         let cell_size = parameters.smoothing_radius * 2.0;
-        
+
         Self {
             particles,
             parameters,
@@ -748,9 +735,8 @@ impl FluidSoftBody {
                     if let Some(indices) = self.spatial_hash.get(&neighbor_cell) {
                         for &idx in indices {
                             if idx != particle_idx {
-                                let distance = (self.particles[idx].position
-                                    - particle.position)
-                                    .length();
+                                let distance =
+                                    (self.particles[idx].position - particle.position).length();
                                 if distance < self.parameters.smoothing_radius {
                                     neighbors.push(idx);
                                 }
@@ -777,8 +763,8 @@ impl FluidSoftBody {
 
             self.particles[i].density = density;
             // 计算压力（使用状态方程）
-            self.particles[i].pressure = self.parameters.gas_constant
-                * (density - self.parameters.rest_density);
+            self.particles[i].pressure =
+                self.parameters.gas_constant * (density - self.parameters.rest_density);
         }
     }
 
@@ -796,10 +782,8 @@ impl FluidSoftBody {
                     let direction = delta / distance;
 
                     // 压力力
-                    let pressure_gradient = self.sph_kernel_gradient(
-                        distance,
-                        self.parameters.smoothing_radius,
-                    );
+                    let pressure_gradient =
+                        self.sph_kernel_gradient(distance, self.parameters.smoothing_radius);
                     let pressure_contribution = -direction
                         * (self.particles[i].pressure + self.particles[j].pressure)
                         / (2.0 * self.particles[j].density)
@@ -922,7 +906,10 @@ impl SoftBodyPhysicsWorld {
     }
 
     pub fn with_substeps(time_step: f32, substeps: u32) -> Self {
-        Self { time_step, substeps }
+        Self {
+            time_step,
+            substeps,
+        }
     }
 }
 
@@ -974,7 +961,7 @@ mod tests {
         let mut config = ClothConfig::default();
         config.structural_stiffness = 2000.0;
         config.use_verlet = true;
-        
+
         let cloth = ClothSoftBody::new_rectangular_with_config(10, 10, 0.1, 0.1, config);
         assert_eq!(cloth.particles.len(), 100);
         assert_eq!(cloth.config.structural_stiffness, 2000.0);
@@ -985,15 +972,15 @@ mod tests {
         let mut config = ClothConfig::default();
         config.use_verlet = true;
         let mut cloth = ClothSoftBody::new_rectangular_with_config(5, 5, 0.1, 0.1, config);
-        
+
         // 记录初始位置
         let initial_pos = cloth.particles[10].position;
-        
+
         // 更新几次
         for _ in 0..10 {
             cloth.update(0.016);
         }
-        
+
         // 粒子应该移动了（由于重力）
         assert_ne!(cloth.particles[10].position, initial_pos);
     }
@@ -1001,13 +988,13 @@ mod tests {
     #[test]
     fn test_cloth_sphere_collision() {
         let mut cloth = ClothSoftBody::new_rectangular(5, 5, 0.1, 0.1);
-        
+
         // 将粒子放在球体内
         cloth.particles[10].position = Vec3A::new(0.0, 0.0, 0.0);
-        
+
         // 碰撞检测
         cloth.collide_with_sphere(Vec3A::ZERO, 0.5);
-        
+
         // 粒子应该在球体表面
         let distance = cloth.particles[10].position.length();
         assert!((distance - 0.5).abs() < 0.01);
@@ -1016,13 +1003,13 @@ mod tests {
     #[test]
     fn test_cloth_plane_collision() {
         let mut cloth = ClothSoftBody::new_rectangular(5, 5, 0.1, 0.1);
-        
+
         // 将粒子放在平面下方
         cloth.particles[10].position = Vec3A::new(0.0, -1.0, 0.0);
-        
+
         // 碰撞检测（平面在y=0）
         cloth.collide_with_plane(Vec3A::ZERO, Vec3A::Y);
-        
+
         // 粒子应该在平面上方
         assert!(cloth.particles[10].position.y >= 0.0);
     }
@@ -1034,4 +1021,3 @@ mod tests {
         assert_eq!(fluid.particles.len(), 100);
     }
 }
-

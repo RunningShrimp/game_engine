@@ -107,7 +107,7 @@ mod tests {
         clip.add_position_track(1, position_track);
 
         // 测试采样
-        let pos = clip.sample_position(1, 1.0).unwrap();
+        let pos = clip.sample_position(1, 1.0).expect("Test: operation should succeed");
         assert!((pos.x - 1.0).abs() < 0.001);
         assert!((pos.y - 1.0).abs() < 0.001);
         assert!((pos.z - 1.0).abs() < 0.001);

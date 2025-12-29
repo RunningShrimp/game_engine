@@ -3,9 +3,9 @@
 //  提供灵活的重试策略，支持指数退避、条件重试和超时控制。
 
 use crate::error::{EngineError, ErrorSeverity};
+use rand::Rng;
 use std::future::Future;
 use std::time::{Duration, Instant};
-use rand::Rng;
 
 /// 重试配置
 #[derive(Debug)]
@@ -226,12 +226,13 @@ impl RetryExecutor {
 
             // 检查是否超时
             if let Some(timeout) = config.timeout
-                && state.is_timeout(timeout) {
-                    return RetryResult::Timeout {
-                        attempts: state.attempt - 1,
-                        total_duration: state.elapsed(),
-                    };
-                }
+                && state.is_timeout(timeout)
+            {
+                return RetryResult::Timeout {
+                    attempts: state.attempt - 1,
+                    total_duration: state.elapsed(),
+                };
+            }
 
             state.attempt += 1;
 

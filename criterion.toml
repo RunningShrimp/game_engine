@@ -1,0 +1,57 @@
+# Criterion Benchmark Configuration
+# https://bheisler.github.io/criterion.rs/book/user_guide/configuration.html
+
+[criterion]
+# 输出目录
+output_folder = "benches/results"
+
+# 默认baseline名称
+baseline = "main"
+
+# 比较基准
+comparison_base = "main"
+
+# 测量模式
+# "real" - 墙钟时间（默认）
+# "cpu" - CPU时间
+# "monotonic" - 单调时间
+measurement_time = 5.0  # 每个benchmark的测量时间（秒）
+warm_up_time = 3.0      # 预热时间（秒）
+sample_size = 100       # 采样数量
+
+# 性能阈值
+# 如果性能下降超过此百分比，显示警告
+noise_threshold = 0.02  # 2% noise threshold
+confidence_level = 0.95
+
+# 输出格式配置
+[output]
+# 生成文本报告
+plaintext = true
+# 生成HTML报告
+html = true
+# 生成JSON报告（用于CI集成）
+json = true
+
+# 绘图配置
+[plots]
+# 生成对比图
+comparison = true
+# 生成线图
+line = true
+# 生成小提琴图
+violin = true
+
+# 报告格式
+[report]
+# 报告中使用的单位
+# "ns" - 纳秒
+# "us" - 微秒
+# "ms" - 毫秒
+# "s" - 秒
+time_unit = "ms"
+# "bytes" - 字节
+# "kb" - 千字节
+# "mb" - 兆字节
+# "gb" - 吉字节
+memory_unit = "mb"

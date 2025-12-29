@@ -42,10 +42,15 @@ impl AnimationCurve {
         let point = BezierControlPoint::new(time, value);
 
         // 按时间排序插入
-        let index = self
-            .control_points
-            .binary_search_by(|p| p.time.partial_cmp(&time).unwrap())
-            .unwrap_or_else(|i| i);
+        let index = match self.control_points.binary_search_by(|p| {
+            p.time.partial_cmp(&time)
+                .unwrap_or({
+                    // Handle NaN by treating it as greater than any time
+                    std::cmp::Ordering::Greater
+                })
+        }) {
+            Ok(i) | Err(i) => i,
+        };
 
         self.control_points.insert(index, point);
     }
@@ -69,8 +74,12 @@ impl AnimationCurve {
         }
 
         // 如果时间在最后一个控制点之后
-        if time >= self.control_points.last().unwrap().time {
-            return self.control_points.last().unwrap().value;
+        if let Some(last_point) = self.control_points.last() {
+            if time >= last_point.time {
+                return last_point.value;
+            }
+        } else {
+            return 0.0;
         }
 
         // 查找相邻的两个控制点
@@ -139,10 +148,11 @@ impl CurveEditor {
             }
 
             if ui.button("Remove Point").clicked()
-                && let Some(index) = self.selected_point {
-                    self.curve.remove_control_point(index);
-                    self.selected_point = None;
-                }
+                && let Some(index) = self.selected_point
+            {
+                self.curve.remove_control_point(index);
+                self.selected_point = None;
+            }
 
             ui.separator();
 
@@ -192,8 +202,8 @@ impl CurveEditor {
             let mut points = Vec::new();
             let steps = 100;
 
-            let min_time = self.curve.control_points.first().unwrap().time;
-            let max_time = self.curve.control_points.last().unwrap().time;
+            let min_time = self.curve.control_points.first().expect("Test: operation should succeed").time;
+            let max_time = self.curve.control_points.last().expect("Test: operation should succeed").time;
 
             for i in 0..=steps {
                 let t = i as f32 / steps as f32;
@@ -228,7 +238,7 @@ impl CurveEditor {
 
             // 检测点击
             if response.clicked() {
-                let click_pos = response.interact_pointer_pos().unwrap();
+                let click_pos = response.interact_pointer_pos().expect("Test: operation should succeed");
                 let distance = ((click_pos.x - x).powi(2) + (click_pos.y - y).powi(2)).sqrt();
 
                 if distance < 10.0 {
@@ -241,39 +251,32 @@ impl CurveEditor {
 
         // 控制点属性编辑
         if let Some(index) = self.selected_point
-            && let Some(point) = self.curve.control_points.get_mut(index) {
-                ui.label(format!("Control Point {}", index));
+            && let Some(point) = self.curve.control_points.get_mut(index)
+        {
+            ui.label(format!("Control Point {}", index));
 
-                ui.horizontal(|ui| {
-                    ui.label("Time:");
-                    ui.add(egui::DragValue::new(&mut point.time).speed(0.01).range(0.0..=1.0));
-                });
+            ui.horizontal(|ui| {
+                ui.label("Time:");
+                ui.add(egui::DragValue::new(&mut point.time).speed(0.01).range(0.0..=1.0));
+            });
 
-                ui.horizontal(|ui| {
-                    ui.label("Value:");
-                    ui.add(egui::DragValue::new(&mut point.value).speed(0.01));
-                });
+            ui.horizontal(|ui| {
+                ui.label("Value:");
+                ui.add(egui::DragValue::new(&mut point.value).speed(0.01));
+            });
 
-                ui.horizontal(|ui| {
-                    ui.label("Left Tangent:");
-                    ui.add(
-                        egui::DragValue::new(&mut point.left_tangent.x).prefix("X: ").speed(0.01),
-                    );
-                    ui.add(
-                        egui::DragValue::new(&mut point.left_tangent.y).prefix("Y: ").speed(0.01),
-                    );
-                });
+            ui.horizontal(|ui| {
+                ui.label("Left Tangent:");
+                ui.add(egui::DragValue::new(&mut point.left_tangent.x).prefix("X: ").speed(0.01));
+                ui.add(egui::DragValue::new(&mut point.left_tangent.y).prefix("Y: ").speed(0.01));
+            });
 
-                ui.horizontal(|ui| {
-                    ui.label("Right Tangent:");
-                    ui.add(
-                        egui::DragValue::new(&mut point.right_tangent.x).prefix("X: ").speed(0.01),
-                    );
-                    ui.add(
-                        egui::DragValue::new(&mut point.right_tangent.y).prefix("Y: ").speed(0.01),
-                    );
-                });
-            }
+            ui.horizontal(|ui| {
+                ui.label("Right Tangent:");
+                ui.add(egui::DragValue::new(&mut point.right_tangent.x).prefix("X: ").speed(0.01));
+                ui.add(egui::DragValue::new(&mut point.right_tangent.y).prefix("Y: ").speed(0.01));
+            });
+        }
     }
 }
 

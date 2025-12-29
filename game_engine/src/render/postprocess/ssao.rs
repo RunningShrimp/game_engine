@@ -291,8 +291,10 @@ impl SsaoPass {
             ];
 
             // 归一化
-            let len =
-                (sample_data[0] * sample_data[0] + sample_data[1] * sample_data[1] + sample_data[2] * sample_data[2]).sqrt();
+            let len = (sample_data[0] * sample_data[0]
+                + sample_data[1] * sample_data[1]
+                + sample_data[2] * sample_data[2])
+                .sqrt();
             sample_data[0] /= len;
             sample_data[1] /= len;
             sample_data[2] /= len;

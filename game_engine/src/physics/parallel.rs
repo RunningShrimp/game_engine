@@ -118,15 +118,25 @@ impl DoubleBufferedPhysicsState {
     /// 获取读缓冲区快照
     pub fn read(&self) -> PhysicsSnapshot {
         if self.read_index.load(Ordering::Acquire) {
-            self.write_buffer.read().unwrap().clone()
+            self.write_buffer
+                .read()
+                .expect("RwLock write_buffer was poisoned (thread panicked while holding lock)")
+                .clone()
         } else {
-            self.read_buffer.read().unwrap().clone()
+            self.read_buffer
+                .read()
+                .expect("RwLock read_buffer was poisoned (thread panicked while holding lock)")
+                .clone()
         }
     }
 
     /// 写入到写缓冲区
     pub fn write(&self, snapshot: PhysicsSnapshot) {
-        *self.write_buffer.write().unwrap() = snapshot;
+        *self
+            .write_buffer
+            .write()
+            .expect("RwLock write_buffer was poisoned (thread panicked while holding lock)") =
+            snapshot;
     }
 
     /// 交换缓冲区
@@ -521,27 +531,31 @@ impl PhysicsThreadRunner {
                 }
                 Ok(PhysicsCommand::ApplyForce { id, fx, fy }) => {
                     if let Some(&handle) = id_to_handle.get(&id)
-                        && let Some(rb) = rigid_body_set.get_mut(handle) {
-                            rb.add_force(vector![fx, fy], true);
-                        }
+                        && let Some(rb) = rigid_body_set.get_mut(handle)
+                    {
+                        rb.add_force(vector![fx, fy], true);
+                    }
                 }
                 Ok(PhysicsCommand::ApplyImpulse { id, ix, iy }) => {
                     if let Some(&handle) = id_to_handle.get(&id)
-                        && let Some(rb) = rigid_body_set.get_mut(handle) {
-                            rb.apply_impulse(vector![ix, iy], true);
-                        }
+                        && let Some(rb) = rigid_body_set.get_mut(handle)
+                    {
+                        rb.apply_impulse(vector![ix, iy], true);
+                    }
                 }
                 Ok(PhysicsCommand::SetVelocity { id, vx, vy }) => {
                     if let Some(&handle) = id_to_handle.get(&id)
-                        && let Some(rb) = rigid_body_set.get_mut(handle) {
-                            rb.set_linvel(vector![vx, vy], true);
-                        }
+                        && let Some(rb) = rigid_body_set.get_mut(handle)
+                    {
+                        rb.set_linvel(vector![vx, vy], true);
+                    }
                 }
                 Ok(PhysicsCommand::SetPosition { id, x, y }) => {
                     if let Some(&handle) = id_to_handle.get(&id)
-                        && let Some(rb) = rigid_body_set.get_mut(handle) {
-                            rb.set_translation(vector![x, y], true);
-                        }
+                        && let Some(rb) = rigid_body_set.get_mut(handle)
+                    {
+                        rb.set_translation(vector![x, y], true);
+                    }
                 }
                 Ok(PhysicsCommand::Shutdown) => {
                     break;

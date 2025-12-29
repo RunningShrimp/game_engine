@@ -27,7 +27,7 @@
 //     - 正确处理表面法线
 //     - 保持光照一致性
 
-use glam::{Mat4, Vec2, Vec3, Vec4, Quat};
+use glam::{Mat4, Quat, Vec2, Vec3, Vec4};
 
 /// Decal配置
 #[derive(Debug, Clone)]
@@ -111,12 +111,7 @@ pub struct Decal {
 
 impl Decal {
     /// 创建新的Decal
-    pub fn new(
-        decal_type: DecalType,
-        position: Vec3,
-        rotation: Quat,
-        size: Vec3,
-    ) -> Self {
+    pub fn new(decal_type: DecalType, position: Vec3, rotation: Quat, size: Vec3) -> Self {
         Self {
             decal_type,
             position,
@@ -128,7 +123,7 @@ impl Decal {
             albedo_map: None,
             roughness: 0.5,
             metallic: 0.0,
-            lifetime: 0.0,  // 永久
+            lifetime: 0.0, // 永久
             age: 0.0,
             active: true,
         }
@@ -167,17 +162,17 @@ impl Decal {
     /// 更新Decal（返回是否应该移除）
     pub fn update(&mut self, dt: f32) -> bool {
         if !self.active {
-            return true;  // 不活跃，移除
+            return true; // 不活跃，移除
         }
 
         if self.lifetime > 0.0 {
             self.age += dt;
             if self.age >= self.lifetime {
-                return true;  // 超过生命周期，移除
+                return true; // 超过生命周期，移除
             }
         }
 
-        false  // 继续保留
+        false // 继续保留
     }
 
     /// 检查是否应该移除（不修改状态）
@@ -398,12 +393,10 @@ impl DecalBatchRenderer {
         let mut batches = Vec::new();
 
         // 按类型分组
-        let mut grouped: std::collections::HashMap<DecalType, Vec<Decal>> = std::collections::HashMap::new();
+        let mut grouped: std::collections::HashMap<DecalType, Vec<Decal>> =
+            std::collections::HashMap::new();
         for &decal in decals {
-            grouped
-                .entry(decal.decal_type)
-                .or_default()
-                .push(decal.clone());
+            grouped.entry(decal.decal_type).or_default().push(decal.clone());
         }
 
         // 为每组创建批次
@@ -452,9 +445,12 @@ impl DecalProjector {
         let local_pos = inv_matrix.transform_point3(surface_position);
 
         // 检查是否在decal范围内
-        if local_pos.x < -0.5 || local_pos.x > 0.5
-            || local_pos.y < -0.5 || local_pos.y > 0.5
-            || local_pos.z < -0.5 || local_pos.z > 0.5
+        if local_pos.x < -0.5
+            || local_pos.x > 0.5
+            || local_pos.y < -0.5
+            || local_pos.y > 0.5
+            || local_pos.z < -0.5
+            || local_pos.z > 0.5
         {
             return None;
         }
@@ -508,9 +504,11 @@ impl DecalPool {
 
     /// 获取decal（从池中）
     pub fn acquire(&mut self) -> Decal {
-        self.free_decals
-            .pop()
-            .unwrap_or_else(|| Decal::at_position(DecalType::Custom, Vec3::ZERO))
+        self.free_decals.pop().unwrap_or_else(|| {
+            // Pool exhausted, creating new decal
+            tracing::warn!("Decal pool exhausted, creating new decal instance");
+            Decal::at_position(DecalType::Custom, Vec3::ZERO)
+        })
     }
 
     /// 归还decal到池
@@ -540,12 +538,11 @@ mod tests {
 
     #[test]
     fn test_decal_lifetime() {
-        let mut decal = Decal::at_position(DecalType::Blood, Vec3::ZERO)
-            .with_lifetime(1.0);
+        let mut decal = Decal::at_position(DecalType::Blood, Vec3::ZERO).with_lifetime(1.0);
 
-        assert!(!decal.update(0.5));  // 0.5秒，仍然存活
-        assert!(!decal.update(0.3));  // 0.8秒，仍然存活
-        assert!(decal.update(0.3));   // 1.1秒，应该移除
+        assert!(!decal.update(0.5)); // 0.5秒，仍然存活
+        assert!(!decal.update(0.3)); // 0.8秒，仍然存活
+        assert!(decal.update(0.3)); // 1.1秒，应该移除
     }
 
     #[test]
@@ -569,7 +566,11 @@ mod tests {
 
         // 添加超过限制的decal
         for i in 0..5 {
-            manager.spawn_decal(DecalType::BulletHole, Vec3::new(i as f32, 0.0, 0.0), Vec3::Y);
+            manager.spawn_decal(
+                DecalType::BulletHole,
+                Vec3::new(i as f32, 0.0, 0.0),
+                Vec3::Y,
+            );
         }
 
         // 应该保留最新的3个
@@ -605,7 +606,10 @@ mod tests {
         let result = DecalProjector::project_to_surface(&decal, surface_pos, surface_normal);
 
         assert!(result.is_some());
-        let (uv, weight) = result.unwrap();
+        let (uv, weight) = result.unwrap_or_else(|| {
+            tracing::error!("Decal projection failed unexpectedly");
+            panic!("Expected projection to succeed");
+        });
         assert!(uv.x >= 0.0 && uv.x <= 1.0);
         assert!(uv.y >= 0.0 && uv.y <= 1.0);
         assert!(weight > 0.0);
@@ -619,10 +623,7 @@ mod tests {
         let decal1 = Decal::at_position(DecalType::BulletHole, Vec3::ZERO);
         let decal2 = Decal::at_position(DecalType::Explosion, Vec3::X);
 
-        let decals = vec![
-            &decal1,
-            &decal2,
-        ];
+        let decals = vec![&decal1, &decal2];
 
         let batches = renderer.render_batch(&decals);
 

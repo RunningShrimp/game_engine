@@ -90,7 +90,7 @@ mod scene_creation_tests {
         let scene = Scene::try_new(SceneId::new(1), "valid_name");
         
         assert!(scene.is_ok());
-        let scene = scene.unwrap();
+        let scene = scene.expect("Test: operation should succeed");
         assert_eq!(scene.name(), "valid_name");
     }
 
@@ -137,7 +137,7 @@ mod scene_state_transition_tests {
     #[test]
     fn test_scene_state_loading_to_loaded() {
         let mut scene = Scene::new(SceneId::new(1), "test");
-        scene.load().unwrap();
+        scene.load().expect("Test: operation should succeed");
         
         let result = scene.load();
         assert!(result.is_ok());
@@ -147,8 +147,8 @@ mod scene_state_transition_tests {
     #[test]
     fn test_scene_state_loaded_to_active() {
         let mut scene = Scene::new(SceneId::new(1), "test");
-        scene.load().unwrap();
-        scene.load().unwrap();
+        scene.load().expect("Test: operation should succeed");
+        scene.load().expect("Test: operation should succeed");
         
         let result = scene.activate();
         assert!(result.is_ok());
@@ -158,9 +158,9 @@ mod scene_state_transition_tests {
     #[test]
     fn test_scene_state_active_to_inactive() {
         let mut scene = Scene::new(SceneId::new(1), "test");
-        scene.load().unwrap();
-        scene.load().unwrap();
-        scene.activate().unwrap();
+        scene.load().expect("Test: operation should succeed");
+        scene.load().expect("Test: operation should succeed");
+        scene.activate().expect("Test: operation should succeed");
         
         let result = scene.deactivate();
         assert!(result.is_ok());
@@ -170,10 +170,10 @@ mod scene_state_transition_tests {
     #[test]
     fn test_scene_state_inactive_to_active() {
         let mut scene = Scene::new(SceneId::new(1), "test");
-        scene.load().unwrap();
-        scene.load().unwrap();
-        scene.activate().unwrap();
-        scene.deactivate().unwrap();
+        scene.load().expect("Test: operation should succeed");
+        scene.load().expect("Test: operation should succeed");
+        scene.activate().expect("Test: operation should succeed");
+        scene.deactivate().expect("Test: operation should succeed");
         
         let result = scene.activate();
         assert!(result.is_ok());
@@ -183,9 +183,9 @@ mod scene_state_transition_tests {
     #[test]
     fn test_scene_state_any_to_unloaded() {
         let mut scene = Scene::new(SceneId::new(1), "test");
-        scene.load().unwrap();
-        scene.load().unwrap();
-        scene.activate().unwrap();
+        scene.load().expect("Test: operation should succeed");
+        scene.load().expect("Test: operation should succeed");
+        scene.activate().expect("Test: operation should succeed");
         
         let result = scene.unload();
         assert!(result.is_ok());
@@ -204,8 +204,8 @@ mod scene_state_transition_tests {
     #[test]
     fn test_scene_state_activate_without_entities() {
         let mut scene = Scene::new(SceneId::new(1), "test");
-        scene.load().unwrap();
-        scene.load().unwrap();
+        scene.load().expect("Test: operation should succeed");
+        scene.load().expect("Test: operation should succeed");
         
         let result = scene.activate();
         assert!(result.is_ok());
@@ -234,7 +234,7 @@ mod scene_entity_management_tests {
         let entity1 = EntityFactory::create_basic(EntityId::new(1), Vec3::ZERO);
         let entity2 = EntityFactory::create_basic(EntityId::new(1), Vec3::ZERO);
         
-        scene.add_entity(entity1).unwrap();
+        scene.add_entity(entity1).expect("Test: operation should succeed");
         let result = scene.add_entity(entity2);
         
         assert!(result.is_err());
@@ -249,7 +249,7 @@ mod scene_entity_management_tests {
     fn test_scene_remove_entity() {
         let mut scene = Scene::new(SceneId::new(1), "test");
         let entity = EntityFactory::create_basic(EntityId::new(1), Vec3::ZERO);
-        scene.add_entity(entity).unwrap();
+        scene.add_entity(entity).expect("Test: operation should succeed");
         
         let result = scene.remove_entity(EntityId::new(1));
         assert!(result.is_ok());
@@ -274,37 +274,37 @@ mod scene_entity_management_tests {
     fn test_scene_get_entity() {
         let mut scene = Scene::new(SceneId::new(1), "test");
         let entity = EntityFactory::create_basic(EntityId::new(1), Vec3::ZERO);
-        scene.add_entity(entity).unwrap();
+        scene.add_entity(entity).expect("Test: operation should succeed");
         
         let retrieved = scene.get_entity(EntityId::new(1));
         assert!(retrieved.is_some());
-        assert_eq!(retrieved.unwrap().id, EntityId::new(1));
+        assert_eq!(retrieved.expect("Test: operation should succeed").id, EntityId::new(1));
     }
 
     #[test]
     fn test_scene_get_entity_mut() {
         let mut scene = Scene::new(SceneId::new(1), "test");
         let entity = EntityFactory::create_basic(EntityId::new(1), Vec3::ZERO);
-        scene.add_entity(entity).unwrap();
+        scene.add_entity(entity).expect("Test: operation should succeed");
         
         if let Some(entity) = scene.get_entity_mut(EntityId::new(1)) {
-            entity.set_name("Updated Name").unwrap();
+            entity.set_name("Updated Name").expect("Test: operation should succeed");
         }
         
         let retrieved = scene.get_entity(EntityId::new(1));
-        assert_eq!(retrieved.unwrap().name, Some("Updated Name".to_string()));
+        assert_eq!(retrieved.expect("Test: operation should succeed").name, Some("Updated Name".to_string()));
     }
 
     #[test]
     fn test_scene_find_entity_by_name() {
         let mut scene = Scene::new(SceneId::new(1), "test");
         let mut entity = EntityFactory::create_basic(EntityId::new(1), Vec3::ZERO);
-        entity.set_name("Player").unwrap();
-        scene.add_entity(entity).unwrap();
+        entity.set_name("Player").expect("Test: operation should succeed");
+        scene.add_entity(entity).expect("Test: operation should succeed");
         
         let found = scene.find_entity_by_name("Player");
         assert!(found.is_some());
-        assert_eq!(found.unwrap().id, EntityId::new(1));
+        assert_eq!(found.expect("Test: operation should succeed").id, EntityId::new(1));
     }
 
     #[test]
@@ -319,9 +319,9 @@ mod scene_entity_management_tests {
     fn test_scene_entity_ids() {
         let mut scene = Scene::new(SceneId::new(1), "test");
         
-        scene.add_entity(EntityFactory::create_basic(EntityId::new(1), Vec3::ZERO)).unwrap();
-        scene.add_entity(EntityFactory::create_basic(EntityId::new(2), Vec3::ZERO)).unwrap();
-        scene.add_entity(EntityFactory::create_basic(EntityId::new(3), Vec3::ZERO)).unwrap();
+        scene.add_entity(EntityFactory::create_basic(EntityId::new(1), Vec3::ZERO)).expect("Test: operation should succeed");
+        scene.add_entity(EntityFactory::create_basic(EntityId::new(2), Vec3::ZERO)).expect("Test: operation should succeed");
+        scene.add_entity(EntityFactory::create_basic(EntityId::new(3), Vec3::ZERO)).expect("Test: operation should succeed");
         
         let ids = scene.entity_ids();
         assert_eq!(ids.len(), 3);
@@ -349,9 +349,9 @@ mod scene_entity_management_tests {
     fn test_scene_remove_multiple_entities() {
         let mut scene = Scene::new(SceneId::new(1), "test");
         
-        scene.add_entity(EntityFactory::create_basic(EntityId::new(1), Vec3::ZERO)).unwrap();
-        scene.add_entity(EntityFactory::create_basic(EntityId::new(2), Vec3::ZERO)).unwrap();
-        scene.add_entity(EntityFactory::create_basic(EntityId::new(3), Vec3::ZERO)).unwrap();
+        scene.add_entity(EntityFactory::create_basic(EntityId::new(1), Vec3::ZERO)).expect("Test: operation should succeed");
+        scene.add_entity(EntityFactory::create_basic(EntityId::new(2), Vec3::ZERO)).expect("Test: operation should succeed");
+        scene.add_entity(EntityFactory::create_basic(EntityId::new(3), Vec3::ZERO)).expect("Test: operation should succeed");
         
         let ids = vec![EntityId::new(1), EntityId::new(3)];
         let result = scene.remove_entities(ids);
@@ -368,8 +368,8 @@ mod scene_validation_tests {
     #[test]
     fn test_scene_validate_valid_scene() {
         let mut scene = Scene::new(SceneId::new(1), "test");
-        scene.load().unwrap();
-        scene.load().unwrap();
+        scene.load().expect("Test: operation should succeed");
+        scene.load().expect("Test: operation should succeed");
         
         let result = scene.validate();
         assert!(result.is_ok());
@@ -394,9 +394,9 @@ mod scene_validation_tests {
         let mut scene = Scene::new(SceneId::new(1), "test");
         
         let mut entity = EntityFactory::create_basic(EntityId::new(1), Vec3::ZERO);
-        entity.scale(Vec3::new(-1.0, 1.0, 1.0)).unwrap();
+        entity.scale(Vec3::new(-1.0, 1.0, 1.0)).expect("Test: operation should succeed");
         
-        scene.add_entity(entity).unwrap();
+        scene.add_entity(entity).expect("Test: operation should succeed");
         
         let result = scene.validate();
         assert!(result.is_err());
@@ -405,15 +405,15 @@ mod scene_validation_tests {
     #[test]
     fn test_scene_validate_multiple_active_cameras() {
         let mut scene = Scene::new(SceneId::new(1), "test");
-        scene.load().unwrap();
-        scene.load().unwrap();
-        scene.activate().unwrap();
+        scene.load().expect("Test: operation should succeed");
+        scene.load().expect("Test: operation should succeed");
+        scene.activate().expect("Test: operation should succeed");
         
         let camera1 = EntityFactory::create_camera(EntityId::new(1), Vec3::ZERO, Camera::default());
         let camera2 = EntityFactory::create_camera(EntityId::new(2), Vec3::ZERO, Camera::default());
         
-        scene.add_entity(camera1).unwrap();
-        scene.add_entity(camera2).unwrap();
+        scene.add_entity(camera1).expect("Test: operation should succeed");
+        scene.add_entity(camera2).expect("Test: operation should succeed");
         
         let result = scene.validate();
         assert!(result.is_err());
@@ -422,13 +422,13 @@ mod scene_validation_tests {
     #[test]
     fn test_scene_validate_inactive_entities_in_active_scene() {
         let mut scene = Scene::new(SceneId::new(1), "test");
-        scene.load().unwrap();
-        scene.load().unwrap();
+        scene.load().expect("Test: operation should succeed");
+        scene.load().expect("Test: operation should succeed");
         
         let mut entity = EntityFactory::create_basic(EntityId::new(1), Vec3::ZERO);
-        entity.deactivate().unwrap();
+        entity.deactivate().expect("Test: operation should succeed");
         
-        scene.add_entity(entity).unwrap();
+        scene.add_entity(entity).expect("Test: operation should succeed");
         
         let result = scene.activate();
         assert!(result.is_err());
@@ -445,10 +445,10 @@ mod scene_event_sourcing_tests {
         
         assert_eq!(scene.uncommitted_event_count(), 0);
         
-        scene.load().unwrap();
+        scene.load().expect("Test: operation should succeed");
         assert_eq!(scene.uncommitted_event_count(), 1);
         
-        scene.load().unwrap();
+        scene.load().expect("Test: operation should succeed");
         assert_eq!(scene.uncommitted_event_count(), 2);
     }
 
@@ -456,8 +456,8 @@ mod scene_event_sourcing_tests {
     fn test_scene_take_uncommitted_events() {
         let mut scene = Scene::new(SceneId::new(1), "test");
         
-        scene.load().unwrap();
-        scene.load().unwrap();
+        scene.load().expect("Test: operation should succeed");
+        scene.load().expect("Test: operation should succeed");
         
         let events = scene.take_uncommitted_events();
         assert_eq!(events.len(), 2);
@@ -468,10 +468,10 @@ mod scene_event_sourcing_tests {
     fn test_scene_events_after_entity_operations() {
         let mut scene = Scene::new(SceneId::new(1), "test");
         
-        scene.add_entity(EntityFactory::create_basic(EntityId::new(1), Vec3::ZERO)).unwrap();
+        scene.add_entity(EntityFactory::create_basic(EntityId::new(1), Vec3::ZERO)).expect("Test: operation should succeed");
         assert_eq!(scene.uncommitted_event_count(), 1);
         
-        scene.remove_entity(EntityId::new(1)).unwrap();
+        scene.remove_entity(EntityId::new(1)).expect("Test: operation should succeed");
         assert_eq!(scene.uncommitted_event_count(), 2);
     }
 }
@@ -483,7 +483,7 @@ mod scene_recovery_tests {
     #[test]
     fn test_scene_recover_from_error() {
         let mut scene = Scene::new(SceneId::new(1), "test");
-        scene.load().unwrap();
+        scene.load().expect("Test: operation should succeed");
         
         let error = SceneError::EntityNotFound(EntityId::new(999));
         let result = scene.recover_from_error(&error);
@@ -520,8 +520,8 @@ mod scene_snapshot_tests {
     #[test]
     fn test_scene_create_snapshot() {
         let mut scene = Scene::new(SceneId::new(1), "test");
-        scene.load().unwrap();
-        scene.add_entity(EntityFactory::create_basic(EntityId::new(1), Vec3::ZERO)).unwrap();
+        scene.load().expect("Test: operation should succeed");
+        scene.add_entity(EntityFactory::create_basic(EntityId::new(1), Vec3::ZERO)).expect("Test: operation should succeed");
         
         let snapshot = scene.create_snapshot();
         
@@ -538,17 +538,17 @@ mod scene_manager_tests {
     #[test]
     fn test_scene_manager_create_scene() {
         let mut manager = SceneRepository::new();
-        manager.create_scene(SceneId::new(1), "test_scene").unwrap();
+        manager.create_scene(SceneId::new(1), "test_scene").expect("Test: operation should succeed");
         
         let scene = manager.get_scene(SceneId::new(1));
         assert!(scene.is_some());
-        assert_eq!(scene.unwrap().id(), SceneId::new(1));
+        assert_eq!(scene.expect("Test: operation should succeed").id(), SceneId::new(1));
     }
 
     #[test]
     fn test_scene_manager_delete_scene() {
         let mut manager = SceneRepository::new();
-        manager.create_scene(SceneId::new(1), "test_scene").unwrap();
+        manager.create_scene(SceneId::new(1), "test_scene").expect("Test: operation should succeed");
         
         let result = manager.delete_scene(SceneId::new(1));
         assert!(result.is_ok());
@@ -560,74 +560,74 @@ mod scene_manager_tests {
     #[test]
     fn test_scene_manager_get_scene() {
         let mut manager = SceneRepository::new();
-        manager.create_scene(SceneId::new(1), "test_scene").unwrap();
+        manager.create_scene(SceneId::new(1), "test_scene").expect("Test: operation should succeed");
         
         let scene = manager.get_scene(SceneId::new(1));
         assert!(scene.is_some());
-        assert_eq!(scene.unwrap().id(), SceneId::new(1));
+        assert_eq!(scene.expect("Test: operation should succeed").id(), SceneId::new(1));
     }
 
     #[test]
     fn test_scene_manager_get_scene_mut() {
         let mut manager = SceneRepository::new();
-        manager.create_scene(SceneId::new(1), "test_scene").unwrap();
+        manager.create_scene(SceneId::new(1), "test_scene").expect("Test: operation should succeed");
         
         if let Some(scene) = manager.get_scene_mut(SceneId::new(1)) {
-            scene.load().unwrap();
+            scene.load().expect("Test: operation should succeed");
         }
         
         let scene = manager.get_scene(SceneId::new(1));
-        assert_eq!(scene.unwrap().state(), SceneState::Loading);
+        assert_eq!(scene.expect("Test: operation should succeed").state(), SceneState::Loading);
     }
 
     #[test]
     fn test_scene_manager_switch_to_scene() {
         let mut manager = SceneRepository::new();
-        manager.create_scene(SceneId::new(1), "scene1").unwrap();
-        manager.create_scene(SceneId::new(2), "scene2").unwrap();
+        manager.create_scene(SceneId::new(1), "scene1").expect("Test: operation should succeed");
+        manager.create_scene(SceneId::new(2), "scene2").expect("Test: operation should succeed");
         
-        manager.get_scene_mut(SceneId::new(1)).unwrap().load().unwrap();
-        manager.get_scene_mut(SceneId::new(1)).unwrap().load().unwrap();
-        manager.get_scene_mut(SceneId::new(1)).unwrap().activate().unwrap();
+        manager.get_scene_mut(SceneId::new(1)).expect("Test: operation should succeed").load().expect("Test: operation should succeed");
+        manager.get_scene_mut(SceneId::new(1)).expect("Test: operation should succeed").load().expect("Test: operation should succeed");
+        manager.get_scene_mut(SceneId::new(1)).expect("Test: operation should succeed").activate().expect("Test: operation should succeed");
         
         let result = manager.switch_to_scene(SceneId::new(2));
         assert!(result.is_ok());
         
-        assert_eq!(manager.active_scene().unwrap().id(), SceneId::new(2));
+        assert_eq!(manager.active_scene().expect("Test: operation should succeed").id(), SceneId::new(2));
     }
 
     #[test]
     fn test_scene_manager_active_scene() {
         let mut manager = SceneRepository::new();
-        manager.create_scene(SceneId::new(1), "test").unwrap();
+        manager.create_scene(SceneId::new(1), "test").expect("Test: operation should succeed");
         
-        manager.get_scene_mut(SceneId::new(1)).unwrap().load().unwrap();
-        manager.get_scene_mut(SceneId::new(1)).unwrap().load().unwrap();
-        manager.get_scene_mut(SceneId::new(1)).unwrap().activate().unwrap();
+        manager.get_scene_mut(SceneId::new(1)).expect("Test: operation should succeed").load().expect("Test: operation should succeed");
+        manager.get_scene_mut(SceneId::new(1)).expect("Test: operation should succeed").load().expect("Test: operation should succeed");
+        manager.get_scene_mut(SceneId::new(1)).expect("Test: operation should succeed").activate().expect("Test: operation should succeed");
         
         let active = manager.active_scene();
         assert!(active.is_some());
-        assert_eq!(active.unwrap().id(), SceneId::new(1));
+        assert_eq!(active.expect("Test: operation should succeed").id(), SceneId::new(1));
     }
 
     #[test]
     fn test_scene_manager_current_scene() {
         let mut manager = SceneRepository::new();
-        manager.create_scene(SceneId::new(1), "test").unwrap();
+        manager.create_scene(SceneId::new(1), "test").expect("Test: operation should succeed");
         
-        manager.get_scene_mut(SceneId::new(1)).unwrap().load().unwrap();
+        manager.get_scene_mut(SceneId::new(1)).expect("Test: operation should succeed").load().expect("Test: operation should succeed");
         
         let current = manager.current_scene();
         assert!(current.is_some());
-        assert_eq!(current.unwrap().id(), SceneId::new(1));
+        assert_eq!(current.expect("Test: operation should succeed").id(), SceneId::new(1));
     }
 
     #[test]
     fn test_scene_manager_scene_ids() {
         let mut manager = SceneRepository::new();
-        manager.create_scene(SceneId::new(1), "scene1").unwrap();
-        manager.create_scene(SceneId::new(2), "scene2").unwrap();
-        manager.create_scene(SceneId::new(3), "scene3").unwrap();
+        manager.create_scene(SceneId::new(1), "scene1").expect("Test: operation should succeed");
+        manager.create_scene(SceneId::new(2), "scene2").expect("Test: operation should succeed");
+        manager.create_scene(SceneId::new(3), "scene3").expect("Test: operation should succeed");
         
         let ids = manager.scene_ids();
         assert_eq!(ids.len(), 3);
@@ -647,7 +647,7 @@ mod scene_edge_cases_tests {
         
         for i in 0..1000 {
             let entity = EntityFactory::create_basic(EntityId::new(i), Vec3::ZERO);
-            scene.add_entity(entity).unwrap();
+            scene.add_entity(entity).expect("Test: operation should succeed");
         }
         
         assert_eq!(scene.total_entity_count(), 1000);
@@ -658,9 +658,9 @@ mod scene_edge_cases_tests {
     fn test_scene_entity_iterators() {
         let mut scene = Scene::new(SceneId::new(1), "test");
         
-        scene.add_entity(EntityFactory::create_basic(EntityId::new(1), Vec3::ZERO)).unwrap();
-        scene.add_entity(EntityFactory::create_basic(EntityId::new(2), Vec3::ZERO)).unwrap();
-        scene.add_entity(EntityFactory::create_basic(EntityId::new(3), Vec3::ZERO)).unwrap();
+        scene.add_entity(EntityFactory::create_basic(EntityId::new(1), Vec3::ZERO)).expect("Test: operation should succeed");
+        scene.add_entity(EntityFactory::create_basic(EntityId::new(2), Vec3::ZERO)).expect("Test: operation should succeed");
+        scene.add_entity(EntityFactory::create_basic(EntityId::new(3), Vec3::ZERO)).expect("Test: operation should succeed");
         
         let count = scene.entities_iter().count();
         assert_eq!(count, 3);
@@ -682,7 +682,7 @@ mod scene_edge_cases_tests {
         let mut scene = Scene::new(SceneId::new(1), "test");
         let initial = scene.last_modified();
         
-        scene.load().unwrap();
+        scene.load().expect("Test: operation should succeed");
         
         assert!(scene.last_modified() > initial);
     }
@@ -696,11 +696,11 @@ mod scene_serialization_tests {
     #[test]
     fn test_scene_serialization() {
         let mut scene = Scene::new(SceneId::new(1), "test_scene");
-        scene.load().unwrap();
-        scene.add_entity(EntityFactory::create_basic(EntityId::new(1), Vec3::ZERO)).unwrap();
+        scene.load().expect("Test: operation should succeed");
+        scene.add_entity(EntityFactory::create_basic(EntityId::new(1), Vec3::ZERO)).expect("Test: operation should succeed");
         
-        let serialized = serde_json::to_string(&scene).unwrap();
-        let deserialized: Scene = serde_json::from_str(&serialized).unwrap();
+        let serialized = serde_json::to_string(&scene).expect("Test: operation should succeed");
+        let deserialized: Scene = serde_json::from_str(&serialized).expect("Test: operation should succeed");
         
         assert_eq!(scene.id(), deserialized.id());
         assert_eq!(scene.name(), deserialized.name());
@@ -710,8 +710,8 @@ mod scene_serialization_tests {
     #[test]
     fn test_scene_id_serialization() {
         let id = SceneId::new(42);
-        let serialized = serde_json::to_string(&id).unwrap();
-        let deserialized: SceneId = serde_json::from_str(&serialized).unwrap();
+        let serialized = serde_json::to_string(&id).expect("Test: operation should succeed");
+        let deserialized: SceneId = serde_json::from_str(&serialized).expect("Test: operation should succeed");
         
         assert_eq!(id, deserialized);
     }
@@ -719,8 +719,8 @@ mod scene_serialization_tests {
     #[test]
     fn test_scene_state_serialization() {
         let state = SceneState::Active;
-        let serialized = serde_json::to_string(&state).unwrap();
-        let deserialized: SceneState = serde_json::from_str(&serialized).unwrap();
+        let serialized = serde_json::to_string(&state).expect("Test: operation should succeed");
+        let deserialized: SceneState = serde_json::from_str(&serialized).expect("Test: operation should succeed");
         
         assert_eq!(state, deserialized);
     }

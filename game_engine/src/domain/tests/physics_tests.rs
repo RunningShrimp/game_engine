@@ -288,7 +288,7 @@ mod tests {
         let mut world = PhysicsWorld::new();
         let body = RigidBody::new_dynamic(RigidBodyState::default());
         let body_id = body.id();
-        world.add_rigid_body(body).unwrap();
+        world.add_rigid_body(body).expect("Test: operation should succeed");
 
         let collider = Collider::new(ShapeType::Sphere { radius: 1.0 });
         let collider_id = collider.id();
@@ -305,7 +305,7 @@ mod tests {
         let mut world = PhysicsWorld::new();
         let body = RigidBody::new_dynamic(RigidBodyState::default());
         let body_id = body.id();
-        world.add_rigid_body(body).unwrap();
+        world.add_rigid_body(body).expect("Test: operation should succeed");
 
         let result = world.remove_rigid_body(body_id);
 
@@ -322,9 +322,9 @@ mod tests {
             ..Default::default()
         });
         let body_id = body.id();
-        world.add_rigid_body(body).unwrap();
+        world.add_rigid_body(body).expect("Test: operation should succeed");
         let collider = Collider::new(ShapeType::Sphere { radius: 1.0 });
-        world.add_collider(body_id, collider).unwrap();
+        world.add_collider(body_id, collider).expect("Test: operation should succeed");
 
         // 执行物理步进
         let result = world.step(0.016);
@@ -333,7 +333,7 @@ mod tests {
         assert!(result.is_ok());
 
         // 验证物体受重力影响下落
-        let updated_body = world.get_rigid_body(body_id).unwrap();
+        let updated_body = world.get_rigid_body(body_id).expect("Test: operation should succeed");
         assert!(updated_body.state().position.y < 10.0);
     }
 

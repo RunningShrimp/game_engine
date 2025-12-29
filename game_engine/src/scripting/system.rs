@@ -83,13 +83,25 @@ impl ScriptSystem {
 
     /// 注册脚本上下文
     pub fn register_context(&self, language: ScriptLanguage, context: Box<dyn ScriptContext>) {
-        let mut contexts = safe_lock(&self.contexts, "ScriptSystem.contexts").expect("Failed to acquire contexts lock");
+        let mut contexts = match safe_lock(&self.contexts, "ScriptSystem.contexts") {
+            Ok(c) => c,
+            Err(e) => {
+                tracing::error!(target: "scripting", "Failed to acquire contexts lock: {}", e);
+                return;
+            }
+        };
         contexts.insert(language, context);
     }
 
     /// 执行脚本
     pub fn execute(&self, language: ScriptLanguage, code: &str) -> ScriptResult {
-        let mut contexts = safe_lock(&self.contexts, "ScriptSystem.contexts").expect("Failed to acquire contexts lock");
+        let mut contexts = match safe_lock(&self.contexts, "ScriptSystem.contexts") {
+            Ok(c) => c,
+            Err(e) => {
+                tracing::error!(target: "scripting", "Failed to acquire contexts lock: {}", e);
+                return ScriptResult::Error(format!("Failed to acquire contexts lock: {}", e));
+            }
+        };
         if let Some(context) = contexts.get_mut(&language) {
             context.execute(code)
         } else {
@@ -114,7 +126,13 @@ impl ScriptSystem {
         name: &str,
         args: &[ScriptValue],
     ) -> ScriptResult {
-        let mut contexts = safe_lock(&self.contexts, "ScriptSystem.contexts").expect("Failed to acquire contexts lock");
+        let mut contexts = match safe_lock(&self.contexts, "ScriptSystem.contexts") {
+            Ok(c) => c,
+            Err(e) => {
+                tracing::error!(target: "scripting", "Failed to acquire contexts lock: {}", e);
+                return ScriptResult::Error(format!("Failed to acquire contexts lock: {}", e));
+            }
+        };
         if let Some(context) = contexts.get_mut(&language) {
             context.call_function(name, args)
         } else {
@@ -129,7 +147,13 @@ impl ScriptSystem {
         name: &str,
         value: ScriptValue,
     ) -> ScriptResult {
-        let mut contexts = safe_lock(&self.contexts, "ScriptSystem.contexts").expect("Failed to acquire contexts lock");
+        let mut contexts = match safe_lock(&self.contexts, "ScriptSystem.contexts") {
+            Ok(c) => c,
+            Err(e) => {
+                tracing::error!(target: "scripting", "Failed to acquire contexts lock: {}", e);
+                return ScriptResult::Error(format!("Failed to acquire contexts lock: {}", e));
+            }
+        };
         if let Some(context) = contexts.get_mut(&language) {
             context.set_global(name, value)
         } else {
@@ -139,7 +163,13 @@ impl ScriptSystem {
 
     /// 获取全局变量
     pub fn get_global(&self, language: ScriptLanguage, name: &str) -> Option<ScriptValue> {
-        let contexts = safe_lock(&self.contexts, "ScriptSystem.contexts").expect("Failed to acquire contexts lock");
+        let contexts = match safe_lock(&self.contexts, "ScriptSystem.contexts") {
+            Ok(c) => c,
+            Err(e) => {
+                tracing::error!(target: "scripting", "Failed to acquire contexts lock: {}", e);
+                return None;
+            }
+        };
         contexts.get(&language).and_then(|ctx| ctx.get_global(name))
     }
 }
@@ -344,22 +374,29 @@ impl JavaScriptContext {
                         });
 
                         // 更新本地缓存
-                        safe_lock(&globals_clone, "JavaScriptContext.globals_cache")
-                            .unwrap()
-                            .insert(name, value);
+                        if let Ok(mut globals) =
+                            safe_lock(&globals_clone, "JavaScriptContext.globals_cache")
+                        {
+                            globals.insert(name, value);
+                        } else {
+                            tracing::error!(target: "scripting", "Failed to acquire globals cache lock for set_global");
+                        }
                         let _ = response.send(result);
                     }
                     JsCommand::GetGlobal(name, response) => {
                         let value = safe_lock(&globals_clone, "JavaScriptContext.globals_cache")
-                            .unwrap()
-                            .get(&name)
-                            .cloned();
+                            .ok()
+                            .and_then(|g| g.get(&name).cloned());
                         let _ = response.send(value);
                     }
                     JsCommand::Reset(response) => {
-                        safe_lock(&globals_clone, "JavaScriptContext.globals_cache")
-                            .unwrap()
-                            .clear();
+                        if let Ok(mut globals) =
+                            safe_lock(&globals_clone, "JavaScriptContext.globals_cache")
+                        {
+                            globals.clear();
+                        } else {
+                            tracing::error!(target: "scripting", "Failed to acquire globals cache lock for reset");
+                        }
                         let _ = response.send(());
                     }
                     JsCommand::Shutdown => break,
@@ -378,7 +415,8 @@ impl ScriptContext for JavaScriptContext {
     fn execute(&mut self, code: &str) -> ScriptResult {
         let (tx, rx) = mpsc::channel();
         if self.sender.send(JsCommand::Execute(code.to_string(), tx)).is_ok() {
-            rx.recv().unwrap_or(ScriptResult::Error("Channel closed".to_string()))
+            // Safe to unwrap_or: channel closure indicates JavaScript thread crashed
+            rx.recv().unwrap_or(ScriptResult::Error("JavaScript thread channel closed".to_string()))
         } else {
             ScriptResult::Error("Failed to send command".to_string())
         }
@@ -391,7 +429,8 @@ impl ScriptContext for JavaScriptContext {
             .send(JsCommand::CallFunction(name.to_string(), args.to_vec(), tx))
             .is_ok()
         {
-            rx.recv().unwrap_or(ScriptResult::Error("Channel closed".to_string()))
+            // Safe to unwrap_or: channel closure indicates JavaScript thread crashed
+            rx.recv().unwrap_or(ScriptResult::Error("JavaScript thread channel closed".to_string()))
         } else {
             ScriptResult::Error("Failed to send command".to_string())
         }
@@ -400,7 +439,8 @@ impl ScriptContext for JavaScriptContext {
     fn set_global(&mut self, name: &str, value: ScriptValue) -> ScriptResult {
         let (tx, rx) = mpsc::channel();
         if self.sender.send(JsCommand::SetGlobal(name.to_string(), value, tx)).is_ok() {
-            rx.recv().unwrap_or(ScriptResult::Error("Channel closed".to_string()))
+            // Safe to unwrap_or: channel closure indicates JavaScript thread crashed
+            rx.recv().unwrap_or(ScriptResult::Error("JavaScript thread channel closed".to_string()))
         } else {
             ScriptResult::Error("Failed to send command".to_string())
         }

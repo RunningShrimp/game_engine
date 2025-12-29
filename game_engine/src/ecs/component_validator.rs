@@ -164,7 +164,15 @@ impl ComponentValidator {
         let component_types: Vec<TypeId> = entity_ref
             .archetype()
             .components()
-            .map(|component_id| world.components().get_info(component_id).unwrap().type_id().unwrap())
+            .filter_map(|component_id| {
+                world.components()
+                    .get_info(component_id)
+                    .and_then(|info| info.type_id().ok())
+                    .or_else(|| {
+                        log::warn!("无法获取组件 {:?} 的类型信息，跳过该组件", component_id);
+                        None
+                    })
+            })
             .collect();
 
         // 检查组件冲突
@@ -261,7 +269,15 @@ impl ComponentValidator {
         let mut component_types: Vec<TypeId> = entity_ref
             .archetype()
             .components()
-            .map(|component_id| world.components().get_info(component_id).unwrap().type_id().unwrap())
+            .filter_map(|component_id| {
+                world.components()
+                    .get_info(component_id)
+                    .and_then(|info| info.type_id().ok())
+                    .or_else(|| {
+                        log::warn!("无法获取组件 {:?} 的类型信息，跳过该组件", component_id);
+                        None
+                    })
+            })
             .collect();
 
         // 添加要插入的组件类型

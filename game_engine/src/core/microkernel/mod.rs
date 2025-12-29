@@ -203,13 +203,18 @@ mod tests {
         let kernel = Microkernel::new();
         let service = DummyService::new("test_service".to_string());
 
-        let service_id = kernel.register_service(service).await.unwrap();
+        let service_id = kernel
+            .register_service(service)
+            .await
+            .expect("Failed to register test_service");
         assert_eq!(kernel.registry().services().await.len(), 1);
 
         // 验证服务已注册，使用实际的元组结构
         let services = kernel.registry().services().await;
         // services 是 Vec<(ServiceId, Arc<Mutex<dyn Service>>)>
-        if let Some((id, _service)) = services.iter().find(|(id, _)| id.to_string() == "test_service") {
+        if let Some((id, _service)) =
+            services.iter().find(|(id, _)| id.to_string() == "test_service")
+        {
             assert_eq!(id.to_string(), "test_service");
         }
     }

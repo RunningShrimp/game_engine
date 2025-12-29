@@ -35,7 +35,10 @@ impl EventId {
         Self {
             timestamp_ns: std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
+                .unwrap_or_else(|_| {
+                    eprintln!("SystemTime is before UNIX_EPOCH, using 0 as timestamp");
+                    std::time::Duration::from_secs(0)
+                })
                 .as_nanos() as i64,
             sequence,
         }
@@ -632,7 +635,7 @@ impl EventSourcingManager {
         // 应用分页
         let offset = query.offset.unwrap_or(0);
         let limit = query.limit;
-        
+
         let mut result = if offset > 0 {
             events.into_iter().skip(offset).collect()
         } else {
@@ -654,12 +657,10 @@ impl EventSourcingManager {
         target_version: u64,
     ) -> Result<(), EventError> {
         let events = self.replay_aggregate_events(aggregate_id, Some(0))?;
-        
+
         // 过滤出目标版本之前的事件
-        let events_to_replay: Vec<_> = events
-            .into_iter()
-            .filter(|e| e.aggregate_version <= target_version)
-            .collect();
+        let events_to_replay: Vec<_> =
+            events.into_iter().filter(|e| e.aggregate_version <= target_version).collect();
 
         // 反序列化并应用事件
         let registry = safe_read(&self.event_registry, "event_registry")
@@ -703,10 +704,14 @@ impl EventSourcingManager {
             }
 
             // 时间范围
-            if stats.oldest_event_time.is_none() || event.id.timestamp_ns < stats.oldest_event_time.unwrap() {
+            let should_update_oldest = stats.oldest_event_time
+                .map_or(true, |oldest| event.id.timestamp_ns < oldest);
+            if should_update_oldest {
                 stats.oldest_event_time = Some(event.id.timestamp_ns);
             }
-            if stats.newest_event_time.is_none() || event.id.timestamp_ns > stats.newest_event_time.unwrap() {
+            let should_update_newest = stats.newest_event_time
+                .map_or(true, |newest| event.id.timestamp_ns > newest);
+            if should_update_newest {
                 stats.newest_event_time = Some(event.id.timestamp_ns);
             }
         }
@@ -851,7 +856,10 @@ impl EventProjectionManager {
     }
 
     /// 注册投影
-    pub fn register_projection(&self, projection: Box<dyn EventProjection>) -> Result<(), EventError> {
+    pub fn register_projection(
+        &self,
+        projection: Box<dyn EventProjection>,
+    ) -> Result<(), EventError> {
         let name = projection.name().to_string();
         let mut projections = safe_write(&self.projections, "projections")
             .map_err(|e| EventError::ApplyFailed(format!("Failed to acquire lock: {}", e)))?;
@@ -866,11 +874,11 @@ impl EventProjectionManager {
         // 或者使用消息传递模式
         let mut projections = safe_write(&self.projections, "projections")
             .map_err(|e| EventError::ApplyFailed(format!("Failed to acquire lock: {}", e)))?;
-        
+
         for projection in projections.values_mut() {
             projection.handle_event(event)?;
         }
-        
+
         Ok(())
     }
 }
@@ -960,9 +968,9 @@ mod tests {
             scene_name: "Test Scene".to_string(),
         };
 
-        let event_id = manager.save_event(&event, Some("Scene_1"), 1, &World::default()).unwrap();
+        let event_id = manager.save_event(&event, Some("Scene_1"), 1, &World::default()).expect("Test: save_event should succeed");
 
-        let stored = safe_read(&store, "event_store").unwrap().get_event(event_id).unwrap();
+        let stored = safe_read(&store, "event_store").expect("Test: event_store lock should be available").get_event(event_id).expect("Test: event should be found");
 
         assert_eq!(stored.event_type, "SceneLoaded");
         assert_eq!(stored.aggregate_id, Some("Scene_1".to_string()));
@@ -978,12 +986,12 @@ mod tests {
         let manager = EventSourcingManager::new(store.clone(), snapshot_store);
 
         let mut scene = Scene::new(SceneId(1), "Test Scene");
-        scene.load().unwrap(); // 这会添加SceneLoadedEvent
+        scene.load().expect("Test: scene load should succeed"); // 这会添加SceneLoadedEvent
 
-        let event_id = manager.commit_aggregate_events(&mut scene, &mut World::default()).unwrap();
+        let event_id = manager.commit_aggregate_events(&mut scene, &mut World::default()).expect("Test: commit events should succeed");
 
         // 验证事件已保存
-        let stored = safe_read(&store, "event_store").unwrap().get_event(event_id).unwrap();
+        let stored = safe_read(&store, "event_store").expect("Test: event_store lock should be available").get_event(event_id).expect("Test: event should be found");
         assert_eq!(stored.event_type, "SceneLoaded");
 
         // 验证事件已清除
@@ -999,22 +1007,20 @@ mod tests {
         let manager = EventSourcingManager::new(store.clone(), snapshot_store);
 
         let mut scene = Scene::new(SceneId(1), "Test Scene");
-        scene.load().unwrap();
-        scene.activate().unwrap();
+        scene.load().expect("Test: scene load should succeed");
+        scene.activate().expect("Test: scene activate should succeed");
 
-        manager.commit_aggregate_events(&mut scene, &mut World::default()).unwrap();
+        manager.commit_aggregate_events(&mut scene, &mut World::default()).expect("Test: commit events should succeed");
 
-        let events = manager.replay_aggregate_events("Scene_1", None).unwrap();
+        let events = manager.replay_aggregate_events("Scene_1", None).expect("Test: replay events should succeed");
 
         assert_eq!(events.len(), 2); // SceneLoaded + SceneActivated
     }
 
     #[test]
     fn test_event_query() {
-        let query = EventQuery::by_aggregate("Scene_1")
-            .with_limit(10)
-            .with_offset(0);
-        
+        let query = EventQuery::by_aggregate("Scene_1").with_limit(10).with_offset(0);
+
         assert_eq!(query.aggregate_id, Some("Scene_1".to_string()));
         assert_eq!(query.limit, Some(10));
         assert_eq!(query.offset, Some(0));
@@ -1023,10 +1029,10 @@ mod tests {
     #[test]
     fn test_event_stream_processor() {
         let mut processor = EventStreamProcessor::new();
-        
+
         // 添加过滤器：只保留特定类型的事件
         processor.add_filter(|e| e.event_type == "SceneLoaded");
-        
+
         let events = vec![
             StoredEvent {
                 id: EventId::now(1),
@@ -1043,7 +1049,7 @@ mod tests {
                 aggregate_version: 2,
             },
         ];
-        
+
         let filtered = processor.process(events);
         assert_eq!(filtered.len(), 1);
         assert_eq!(filtered[0].event_type, "SceneLoaded");

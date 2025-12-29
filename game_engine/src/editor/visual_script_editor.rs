@@ -212,7 +212,7 @@ impl VisualScriptNode {
     pub fn new(id: u64, node_type: NodeType, position: Vec2) -> Self {
         let node_type_clone = node_type.clone();
         let (name, input_ports, output_ports) = Self::create_ports_for_type(&node_type_clone);
-        
+
         Self {
             id,
             node_type,
@@ -237,17 +237,17 @@ impl VisualScriptNode {
                     EventType::OnCollision => "On Collision",
                     EventType::Custom(s) => s.as_str(),
                 };
-                
+
                 let output_ports = vec![Port {
                     id: 0,
                     port_type: PortType::ExecutionOut,
                     name: "Out".to_string(),
                     position: Vec2::new(150.0, 50.0),
                 }];
-                
+
                 (name.to_string(), Vec::new(), output_ports)
             }
-            
+
             NodeType::Condition(cond_type) => {
                 let name = match cond_type {
                     ConditionType::If => "If",
@@ -260,7 +260,7 @@ impl VisualScriptNode {
                         BooleanOp::Xor => "Xor",
                     },
                 };
-                
+
                 let input_ports = vec![
                     Port {
                         id: 0,
@@ -275,7 +275,7 @@ impl VisualScriptNode {
                         position: Vec2::new(0.0, 50.0),
                     },
                 ];
-                
+
                 let output_ports = vec![
                     Port {
                         id: 0,
@@ -290,10 +290,10 @@ impl VisualScriptNode {
                         position: Vec2::new(150.0, 70.0),
                     },
                 ];
-                
+
                 (name.to_string(), input_ports, output_ports)
             }
-            
+
             NodeType::Action(action_type) => {
                 let name = match action_type {
                     ActionType::Move => "Move",
@@ -303,28 +303,24 @@ impl VisualScriptNode {
                     ActionType::SetVariable => "Set Variable",
                     ActionType::SendEvent => "Send Event",
                 };
-                
-                let input_ports = vec![
-                    Port {
-                        id: 0,
-                        port_type: PortType::ExecutionIn,
-                        name: "In".to_string(),
-                        position: Vec2::new(0.0, 50.0),
-                    },
-                ];
-                
-                let output_ports = vec![
-                    Port {
-                        id: 0,
-                        port_type: PortType::ExecutionOut,
-                        name: "Out".to_string(),
-                        position: Vec2::new(150.0, 50.0),
-                    },
-                ];
-                
+
+                let input_ports = vec![Port {
+                    id: 0,
+                    port_type: PortType::ExecutionIn,
+                    name: "In".to_string(),
+                    position: Vec2::new(0.0, 50.0),
+                }];
+
+                let output_ports = vec![Port {
+                    id: 0,
+                    port_type: PortType::ExecutionOut,
+                    name: "Out".to_string(),
+                    position: Vec2::new(150.0, 50.0),
+                }];
+
                 (name.to_string(), input_ports, output_ports)
             }
-            
+
             NodeType::Variable(var_type) => {
                 let name = match var_type {
                     VariableType::Get => "Get Variable",
@@ -332,30 +328,28 @@ impl VisualScriptNode {
                     VariableType::Local => "Local Variable",
                     VariableType::Global => "Global Variable",
                 };
-                
+
                 let input_ports = if matches!(var_type, VariableType::Set) {
-                    vec![
-                        Port {
-                            id: 0,
-                            port_type: PortType::DataIn(DataType::Object),
-                            name: "Value".to_string(),
-                            position: Vec2::new(0.0, 50.0),
-                        },
-                    ]
+                    vec![Port {
+                        id: 0,
+                        port_type: PortType::DataIn(DataType::Object),
+                        name: "Value".to_string(),
+                        position: Vec2::new(0.0, 50.0),
+                    }]
                 } else {
                     Vec::new()
                 };
-                
+
                 let output_ports = vec![Port {
                     id: 0,
                     port_type: PortType::DataOut(DataType::Object),
                     name: "Value".to_string(),
                     position: Vec2::new(150.0, 50.0),
                 }];
-                
+
                 (name.to_string(), input_ports, output_ports)
             }
-            
+
             NodeType::Flow(flow_type) => {
                 let name = match flow_type {
                     FlowType::Sequence => "Sequence",
@@ -364,24 +358,24 @@ impl VisualScriptNode {
                     FlowType::Delay => "Delay",
                     FlowType::Wait => "Wait",
                 };
-                
+
                 let input_ports = vec![Port {
                     id: 0,
                     port_type: PortType::ExecutionIn,
                     name: "In".to_string(),
                     position: Vec2::new(0.0, 50.0),
                 }];
-                
+
                 let output_ports = vec![Port {
                     id: 0,
                     port_type: PortType::ExecutionOut,
                     name: "Out".to_string(),
                     position: Vec2::new(150.0, 50.0),
                 }];
-                
+
                 (name.to_string(), input_ports, output_ports)
             }
-            
+
             NodeType::Math(op) => {
                 let name = match op {
                     MathOperation::Add => "Add",
@@ -395,7 +389,7 @@ impl VisualScriptNode {
                     MathOperation::Clamp => "Clamp",
                     MathOperation::Lerp => "Lerp",
                 };
-                
+
                 let input_ports = vec![
                     Port {
                         id: 0,
@@ -410,14 +404,14 @@ impl VisualScriptNode {
                         position: Vec2::new(0.0, 70.0),
                     },
                 ];
-                
+
                 let output_ports = vec![Port {
                     id: 0,
                     port_type: PortType::DataOut(DataType::Float),
                     name: "Result".to_string(),
                     position: Vec2::new(150.0, 50.0),
                 }];
-                
+
                 (name.to_string(), input_ports, output_ports)
             }
         }
@@ -438,7 +432,7 @@ impl VisualScriptNode {
         } else {
             &self.output_ports
         };
-        
+
         if let Some(port) = ports.iter().find(|p| p.id == port_id) {
             egui::pos2(
                 self.position.x + port.position.x,
@@ -508,9 +502,7 @@ impl VisualScript {
     pub fn remove_node(&mut self, node_id: u64) {
         self.nodes.retain(|n| n.id != node_id);
         // 删除相关连接
-        self.connections.retain(|c| {
-            c.from_node != node_id && c.to_node != node_id
-        });
+        self.connections.retain(|c| c.from_node != node_id && c.to_node != node_id);
     }
 
     /// 添加连接
@@ -529,41 +521,19 @@ impl VisualScript {
     /// 验证连接
     fn validate_connection(&self, connection: &Connection) -> Result<(), ConnectionError> {
         // 检查节点是否存在
-        let from_node = self.nodes.iter().find(|n| n.id == connection.from_node);
-        let to_node = self.nodes.iter().find(|n| n.id == connection.to_node);
-
-        if from_node.is_none() {
-            return Err(ConnectionError::NodeNotFound(connection.from_node));
-        }
-        if to_node.is_none() {
-            return Err(ConnectionError::NodeNotFound(connection.to_node));
-        }
-
-        let from_node = from_node.unwrap();
-        let to_node = to_node.unwrap();
+        let from_node = self.nodes.iter().find(|n| n.id == connection.from_node)
+            .ok_or(ConnectionError::NodeNotFound(connection.from_node))?;
+        let to_node = self.nodes.iter().find(|n| n.id == connection.to_node)
+            .ok_or(ConnectionError::NodeNotFound(connection.to_node))?;
 
         // 检查端口是否存在
-        let from_port = from_node
-            .output_ports
-            .iter()
-            .find(|p| p.id == connection.from_port);
-        let to_port = to_node
-            .input_ports
-            .iter()
-            .find(|p| p.id == connection.to_port);
-
-        if from_port.is_none() {
-            return Err(ConnectionError::PortNotFound);
-        }
-        if to_port.is_none() {
-            return Err(ConnectionError::PortNotFound);
-        }
+        let from_port = from_node.output_ports.iter().find(|p| p.id == connection.from_port)
+            .ok_or(ConnectionError::PortNotFound)?;
+        let to_port = to_node.input_ports.iter().find(|p| p.id == connection.to_port)
+            .ok_or(ConnectionError::PortNotFound)?;
 
         // 检查连接类型是否匹配
-        let from_port_type = &from_port.unwrap().port_type;
-        let to_port_type = &to_port.unwrap().port_type;
-
-        match (from_port_type, to_port_type) {
+        match (&from_port.port_type, &to_port.port_type) {
             (PortType::ExecutionOut, PortType::ExecutionIn) => Ok(()),
             (PortType::DataOut(from_type), PortType::DataIn(to_type)) => {
                 if from_type == to_type {
@@ -659,12 +629,12 @@ impl VisualScriptEditor {
     pub fn add_node(&mut self, node_type: NodeType, position: Vec2) -> u64 {
         let id = self.next_node_id;
         self.next_node_id += 1;
-        
+
         let mut node = VisualScriptNode::new(id, node_type, position);
         if self.snap_to_grid {
             node.position = self.snap_position(position);
         }
-        
+
         self.script.add_node(node);
         id
     }
@@ -866,7 +836,10 @@ impl VisualScriptEditor {
                     node_rect.min.x * self.zoom + self.view_offset.x,
                     node_rect.min.y * self.zoom + self.view_offset.y,
                 ),
-                egui::vec2(node_rect.width() * self.zoom, node_rect.height() * self.zoom),
+                egui::vec2(
+                    node_rect.width() * self.zoom,
+                    node_rect.height() * self.zoom,
+                ),
             );
 
             // 只绘制可见的节点
@@ -893,11 +866,7 @@ impl VisualScriptEditor {
                 screen_rect.min,
                 egui::vec2(screen_rect.width(), 25.0 * self.zoom),
             );
-            painter.rect_filled(
-                title_rect,
-                0.0,
-                egui::Color32::from_rgb(30, 40, 50),
-            );
+            painter.rect_filled(title_rect, 0.0, egui::Color32::from_rgb(30, 40, 50));
             painter.text(
                 egui::pos2(
                     screen_rect.min.x + 5.0 * self.zoom,
@@ -988,14 +957,18 @@ impl VisualScriptEditor {
             points.push(point);
         }
 
-        painter.add(egui::Shape::line(
-            points,
-            egui::Stroke::new(2.0, color),
-        ));
+        painter.add(egui::Shape::line(points, egui::Stroke::new(2.0, color)));
     }
 
     /// 三次贝塞尔曲线插值
-    fn cubic_bezier(&self, p0: egui::Pos2, p1: egui::Pos2, p2: egui::Pos2, p3: egui::Pos2, t: f32) -> egui::Pos2 {
+    fn cubic_bezier(
+        &self,
+        p0: egui::Pos2,
+        p1: egui::Pos2,
+        p2: egui::Pos2,
+        p3: egui::Pos2,
+        t: f32,
+    ) -> egui::Pos2 {
         let t2 = t * t;
         let t3 = t2 * t;
         let mt = 1.0 - t;
@@ -1012,39 +985,40 @@ impl VisualScriptEditor {
     fn handle_interaction(&mut self, response: &egui::Response, _viewport: egui::Rect) {
         // 处理点击
         if response.clicked()
-            && let Some(click_pos) = response.interact_pointer_pos() {
-                let graph_pos = egui::pos2(
-                    (click_pos.x - self.view_offset.x) / self.zoom,
-                    (click_pos.y - self.view_offset.y) / self.zoom,
-                );
+            && let Some(click_pos) = response.interact_pointer_pos()
+        {
+            let graph_pos = egui::pos2(
+                (click_pos.x - self.view_offset.x) / self.zoom,
+                (click_pos.y - self.view_offset.y) / self.zoom,
+            );
 
-                // 检查是否点击了节点
-                let mut clicked_node = None;
-                for node in &self.script.nodes {
-                    if node.rect().contains(graph_pos) {
-                        clicked_node = Some(node.id);
-                        break;
-                    }
-                }
-
-                if let Some(node_id) = clicked_node {
-                    if !response.ctx.input(|i| i.modifiers.ctrl) {
-                        self.selected_nodes.clear();
-                    }
-                    if !self.selected_nodes.contains(&node_id) {
-                        self.selected_nodes.push(node_id);
-                    }
-                } else if !response.ctx.input(|i| i.modifiers.ctrl) {
-                    self.selected_nodes.clear();
-                }
-
-                // 更新节点选中状态
-                for i in 0..self.script.nodes.len() {
-                    if let Some(node) = self.script.nodes.get_mut(i) {
-                        node.selected = self.selected_nodes.contains(&node.id);
-                    }
+            // 检查是否点击了节点
+            let mut clicked_node = None;
+            for node in &self.script.nodes {
+                if node.rect().contains(graph_pos) {
+                    clicked_node = Some(node.id);
+                    break;
                 }
             }
+
+            if let Some(node_id) = clicked_node {
+                if !response.ctx.input(|i| i.modifiers.ctrl) {
+                    self.selected_nodes.clear();
+                }
+                if !self.selected_nodes.contains(&node_id) {
+                    self.selected_nodes.push(node_id);
+                }
+            } else if !response.ctx.input(|i| i.modifiers.ctrl) {
+                self.selected_nodes.clear();
+            }
+
+            // 更新节点选中状态
+            for i in 0..self.script.nodes.len() {
+                if let Some(node) = self.script.nodes.get_mut(i) {
+                    node.selected = self.selected_nodes.contains(&node.id);
+                }
+            }
+        }
 
         // 处理拖拽
         if response.dragged() {
@@ -1054,23 +1028,24 @@ impl VisualScriptEditor {
             if let Some(node_id) = self.dragging_node {
                 // 先找到节点索引
                 let node_idx_opt = self.script.nodes.iter().position(|n| n.id == node_id);
-                
+
                 // 预先计算 snap_to_grid 和 grid_size，避免借用冲突
                 let snap_to_grid = self.snap_to_grid;
                 let grid_size = self.grid_size;
-                
+
                 if let Some(node_idx) = node_idx_opt
                     && node_idx < self.script.nodes.len()
-                        && let Some(node) = self.script.nodes.get_mut(node_idx) {
-                            node.position += graph_delta;
-                            if snap_to_grid {
-                                // 直接计算 snap_position，避免调用 self 方法
-                                node.position = Vec2::new(
-                                    (node.position.x / grid_size).round() * grid_size,
-                                    (node.position.y / grid_size).round() * grid_size,
-                                );
-                            }
-                        }
+                    && let Some(node) = self.script.nodes.get_mut(node_idx)
+                {
+                    node.position += graph_delta;
+                    if snap_to_grid {
+                        // 直接计算 snap_position，避免调用 self 方法
+                        node.position = Vec2::new(
+                            (node.position.x / grid_size).round() * grid_size,
+                            (node.position.y / grid_size).round() * grid_size,
+                        );
+                    }
+                }
             } else {
                 // 拖拽视图
                 self.view_offset += Vec2::new(delta.x, delta.y);
@@ -1079,21 +1054,22 @@ impl VisualScriptEditor {
 
         // 开始拖拽
         if response.drag_started()
-            && let Some(click_pos) = response.interact_pointer_pos() {
-                let graph_pos = egui::pos2(
-                    (click_pos.x - self.view_offset.x) / self.zoom,
-                    (click_pos.y - self.view_offset.y) / self.zoom,
-                );
+            && let Some(click_pos) = response.interact_pointer_pos()
+        {
+            let graph_pos = egui::pos2(
+                (click_pos.x - self.view_offset.x) / self.zoom,
+                (click_pos.y - self.view_offset.y) / self.zoom,
+            );
 
-                // 检查是否开始拖拽节点
-                for node in &self.script.nodes {
-                    if node.rect().contains(graph_pos) {
-                        self.dragging_node = Some(node.id);
-                        self.drag_start = Some(Vec2::new(graph_pos.x, graph_pos.y));
-                        break;
-                    }
+            // 检查是否开始拖拽节点
+            for node in &self.script.nodes {
+                if node.rect().contains(graph_pos) {
+                    self.dragging_node = Some(node.id);
+                    self.drag_start = Some(Vec2::new(graph_pos.x, graph_pos.y));
+                    break;
                 }
             }
+        }
 
         // 结束拖拽
         if response.drag_stopped() {
@@ -1118,7 +1094,10 @@ impl VisualScriptEditor {
     /// # 返回
     ///
     /// 成功返回Ok(())，失败返回错误信息
-    pub fn save_to_file(&mut self, path: &std::path::Path) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn save_to_file(
+        &mut self,
+        path: &std::path::Path,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let json = serde_json::to_string_pretty(&self.script)?;
         std::fs::write(path, json)?;
         self.current_file_path = Some(path.to_path_buf());
@@ -1141,7 +1120,10 @@ impl VisualScriptEditor {
     ///
     /// 加载成功后，会重置编辑器状态（视图偏移、缩放、选中等），
     /// 但保留脚本内容（节点和连接）。
-    pub fn load_from_file(&mut self, path: &std::path::Path) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn load_from_file(
+        &mut self,
+        path: &std::path::Path,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let json = std::fs::read_to_string(path)?;
         let script: VisualScript = serde_json::from_str(&json)?;
 
@@ -1192,7 +1174,7 @@ mod tests {
         let mut editor = VisualScriptEditor::new();
         let node1 = editor.add_node(NodeType::Event(EventType::OnStart), Vec2::new(100.0, 100.0));
         let node2 = editor.add_node(NodeType::Action(ActionType::Move), Vec2::new(300.0, 100.0));
-        
+
         let result = editor.add_connection(node1, 0, node2, 0);
         assert!(result.is_ok());
         assert_eq!(editor.script.connections.len(), 1);
@@ -1203,10 +1185,9 @@ mod tests {
         let mut editor = VisualScriptEditor::new();
         let node1 = editor.add_node(NodeType::Event(EventType::OnStart), Vec2::new(100.0, 100.0));
         let node2 = editor.add_node(NodeType::Action(ActionType::Move), Vec2::new(300.0, 100.0));
-        
+
         // 无效连接（端口不存在）
         let result = editor.add_connection(node1, 999, node2, 0);
         assert!(result.is_err());
     }
 }
-

@@ -3,7 +3,10 @@
 
 use crate::domain::entity::{EntityId, GameEntity};
 use crate::domain::errors::{CompensationAction, DomainError, RecoveryStrategy, SceneError};
-use crate::domain::events::{AggregateEventQueue, AggregateRoot, DomainEvent, EntityAddedEvent, SceneActivatedEvent, SceneLoadedEvent};
+use crate::domain::events::{
+    AggregateEventQueue, AggregateRoot, DomainEvent, EntityAddedEvent, SceneActivatedEvent,
+    SceneLoadedEvent,
+};
 use crate::impl_default;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -216,7 +219,7 @@ impl Scene {
     /// use game_engine::domain::scene::{Scene, SceneId};
     ///
     /// // 有效的场景名称
-    /// let scene = Scene::try_new(SceneId(1), "Main Level").unwrap();
+    /// let scene = Scene::try_new(SceneId(1), "Main Level").expect("Test: operation should succeed");
     ///
     /// // 无效的场景名称
     /// let result = Scene::try_new(SceneId(2), "");
@@ -504,9 +507,7 @@ impl Scene {
 
     /// 查找实体（按名称）
     pub fn find_entity_by_name(&self, name: &str) -> Option<&GameEntity> {
-        self.entities
-            .values()
-            .find(|e| e.name.as_deref() == Some(name))
+        self.entities.values().find(|e| e.name.as_deref() == Some(name))
     }
 
     /// 获取所有实体ID
@@ -608,11 +609,7 @@ impl Scene {
 
         // 不变式4：活跃场景最多只能有一个相机
         if self.state == SceneState::Active {
-            let camera_count = self
-                .entities
-                .values()
-                .filter(|e| e.camera.is_some())
-                .count();
+            let camera_count = self.entities.values().filter(|e| e.camera.is_some()).count();
 
             if camera_count > 1 {
                 return Err(DomainError::Scene(SceneError::ComponentNotFound(format!(
@@ -622,11 +619,7 @@ impl Scene {
             }
 
             // 不变式5：场景激活时，所有实体必须激活
-            let inactive_count = self
-                .entities
-                .values()
-                .filter(|e| !e.is_active())
-                .count();
+            let inactive_count = self.entities.values().filter(|e| !e.is_active()).count();
 
             if inactive_count > 0 {
                 return Err(DomainError::Scene(SceneError::ComponentNotFound(format!(
@@ -652,11 +645,7 @@ impl Scene {
         }
 
         if self.state == SceneState::Active {
-            let camera_count = self
-                .entities
-                .values()
-                .filter(|e| e.camera.is_some())
-                .count();
+            let camera_count = self.entities.values().filter(|e| e.camera.is_some()).count();
 
             if camera_count > 1 {
                 return Err(DomainError::Scene(SceneError::ComponentNotFound(format!(
@@ -821,6 +810,9 @@ impl_default!(SceneRepository {
     last_updated: Self::current_timestamp(),
 });
 
+/// Type alias for backwards compatibility with tests
+pub type SceneManager = SceneRepository;
+
 impl SceneRepository {
     pub fn new() -> Self {
         Self::default()
@@ -892,9 +884,10 @@ impl SceneRepository {
     pub fn switch_to_scene(&mut self, id: SceneId) -> Result<(), DomainError> {
         // 停用当前场景
         if let Some(current_id) = self.active_scene
-            && let Some(current_scene) = self.scenes.get_mut(&current_id) {
-                current_scene.deactivate()?;
-            }
+            && let Some(current_scene) = self.scenes.get_mut(&current_id)
+        {
+            current_scene.deactivate()?;
+        }
 
         // 激活新场景
         let scene = self.scenes.get_mut(&id).ok_or_else(|| {
@@ -914,6 +907,11 @@ impl SceneRepository {
     /// 获取所有场景ID
     pub fn scene_ids(&self) -> Vec<SceneId> {
         self.scenes.keys().cloned().collect()
+    }
+
+    /// 获取场景数量
+    pub fn scene_count(&self) -> usize {
+        self.scenes.len()
     }
 
     /// 更新所有场景
@@ -968,32 +966,32 @@ mod tests {
     fn test_scene_lifecycle() {
         let mut scene = Scene::new(SceneId(1), "Test Scene");
 
-        scene.load().unwrap();
+        scene.load().expect("Test: operation should succeed");
         assert_eq!(scene.state, SceneState::Loaded);
 
-        scene.activate().unwrap();
+        scene.activate().expect("Test: operation should succeed");
         assert_eq!(scene.state, SceneState::Active);
 
-        scene.deactivate().unwrap();
+        scene.deactivate().expect("Test: operation should succeed");
         assert_eq!(scene.state, SceneState::Inactive);
 
-        scene.unload().unwrap();
+        scene.unload().expect("Test: operation should succeed");
         assert_eq!(scene.state, SceneState::Unloaded);
     }
 
     #[test]
     fn test_scene_entity_management() {
         let mut scene = Scene::new(SceneId(1), "Test Scene");
-        scene.load().unwrap();
-        scene.activate().unwrap();
+        scene.load().expect("Test: operation should succeed");
+        scene.activate().expect("Test: operation should succeed");
 
         let entity = EntityFactory::create_basic(EntityId(1), Vec3::ZERO);
-        scene.add_entity(entity).unwrap();
+        scene.add_entity(entity).expect("Test: operation should succeed");
 
         assert_eq!(scene.total_entity_count(), 1);
         assert_eq!(scene.active_entity_count(), 1);
 
-        let removed = scene.remove_entity(EntityId(1)).unwrap();
+        let removed = scene.remove_entity(EntityId(1)).expect("Test: operation should succeed");
         assert_eq!(removed.id, EntityId(1));
         assert_eq!(scene.total_entity_count(), 0);
     }
@@ -1001,10 +999,10 @@ mod tests {
     #[test]
     fn test_scene_duplicate_entity_error() {
         let mut scene = Scene::new(SceneId(1), "Test Scene");
-        scene.load().unwrap();
+        scene.load().expect("Test: operation should succeed");
 
         let entity1 = EntityFactory::create_basic(EntityId(1), Vec3::ZERO);
-        scene.add_entity(entity1).unwrap();
+        scene.add_entity(entity1).expect("Test: operation should succeed");
 
         // 尝试添加重复ID的实体应该失败
         let entity2 = EntityFactory::create_basic(EntityId(1), Vec3::new(1.0, 1.0, 1.0));
@@ -1022,43 +1020,41 @@ mod tests {
 
         // 测试不变式2：实体ID唯一性（通过add_entity已保证，但验证方法会检查）
         let mut scene = Scene::new(SceneId(1), "Test Scene");
-        scene.load().unwrap();
+        scene.load().expect("Test: operation should succeed");
         let entity1 = EntityFactory::create_basic(EntityId(1), Vec3::ZERO);
-        scene.add_entity(entity1).unwrap();
+        scene.add_entity(entity1).expect("Test: operation should succeed");
         assert!(scene.validate().is_ok());
 
         // 测试不变式3：所有实体必须有效
         let mut scene = Scene::new(SceneId(1), "Test Scene");
-        scene.load().unwrap();
-        let mut invalid_entity = EntityFactory::create_sprite(
-            EntityId(1),
-            Vec3::ZERO,
-            crate::ecs::Sprite::default(),
-        );
+        scene.load().expect("Test: operation should succeed");
+        let mut invalid_entity =
+            EntityFactory::create_sprite(EntityId(1), Vec3::ZERO, crate::ecs::Sprite::default());
         invalid_entity.camera = Some(Camera::default()); // 违反实体不变式
         scene.entities.insert(EntityId(1), invalid_entity);
         assert!(scene.validate().is_err());
 
         // 测试不变式4：活跃场景最多只能有一个相机
         let mut scene = Scene::new(SceneId(1), "Test Scene");
-        scene.load().unwrap();
-        scene.activate().unwrap();
+        scene.load().expect("Test: operation should succeed");
+        scene.activate().expect("Test: operation should succeed");
 
         let entity1 = EntityFactory::create_camera(EntityId(1), Vec3::ZERO, Camera::default());
-        scene.add_entity(entity1).unwrap();
+        scene.add_entity(entity1).expect("Test: operation should succeed");
         assert!(scene.validate().is_ok());
 
-        let entity2 = EntityFactory::create_camera(EntityId(2), Vec3::new(1.0, 0.0, 0.0), Camera::default());
+        let entity2 =
+            EntityFactory::create_camera(EntityId(2), Vec3::new(1.0, 0.0, 0.0), Camera::default());
         let result = scene.add_entity(entity2);
         assert!(result.is_err()); // 应该失败，因为已经有相机了
 
         // 测试不变式5：场景激活时，所有实体必须激活
         let mut scene = Scene::new(SceneId(1), "Test Scene");
-        scene.load().unwrap();
+        scene.load().expect("Test: operation should succeed");
         let mut entity = EntityFactory::create_basic(EntityId(1), Vec3::ZERO);
-        entity.deactivate().unwrap();
+        entity.deactivate().expect("Test: operation should succeed");
         scene.entities.insert(EntityId(1), entity);
-        scene.activate().unwrap(); // activate会激活所有实体，所以应该通过
+        scene.activate().expect("Test: operation should succeed"); // activate会激活所有实体，所以应该通过
         assert!(scene.validate().is_ok());
     }
 
@@ -1066,8 +1062,8 @@ mod tests {
     fn test_scene_invariants_camera_limit() {
         // 测试相机数量限制不变式
         let mut scene = Scene::new(SceneId(1), "Test Scene");
-        scene.load().unwrap();
-        scene.activate().unwrap();
+        scene.load().expect("Test: operation should succeed");
+        scene.activate().expect("Test: operation should succeed");
 
         // 添加第一个相机（应该成功）
         let entity1 = EntityFactory::create_camera(EntityId(1), Vec3::ZERO, Camera::default());
@@ -1075,7 +1071,8 @@ mod tests {
         assert!(scene.validate().is_ok());
 
         // 尝试添加第二个相机（应该失败）
-        let entity2 = EntityFactory::create_camera(EntityId(2), Vec3::new(1.0, 0.0, 0.0), Camera::default());
+        let entity2 =
+            EntityFactory::create_camera(EntityId(2), Vec3::new(1.0, 0.0, 0.0), Camera::default());
         let result = scene.add_entity(entity2);
         assert!(result.is_err());
         if let Err(DomainError::Scene(SceneError::ComponentNotFound(msg))) = result {
@@ -1089,11 +1086,11 @@ mod tests {
     fn test_scene_invariants_entity_activation() {
         // 测试场景激活时实体必须激活的不变式
         let mut scene = Scene::new(SceneId(1), "Test Scene");
-        scene.load().unwrap();
+        scene.load().expect("Test: operation should succeed");
 
         // 添加一个非活跃实体
         let mut entity = EntityFactory::create_basic(EntityId(1), Vec3::ZERO);
-        entity.deactivate().unwrap();
+        entity.deactivate().expect("Test: operation should succeed");
         scene.entities.insert(EntityId(1), entity);
 
         // 激活场景（应该自动激活所有实体）
@@ -1101,7 +1098,7 @@ mod tests {
         assert!(scene.validate().is_ok());
 
         // 验证实体已激活
-        assert!(scene.get_entity(EntityId(1)).unwrap().is_active());
+        assert!(scene.get_entity(EntityId(1)).expect("Test: operation should succeed").is_active());
     }
 
     #[test]
@@ -1113,15 +1110,15 @@ mod tests {
         assert!(result.is_err());
 
         // 正确的状态转换
-        scene.load().unwrap();
-        scene.activate().unwrap();
+        scene.load().expect("Test: operation should succeed");
+        scene.activate().expect("Test: operation should succeed");
         assert_eq!(scene.state, SceneState::Active);
     }
 
     #[test]
     fn test_scene_remove_nonexistent_entity() {
         let mut scene = Scene::new(SceneId(1), "Test Scene");
-        scene.load().unwrap();
+        scene.load().expect("Test: operation should succeed");
 
         // 尝试移除不存在的实体应该失败
         let result = scene.remove_entity(EntityId(999));
@@ -1132,13 +1129,13 @@ mod tests {
     #[test]
     fn test_scene_entity_count() {
         let mut scene = Scene::new(SceneId(1), "Test Scene");
-        scene.load().unwrap();
-        scene.activate().unwrap();
+        scene.load().expect("Test: operation should succeed");
+        scene.activate().expect("Test: operation should succeed");
 
         // 添加多个实体
         for i in 1..=5 {
             let entity = EntityFactory::create_basic(EntityId(i), Vec3::ZERO);
-            scene.add_entity(entity).unwrap();
+            scene.add_entity(entity).expect("Test: operation should succeed");
         }
 
         assert_eq!(scene.total_entity_count(), 5);
@@ -1146,7 +1143,7 @@ mod tests {
 
         // 停用一个实体
         if let Some(entity) = scene.get_entity_mut(EntityId(3)) {
-            entity.deactivate().unwrap();
+            entity.deactivate().expect("Test: operation should succeed");
         }
 
         assert_eq!(scene.total_entity_count(), 5);
@@ -1163,7 +1160,7 @@ mod tests {
     fn test_scene_add_entity_validation() {
         // 测试业务规则：添加实体时验证实体状态
         let mut scene = Scene::new(SceneId(1), "Test Scene");
-        scene.load().unwrap();
+        scene.load().expect("Test: operation should succeed");
 
         // 创建无效实体（Sprite和Camera冲突）
         let mut invalid_entity =
@@ -1178,59 +1175,59 @@ mod tests {
     fn test_scene_activate_activates_entities() {
         // 测试业务规则：场景激活时，所有实体必须激活
         let mut scene = Scene::new(SceneId(1), "Test Scene");
-        scene.load().unwrap();
+        scene.load().expect("Test: operation should succeed");
 
         let mut entity = EntityFactory::create_basic(EntityId(1), Vec3::ZERO);
-        entity.deactivate().unwrap(); // 先停用
-        scene.add_entity(entity).unwrap();
+        entity.deactivate().expect("Test: operation should succeed"); // 先停用
+        scene.add_entity(entity).expect("Test: operation should succeed");
 
         // 激活场景应该激活所有实体
-        scene.activate().unwrap();
+        scene.activate().expect("Test: operation should succeed");
         assert_eq!(scene.state, SceneState::Active);
-        assert!(scene.get_entity(EntityId(1)).unwrap().is_active());
+        assert!(scene.get_entity(EntityId(1)).expect("Test: operation should succeed").is_active());
     }
 
     #[test]
     fn test_scene_deactivate_deactivates_entities() {
         // 测试业务规则：场景停用时，所有实体必须停用
         let mut scene = Scene::new(SceneId(1), "Test Scene");
-        scene.load().unwrap();
-        scene.activate().unwrap();
+        scene.load().expect("Test: operation should succeed");
+        scene.activate().expect("Test: operation should succeed");
 
         let entity = EntityFactory::create_basic(EntityId(1), Vec3::ZERO);
-        scene.add_entity(entity).unwrap();
+        scene.add_entity(entity).expect("Test: operation should succeed");
 
         // 停用场景应该停用所有实体
-        scene.deactivate().unwrap();
+        scene.deactivate().expect("Test: operation should succeed");
         assert_eq!(scene.state, SceneState::Inactive);
-        assert!(!scene.get_entity(EntityId(1)).unwrap().is_active());
+        assert!(!scene.get_entity(EntityId(1)).expect("Test: operation should succeed").is_active());
     }
 
     #[test]
     fn test_scene_unload_clears_entities() {
         // 测试业务规则：卸载场景时清除所有实体
         let mut scene = Scene::new(SceneId(1), "Test Scene");
-        scene.load().unwrap();
+        scene.load().expect("Test: operation should succeed");
 
         let entity = EntityFactory::create_basic(EntityId(1), Vec3::ZERO);
-        scene.add_entity(entity).unwrap();
+        scene.add_entity(entity).expect("Test: operation should succeed");
         assert_eq!(scene.total_entity_count(), 1);
 
-        scene.unload().unwrap();
+        scene.unload().expect("Test: operation should succeed");
         assert_eq!(scene.total_entity_count(), 0);
     }
 
     #[test]
     fn test_scene_get_entity() {
         let mut scene = Scene::new(SceneId(1), "Test Scene");
-        scene.load().unwrap();
+        scene.load().expect("Test: operation should succeed");
 
         let entity = EntityFactory::create_basic(EntityId(1), Vec3::ZERO);
-        scene.add_entity(entity).unwrap();
+        scene.add_entity(entity).expect("Test: operation should succeed");
 
         // 获取存在的实体
         assert!(scene.get_entity(EntityId(1)).is_some());
-        assert_eq!(scene.get_entity(EntityId(1)).unwrap().id, EntityId(1));
+        assert_eq!(scene.get_entity(EntityId(1)).expect("Test: operation should succeed").id, EntityId(1));
 
         // 获取不存在的实体
         assert!(scene.get_entity(EntityId(999)).is_none());
@@ -1239,18 +1236,18 @@ mod tests {
     #[test]
     fn test_scene_get_entity_mut() {
         let mut scene = Scene::new(SceneId(1), "Test Scene");
-        scene.load().unwrap();
+        scene.load().expect("Test: operation should succeed");
 
         let entity = EntityFactory::create_basic(EntityId(1), Vec3::ZERO);
-        scene.add_entity(entity).unwrap();
+        scene.add_entity(entity).expect("Test: operation should succeed");
 
         // 修改实体
         if let Some(entity) = scene.get_entity_mut(EntityId(1)) {
-            entity.set_position(Vec3::ONE).unwrap();
+            entity.set_position(Vec3::ONE).expect("Test: operation should succeed");
         }
 
         assert_eq!(
-            scene.get_entity(EntityId(1)).unwrap().position(),
+            scene.get_entity(EntityId(1)).expect("Test: operation should succeed").position(),
             Some(Vec3::ONE)
         );
     }
@@ -1259,33 +1256,33 @@ mod tests {
     fn test_scene_manager() {
         let mut manager = SceneManager::new();
 
-        manager.create_scene(SceneId(1), "Scene 1").unwrap();
-        manager.create_scene(SceneId(2), "Scene 2").unwrap();
+        manager.create_scene(SceneId(1), "Scene 1").expect("Test: operation should succeed");
+        manager.create_scene(SceneId(2), "Scene 2").expect("Test: operation should succeed");
 
         assert_eq!(manager.scene_ids().len(), 2);
 
         // 加载场景（switch_to_scene会自动激活）
-        manager.get_scene_mut(SceneId(1)).unwrap().load().unwrap();
-        manager.get_scene_mut(SceneId(2)).unwrap().load().unwrap();
+        manager.get_scene_mut(SceneId(1)).expect("Test: operation should succeed").load().expect("Test: operation should succeed");
+        manager.get_scene_mut(SceneId(2)).expect("Test: operation should succeed").load().expect("Test: operation should succeed");
 
-        manager.switch_to_scene(SceneId(1)).unwrap();
-        assert_eq!(manager.active_scene().unwrap().id, SceneId(1));
+        manager.switch_to_scene(SceneId(1)).expect("Test: operation should succeed");
+        assert_eq!(manager.active_scene().expect("Test: operation should succeed").id, SceneId(1));
 
-        manager.switch_to_scene(SceneId(2)).unwrap();
-        assert_eq!(manager.active_scene().unwrap().id, SceneId(2));
+        manager.switch_to_scene(SceneId(2)).expect("Test: operation should succeed");
+        assert_eq!(manager.active_scene().expect("Test: operation should succeed").id, SceneId(2));
     }
 
     #[test]
     fn test_scene_find_entity_by_name() {
         let mut scene = Scene::new(SceneId(1), "Test Scene");
-        scene.load().unwrap();
+        scene.load().expect("Test: operation should succeed");
 
         let entity = EntityFactory::create_basic(EntityId(1), Vec3::ZERO).with_name("Test Entity");
-        scene.add_entity(entity).unwrap();
+        scene.add_entity(entity).expect("Test: operation should succeed");
 
         let found = scene.find_entity_by_name("Test Entity");
         assert!(found.is_some());
-        assert_eq!(found.unwrap().id, EntityId(1));
+        assert_eq!(found.expect("Test: operation should succeed").id, EntityId(1));
 
         let not_found = scene.find_entity_by_name("Nonexistent");
         assert!(not_found.is_none());
@@ -1294,14 +1291,10 @@ mod tests {
     #[test]
     fn test_scene_entity_ids() {
         let mut scene = Scene::new(SceneId(1), "Test Scene");
-        scene.load().unwrap();
+        scene.load().expect("Test: operation should succeed");
 
-        scene
-            .add_entity(EntityFactory::create_basic(EntityId(1), Vec3::ZERO))
-            .unwrap();
-        scene
-            .add_entity(EntityFactory::create_basic(EntityId(2), Vec3::ZERO))
-            .unwrap();
+        scene.add_entity(EntityFactory::create_basic(EntityId(1), Vec3::ZERO)).expect("Test: operation should succeed");
+        scene.add_entity(EntityFactory::create_basic(EntityId(2), Vec3::ZERO)).expect("Test: operation should succeed");
 
         let ids = scene.entity_ids();
         assert_eq!(ids.len(), 2);
@@ -1312,7 +1305,7 @@ mod tests {
     #[test]
     fn test_scene_add_entities() {
         let mut scene = Scene::new(SceneId(1), "Test Scene");
-        scene.load().unwrap();
+        scene.load().expect("Test: operation should succeed");
 
         let entities = vec![
             EntityFactory::create_basic(EntityId(1), Vec3::ZERO),
@@ -1320,14 +1313,14 @@ mod tests {
             EntityFactory::create_basic(EntityId(3), Vec3::ZERO),
         ];
 
-        scene.add_entities(entities).unwrap();
+        scene.add_entities(entities).expect("Test: operation should succeed");
         assert_eq!(scene.total_entity_count(), 3);
     }
 
     #[test]
     fn test_scene_add_entities_duplicate_error() {
         let mut scene = Scene::new(SceneId(1), "Test Scene");
-        scene.load().unwrap();
+        scene.load().expect("Test: operation should succeed");
 
         let entities = vec![
             EntityFactory::create_basic(EntityId(1), Vec3::ZERO),
@@ -1340,21 +1333,13 @@ mod tests {
     #[test]
     fn test_scene_remove_entities() {
         let mut scene = Scene::new(SceneId(1), "Test Scene");
-        scene.load().unwrap();
+        scene.load().expect("Test: operation should succeed");
 
-        scene
-            .add_entity(EntityFactory::create_basic(EntityId(1), Vec3::ZERO))
-            .unwrap();
-        scene
-            .add_entity(EntityFactory::create_basic(EntityId(2), Vec3::ZERO))
-            .unwrap();
-        scene
-            .add_entity(EntityFactory::create_basic(EntityId(3), Vec3::ZERO))
-            .unwrap();
+        scene.add_entity(EntityFactory::create_basic(EntityId(1), Vec3::ZERO)).expect("Test: operation should succeed");
+        scene.add_entity(EntityFactory::create_basic(EntityId(2), Vec3::ZERO)).expect("Test: operation should succeed");
+        scene.add_entity(EntityFactory::create_basic(EntityId(3), Vec3::ZERO)).expect("Test: operation should succeed");
 
-        let removed = scene
-            .remove_entities(vec![EntityId(1), EntityId(3)])
-            .unwrap();
+        let removed = scene.remove_entities(vec![EntityId(1), EntityId(3)]).expect("Test: operation should succeed");
         assert_eq!(removed.len(), 2);
         assert_eq!(scene.total_entity_count(), 1);
     }
@@ -1362,32 +1347,32 @@ mod tests {
     #[test]
     fn test_scene_update_removes_pending_deletion() {
         let mut scene = Scene::new(SceneId(1), "Test Scene");
-        scene.load().unwrap();
-        scene.activate().unwrap();
+        scene.load().expect("Test: operation should succeed");
+        scene.activate().expect("Test: operation should succeed");
 
         let mut entity = EntityFactory::create_basic(EntityId(1), Vec3::ZERO);
-        entity.mark_for_deletion().unwrap();
-        scene.add_entity(entity).unwrap();
+        entity.mark_for_deletion().expect("Test: operation should succeed");
+        scene.add_entity(entity).expect("Test: operation should succeed");
 
         assert_eq!(scene.total_entity_count(), 1);
 
         // 更新场景应该移除待删除的实体
-        scene.update(0.016).unwrap();
+        scene.update(0.016).expect("Test: operation should succeed");
         assert_eq!(scene.total_entity_count(), 0);
     }
 
     #[test]
     fn test_scene_update_inactive_scene() {
         let mut scene = Scene::new(SceneId(1), "Test Scene");
-        scene.load().unwrap();
+        scene.load().expect("Test: operation should succeed");
         // 不激活场景
 
         let mut entity = EntityFactory::create_basic(EntityId(1), Vec3::ZERO);
-        entity.mark_for_deletion().unwrap();
-        scene.add_entity(entity).unwrap();
+        entity.mark_for_deletion().expect("Test: operation should succeed");
+        scene.add_entity(entity).expect("Test: operation should succeed");
 
         // 非活跃场景的update应该成功但不移除实体
-        scene.update(0.016).unwrap();
+        scene.update(0.016).expect("Test: operation should succeed");
         assert_eq!(scene.total_entity_count(), 1); // 实体仍然存在
     }
 
@@ -1404,8 +1389,8 @@ mod tests {
     #[test]
     fn test_scene_validate_multiple_cameras() {
         let mut scene = Scene::new(SceneId(1), "Test Scene");
-        scene.load().unwrap();
-        scene.activate().unwrap();
+        scene.load().expect("Test: operation should succeed");
+        scene.activate().expect("Test: operation should succeed");
 
         // 添加两个相机实体
         let camera1 = Camera::default();
@@ -1416,14 +1401,14 @@ mod tests {
                 Vec3::ZERO,
                 camera1,
             ))
-            .unwrap();
+            .expect("Test: operation should succeed");
         scene
             .add_entity(EntityFactory::create_camera(
                 EntityId(2),
                 Vec3::ZERO,
                 camera2,
             ))
-            .unwrap();
+            .expect("Test: operation should succeed");
 
         // 活跃场景不能有多个相机
         assert!(scene.validate().is_err());
@@ -1432,11 +1417,9 @@ mod tests {
     #[test]
     fn test_scene_create_snapshot() {
         let mut scene = Scene::new(SceneId(1), "Test Scene");
-        scene.load().unwrap();
+        scene.load().expect("Test: operation should succeed");
 
-        scene
-            .add_entity(EntityFactory::create_basic(EntityId(1), Vec3::ZERO))
-            .unwrap();
+        scene.add_entity(EntityFactory::create_basic(EntityId(1), Vec3::ZERO)).expect("Test: operation should succeed");
 
         let snapshot = scene.create_snapshot();
         assert_eq!(snapshot.scene_id, SceneId(1));
@@ -1448,7 +1431,7 @@ mod tests {
     #[test]
     fn test_scene_manager_get_scene() {
         let mut manager = SceneManager::new();
-        manager.create_scene(SceneId(1), "Scene 1").unwrap();
+        manager.create_scene(SceneId(1), "Scene 1").expect("Test: operation should succeed");
 
         assert!(manager.get_scene(SceneId(1)).is_some());
         assert!(manager.get_scene(SceneId(999)).is_none());
@@ -1457,11 +1440,11 @@ mod tests {
     #[test]
     fn test_scene_manager_delete_scene() {
         let mut manager = SceneManager::new();
-        manager.create_scene(SceneId(1), "Scene 1").unwrap();
-        manager.get_scene_mut(SceneId(1)).unwrap().load().unwrap();
-        manager.switch_to_scene(SceneId(1)).unwrap();
+        manager.create_scene(SceneId(1), "Scene 1").expect("Test: operation should succeed");
+        manager.get_scene_mut(SceneId(1)).expect("Test: operation should succeed").load().expect("Test: operation should succeed");
+        manager.switch_to_scene(SceneId(1)).expect("Test: operation should succeed");
 
-        let deleted = manager.delete_scene(SceneId(1)).unwrap();
+        let deleted = manager.delete_scene(SceneId(1)).expect("Test: operation should succeed");
         assert_eq!(deleted.id, SceneId(1));
         assert!(manager.active_scene().is_none());
     }
@@ -1475,17 +1458,17 @@ mod tests {
     #[test]
     fn test_scene_manager_update() {
         let mut manager = SceneManager::new();
-        manager.create_scene(SceneId(1), "Scene 1").unwrap();
-        manager.get_scene_mut(SceneId(1)).unwrap().load().unwrap();
+        manager.create_scene(SceneId(1), "Scene 1").expect("Test: operation should succeed");
+        manager.get_scene_mut(SceneId(1)).expect("Test: operation should succeed").load().expect("Test: operation should succeed");
 
-        manager.update(0.016).unwrap();
+        manager.update(0.016).expect("Test: operation should succeed");
         // 验证更新成功（通过行为验证）
     }
 
     #[test]
     fn test_scene_manager_validate() {
         let mut manager = SceneManager::new();
-        manager.create_scene(SceneId(1), "Scene 1").unwrap();
+        manager.create_scene(SceneId(1), "Scene 1").expect("Test: operation should succeed");
 
         assert!(manager.validate().is_ok());
     }
@@ -1540,10 +1523,8 @@ mod tests {
     #[test]
     fn test_scene_recover_from_error_use_default() {
         let mut scene = Scene::new(SceneId(1), "Test Scene");
-        scene.load().unwrap();
-        scene
-            .add_entity(EntityFactory::create_basic(EntityId(1), Vec3::ZERO))
-            .unwrap();
+        scene.load().expect("Test: operation should succeed");
+        scene.add_entity(EntityFactory::create_basic(EntityId(1), Vec3::ZERO)).expect("Test: operation should succeed");
         scene.recovery_strategy = RecoveryStrategy::UseDefault;
 
         let error = SceneError::SerializationFailed("test".to_string());
@@ -1557,7 +1538,7 @@ mod tests {
     #[test]
     fn test_scene_recover_from_error_skip() {
         let mut scene = Scene::new(SceneId(1), "Test Scene");
-        scene.load().unwrap();
+        scene.load().expect("Test: operation should succeed");
         scene.recovery_strategy = RecoveryStrategy::Skip;
 
         let error = SceneError::SerializationFailed("test".to_string());
@@ -1570,7 +1551,7 @@ mod tests {
     #[test]
     fn test_scene_recover_from_error_log_and_continue() {
         let mut scene = Scene::new(SceneId(1), "Test Scene");
-        scene.load().unwrap();
+        scene.load().expect("Test: operation should succeed");
         scene.recovery_strategy = RecoveryStrategy::LogAndContinue;
 
         let error = SceneError::SerializationFailed("test".to_string());
@@ -1599,10 +1580,8 @@ mod tests {
     #[test]
     fn test_scene_create_compensation() {
         let mut scene = Scene::new(SceneId(1), "Test Scene");
-        scene.load().unwrap();
-        scene
-            .add_entity(EntityFactory::create_basic(EntityId(1), Vec3::ZERO))
-            .unwrap();
+        scene.load().expect("Test: operation should succeed");
+        scene.add_entity(EntityFactory::create_basic(EntityId(1), Vec3::ZERO)).expect("Test: operation should succeed");
 
         let compensation = scene.create_compensation();
 

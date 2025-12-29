@@ -143,7 +143,7 @@ impl CicdPipeline {
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .map(|d| d.as_millis())
-                .unwrap_or(0)
+                .unwrap_or_else(|_| 0)
         );
 
         Self {
@@ -487,7 +487,7 @@ mod tests {
 
         assert_eq!(pipeline.get_status(), PipelineStatus::Pending);
 
-        let stage_result = pipeline.stages.first_mut().unwrap();
+        let stage_result = pipeline.stages.first_mut().expect("Stage should exist after add_stage");
         stage_result.status = StageStatus::Passed;
 
         assert_eq!(pipeline.get_status(), PipelineStatus::Passed);

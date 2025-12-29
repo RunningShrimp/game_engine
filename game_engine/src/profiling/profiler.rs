@@ -140,7 +140,7 @@ mod tests {
         profiler.end_scope();
 
         // 验证统计信息
-        let stats = profiler.get_stats("test_scope").unwrap();
+        let stats = profiler.get_stats("test_scope").expect("Test: operation should succeed");
         assert_eq!(stats.call_count, 2);
         assert!(stats.total_time >= Duration::from_millis(30));
         assert!(stats.min_time >= Duration::from_millis(10));
@@ -156,7 +156,7 @@ mod tests {
             thread::sleep(Duration::from_millis(10));
         } // 作用域结束时自动调用end_scope
 
-        let stats = profiler.get_stats("auto_scope").unwrap();
+        let stats = profiler.get_stats("auto_scope").expect("Test: operation should succeed");
         assert_eq!(stats.call_count, 1);
     }
 }

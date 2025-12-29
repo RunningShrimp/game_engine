@@ -445,7 +445,7 @@ mod tests {
         );
         assert_eq!(heatmap.hotspot_count(), 1);
 
-        let metrics = heatmap.get_metrics(&location).unwrap();
+        let metrics = heatmap.get_metrics(&location).expect("Test: operation should succeed");
         assert_eq!(metrics.call_count, 1);
         assert_eq!(metrics.total_time, Duration::from_millis(50));
     }

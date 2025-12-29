@@ -8,8 +8,8 @@
 
 use crate::network::delta_serialization::{DeltaPacket, EntityDelta};
 use glam::Vec3;
-use std::collections::{BinaryHeap, HashMap};
 use std::cmp::Ordering;
+use std::collections::{BinaryHeap, HashMap};
 
 /// 同步优先级（0-255，值越大优先级越高）
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -91,7 +91,8 @@ impl EntitySyncInfo {
 
         let change_rate_factor = (self.change_rate * 10.0).min(1.0); // 变化越快，优先级越高
 
-        self.priority_score = self.importance_weight * distance_factor * (0.5 + change_rate_factor * 0.5);
+        self.priority_score =
+            self.importance_weight * distance_factor * (0.5 + change_rate_factor * 0.5);
 
         // 根据分数确定优先级等级
         self.priority = if self.priority_score > 0.8 {
@@ -108,12 +109,12 @@ impl EntitySyncInfo {
 
         // 根据优先级和距离建议更新间隔
         self.suggested_interval = match self.priority.0 {
-            255 => 1,      // CRITICAL: 每帧更新
-            200 => 2,      // HIGH: 每2帧
-            128 => 4,       // MEDIUM: 每4帧
-            64 => 8,        // LOW: 每8帧
-            32 => 16,       // MINIMAL: 每16帧
-            _ => 8,         // 默认
+            255 => 1, // CRITICAL: 每帧更新
+            200 => 2, // HIGH: 每2帧
+            128 => 4, // MEDIUM: 每4帧
+            64 => 8,  // LOW: 每8帧
+            32 => 16, // MINIMAL: 每16帧
+            _ => 8,   // 默认
         };
     }
 }
@@ -127,7 +128,9 @@ impl PartialOrd for EntitySyncInfo {
 impl Ord for EntitySyncInfo {
     fn cmp(&self, other: &Self) -> Ordering {
         // BinaryHeap是最大堆，所以需要反转比较
-        other.priority_score.partial_cmp(&self.priority_score)
+        other
+            .priority_score
+            .partial_cmp(&self.priority_score)
             .unwrap_or(Ordering::Equal)
     }
 }
@@ -406,4 +409,3 @@ mod tests {
         assert_eq!(budget.current_bytes_used, 0);
     }
 }
-

@@ -27,6 +27,10 @@ path = "src/lib.rs"
 name = "simd_benchmarks"
 harness = false
 
+[[bench]]
+name = "simd_extended_benchmarks"
+harness = false
+
 [features]
 default = []
 

@@ -177,14 +177,18 @@ fn run_benchmarks_and_collect() -> Result<Vec<(f64, Duration, f64)>, Box<dyn std
             // 解析基准测试输出
             parse_benchmark_output(&String::from_utf8_lossy(&output.stdout))
         }
-        Err(e) => {
-            Err(format!("无法运行基准测试: {}. 请确保已安装cargo-criterion: cargo install cargo-criterion", e).into())
-        }
+        Err(e) => Err(format!(
+            "无法运行基准测试: {}. 请确保已安装cargo-criterion: cargo install cargo-criterion",
+            e
+        )
+        .into()),
     }
 }
 
 /// 解析基准测试输出并提取性能指标
-fn parse_benchmark_output(output: &str) -> Result<Vec<(f64, Duration, f64)>, Box<dyn std::error::Error>> {
+fn parse_benchmark_output(
+    output: &str,
+) -> Result<Vec<(f64, Duration, f64)>, Box<dyn std::error::Error>> {
     let mut samples = Vec::new();
 
     // 简单解析：查找包含平均时间的行
@@ -194,23 +198,24 @@ fn parse_benchmark_output(output: &str) -> Result<Vec<(f64, Duration, f64)>, Box
         if line.contains("time:") && line.contains("ms") {
             // 提取平均时间（简化版本）
             if let Some(start) = line.find('[')
-                && let Some(end) = line.find(']') {
-                    let times_str = &line[start + 1..end];
-                    let times: Vec<&str> = times_str.split_whitespace().collect();
+                && let Some(end) = line.find(']')
+            {
+                let times_str = &line[start + 1..end];
+                let times: Vec<&str> = times_str.split_whitespace().collect();
 
-                    if !times.is_empty() {
-                        // 取第一个时间作为平均帧时间
-                        if let Ok(avg_time_ms) = times[0].parse::<f64>() {
-                            let frame_time = Duration::from_millis(avg_time_ms as u64);
-                            let fps = 1000.0 / avg_time_ms;
+                if !times.is_empty() {
+                    // 取第一个时间作为平均帧时间
+                    if let Ok(avg_time_ms) = times[0].parse::<f64>() {
+                        let frame_time = Duration::from_millis(avg_time_ms as u64);
+                        let fps = 1000.0 / avg_time_ms;
 
-                            // 估算内存使用（实际应该从基准测试中获取）
-                            let memory = 200.0; // 默认200MB
+                        // 估算内存使用（实际应该从基准测试中获取）
+                        let memory = 200.0; // 默认200MB
 
-                            samples.push((fps, frame_time, memory));
-                        }
+                        samples.push((fps, frame_time, memory));
                     }
                 }
+            }
         }
     }
 
@@ -304,13 +309,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 检测回归
     eprintln!("🔍 检测性能回归...");
     let regressions = detector.detect_regressions();
-    
+
     // 打印检测到的回归数量
     if !regressions.is_empty() {
         eprintln!("   检测到 {} 个回归项", regressions.len());
         for (i, regression) in regressions.iter().enumerate().take(5) {
-            eprintln!("   [{}/{}] {}: {:.2}% 回归", 
-                i + 1, 
+            eprintln!(
+                "   [{}/{}] {}: {:.2}% 回归",
+                i + 1,
                 regressions.len().min(5),
                 regression.metric_name,
                 regression.regression_percent

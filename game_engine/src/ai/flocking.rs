@@ -281,7 +281,9 @@ impl FlockManager {
         if self.config.enhanced.enable_sub_flocks {
             self.sub_flocks.insert(id, sub_flock_id);
             // 如果这是子群体的第一个代理，设为领导者
-            if self.config.enhanced.enable_leader_following && !self.leaders.contains_key(&sub_flock_id) {
+            if self.config.enhanced.enable_leader_following
+                && !self.leaders.contains_key(&sub_flock_id)
+            {
                 self.leaders.insert(sub_flock_id, id);
             }
         }
@@ -290,8 +292,13 @@ impl FlockManager {
     }
 
     /// 设置子群体领导者（仅在启用分层群体和领导者跟随时有效）
-    pub fn set_leader(&mut self, sub_flock_id: usize, agent_id: AgentId) -> Result<(), FlockingError> {
-        if !self.config.enhanced.enable_sub_flocks || !self.config.enhanced.enable_leader_following {
+    pub fn set_leader(
+        &mut self,
+        sub_flock_id: usize,
+        agent_id: AgentId,
+    ) -> Result<(), FlockingError> {
+        if !self.config.enhanced.enable_sub_flocks || !self.config.enhanced.enable_leader_following
+        {
             return Err(FlockingError::InvalidConfig(
                 "Sub-flocks and leader following must be enabled".to_string(),
             ));
@@ -354,7 +361,6 @@ impl FlockManager {
         }
     }
 
-
     /// 更新群体行为
     pub fn update(&mut self, delta_time: f32) {
         // 计算每个代理的转向力
@@ -379,15 +385,18 @@ impl FlockManager {
 
             // 增强功能：领导者跟随
             if self.config.enhanced.enable_leader_following
-                && let Some(leader_force) = self.calculate_leader_following(*id, agent) {
-                    force += leader_force * self.config.enhanced.leader_follow_weight;
-                }
+                && let Some(leader_force) = self.calculate_leader_following(*id, agent)
+            {
+                force += leader_force * self.config.enhanced.leader_follow_weight;
+            }
 
             // 增强功能：路径跟随
-            if self.config.enhanced.enable_path_following && !self.path_points.is_empty()
-                && let Some(path_force) = self.calculate_path_following(agent) {
-                    force += path_force * self.config.enhanced.path_follow_weight;
-                }
+            if self.config.enhanced.enable_path_following
+                && !self.path_points.is_empty()
+                && let Some(path_force) = self.calculate_path_following(agent)
+            {
+                force += path_force * self.config.enhanced.path_follow_weight;
+            }
 
             // 增强功能：群体目标
             if self.config.enhanced.enable_group_goal {
@@ -443,9 +452,10 @@ impl FlockManager {
 
             // 如果启用分层群体，只考虑同子群体的代理
             if let Some(sub_id) = sub_flock_id
-                && self.sub_flocks.get(other_id) != Some(&sub_id) {
-                    continue;
-                }
+                && self.sub_flocks.get(other_id) != Some(&sub_id)
+            {
+                continue;
+            }
 
             let diff = agent.position - other.position;
             let distance = diff.length();
@@ -485,9 +495,10 @@ impl FlockManager {
 
             // 如果启用分层群体，只考虑同子群体的代理
             if let Some(sub_id) = sub_flock_id
-                && self.sub_flocks.get(other_id) != Some(&sub_id) {
-                    continue;
-                }
+                && self.sub_flocks.get(other_id) != Some(&sub_id)
+            {
+                continue;
+            }
 
             let distance = (agent.position - other.position).length();
 
@@ -524,9 +535,10 @@ impl FlockManager {
 
             // 如果启用分层群体，只考虑同子群体的代理
             if let Some(sub_id) = sub_flock_id
-                && self.sub_flocks.get(other_id) != Some(&sub_id) {
-                    continue;
-                }
+                && self.sub_flocks.get(other_id) != Some(&sub_id)
+            {
+                continue;
+            }
 
             let distance = (agent.position - other.position).length();
 
@@ -593,7 +605,8 @@ impl FlockManager {
 
     /// 计算领导者跟随力（增强功能）
     fn calculate_leader_following(&self, agent_id: AgentId, agent: &Agent) -> Option<Vec3> {
-        if !self.config.enhanced.enable_leader_following || !self.config.enhanced.enable_sub_flocks {
+        if !self.config.enhanced.enable_leader_following || !self.config.enhanced.enable_sub_flocks
+        {
             return None;
         }
 
@@ -713,8 +726,8 @@ mod tests {
         flock.update(0.016);
 
         // 代理应该开始分离
-        let pos1 = flock.get_agent_position(agent1).unwrap();
-        let pos2 = flock.get_agent_position(agent2).unwrap();
+        let pos1 = flock.get_agent_position(agent1).expect("Agent1 should exist");
+        let pos2 = flock.get_agent_position(agent2).expect("Agent2 should exist");
 
         // 位置应该发生变化
         assert!(pos1 != Vec3::new(0.0, 0.0, 0.0) || pos2 != Vec3::new(0.5, 0.0, 0.0));
@@ -745,8 +758,8 @@ mod tests {
         }
 
         // 代理应该避开障碍物（速度方向改变或速度减小）
-        let velocity = flock.get_agent_velocity(agent).unwrap();
-        let position = flock.get_agent_position(agent).unwrap();
+        let velocity = flock.get_agent_velocity(agent).expect("Agent should have velocity");
+        let position = flock.get_agent_position(agent).expect("Agent should have position");
 
         // 检查：速度方向改变（y或z分量非零）或速度减小，或者位置没有直接撞向障碍物
         let velocity_changed = velocity.y.abs() > 0.01 || velocity.z.abs() > 0.01;

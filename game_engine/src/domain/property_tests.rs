@@ -311,7 +311,7 @@ mod tests {
                 let vec = pos.to_vec3();
                 let back = Position::from_vec3(vec);
                 prop_assert!(back.is_some());
-                let back = back.unwrap();
+                let back = back.expect("Test: operation should succeed");
                 prop_assert!((back.x() - x).abs() < 0.0001);
                 prop_assert!((back.y() - y).abs() < 0.0001);
                 prop_assert!((back.z() - z).abs() < 0.0001);
@@ -328,7 +328,7 @@ mod tests {
                 let vec = vel.to_vec3();
                 let back = Velocity::from_vec3(vec);
                 prop_assert!(back.is_some());
-                let back = back.unwrap();
+                let back = back.expect("Test: operation should succeed");
                 prop_assert!((back.x() - x).abs() < 0.0001);
                 prop_assert!((back.y() - y).abs() < 0.0001);
                 prop_assert!((back.z() - z).abs() < 0.0001);
@@ -345,7 +345,7 @@ mod tests {
                 let vec = scale.to_vec3();
                 let back = Scale::from_vec3(vec);
                 prop_assert!(back.is_some());
-                let back = back.unwrap();
+                let back = back.expect("Test: operation should succeed");
                 prop_assert!((back.x() - x).abs() < 0.0001);
                 prop_assert!((back.y() - y).abs() < 0.0001);
                 prop_assert!((back.z() - z).abs() < 0.0001);

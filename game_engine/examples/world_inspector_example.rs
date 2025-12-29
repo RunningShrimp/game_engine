@@ -8,16 +8,17 @@ fn main() {
     let mut world = World::new();
 
     for i in 0..10 {
-        world.spawn((
-            Transform {
-                pos: Vec3::new(i as f32, 0.0, 0.0),
-                rot: Quat::IDENTITY,
-                scale: Vec3::ONE,
-            },
-        ));
+        world.spawn((Transform {
+            pos: Vec3::new(i as f32, 0.0, 0.0),
+            rot: Quat::IDENTITY,
+            scale: Vec3::ONE,
+        },));
     }
 
-    println!("创建了 {} 个实体\n", world.query::<EntityRef>().iter(&world).count());
+    println!(
+        "创建了 {} 个实体\n",
+        world.query::<EntityRef>().iter(&world).count()
+    );
 
     println!("World Inspector 功能:");
     println!("  - 实时查看所有实体和组件");

@@ -307,11 +307,11 @@ mod tests {
 
         // 测试可压缩数据（重复数据）
         let data = vec![0u8; 1000];
-        let compressed = compressor.compress(&data).unwrap();
+        let compressed = compressor.compress(&data).expect("Test: operation should succeed");
         assert!(compressed.len() < data.len());
 
         // 解压缩
-        let decompressed = compressor.decompress(&compressed).unwrap();
+        let decompressed = compressor.decompress(&compressed).expect("Test: operation should succeed");
         assert_eq!(data, decompressed);
     }
 
@@ -321,7 +321,7 @@ mod tests {
 
         // 小数据不应该被压缩（小于阈值）
         let data = vec![1u8, 2u8, 3u8];
-        let compressed = compressor.compress(&data).unwrap();
+        let compressed = compressor.compress(&data).expect("Test: operation should succeed");
         assert_eq!(data, compressed);
     }
 
@@ -331,13 +331,13 @@ mod tests {
 
         // 测试带标志的压缩
         let data = vec![0u8; 1000];
-        let compressed = compressor.compress_with_flag(&data).unwrap();
+        let compressed = compressor.compress_with_flag(&data).expect("Test: operation should succeed");
 
         // 第一个字节应该是压缩标志
         assert_eq!(compressed[0], 1);
 
         // 解压缩
-        let decompressed = compressor.decompress_with_flag(&compressed).unwrap();
+        let decompressed = compressor.decompress_with_flag(&compressed).expect("Test: operation should succeed");
         assert_eq!(data, decompressed);
     }
 
@@ -349,9 +349,9 @@ mod tests {
 
         let data = vec![0u8; 1000];
 
-        let fast_compressed = fast.compress(&data).unwrap();
-        let balanced_compressed = balanced.compress(&data).unwrap();
-        let best_compressed = best.compress(&data).unwrap();
+        let fast_compressed = fast.compress(&data).expect("Test: operation should succeed");
+        let balanced_compressed = balanced.compress(&data).expect("Test: operation should succeed");
+        let best_compressed = best.compress(&data).expect("Test: operation should succeed");
 
         // Best应该压缩得最好（最小）
         assert!(best_compressed.len() <= balanced_compressed.len());
@@ -367,13 +367,13 @@ mod tests {
         let data3 = vec![2u8; 500];
 
         let data_list = vec![data1.as_slice(), data2.as_slice(), data3.as_slice()];
-        let compressed = batch_compressor.compress_batch(&data_list).unwrap();
+        let compressed = batch_compressor.compress_batch(&data_list).expect("Test: operation should succeed");
 
         assert_eq!(compressed.len(), 3);
 
         // 解压缩
         let compressed_refs: Vec<&[u8]> = compressed.iter().map(|v| v.as_slice()).collect();
-        let decompressed = batch_compressor.decompress_batch(&compressed_refs).unwrap();
+        let decompressed = batch_compressor.decompress_batch(&compressed_refs).expect("Test: operation should succeed");
 
         assert_eq!(decompressed.len(), 3);
         assert_eq!(decompressed[0], data1);
@@ -391,12 +391,12 @@ mod tests {
         streaming.add_chunk(&vec![2u8; 500]);
 
         // 完成压缩
-        let compressed = streaming.finish().unwrap();
+        let compressed = streaming.finish().expect("Test: operation should succeed");
         assert!(!compressed.is_empty());
 
         // 解压缩验证
         let compressor = NetworkCompressor::new();
-        let decompressed = compressor.decompress(&compressed).unwrap();
+        let decompressed = compressor.decompress(&compressed).expect("Test: operation should succeed");
         assert_eq!(decompressed.len(), 1500);
     }
 }

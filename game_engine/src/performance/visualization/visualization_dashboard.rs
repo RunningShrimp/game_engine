@@ -370,9 +370,9 @@ mod tests {
         chart.add_value("frame_3", 59.0, 2);
 
         assert_eq!(chart.point_count(), 3);
-        assert!(chart.get_average().unwrap() > 59.0 && chart.get_average().unwrap() < 61.0);
-        assert_eq!(chart.get_max().unwrap(), 61.0);
-        assert_eq!(chart.get_min().unwrap(), 59.0);
+        assert!(chart.get_average().expect("Test: operation should succeed") > 59.0 && chart.get_average().expect("Test: operation should succeed") < 61.0);
+        assert_eq!(chart.get_max().expect("Test: operation should succeed"), 61.0);
+        assert_eq!(chart.get_min().expect("Test: operation should succeed"), 59.0);
     }
 
     #[test]
@@ -384,7 +384,7 @@ mod tests {
 
         let p95 = chart.get_percentile_95();
         assert!(p95.is_some());
-        assert!(p95.unwrap() > 90.0 && p95.unwrap() <= 100.0);
+        assert!(p95.expect("Test: operation should succeed") > 90.0 && p95.expect("Test: operation should succeed") <= 100.0);
     }
 
     #[test]
@@ -424,10 +424,10 @@ mod tests {
         assert_eq!(dashboard.chart_count(), 2);
         assert_eq!(dashboard.get_gauge("current_fps"), Some(60.5));
 
-        dashboard.add_data_to_chart(idx1, "f1", 60.0, 0).unwrap();
-        dashboard.add_data_to_chart(idx2, "m1", 250.0, 0).unwrap();
+        dashboard.add_data_to_chart(idx1, "f1", 60.0, 0).expect("Test: operation should succeed");
+        dashboard.add_data_to_chart(idx2, "m1", 250.0, 0).expect("Test: operation should succeed");
 
-        assert_eq!(dashboard.get_chart(idx1).unwrap().point_count(), 1);
+        assert_eq!(dashboard.get_chart(idx1).expect("Test: operation should succeed").point_count(), 1);
     }
 
     #[test]

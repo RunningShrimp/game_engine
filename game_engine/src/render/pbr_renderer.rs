@@ -422,7 +422,7 @@ impl PbrRenderer {
                     min_binding_size: std::num::NonZeroU64::new(std::mem::size_of::<
                         MaterialUniformPBR,
                     >()
-                        as wgpu::BufferAddress ),
+                        as wgpu::BufferAddress),
                 },
                 count: None,
             }],

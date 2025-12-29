@@ -1,0 +1,726 @@
+name: Quality Gate
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  # ============================================
+  # 1. 格式检查
+  # ============================================
+  format:
+    name: Check Formatting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - name: Check formatting
+        run: |
+          cargo fmt --all -- --check --verbose
+          echo "✅ Code formatting check passed"
+
+  # ============================================
+  # 2. Clippy检查
+  # ============================================
+  clippy:
+    name: Clippy Linting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Run clippy
+        run: |
+          cargo clippy --workspace --all-targets --all-features -- -D warnings
+          echo "✅ Clippy check passed"
+
+      - name: Count warnings
+        if: always()
+        run: |
+          echo "Checking clippy warnings count..."
+          cargo clippy --workspace --all-targets --all-features -- -D warnings 2>&1 | tee clippy_output.txt
+          WARNINGS=$(grep -c "warning:" clippy_output.txt || echo "0")
+          echo "Total warnings: $WARNINGS"
+          echo "clippy_warnings=$WARNINGS" >> $GITHUB_OUTPUT
+          echo "Warnings: $WARNINGS" >> $GITHUB_STEP_SUMMARY
+
+      - name: Check warning threshold
+        if: always()
+        run: |
+          WARNINGS=$(grep -c "warning:" clippy_output.txt || echo "0")
+          if [ $WARNINGS -gt 10 ]; then
+            echo "❌ Too many warnings: $WARNINGS > 10"
+            echo "Please fix warnings before merging"
+            exit 1
+          else
+            echo "✅ Warning count acceptable: $WARNINGS <= 10"
+          fi
+
+  # ============================================
+  # 3. 单元测试
+  # ============================================
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Run unit tests
+        run: |
+          cargo test --workspace --lib --verbose
+          echo "✅ Unit tests passed"
+
+      - name: Run integration tests
+        run: |
+          cargo test --workspace --test '*' --verbose
+          echo "✅ Integration tests passed"
+
+  # ============================================
+  # 4. 文档测试（增强版）
+  # ============================================
+  doc:
+    name: Documentation Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Generate documentation
+        run: |
+          cargo doc --workspace --no-deps --all-features --document-private-items
+          echo "✅ Documentation generated"
+
+      - name: Check doc tests
+        run: |
+          cargo test --workspace --doc
+          echo "✅ Doc tests passed"
+
+      - name: Check for broken doc links
+        run: |
+          cargo doc --workspace --no-deps --all-features 2>&1 | tee doc_output.txt
+          if grep -i "cannot be resolved" doc_output.txt; then
+            echo "❌ Found unresolved doc links"
+            exit 1
+          fi
+          echo "✅ No broken doc links"
+
+      - name: Calculate documentation coverage
+        id: doc-coverage
+        run: |
+          # 统计文档覆盖率
+          echo "Calculating documentation coverage..."
+
+          # 查找所有公共API项
+          total_items=$(find game_engine/src game_engine_simd/src game_engine_performance/src \
+            -name "*.rs" -exec grep -E "^pub (fn|struct|enum|trait|type|mod|const|static)" {} \; 2>/dev/null | wc -l)
+
+          # 查找有文档注释的项
+          documented_items=$(find game_engine/src game_engine_simd/src game_engine_performance/src \
+            -name "*.rs" -exec grep -B3 -E "^pub (fn|struct|enum|trait|type|mod|const|static)" {} \; 2>/dev/null \
+            | grep -c "///" || echo "0")
+
+          if [ "$total_items" -gt 0 ]; then
+            coverage=$(awk "BEGIN {printf \"%.2f\", ($documented_items / $total_items) * 100}")
+          else
+            coverage="0.00"
+          fi
+
+          echo "Total public items: $total_items"
+          echo "Documented items: $documented_items"
+          echo "Documentation coverage: ${coverage}%"
+          echo "doc_coverage=${coverage}%" >> $GITHUB_OUTPUT
+          echo "doc_items=$documented_items" >> $GITHUB_OUTPUT
+          echo "doc_total=$total_items" >> $GITHUB_OUTPUT
+
+          # 添加到汇总
+          echo "### Documentation Coverage" >> $GITHUB_STEP_SUMMARY
+          echo "- **Total Public Items**: $total_items" >> $GITHUB_STEP_SUMMARY
+          echo "- **Documented Items**: $documented_items" >> $GITHUB_STEP_SUMMARY
+          echo "- **Coverage**: ${coverage}%" >> $GITHUB_STEP_SUMMARY
+
+          # 检查是否达到90%阈值
+          if (( $(echo "$coverage < 90" | bc -l 2>/dev/null || echo "0") )); then
+            echo "⚠️ Documentation coverage below 90%: ${coverage}%"
+            echo "Consider adding more documentation"
+            exit 1
+          else
+            echo "✅ Documentation coverage meets threshold: ${coverage}% >= 90%"
+          fi
+
+      - name: Upload documentation
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: documentation
+          path: target/doc/
+          retention-days: 7
+
+  # ============================================
+  # 5. 覆盖率检查
+  # ============================================
+  coverage:
+    name: Code Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: llvm-tools-preview
+
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+
+      - name: Generate coverage
+        run: |
+          cargo llvm-cov --workspace --all-features --lcov --output-path lcov.info
+          cargo llvm-cov --workspace --all-features --summary-only > coverage-summary.txt
+          cat coverage-summary.txt
+
+      - name: Upload to codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./lcov.info
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+
+      - name: Check coverage threshold
+        run: |
+          # 检查总体覆盖率是否>50%
+          COVERAGE=$(grep -oP 'Total.*\K\d+\.\d+' coverage-summary.txt | head -1 || echo "0")
+          echo "Overall coverage: ${COVERAGE}%"
+          echo "coverage=${COVERAGE}%" >> $GITHUB_OUTPUT
+          echo "## Coverage Report" >> $GITHUB_STEP_SUMMARY
+          echo "Overall coverage: ${COVERAGE}%" >> $GITHUB_STEP_SUMMARY
+
+          if (( $(echo "$COVERAGE < 50" | bc -l 2>/dev/null || echo "0") )); then
+            echo "⚠️ Coverage below 50% threshold: ${COVERAGE}%"
+            echo "Consider adding more tests"
+            exit 1
+          else
+            echo "✅ Coverage meets threshold: ${COVERAGE}% >= 50%"
+          fi
+
+  # ============================================
+  # 6. 安全审计（增强版）
+  # ============================================
+  audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install cargo-audit
+        run: cargo install cargo-audit
+
+      - name: Run security audit
+        run: |
+          cargo audit
+          echo "✅ Security audit passed"
+        continue-on-error: true
+
+      - name: Check for vulnerabilities
+        run: |
+          cargo audit --json > audit_report.json 2>&1 || true
+          VULNS=$(cat audit_report.json | grep -o '"vulnerabilities":{"count":[0-9]*' | grep -o '[0-9]*$' || echo "0")
+          if [ "$VULNS" -gt 0 ]; then
+            echo "⚠️ Found $VULNS vulnerabilities"
+            echo "Please review audit_report.json"
+            cat audit_report.json | jq '.vulnerabilities' >> $GITHUB_STEP_SUMMARY || true
+          else
+            echo "✅ No vulnerabilities found"
+          fi
+
+      - name: Upload audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-audit-report
+          path: audit_report.json
+          retention-days: 30
+
+  # ============================================
+  # 6b. 依赖检查（新增 - cargo-udeps）
+  # ============================================
+  udeps:
+    name: Unused Dependencies Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install cargo-udeps
+        run: cargo install cargo-udeps
+
+      - name: Check for unused dependencies
+        run: |
+          cargo +stable udeps --workspace
+          echo "✅ No unused dependencies found"
+        continue-on-error: true
+
+      - name: Generate unused dependencies report
+        if: always()
+        run: |
+          cargo +stable udeps --workspace --all-targets > udeps_report.txt 2>&1 || true
+          echo "### Unused Dependencies Report" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          head -100 udeps_report.txt >> $GITHUB_STEP_SUMMARY || true
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload udeps report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: udeps-report
+          path: udeps_report.txt
+          retention-days: 30
+
+  # ============================================
+  # 7. 依赖检查
+  # ============================================
+  outdated:
+    name: Outdated Dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install cargo-outdated
+        run: cargo install cargo-outdated
+
+      - name: Check outdated dependencies
+        run: |
+          cargo outdated --workspace --exit-code 1
+        continue-on-error: true
+
+      - name: Generate dependency report
+        if: always()
+        run: |
+          cargo outdated --workspace > outdated_report.txt 2>&1 || true
+          echo "### Outdated Dependencies" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          cat outdated_report.txt >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+  # ============================================
+  # 8. 示例编译检查
+  # ============================================
+  examples:
+    name: Build Examples
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build all examples
+        run: |
+          if [ -d "examples" ]; then
+            for example in examples/*.rs; do
+              if [ -f "$example" ]; then
+                echo "Building $example"
+                cargo build --example $(basename "$example" .rs)
+              fi
+            done
+            echo "✅ All examples built successfully"
+          else
+            echo "No examples directory found, skipping"
+          fi
+
+  # ============================================
+  # 9. 代码复杂度检查
+  # ============================================
+  complexity:
+    name: Code Complexity Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install cargo-complexity
+        run: cargo install cargo-complexity
+        continue-on-error: true
+
+      - name: Check complexity
+        run: |
+          cargo complexity --workspace --threshold 20
+        continue-on-error: true
+
+      - name: Generate complexity report
+        if: always()
+        run: |
+          echo "### Code Complexity" >> $GITHUB_STEP_SUMMARY
+          cargo complexity --workspace --threshold 20 > complexity_report.txt 2>&1 || true
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          cat complexity_report.txt >> $GITHUB_STEP_SUMMARY || echo "Complexity check not available"
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+  # ============================================
+  # 10. Clippy动态建议生成（新增）
+  # ============================================
+  clippy-dynamic:
+    name: Clippy Suggestions Generator
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Generate clippy suggestions
+        run: |
+          cargo clippy --workspace --all-targets --all-features \
+            -- -W clippy::all -W clippy::pedantic \
+            > clippy_suggestions.txt 2>&1 || true
+
+      - name: Count suggestions by category
+        id: suggestions
+        run: |
+          echo "Analyzing clippy suggestions..."
+
+          # 统计警告类型
+          warning_count=$(grep -c "warning:" clippy_suggestions.txt 2>/dev/null || echo "0")
+          suggestion_count=$(grep -c "help:" clippy_suggestions.txt 2>/dev/null || echo "0")
+
+          echo "Total warnings: $warning_count"
+          echo "Total suggestions: $suggestion_count"
+          echo "warnings=$warning_count" >> $GITHUB_OUTPUT
+          echo "suggestions=$suggestion_count" >> $GITHUB_OUTPUT
+
+          # 按类别统计
+          echo "### Clippy Suggestions Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Warnings**: $warning_count" >> $GITHUB_STEP_SUMMARY
+          echo "- **Suggestions**: $suggestion_count" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # 列出最常见的问题
+          echo "### Top 10 Most Common Issues" >> $GITHUB_STEP_SUMMARY
+          grep "warning:" clippy_suggestions.txt 2>/dev/null \
+            | sed 's/.*warning: //' | sed 's/ ,.*//' \
+            | sort | uniq -c | sort -rn | head -10 \
+            >> $GITHUB_STEP_SUMMARY || echo "No warnings found" >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload suggestions
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: clippy-suggestions
+          path: clippy_suggestions.txt
+          retention-days: 30
+
+  # ============================================
+  # 11. 性能回归检测（新增）
+  # ============================================
+  performance-regression:
+    name: Performance Regression Check
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libssl-dev pkg-config libx11-dev libxext-dev
+
+      - name: Run baseline benchmarks (main branch)
+        run: |
+          git checkout origin/main || git checkout origin/master
+          cargo bench --workspace -- --save-baseline baseline --output-format bencher || true
+
+      - name: Run current benchmarks (PR branch)
+        run: |
+          git checkout ${{ github.sha }}
+          cargo bench --workspace -- --save-baseline main --output-format bencher || true
+
+      - name: Detect performance regression
+        run: |
+          python3 scripts/detect_regression.py \
+            --baseline target/criterion/baseline \
+            --current target/criterion/main \
+            --threshold 5.0 \
+            --verbose
+        continue-on-error: true
+
+      - name: Generate performance report
+        if: always()
+        run: |
+          echo "### Performance Regression Check" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Benchmark comparison between PR and main branch" >> $GITHUB_STEP_SUMMARY
+          echo "- **Threshold**: 5% regression" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: See benchmark artifacts for details" >> $GITHUB_STEP_SUMMARY
+
+      - name: Fail on significant regression
+        run: |
+          # 如果性能退化超过5%，阻止合并
+          python3 scripts/detect_regression.py \
+            --baseline target/criterion/baseline \
+            --current target/criterion/main \
+            --threshold 5.0 \
+            --fail-on-regression || {
+            echo "❌ Performance regression detected (>5%)"
+            echo "Please review and optimize before merging"
+            exit 1
+          }
+        continue-on-error: false
+
+  # ============================================
+  # 12. 重复代码检测（新增）
+  # ============================================
+  duplicate-code:
+    name: Duplicate Code Detection
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install jplana/duplicate-code-detection-tool
+        run: |
+          wget https://github.com/jplana/duplicate-code-detection-tool/releases/download/v1.1.0/dcdt-1.1.0.jar
+        continue-on-error: true
+
+      - name: Run duplicate code detection
+        run: |
+          java -jar dcdt-1.1.0.jar -vl src/ || true
+        continue-on-error: true
+
+      - name: Generate duplicate code report
+        if: always()
+        run: |
+          echo "### Duplicate Code Detection" >> $GITHUB_STEP_SUMMARY
+          echo "Duplicate code analysis completed. Review for potential refactoring opportunities." >> $GITHUB_STEP_SUMMARY
+          echo "See artifacts for detailed report." >> $GITHUB_STEP_SUMMARY
+
+  # ============================================
+  # 13. 代码风格一致性检查（新增）
+  # ============================================
+  style-check:
+    name: Code Style Consistency
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Check line length
+        run: |
+          echo "Checking line length..."
+          find game_engine/src game_engine_simd/src game_engine_performance/src \
+            -name "*.rs" -exec awk 'length > 100 {print FILENAME":"NR":"length}' {} \; \
+            | tee line_length_report.txt | head -20
+
+          LONG_LINES=$(wc -l < line_length_report.txt)
+          if [ "$LONG_LINES" -gt 50 ]; then
+            echo "⚠️ Found $LONG_LINES lines exceeding 100 characters"
+            echo "Consider breaking long lines for better readability"
+          else
+            echo "✅ Line length acceptable"
+          fi
+        continue-on-error: true
+
+      - name: Check trailing whitespace
+        run: |
+          echo "Checking trailing whitespace..."
+          find game_engine/src game_engine_simd/src game_engine_performance/src \
+            -name "*.rs" -exec grep -l " $" {} \; | tee trailing_ws.txt || true
+
+          WS_FILES=$(wc -l < trailing_ws.txt 2>/dev/null || echo "0")
+          if [ "$WS_FILES" -gt 0 ]; then
+            echo "⚠️ Found $WS_FILES files with trailing whitespace"
+          else
+            echo "✅ No trailing whitespace found"
+          fi
+        continue-on-error: true
+
+      - name: Upload style report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: style-check-report
+          path: |
+            line_length_report.txt
+            trailing_ws.txt
+          retention-days: 30
+
+  # ============================================
+  # 14. 质量门禁汇总
+  # ============================================
+  quality-summary:
+    name: Quality Gate Summary
+    runs-on: ubuntu-latest
+    needs: [format, clippy, test, doc, coverage, audit, udeps, outdated, examples, complexity, clippy-dynamic, performance-regression, duplicate-code, style-check]
+    if: always()
+    steps:
+      - name: Check all jobs status
+        run: |
+          echo "## 🔍 Quality Gate Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Category | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|----------|--------|" >> $GITHUB_STEP_SUMMARY
+
+          # Define jobs with categories
+          declare -A job_categories
+          job_categories[format]="Code Style"
+          job_categories[clippy]="Linting"
+          job_categories[test]="Testing"
+          job_categories[doc]="Documentation"
+          job_categories[coverage]="Coverage"
+          job_categories[audit]="Security"
+          job_categories[udeps]="Dependencies"
+          job_categories[outdated]="Dependencies"
+          job_categories[examples]="Build"
+          job_categories[complexity]="Complexity"
+          job_categories[clippy-dynamic]="Linting"
+          job_categories[performance-regression]="Performance"
+          job_categories[duplicate-code]="Code Quality"
+          job_categories[style-check]="Code Style"
+
+          # Check each job status
+          for job in format clippy test doc coverage audit udeps outdated examples complexity clippy-dynamic performance-regression duplicate-code style-check; do
+            status="${{ needs.${job}.result }}"
+            category="${job_categories[$job]}"
+            if [ "$status" = "success" ]; then
+              echo "| $job | $category | ✅ $status |" >> $GITHUB_STEP_SUMMARY
+            elif [ "$status" = "failure" ]; then
+              echo "| $job | $category | ❌ $status |" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "| $job | $category | ⚠️ $status |" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+
+      - name: Calculate quality metrics
+        run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 📊 Quality Metrics" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Count successful jobs
+          total=14
+          success=0
+          for job in format clippy test doc coverage audit udeps outdated examples complexity clippy-dynamic performance-regression duplicate-code style-check; do
+            if [ "${{ needs.${job}.result }}" = "success" ]; then
+              success=$((success + 1))
+            fi
+          done
+
+          pass_rate=$(awk "BEGIN {printf \"%.1f\", ($success / $total) * 100}")
+          echo "- **Total Checks**: $total" >> $GITHUB_STEP_SUMMARY
+          echo "- **Passed**: $success" >> $GITHUB_STEP_SUMMARY
+          echo "- **Pass Rate**: ${pass_rate}%" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+      - name: Final quality gate decision
+        run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 🚦 Quality Gate Decision" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Fail if any critical job failed
+          failed=0
+          for job in format clippy test doc coverage; do
+            status="${{ needs.${job}.result }}"
+            if [ "$status" != "success" ]; then
+              echo "❌ Critical job $job failed" >> $GITHUB_STEP_SUMMARY
+              failed=1
+            fi
+          done
+
+          # Check for security issues
+          if [ "${{ needs.audit.result }}" = "failure" ]; then
+            echo "⚠️ Security audit failed - review required" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Check for performance regression
+          if [ "${{ needs.performance-regression.result }}" = "failure" ]; then
+            echo "⚠️ Performance regression detected - optimization required" >> $GITHUB_STEP_SUMMARY
+            failed=1
+          fi
+
+          if [ $failed -eq 1 ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### ❌ Quality Gate FAILED" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Critical checks did not pass. Please fix the issues before merging." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Required Actions:**" >> $GITHUB_STEP_SUMMARY
+            echo "- Fix formatting issues (run \`cargo fmt\`)" >> $GITHUB_STEP_SUMMARY
+            echo "- Resolve clippy warnings" >> $GITHUB_STEP_SUMMARY
+            echo "- Ensure all tests pass" >> $GITHUB_STEP_SUMMARY
+            echo "- Complete documentation (coverage > 90%)" >> $GITHUB_STEP_SUMMARY
+            echo "- Improve test coverage (target: > 50%)" >> $GITHUB_STEP_SUMMARY
+            echo "- Fix performance regressions (threshold: > 5%)" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          else
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### ✅ Quality Gate PASSED" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "All critical checks passed! This PR is ready for review and merge." >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload quality report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quality-gate-report
+          path: |
+            clippy_suggestions.txt
+            udeps_report.txt
+            audit_report.json
+            line_length_report.txt
+            trailing_ws.txt
+          retention-days: 90

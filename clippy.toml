@@ -1,0 +1,34 @@
+# Clippy Configuration for Game Engine
+#
+# This configuration defines thresholds for various clippy lints.
+# Values are set higher than default to accommodate game engine requirements.
+
+# Complex type thresholds
+type-complexity-threshold = 300  # Increased from 250 - Game engines have complex types
+
+# Function argument count
+too-many-arguments-threshold = 10  # Increased from 7 - Render/physics APIs need many parameters
+
+# Array/Vec size thresholds
+array-size-threshold = 512000
+vec-box-size-threshold = 1048576
+
+# Trait bounds
+max-trait-bounds = 8  # Increased from 6 - Generic systems need more bounds
+
+# Cognitive complexity - increased for game logic
+cognitive-complexity-threshold = 40  # Increased from 30
+
+# Literal representation
+literal-representation-threshold = 10  # Allow small literals
+
+# Stack size for stack-based checks
+stack-size-threshold = 512000
+
+# Enum variant size threshold
+enum-variant-size-threshold = 200
+
+# Warn on certain patterns
+warn-on-all-wildcard-imports = false  # Allow wildcard imports in tests
+disallowed-methods = []  # No methods disallowed
+disallowed-types = []  # No types disallowed

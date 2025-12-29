@@ -225,7 +225,12 @@ impl ColorGradient {
 
     pub fn add_stop(mut self, time: f32, color: Vec4) -> Self {
         self.stops.push(ColorStop { time, color });
-        self.stops.sort_by(|a, b| a.time.partial_cmp(&b.time).unwrap());
+        self.stops.sort_by(|a, b| {
+            a.time.partial_cmp(&b.time).unwrap_or_else(|| {
+                log::error!("Failed to compare color stop times: NaN detected");
+                std::cmp::Ordering::Equal
+            })
+        });
         self
     }
 
@@ -250,7 +255,11 @@ impl ColorGradient {
             }
         }
 
-        self.stops.last().unwrap().color
+        // 使用 unwrap_or_else 提供安全的后备值
+        self.stops.last().map(|stop| stop.color).unwrap_or_else(|| {
+            log::error!("Color gradient has no stops despite passing length checks");
+            Vec4::ONE
+        })
     }
 }
 
@@ -318,7 +327,11 @@ fn sample_curve(points: &[(f32, f32)], t: f32) -> f32 {
         }
     }
 
-    points.last().unwrap().1
+    // 使用 unwrap_or_else 提供安全的后备值
+    points.last().map(|&(_, v)| v).unwrap_or_else(|| {
+        log::error!("Curve has no points despite passing length checks");
+        1.0
+    })
 }
 
 // ============================================================================
@@ -555,10 +568,12 @@ pub fn particle_emitter_update_system(
 
         // 检查持续时间
         if let Some(duration) = emitter.config.duration
-            && emitter.elapsed_time >= duration && !emitter.config.looping {
-                emitter.enabled = false;
-                continue;
-            }
+            && emitter.elapsed_time >= duration
+            && !emitter.config.looping
+        {
+            emitter.enabled = false;
+            continue;
+        }
 
         // 计算发射数（实际发射在 GPU compute shader 中执行）
         let _emit_count = emitter.particles_to_emit(delta);

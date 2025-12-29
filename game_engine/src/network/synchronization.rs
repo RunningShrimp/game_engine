@@ -372,9 +372,10 @@ impl StateSyncManager {
 
                 // 更新服务器状态并检测冲突
                 if let Ok(conflict) = self.update_server_state(delta.id, server_state, current_tick)
-                    && conflict.conflict_type != ConflictType::None {
-                        conflicts.push(conflict);
-                    }
+                    && conflict.conflict_type != ConflictType::None
+                {
+                    conflicts.push(conflict);
+                }
             }
         }
 
@@ -556,7 +557,7 @@ mod tests {
             Vec3::ONE,
             Vec3::ZERO,
         );
-        manager.update_client_state(1, client_state, 5).unwrap();
+        manager.update_client_state(1, client_state, 5).expect("Test: operation should succeed");
 
         let server_state = EntityState::new(
             Vec3::new(1.0, 0.0, 0.0), // 超出阈值
@@ -565,7 +566,7 @@ mod tests {
             Vec3::ZERO,
         );
 
-        let resolution = manager.update_server_state(1, server_state, 5).unwrap();
+        let resolution = manager.update_server_state(1, server_state, 5).expect("Test: operation should succeed");
         assert_eq!(resolution.conflict_type, ConflictType::StateMismatch);
     }
 

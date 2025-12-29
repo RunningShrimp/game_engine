@@ -29,9 +29,18 @@ fn main() {
     let result = bench.run("expensive_operation", 10, || {
         expensive_operation();
     });
-    println!("执行时间: {:.3}ms", result.avg_duration.as_secs_f64() * 1000.0);
-    println!("最小时间: {:.3}ms", result.min_duration.as_secs_f64() * 1000.0);
-    println!("最大时间: {:.3}ms", result.max_duration.as_secs_f64() * 1000.0);
+    println!(
+        "执行时间: {:.3}ms",
+        result.avg_duration.as_secs_f64() * 1000.0
+    );
+    println!(
+        "最小时间: {:.3}ms",
+        result.min_duration.as_secs_f64() * 1000.0
+    );
+    println!(
+        "最大时间: {:.3}ms",
+        result.max_duration.as_secs_f64() * 1000.0
+    );
 
     // 2. 物理模拟测试
     println!("\n2. 物理模拟测试");
@@ -39,7 +48,10 @@ fn main() {
     let physics_result = bench.run("physics_step", 100, || {
         physics_simulation_step();
     });
-    println!("物理步进时间: {:.3}μs", physics_result.avg_duration.as_secs_f64() * 1_000_000.0);
+    println!(
+        "物理步进时间: {:.3}μs",
+        physics_result.avg_duration.as_secs_f64() * 1_000_000.0
+    );
 
     // 3. 渲染测试
     println!("\n3. 渲染帧测试");
@@ -47,7 +59,10 @@ fn main() {
     let render_result = bench.run("render_frame", 100, || {
         render_frame();
     });
-    println!("渲染帧时间: {:.3}μs", render_result.avg_duration.as_secs_f64() * 1_000_000.0);
+    println!(
+        "渲染帧时间: {:.3}μs",
+        render_result.avg_duration.as_secs_f64() * 1_000_000.0
+    );
 
     // 4. 性能回归检测
     println!("\n4. 性能回归检测");

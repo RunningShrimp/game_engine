@@ -1,79 +1,88 @@
-//! # 领域层（Domain Layer）
+//! # Domain Layer
 //!
-//! 本模块实现领域驱动设计（DDD）的核心理念，提供富领域对象和领域服务。
+//! This module implements the core concepts of Domain-Driven Design (DDD),
+//! providing rich domain objects and domain services.
 //!
-//! ## 设计理念
+//! ## Design Philosophy
 //!
-//! 领域层是业务逻辑的核心，不依赖任何基础设施、应用或用户界面层。
-//! 所有业务规则和领域逻辑都封装在领域对象中，形成富领域模型。
+//! The domain layer is the core of business logic, independent of any infrastructure,
+//! application, or user interface layers. All business rules and domain logic are
+//! encapsulated in domain objects, forming a rich domain model.
 //!
-//! ## 核心组件
+//! ## Core Components
 //!
-//! ### 实体（Entities）
-//! - [`EntityFactory`](entity::EntityFactory) - 实体工厂，创建和管理领域实体
-//! - [`GameEntity`](entity::GameEntity) - 游戏实体的领域表示
-//! - [`EntityId`](entity::EntityId) - 实体的唯一标识符
+//! ### Entities
+//! - [`EntityFactory`](entity::EntityFactory) - Entity factory for creating and managing domain entities
+//! - [`GameEntity`](entity::GameEntity) - Domain representation of game entities
+//! - [`EntityId`](entity::EntityId) - Unique identifier for entities
 //!
-//! ### 值对象（Value Objects）
-//! - [`Position`](value_objects::Position) - 位置值对象
-//! - [`Velocity`](value_objects::Velocity) - 速度值对象
-//! - [`Mass`](value_objects::Mass) - 质量值对象
-//! - [`DomainTransform`](value_objects::Transform) - 变换值对象
+//! ### Value Objects
+//! - [`Position`](value_objects::Position) - Position value object
+//! - [`Velocity`](value_objects::Velocity) - Velocity value object
+//! - [`Mass`](value_objects::Mass) - Mass value object
+//! - [`DomainTransform`](value_objects::Transform) - Transform value object
 //!
-//! ### 聚合（Aggregates）
-//! - [`RigidBody`](physics::RigidBody) - 刚体聚合，包含物理属性和行为
-//! - [`Collider`](physics::Collider) - 碰撞体聚合
-//! - [`Scene`](scene::Scene) - 场景聚合
+//! ### Aggregates
+//! - [`RigidBody`](physics::RigidBody) - Rigid body aggregate with physics properties and behaviors
+//! - [`Collider`](physics::Collider) - Collider aggregate
+//! - [`Scene`](scene::Scene) - Scene aggregate
 //!
-//! ### 领域服务（Domain Services）
-//! - [`PhysicsDomainService`](services::PhysicsDomainService) - 物理领域服务
-//! - [`AudioDomainService`](services::AudioDomainService) - 音频领域服务
-//! - [`SceneDomainService`](services::SceneDomainService) - 场景领域服务
+//! ### Domain Services
+//! - [`PhysicsDomainService`](services::PhysicsDomainService) - Physics domain service
+//! - [`AudioDomainService`](services::AudioDomainService) - Audio domain service
+//! - [`SceneDomainService`](services::SceneDomainService) - Scene domain service
 //!
-//! ### 领域事件（Domain Events）
-//! - [`EnhancedEventBus`](event_bus::EnhancedEventBus) - 事件总线，用于领域事件通信
-//! - [`EventQueue`](event_bus::EventQueue) - 事件队列
+//! ### Domain Events
+//! - [`EnhancedEventBus`](event_bus::EnhancedEventBus) - Event bus for domain event communication
+//! - [`EventQueue`](event_bus::EventQueue) - Event queue
 //!
-//! ## 设计模式
+//! ## Design Patterns
 //!
-//! ### CQRS（命令查询职责分离）
-//! - 命令（Commands）: 修改领域状态
-//! - 查询（Queries）: 读取领域状态
-//! - 读写分离优化性能
+//! ### CQRS (Command Query Responsibility Segregation)
+//! - Commands: Modify domain state
+//! - Queries: Read domain state
+//! - Separate read and write for performance optimization
 //!
-//! ### 事件溯源（Event Sourcing）
-//! - 记录所有状态变更事件
-//! - 支持时间旅行和审计
-//! - 事件重放重建状态
+//! ### Event Sourcing
+//! - Record all state change events
+//! - Support time travel and auditing
+//! - Replay events to rebuild state
 //!
-//! ### 依赖注入（DI）
-//! - [`DIContainer`](services::DIContainer) - 依赖注入容器
-//! - 解耦领域服务依赖
+//! ### Dependency Injection (DI)
+//! - [`DIContainer`](services::DIContainer) - Dependency injection container
+//! - Decouple domain service dependencies
 //!
-//! ## 使用示例
+//! ## Examples
 //!
 //! ```rust,no_run
 //! use game_engine::domain::*;
 //!
-//! // 创建实体
+//! // Create entity
 //! let entity = EntityFactory::create("player")
 //!     .with_position(Position::new(0.0, 0.0, 0.0))
 //!     .with_velocity(Velocity::new(0.0, 0.0, 0.0))
 //!     .with_mass(Mass::from_kilograms(70.0))
 //!     .build();
 //!
-//! // 使用领域服务
+//! // Use domain service
 //! let physics_service = PhysicsDomainService::new();
 //! physics_service.apply_force(&entity, Velocity::new(10.0, 0.0, 0.0));
 //! ```
 //!
-//! ## 错误处理
+//! ## Error Handling
 //!
-//! 所有领域操作都返回 [`DomainError`]，包含详细的错误信息和恢复策略。
-//!
+//! All domain operations return [`DomainError`] with detailed error information
+//! and recovery strategies.
 
+// 模块私有实现说明：
+// - 实现领域驱动设计（DDD）模式
+// - 提供富领域模型和领域服务
+// - 支持CQRS和事件溯源模式
+// - 实现依赖注入容器
+// - 使用Actor模式处理领域逻辑
 pub mod actor;
 pub mod audio;
+pub mod cqrs;
 pub mod entity;
 #[cfg(test)]
 mod error_handling_tests;
@@ -81,9 +90,7 @@ pub mod errors;
 pub mod event_bus;
 pub mod event_registry;
 pub mod event_sourcing;
-pub mod cqrs;
 pub mod events;
-
 #[cfg(test)]
 mod aggregate_invariants_tests;
 pub mod physics;
@@ -91,6 +98,7 @@ pub mod physics;
 mod property_tests;
 pub mod scene;
 pub mod services;
+pub mod soa_storage;
 pub mod value_objects;
 
 // 重新导出主要类型
@@ -108,6 +116,7 @@ pub use scene::{Scene, SceneId, SceneRepository};
 pub use services::{
     AudioDomainService, DIContainer, DomainServiceFactory, PhysicsDomainService, SceneDomainService,
 };
+pub use soa_storage::{ColliderStorage, RigidBodyStorage};
 pub use value_objects::{
     Duration, Mass, Position, Rotation, Scale, Transform as DomainTransform, Velocity, Volume,
 };

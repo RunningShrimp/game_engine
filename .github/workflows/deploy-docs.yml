@@ -1,0 +1,114 @@
+name: Deploy Documentation
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'docs/**'
+      - '.github/workflows/deploy-docs.yml'
+  pull_request:
+    branches: [main, master]
+    paths:
+      - 'docs/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: Cache mdbook
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo/bin/
+          key: ${{ runner.os }}-mdbook-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-mdbook-
+
+      - name: Install mdbook
+        run: |
+          cargo install mdbook --locked || true
+          cargo install mdbook-linkcheck --locked || true
+          cargo install mdbook-mermaid --locked || true
+          cargo install mdbook-toc --locked || true
+
+      - name: Verify mdbook installation
+        run: |
+          mdbook --version
+          mdbook-linkcheck --version || echo "mdbook-linkcheck not installed"
+
+      - name: Build documentation
+        run: |
+          cd docs
+          mdbook build
+
+      - name: Check for broken links
+        run: |
+          cd docs
+          mdbook linkcheck || echo "Link check completed with warnings"
+
+      - name: Deploy to GitHub Pages
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs/book
+          cname: docs.gameengine.com  # Optional: Custom domain
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
+          commit_message: 'Deploy documentation'
+
+      - name: Upload artifact (for PR previews)
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v3
+        with:
+          name: documentation-preview
+          path: docs/book/
+          retention-days: 7
+
+      - name: Comment PR with preview link
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '📚 Documentation preview has been built!\n\nDownload the artifact from the Actions page to view the documentation locally.'
+            })
+
+  build-rustdoc:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: Generate Rust documentation
+        run: |
+          cargo doc --workspace --no-deps --all-features
+
+      - name: Upload Rust documentation
+        uses: actions/upload-artifact@v3
+        with:
+          name: rustdoc
+          path: target/doc/
+          retention-days: 7

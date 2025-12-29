@@ -1,5 +1,5 @@
 //  OpenXR 实现
-// 
+//
 //  完整的OpenXR集成，包括实例创建、会话管理、交换链等
 
 use super::*;
@@ -92,11 +92,9 @@ impl OpenXrBackend {
             })?;
 
         // 2. 获取系统（HMD）
-        let system = instance
-            .system(xr::FormFactor::HEAD_MOUNTED_DISPLAY)
-            .map_err(|e| {
-                OpenXrError::InitializationFailed(format!("System query failed: {:?}", e))
-            })?;
+        let system = instance.system(xr::FormFactor::HEAD_MOUNTED_DISPLAY).map_err(|e| {
+            OpenXrError::InitializationFailed(format!("System query failed: {:?}", e))
+        })?;
 
         // 3. 检查系统属性
         let system_properties = instance.system_properties(system).map_err(|e| {
@@ -154,16 +152,16 @@ impl OpenXrBackend {
 
     /// 获取实例信息（用于调试）
     pub fn instance_info(&self) -> Result<xr::InstanceProperties, OpenXrError> {
-        self.instance
-            .properties()
-            .map_err(|e| OpenXrError::InitializationFailed(format!("Failed to get instance properties: {:?}", e)))
+        self.instance.properties().map_err(|e| {
+            OpenXrError::InitializationFailed(format!("Failed to get instance properties: {:?}", e))
+        })
     }
 
     /// 获取系统信息（用于调试）
     pub fn system_info(&self) -> Result<xr::SystemProperties, OpenXrError> {
-        self.instance
-            .system_properties(self.system)
-            .map_err(|e| OpenXrError::InitializationFailed(format!("Failed to get system properties: {:?}", e)))
+        self.instance.system_properties(self.system).map_err(|e| {
+            OpenXrError::InitializationFailed(format!("Failed to get system properties: {:?}", e))
+        })
     }
 
     /// 检查视图空间是否可用
@@ -183,12 +181,9 @@ impl OpenXrBackend {
 
     /// 创建参考空间
     pub fn create_reference_space(&mut self) -> Result<(), OpenXrError> {
-        let session = self
-            .session
-            .as_ref()
-            .ok_or(OpenXrError::SessionCreationFailed(
-                "Session not created".to_string(),
-            ))?;
+        let session = self.session.as_ref().ok_or(OpenXrError::SessionCreationFailed(
+            "Session not created".to_string(),
+        ))?;
 
         // 转换参考空间类型
         let reference_space_type = match self.config.reference_space {
@@ -245,10 +240,7 @@ impl OpenXrBackend {
         });
 
         // 记录创建的交换链数量
-        tracing::debug!(
-            "Created swapchain, total count: {}",
-            self.swapchain_count()
-        );
+        tracing::debug!("Created swapchain, total count: {}", self.swapchain_count());
 
         Ok(())
     }
@@ -302,8 +294,7 @@ impl OpenXrBackend {
         // 轮询OpenXR事件
         // 暂时添加模拟事件
         if self.state == XrSessionState::Ready {
-            self.events
-                .push(XrEvent::SessionStateChanged(XrSessionState::Synchronized));
+            self.events.push(XrEvent::SessionStateChanged(XrSessionState::Synchronized));
             self.state = XrSessionState::Synchronized;
         }
     }
@@ -376,12 +367,12 @@ pub struct OpenXrSwapchain {
 
 impl OpenXrSwapchain {
     /// 创建一个新的OpenXR交换链
-    /// 
+    ///
     /// # 参数
     /// * `_session` - OpenXR会话引用
     /// * `width` - 交换链宽度（像素）
     /// * `height` - 交换链高度（像素）
-    /// 
+    ///
     /// # 返回
     /// 返回初始化成功的交换链实例，或OpenXrError错误
     pub fn new(
@@ -415,7 +406,7 @@ impl XrSwapchain for OpenXrSwapchain {
                 "No swapchain images available".to_string(),
             ));
         }
-        
+
         self.current_image_index = (self.current_image_index + 1) % self.images.len() as u32;
         Ok(self.current_image_index)
     }

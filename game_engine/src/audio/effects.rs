@@ -658,7 +658,7 @@ impl_default!(AudioOcclusionConfig {
 });
 
 /// 音频遮挡效果
-/// 
+///
 /// 模拟声音被障碍物遮挡的效果，通过低通滤波和音量衰减实现
 pub struct AudioOcclusionEffect {
     config: AudioOcclusionConfig,
@@ -717,9 +717,7 @@ impl AudioEffect for AudioOcclusionEffect {
             let input = *sample;
 
             // 应用低通滤波
-            let output = b0 * input
-                + b1 * self.lowpass_state.x1
-                + b2 * self.lowpass_state.x2
+            let output = b0 * input + b1 * self.lowpass_state.x1 + b2 * self.lowpass_state.x2
                 - a1 * self.lowpass_state.y1
                 - a2 * self.lowpass_state.y2;
 
@@ -773,7 +771,7 @@ impl_default!(LimiterConfig {
 });
 
 /// 限制器效果
-/// 
+///
 /// 防止音频信号超过阈值，用于防止削波失真
 pub struct LimiterEffect {
     config: LimiterConfig,
@@ -805,7 +803,8 @@ impl AudioEffect for LimiterEffect {
         }
 
         let threshold_linear = 10.0_f32.powf(self.config.threshold / 20.0);
-        let release_coeff = (-1.0 / (self.config.release_ms * 0.001 * self.config.sample_rate)).exp();
+        let release_coeff =
+            (-1.0 / (self.config.release_ms * 0.001 * self.config.sample_rate)).exp();
 
         for sample in samples.iter_mut() {
             let input_abs = sample.abs();

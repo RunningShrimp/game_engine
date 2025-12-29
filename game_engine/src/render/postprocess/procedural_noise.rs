@@ -140,4 +140,3 @@ impl Default for ProceduralNoiseUniforms {
         }
     }
 }
-

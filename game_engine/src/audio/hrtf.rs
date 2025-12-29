@@ -93,7 +93,7 @@ impl HrtfFilter {
     /// 创建新的HRTF滤波器
     pub fn new(config: HrtfConfig) -> Self {
         let max_delay_samples = (config.max_itd_delay * config.sample_rate).ceil() as usize + 1;
-        
+
         Self {
             config,
             azimuth: 0.0,
@@ -166,10 +166,10 @@ impl HrtfFilter {
         // ITD = (head_radius / speed_of_sound) * (azimuth + sin(azimuth))
         let head_radius = self.config.head_radius;
         let speed = self.config.speed_of_sound;
-        
+
         // 考虑仰角的影响（简化模型）
         let effective_azimuth = self.azimuth * self.elevation.cos();
-        
+
         let itd_base = (head_radius / speed) * (effective_azimuth + effective_azimuth.sin());
         let itd = itd_base.clamp(-self.config.max_itd_delay, self.config.max_itd_delay);
 
@@ -192,17 +192,17 @@ impl HrtfFilter {
         // 简化的ILD模型：基于方位角的余弦函数
         // 当声源在右侧时，右耳增益高，左耳增益低（头部阴影效应）
         let azimuth_normalized = self.azimuth / PI; // -1 到 1
-        
+
         // 使用余弦函数模拟头部阴影
         let shadow_factor = (azimuth_normalized * PI / 2.0).cos();
-        
+
         // 左耳增益：声源在右侧时降低
         let left_gain = if self.azimuth > 0.0 {
             0.5 + 0.5 * shadow_factor
         } else {
             1.0
         };
-        
+
         // 右耳增益：声源在左侧时降低
         let right_gain = if self.azimuth < 0.0 {
             0.5 + 0.5 * shadow_factor
@@ -212,7 +212,7 @@ impl HrtfFilter {
 
         // 考虑仰角的影响（简化）
         let elevation_factor = 1.0 - (self.elevation.abs() / (PI / 2.0)) * 0.2;
-        
+
         (left_gain * elevation_factor, right_gain * elevation_factor)
     }
 
@@ -226,10 +226,10 @@ impl HrtfFilter {
     pub fn process_mono(&mut self, mono_samples: &[f32]) -> (Vec<f32>, Vec<f32>) {
         let (itd_left, itd_right) = self.calculate_itd();
         let (ild_left, ild_right) = self.calculate_ild();
-        
+
         let delay_samples_left = (itd_left * self.config.sample_rate).round() as i32;
         let delay_samples_right = (itd_right * self.config.sample_rate).round() as i32;
-        
+
         let buffer_size = self.left_delay_buffer.len();
         let mut left_output = Vec::with_capacity(mono_samples.len());
         let mut right_output = Vec::with_capacity(mono_samples.len());
@@ -240,9 +240,13 @@ impl HrtfFilter {
             self.right_delay_buffer[self.delay_write_index] = sample;
 
             // 读取延迟后的样本
-            let left_delay_index = (self.delay_write_index as i32 - delay_samples_left + buffer_size as i32) as usize % buffer_size;
-            let right_delay_index = (self.delay_write_index as i32 - delay_samples_right + buffer_size as i32) as usize % buffer_size;
-            
+            let left_delay_index = (self.delay_write_index as i32 - delay_samples_left
+                + buffer_size as i32) as usize
+                % buffer_size;
+            let right_delay_index = (self.delay_write_index as i32 - delay_samples_right
+                + buffer_size as i32) as usize
+                % buffer_size;
+
             let mut left_sample = self.left_delay_buffer[left_delay_index];
             let mut right_sample = self.right_delay_buffer[right_delay_index];
 
@@ -426,7 +430,7 @@ mod tests {
     fn test_hrtf_position_update() {
         let config = HrtfConfig::default();
         let mut filter = HrtfFilter::new(config);
-        
+
         filter.update_source_position(PI / 4.0, 0.0, 5.0);
         assert!((filter.azimuth - PI / 4.0).abs() < 0.001);
         assert_eq!(filter.distance, 5.0);
@@ -436,11 +440,11 @@ mod tests {
     fn test_hrtf_itd_calculation() {
         let config = HrtfConfig::default();
         let mut filter = HrtfFilter::new(config);
-        
+
         // 声源在右侧
         filter.update_source_position(PI / 2.0, 0.0, 1.0);
         let (itd_left, itd_right) = filter.calculate_itd();
-        
+
         // 右耳应该先听到（ITD为负）
         assert!(itd_right < 0.0);
         assert!(itd_left > 0.0);
@@ -450,11 +454,11 @@ mod tests {
     fn test_hrtf_ild_calculation() {
         let config = HrtfConfig::default();
         let mut filter = HrtfFilter::new(config);
-        
+
         // 声源在右侧
         filter.update_source_position(PI / 2.0, 0.0, 1.0);
         let (ild_left, ild_right) = filter.calculate_ild();
-        
+
         // 右耳增益应该大于左耳
         assert!(ild_right > ild_left);
     }
@@ -463,12 +467,12 @@ mod tests {
     fn test_hrtf_process_mono() {
         let config = HrtfConfig::default();
         let mut filter = HrtfFilter::new(config);
-        
+
         filter.update_source_position(PI / 4.0, 0.0, 1.0);
-        
+
         let mono_samples = vec![0.5, 0.3, -0.2, -0.4, 0.1];
         let (left, right) = filter.process_mono(&mono_samples);
-        
+
         assert_eq!(left.len(), mono_samples.len());
         assert_eq!(right.len(), mono_samples.len());
     }
@@ -476,12 +480,12 @@ mod tests {
     #[test]
     fn test_doppler_calculator() {
         let calculator = DopplerCalculator::default();
-        
+
         // 声源远离监听器
         let relative_pos = Vec3::new(10.0, 0.0, 0.0);
         let source_vel = Vec3::new(10.0, 0.0, 0.0); // 远离
         let listener_vel = Vec3::ZERO;
-        
+
         let pitch = calculator.calculate_pitch_shift(relative_pos, source_vel, listener_vel);
         assert!(pitch < 1.0); // 音调应该降低
     }
@@ -489,14 +493,13 @@ mod tests {
     #[test]
     fn test_doppler_approaching() {
         let calculator = DopplerCalculator::default();
-        
+
         // 声源接近监听器
         let relative_pos = Vec3::new(10.0, 0.0, 0.0);
         let source_vel = Vec3::new(-10.0, 0.0, 0.0); // 接近
         let listener_vel = Vec3::ZERO;
-        
+
         let pitch = calculator.calculate_pitch_shift(relative_pos, source_vel, listener_vel);
         assert!(pitch > 1.0); // 音调应该升高
     }
 }
-

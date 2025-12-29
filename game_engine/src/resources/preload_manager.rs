@@ -6,14 +6,22 @@
 //! - 基于优先级的预加载
 //! - 预加载进度追踪
 
+use crate::error::lock_safety::{safe_read, safe_write};
 use crate::resources::coroutine_loader::{AssetType, CoroutineAssetLoader, LoadPriority};
 use crate::resources::dependency_manager::DependencyGraph;
-use crate::error::lock_safety::{safe_write, safe_read};
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 use std::time::Instant;
+use thiserror::Error;
+
+/// 预加载错误
+#[derive(Debug, Error)]
+pub enum PreloadError {
+    #[error("Lock error: {0}")]
+    LockError(String),
+}
 
 /// 预加载策略
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -179,7 +187,7 @@ impl PreloadManager {
         asset_type: AssetType,
         priority: LoadPriority,
         strategy: PreloadStrategy,
-    ) {
+    ) -> Result<(), PreloadError> {
         let request = PreloadRequest {
             path: path.clone(),
             asset_type,
@@ -190,15 +198,17 @@ impl PreloadManager {
 
         // 添加到请求队列
         {
-            let mut queue = safe_write(&self.request_queue, "request_queue")
-                .expect("Failed to acquire request_queue lock");
+            let mut queue = safe_write(&self.request_queue, "request_queue").map_err(|e| {
+                PreloadError::LockError(format!("Failed to acquire request_queue lock: {}", e))
+            })?;
             queue.push(request);
         }
 
         // 更新状态
         {
-            let mut status_map = safe_write(&self.status_map, "status_map")
-                .expect("Failed to acquire status_map lock");
+            let mut status_map = safe_write(&self.status_map, "status_map").map_err(|e| {
+                PreloadError::LockError(format!("Failed to acquire status_map lock: {}", e))
+            })?;
             status_map.insert(
                 path.clone(),
                 PreloadStatus {
@@ -213,10 +223,12 @@ impl PreloadManager {
 
         // 更新统计
         {
-            let mut stats = safe_write(&self.stats, "stats")
-                .expect("Failed to acquire stats lock");
+            let mut stats = safe_write(&self.stats, "stats").map_err(|e| {
+                PreloadError::LockError(format!("Failed to acquire stats lock: {}", e))
+            })?;
             stats.total_requests += 1;
         }
+        Ok(())
     }
 
     /// 批量添加预加载请求
@@ -225,7 +237,7 @@ impl PreloadManager {
         requests: Vec<(PathBuf, AssetType, LoadPriority, PreloadStrategy)>,
     ) {
         for (path, asset_type, priority, strategy) in requests {
-            self.request_preload(path, asset_type, priority, strategy);
+            let _ = self.request_preload(path, asset_type, priority, strategy);
         }
     }
 
@@ -238,7 +250,7 @@ impl PreloadManager {
     /// * `scene_resources` - 场景资源列表（路径，类型）
     pub fn preload_scene(&self, scene_resources: Vec<(PathBuf, AssetType)>) {
         for (path, asset_type) in scene_resources {
-            self.request_preload(
+            let _ = self.request_preload(
                 path,
                 asset_type,
                 LoadPriority::High,
@@ -262,7 +274,12 @@ impl PreloadManager {
                 } else {
                     LoadPriority::Normal
                 };
-                self.request_preload(path, asset_type, priority, PreloadStrategy::DistanceBased);
+                let _ = self.request_preload(
+                    path,
+                    asset_type,
+                    priority,
+                    PreloadStrategy::DistanceBased,
+                );
             }
         }
     }
@@ -274,13 +291,16 @@ impl PreloadManager {
     /// # 参数
     ///
     /// * `loader` - 资源加载器
-    pub fn update(&self, _loader: &mut CoroutineAssetLoader) {
-        let mut queue = safe_write(&self.request_queue, "request_queue")
-            .expect("Failed to acquire request_queue lock");
-        let mut loading_set = safe_write(&self.loading_set, "loading_set")
-            .expect("Failed to acquire loading_set lock");
-        let mut status_map = safe_write(&self.status_map, "status_map")
-            .expect("Failed to acquire status_map lock");
+    pub fn update(&self, _loader: &mut CoroutineAssetLoader) -> Result<(), PreloadError> {
+        let mut queue = safe_write(&self.request_queue, "request_queue").map_err(|e| {
+            PreloadError::LockError(format!("Failed to acquire request_queue lock: {}", e))
+        })?;
+        let mut loading_set = safe_write(&self.loading_set, "loading_set").map_err(|e| {
+            PreloadError::LockError(format!("Failed to acquire loading_set lock: {}", e))
+        })?;
+        let mut status_map = safe_write(&self.status_map, "status_map").map_err(|e| {
+            PreloadError::LockError(format!("Failed to acquire status_map lock: {}", e))
+        })?;
 
         // 按优先级和策略排序
         queue.sort_by(|a, b| match a.strategy.cmp(&b.strategy) {
@@ -298,8 +318,13 @@ impl PreloadManager {
 
                 // 检查依赖是否已加载（如果启用）
                 if self.config.preload_dependencies {
-                    let graph = safe_read(&self.dependency_graph, "dependency_graph")
-                        .expect("Failed to acquire dependency_graph lock");
+                    let graph =
+                        safe_read(&self.dependency_graph, "dependency_graph").map_err(|e| {
+                            PreloadError::LockError(format!(
+                                "Failed to acquire dependency_graph lock: {}",
+                                e
+                            ))
+                        })?;
                     if !graph.can_load(&request.path) {
                         // 依赖未就绪，放回队列
                         queue.push(request);
@@ -320,16 +345,19 @@ impl PreloadManager {
                 break;
             }
         }
+        Ok(())
     }
 
     /// 标记预加载完成
-    pub fn mark_completed(&self, path: &PathBuf, success: bool) {
-        let mut loading_set = safe_write(&self.loading_set, "loading_set")
-            .expect("Failed to acquire loading_set lock");
-        let mut status_map = safe_write(&self.status_map, "status_map")
-            .expect("Failed to acquire status_map lock");
+    pub fn mark_completed(&self, path: &PathBuf, success: bool) -> Result<(), PreloadError> {
+        let mut loading_set = safe_write(&self.loading_set, "loading_set").map_err(|e| {
+            PreloadError::LockError(format!("Failed to acquire loading_set lock: {}", e))
+        })?;
+        let mut status_map = safe_write(&self.status_map, "status_map").map_err(|e| {
+            PreloadError::LockError(format!("Failed to acquire status_map lock: {}", e))
+        })?;
         let mut stats = safe_write(&self.stats, "stats")
-            .expect("Failed to acquire stats lock");
+            .map_err(|e| PreloadError::LockError(format!("Failed to acquire stats lock: {}", e)))?;
 
         loading_set.remove(path);
 
@@ -343,8 +371,10 @@ impl PreloadManager {
 
                 // 计算加载时间
                 if let Some(started_at) = status.started_at {
-                    let load_time =
-                        status.completed_at.unwrap().duration_since(started_at).as_secs_f32();
+                    let completed_at = status.completed_at.ok_or_else(|| {
+                        PreloadError::LockError("Completed time not set".to_string())
+                    })?;
+                    let load_time = completed_at.duration_since(started_at).as_secs_f32();
                     stats.total_load_time += load_time;
                     stats.avg_load_time = stats.total_load_time / stats.completed as f32;
                 }
@@ -356,8 +386,13 @@ impl PreloadManager {
 
         // 更新依赖图状态
         {
-            let mut graph = safe_write(&self.dependency_graph, "dependency_graph")
-                .expect("Failed to acquire dependency_graph lock");
+            let mut graph =
+                safe_write(&self.dependency_graph, "dependency_graph").map_err(|e| {
+                    PreloadError::LockError(format!(
+                        "Failed to acquire dependency_graph lock: {}",
+                        e
+                    ))
+                })?;
             graph.set_load_state(
                 path,
                 if success {
@@ -367,16 +402,19 @@ impl PreloadManager {
                 },
             );
         }
+        Ok(())
     }
 
     /// 取消预加载
-    pub fn cancel_preload(&self, path: &PathBuf) {
-        let mut loading_set = safe_write(&self.loading_set, "loading_set")
-            .expect("Failed to acquire loading_set lock");
-        let mut status_map = safe_write(&self.status_map, "status_map")
-            .expect("Failed to acquire status_map lock");
+    pub fn cancel_preload(&self, path: &PathBuf) -> Result<(), PreloadError> {
+        let mut loading_set = safe_write(&self.loading_set, "loading_set").map_err(|e| {
+            PreloadError::LockError(format!("Failed to acquire loading_set lock: {}", e))
+        })?;
+        let mut status_map = safe_write(&self.status_map, "status_map").map_err(|e| {
+            PreloadError::LockError(format!("Failed to acquire status_map lock: {}", e))
+        })?;
         let mut stats = safe_write(&self.stats, "stats")
-            .expect("Failed to acquire stats lock");
+            .map_err(|e| PreloadError::LockError(format!("Failed to acquire stats lock: {}", e)))?;
 
         loading_set.remove(path);
 
@@ -384,20 +422,22 @@ impl PreloadManager {
             status.state = PreloadState::Cancelled;
             stats.cancelled += 1;
         }
+        Ok(())
     }
 
     /// 获取预加载状态
-    pub fn get_status(&self, path: &PathBuf) -> Option<PreloadStatus> {
-        let status_map = safe_read(&self.status_map, "status_map")
-            .expect("Failed to acquire status_map lock");
-        status_map.get(path).cloned()
+    pub fn get_status(&self, path: &PathBuf) -> Result<Option<PreloadStatus>, PreloadError> {
+        let status_map = safe_read(&self.status_map, "status_map").map_err(|e| {
+            PreloadError::LockError(format!("Failed to acquire status_map lock: {}", e))
+        })?;
+        Ok(status_map.get(path).cloned())
     }
 
     /// 获取统计信息
-    pub fn stats(&self) -> PreloadStats {
+    pub fn stats(&self) -> Result<PreloadStats, PreloadError> {
         let stats = safe_read(&self.stats, "stats")
-            .expect("Failed to acquire stats lock");
-        stats.clone()
+            .map_err(|e| PreloadError::LockError(format!("Failed to acquire stats lock: {}", e)))?;
+        Ok(stats.clone())
     }
 
     /// 获取依赖图（用于外部添加依赖关系）
@@ -406,16 +446,23 @@ impl PreloadManager {
     }
 
     /// 清除所有预加载请求
-    pub fn clear(&self) {
+    pub fn clear(&self) -> Result<(), PreloadError> {
         safe_write(&self.request_queue, "request_queue")
-            .expect("Failed to acquire request_queue lock")
+            .map_err(|e| {
+                PreloadError::LockError(format!("Failed to acquire request_queue lock: {}", e))
+            })?
             .clear();
         safe_write(&self.status_map, "status_map")
-            .expect("Failed to acquire status_map lock")
+            .map_err(|e| {
+                PreloadError::LockError(format!("Failed to acquire status_map lock: {}", e))
+            })?
             .clear();
         safe_write(&self.loading_set, "loading_set")
-            .expect("Failed to acquire loading_set lock")
+            .map_err(|e| {
+                PreloadError::LockError(format!("Failed to acquire loading_set lock: {}", e))
+            })?
             .clear();
+        Ok(())
     }
 }
 
@@ -440,7 +487,7 @@ mod tests {
             PreloadStrategy::Immediate,
         );
 
-        let stats = manager.stats();
+        let stats = manager.stats().expect("Failed to get stats");
         assert_eq!(stats.total_requests, 1);
     }
 
@@ -455,7 +502,7 @@ mod tests {
 
         manager.preload_scene(scene_resources);
 
-        let stats = manager.stats();
+        let stats = manager.stats().expect("Failed to get stats");
         assert_eq!(stats.total_requests, 2);
     }
 
@@ -472,7 +519,7 @@ mod tests {
 
         manager.preload_by_distance(resources);
 
-        let stats = manager.stats();
+        let stats = manager.stats().expect("Failed to get stats");
         assert_eq!(stats.total_requests, 1); // 只有near.png在阈值内
     }
 }

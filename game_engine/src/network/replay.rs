@@ -186,11 +186,7 @@ impl ReplayRecorder {
         let mut events = Vec::new();
 
         // 从最后一个快照开始应用所有帧
-        let last_snapshot_tick = self
-            .snapshots
-            .back()
-            .map(|s| s.tick)
-            .unwrap_or(0);
+        let last_snapshot_tick = self.snapshots.back().map(|s| s.tick).unwrap_or(0);
 
         for frame in self.frames.iter() {
             if frame.tick > last_snapshot_tick && frame.tick <= tick {
@@ -221,13 +217,15 @@ impl ReplayRecorder {
 
     /// 保存回放到文件
     pub fn save_to_file(&self, path: &PathBuf) -> Result<(), ReplayError> {
+        let start_time = self
+            .start_time
+            .duration_since(UNIX_EPOCH)
+            .map_err(|_| ReplayError::InvalidFile("Invalid start time".to_string()))?
+            .as_millis() as u64;
+
         let header = ReplayHeader {
             version: 1,
-            start_time: self
-                .start_time
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_millis() as u64,
+            start_time,
             end_time: current_timestamp_ms(),
             total_ticks: self.current_tick,
             snapshot_count: self.snapshots.len(),
@@ -542,15 +540,13 @@ impl TimeTravelDebugger {
     /// 单步执行
     pub fn step(&mut self) {
         self.step_mode = true;
-        self.player.seek_to_tick(self.player.current_tick() + 1)
-            .unwrap_or_default();
+        self.player.seek_to_tick(self.player.current_tick() + 1).unwrap_or_default();
     }
 
     /// 单步后退
     pub fn step_back(&mut self) {
         if self.player.current_tick() > 0 {
-            self.player.seek_to_tick(self.player.current_tick() - 1)
-                .unwrap_or_default();
+            self.player.seek_to_tick(self.player.current_tick() - 1).unwrap_or_default();
         }
     }
 
@@ -636,7 +632,7 @@ impl std::error::Error for ReplayError {}
 fn current_timestamp_ms() -> u64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
-        .unwrap()
+        .expect("System time went backwards; cannot get current timestamp")
         .as_millis() as u64
 }
 
@@ -673,10 +669,9 @@ mod tests {
         recorder.start_recording();
         recorder.record_frame(1, HashMap::new(), Vec::new(), None);
         recorder.stop_recording();
-        recorder.save_to_file(&temp_path).unwrap();
+        recorder.save_to_file(&temp_path).expect("Test: operation should succeed");
 
-        let player = ReplayPlayer::load_from_file(&temp_path).unwrap();
+        let player = ReplayPlayer::load_from_file(&temp_path).expect("Test: operation should succeed");
         assert_eq!(player.total_ticks(), 1);
     }
 }
-

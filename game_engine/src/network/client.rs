@@ -246,11 +246,12 @@ impl GameClient {
         })?;
 
         if self.config.enable_compression
-            && let Some(compressor) = &self.compressor {
-                data = compressor.compress(&data).map_err(|e| {
-                    NetworkError::CompressionError(format!("Compression failed: {}", e))
-                })?;
-            }
+            && let Some(compressor) = &self.compressor
+        {
+            data = compressor.compress(&data).map_err(|e| {
+                NetworkError::CompressionError(format!("Compression failed: {}", e))
+            })?;
+        }
 
         let mut stream_guard = self.stream.lock().await;
         if let Some(stream) = stream_guard.as_mut() {
@@ -462,5 +463,147 @@ mod tests {
     fn test_client_creation() {
         let config = ClientConfig::default();
         let _client = GameClient::new(config);
+    }
+
+    #[test]
+    fn test_client_config_custom() {
+        let config = ClientConfig {
+            server_address: "192.168.1.1".to_string(),
+            server_port: 9000,
+            reconnect_interval_ms: 3000,
+            max_reconnect_attempts: 10,
+            enable_compression: false,
+            enable_delay_compensation: false,
+            client_name: "TestClient".to_string(),
+        };
+
+        assert_eq!(config.server_address, "192.168.1.1");
+        assert_eq!(config.server_port, 9000);
+        assert_eq!(config.reconnect_interval_ms, 3000);
+        assert_eq!(config.max_reconnect_attempts, 10);
+        assert!(!config.enable_compression);
+        assert!(!config.enable_delay_compensation);
+        assert_eq!(config.client_name, "TestClient");
+    }
+
+    #[test]
+    fn test_client_state_initialization() {
+        let config = ClientConfig::default();
+        let client = GameClient::new(config);
+
+        // 创建runtime来检查异步状态
+        let rt = tokio::runtime::Runtime::new().unwrap_or_else(|e| {
+            panic!("Failed to create runtime: {}", e);
+        });
+
+        rt.block_on(async {
+            let state = client.state.lock().await;
+            assert_eq!(state.connection_state, ConnectionState::Disconnected);
+            assert!(state.client_id.is_none());
+            assert!(state.server_addr.is_none());
+            assert_eq!(state.current_tick, 0);
+        });
+    }
+
+    #[test]
+    fn test_network_stats() {
+        let stats = NetworkStats {
+            bytes_sent: 1024,
+            bytes_received: 2048,
+            messages_sent: 10,
+            messages_received: 20,
+            ping_ms: 50,
+        };
+
+        assert_eq!(stats.bytes_sent, 1024);
+        assert_eq!(stats.bytes_received, 2048);
+        assert_eq!(stats.messages_sent, 10);
+        assert_eq!(stats.messages_received, 20);
+        assert_eq!(stats.ping_ms, 50);
+    }
+
+    #[test]
+    fn test_server_state_disconnected() {
+        let state = ServerState {
+            connected: false,
+            client_id: None,
+            server_addr: None,
+        };
+
+        assert!(!state.connected);
+        assert!(state.client_id.is_none());
+        assert!(state.server_addr.is_none());
+    }
+
+    #[test]
+    fn test_server_state_connected() {
+        let addr = "127.0.0.1:8080".parse().unwrap_or_else(|e| {
+            panic!("Failed to parse address: {}", e);
+        });
+
+        let state = ServerState {
+            connected: true,
+            client_id: Some(12345),
+            server_addr: Some(addr),
+        };
+
+        assert!(state.connected);
+        assert_eq!(state.client_id, Some(12345));
+        assert_eq!(state.server_addr, Some(addr));
+    }
+
+    #[test]
+    fn test_message_serialization() {
+        let msg = NetworkMessage::Heartbeat {
+            timestamp: 12345,
+        };
+
+        let serialized = bincode::serialize(&msg);
+        assert!(serialized.is_ok());
+
+        let deserialized: Result<NetworkMessage, _> = bincode::deserialize(&serialized.unwrap_or_else(|e| {
+            panic!("Serialization failed: {}", e);
+        }));
+        assert!(deserialized.is_ok());
+    }
+
+    #[test]
+    fn test_connect_message_creation() {
+        let msg = NetworkMessage::Connect {
+            client_id: 12345,
+            name: "TestClient".to_string(),
+        };
+
+        let serialized = bincode::serialize(&msg);
+        assert!(serialized.is_ok());
+
+        if let Ok(NetworkMessage::Connect { client_id, name }) =
+            bincode::deserialize::<NetworkMessage>(&serialized.unwrap_or_else(|e| {
+                panic!("Serialization failed: {}", e);
+            }))
+        {
+            assert_eq!(client_id, 12345);
+            assert_eq!(name, "TestClient");
+        } else {
+            panic!("Deserialization failed");
+        }
+    }
+
+    #[test]
+    fn test_disconnect_message_creation() {
+        let msg = NetworkMessage::Disconnect { client_id: 12345 };
+
+        let serialized = bincode::serialize(&msg);
+        assert!(serialized.is_ok());
+
+        if let Ok(NetworkMessage::Disconnect { client_id }) =
+            bincode::deserialize::<NetworkMessage>(&serialized.unwrap_or_else(|e| {
+                panic!("Serialization failed: {}", e);
+            }))
+        {
+            assert_eq!(client_id, 12345);
+        } else {
+            panic!("Deserialization failed");
+        }
     }
 }

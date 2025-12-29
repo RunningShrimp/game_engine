@@ -186,8 +186,7 @@ impl RegressionTestSuite {
 
     /// 注册基线
     pub fn register_baseline(&mut self, baseline: PerformanceBaseline) {
-        self.baselines
-            .insert(baseline.metric_name.clone(), baseline);
+        self.baselines.insert(baseline.metric_name.clone(), baseline);
     }
 
     /// 注册多个基线
@@ -203,10 +202,7 @@ impl RegressionTestSuite {
         metric_name: &str,
         current_value: f64,
     ) -> Result<RegressionTestResult, &'static str> {
-        let baseline = self
-            .baselines
-            .get(metric_name)
-            .ok_or("Metric not found in baseline")?;
+        let baseline = self.baselines.get(metric_name).ok_or("Metric not found in baseline")?;
 
         let result = RegressionTestResult::new(baseline, current_value);
         self.results.push(result.clone());
@@ -397,7 +393,6 @@ impl RegressionTestSuite {
     }
 }
 
-
 /// 回归测试摘要
 #[derive(Debug, Clone)]
 pub struct RegressionSummary {
@@ -467,12 +462,12 @@ mod tests {
         assert_eq!(suite.baseline_count(), 2);
 
         // 测试 fps
-        let result1 = suite.test_metric("fps", 59.0).unwrap();
+        let result1 = suite.test_metric("fps", 59.0).expect("Test: operation should succeed");
         assert!(result1.passed());
 
         // 测试 memory 警告 (280 - 256) / 256 = 9.4%, which is < 10%, so Baseline
         // Let's use a value that triggers warning: 256 + 28 = 284 (10.9% increase)
-        let result2 = suite.test_metric("memory", 284.0).unwrap();
+        let result2 = suite.test_metric("memory", 284.0).expect("Test: operation should succeed");
         assert!(result2.warned());
 
         assert_eq!(suite.result_count(), 2);
@@ -485,8 +480,8 @@ mod tests {
         suite.register_baseline(PerformanceBaseline::new("fps", 60.0, "fps"));
         suite.register_baseline(PerformanceBaseline::new("latency", 16.0, "ms"));
 
-        suite.test_metric("fps", 61.0).unwrap();
-        suite.test_metric("latency", 14.0).unwrap();
+        suite.test_metric("fps", 61.0).expect("Test: operation should succeed");
+        suite.test_metric("latency", 14.0).expect("Test: operation should succeed");
 
         let summary = suite.get_summary();
         assert_eq!(summary.total_tests, 2);
@@ -515,7 +510,7 @@ mod tests {
         let mut suite = RegressionTestSuite::new();
         suite.register_baseline(PerformanceBaseline::new("fps", 60.0, "fps"));
 
-        suite.test_metric("fps", 59.0).unwrap();
+        suite.test_metric("fps", 59.0).expect("Test: operation should succeed");
 
         let html = suite.generate_html_report();
         assert!(html.contains("Performance Regression Report"));

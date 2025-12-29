@@ -109,7 +109,17 @@ impl SystemSchedulerOptimizer {
                 if let Some(deps) = graph.get_mut(dep_name) {
                     deps.push(system_name.clone());
                 }
-                *in_degree.get_mut(system_name).unwrap() += 1;
+                if let Some(degree) = in_degree.get_mut(system_name) {
+                    *degree += 1;
+                } else {
+                    // This should never happen since we initialize all systems above
+                    tracing::error!(
+                        "System '{}' not found in in_degree map during dependency analysis",
+                        system_name
+                    );
+                    // Insert it to prevent panic
+                    in_degree.insert(system_name.clone(), 1);
+                }
             }
         }
 

@@ -1,49 +1,70 @@
-//! 引擎核心实现
+//! # Core Engine Module
 //!
-//! 提供游戏引擎的主入口和运行循环。
+//! This module provides the core engine functionality including:
+//!
+//! - Engine initialization and lifecycle management
+//! - Main loop control
+//! - System coordination
+//! - Resource management
+//!
+//! ## Architecture
+//!
+//! The engine follows a microkernel architecture pattern with event-driven
+//! game loop, supporting both fixed and variable timestep systems.
+//!
+//! ## Examples
+//!
+//! ```rust,no_run
+//! use game_engine::core::Engine;
+//!
+//! fn main() -> Result<(), Box<dyn std::error::Error>> {
+//!     Engine::run()
+//! }
+//! ```
+
+// 模块私有实现说明：
+// - 使用winit 0.30作为窗口和事件循环管理
+// - 基于协程的异步任务系统（tokio运行时）
+// - 支持固定时间步（物理）和可变时间步（游戏逻辑）调度器
+// - 集成ECS（Bevy ECS）作为核心数据模型
 
 use crate::config::EngineConfig;
 use crate::core::engine::game_loop_coroutine::CoroutineGameLoop;
 
-/// 游戏引擎主结构
+/// Main game engine structure
 ///
-/// 负责管理引擎的配置和生命周期，提供引擎的初始化和运行功能。
+/// Manages engine configuration and lifecycle, providing initialization
+/// and runtime functionality for the entire game engine.
 ///
-/// # 示例
+/// # Examples
 ///
 /// ```rust,no_run
 /// use game_engine::core::Engine;
 /// use game_engine::config::EngineConfig;
 ///
-/// // 创建引擎配置
 /// let config = EngineConfig::default();
-///
-/// // 创建引擎实例
 /// let engine = Engine::new(config);
-///
-/// // 运行引擎
-/// Engine::run().expect("Engine failed to run");
 /// ```
 #[derive(Debug)]
 pub struct Engine {
-    /// 引擎配置
+    /// Engine configuration settings
     pub config: EngineConfig,
 }
 
 impl Engine {
-    /// 创建新的引擎实例
+    /// Creates a new engine instance
     ///
-    /// # 参数
+    /// # Arguments
     ///
-    /// * `config` - 引擎配置
+    /// * `config` - Engine configuration settings
     ///
-    /// # 返回
+    /// # Returns
     ///
-    /// 返回新创建的引擎实例
+    /// Returns the newly created engine instance
     ///
-    /// # 示例
+    /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use game_engine::core::Engine;
     /// use game_engine::config::EngineConfig;
     ///
@@ -54,22 +75,22 @@ impl Engine {
         Self { config }
     }
 
-    /// 运行引擎
+    /// Runs the engine
     ///
-    /// 这是引擎的入口点，执行以下操作：
+    /// This is the main entry point for the engine, performing the following operations:
     ///
-    /// 1. 初始化tracing和metrics系统
-    /// 2. 创建默认配置
-    /// 3. 初始化引擎实例
-    /// 4. 创建窗口和事件循环
-    /// 5. 初始化ECS世界和渲染器
-    /// 6. 启动游戏主循环
+    /// 1. Initialize tracing and metrics systems
+    /// 2. Create default configuration
+    /// 3. Initialize engine instance
+    /// 4. Create window and event loop
+    /// 5. Initialize ECS world and renderer
+    /// 6. Start main game loop
     ///
-    /// # 返回
+    /// # Returns
     ///
-    /// 成功时返回`Ok(())`，失败时返回错误信息
+    /// Returns `Ok(())` on success, or an error on failure
     ///
-    /// # 示例
+    /// # Examples
     ///
     /// ```rust,no_run
     /// use game_engine::core::Engine;
@@ -79,55 +100,66 @@ impl Engine {
     /// }
     /// ```
     ///
-    /// # 错误
+    /// # Errors
     ///
-    /// 可能返回以下错误：
-    /// - 窗口创建失败
-    /// - 渲染器初始化失败
-    /// - 编辑器初始化失败
+    /// This function will return an error if:
+    /// - Window creation fails
+    /// - Renderer initialization fails
+    /// - Editor initialization fails
     pub fn run() -> Result<(), Box<dyn std::error::Error>> {
+        // Initialize tracing and metrics systems
         // 初始化tracing和metrics系统
         crate::performance::tracing_metrics::TracingMetricsManager::init();
 
         tracing::info!("Game Engine starting...");
 
+        // Create default configuration
         // 创建默认配置
         let config = EngineConfig::default();
 
+        // Create engine instance
         // 创建引擎实例
         let engine = Self::new(config);
 
         tracing::info!("Game Engine initialized successfully");
 
+        // Use pollster to run async initialization
         // 使用pollster运行异步初始化
         pollster::block_on(engine.run_async())
     }
 
-    /// 异步运行引擎
+    /// Async engine runner
     ///
-    /// 内部异步运行方法，由`run()`方法调用。
-    /// 执行引擎的主事件循环，处理窗口事件、更新游戏逻辑和渲染。
+    /// Internal async method called by `run()`.
+    /// Executes the engine's main event loop, handling window events,
+    /// updating game logic, and rendering.
     ///
-    /// # 流程
+    /// # Flow
     ///
-    /// 1. 创建事件循环和窗口
-    /// 2. 初始化ECS世界、渲染器和编辑器
-    /// 3. 进入事件循环：
-    ///    - 处理窗口事件（输入、关闭等）
-    ///    - 更新固定时间步调度器（物理等）
-    ///    - 更新可变时间步调度器（游戏逻辑）
-    ///    - 执行协程任务
-    ///    - 渲染帧
-    /// 4. 退出清理
-    #[allow(deprecated)]
+    /// 1. Create event loop and window
+    /// 2. Initialize ECS world, renderer, and editor
+    /// 3. Enter event loop:
+    ///    - Process window events (input, close, etc.)
+    ///    - Update fixed-timestep scheduler (physics, etc.)
+    ///    - Update variable-timestep scheduler (game logic)
+    ///    - Execute coroutine tasks
+    ///    - Render frame
+    /// 4. Cleanup on exit
+    // 内部异步运行方法：实现引擎的主事件循环
+    // - 使用winit事件循环处理窗口事件
+    // - 支持固定时间步（物理模拟）和可变时间步（游戏逻辑）
+    // - 集成协程系统支持异步任务
+    #[allow(deprecated)] // TODO: winit 0.30某些API仍标记为deprecated，等待上游稳定
     async fn run_async(self) -> Result<(), Box<dyn std::error::Error>> {
         use winit::event::{Event, WindowEvent};
         use winit::event_loop::{ControlFlow, EventLoop};
 
+        // Create event loop
         // 创建事件循环
         let event_loop = EventLoop::new()?;
         event_loop.set_control_flow(ControlFlow::Poll);
 
+        // Create window (using winit 0.30 API: EventLoop::create_window)
         // 创建窗口（使用winit 0.30 API：通过 EventLoop::create_window）
         let window_attrs = winit::window::WindowAttributes::default()
             .with_title("Game Engine")
@@ -137,12 +169,15 @@ impl Engine {
             ));
         let window = std::sync::Arc::new(event_loop.create_window(window_attrs)?);
 
+        // Initialize ECS world
         // 初始化ECS世界
         let mut world = bevy_ecs::world::World::new();
 
+        // Initialize renderer (async)
         // 初始化渲染器（异步）
         let mut renderer = crate::render::wgpu_utils::WgpuRenderer::new(window.clone()).await?;
 
+        // Initialize editor context (async)
         // 初始化编辑器上下文（异步）
         let device = renderer.device();
         let format = renderer.surface_format();
@@ -184,8 +219,7 @@ impl Engine {
         let runtime = tokio::runtime::Builder::new_multi_thread()
             .worker_threads(4)
             .enable_all()
-            .build()
-            .expect("Failed to create Tokio runtime");
+            .build()?;
 
         let runtime_handle = runtime.handle().clone();
         let _guard = runtime.enter();
@@ -195,7 +229,9 @@ impl Engine {
             CoroutineGameLoop::new(std::time::Duration::from_secs_f64(1.0 / 60.0));
 
         // 创建协程任务管理器并添加到ECS世界
-        let task_manager = crate::core::engine::game_loop_coroutine::CoroutineTaskManager::new(runtime_handle.clone());
+        let task_manager = crate::core::engine::game_loop_coroutine::CoroutineTaskManager::new(
+            runtime_handle.clone(),
+        );
         world.insert_resource(task_manager);
 
         tracing::info!("Coroutine game loop initialized");

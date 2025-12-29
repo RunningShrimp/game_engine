@@ -5,35 +5,35 @@
 //! ## 核心组件
 //!
 //! ### 统一资源管理（Unified Resource Management）
-//! - [`UnifiedResourceManager`]: 统一资源管理器
-//! - [`Resource`]: 资源trait
-//! - [`ResourceLoader`]: 资源加载器trait
-//! - [`ResourceLoaderRegistry`]: 加载器注册表
+//! - [`UnifiedResourceManager`][]: 统一资源管理器
+//! - [`Resource`][]: 资源trait
+//! - [`ResourceLoader`][]: 资源加载器trait
+//! - [`ResourceLoaderRegistry`][]: 加载器注册表
 //!
 //! ### 异步加载（Async Loading）
-//! - [`AsyncUploader`]: 异步上传器
-//! - [`UploadTask`]: 上传任务
-//! - [`async_upload`]: 异步上传模块
+//! - [`AsyncUploader`][]: 异步上传器
+//! - [`UploadTask`][]: 上传任务
+//! - [`async_upload`][]: 异步上传模块
 //!
 //! ### Staging Buffer优化
-//! - [`RingBufferStagingBuffer`]: 环形缓冲区staging buffer
-//! - [`RingBufferStagingPool`]: Staging buffer池
-//! - [`staging_buffer`]: 基础staging buffer
-//! - [`ring_buffer_pool`]: 环形buffer池
+//! - [`RingBufferStagingBuffer`][]: 环形缓冲区staging buffer
+//! - [`RingBufferStagingPool`][]: Staging buffer池
+//! - [`staging_buffer`][]: 基础staging buffer
+//! - [`ring_buffer_pool`][]: 环形buffer池
 //!
 //! ### 内存管理（Memory Management）
-//! - [`MemoryAllocator`]: 内存分配器
-//! - [`memory_monitor`]: 内存监控
-//! - [`PreallocationManager`]: 预分配管理器
-//! - [`memory_debug`]: 内存调试工具
+//! - [`MemoryAllocator`][]: 内存分配器
+//! - [`memory_monitor`][]: 内存监控
+//! - [`PreallocationManager`][]: 预分配管理器
+//! - [`memory_debug`][]: 内存调试工具
 //!
 //! ### 缓存系统（Caching）
-//! - [`CompressedCache`]: 压缩缓存
-//! - [`shader_cache`]: 着色器缓存
-//! - [`CacheStats`]: 缓存统计
+//! - [`CompressedCache`][]: 压缩缓存
+//! - [`shader_cache`][]: 着色器缓存
+//! - [`CacheStats`][]: 缓存统计
 //!
 //! ### 热重载（Hot Reload）
-//! - [`hot_reload`]: 资源热重载系统
+//! - [`hot_reload`][]: 资源热重载系统
 //! - 支持运行时更新资源
 //! - 自动检测文件变化
 //!
@@ -116,20 +116,18 @@
 //!
 //! ## 相关模块
 //!
-//! - [`crate::render`]: 渲染资源使用
-//! - [`crate::audio`]: 音频资源使用
-//! - [`crate::physics`]: 物理资源使用
+//! - [`crate::render`][]: 渲染资源使用
+//! - [`crate::audio`][]: 音频资源使用
+//! - [`crate::physics`][]: 物理资源使用
 //!
-
 
 pub mod async_upload;
 pub mod atlas;
 pub mod coroutine_loader;
 pub mod dependency_manager;
-pub mod time;
-pub mod ring_buffer_staging_pool;
 pub mod events;
 pub mod font;
+pub mod gltf_assets;
 pub mod gltf_loader;
 pub mod hot_reload;
 pub mod manager;
@@ -139,6 +137,7 @@ pub mod memory_monitor;
 pub mod preallocation_manager;
 pub mod preload_manager;
 pub mod ring_buffer_pool;
+pub mod ring_buffer_staging_pool;
 pub mod runtime;
 pub mod shader_cache;
 pub mod staging_buffer;
@@ -146,6 +145,7 @@ pub mod staging_buffer;
 mod tests;
 pub mod texture_compression;
 pub mod texture_decoder;
+pub mod time;
 pub mod upload_queue;
 
 // 统一资源接口
@@ -166,10 +166,6 @@ pub use unified_manager::{CacheStats, UnifiedResourceManager};
 
 // 重新导出主要类型
 pub use async_upload::{AsyncUploader, UploadTask};
-pub use ring_buffer_staging_pool::{
-    RingBufferPerformanceMetrics, RingBufferPoolStats, RingBufferStagingBuffer,
-    RingBufferStagingPool, create_ring_buffer_staging_pool,
-};
 pub use memory_allocator::{
     AllocationPriority, AllocationRequest, AllocationResult, AllocationType, AllocatorConfig,
     MemoryPressure, MemoryPressureEvent, PressureRecommendation, SmartMemoryAllocator,
@@ -194,6 +190,10 @@ pub use preallocation_manager::{
 pub use ring_buffer_pool::{
     AllocationStats, BlockSize, BufferState, MemoryBlock, RingBuffer, RingBufferPool,
 };
+pub use ring_buffer_staging_pool::{
+    RingBufferPerformanceMetrics, RingBufferPoolStats, RingBufferStagingBuffer,
+    RingBufferStagingPool, create_ring_buffer_staging_pool,
+};
 pub use staging_buffer::{PoolStats, StagingBuffer, StagingBufferPool};
 pub use texture_compression::{
     BC1Format, BC2Format, BC3Format, CompressedTexture, CompressionError, CompressionFormat,
@@ -213,7 +213,7 @@ pub use preload_manager::{
 };
 
 // Re-export Hot Reload components
-pub use hot_reload::{HotReloadEvent, ResourceHotReloadManager, HotReloadService};
+pub use hot_reload::{HotReloadEvent, HotReloadService, ResourceHotReloadManager};
 
 // Re-export Streaming Loader components
 pub use streaming_loader::{
@@ -230,7 +230,7 @@ pub use shader_cache::{
 
 // Re-export Texture Decoder components
 pub use texture_decoder::{
-    DecodedTexture, TextureDecoder, TextureDecodeConfig, TextureDecodeError, TextureFormat,
+    DecodedTexture, TextureDecodeConfig, TextureDecodeError, TextureDecoder, TextureFormat,
 };
 
 // 向后兼容类型别名

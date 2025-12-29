@@ -267,13 +267,14 @@ impl AudioProcessingPipeline {
 
         // 后处理
         if self.post_effects_enabled
-            && let Some(effects) = self.mixer.channel_effects.get(&channel) {
-                for effect in effects {
-                    if effect.enabled {
-                        self.metrics.effect_applications += 1;
-                    }
+            && let Some(effects) = self.mixer.channel_effects.get(&channel)
+        {
+            for effect in effects {
+                if effect.enabled {
+                    self.metrics.effect_applications += 1;
                 }
             }
+        }
 
         // 更新指标
         let elapsed = start.elapsed().as_secs_f64() * 1000.0;
@@ -430,6 +431,6 @@ mod tests {
 
         let effects = mixer.get_channel_effects(AudioChannel::Voice);
         assert!(effects.is_some());
-        assert_eq!(effects.unwrap().len(), 1);
+        assert_eq!(effects.expect("Test: operation should succeed").len(), 1);
     }
 }

@@ -3,7 +3,7 @@
 //  展示PBR渲染、后处理效果等高级渲染功能
 
 use bevy_ecs::prelude::*;
-use game_engine::ecs::{Camera, Projection, Transform, PbrMaterialComp};
+use game_engine::ecs::{Camera, PbrMaterialComp, Projection, Transform};
 use glam::{Quat, Vec3};
 
 fn main() {

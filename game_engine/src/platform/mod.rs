@@ -7,14 +7,13 @@ pub mod winit;
 
 use thiserror::Error;
 
+// Platform-specific modules
 #[cfg(target_arch = "wasm32")]
 pub mod web_fs;
-
 #[cfg(target_arch = "wasm32")]
 pub mod wasm_performance;
 #[cfg(target_arch = "wasm32")]
 pub mod web_input;
-
 #[cfg(any(target_os = "android", target_os = "ios"))]
 pub mod mobile;
 
@@ -36,9 +35,9 @@ pub trait Window: Send + Sync {
     fn set_fullscreen(&self, fullscreen: bool);
     fn set_cursor_visible(&self, visible: bool);
 
+    // Platform-specific methods - use trait bounds instead of cfg
     #[cfg(not(target_arch = "wasm32"))]
     fn raw_window_handle(&self) -> raw_window_handle::RawWindowHandle;
-
     #[cfg(not(target_arch = "wasm32"))]
     fn raw_display_handle(&self) -> raw_window_handle::RawDisplayHandle;
 }
@@ -285,7 +284,7 @@ pub trait Input: Send + Sync {
     fn set_cursor_grab(&mut self, grab: bool);
     fn set_cursor_visible(&mut self, visible: bool);
 
-    /// XR 输入 (可选)
+    /// XR 输入 (可选) - single cfg for entire method
     #[cfg(feature = "xr")]
     fn xr_actions(&self) -> Option<&XrActionSet>;
 }
@@ -483,10 +482,10 @@ mod tests {
 
     #[test]
     fn test_read_write_sync_outside_runtime() {
-        let dir = tempdir().unwrap();
+        let dir = tempdir().expect("Test: operation should succeed");
         let path = dir.path().join("test_sync.txt");
         let data = b"hello sync";
-        std::fs::write(&path, data).unwrap();
+        std::fs::write(&path, data).expect("Test: operation should succeed");
 
         let fs = NativeFilesystem::new();
         let read = fs.read_sync(&path).expect("read_sync failed");
@@ -494,16 +493,16 @@ mod tests {
 
         let write_path = dir.path().join("test_sync_write.txt");
         fs.write_sync(&write_path, b"written").expect("write_sync failed");
-        let got = std::fs::read(&write_path).unwrap();
+        let got = std::fs::read(&write_path).expect("Test: operation should succeed");
         assert_eq!(got, b"written");
     }
 
     #[tokio::test]
     async fn test_read_write_sync_inside_runtime() {
-        let dir = tempdir().unwrap();
+        let dir = tempdir().expect("Test: operation should succeed");
         let path = dir.path().join("test_async_sync.txt");
         let data = b"hello async".to_vec();
-        tokio::fs::write(&path, &data).await.unwrap();
+        tokio::fs::write(&path, &data).await.expect("Test: operation should succeed");
 
         let fs = NativeFilesystem::new();
         let read = fs.read_sync(&path).expect("read_sync inside runtime failed");
@@ -533,6 +532,6 @@ pub use console::{
 
 // 平台检测工具
 pub use detection::{
-    current_arch, current_os, is_aarch64, is_android, is_console, is_desktop, is_ios, is_linux,
-    is_macos, is_mobile, is_wasm32, is_web, is_windows, is_x86_64, supports_simd, PlatformInfo,
+    PlatformInfo, current_arch, current_os, is_aarch64, is_android, is_console, is_desktop, is_ios,
+    is_linux, is_macos, is_mobile, is_wasm32, is_web, is_windows, is_x86_64, supports_simd,
 };

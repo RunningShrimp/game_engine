@@ -267,7 +267,7 @@ impl ProfilingService {
         let metrics = RealtimeMetrics {
             timestamp: std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
+                .expect("Test: operation should succeed")
                 .as_millis() as u64,
             fps: *current_values.get("render.fps").unwrap_or(&0) as f64,
             frame_time: *current_values.get("render.frame_time").unwrap_or(&0) as f64,
@@ -279,7 +279,7 @@ impl ProfilingService {
             physics_time: *current_values.get("physics.step_time").unwrap_or(&0) as f64,
             audio_latency: *current_values.get("audio.latency").unwrap_or(&0) as f64,
             coroutine: None, // 协程指标需要从ECS世界获取，暂时为None
-            simd: None, // SIMD指标在collect_realtime_metrics中设置
+            simd: None,      // SIMD指标在collect_realtime_metrics中设置
         };
 
         Ok(metrics)
@@ -419,7 +419,7 @@ impl ProfilingService {
         let mut report = MaintenanceReport {
             timestamp: std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
+                .expect("Test: operation should succeed")
                 .as_secs(),
             operations: Vec::new(),
             errors: Vec::new(),
@@ -551,9 +551,10 @@ impl ProfilingService {
             }
 
             if let Ok(storage) = self.storage.lock()
-                && let Ok(storage_stats) = storage.get_storage_stats_sync() {
-                    state.storage_files_count = storage_stats.total_files;
-                }
+                && let Ok(storage_stats) = storage.get_storage_stats_sync()
+            {
+                state.storage_files_count = storage_stats.total_files;
+            }
         }
     }
 
@@ -657,9 +658,9 @@ macro_rules! profile_metric {
     };
 }
 
-/// 记录性能时间的宏
+/// 记录性能时间的宏（Service版本）
 #[macro_export]
-macro_rules! profile_scope {
+macro_rules! profile_service_scope {
     ($service:expr, $name:expr, $code:expr) => {{
         let _timer = $service.create_timer($name);
         let _result = $code;
@@ -721,44 +722,44 @@ mod tests {
             ..Default::default()
         };
 
-        let mut service = ProfilingService::new(config).unwrap();
+        let mut service = ProfilingService::new(config).expect("Test: operation should succeed");
 
         // 初始状态应该是未运行
         assert!(!service.is_running());
 
         // 启动服务
-        service.start().unwrap();
+        service.start().expect("Test: operation should succeed");
         assert!(service.is_running());
 
         // 记录指标
-        service.record_metric("test_metric", 42.0).unwrap();
+        service.record_metric("test_metric", 42.0).expect("Test: operation should succeed");
 
         // 获取实时指标
-        let metrics = service.get_realtime_metrics().unwrap();
+        let metrics = service.get_realtime_metrics().expect("Test: operation should succeed");
         assert_eq!(metrics.fps, 0.0);
 
         // 停止服务
-        service.stop().unwrap();
+        service.stop().expect("Test: operation should succeed");
         assert!(!service.is_running());
     }
 
     #[test]
     fn test_macros() {
         let config = ProfilingServiceConfig::default();
-        let mut service = ProfilingService::new(config).unwrap();
-        service.start().unwrap();
+        let mut service = ProfilingService::new(config).expect("Test: operation should succeed");
+        service.start().expect("Test: operation should succeed");
 
         // 测试指标记录宏
         profile_metric!(service, "test_metric", 100.0);
 
         // 测试作用域计时宏
-        let result = profile_scope!(service, "test_scope", {
+        let result = profile_service_scope!(service, "test_scope", {
             std::thread::sleep(Duration::from_millis(10));
             42
         });
 
         assert_eq!(result, 42);
 
-        service.stop().unwrap();
+        service.stop().expect("Test: operation should succeed");
     }
 }

@@ -1,5 +1,5 @@
 //  插件系统核心
-// 
+//
 //  提供模块化的插件架构，允许按需加载功能模块。
 
 use bevy_ecs::prelude::*;
@@ -14,7 +14,11 @@ pub struct PluginVersion {
 
 impl PluginVersion {
     pub fn new(major: u32, minor: u32, patch: u32) -> Self {
-        Self { major, minor, patch }
+        Self {
+            major,
+            minor,
+            patch,
+        }
     }
 }
 
@@ -83,11 +87,11 @@ pub use registry::PluginRegistry;
 
 // 热加载支持
 pub mod hot_reload;
-pub use hot_reload::{PluginHotReloadManager, HotReloadError};
+pub use hot_reload::{HotReloadError, PluginHotReloadManager};
 
 // 配置系统
 pub mod config;
-pub use config::{PluginConfigManager, PluginConfig};
+pub use config::{PluginConfig, PluginConfigManager};
 
 // 内置插件
 pub mod builtin;
@@ -151,7 +155,7 @@ impl App {
     /// 构建所有插件
     pub fn build_plugins(&mut self) -> &mut Self {
         // 使用std::mem::take来临时移除plugin_registry,避免借用冲突
-        let mut registry = std::mem::take(&mut self.plugin_registry);
+        let registry = std::mem::take(&mut self.plugin_registry);
         registry.build_all(self);
         self.plugin_registry = registry;
         self

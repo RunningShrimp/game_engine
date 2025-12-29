@@ -1,5 +1,4 @@
 use bevy_ecs::prelude::*;
-use bevy_ecs::world::World;
 use std::{
     path::{Path, PathBuf},
     sync::{Arc, RwLock},
@@ -16,7 +15,10 @@ use crate::render::wgpu_utils::WgpuRenderer;
 use std::collections::HashMap;
 
 // --- GLTF Support ---
-// GltfScene is now defined in gltf_loader.rs with proper feature gating
+// GLTF-specific code has been extracted to gltf_assets.rs
+// Consolidated GLTF imports with single cfg block
+#[cfg(feature = "gltf")]
+pub use super::gltf_assets::{GltfAssetLoader, import_gltf_to_world};
 #[cfg(feature = "gltf")]
 pub use super::gltf_loader::GltfScene;
 
@@ -48,6 +50,15 @@ impl<T: 'static + Send + Sync> Handle<T> {
         }
     }
 
+    /// Create a Handle from an Arc<AssetContainer> (for internal use)
+    fn from_container(container: Arc<AssetContainer<T>>) -> Self {
+        Self { container }
+    }
+
+    /// 获取资源（优化版本：如果T是Arc<_>，避免额外克隆）
+    ///
+    /// 优化：当T = Arc<U>时，直接克隆Arc指针而不是克隆内部数据
+    /// 这对于Handle<Arc<GpuMesh>>等常见用法可以显著减少开销
     pub fn get(&self) -> Option<T>
     where
         T: Clone,
@@ -57,7 +68,11 @@ impl<T: 'static + Send + Sync> Handle<T> {
             .read()
             .ok() // ✅ 处理锁中毒情况
             .and_then(|state| match &*state {
-                LoadState::Loaded(v) => Some(v.clone()),
+                LoadState::Loaded(v) => {
+                    // 如果T已经是Arc<_>，克隆Arc只是增加引用计数，非常快
+                    // 这比克隆内部数据（如GpuMesh）要快得多
+                    Some(v.clone())
+                }
                 _ => None,
             })
     }
@@ -172,19 +187,19 @@ impl<T: 'static + Send + Sync> Handle<T> {
 enum AssetTask {
     Texture {
         path: PathBuf,
-        handle: Handle<u32>,
+        handle: Arc<AssetContainer<u32>>,  // Use Arc directly to avoid Handle cloning
         is_linear: bool,
         start: std::time::Instant,
     },
     Atlas {
         path: PathBuf,
-        handle: Handle<Atlas>,
+        handle: Arc<AssetContainer<Atlas>>,  // Use Arc directly
         start: std::time::Instant,
     },
     #[cfg(feature = "gltf")]
     Gltf {
         path: PathBuf,
-        handle: Handle<GltfScene>,
+        handle: Arc<AssetContainer<GltfScene>>,  // Use Arc directly
         start: std::time::Instant,
     },
 }
@@ -247,6 +262,33 @@ impl Default for AssetServer {
 }
 
 impl AssetServer {
+    /// Helper method to wait for asset loading with timeout (reduces code duplication)
+    async fn wait_for_load<T>(&self, handle: &Handle<T>) -> Result<Handle<T>, String>
+    where
+        T: Clone + Send + Sync,
+    {
+        let mut timeout_counter = 0;
+        const MAX_TIMEOUT: u32 = 1000;
+
+        while timeout_counter < MAX_TIMEOUT {
+            if let Some(result) = handle.get_state_non_blocking() {
+                return match result {
+                    LoadState::Loaded(_) => Ok(handle.clone()),
+                    LoadState::Failed(e) => Err(e),
+                    LoadState::Loading => {
+                        timeout_counter += 1;
+                        tokio::time::sleep(Duration::from_millis(1)).await;
+                        continue;
+                    }
+                };
+            }
+            timeout_counter += 1;
+            tokio::time::sleep(Duration::from_millis(1)).await;
+        }
+
+        Err("Timeout waiting for asset to load".to_string())
+    }
+
     pub fn new() -> Self {
         let (task_tx, task_rx) = mpsc::unbounded_channel::<AssetTask>();
         let (done_tx, done_rx) = mpsc::unbounded_channel();
@@ -311,22 +353,8 @@ impl AssetServer {
                                                 AssetTask::Gltf { path, .. } => {
                                                     match tokio::fs::read(path).await {
                                                         Ok(bytes) => {
-                                                            let bytes_for_import = bytes.clone();
-                                                            let load_res = tokio::task::spawn_blocking(move || {
-                                                                gltf::import_slice(&bytes_for_import)
-                                                            }).await;
-
-                                                            match load_res {
-                                                                Ok(Ok(data)) => {
-                                                                    // 尝试解析 JSON（.gltf），GLB 会失败后回退 None
-                                                                    let json = String::from_utf8(bytes.clone())
-                                                                        .ok()
-                                                                        .and_then(|s| serde_json::from_str::<serde_json::Value>(&s).ok());
-                                                                    Ok(AssetResult::Gltf(GltfScene { data: Arc::new(data), json }))
-                                                                    },
-                                                                    Ok(Err(e)) => Err(e.to_string()),
-                                                                    Err(e) => Err(e.to_string()),
-                                                                }
+                                                            super::gltf_assets::GltfAssetLoader::load_from_bytes(bytes).await
+                                                                .map(AssetResult::Gltf)
                                                         },
                                                         Err(e) => Err(e.to_string()),
                                                     }
@@ -373,154 +401,72 @@ impl AssetServer {
             .entered();
 
         let handle = Handle::new_loading();
+        let container = handle.container.clone();  // Single Arc clone
         let task = AssetTask::Texture {
             path: path.to_path_buf(),
-            handle: handle.clone(),
+            handle: container,
             is_linear: false,
             start: std::time::Instant::now(),
         };
 
         // 发送任务并等待结果
-        let (_result_tx, _result_rx) = tokio::sync::oneshot::channel::<Result<(), String>>();
         let _ = self.tx.send(task);
-
-        // 等待加载完成
-        let mut timeout_counter = 0;
-        const MAX_TIMEOUT: u32 = 1000; // 最多等待1000次检查
-
-        while timeout_counter < MAX_TIMEOUT {
-            // 检查是否已完成
-            if let Some(result) = handle.get_state_non_blocking() {
-                return match result {
-                    LoadState::Loaded(_) => Ok(handle),
-                    LoadState::Failed(e) => Err(e),
-                    LoadState::Loading => {
-                        // 继续等待
-                        timeout_counter += 1;
-                        tokio::time::sleep(Duration::from_millis(1)).await;
-                        continue;
-                    }
-                };
-            }
-            timeout_counter += 1;
-            tokio::time::sleep(Duration::from_millis(1)).await;
-        }
-
-        Err("Timeout waiting for texture to load".to_string())
+        self.wait_for_load(&handle).await
     }
 
     /// 异步加载线性纹理
     pub async fn load_texture_linear_async(&self, path: &Path) -> Result<Handle<u32>, String> {
         let handle = Handle::new_loading();
+        let container = handle.container.clone();  // Single Arc clone
         let task = AssetTask::Texture {
             path: path.to_path_buf(),
-            handle: handle.clone(),
+            handle: container,
             is_linear: true,
             start: std::time::Instant::now(),
         };
 
         // 发送任务并等待结果
         let _ = self.tx.send(task);
-
-        // 等待加载完成
-        let mut timeout_counter = 0;
-        const MAX_TIMEOUT: u32 = 1000;
-
-        while timeout_counter < MAX_TIMEOUT {
-            if let Some(result) = handle.get_state_non_blocking() {
-                return match result {
-                    LoadState::Loaded(_) => Ok(handle),
-                    LoadState::Failed(e) => Err(e),
-                    LoadState::Loading => {
-                        timeout_counter += 1;
-                        tokio::time::sleep(Duration::from_millis(1)).await;
-                        continue;
-                    }
-                };
-            }
-            timeout_counter += 1;
-            tokio::time::sleep(Duration::from_millis(1)).await;
-        }
-
-        Err("Timeout waiting for texture to load".to_string())
+        self.wait_for_load(&handle).await
     }
 
     /// 异步加载图集
     pub async fn load_atlas_async(&self, path: &Path) -> Result<Handle<Atlas>, String> {
         let handle = Handle::new_loading();
+        let container = handle.container.clone();  // Single Arc clone
         let task = AssetTask::Atlas {
             path: path.to_path_buf(),
-            handle: handle.clone(),
+            handle: container,
             start: std::time::Instant::now(),
         };
 
         // 发送任务并等待结果
         let _ = self.tx.send(task);
-
-        // 等待加载完成
-        let mut timeout_counter = 0;
-        const MAX_TIMEOUT: u32 = 1000;
-
-        while timeout_counter < MAX_TIMEOUT {
-            if let Some(result) = handle.get_state_non_blocking() {
-                return match result {
-                    LoadState::Loaded(_) => Ok(handle),
-                    LoadState::Failed(e) => Err(e),
-                    LoadState::Loading => {
-                        timeout_counter += 1;
-                        tokio::time::sleep(Duration::from_millis(1)).await;
-                        continue;
-                    }
-                };
-            }
-            timeout_counter += 1;
-            tokio::time::sleep(Duration::from_millis(1)).await;
-        }
-
-        Err("Timeout waiting for atlas to load".to_string())
+        self.wait_for_load(&handle).await
     }
 
     #[cfg(feature = "gltf")]
     /// 异步加载GLTF场景
     pub async fn load_gltf_async(&self, path: &Path) -> Result<Handle<GltfScene>, String> {
         let handle = Handle::new_loading();
+        let container = handle.container.clone();  // Single Arc clone
         let task = AssetTask::Gltf {
             path: path.to_path_buf(),
-            handle: handle.clone(),
+            handle: container,
             start: std::time::Instant::now(),
         };
 
         // 发送任务并等待结果
         let _ = self.tx.send(task);
-
-        // 等待加载完成
-        let mut timeout_counter = 0;
-        const MAX_TIMEOUT: u32 = 1000;
-
-        while timeout_counter < MAX_TIMEOUT {
-            if let Some(result) = handle.get_state_non_blocking() {
-                return match result {
-                    LoadState::Loaded(_) => Ok(handle),
-                    LoadState::Failed(e) => Err(e),
-                    LoadState::Loading => {
-                        timeout_counter += 1;
-                        tokio::time::sleep(Duration::from_millis(1)).await;
-                        continue;
-                    }
-                };
-            }
-            timeout_counter += 1;
-            tokio::time::sleep(Duration::from_millis(1)).await;
-        }
-
-        Err("Timeout waiting for gltf to load".to_string())
+        self.wait_for_load(&handle).await
     }
 
     pub fn load_texture(&self, path: &Path) -> Handle<u32> {
         let handle = Handle::new_loading();
+        let container = handle.container.clone();  // Single Arc clone
         let task = AssetTask::Texture {
             path: path.to_path_buf(),
-            handle: handle.clone(),
+            handle: container,
             is_linear: false,
             start: std::time::Instant::now(),
         };
@@ -530,9 +476,10 @@ impl AssetServer {
 
     pub fn load_texture_linear(&self, path: &Path) -> Handle<u32> {
         let handle = Handle::new_loading();
+        let container = handle.container.clone();  // Single Arc clone
         let task = AssetTask::Texture {
             path: path.to_path_buf(),
-            handle: handle.clone(),
+            handle: container,
             is_linear: true,
             start: std::time::Instant::now(),
         };
@@ -542,9 +489,10 @@ impl AssetServer {
 
     pub fn load_atlas(&self, path: &Path) -> Handle<Atlas> {
         let handle = Handle::new_loading();
+        let container = handle.container.clone();  // Single Arc clone
         let task = AssetTask::Atlas {
             path: path.to_path_buf(),
-            handle: handle.clone(),
+            handle: container,
             start: std::time::Instant::now(),
         };
         let _ = self.tx.send(task);
@@ -554,9 +502,10 @@ impl AssetServer {
     #[cfg(feature = "gltf")]
     pub fn load_gltf(&self, path: &Path) -> Handle<GltfScene> {
         let handle = Handle::new_loading();
+        let container = handle.container.clone();  // Single Arc clone
         let task = AssetTask::Gltf {
             path: path.to_path_buf(),
-            handle: handle.clone(),
+            handle: container,
             start: std::time::Instant::now(),
         };
         let _ = self.tx.send(task);
@@ -579,7 +528,7 @@ impl AssetServer {
                 ) => {
                     let ms = std::time::Instant::now().duration_since(start).as_secs_f64() * 1000.0;
                     if let Some(tex_id) = renderer.load_texture_from_image(img.clone(), is_linear) {
-                        if let Ok(mut state) = handle.container.state.write() {
+                        if let Ok(mut state) = handle.state.write() {
                             *state = LoadState::Loaded(tex_id);
                         } // ✅ 处理锁中毒情况，忽略更新失败
 
@@ -599,9 +548,10 @@ impl AssetServer {
                             }
                         }
 
-                        events.push(AssetEvent::TextureLoaded(handle.clone(), ms as f32));
+                        let handle = Handle::from_container(handle.clone());
+                        events.push(AssetEvent::TextureLoaded(handle, ms as f32));
                     } else {
-                        if let Ok(mut state) = handle.container.state.write() {
+                        if let Ok(mut state) = handle.state.write() {
                             *state = LoadState::Failed("Failed to create texture".to_string());
                         } // ✅ 处理锁中毒情况，忽略更新失败
 
@@ -610,8 +560,9 @@ impl AssetServer {
                             stats.failed_textures += 1;
                         }
 
+                        let handle = Handle::from_container(handle.clone());
                         events.push(AssetEvent::TextureFailed(
-                            handle.clone(),
+                            handle,
                             "Failed to create texture".to_string(),
                         ));
                     }
@@ -621,7 +572,7 @@ impl AssetServer {
                     let ms = std::time::Instant::now().duration_since(start).as_secs_f64() * 1000.0;
                     if let Ok(json_str) = String::from_utf8(bytes) {
                         if let Some(atlas) = Atlas::from_json(&json_str) {
-                            if let Ok(mut state) = handle.container.state.write() {
+                            if let Ok(mut state) = handle.state.write() {
                                 *state = LoadState::Loaded(atlas);
                             } // ✅ 处理锁中毒情况，忽略更新失败
 
@@ -631,9 +582,10 @@ impl AssetServer {
                                 stats.total_memory_bytes += bytes_len;
                             }
 
-                            events.push(AssetEvent::AtlasLoaded(handle.clone(), ms as f32));
+                            let handle = Handle::from_container(handle.clone());
+                            events.push(AssetEvent::AtlasLoaded(handle, ms as f32));
                         } else {
-                            if let Ok(mut state) = handle.container.state.write() {
+                            if let Ok(mut state) = handle.state.write() {
                                 *state = LoadState::Failed("Invalid Atlas JSON".to_string());
                             } // ✅ 处理锁中毒情况，忽略更新失败
 
@@ -642,17 +594,19 @@ impl AssetServer {
                                 stats.failed_atlases += 1;
                             }
 
+                            let handle = Handle::from_container(handle.clone());
                             events.push(AssetEvent::AtlasFailed(
-                                handle.clone(),
+                                handle,
                                 "Invalid Atlas JSON".to_string(),
                             ));
                         }
                     } else {
-                        if let Ok(mut state) = handle.container.state.write() {
+                        if let Ok(mut state) = handle.state.write() {
                             *state = LoadState::Failed("Invalid UTF-8".to_string());
                         } // ✅ 处理锁中毒情况，忽略更新失败
+                        let handle = Handle::from_container(handle.clone());
                         events.push(AssetEvent::AtlasFailed(
-                            handle.clone(),
+                            handle,
                             "Invalid UTF-8".to_string(),
                         ));
                     }
@@ -660,7 +614,7 @@ impl AssetServer {
                 #[cfg(feature = "gltf")]
                 (AssetTask::Gltf { handle, start, .. }, Ok(AssetResult::Gltf(scene))) => {
                     let ms = std::time::Instant::now().duration_since(start).as_secs_f64() * 1000.0;
-                    if let Ok(mut state) = handle.container.state.write() {
+                    if let Ok(mut state) = handle.state.write() {
                         *state = LoadState::Loaded(scene);
                     } // ✅ 处理锁中毒情况，忽略更新失败
 
@@ -669,10 +623,11 @@ impl AssetServer {
                         stats.loaded_gltf_scenes += 1;
                     }
 
-                    events.push(AssetEvent::GltfLoaded(handle.clone(), ms as f32));
+                    let handle = Handle::from_container(handle.clone());
+                    events.push(AssetEvent::GltfLoaded(handle, ms as f32));
                 }
                 (AssetTask::Texture { handle, .. }, Err(e)) => {
-                    if let Ok(mut state) = handle.container.state.write() {
+                    if let Ok(mut state) = handle.state.write() {
                         *state = LoadState::Failed(e.clone());
                     } // ✅ 处理锁中毒情况，忽略更新失败
 
@@ -681,10 +636,11 @@ impl AssetServer {
                         stats.failed_textures += 1;
                     }
 
-                    events.push(AssetEvent::TextureFailed(handle.clone(), e));
+                    let handle = Handle::from_container(handle.clone());
+                    events.push(AssetEvent::TextureFailed(handle, e));
                 }
                 (AssetTask::Atlas { handle, .. }, Err(e)) => {
-                    if let Ok(mut state) = handle.container.state.write() {
+                    if let Ok(mut state) = handle.state.write() {
                         *state = LoadState::Failed(e.clone());
                     } // ✅ 处理锁中毒情况，忽略更新失败
 
@@ -693,14 +649,16 @@ impl AssetServer {
                         stats.failed_atlases += 1;
                     }
 
-                    events.push(AssetEvent::AtlasFailed(handle.clone(), e));
+                    let handle = Handle::from_container(handle.clone());
+                    events.push(AssetEvent::AtlasFailed(handle, e));
                 }
                 #[cfg(feature = "gltf")]
                 (AssetTask::Gltf { handle, .. }, Err(e)) => {
-                    if let Ok(mut state) = handle.container.state.write() {
+                    if let Ok(mut state) = handle.state.write() {
                         *state = LoadState::Failed(e.clone());
                     } // ✅ 处理锁中毒情况，忽略更新失败
-                    events.push(AssetEvent::GltfFailed(handle.clone(), e));
+                    let handle = Handle::from_container(handle.clone());
+                    events.push(AssetEvent::GltfFailed(handle, e));
                 }
                 _ => {}
             }
@@ -819,318 +777,18 @@ impl Drop for AssetServer {
         }
 
         if let Some(handle) = self.worker_handle.take()
-            && let Err(e) = handle.join() {
-                log::error!("Asset loader thread panicked: {:?}", e);
-            }
+            && let Err(e) = handle.join()
+        {
+            log::error!("Asset loader thread panicked: {:?}", e);
+        }
     }
 }
 
-// 将GLTF场景导入为引擎批次，可选生成切线与纹理绑定组
+// Re-export from gltf_assets module
 #[cfg(feature = "gltf")]
-pub fn import_gltf_to_world(
-    world: &mut World,
-    renderer: &mut WgpuRenderer,
-    handle: &Handle<GltfScene>,
-) {
-    // use gltf::Primitive;
-    if let Some(scene) = handle.get() {
-        let (doc, buffers, images) = &*scene.data;
+pub use super::gltf_assets::to_rgba;
 
-        // Check if pbr renderer exists first to avoid borrowing conflicts
-        if renderer.pbr_renderer.is_none() {
-            return;
-        }
-
-        // Process all primitives to collect mesh data and material info separately
-        let mut primitive_data = Vec::new();
-
-        for mesh in doc.meshes() {
-            for primitive in mesh.primitives() {
-                let reader = primitive.reader(|buf| Some(&buffers[buf.index()]));
-                let positions: Vec<[f32; 3]> =
-                    reader.read_positions().map(|it| it.collect()).unwrap_or_default();
-                let normals: Vec<[f32; 3]> = reader
-                    .read_normals()
-                    .map(|it| it.collect())
-                    .unwrap_or_else(|| vec![[0.0, 1.0, 0.0]; positions.len()]);
-                // 选择UV集索引：优先 baseColor，其次 MR/normal/AO/emissive
-                let mut texcoord_index = 0u32;
-                let mt = primitive.material();
-                if let Some(info) = mt.pbr_metallic_roughness().base_color_texture() {
-                    texcoord_index = info.tex_coord();
-                } else if let Some(info) = mt.pbr_metallic_roughness().metallic_roughness_texture()
-                {
-                    texcoord_index = info.tex_coord();
-                } else if let Some(info) = mt.normal_texture() {
-                    texcoord_index = info.tex_coord();
-                } else if let Some(info) = mt.occlusion_texture() {
-                    texcoord_index = info.tex_coord();
-                } else if let Some(info) = mt.emissive_texture() {
-                    texcoord_index = info.tex_coord();
-                }
-                let uvs: Vec<[f32; 2]> = reader
-                    .read_tex_coords(texcoord_index).map(|tc| tc.into_f32())
-                    .map(|it| it.collect())
-                    .unwrap_or_else(|| vec![[0.0, 0.0]; positions.len()]);
-                let mut tangents: Vec<[f32; 4]> =
-                    reader.read_tangents().map(|it| it.collect()).unwrap_or_default();
-                let indices: Vec<u32> = reader
-                    .read_indices()
-                    .map(|r| r.into_u32().collect())
-                    .unwrap_or_else(|| (0..positions.len() as u32).collect());
-
-                if tangents.is_empty() {
-                    tangents = generate_tangents(&positions, &normals, &uvs, &indices);
-                }
-
-                let mut vertices = Vec::with_capacity(positions.len());
-                for i in 0..positions.len() {
-                    vertices.push(crate::render::mesh::Vertex3D {
-                        pos: positions[i],
-                        normal: normals[i],
-                        uv: uvs[i],
-                        tangent: tangents[i],
-                    });
-                }
-
-                // GLTF 材质参数映射
-                let mr = primitive.material().pbr_metallic_roughness();
-                let mut mat = crate::render::pbr::PbrMaterial::default();
-                let base = mr.base_color_factor();
-                mat.base_color = glam::Vec4::from_array(base);
-                mat.metallic = mr.metallic_factor();
-                mat.roughness = mr.roughness_factor();
-                mat.emissive = glam::Vec3::from_array(primitive.material().emissive_factor());
-                mat.normal_scale =
-                    primitive.material().normal_texture().map(|n| n.scale()).unwrap_or(1.0);
-                mat.ambient_occlusion =
-                    primitive.material().occlusion_texture().map(|o| o.strength()).unwrap_or(1.0);
-
-                // KHR_texture_transform（UV变换）解析（仅 .gltf JSON 可用）
-                let reader = primitive.reader(|buf| Some(&buffers[buf.index()]));
-                let mut final_vertices = vertices;
-                if let Some(ref json) = scene.json
-                    && let Some(materials) = json.get("materials").and_then(|v| v.as_array())
-                        && let Some(mi) = primitive.material().index()
-                            && let Some(mj) = materials.get(mi)
-                                && let Some(pbr_json) = mj.get("pbrMetallicRoughness")
-                                    && let Some(bct) = pbr_json.get("baseColorTexture")
-                                        && let Some(ext) = bct.get("extensions")
-                                            && let Some(tt) = ext.get("KHR_texture_transform") {
-                                                if let Some(off) =
-                                                    tt.get("offset").and_then(|x| x.as_array())
-                                                    && off.len() >= 2 {
-                                                        mat.uv_offset = [
-                                                            off[0].as_f64().unwrap_or(0.0) as f32,
-                                                            off[1].as_f64().unwrap_or(0.0) as f32,
-                                                        ];
-                                                    }
-                                                if let Some(scl) =
-                                                    tt.get("scale").and_then(|x| x.as_array())
-                                                    && scl.len() >= 2 {
-                                                        mat.uv_scale = [
-                                                            scl[0].as_f64().unwrap_or(1.0) as f32,
-                                                            scl[1].as_f64().unwrap_or(1.0) as f32,
-                                                        ];
-                                                    }
-                                                if let Some(rot) =
-                                                    tt.get("rotation").and_then(|x| x.as_f64())
-                                                {
-                                                    mat.uv_rotation = rot as f32;
-                                                }
-                                                if let Some(tc) =
-                                                    tt.get("texCoord").and_then(|x| x.as_u64())
-                                                {
-                                                    let tc_i = tc as u32;
-                                                    let uvs2: Vec<[f32; 2]> = reader
-                                                        .read_tex_coords(tc_i).map(|tc| tc.into_f32())
-                                                        .map(|it| it.collect())
-                                                        .unwrap_or_else(|| {
-                                                            // Get original UVs if the alternate set doesn't exist
-                                                            let mut texcoord_index = 0u32;
-                                                            let mt = primitive.material();
-                                                            if let Some(info) = mt
-                                                                .pbr_metallic_roughness()
-                                                                .base_color_texture()
-                                                            {
-                                                                texcoord_index = info.tex_coord();
-                                                            } else if let Some(info) = mt
-                                                                .pbr_metallic_roughness()
-                                                                .metallic_roughness_texture()
-                                                            {
-                                                                texcoord_index = info.tex_coord();
-                                                            } else if let Some(info) =
-                                                                mt.normal_texture()
-                                                            {
-                                                                texcoord_index = info.tex_coord();
-                                                            } else if let Some(info) =
-                                                                mt.occlusion_texture()
-                                                            {
-                                                                texcoord_index = info.tex_coord();
-                                                            } else if let Some(info) =
-                                                                mt.emissive_texture()
-                                                            {
-                                                                texcoord_index = info.tex_coord();
-                                                            }
-                                                            reader
-                                                                .read_tex_coords(texcoord_index).map(|tc| tc.into_f32())
-                                                                .map(|it| it.collect())
-                                                                .unwrap_or_else(|| {
-                                                                    vec![
-                                                                        [0.0, 0.0];
-                                                                        positions.len()
-                                                                    ]
-                                                                })
-                                                        });
-                                                    // 用新版 UV 替换
-                                                    for i in 0..final_vertices.len() {
-                                                        if i < uvs2.len() {
-                                                            final_vertices[i].uv = uvs2[i];
-                                                        }
-                                                    }
-                                                }
-                                            }
-
-                // Store the vertex and index data for later processing
-                let mesh_id = mesh.index() as u64;
-                let mat_id = primitive.material().index().unwrap_or(0) as u64;
-
-                // Store primitive data for later processing to avoid borrowing conflicts
-                primitive_data.push((
-                    final_vertices,
-                    indices,
-                    mat,
-                    mat_id,
-                    mesh_id,
-                    primitive.material().index().unwrap_or(0),
-                ));
-            }
-        }
-
-        // Now process the collected data using the renderer
-        for (vertices, indices, mat, mat_id, mesh_id, material_index) in primitive_data {
-            // Create GPU mesh (this requires mutable access to renderer)
-            let gpu_mesh = renderer.create_gpu_mesh(&vertices, &indices);
-
-            // Now we can safely use the pbr renderer (immutable access) with device and queue
-            let pbr = renderer.pbr_renderer.as_ref().unwrap();
-            let device = renderer.device();
-            let queue = renderer.queue();
-
-            // 构建纹理绑定组（五贴图）并持久化纹理
-            // 创建1x1白色默认纹理（固定参数，不会失败）
-            let default_img = image::RgbaImage::from_raw(1, 1, vec![255, 255, 255, 255])
-                .expect("Failed to create default 1x1 white image - this should never happen");
-            let materials: Vec<gltf::Material> = scene.data.0.materials().collect();
-            let material = &materials[material_index];
-            let mr = material.pbr_metallic_roughness();
-            let bc_img = mr
-                .base_color_texture()
-                .map(|info| &images[info.texture().source().index()])
-                .map(to_rgba)
-                .unwrap_or(default_img.clone());
-            let mr_img = mr
-                .metallic_roughness_texture()
-                .map(|info| &images[info.texture().source().index()])
-                .map(to_rgba)
-                .unwrap_or(default_img.clone());
-            let n_img = material
-                .normal_texture()
-                .map(|info| &images[info.texture().source().index()])
-                .map(to_rgba)
-                .unwrap_or(default_img.clone());
-            let ao_img = material
-                .occlusion_texture()
-                .map(|info| &images[info.texture().source().index()])
-                .map(to_rgba)
-                .unwrap_or(default_img.clone());
-            let em_img = material
-                .emissive_texture()
-                .map(|info| &images[info.texture().source().index()])
-                .map(to_rgba)
-                .unwrap_or(default_img.clone());
-            let tex_set = pbr.create_texture_set_from_images(
-                device,
-                queue,
-                [bc_img, mr_img, n_img, ao_img, em_img],
-                [true, false, false, false, true],
-            );
-            let tex_bg = std::sync::Arc::new(tex_set.bind_group);
-
-            // 材质注册与复用
-            let mut registry =
-                world.get_resource_or_insert_with::<MaterialRegistry>(Default::default);
-            let (material_bg, material_buf): (
-                std::sync::Arc<wgpu::BindGroup>,
-                std::sync::Arc<wgpu::Buffer>,
-            ) = if let Some(triple) = registry.materials.get(&mat_id) {
-                // 使用已注册的材质
-                (triple.0.clone(), triple.1.clone())
-            } else {
-                let (bg, buf): (
-                    std::sync::Arc<wgpu::BindGroup>,
-                    std::sync::Arc<wgpu::Buffer>,
-                ) = pbr.create_material_bind_group(device, queue, &mat);
-                // 登记材质，包括纹理绑定组
-                registry.materials.insert(mat_id, (bg.clone(), buf.clone(), tex_bg.clone()));
-                (bg, buf)
-            };
-
-            let comp = crate::render::instance_batch::Mesh3DRenderer {
-                mesh: gpu_mesh,
-                material_bind_group: material_bg,
-                textures_bind_group: Some(tex_bg),
-                material_uniform_buffer: Some(material_buf),
-                mesh_id,
-                material_id: mat_id,
-                pipeline_id: 0,   // 默认管线 ID
-                blend_mode: 0,    // 默认混合模式（不透明）
-                depth_test: true, // 默认启用深度测试
-                render_flags: 0,  // 默认无特殊渲染标志
-                visible: true,
-            };
-            let transform = crate::ecs::Transform::default();
-            world.spawn((comp, transform));
-        }
-    }
-}
-
-// 纹理UV变换扩展（KHR_texture_transform）解析可在后续版本加入；当前使用默认值
-
-// 删除视图构建占位函数，改为直接创建纹理集合并持久化在绑定组中
-
-#[cfg(feature = "gltf")]
-fn to_rgba(data: &gltf::image::Data) -> image::RgbaImage {
-    match data.format {
-        gltf::image::Format::R8G8B8A8 => {
-            image::RgbaImage::from_raw(data.width, data.height, data.pixels.clone())
-                .unwrap_or_else(|| image::RgbaImage::new(data.width, data.height))
-        }
-        gltf::image::Format::R8G8B8 => {
-            let mut rgba = Vec::with_capacity((data.width * data.height * 4) as usize);
-            for i in (0..data.pixels.len()).step_by(3) {
-                rgba.extend_from_slice(&[
-                    data.pixels[i],
-                    data.pixels[i + 1],
-                    data.pixels[i + 2],
-                    255,
-                ]);
-            }
-            image::RgbaImage::from_raw(data.width, data.height, rgba).unwrap_or_else(|| {
-                // 如果无法创建图像（通常是因为尺寸不匹配），创建一个默认图像
-                log::warn!(
-                    "Failed to create image from raw data ({}x{}), using default",
-                    data.width,
-                    data.height
-                );
-                image::RgbaImage::new(data.width.max(1), data.height.max(1))
-            })
-        }
-        _ => image::RgbaImage::new(data.width, data.height),
-    }
-}
-
-fn generate_tangents(
+pub fn generate_tangents(
     positions: &[[f32; 3]],
     normals: &[[f32; 3]],
     uvs: &[[f32; 2]],

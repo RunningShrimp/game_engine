@@ -467,15 +467,11 @@ impl WebRtcManager {
     }
 
     /// 获取对等连接（只读引用）
-    pub async fn get_peer_connection(
-        &self,
-        connection_id: &str,
-    ) -> Option<WebRtcPeerConnection> {
+    pub async fn get_peer_connection(&self, connection_id: &str) -> Option<WebRtcPeerConnection> {
         let guard = self.connections.read().await;
         // 由于 WebRtcPeerConnection 不实现 Clone，我们需要克隆连接
-        guard.get(connection_id).map(|_| {
+        guard.get(connection_id).map(|conn_info| {
             // 创建一个新连接作为克隆
-            let conn_info = guard.get(connection_id).unwrap();
             WebRtcPeerConnection::new(conn_info.connection_id.clone(), conn_info.config.clone())
         })
     }

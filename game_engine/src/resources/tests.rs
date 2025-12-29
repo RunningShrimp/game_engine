@@ -21,7 +21,7 @@ mod tests {
         // Verify the event and handle state
         if let AssetEvent::TextureLoaded(h, ms) = event {
             assert!(h.is_loaded());
-            assert_eq!(h.get().unwrap(), 123);
+            assert_eq!(h.get().expect("Test: operation should succeed"), 123);
             assert_eq!(ms, 50.0);
         } else {
             panic!("Expected TextureLoaded event, got {:?}", event);
@@ -39,12 +39,12 @@ mod tests {
         if let AssetEvent::TextureFailed(h, reason) = event {
             assert!(!h.is_loaded());
             assert_eq!(reason, "File not found");
-            match &*h.container.state.read().unwrap() {
+            match &*h.container.state.read().expect("Test: operation should succeed") {
                 LoadState::Failed(r) => assert_eq!(r, "File not found"),
                 _ => {
                     panic!(
                         "Expected Failed state, got {:?}",
-                        h.container.state.read().unwrap()
+                        h.container.state.read().expect("Test: operation should succeed")
                     );
                 }
             }

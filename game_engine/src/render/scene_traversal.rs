@@ -136,15 +136,23 @@ impl OptimizedSceneTraverser {
     ) -> Vec<EntityData> {
         // 查询所有需要渲染的实体
         // 注意：使用 WorldQuery 而不是直接调用 query()
+        // 优化：使用引用避免克隆 Arc 指针
         let entities: Vec<EntityData> = world
             .query::<(Entity, &Transform, &Mesh3DRenderer)>()
             .iter(world)
-            .map(|(entity, transform, renderer)| {
-                EntityData {
-                    entity,
-                    transform: *transform,
-                    renderer: renderer.clone(),
-                }
+            .map(|(entity, transform, renderer)| EntityData {
+                entity,
+                transform: *transform,
+                // 优化：只复制必要的字段（mesh_id, material_id等），而不是整个renderer
+                // 这避免了克隆3个Arc指针（mesh, material_bind_group, textures_bind_group）
+                renderer_key: RendererKey {
+                    mesh_id: renderer.mesh_id,
+                    material_id: renderer.material_id,
+                    pipeline_id: renderer.pipeline_id,
+                    blend_mode: renderer.blend_mode,
+                    depth_test: renderer.depth_test,
+                    render_flags: renderer.render_flags,
+                },
             })
             .collect();
 
@@ -159,17 +167,25 @@ impl OptimizedSceneTraverser {
         _view_proj: Option<[[f32; 4]; 4]>,
     ) -> Vec<EntityData> {
         // 查询所有需要渲染的实体
+        // 优化：使用引用避免克隆 Arc 指针
         let entities: Vec<EntityData> = world
             .query::<(Entity, &Transform, &Mesh3DRenderer)>()
             .iter(world)
             .collect::<Vec<_>>()
             .into_par_iter()
-            .map(|(entity, transform, renderer)| {
-                EntityData {
-                    entity,
-                    transform: *transform,
-                    renderer: renderer.clone(),
-                }
+            .map(|(entity, transform, renderer)| EntityData {
+                entity,
+                transform: *transform,
+                // 优化：只复制必要的字段（mesh_id, material_id等），而不是整个renderer
+                // 这避免了克隆3个Arc指针
+                renderer_key: RendererKey {
+                    mesh_id: renderer.mesh_id,
+                    material_id: renderer.material_id,
+                    pipeline_id: renderer.pipeline_id,
+                    blend_mode: renderer.blend_mode,
+                    depth_test: renderer.depth_test,
+                    render_flags: renderer.render_flags,
+                },
             })
             .collect();
 
@@ -182,8 +198,16 @@ impl OptimizedSceneTraverser {
         let mut batch_map: HashMap<BatchKey, Vec<EntityData>> = HashMap::new();
 
         for entity in entities {
-            let key = entity.renderer.batch_key();
-            batch_map.entry(key).or_default().push(entity.clone());
+            // 优化：使用renderer_key直接构造BatchKey，避免克隆renderer
+            let key = BatchKey {
+                mesh_id: entity.renderer_key.mesh_id,
+                material_id: entity.renderer_key.material_id,
+                pipeline_id: entity.renderer_key.pipeline_id,
+                blend_mode: entity.renderer_key.blend_mode,
+                depth_test: entity.renderer_key.depth_test,
+                render_flags: entity.renderer_key.render_flags,
+            };
+            batch_map.entry(key).or_default().push(*entity);
         }
 
         // 转换为OptimizedBatch
@@ -240,12 +264,25 @@ impl OptimizedSceneTraverser {
     }
 }
 
+/// 渲染器关键数据（用于批处理分组，避免克隆整个Mesh3DRenderer）
+///
+/// 只包含批处理所需的字段，避免克隆Arc指针。
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct RendererKey {
+    mesh_id: u64,
+    material_id: u64,
+    pipeline_id: u32,
+    blend_mode: u8,
+    depth_test: bool,
+    render_flags: u16,
+}
+
 /// 实体数据（用于场景遍历）
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 struct EntityData {
     entity: Entity,
     transform: Transform,
-    renderer: Mesh3DRenderer,
+    renderer_key: RendererKey,
 }
 
 /// 增量场景更新器
@@ -259,11 +296,10 @@ pub struct IncrementalSceneUpdater {
 }
 
 /// 实体快照
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 struct EntitySnapshot {
     transform: Transform,
-    mesh_id: u64,
-    material_id: u64,
+    renderer_key: RendererKey,
 }
 
 impl IncrementalSceneUpdater {
@@ -278,28 +314,34 @@ impl IncrementalSceneUpdater {
     /// 检测变化的实体
     pub fn detect_changes(&mut self, world: &mut bevy_ecs::world::World) -> Vec<Entity> {
         let mut changed = Vec::new();
-        
+
         // 先收集所有当前实体快照
         // 注意：使用 query_mut 避免借用问题
+        // 优化：避免克隆renderer
         let current_snapshots: Vec<(Entity, EntitySnapshot)> = world
             .query::<(Entity, &Transform, &Mesh3DRenderer)>()
             .iter(world)
             .map(|(entity, transform, renderer)| {
                 let snapshot = EntitySnapshot {
                     transform: *transform,
-                    mesh_id: renderer.mesh_id,
-                    material_id: renderer.material_id,
+                    renderer_key: RendererKey {
+                        mesh_id: renderer.mesh_id,
+                        material_id: renderer.material_id,
+                        pipeline_id: renderer.pipeline_id,
+                        blend_mode: renderer.blend_mode,
+                        depth_test: renderer.depth_test,
+                        render_flags: renderer.render_flags,
+                    },
                 };
                 (entity, snapshot)
             })
             .collect();
-        
+
         // 检查变化
         for (entity, current_snapshot) in &current_snapshots {
             if let Some(prev) = self.previous_entities.get(entity) {
                 if prev.transform != current_snapshot.transform
-                    || prev.mesh_id != current_snapshot.mesh_id
-                    || prev.material_id != current_snapshot.material_id
+                    || prev.renderer_key != current_snapshot.renderer_key
                 {
                     changed.push(*entity);
                     self.dirty_entities.insert(*entity);
@@ -309,16 +351,14 @@ impl IncrementalSceneUpdater {
                 changed.push(*entity);
                 self.dirty_entities.insert(*entity);
             }
-            
+
             // 更新快照
-            self.previous_entities.insert(*entity, current_snapshot.clone());
+            self.previous_entities.insert(*entity, *current_snapshot);
         }
- 
+
         // 检查已移除的实体
-        let current_entities: std::collections::HashSet<Entity> = current_snapshots
-            .iter()
-            .map(|(entity, _)| *entity)
-            .collect();
+        let current_entities: std::collections::HashSet<Entity> =
+            current_snapshots.iter().map(|(entity, _)| *entity).collect();
 
         for entity in self.previous_entities.keys() {
             if !current_entities.contains(entity) {
@@ -369,4 +409,3 @@ mod tests {
         assert!(updater.dirty_entities.is_empty());
     }
 }
-

@@ -74,7 +74,7 @@ mod physics_ecs_integration_tests {
         );
 
         if let Some(mut physics) = world.get_resource_mut::<PhysicsDomainService>() {
-            physics.create_body(body).unwrap();
+            physics.create_body(body).expect("Test: operation should succeed");
         }
 
         // 步进模拟
@@ -87,7 +87,7 @@ mod physics_ecs_integration_tests {
         if let Some(physics) = world.get_resource::<PhysicsDomainService>() {
             let pos = physics.get_body_position(RigidBodyId::new(1));
             assert!(pos.is_ok());
-            let position = pos.unwrap();
+            let position = pos.expect("Test: operation should succeed");
             // Y坐标应该小于初始值10.0（受重力影响）
             assert!(position.y < 10.0);
         }
@@ -106,7 +106,7 @@ mod physics_ecs_integration_tests {
         );
 
         if let Some(mut physics) = world.get_resource_mut::<PhysicsDomainService>() {
-            physics.create_body(body).unwrap();
+            physics.create_body(body).expect("Test: operation should succeed");
         }
 
         // 应用力
@@ -117,14 +117,14 @@ mod physics_ecs_integration_tests {
 
         // 步进模拟
         if let Some(mut physics) = world.get_resource_mut::<PhysicsDomainService>() {
-            physics.step_simulation(0.016).unwrap();
+            physics.step_simulation(0.016).expect("Test: operation should succeed");
         }
 
         // 验证刚体位置已更新
         if let Some(physics) = world.get_resource::<PhysicsDomainService>() {
             let pos = physics.get_body_position(RigidBodyId::new(1));
             assert!(pos.is_ok());
-            let position = pos.unwrap();
+            let position = pos.expect("Test: operation should succeed");
             // Y坐标应该大于初始值0.0（受向上力影响）
             assert!(position.y > 0.0);
         }
@@ -143,7 +143,7 @@ mod physics_ecs_integration_tests {
         );
 
         if let Some(mut physics) = world.get_resource_mut::<PhysicsDomainService>() {
-            physics.create_body(body).unwrap();
+            physics.create_body(body).expect("Test: operation should succeed");
         }
 
         // 设置位置
@@ -156,7 +156,7 @@ mod physics_ecs_integration_tests {
         if let Some(physics) = world.get_resource::<PhysicsDomainService>() {
             let pos = physics.get_body_position(RigidBodyId::new(1));
             assert!(pos.is_ok());
-            let position = pos.unwrap();
+            let position = pos.expect("Test: operation should succeed");
             assert_eq!(position.x, 5.0);
             assert_eq!(position.y, 10.0);
             assert_eq!(position.z, 15.0);
@@ -176,7 +176,7 @@ mod physics_ecs_integration_tests {
         );
 
         if let Some(mut physics) = world.get_resource_mut::<PhysicsDomainService>() {
-            physics.create_body(body).unwrap();
+            physics.create_body(body).expect("Test: operation should succeed");
         }
 
         // 创建碰撞体
@@ -189,7 +189,7 @@ mod physics_ecs_integration_tests {
 
         // 步进模拟
         if let Some(mut physics) = world.get_resource_mut::<PhysicsDomainService>() {
-            physics.step_simulation(0.016).unwrap();
+            physics.step_simulation(0.016).expect("Test: operation should succeed");
         }
 
         // 验证刚体仍然存在
@@ -211,7 +211,7 @@ mod physics_ecs_integration_tests {
         );
 
         if let Some(mut physics) = world.get_resource_mut::<PhysicsDomainService>() {
-            physics.create_body(body).unwrap();
+            physics.create_body(body).expect("Test: operation should succeed");
         }
 
         // 销毁刚体
@@ -259,7 +259,7 @@ mod scene_ecs_integration_tests {
         if let Some(scene_service) = world.get_resource::<SceneDomainService>() {
             let scene = scene_service.get_scene(SceneId::new(1));
             assert!(scene.is_some());
-            assert_eq!(scene.unwrap().id(), SceneId::new(1));
+            assert_eq!(scene.expect("Test: operation should succeed").id(), SceneId::new(1));
         }
     }
 
@@ -270,7 +270,7 @@ mod scene_ecs_integration_tests {
 
         // 创建场景
         if let Some(mut scene_service) = world.get_resource_mut::<SceneDomainService>() {
-            scene_service.create_scene(SceneId::new(1), "test_scene").unwrap();
+            scene_service.create_scene(SceneId::new(1), "test_scene").expect("Test: operation should succeed");
         }
 
         // 创建ECS实体
@@ -310,8 +310,8 @@ mod scene_ecs_integration_tests {
 
         // 创建多个场景
         if let Some(mut scene_service) = world.get_resource_mut::<SceneDomainService>() {
-            scene_service.create_scene(SceneId::new(1), "scene1").unwrap();
-            scene_service.create_scene(SceneId::new(2), "scene2").unwrap();
+            scene_service.create_scene(SceneId::new(1), "scene1").expect("Test: operation should succeed");
+            scene_service.create_scene(SceneId::new(2), "scene2").expect("Test: operation should succeed");
         }
 
         // 切换到场景1
@@ -324,19 +324,19 @@ mod scene_ecs_integration_tests {
         if let Some(scene_service) = world.get_resource::<SceneDomainService>() {
             let active_scene = scene_service.get_active_scene();
             assert!(active_scene.is_some());
-            assert_eq!(active_scene.unwrap().id(), SceneId::new(1));
+            assert_eq!(active_scene.expect("Test: operation should succeed").id(), SceneId::new(1));
         }
 
         // 切换到场景2
         if let Some(mut scene_service) = world.get_resource_mut::<SceneDomainService>() {
-            scene_service.switch_to_scene(SceneId::new(2)).unwrap();
+            scene_service.switch_to_scene(SceneId::new(2)).expect("Test: operation should succeed");
         }
 
         // 验证活跃场景已更新
         if let Some(scene_service) = world.get_resource::<SceneDomainService>() {
             let active_scene = scene_service.get_active_scene();
             assert!(active_scene.is_some());
-            assert_eq!(active_scene.unwrap().id(), SceneId::new(2));
+            assert_eq!(active_scene.expect("Test: operation should succeed").id(), SceneId::new(2));
         }
     }
 
@@ -347,7 +347,7 @@ mod scene_ecs_integration_tests {
 
         // 创建场景
         if let Some(mut scene_service) = world.get_resource_mut::<SceneDomainService>() {
-            scene_service.create_scene(SceneId::new(1), "test_scene").unwrap();
+            scene_service.create_scene(SceneId::new(1), "test_scene").expect("Test: operation should succeed");
         }
 
         // 删除场景
@@ -379,7 +379,7 @@ mod actor_ecs_integration_tests {
         
         // 创建Actor系统并注册音频Actor
         let mut actor_system = crate::domain::actor::ActorSystem::new();
-        let audio_handle = actor_system.register("audio", AudioActor::new()).unwrap();
+        let audio_handle = actor_system.register("audio", AudioActor::new()).expect("Test: operation should succeed");
         
         // 将Actor句柄注册为ECS资源
         world.insert_resource(audio_handle);
@@ -394,7 +394,7 @@ mod actor_ecs_integration_tests {
         
         // 创建Actor系统并注册音频Actor
         let mut actor_system = crate::domain::actor::ActorSystem::new();
-        let audio_handle = actor_system.register("audio", AudioActor::new()).unwrap();
+        let audio_handle = actor_system.register("audio", AudioActor::new()).expect("Test: operation should succeed");
         
         world.insert_resource(audio_handle);
 
@@ -416,7 +416,7 @@ mod actor_ecs_integration_tests {
         
         // 创建Actor系统并注册物理Actor
         let mut actor_system = crate::domain::actor::ActorSystem::new();
-        let physics_handle = actor_system.register("physics", PhysicsActor::new()).unwrap();
+        let physics_handle = actor_system.register("physics", PhysicsActor::new()).expect("Test: operation should succeed");
         
         world.insert_resource(physics_handle);
 
@@ -430,7 +430,7 @@ mod actor_ecs_integration_tests {
         
         // 创建Actor系统并注册物理Actor
         let mut actor_system = crate::domain::actor::ActorSystem::new();
-        let physics_handle = actor_system.register("physics", PhysicsActor::new()).unwrap();
+        let physics_handle = actor_system.register("physics", PhysicsActor::new()).expect("Test: operation should succeed");
         
         world.insert_resource(physics_handle);
 
@@ -447,8 +447,8 @@ mod actor_ecs_integration_tests {
         
         // 创建Actor系统并注册多个Actor
         let mut actor_system = crate::domain::actor::ActorSystem::new();
-        let audio_handle = actor_system.register("audio", AudioActor::new()).unwrap();
-        let physics_handle = actor_system.register("physics", PhysicsActor::new()).unwrap();
+        let audio_handle = actor_system.register("audio", AudioActor::new()).expect("Test: operation should succeed");
+        let physics_handle = actor_system.register("physics", PhysicsActor::new()).expect("Test: operation should succeed");
         
         world.insert_resource(audio_handle);
         world.insert_resource(physics_handle);
@@ -542,15 +542,15 @@ mod comprehensive_integration_tests {
 
         // 创建Actor系统并注册Actor
         let mut actor_system = crate::domain::actor::ActorSystem::new();
-        let audio_handle = actor_system.register("audio", AudioActor::new()).unwrap();
-        let physics_handle = actor_system.register("physics", PhysicsActor::new()).unwrap();
+        let audio_handle = actor_system.register("audio", AudioActor::new()).expect("Test: operation should succeed");
+        let physics_handle = actor_system.register("physics", PhysicsActor::new()).expect("Test: operation should succeed");
         
         world.insert_resource(audio_handle);
         world.insert_resource(physics_handle);
 
         // 创建场景
         if let Some(mut scene_service) = world.get_resource_mut::<SceneDomainService>() {
-            scene_service.create_scene(SceneId::new(1), "main_scene").unwrap();
+            scene_service.create_scene(SceneId::new(1), "main_scene").expect("Test: operation should succeed");
         }
 
         // 创建刚体
@@ -561,7 +561,7 @@ mod comprehensive_integration_tests {
         );
 
         if let Some(mut physics) = world.get_resource_mut::<PhysicsDomainService>() {
-            physics.create_body(body).unwrap();
+            physics.create_body(body).expect("Test: operation should succeed");
         }
 
         // 创建ECS实体
@@ -639,7 +639,7 @@ mod comprehensive_integration_tests {
         );
 
         if let Some(mut physics) = world.get_resource_mut::<PhysicsDomainService>() {
-            physics.create_body(body).unwrap();
+            physics.create_body(body).expect("Test: operation should succeed");
         }
 
         // 创建ECS实体
@@ -647,7 +647,7 @@ mod comprehensive_integration_tests {
 
         // 步进物理模拟
         if let Some(mut physics) = world.get_resource_mut::<PhysicsDomainService>() {
-            physics.step_simulation(0.016).unwrap();
+            physics.step_simulation(0.016).expect("Test: operation should succeed");
         }
 
         // 获取物理刚体位置
@@ -658,7 +658,7 @@ mod comprehensive_integration_tests {
         };
 
         assert!(physics_pos.is_some());
-        let pos = physics_pos.unwrap();
+        let pos = physics_pos.expect("Test: operation should succeed");
         // Y坐标应该小于初始值10.0（受重力影响）
         assert!(pos.y < 10.0);
     }
@@ -670,9 +670,9 @@ mod comprehensive_integration_tests {
 
         // 创建多个场景
         if let Some(mut scene_service) = world.get_resource_mut::<SceneDomainService>() {
-            scene_service.create_scene(SceneId::new(1), "scene1").unwrap();
-            scene_service.create_scene(SceneId::new(2), "scene2").unwrap();
-            scene_service.create_scene(SceneId::new(3), "scene3").unwrap();
+            scene_service.create_scene(SceneId::new(1), "scene1").expect("Test: operation should succeed");
+            scene_service.create_scene(SceneId::new(2), "scene2").expect("Test: operation should succeed");
+            scene_service.create_scene(SceneId::new(3), "scene3").expect("Test: operation should succeed");
         }
 
         // 为每个场景创建实体

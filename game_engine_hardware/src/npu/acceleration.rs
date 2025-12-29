@@ -238,7 +238,7 @@ impl NpuAccelerator {
             return vec!["NPU不可用"];
         }
 
-        let npu = self.npu_info.as_ref().unwrap();
+        let npu = self.npu_info.as_ref().expect("NPU info must be present when enabled");
         let mut use_cases = Vec::new();
 
         if npu.tops > 20.0 {

@@ -23,8 +23,8 @@ pub mod rust_scripting;
 pub mod system;
 /// 线程安全模块
 pub mod thread_safe;
-/// WebAssembly支持模块
-pub mod wasm_support;
+/// WebAssembly支持模块 (temporarily disabled - wasmtime dependency removed)
+// pub mod wasm_support;
 
 #[cfg(test)]
 mod lua_tests;

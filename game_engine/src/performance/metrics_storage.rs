@@ -61,7 +61,7 @@ impl MetricsStorage {
     /// * `value` - metric值
     /// * `tags` - 可选的标签
     pub fn record(&self, name: &str, value: f64, tags: Option<HashMap<String, String>>) {
-        let mut metrics = self.metrics.lock().unwrap();
+        let mut metrics = self.metrics.lock().expect("Test: operation should succeed");
         let entry = metrics.entry(name.to_string()).or_insert_with(VecDeque::new);
 
         let data_point = MetricDataPoint {
@@ -88,7 +88,7 @@ impl MetricsStorage {
     ///
     /// metric数据点的克隆，如果不存在则返回空
     pub fn get_metrics(&self, name: &str) -> Vec<MetricDataPoint> {
-        let metrics = self.metrics.lock().unwrap();
+        let metrics = self.metrics.lock().expect("Test: operation should succeed");
         metrics.get(name).map(|v| v.clone().into_iter().collect()).unwrap_or_default()
     }
 
@@ -103,7 +103,7 @@ impl MetricsStorage {
     ///
     /// 指定时间范围内的数据点
     pub fn get_metrics_in_window(&self, name: &str, duration: Duration) -> Vec<MetricDataPoint> {
-        let metrics = self.metrics.lock().unwrap();
+        let metrics = self.metrics.lock().expect("Test: operation should succeed");
         let now = Instant::now();
 
         metrics
@@ -158,7 +158,7 @@ impl MetricsStorage {
     ///
     /// 当前存储的所有metric名称
     pub fn get_all_metric_names(&self) -> Vec<String> {
-        let metrics = self.metrics.lock().unwrap();
+        let metrics = self.metrics.lock().expect("Test: operation should succeed");
         metrics.keys().cloned().collect()
     }
 
@@ -168,13 +168,13 @@ impl MetricsStorage {
     ///
     /// * `name` - metric名称
     pub fn clear(&self, name: &str) {
-        let mut metrics = self.metrics.lock().unwrap();
+        let mut metrics = self.metrics.lock().expect("Test: operation should succeed");
         metrics.remove(name);
     }
 
     /// 清除所有metrics数据
     pub fn clear_all(&self) {
-        let mut metrics = self.metrics.lock().unwrap();
+        let mut metrics = self.metrics.lock().expect("Test: operation should succeed");
         metrics.clear();
     }
 }
@@ -230,7 +230,7 @@ mod tests {
 
         let agg = storage.aggregate("test_metric", None);
         assert!(agg.is_some());
-        let agg = agg.unwrap();
+        let agg = agg.expect("Test: operation should succeed");
         assert_eq!(agg.min, 10.0);
         assert_eq!(agg.max, 30.0);
         assert_eq!(agg.avg, 20.0);

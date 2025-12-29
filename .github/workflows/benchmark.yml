@@ -1,0 +1,301 @@
+name: Continuous Benchmarking
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  benchmark:
+    name: Run Benchmarks
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          components: rustfmt, clippy
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo index
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo build
+        uses: actions/cache@v4
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache benchmark data
+        uses: actions/cache@v4
+        with:
+          path: |
+            game_engine/benches/results/
+            game_engine/benches/baseline/
+            target/criterion/
+          key: ${{ runner.os }}-benchmark-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-benchmark-
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libssl-dev pkg-config libx11-dev libxext-dev libxcursor-dev libxrandr-dev libxi-dev
+
+      - name: Install Python dependencies
+        run: |
+          pip3 install matplotlib
+
+      - name: Setup baseline
+        run: |
+          # 检查是否已有baseline
+          if [ -d "target/criterion/main" ] || [ -d "game_engine/benches/baseline/main" ]; then
+            echo "Baseline already exists, skipping setup"
+          else
+            echo "Creating initial baseline..."
+            cargo bench --workspace -- --save-baseline main --output-format bencher || true
+          fi
+
+      - name: Run all benchmarks
+        run: |
+          cargo bench --workspace -- --save-baseline main --output-format bencher | tee benchmark_results.txt
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: |
+            benchmark_results.txt
+            game_engine/benches/results/
+            target/criterion/
+          retention-days: 30
+
+      - name: Generate performance report
+        run: |
+          python3 scripts/generate_benchmark_report.py > benchmark_report.md || true
+
+      - name: Upload benchmark report
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-report
+          path: benchmark_report.md
+          retention-days: 90
+
+      - name: Export benchmark data
+        run: |
+          python3 scripts/export_benchmark_data.py --csv
+
+      - name: Upload exported data
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-data
+          path: |
+            game_engine/benches/trends/benchmark_data.json
+            game_engine/benches/trends/benchmark_data.csv
+          retention-days: 90
+
+      - name: Store benchmark result
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          tool: 'cargo'
+          output-file-path: benchmark_results.txt
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          auto-push: false
+          alert-threshold: '150%'
+          comment-on-alert: true
+          fail-on-alert: true
+          alert-comment-cc-users: '@maintainers'
+        continue-on-error: true
+
+      - name: Comment PR with results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+
+            let comment = '## 🚀 Benchmark Results\n\n';
+
+            // 尝试读取生成的报告
+            try {
+              const report = fs.readFileSync('benchmark_report.md', 'utf8');
+              comment += report.slice(0, 2000); // 限制长度
+              if (report.length > 2000) {
+                comment += '\n\n... (truncated)\n\n[View full report in artifacts](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})';
+              }
+            } catch (e) {
+              // 如果没有报告，使用基本结果
+              const results = fs.readFileSync('benchmark_results.txt', 'utf8');
+              comment += 'Here are the benchmark results from this run:\n\n';
+              comment += '```\n';
+              comment += results.split('\n').slice(0, 50).join('\n');
+              comment += '\n...\n```\n\n';
+              comment += 'Full results are available in the workflow artifacts.';
+            }
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  performance-regression-check:
+    name: Performance Regression Check
+    runs-on: ubuntu-latest
+    needs: benchmark
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download benchmark results
+        uses: actions/download-artifact@v4
+        with:
+          name: benchmark-results
+          path: ./new
+
+      - name: Checkout main branch for baseline
+        run: |
+          git checkout origin/main || git checkout origin/master
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo build
+        uses: actions/cache@v4
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libssl-dev pkg-config libx11-dev libxext-dev libxcursor-dev libxrandr-dev libxi-dev
+          pip3 install matplotlib
+
+      - name: Run baseline benchmarks
+        run: |
+          cargo bench --workspace -- --save-baseline baseline --output-format bencher | tee baseline_results.txt
+
+      - name: Detect regressions
+        run: |
+          python3 scripts/detect_regression.py \
+            --baseline target/criterion/baseline \
+            --current target/criterion/main \
+            --threshold 10.0 \
+            --verbose
+
+  # 性能趋势追踪
+  trends:
+    name: Performance Trends
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    needs: benchmark
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download benchmark data
+        uses: actions/download-artifact@v4
+        with:
+          name: benchmark-data
+          path: ./data
+
+      - name: Install Python dependencies
+        run: |
+          pip3 install matplotlib
+
+      - name: Load historical data
+        run: |
+          # 下载之前的历史数据
+          git fetch origin gh-pages:gh-pages || true
+
+          if [ -d "gh-pages" ]; then
+            cp -r gh-pages/benches/trends/*.json game_engine/benches/trends/ 2>/dev/null || true
+          fi
+
+          # 添加今天的日期数据
+          DATE=$(date +%Y-%m-%d)
+          cp ./data/benchmark_data.json "game_engine/benches/trends/${DATE}.json"
+
+      - name: Update trend charts
+        run: |
+          python3 scripts/update_trend_charts.py \
+            --trends-dir game_engine/benches/trends \
+            --output-dir game_engine/benches/trends
+
+      - name: Deploy trend report to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./game_engine/benches/trends
+          publish_branch: gh-pages
+          keep_files: true
+          force_orphan: true
+
+  benchmark-summary:
+    name: Benchmark Summary
+    runs-on: ubuntu-latest
+    needs: [benchmark, performance-regression-check]
+    if: always()
+
+    steps:
+      - name: Download all results
+        uses: actions/download-artifact@v4
+        with:
+          path: benchmark-artifacts
+
+      - name: Generate summary
+        run: |
+          echo "# 🚀 Benchmark Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Benchmark results have been collected and analyzed." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 📊 Available Benchmarks" >> $GITHUB_STEP_SUMMARY
+          echo "- **ECS Benchmarks:** Entity creation, component iteration, query performance" >> $GITHUB_STEP_SUMMARY
+          echo "- **Physics Benchmarks:** Physics stepping, collision detection, spatial queries" >> $GITHUB_STEP_SUMMARY
+          echo "- **Render Benchmarks:** Frustum culling, transform calculations, batching" >> $GITHUB_STEP_SUMMARY
+          echo "- **Serialization Benchmarks:** Message serialization, scene save/load" >> $GITHUB_STEP_SUMMARY
+          echo "- **Memory Benchmarks:** Allocation patterns, component layout, memory efficiency" >> $GITHUB_STEP_SUMMARY
+          echo "- **Math Benchmarks:** Vector operations, matrix calculations, transformations" >> $GITHUB_STEP_SUMMARY
+          echo "- **Network Benchmarks:** Message serialization, packet handling" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 📈 Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "- Benchmark results (raw output)" >> $GITHUB_STEP_SUMMARY
+          echo "- Performance report (Markdown)" >> $GITHUB_STEP_SUMMARY
+          echo "- Exported data (JSON/CSV)" >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload summary as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-summary
+          path: |
+            benchmark-artifacts/benchmark-results/
+            benchmark-artifacts/benchmark-report/
+            benchmark-artifacts/benchmark-data/

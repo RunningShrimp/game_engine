@@ -2,9 +2,9 @@
 //!
 //! 这个模块包含 GLTF 加载器的完整实现。
 
+use serde_json::Value;
 use std::path::Path;
 use std::sync::Arc;
-use serde_json::Value;
 
 /// GLTF 场景数据
 ///
@@ -30,12 +30,16 @@ impl GltfScene {
     ///
     /// # 返回
     /// 包含解析后文档、缓冲区和图像的 `GltfScene`
-    pub fn from_bytes(bytes: Vec<u8>, json: Option<Value>) -> Self {
-        let data = gltf::import_slice(&bytes).expect("Failed to import GLTF data");
-        Self {
+    ///
+    /// # 错误
+    /// 如果 GLTF 数据无效或解析失败，返回错误
+    pub fn from_bytes(bytes: Vec<u8>, json: Option<Value>) -> Result<Self, GltfLoadError> {
+        let data = gltf::import_slice(&bytes)
+            .map_err(|e| GltfLoadError::parse(format!("Failed to import GLTF data: {}", e)))?;
+        Ok(Self {
             data: Arc::new(data),
             json,
-        }
+        })
     }
 
     /// 获取 GLTF 文档
@@ -164,12 +168,11 @@ mod tests {
 
         let scene = GltfScene::from_bytes(
             gltf_data.to_vec(),
-            serde_json::from_str(std::str::from_utf8(gltf_data).unwrap()).ok(),
-        );
+            serde_json::from_str(std::str::from_utf8(gltf_data).unwrap_or("")).ok(),
+        ).expect("Failed to create GLTF scene in test");
 
         assert_eq!(scene.scene_count(), 1);
         assert_eq!(scene.mesh_count(), 0);
         assert!(scene.json.is_some());
     }
 }
-

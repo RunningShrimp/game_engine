@@ -1262,14 +1262,16 @@ impl NetworkSimulator {
     /// 更新性能极值
     fn update_performance_extremes(&mut self, metrics: &SimulationMetrics) {
         // 更新最佳性能
-        if self.statistics.best_performance.is_none() || 
-           self.is_better_performance(metrics, self.statistics.best_performance.as_ref().unwrap()) {
+        let should_update_best = self.statistics.best_performance.as_ref()
+            .map_or(true, |best| self.is_better_performance(metrics, best));
+        if should_update_best {
             self.statistics.best_performance = Some(metrics.clone());
         }
 
         // 更新最差性能
-        if self.statistics.worst_performance.is_none() || 
-           self.is_worse_performance(metrics, self.statistics.worst_performance.as_ref().unwrap()) {
+        let should_update_worst = self.statistics.worst_performance.as_ref()
+            .map_or(true, |worst| self.is_worse_performance(metrics, worst));
+        if should_update_worst {
             self.statistics.worst_performance = Some(metrics.clone());
         }
     }
@@ -1737,14 +1739,16 @@ impl LoadTester {
 
     fn update_performance_extremes(&mut self, metrics: &LoadTestMetrics) {
         // 更新最佳性能
-        if self.test_statistics.best_performance.is_none() || 
-           self.is_better_load_performance(metrics, self.test_statistics.best_performance.as_ref().unwrap()) {
+        let should_update_best = self.test_statistics.best_performance.as_ref()
+            .map_or(true, |best| self.is_better_load_performance(metrics, best));
+        if should_update_best {
             self.test_statistics.best_performance = Some(metrics.clone());
         }
 
         // 更新最差性能
-        if self.test_statistics.worst_performance.is_none() || 
-           self.is_worse_load_performance(metrics, self.test_statistics.worst_performance.as_ref().unwrap()) {
+        let should_update_worst = self.test_statistics.worst_performance.as_ref()
+            .map_or(true, |worst| self.is_worse_load_performance(metrics, worst));
+        if should_update_worst {
             self.test_statistics.worst_performance = Some(metrics.clone());
         }
     }
@@ -1891,11 +1895,12 @@ impl FailureSimulator {
                 
                 // 更新执行记录
                 if let Some(ref mut execution) = self.failure_history.back_mut() {
-                    execution.end_time = Some(Instant::now());
+                    let end_time = Instant::now();
+                    execution.end_time = Some(end_time);
                     execution.status = ExecutionStatus::Completed;
                     execution.result = Some(ExecutionResult {
                         success: true,
-                        execution_time_s: execution.end_time.unwrap().duration_since(execution.start_time).as_secs_f64(),
+                        execution_time_s: end_time.duration_since(execution.start_time).as_secs_f64(),
                         error_message: None,
                         performance_metrics: HashMap::new(),
                     });

@@ -69,6 +69,9 @@
 pub mod clip;
 /// 关键帧系统 - 定义动画关键帧和插值模式
 pub mod keyframe;
+/// 并行动画系统 - 并行处理多个动画实体
+/// 并行功能默认启用，使用rayon进行并行处理
+pub mod parallel;
 /// 动画播放器 - 播放和控制动画的系统
 pub mod player;
 /// 动画服务 - 管理所有动画资源的服务
@@ -77,9 +80,6 @@ pub mod service;
 pub mod skeleton;
 /// 皮肤网格 - 支持骨骼蒙皮的网格系统
 pub mod skinned_mesh;
-/// 并行动画系统 - 并行处理多个动画实体
-/// 并行功能默认启用，使用rayon进行并行处理
-pub mod parallel;
 
 pub use clip::AnimationClip;
 pub use keyframe::{InterpolationMode, Keyframe, KeyframeTrack};

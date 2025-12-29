@@ -25,8 +25,7 @@ impl fmt::Display for ServiceId {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ServiceState {
     #[default]
     Uninitialized,
@@ -36,7 +35,6 @@ pub enum ServiceState {
     Stopped,
     Error,
 }
-
 
 #[derive(Debug, Clone)]
 pub struct ServiceInfo {

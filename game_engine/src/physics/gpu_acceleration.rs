@@ -1,10 +1,63 @@
-//! GPU加速物理计算模块
+//! # GPU 加速物理计算模块
+//!
+//! **API 稳定性**: 实验性 (Experimental) (v0.1.0)
 //!
 //! 提供GPU加速的物理计算功能：
 //! - GPU碰撞检测
 //! - GPU约束求解
 //! - GPU力场计算
 //! - 刚体与软体碰撞检测
+//!
+//! ## API 稳定性声明
+//!
+//! **警告**: 此 API 处于实验性阶段，可能会在未来版本中发生破坏性变更。
+//! - **状态**: 实验性 (Experimental) - 部分实现
+//! - **引入版本**: v0.1.0
+//! - **预期稳定版本**: v0.3.0
+//!
+//! ## 功能完整性追踪
+//!
+//! | 功能 | 状态 | 说明 |
+//! |------|------|------|
+//! | GPU 碰撞检测管线 | ✅ 已实现 | 着色器和管线创建完整 |
+//! | GPU 约束求解 | 🚧 开发中 | 基础框架就绪，算法待完善 |
+//! | 刚体-软体碰撞检测 | ✅ 已实现 | 球-AABB 碰撞检测完整 |
+//! | GPU 力场计算 | ⏳ 计划中 | 设计阶段 |
+//! | 异步结果读取 | 🚧 开发中 | 简化实现，需要改进 |
+//! | CPU 回退机制 | ✅ 已实现 | 完整的回退逻辑 |
+//!
+//! ## 使用说明
+//!
+//! 此模块提供 GPU 加速的物理计算功能，在 GPU 不可用时自动回退到 CPU 实现。
+//!
+//! ### 示例
+//!
+//! ```rust,no_run
+//! use game_engine::physics::gpu_acceleration::{GpuPhysicsAccelerator, GpuPhysicsConfig};
+//!
+//! let config = GpuPhysicsConfig {
+//!     enabled: true,
+//!     gpu_collision_detection: true,
+//!     ..Default::default()
+//! };
+//!
+//! let accelerator = GpuPhysicsAccelerator::new(device, queue, config)?;
+//! ```
+//!
+//! ## 已知限制
+//!
+//! 1. GPU 结果读取为同步操作，影响性能
+//! 2. 约束求解器实现较为简化
+//! 3. 缺少复杂形状的碰撞检测
+//! 4. 性能优化空间较大
+//!
+//! ## 未来改进计划
+//!
+//! - [ ] 实现异步 GPU 结果读取
+//! - [ ] 添加更多碰撞形状支持
+//! - [ ] 优化约束求解算法
+//! - [ ] 添加并行碰撞检测优化
+//! - [ ] 实现更精确的刚体-软体碰撞
 
 use glam::Vec3;
 use rapier3d::prelude::*;
@@ -126,44 +179,45 @@ impl GpuPhysicsAccelerator {
             source: wgpu::ShaderSource::Wgsl(shader_source.into()),
         });
 
-        let bind_group_layout = self.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("Collision Detection BGL"),
-            entries: &[
-                // 刚体缓冲区
-                wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: true },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
+        let bind_group_layout =
+            self.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("Collision Detection BGL"),
+                entries: &[
+                    // 刚体缓冲区
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: true },
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
                     },
-                    count: None,
-                },
-                // 碰撞结果缓冲区
-                wgpu::BindGroupLayoutEntry {
-                    binding: 1,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: false },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
+                    // 碰撞结果缓冲区
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: false },
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
                     },
-                    count: None,
-                },
-                // 参数Uniform
-                wgpu::BindGroupLayoutEntry {
-                    binding: 2,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Uniform,
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
+                    // 参数Uniform
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 2,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Uniform,
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
                     },
-                    count: None,
-                },
-            ],
-        });
+                ],
+            });
 
         let pipeline_layout = self.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("Collision Detection Pipeline Layout"),
@@ -290,51 +344,52 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
             source: wgpu::ShaderSource::Wgsl(shader_source.into()),
         });
 
-        let bind_group_layout = self.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("Rigid-Soft Collision BGL"),
-            entries: &[
-                wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: true },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
+        let bind_group_layout =
+            self.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("Rigid-Soft Collision BGL"),
+                entries: &[
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: true },
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
                     },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 1,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: true },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: true },
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
                     },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 2,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: false },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 2,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: false },
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
                     },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 3,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Uniform,
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 3,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Uniform,
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
                     },
-                    count: None,
-                },
-            ],
-        });
+                ],
+            });
 
         let pipeline_layout = self.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("Rigid-Soft Collision Pipeline Layout"),
@@ -357,7 +412,8 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
         // 刚体缓冲区
         self.rigid_body_buffer = Some(self.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("GPU Rigid Body Buffer"),
-            size: (self.config.max_rigid_bodies as u64) * std::mem::size_of::<GpuRigidBody>() as u64,
+            size: (self.config.max_rigid_bodies as u64)
+                * std::mem::size_of::<GpuRigidBody>() as u64,
             usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         }));
@@ -365,7 +421,8 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
         // 软体粒子缓冲区
         self.soft_particle_buffer = Some(self.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("GPU Soft Particle Buffer"),
-            size: (self.config.max_soft_particles as u64) * std::mem::size_of::<GpuSoftParticle>() as u64,
+            size: (self.config.max_soft_particles as u64)
+                * std::mem::size_of::<GpuSoftParticle>() as u64,
             usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         }));
@@ -375,7 +432,9 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
         self.collision_result_buffer = Some(self.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("GPU Collision Result Buffer"),
             size: (max_collisions as u64) * std::mem::size_of::<GpuCollisionResult>() as u64,
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::COPY_SRC,
+            usage: wgpu::BufferUsages::STORAGE
+                | wgpu::BufferUsages::COPY_DST
+                | wgpu::BufferUsages::COPY_SRC,
             mapped_at_creation: false,
         }));
     }
@@ -391,7 +450,9 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
             return Err(GpuPhysicsError::GpuAccelerationDisabled);
         }
 
-        let pipeline = self.rigid_soft_collision_pipeline.as_ref()
+        let pipeline = self
+            .rigid_soft_collision_pipeline
+            .as_ref()
             .ok_or(GpuPhysicsError::PipelineNotInitialized)?;
 
         // 上传数据到GPU
@@ -411,6 +472,22 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
             _padding: 0.0,
         };
 
+        // 验证缓冲区已初始化
+        let rigid_body_buffer = self.rigid_body_buffer.as_ref().ok_or_else(|| {
+            tracing::error!("Rigid body buffer not initialized for GPU collision detection");
+            GpuPhysicsError::BufferNotInitialized
+        })?;
+
+        let soft_particle_buffer = self.soft_particle_buffer.as_ref().ok_or_else(|| {
+            tracing::error!("Soft particle buffer not initialized for GPU collision detection");
+            GpuPhysicsError::BufferNotInitialized
+        })?;
+
+        let collision_result_buffer = self.collision_result_buffer.as_ref().ok_or_else(|| {
+            tracing::error!("Collision result buffer not initialized for GPU collision detection");
+            GpuPhysicsError::BufferNotInitialized
+        })?;
+
         // 创建绑定组
         let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Rigid-Soft Collision Bind Group"),
@@ -418,23 +495,26 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
             entries: &[
                 wgpu::BindGroupEntry {
                     binding: 0,
-                    resource: self.rigid_body_buffer.as_ref().unwrap().as_entire_binding(),
+                    resource: rigid_body_buffer.as_entire_binding(),
                 },
                 wgpu::BindGroupEntry {
                     binding: 1,
-                    resource: self.soft_particle_buffer.as_ref().unwrap().as_entire_binding(),
+                    resource: soft_particle_buffer.as_entire_binding(),
                 },
                 wgpu::BindGroupEntry {
                     binding: 2,
-                    resource: self.collision_result_buffer.as_ref().unwrap().as_entire_binding(),
+                    resource: collision_result_buffer.as_entire_binding(),
                 },
                 wgpu::BindGroupEntry {
                     binding: 3,
-                    resource: self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                        label: Some("Collision Params Buffer"),
-                        contents: bytemuck::bytes_of(&params),
-                        usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-                    }).as_entire_binding(),
+                    resource: self
+                        .device
+                        .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                            label: Some("Collision Params Buffer"),
+                            contents: bytemuck::bytes_of(&params),
+                            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+                        })
+                        .as_entire_binding(),
                 },
             ],
         });
@@ -612,12 +692,17 @@ impl RigidSoftCollisionDetector {
             .collect();
 
         // 创建命令编码器
-        let mut encoder = accelerator.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("Rigid-Soft Collision Encoder"),
-        });
+        let mut encoder =
+            accelerator.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("Rigid-Soft Collision Encoder"),
+            });
 
         // 调用GPU加速器（简化实现，实际需要完整的GPU缓冲区管理）
-        let _ = accelerator.detect_rigid_soft_collisions(&mut encoder, &gpu_rigid_bodies, &gpu_particles);
+        let _ = accelerator.detect_rigid_soft_collisions(
+            &mut encoder,
+            &gpu_rigid_bodies,
+            &gpu_particles,
+        );
 
         // 注意：实际需要从GPU异步读取结果
         // 这里返回空结果，实际使用中应该使用异步读取
@@ -694,4 +779,3 @@ mod tests {
         assert_eq!(config.workgroup_size, 64);
     }
 }
-

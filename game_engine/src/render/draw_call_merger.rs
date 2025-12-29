@@ -211,10 +211,7 @@ pub struct SceneTraversalOptimizer {
 
 impl SceneTraversalOptimizer {
     /// 创建新的场景遍历优化器
-    pub fn new(
-        traversal_config: SceneTraversalConfig,
-        merge_config: DrawCallMergeConfig,
-    ) -> Self {
+    pub fn new(traversal_config: SceneTraversalConfig, merge_config: DrawCallMergeConfig) -> Self {
         Self {
             traverser: OptimizedSceneTraverser::new(traversal_config),
             merger: DrawCallMerger::new(merge_config),
@@ -257,11 +254,11 @@ pub struct OptimizedSceneResult {
 }
 
 // 重新导出类型
+pub use crate::render::gpu_driven::GpuInstance;
 pub use crate::render::scene_traversal::{
     IncrementalSceneUpdater, OptimizedSceneTraverser, SceneTraversalConfig, SceneTraversalResult,
     TraversalStats,
 };
-pub use crate::render::gpu_driven::GpuInstance;
 
 // bevy_ecs::prelude 未在此文件中使用，但可能在未来需要
 // use bevy_ecs::prelude::*;
@@ -313,4 +310,3 @@ mod tests {
         assert!(stats.saved_draw_calls > 0);
     }
 }
-

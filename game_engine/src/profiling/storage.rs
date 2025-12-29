@@ -1,5 +1,5 @@
 //  性能数据存储模块
-// 
+//
 //  提供内存中环形缓冲区、持久化存储、数据压缩和查询功能。
 
 use std::collections::{HashMap, VecDeque};
@@ -7,23 +7,23 @@ use std::fs;
 use std::path::{Path, PathBuf};
 // Arc 和 Mutex 未在此文件中使用，但可能在未来需要
 // use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use serde::{Deserialize, Serialize};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use tokio::fs::{File, OpenOptions};
 use tokio::io::{AsyncReadExt, AsyncWriteExt, BufWriter};
 // AsyncSeekExt 和 BufReader 未在此文件中使用
 // use tokio::io::{AsyncSeekExt, BufReader};
 
-use crate::platform::run_sync;
-use super::metrics::*;
 use super::ProfilingResult;
+use super::metrics::*;
+use crate::platform::run_sync;
 
 // ============================================================================
 // 环形缓冲区
 // ============================================================================
 
 /// 环形缓冲区
-/// 
+///
 /// 固定大小的循环缓冲区，自动覆盖最旧的数据
 #[derive(Debug, Clone)]
 pub struct RingBuffer<T> {
@@ -57,7 +57,7 @@ impl<T> RingBuffer<T> {
     pub fn push(&mut self, item: T) -> bool {
         let old_item = self.buffer[self.write_pos].replace(item);
         self.write_pos = (self.write_pos + 1) % self.buffer.len();
-        
+
         if self.is_full {
             self.read_pos = self.write_pos;
         } else {
@@ -66,7 +66,7 @@ impl<T> RingBuffer<T> {
                 self.is_full = true;
             }
         }
-        
+
         old_item.is_some() // 返回是否覆盖了旧数据
     }
 
@@ -75,12 +75,12 @@ impl<T> RingBuffer<T> {
         if self.count == 0 {
             return None;
         }
-        
+
         let item = self.buffer[self.read_pos].take();
         self.read_pos = (self.read_pos + 1) % self.buffer.len();
         self.count -= 1;
         self.is_full = false;
-        
+
         item
     }
 
@@ -89,13 +89,13 @@ impl<T> RingBuffer<T> {
         if self.count == 0 {
             return None;
         }
-        
+
         let latest_pos = if self.write_pos == 0 {
             self.buffer.len() - 1
         } else {
             self.write_pos - 1
         };
-        
+
         self.buffer[latest_pos].as_ref()
     }
 
@@ -104,7 +104,7 @@ impl<T> RingBuffer<T> {
         if self.count == 0 {
             return None;
         }
-        
+
         self.buffer[self.read_pos].as_ref()
     }
 
@@ -163,11 +163,11 @@ impl<'a, T> Iterator for RingBufferIter<'a, T> {
         if self.remaining == 0 {
             return None;
         }
-        
+
         let item = self.buffer[self.pos].as_ref();
         self.pos = (self.pos + 1) % self.buffer.len();
         self.remaining -= 1;
-        
+
         item
     }
 }
@@ -193,11 +193,7 @@ pub struct DataPoint {
 
 impl DataPoint {
     /// 创建新的数据点
-    pub fn new(
-        metric_name: impl Into<String>,
-        value: f64,
-        category: MetricCategory,
-    ) -> Self {
+    pub fn new(metric_name: impl Into<String>, value: f64, category: MetricCategory) -> Self {
         Self {
             timestamp: SystemTime::now()
                 .duration_since(UNIX_EPOCH)
@@ -309,12 +305,12 @@ impl DataCompressor {
     }
 
     fn compress_gzip(&self, data: &[u8]) -> ProfilingResult<Vec<u8>> {
-        use flate2::write::GzEncoder;
         use flate2::Compression;
+        use flate2::write::GzEncoder;
         use std::io::Write;
 
-        let mut encoder = GzEncoder::new(Vec::new(), 
-            Compression::new(self.config.compression_level));
+        let mut encoder =
+            GzEncoder::new(Vec::new(), Compression::new(self.config.compression_level));
         encoder.write_all(data)?;
         Ok(encoder.finish()?)
     }
@@ -406,11 +402,12 @@ impl PersistentStorage {
     /// 创建新的持久化存储
     pub async fn new(config: StorageConfig) -> ProfilingResult<Self> {
         // 确保数据目录存在
-        tokio::fs::create_dir_all(&config.data_dir).await
+        tokio::fs::create_dir_all(&config.data_dir)
+            .await
             .map_err(super::ProfilingError::IoError)?;
 
         let compressor = DataCompressor::new(config.compression.clone());
-        
+
         let mut storage = Self {
             config,
             current_file: None,
@@ -423,7 +420,7 @@ impl PersistentStorage {
 
         // 初始化文件
         storage.create_new_file().await?;
-        
+
         Ok(storage)
     }
 
@@ -436,7 +433,7 @@ impl PersistentStorage {
     pub fn store(&mut self, data_point: DataPoint) -> ProfilingResult<()> {
         if self.config.enable_write_cache {
             self.write_cache.push_back(data_point);
-            
+
             // 缓存满时刷新
             if self.write_cache.len() >= self.config.cache_size {
                 // 使用同步版本的 flush_cache
@@ -446,33 +443,32 @@ impl PersistentStorage {
             // 直接调用同步版本的写入逻辑
             self.write_data_point_sync(&data_point)?;
         }
-        
+
         Ok(())
     }
-    
+
     /// 写入单个数据点（同步版本）
     fn write_data_point_sync(&mut self, data_point: &DataPoint) -> ProfilingResult<()> {
         // 序列化数据点
         let serialized = serde_json::to_vec(data_point)?;
-        
+
         // 压缩数据（如果需要）
         let compressed = self.compressor.compress(&serialized)?;
-        
+
         // 写入长度前缀和数据
         let length_bytes = (compressed.len() as u32).to_le_bytes();
-        
+
         // 使用 tokio runtime 的 block_on 或者直接使用同步 I/O
-        let rt = tokio::runtime::Handle::try_current()
-            .unwrap_or_else(|_| {
-                // 如果没有当前 runtime，创建一个临时的
-                tokio::runtime::Builder::new_current_thread()
-                    .enable_all()
-                    .build()
-                    .expect("Failed to create tokio runtime for file writing")
-                    .handle()
-                    .clone()
-            });
-        
+        let rt = tokio::runtime::Handle::try_current().unwrap_or_else(|_| {
+            // 如果没有当前 runtime，创建一个临时的
+            tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .expect("Failed to create tokio runtime for file writing")
+                .handle()
+                .clone()
+        });
+
         if let Some(ref mut file) = self.current_file {
             // 将同步写入包装为异步操作
             rt.block_on(async {
@@ -482,13 +478,13 @@ impl PersistentStorage {
             })?;
             self.total_written += compressed.len() + 4;
         }
-        
+
         // 检查是否需要轮换文件
         self.rotate_file_if_needed_sync()?;
-        
+
         Ok(())
     }
-    
+
     /// 轮换文件（同步版本）
     fn rotate_file_if_needed_sync(&mut self) -> ProfilingResult<()> {
         let should_rotate = if let Some(ref info) = self.current_file_info {
@@ -496,13 +492,13 @@ impl PersistentStorage {
         } else {
             true // 没有当前文件，需要创建
         };
-        
+
         if should_rotate {
             self.close_current_file_sync()?;
             self.create_new_file_sync()?;
             self.cleanup_old_files_sync()?;
         }
-        
+
         Ok(())
     }
 
@@ -519,11 +515,11 @@ impl PersistentStorage {
         while let Some(data_point) = self.write_cache.pop_front() {
             self.write_data_point(&data_point).await?;
         }
-        
+
         if let Some(ref mut file) = self.current_file {
             file.flush().await?;
         }
-        
+
         Ok(())
     }
 
@@ -533,24 +529,23 @@ impl PersistentStorage {
         while let Some(data_point) = self.write_cache.pop_front() {
             self.write_data_point_sync(&data_point)?;
         }
-        
+
         if let Some(ref mut file) = self.current_file {
-            let rt = tokio::runtime::Handle::try_current()
-                .unwrap_or_else(|_| {
-                    tokio::runtime::Builder::new_current_thread()
-                        .enable_all()
-                        .build()
-                        .expect("Failed to create tokio runtime for file flushing")
-                        .handle()
-                        .clone()
-                });
-            
+            let rt = tokio::runtime::Handle::try_current().unwrap_or_else(|_| {
+                tokio::runtime::Builder::new_current_thread()
+                    .enable_all()
+                    .build()
+                    .expect("Failed to create tokio runtime for file flushing")
+                    .handle()
+                    .clone()
+            });
+
             rt.block_on(async {
                 file.flush().await?;
                 Ok::<_, tokio::io::Error>(())
             })?;
         }
-        
+
         Ok(())
     }
 
@@ -558,22 +553,22 @@ impl PersistentStorage {
     async fn write_data_point(&mut self, data_point: &DataPoint) -> ProfilingResult<()> {
         // 序列化数据点
         let serialized = serde_json::to_vec(data_point)?;
-        
+
         // 压缩数据（如果需要）
         let compressed = self.compressor.compress(&serialized)?;
-        
+
         // 写入长度前缀和数据
         let length_bytes = (compressed.len() as u32).to_le_bytes();
-        
+
         if let Some(ref mut file) = self.current_file {
             file.write_all(&length_bytes).await?;
             file.write_all(&compressed).await?;
             self.total_written += compressed.len() + 4;
         }
-        
+
         // 检查是否需要轮换文件
         self.rotate_file_if_needed().await?;
-        
+
         Ok(())
     }
 
@@ -584,22 +579,20 @@ impl PersistentStorage {
         } else {
             true // 没有当前文件，需要创建
         };
-        
+
         if should_rotate {
             self.close_current_file().await?;
             self.create_new_file().await?;
             self.cleanup_old_files().await?;
         }
-        
+
         Ok(())
     }
 
     /// 创建新文件
     async fn create_new_file(&mut self) -> ProfilingResult<()> {
-        let timestamp = SystemTime::now()
-            .duration_since(UNIX_EPOCH)?
-            .as_secs();
-        
+        let timestamp = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
+
         let filename = format!(
             "{}_{}_{}.dat{}",
             self.config.file_prefix,
@@ -611,44 +604,43 @@ impl PersistentStorage {
                 ""
             }
         );
-        
+
         let file_path = self.config.data_dir.join(filename);
         let file = OpenOptions::new()
             .create(true)
             .write(true)
             .truncate(true)
-            .open(&file_path).await?;
-        
+            .open(&file_path)
+            .await?;
+
         let file_info = FileInfo {
             path: file_path.clone(),
             size: 0,
             created_at: SystemTime::now(),
             is_compressed: self.config.compression.compression_type != CompressionType::None,
         };
-        
+
         self.current_file = Some(BufWriter::new(file));
         self.current_file_info = Some(file_info);
         self.file_index += 1;
         self.total_written = 0;
-        
+
         tracing::debug!(
             target: "profiling",
             "创建新的存储文件: {:?}",
             file_path
         );
-        
+
         Ok(())
     }
-    
+
     /// 创建新文件（同步版本）
     fn create_new_file_sync(&mut self) -> ProfilingResult<()> {
         // std::io::Write 在局部导入，未来可能需要
         // use std::io::Write;
-        
-        let timestamp = SystemTime::now()
-            .duration_since(UNIX_EPOCH)?
-            .as_secs();
-        
+
+        let timestamp = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
+
         let filename = format!(
             "{}_{}_{}.dat{}",
             self.config.file_prefix,
@@ -660,32 +652,30 @@ impl PersistentStorage {
                 ""
             }
         );
-        
+
         let file_path = self.config.data_dir.join(filename);
-        
+
         // 使用同步文件 I/O
-        let mut file = fs::File::create(&file_path)?;
-        
+        let file = fs::File::create(&file_path)?;
+
         let file_info = FileInfo {
             path: file_path.clone(),
             size: 0,
             created_at: SystemTime::now(),
             is_compressed: self.config.compression.compression_type != CompressionType::None,
         };
-        
-        self.current_file = Some(BufWriter::new(
-            tokio::fs::File::from_std(file)
-        ));
+
+        self.current_file = Some(BufWriter::new(tokio::fs::File::from_std(file)));
         self.current_file_info = Some(file_info);
         self.file_index += 1;
         self.total_written = 0;
-        
+
         tracing::debug!(
             target: "profiling",
             "创建新的存储文件: {:?}",
             file_path
         );
-        
+
         Ok(())
     }
 
@@ -693,77 +683,80 @@ impl PersistentStorage {
     async fn close_current_file(&mut self) -> ProfilingResult<()> {
         if let Some(mut file) = self.current_file.take() {
             file.flush().await?;
-            
+
             // 更新文件信息
             if let Some(ref mut info) = self.current_file_info {
                 info.size = self.total_written;
             }
         }
-        
+
         self.current_file_info = None;
         self.total_written = 0;
-        
+
         Ok(())
     }
-    
+
     /// 关闭当前文件（同步版本）
     fn close_current_file_sync(&mut self) -> ProfilingResult<()> {
         if let Some(mut file) = self.current_file.take() {
-            let rt = tokio::runtime::Handle::try_current()
-                .unwrap_or_else(|_| {
-                    tokio::runtime::Builder::new_current_thread()
-                        .enable_all()
-                        .build()
-                        .expect("Failed to create tokio runtime for file closing")
-                        .handle()
-                        .clone()
-                });
-            
+            let rt = tokio::runtime::Handle::try_current().unwrap_or_else(|_| {
+                tokio::runtime::Builder::new_current_thread()
+                    .enable_all()
+                    .build()
+                    .expect("Failed to create tokio runtime for file closing")
+                    .handle()
+                    .clone()
+            });
+
             rt.block_on(async {
                 file.flush().await?;
                 Ok::<_, tokio::io::Error>(())
             })?;
-            
+
             // 更新文件信息
             if let Some(ref mut info) = self.current_file_info {
                 info.size = self.total_written;
             }
         }
-        
+
         self.current_file_info = None;
         self.total_written = 0;
-        
+
         Ok(())
     }
 
     /// 清理旧文件
     async fn cleanup_old_files(&mut self) -> ProfilingResult<()> {
         let mut files = Vec::new();
-        
+
         // 扫描目录中的文件
         let mut entries = tokio::fs::read_dir(&self.config.data_dir).await?;
-        while let Some(entry) = entries.next_entry().await.map_err(super::ProfilingError::IoError)? {
+        while let Some(entry) =
+            entries.next_entry().await.map_err(super::ProfilingError::IoError)?
+        {
             let path = entry.path();
-            
+
             // 检查文件名是否匹配前缀
             if let Some(name) = path.file_name().and_then(|n| n.to_str())
-                && name.starts_with(&self.config.file_prefix) && name.ends_with(".dat") {
-                    let metadata = tokio::fs::metadata(&path).await
-                        .map_err(super::ProfilingError::IoError)?;
-                    let created_at = metadata.created().unwrap_or(SystemTime::now());
-                    
-                    files.push(FileInfo {
-                        path: path.clone(),
-                        size: metadata.len() as usize,
-                        created_at,
-                        is_compressed: name.ends_with(".gz"),
-                    });
-                }
+                && name.starts_with(&self.config.file_prefix)
+                && name.ends_with(".dat")
+            {
+                let metadata =
+                    tokio::fs::metadata(&path).await.map_err(super::ProfilingError::IoError)?;
+                let created_at = metadata.created().unwrap_or(SystemTime::now());
+
+                files.push(FileInfo {
+                    path: path.clone(),
+                    size: metadata.len() as usize,
+                    created_at,
+                    is_compressed: name.ends_with(".gz"),
+                });
+            }
         }
-        
+
         // 按创建时间排序（最新的在前）
         files.sort_by(|a, b| b.created_at.cmp(&a.created_at));
-        
+
         // 删除超出保留数量的文件
         if files.len() > self.config.retain_files {
             for file_info in files.iter().skip(self.config.retain_files) {
@@ -783,39 +776,41 @@ impl PersistentStorage {
                 }
             }
         }
-        
+
         Ok(())
     }
-    
+
     /// 清理旧文件（同步版本）
     fn cleanup_old_files_sync(&mut self) -> ProfilingResult<()> {
         let mut files = Vec::new();
-        
+
         // 扫描目录中的文件（使用同步 I/O）
         let dir_entries = fs::read_dir(&self.config.data_dir)?;
-        
+
         for entry in dir_entries {
             let entry = entry?;
             let path = entry.path();
-            
+
             // 检查文件名是否匹配前缀
             if let Some(name) = path.file_name().and_then(|n| n.to_str())
-                && name.starts_with(&self.config.file_prefix) && name.ends_with(".dat") {
-                    let metadata = fs::metadata(&path)?;
-                    let created_at = metadata.created().unwrap_or(SystemTime::now());
-                    
-                    files.push(FileInfo {
-                        path: path.clone(),
-                        size: metadata.len() as usize,
-                        created_at,
-                        is_compressed: name.ends_with(".gz"),
-                    });
-                }
+                && name.starts_with(&self.config.file_prefix)
+                && name.ends_with(".dat")
+            {
+                let metadata = fs::metadata(&path)?;
+                let created_at = metadata.created().unwrap_or(SystemTime::now());
+
+                files.push(FileInfo {
+                    path: path.clone(),
+                    size: metadata.len() as usize,
+                    created_at,
+                    is_compressed: name.ends_with(".gz"),
+                });
+            }
         }
-        
+
         // 按创建时间排序（最新的在前）
         files.sort_by(|a, b| b.created_at.cmp(&a.created_at));
-        
+
         // 删除超出保留数量的文件
         if files.len() > self.config.retain_files {
             for file_info in files.iter().skip(self.config.retain_files) {
@@ -835,7 +830,7 @@ impl PersistentStorage {
                 }
             }
         }
-        
+
         Ok(())
     }
 
@@ -844,25 +839,29 @@ impl PersistentStorage {
         let mut total_files = 0;
         let mut total_size = 0;
         let mut compressed_files = 0;
-        
-        let mut entries = tokio::fs::read_dir(&self.config.data_dir).await
+
+        let mut entries = tokio::fs::read_dir(&self.config.data_dir)
+            .await
             .map_err(super::ProfilingError::IoError)?;
-        while let Some(entry) = entries.next_entry().await
-            .map_err(super::ProfilingError::IoError)? {
+        while let Some(entry) =
+            entries.next_entry().await.map_err(super::ProfilingError::IoError)?
+        {
             let path = entry.path();
-            
+
             if let Some(name) = path.file_name().and_then(|n| n.to_str())
-                && name.starts_with(&self.config.file_prefix) && name.ends_with(".dat") {
-                    let metadata = tokio::fs::metadata(&path).await
-                        .map_err(super::ProfilingError::IoError)?;
-                    total_files += 1;
-                    total_size += metadata.len();
-                    if name.ends_with(".gz") {
-                        compressed_files += 1;
-                    }
+                && name.starts_with(&self.config.file_prefix)
+                && name.ends_with(".dat")
+            {
+                let metadata =
+                    tokio::fs::metadata(&path).await.map_err(super::ProfilingError::IoError)?;
+                total_files += 1;
+                total_size += metadata.len();
+                if name.ends_with(".gz") {
+                    compressed_files += 1;
                 }
+            }
         }
-        
+
         Ok(StorageStats {
             total_files,
             total_size,
@@ -878,24 +877,26 @@ impl PersistentStorage {
         let mut total_files = 0;
         let mut total_size = 0;
         let mut compressed_files = 0;
-        
+
         let dir_entries = fs::read_dir(&self.config.data_dir)?;
-        
+
         for entry in dir_entries {
             let entry = entry?;
             let path = entry.path();
-            
+
             if let Some(name) = path.file_name().and_then(|n| n.to_str())
-                && name.starts_with(&self.config.file_prefix) && name.ends_with(".dat") {
-                    let metadata = fs::metadata(&path)?;
-                    total_files += 1;
-                    total_size += metadata.len();
-                    if name.ends_with(".gz") {
-                        compressed_files += 1;
-                    }
+                && name.starts_with(&self.config.file_prefix)
+                && name.ends_with(".dat")
+            {
+                let metadata = fs::metadata(&path)?;
+                total_files += 1;
+                total_size += metadata.len();
+                if name.ends_with(".gz") {
+                    compressed_files += 1;
                 }
+            }
         }
-        
+
         Ok(StorageStats {
             total_files,
             total_size,
@@ -1004,18 +1005,22 @@ impl DataQueryer {
         let mut total_count = 0;
 
         // 扫描所有文件
-        let mut entries = tokio::fs::read_dir(&self.storage_dir).await
+        let mut entries = tokio::fs::read_dir(&self.storage_dir)
+            .await
             .map_err(super::ProfilingError::IoError)?;
-        while let Some(entry) = entries.next_entry().await
-            .map_err(super::ProfilingError::IoError)? {
+        while let Some(entry) =
+            entries.next_entry().await.map_err(super::ProfilingError::IoError)?
+        {
             let path = entry.path();
-            
+
             if let Some(name) = path.file_name().and_then(|n| n.to_str())
-                && name.starts_with(&self.file_prefix) && name.ends_with(".dat") {
-                    let file_data_points = self.read_file(&path, condition).await?;
-                    total_count += file_data_points.len();
-                    data_points.extend(file_data_points);
-                }
+                && name.starts_with(&self.file_prefix)
+                && name.ends_with(".dat")
+            {
+                let file_data_points = self.read_file(&path, condition).await?;
+                total_count += file_data_points.len();
+                data_points.extend(file_data_points);
+            }
         }
 
         // 应用过滤条件
@@ -1050,17 +1055,19 @@ impl DataQueryer {
 
         // 扫描所有文件（使用同步 I/O）
         let dir_entries = fs::read_dir(&self.storage_dir)?;
-        
+
         for entry in dir_entries {
             let entry = entry?;
             let path = entry.path();
-            
+
             if let Some(name) = path.file_name().and_then(|n| n.to_str())
-                && name.starts_with(&self.file_prefix) && name.ends_with(".dat") {
-                    let file_data_points = self.read_file_sync(&path, condition)?;
-                    total_count += file_data_points.len();
-                    data_points.extend(file_data_points);
-                }
+                && name.starts_with(&self.file_prefix)
+                && name.ends_with(".dat")
+            {
+                let file_data_points = self.read_file_sync(&path, condition)?;
+                total_count += file_data_points.len();
+                data_points.extend(file_data_points);
+            }
         }
 
         // 应用过滤条件
@@ -1087,9 +1094,13 @@ impl DataQueryer {
     }
 
     /// 读取单个文件（同步版本）
-    fn read_file_sync(&self, path: &Path, condition: &QueryCondition) -> ProfilingResult<Vec<DataPoint>> {
+    fn read_file_sync(
+        &self,
+        path: &Path,
+        condition: &QueryCondition,
+    ) -> ProfilingResult<Vec<DataPoint>> {
         use std::io::Read;
-        
+
         let mut file = fs::File::open(path)?;
         let mut data_points = Vec::new();
 
@@ -1099,30 +1110,32 @@ impl DataQueryer {
             if file.read_exact(&mut length_bytes).is_err() {
                 break; // 文件结束
             }
-            
+
             let length = u32::from_le_bytes(length_bytes) as usize;
-            
+
             // 读取数据
             let mut compressed_data = vec![0u8; length];
             file.read_exact(&mut compressed_data)?;
-            
+
             // 解压缩
             let decompressed = self.compressor.decompress(&compressed_data)?;
-            
+
             // 反序列化
             let data_point: DataPoint = serde_json::from_slice(&decompressed)?;
-            
+
             // 应用时间范围过滤
             if let Some(start_time) = condition.start_time
-                && data_point.timestamp < start_time {
-                    continue;
-                }
-            
+                && data_point.timestamp < start_time
+            {
+                continue;
+            }
+
             if let Some(end_time) = condition.end_time
-                && data_point.timestamp > end_time {
-                    continue;
-                }
-            
+                && data_point.timestamp > end_time
+            {
+                continue;
+            }
+
             data_points.push(data_point);
         }
 
@@ -1130,9 +1143,12 @@ impl DataQueryer {
     }
 
     /// 读取单个文件
-    async fn read_file(&self, path: &Path, condition: &QueryCondition) -> ProfilingResult<Vec<DataPoint>> {
-        let file = tokio::fs::File::open(path).await
-            .map_err(super::ProfilingError::IoError)?;
+    async fn read_file(
+        &self,
+        path: &Path,
+        condition: &QueryCondition,
+    ) -> ProfilingResult<Vec<DataPoint>> {
+        let file = tokio::fs::File::open(path).await.map_err(super::ProfilingError::IoError)?;
         let mut reader = tokio::io::BufReader::new(file);
         let mut data_points = Vec::new();
 
@@ -1142,30 +1158,32 @@ impl DataQueryer {
             if reader.read_exact(&mut length_bytes).await.is_err() {
                 break; // 文件结束
             }
-            
+
             let length = u32::from_le_bytes(length_bytes) as usize;
-            
+
             // 读取数据
             let mut compressed_data = vec![0u8; length];
             reader.read_exact(&mut compressed_data).await?;
-            
+
             // 解压缩
             let decompressed = self.compressor.decompress(&compressed_data)?;
-            
+
             // 反序列化
             let data_point: DataPoint = serde_json::from_slice(&decompressed)?;
-            
+
             // 应用时间范围过滤
             if let Some(start_time) = condition.start_time
-                && data_point.timestamp < start_time {
-                    continue;
-                }
-            
+                && data_point.timestamp < start_time
+            {
+                continue;
+            }
+
             if let Some(end_time) = condition.end_time
-                && data_point.timestamp > end_time {
-                    continue;
-                }
-            
+                && data_point.timestamp > end_time
+            {
+                continue;
+            }
+
             data_points.push(data_point);
         }
 
@@ -1173,22 +1191,28 @@ impl DataQueryer {
     }
 
     /// 应用过滤条件
-    fn apply_filters(&self, data_points: &[DataPoint], condition: &QueryCondition) -> Vec<DataPoint> {
+    fn apply_filters(
+        &self,
+        data_points: &[DataPoint],
+        condition: &QueryCondition,
+    ) -> Vec<DataPoint> {
         data_points
             .iter()
             .filter(|point| {
                 // 指标名称过滤
                 if let Some(ref names) = condition.metric_names
-                    && !names.contains(&point.metric_name) {
-                        return false;
-                    }
-                
+                    && !names.contains(&point.metric_name)
+                {
+                    return false;
+                }
+
                 // 类别过滤
                 if let Some(ref categories) = condition.categories
-                    && !categories.contains(&point.category) {
-                        return false;
-                    }
-                
+                    && !categories.contains(&point.category)
+                {
+                    return false;
+                }
+
                 // 标签过滤
                 if let Some(ref tags) = condition.tags {
                     for (key, value) in tags {
@@ -1197,7 +1221,7 @@ impl DataQueryer {
                         }
                     }
                 }
-                
+
                 true
             })
             .cloned()
@@ -1214,10 +1238,14 @@ impl DataQueryer {
                 data_points.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
             }
             QueryOrder::ValueAsc => {
-                data_points.sort_by(|a, b| a.value.partial_cmp(&b.value).unwrap_or(std::cmp::Ordering::Equal));
+                data_points.sort_by(|a, b| {
+                    a.value.partial_cmp(&b.value).unwrap_or(std::cmp::Ordering::Equal)
+                });
             }
             QueryOrder::ValueDesc => {
-                data_points.sort_by(|a, b| b.value.partial_cmp(&a.value).unwrap_or(std::cmp::Ordering::Equal));
+                data_points.sort_by(|a, b| {
+                    b.value.partial_cmp(&a.value).unwrap_or(std::cmp::Ordering::Equal)
+                });
             }
         }
     }
@@ -1235,27 +1263,27 @@ mod tests {
     #[test]
     fn test_ring_buffer() {
         let mut buffer = RingBuffer::new(3);
-        
+
         assert_eq!(buffer.len(), 0);
         assert!(buffer.is_empty());
         assert!(!buffer.is_full());
-        
+
         // 填充缓冲区
         assert!(!buffer.push(1));
         assert!(!buffer.push(2));
         assert!(!buffer.push(3));
-        
+
         assert_eq!(buffer.len(), 3);
         assert!(!buffer.is_empty());
         assert!(buffer.is_full());
-        
+
         // 覆盖数据
         assert!(buffer.push(4)); // 覆盖了1
-        
+
         assert_eq!(buffer.len(), 3);
         assert_eq!(buffer.peek_latest(), Some(&4));
         assert_eq!(buffer.peek_oldest(), Some(&2));
-        
+
         // 读取数据
         assert_eq!(buffer.pop(), Some(2));
         assert_eq!(buffer.pop(), Some(3));
@@ -1268,7 +1296,7 @@ mod tests {
         let point = DataPoint::new("test_metric", 42.0, MetricCategory::Render)
             .with_tag("scene", "test")
             .with_timestamp(1234567890);
-        
+
         assert_eq!(point.metric_name, "test_metric");
         assert_eq!(point.value, 42.0);
         assert_eq!(point.category, MetricCategory::Render);
@@ -1283,13 +1311,13 @@ mod tests {
             compression_level: 6,
             min_size: 10,
         };
-        
+
         let compressor = DataCompressor::new(config);
-        
+
         let data = b"Hello, World! This is a test string for compression.";
-        let compressed = compressor.compress(data).unwrap();
-        let decompressed = compressor.decompress(&compressed).unwrap();
-        
+        let compressed = compressor.compress(data).expect("Test: operation should succeed");
+        let decompressed = compressor.decompress(&compressed).expect("Test: operation should succeed");
+
         assert_eq!(data, &decompressed[..]);
         assert!(compressed.len() < data.len()); // 压缩后应该更小
     }
@@ -1298,42 +1326,44 @@ mod tests {
     fn test_data_queryer() {
         use std::fs;
         use tempfile::TempDir;
-        
+
         // 创建临时目录
-        let temp_dir = TempDir::new().unwrap();
+        let temp_dir = TempDir::new().expect("Test: operation should succeed");
         let storage_dir = temp_dir.path();
-        
+
         // 创建测试数据
         let points = vec![
             DataPoint::new("metric1", 10.0, MetricCategory::Render),
             DataPoint::new("metric2", 20.0, MetricCategory::Memory),
             DataPoint::new("metric1", 15.0, MetricCategory::Render),
         ];
-        
+
         // 写入测试文件
         let file_path = storage_dir.join("test_metrics_0.dat");
-        let mut file = fs::File::create(&file_path).unwrap();
-        
+        let mut file = fs::File::create(&file_path).expect("Test: operation should succeed");
+
         for point in &points {
-            let serialized = serde_json::to_vec(point).unwrap();
+            let serialized = serde_json::to_vec(point).expect("Test: operation should succeed");
             let length_bytes = (serialized.len() as u32).to_le_bytes();
             use std::io::Write;
-            file.write_all(&length_bytes).unwrap();
-            file.write_all(&serialized).unwrap();
+            file.write_all(&length_bytes).expect("Test: operation should succeed");
+            file.write_all(&serialized).expect("Test: operation should succeed");
         }
-        
+
         // 创建查询器并测试查询 - 使用 query_sync 方法避免生命周期问题
         let queryer = DataQueryer::new(storage_dir, "test_metrics");
-        let result = queryer.query_sync(&QueryCondition {
-            metric_names: Some(vec!["metric1".to_string()]),
-            categories: None,
-            start_time: None,
-            end_time: None,
-            tags: None,
-            limit: None,
-            order_by: Some(QueryOrder::TimestampAsc),
-        }).unwrap();
-        
+        let result = queryer
+            .query_sync(&QueryCondition {
+                metric_names: Some(vec!["metric1".to_string()]),
+                categories: None,
+                start_time: None,
+                end_time: None,
+                tags: None,
+                limit: None,
+                order_by: Some(QueryOrder::TimestampAsc),
+            })
+            .expect("Test: operation should succeed");
+
         assert_eq!(result.data_points.len(), 2);
         assert_eq!(result.data_points[0].metric_name, "metric1");
         assert_eq!(result.data_points[1].metric_name, "metric1");
@@ -1343,45 +1373,47 @@ mod tests {
 
     #[test]
     fn test_persistent_storage_sync_io() {
-        use tempfile::tempdir;
         use std::fs;
-        
-        let dir = tempdir().unwrap();
+        use tempfile::tempdir;
+
+        let dir = tempdir().expect("Test: operation should succeed");
         let mut cfg = StorageConfig::default();
         cfg.data_dir = dir.path().to_path_buf();
         cfg.file_prefix = "test_metrics".to_string();
         cfg.enable_write_cache = true;
         cfg.cache_size = 2; // flush after 2
-        
+
         // Create storage synchronously
         let mut storage = PersistentStorage::new_sync(cfg).expect("new_sync failed");
-        
+
         // Store two points to trigger flush
-        storage.store(DataPoint::new("m1", 1.0, MetricCategory::System)).unwrap();
-        storage.store(DataPoint::new("m2", 2.0, MetricCategory::Memory)).unwrap();
-        
+        storage.store(DataPoint::new("m1", 1.0, MetricCategory::System)).expect("Test: operation should succeed");
+        storage.store(DataPoint::new("m2", 2.0, MetricCategory::Memory)).expect("Test: operation should succeed");
+
         // flush cache sync
         storage.flush_cache_sync().expect("flush_cache_sync failed");
-        
+
         // stats
         let stats = storage.get_storage_stats_sync().expect("get_storage_stats_sync failed");
         assert!(stats.total_files >= 1);
         assert!(stats.current_file_size > 0 || stats.total_size > 0);
-        
+
         // query sync via DataQueryer - 避免生命周期问题
         let dir_path = dir.path().to_path_buf();
         let queryer = DataQueryer::new(&dir_path, "test_metrics");
-        let res = queryer.query_sync(&QueryCondition {
-            metric_names: None,
-            categories: None,
-            start_time: None,
-            end_time: None,
-            tags: None,
-            limit: None,
-            order_by: None
-        }).expect("query_sync failed");
+        let res = queryer
+            .query_sync(&QueryCondition {
+                metric_names: None,
+                categories: None,
+                start_time: None,
+                end_time: None,
+                tags: None,
+                limit: None,
+                order_by: None,
+            })
+            .expect("query_sync failed");
         assert!(res.total_count >= 2);
-        
+
         // cleanup
         fs::remove_dir_all(dir.path()).ok();
     }

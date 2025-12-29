@@ -1,9 +1,9 @@
 //  异步着色器编译系统
-// 
+//
 //  使用异步编译减少主线程阻塞，提升启动性能和响应性。
-// 
+//
 //  ## 设计原则
-// 
+//
 //  1. **异步编译**: 使用`tokio::task::spawn_blocking`在后台线程编译
 //  2. **编译队列**: 优先级队列管理编译任务
 //  3. **进度跟踪**: 实时追踪编译进度
@@ -13,6 +13,7 @@
 use crate::error::RenderError;
 use crate::error::safe_lock;
 use crate::render::shader_cache::{ShaderCache, ShaderCacheKey};
+use num_cpus;
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
 use std::sync::{Arc, Mutex};
@@ -20,11 +21,9 @@ use std::time::{Duration, Instant};
 use thiserror::Error;
 use tokio::sync::{mpsc, oneshot};
 use tokio::time::timeout;
-use num_cpus;
 
 /// 着色器编译优先级
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub enum ShaderCompilePriority {
     /// 关键优先级 - 立即需要的着色器（如基础渲染着色器）
     Critical = 0,
@@ -36,7 +35,6 @@ pub enum ShaderCompilePriority {
     /// 低优先级 - 后台编译
     Low = 3,
 }
-
 
 impl ShaderCompilePriority {
     pub fn new() -> Self {
@@ -317,10 +315,17 @@ impl AsyncShaderCompiler {
                 Some(request) = request_rx.recv() => {
                     // 添加到优先级队列
                     {
-                        let mut queue = safe_lock(&priority_queue, "priority_queue").unwrap();
-                        queue.push(request);
-                        stats.total_requests += 1;
-                        stats.pending += 1;
+                        match safe_lock(&priority_queue, "priority_queue") {
+                            Ok(mut queue) => {
+                                queue.push(request);
+                                stats.total_requests += 1;
+                                stats.pending += 1;
+                            }
+                            Err(e) => {
+                                tracing::error!("Failed to acquire priority_queue lock: {}", e);
+                                continue; // 跳过此请求，继续处理下一个
+                            }
+                        }
                     }
 
                     // 尝试处理队列
@@ -378,7 +383,9 @@ impl AsyncShaderCompiler {
                         wait_stats.max_wait_time_ms = wait_stats.max_wait_time_ms.max(wait_time_ms);
                         wait_stats.sample_count += 1;
                     } else {
-                        tracing::error!("Failed to acquire wait_time_stats lock, skipping statistics update");
+                        tracing::error!(
+                            "Failed to acquire wait_time_stats lock, skipping statistics update"
+                        );
                     }
                 }
 
@@ -391,8 +398,9 @@ impl AsyncShaderCompiler {
                 let compile_options = request.compile_options.clone();
 
                 // 在新任务中执行编译
+                let label_str = label.as_deref().unwrap_or("unnamed");
                 let _span = crate::performance::tracing_metrics::TracingMetricsManager::shader_compile_span(
-                    label.as_ref().unwrap_or(&"unnamed".to_string()),
+                    label_str,
                     source.len(),
                     enable_cache
                 ).entered();
@@ -408,8 +416,13 @@ impl AsyncShaderCompiler {
                     // 检查缓存
                     let cached_result = if enable_cache {
                         if let Some(cache) = &cache_clone {
-                            let mut cache_guard = safe_lock(cache, "shader_cache").unwrap();
-                            cache_guard.get(&cache_key).ok().flatten()
+                            match safe_lock(cache, "shader_cache") {
+                                Ok(mut cache_guard) => cache_guard.get(&cache_key).ok().flatten(),
+                                Err(e) => {
+                                    tracing::warn!("Failed to acquire shader_cache lock: {}", e);
+                                    None
+                                }
+                            }
                         } else {
                             None
                         }
@@ -421,13 +434,35 @@ impl AsyncShaderCompiler {
                         // 缓存命中，直接返回
                         Ok(CompiledShader {
                             cache_key,
-                            source: String::from_utf8(cached_source).unwrap_or(source),
+                            source: match String::from_utf8(cached_source) {
+                                Ok(s) => s,
+                                Err(e) => {
+                                    tracing::warn!(
+                                        "Failed to decode cached shader source as UTF-8: {}",
+                                        e
+                                    );
+                                    source // 回退到原始源码
+                                }
+                            },
                             compile_time_ms: start.elapsed().as_secs_f32() * 1000.0,
                         })
                     } else {
                         // 缓存未命中，执行编译
                         // 注意：wgpu的create_shader_module是同步的，需要在阻塞任务中执行
-                        let permit = spawn_blocking_semaphore.acquire().await.unwrap();
+                        let _permit = match spawn_blocking_semaphore.acquire().await {
+                            Ok(p) => p,
+                            Err(e) => {
+                                tracing::error!(
+                                    "Failed to acquire spawn_blocking semaphore: {}",
+                                    e
+                                );
+                                let error_result = Err(CompileError::CompilationFailed(
+                                    "Failed to acquire compilation semaphore".to_string(),
+                                ));
+                                let _ = response_tx.send(error_result);
+                                return;
+                            }
+                        };
                         let compile_future = tokio::task::spawn_blocking(move || {
                             // 许可将在函数结束时自动释放
                             // 这里只是验证和预处理源码
@@ -452,11 +487,21 @@ impl AsyncShaderCompiler {
                     // 如果编译成功，存储到缓存
                     if let Ok(ref compiled) = result
                         && enable_cache
-                            && let Some(cache) = &cache_clone {
-                                let mut cache_guard = safe_lock(cache, "shader_cache").unwrap();
+                        && let Some(cache) = &cache_clone
+                    {
+                        match safe_lock(cache, "shader_cache") {
+                            Ok(mut cache_guard) => {
                                 let _ =
                                     cache_guard.put_source(&compiled.cache_key, &compiled.source);
                             }
+                            Err(e) => {
+                                tracing::warn!(
+                                    "Failed to acquire shader_cache lock for writing: {}",
+                                    e
+                                );
+                            }
+                        }
+                    }
 
                     // 发送结果
                     let _ = response_tx.send(result);
@@ -477,10 +522,19 @@ impl AsyncShaderCompiler {
         priority: ShaderCompilePriority,
     ) -> Result<oneshot::Receiver<Result<CompiledShader, CompileError>>, RenderError> {
         let id = {
-            let mut next_id = safe_lock(&self.next_id, "shader_compile_id").unwrap();
-            let id = *next_id;
-            *next_id += 1;
-            id
+            match safe_lock(&self.next_id, "shader_compile_id") {
+                Ok(mut next_id) => {
+                    let id = *next_id;
+                    *next_id += 1;
+                    id
+                }
+                Err(e) => {
+                    return Err(RenderError::InvalidState {
+                        message: format!("Failed to acquire shader_compile_id lock: {}", e),
+                        severity: crate::error::ErrorSeverity::Error,
+                    });
+                }
+            }
         };
 
         let (response_tx, response_rx) = oneshot::channel();
@@ -495,11 +549,9 @@ impl AsyncShaderCompiler {
             response_tx,
         };
 
-        self.request_tx.send(request).map_err(|e| {
-            RenderError::InvalidState {
-                message: format!("Failed to send compile request: {}", e),
-                severity: crate::error::ErrorSeverity::Error
-            }
+        self.request_tx.send(request).map_err(|e| RenderError::InvalidState {
+            message: format!("Failed to send compile request: {}", e),
+            severity: crate::error::ErrorSeverity::Error,
         })?;
 
         Ok(response_rx)
@@ -516,7 +568,14 @@ impl AsyncShaderCompiler {
 
     /// 获取编译进度
     pub fn get_progress(&self) -> Option<CompileProgress> {
-        let mut rx = safe_lock(&self.progress_rx, "shader_progress_rx").unwrap();
+        let mut rx = match safe_lock(&self.progress_rx, "shader_progress_rx") {
+            Ok(rx) => rx,
+            Err(e) => {
+                tracing::warn!("Failed to acquire shader_progress_rx lock: {}", e);
+                return None;
+            }
+        };
+
         let mut progress = rx.try_recv().ok()?;
 
         // 添加等待时间统计
@@ -559,32 +618,34 @@ mod tests {
 
     #[tokio::test]
     async fn test_async_compiler_basic() {
-        let compiler = AsyncShaderCompiler::with_default_config().unwrap();
+        let compiler = AsyncShaderCompiler::with_default_config()
+            .expect("Failed to create async shader compiler");
 
         let source = "fn main() {}";
-        let rx = compiler.compile(None, source).unwrap();
+        let rx = compiler.compile(None, source).expect("Failed to submit compile request");
 
         let result = wait_for_compile(rx).await;
         assert!(result.is_ok());
 
-        let compiled = result.unwrap();
+        let compiled = result.expect("Failed to get compiled shader");
         assert_eq!(compiled.source, source);
     }
 
     #[tokio::test]
     async fn test_priority_ordering() {
-        let compiler = AsyncShaderCompiler::with_default_config().unwrap();
+        let compiler = AsyncShaderCompiler::with_default_config()
+            .expect("Failed to create async shader compiler");
 
         // 提交不同优先级的请求
         let rx_low = compiler
             .compile_async(None, "low", "", ShaderCompilePriority::Low)
-            .unwrap();
+            .expect("Failed to submit low priority compile request");
         let rx_high = compiler
             .compile_async(None, "high", "", ShaderCompilePriority::High)
-            .unwrap();
+            .expect("Failed to submit high priority compile request");
         let rx_critical = compiler
             .compile_async(None, "critical", "", ShaderCompilePriority::Critical)
-            .unwrap();
+            .expect("Failed to submit critical priority compile request");
 
         // 高优先级应该先完成（理论上）
         // 注意：实际顺序可能受并发数影响

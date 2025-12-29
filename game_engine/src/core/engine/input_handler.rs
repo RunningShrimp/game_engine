@@ -9,10 +9,13 @@
 //  - 输入映射和动作处理
 
 use crate::config::input::InputConfig;
-use crate::platform::{InputBuffer, InputEvent, KeyCode, Modifiers, MouseButton, InputActions, GamepadButton, GamepadAxis};
+use crate::core::editor::EditorEventHandler;
+use crate::platform::{
+    GamepadAxis, GamepadButton, InputActions, InputBuffer, InputEvent, KeyCode, Modifiers,
+    MouseButton,
+};
 use crate::render::wgpu_utils::WgpuRenderer;
 use crate::services::render::RenderService;
-use crate::core::editor::EditorEventHandler;
 use bevy_ecs::prelude::*;
 use winit::event::WindowEvent;
 use winit::event_loop::ActiveEventLoop;
@@ -39,7 +42,7 @@ pub fn handle_window_event(
     editor_ctx: &mut dyn EditorEventHandler,
     render_service: &mut RenderService,
     render_cache: &mut crate::render::graph::RenderCache,
-    window: &winit::window::Window,
+    _window: &winit::window::Window,
     elwt: &ActiveEventLoop,
 ) {
     // 处理编辑器输入事件，让编辑器消费事件
@@ -55,7 +58,11 @@ pub fn handle_window_event(
             render_service.update_viewport(size.width, size.height);
             render_cache.invalidate();
         }
-        WindowEvent::ScaleFactorChanged { scale_factor, inner_size_writer, .. } => {
+        WindowEvent::ScaleFactorChanged {
+            scale_factor,
+            inner_size_writer,
+            ..
+        } => {
             // ScaleFactorChanged 事件处理
             // 使用新的缩放因子和内部尺寸写入器
             tracing::debug!("Scale factor changed to: {}", scale_factor);
@@ -153,7 +160,17 @@ pub fn handle_input_event(event: &WindowEvent, world: &mut World) {
             }
             WindowEvent::MouseInput { state, button, .. } => {
                 let mb = map_mouse_button(button);
-                let (x, y) = mouse_pos.unwrap(); // Safe to unwrap since we checked the event type
+                // SAFETY: mouse_pos is guaranteed to be Some here because we only set it
+                // when the event is MouseInput (see lines 109-113). This is a structural
+                // invariant of the match arm.
+                let (x, y) = mouse_pos.unwrap_or_else(|| {
+                    tracing::error!(
+                        "BUG: mouse_pos should be Some for MouseInput events. \
+                         This indicates a logic error in the event handling code. \
+                         Using fallback (0, 0)."
+                    );
+                    (0.0, 0.0)
+                });
 
                 match state {
                     winit::event::ElementState::Pressed => {
@@ -261,9 +278,17 @@ fn handle_keyboard_input(
         }
 
         // 获取输入动作资源
-        let mut actions = world
-            .get_resource_mut::<InputActions>()
-            .expect("Failed to get InputActions resource");
+        // SAFETY: InputActions resource is guaranteed to exist here because:
+        // 1. We just inserted it above if it was missing
+        // 2. This resource must be initialized during engine startup
+        let mut actions = match world.get_resource_mut::<InputActions>() {
+            Some(actions) => actions,
+            None => {
+                // This should never happen due to the check above, but handle it gracefully
+                log::warn!("InputActions resource not found after insertion, skipping keyboard input handling");
+                return;
+            }
+        };
 
         // 根据配置映射按键到动作
         if key_str == config.key_bindings.forward {
@@ -481,9 +506,17 @@ fn update_input_actions(
     }
 
     // 获取输入动作资源
-    let mut actions = world
-        .get_resource_mut::<InputActions>()
-        .expect("Failed to get InputActions resource");
+    // SAFETY: InputActions resource is guaranteed to exist here because:
+    // 1. We just inserted it above if it was missing
+    // 2. This resource must be initialized during engine startup
+    let mut actions = match world.get_resource_mut::<InputActions>() {
+        Some(actions) => actions,
+        None => {
+            // This should never happen due to the check above, but handle it gracefully
+            log::warn!("InputActions resource not found after insertion in update_input_actions, skipping update");
+            return;
+        }
+    };
 
     // 根据事件更新动作状态
     for event in events {
@@ -550,31 +583,32 @@ fn update_action_state(
 /// * `world` - ECS世界
 pub fn handle_touch_input(event: &winit::event::WindowEvent, world: &mut World) {
     if let Some(mut buf) = world.get_resource_mut::<crate::platform::InputBuffer>()
-        && let winit::event::WindowEvent::Touch(touch) = event {
-            let id = touch.id;
-            let position = touch.location;
-            let x = position.x as f32;
-            let y = position.y as f32;
+        && let winit::event::WindowEvent::Touch(touch) = event
+    {
+        let id = touch.id;
+        let position = touch.location;
+        let x = position.x as f32;
+        let y = position.y as f32;
 
-            match touch.phase {
-                winit::event::TouchPhase::Started => {
-                    buf.events.push(crate::platform::InputEvent::TouchStart { id, x, y });
-                    tracing::debug!(target: "input", "Touch started: id={}, x={}, y={}", id, x, y);
-                }
-                winit::event::TouchPhase::Moved => {
-                    buf.events.push(crate::platform::InputEvent::TouchMove { id, x, y });
-                    tracing::debug!(target: "input", "Touch moved: id={}, x={}, y={}", id, x, y);
-                }
-                winit::event::TouchPhase::Ended => {
-                    buf.events.push(crate::platform::InputEvent::TouchEnd { id, x, y });
-                    tracing::debug!(target: "input", "Touch ended: id={}, x={}, y={}", id, x, y);
-                }
-                winit::event::TouchPhase::Cancelled => {
-                    buf.events.push(crate::platform::InputEvent::TouchEnd { id, x, y });
-                    tracing::debug!(target: "input", "Touch cancelled: id={}, x={}, y={}", id, x, y);
-                }
+        match touch.phase {
+            winit::event::TouchPhase::Started => {
+                buf.events.push(crate::platform::InputEvent::TouchStart { id, x, y });
+                tracing::debug!(target: "input", "Touch started: id={}, x={}, y={}", id, x, y);
+            }
+            winit::event::TouchPhase::Moved => {
+                buf.events.push(crate::platform::InputEvent::TouchMove { id, x, y });
+                tracing::debug!(target: "input", "Touch moved: id={}, x={}, y={}", id, x, y);
+            }
+            winit::event::TouchPhase::Ended => {
+                buf.events.push(crate::platform::InputEvent::TouchEnd { id, x, y });
+                tracing::debug!(target: "input", "Touch ended: id={}, x={}, y={}", id, x, y);
+            }
+            winit::event::TouchPhase::Cancelled => {
+                buf.events.push(crate::platform::InputEvent::TouchEnd { id, x, y });
+                tracing::debug!(target: "input", "Touch cancelled: id={}, x={}, y={}", id, x, y);
             }
         }
+    }
 }
 
 /// 处理指针按钮事件（包括触摸）
@@ -587,7 +621,7 @@ pub fn handle_touch_input(event: &winit::event::WindowEvent, world: &mut World) 
 ///
 /// * `event` - 窗口事件
 /// * `world` - ECS世界
-pub fn handle_pointer_button(event: &winit::event::WindowEvent, _world: &mut World) {
+pub fn handle_pointer_button(_event: &winit::event::WindowEvent, _world: &mut World) {
     // 在winit 0.30中，指针按钮事件主要通过MouseInput和Touch事件处理
     // 这里可以处理其他指针设备的特殊事件
     // 目前触摸和鼠标事件已经在handle_input_event中处理
@@ -695,7 +729,8 @@ mod tests {
 
         handle_touch_input(&touch_event, &mut world);
 
-        let buf = world.get_resource::<crate::platform::InputBuffer>().unwrap();
+        let buf = world.get_resource::<crate::platform::InputBuffer>()
+            .expect("InputBuffer resource should exist after being inserted in test setup");
         assert_eq!(buf.events.len(), 1);
         match &buf.events[0] {
             crate::platform::InputEvent::TouchStart { id, x, y } => {
@@ -722,7 +757,8 @@ mod tests {
 
         handle_touch_input(&touch_event, &mut world);
 
-        let buf = world.get_resource::<crate::platform::InputBuffer>().unwrap();
+        let buf = world.get_resource::<crate::platform::InputBuffer>()
+            .expect("InputBuffer resource should exist after being inserted in test setup");
         assert_eq!(buf.events.len(), 1);
         match &buf.events[0] {
             crate::platform::InputEvent::TouchMove { id, x, y } => {
@@ -749,7 +785,8 @@ mod tests {
 
         handle_touch_input(&touch_event, &mut world);
 
-        let buf = world.get_resource::<crate::platform::InputBuffer>().unwrap();
+        let buf = world.get_resource::<crate::platform::InputBuffer>()
+            .expect("InputBuffer resource should exist after being inserted in test setup");
         assert_eq!(buf.events.len(), 1);
         match &buf.events[0] {
             crate::platform::InputEvent::TouchEnd { id, x, y } => {
@@ -776,7 +813,8 @@ mod tests {
 
         handle_touch_input(&touch_event, &mut world);
 
-        let buf = world.get_resource::<crate::platform::InputBuffer>().unwrap();
+        let buf = world.get_resource::<crate::platform::InputBuffer>()
+            .expect("InputBuffer resource should exist after being inserted in test setup");
         assert_eq!(buf.events.len(), 1);
         // Cancelled应该转换为TouchEnd
         match &buf.events[0] {
@@ -802,7 +840,8 @@ mod tests {
 
         handle_gamepad_input(&gamepad_event, &mut world);
 
-        let buf = world.get_resource::<crate::platform::InputBuffer>().unwrap();
+        let buf = world.get_resource::<crate::platform::InputBuffer>()
+            .expect("InputBuffer resource should exist after being inserted in test setup");
         assert_eq!(buf.events.len(), 1);
         match &buf.events[0] {
             crate::platform::InputEvent::GamepadButton {
@@ -831,7 +870,8 @@ mod tests {
 
         handle_gamepad_input(&gamepad_event, &mut world);
 
-        let buf = world.get_resource::<crate::platform::InputBuffer>().unwrap();
+        let buf = world.get_resource::<crate::platform::InputBuffer>()
+            .expect("InputBuffer resource should exist after being inserted in test setup");
         assert_eq!(buf.events.len(), 1);
         match &buf.events[0] {
             crate::platform::InputEvent::GamepadAxis { id, axis, value } => {
@@ -852,7 +892,8 @@ mod tests {
 
         handle_gamepad_input(&gamepad_event, &mut world);
 
-        let buf = world.get_resource::<crate::platform::InputBuffer>().unwrap();
+        let buf = world.get_resource::<crate::platform::InputBuffer>()
+            .expect("InputBuffer resource should exist after being inserted in test setup");
         assert_eq!(buf.events.len(), 1);
         match &buf.events[0] {
             crate::platform::InputEvent::GamepadConnected(id) => {
@@ -871,7 +912,8 @@ mod tests {
 
         handle_gamepad_input(&gamepad_event, &mut world);
 
-        let buf = world.get_resource::<crate::platform::InputBuffer>().unwrap();
+        let buf = world.get_resource::<crate::platform::InputBuffer>()
+            .expect("InputBuffer resource should exist after being inserted in test setup");
         assert_eq!(buf.events.len(), 1);
         match &buf.events[0] {
             crate::platform::InputEvent::GamepadDisconnected(id) => {

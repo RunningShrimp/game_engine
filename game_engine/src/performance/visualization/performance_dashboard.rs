@@ -155,7 +155,7 @@ impl MetricTracker {
         self.history
             .iter()
             .map(|s| s.value)
-            .max_by(|a, b| a.partial_cmp(b).unwrap())
+            .max_by(|a, b| a.partial_cmp(b).expect("Test: operation should succeed"))
     }
 
     /// 获取最小值
@@ -163,7 +163,7 @@ impl MetricTracker {
         self.history
             .iter()
             .map(|s| s.value)
-            .min_by(|a, b| a.partial_cmp(b).unwrap())
+            .min_by(|a, b| a.partial_cmp(b).expect("Test: operation should succeed"))
     }
 
     /// 计算趋势（上升/下降/平稳）

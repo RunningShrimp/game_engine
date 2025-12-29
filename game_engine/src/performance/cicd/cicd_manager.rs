@@ -504,7 +504,7 @@ mod tests {
 
         assert_eq!(pipeline.get_status(), PipelineStatus::Pending);
 
-        let stage_result = pipeline.stages.first_mut().unwrap();
+        let stage_result = pipeline.stages.first_mut().expect("Test: operation should succeed");
         stage_result.status = StageStatus::Passed;
 
         assert_eq!(pipeline.get_status(), PipelineStatus::Passed);

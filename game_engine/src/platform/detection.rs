@@ -377,4 +377,3 @@ mod tests {
         assert!(!arch.is_empty());
     }
 }
-

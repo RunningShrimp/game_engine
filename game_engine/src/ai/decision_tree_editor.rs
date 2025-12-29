@@ -171,7 +171,9 @@ impl DecisionTree {
 
     /// 添加子节点
     pub fn add_child(&mut self, parent_id: u64, child_id: u64) -> Result<(), DecisionTreeError> {
-        let parent = self.nodes.get_mut(&parent_id)
+        let parent = self
+            .nodes
+            .get_mut(&parent_id)
             .ok_or(DecisionTreeError::NodeNotFound(parent_id))?;
 
         // 检查节点类型是否支持子节点
@@ -193,7 +195,9 @@ impl DecisionTree {
 
     /// 移除子节点
     pub fn remove_child(&mut self, parent_id: u64, child_id: u64) -> Result<(), DecisionTreeError> {
-        let parent = self.nodes.get_mut(&parent_id)
+        let parent = self
+            .nodes
+            .get_mut(&parent_id)
             .ok_or(DecisionTreeError::NodeNotFound(parent_id))?;
 
         parent.children.retain(|&id| id != child_id);
@@ -201,9 +205,12 @@ impl DecisionTree {
     }
 
     /// 更新节点
-    pub fn update_node(&mut self, node_id: u64, updates: NodeUpdates) -> Result<(), DecisionTreeError> {
-        let node = self.nodes.get_mut(&node_id)
-            .ok_or(DecisionTreeError::NodeNotFound(node_id))?;
+    pub fn update_node(
+        &mut self,
+        node_id: u64,
+        updates: NodeUpdates,
+    ) -> Result<(), DecisionTreeError> {
+        let node = self.nodes.get_mut(&node_id).ok_or(DecisionTreeError::NodeNotFound(node_id))?;
 
         if let Some(name) = updates.name {
             node.name = name;
@@ -231,9 +238,13 @@ impl DecisionTree {
             return Err(DecisionTreeError::InvalidTree("No root node".to_string()));
         }
 
-        let root_id = self.root_id.unwrap();
+        let root_id = self
+            .root_id
+            .ok_or_else(|| DecisionTreeError::InvalidTree("No root node".to_string()))?;
         if !self.nodes.contains_key(&root_id) {
-            return Err(DecisionTreeError::InvalidTree("Root node not found".to_string()));
+            return Err(DecisionTreeError::InvalidTree(
+                "Root node not found".to_string(),
+            ));
         }
 
         // 检查所有节点是否可达
@@ -243,9 +254,10 @@ impl DecisionTree {
         // 检查是否有孤立节点
         for node_id in self.nodes.keys() {
             if !visited.contains(node_id) {
-                return Err(DecisionTreeError::InvalidTree(
-                    format!("Isolated node: {}", node_id),
-                ));
+                return Err(DecisionTreeError::InvalidTree(format!(
+                    "Isolated node: {}",
+                    node_id
+                )));
             }
         }
 
@@ -253,15 +265,18 @@ impl DecisionTree {
     }
 
     /// 访问节点（递归）
-    fn visit_node(&self, node_id: u64, visited: &mut HashSet<u64>) -> Result<(), DecisionTreeError> {
+    fn visit_node(
+        &self,
+        node_id: u64,
+        visited: &mut HashSet<u64>,
+    ) -> Result<(), DecisionTreeError> {
         if visited.contains(&node_id) {
             return Ok(()); // 已访问，可能是循环引用（需要更严格的检查）
         }
 
         visited.insert(node_id);
 
-        let node = self.nodes.get(&node_id)
-            .ok_or(DecisionTreeError::NodeNotFound(node_id))?;
+        let node = self.nodes.get(&node_id).ok_or(DecisionTreeError::NodeNotFound(node_id))?;
 
         for &child_id in &node.children {
             self.visit_node(child_id, visited)?;
@@ -337,26 +352,33 @@ impl DecisionTreeEditor {
     }
 
     /// 创建新决策树
-    pub fn create_tree(&mut self, name: String) -> &mut DecisionTree {
+    pub fn create_tree(&mut self, name: String) -> Result<&mut DecisionTree, DecisionTreeError> {
         let tree = DecisionTree::new(name.clone());
         self.tree_library.insert(name.clone(), tree);
         self.current_tree = Some(DecisionTree::new(name));
-        self.current_tree.as_mut().unwrap()
+        self.current_tree
+            .as_mut()
+            .ok_or_else(|| DecisionTreeError::InvalidOperation("Failed to create tree".to_string()))
     }
 
     /// 加载决策树
     pub fn load_tree(&mut self, name: &str) -> Result<&mut DecisionTree, DecisionTreeError> {
-        let tree = self.tree_library.get(name)
-            .ok_or(DecisionTreeError::InvalidTree(format!("Tree not found: {}", name)))?;
+        let tree = self.tree_library.get(name).ok_or(DecisionTreeError::InvalidTree(format!(
+            "Tree not found: {}",
+            name
+        )))?;
         self.current_tree = Some(tree.clone());
-        Ok(self.current_tree.as_mut().unwrap())
+        self.current_tree
+            .as_mut()
+            .ok_or_else(|| DecisionTreeError::InvalidOperation("Failed to load tree".to_string()))
     }
 
     /// 保存当前决策树
     pub fn save_current_tree(&mut self) -> Result<(), DecisionTreeError> {
-        let tree = self.current_tree.take()
-            .ok_or(DecisionTreeError::InvalidOperation("No current tree".to_string()))?;
-        
+        let tree = self.current_tree.take().ok_or(DecisionTreeError::InvalidOperation(
+            "No current tree".to_string(),
+        ))?;
+
         tree.validate()?;
         self.tree_library.insert(tree.name.clone(), tree);
         Ok(())
@@ -391,29 +413,16 @@ mod tests {
     #[test]
     fn test_decision_tree_creation() {
         let mut tree = DecisionTree::new("Test Tree".to_string());
-        let root_id = tree.add_node(
-            DecisionNodeType::Selector,
-            "Root".to_string(),
-            (0.0, 0.0),
-        );
+        let root_id = tree.add_node(DecisionNodeType::Selector, "Root".to_string(), (0.0, 0.0));
         assert_eq!(tree.root_id, Some(root_id));
     }
 
     #[test]
     fn test_decision_tree_validation() {
         let mut tree = DecisionTree::new("Test Tree".to_string());
-        let root_id = tree.add_node(
-            DecisionNodeType::Selector,
-            "Root".to_string(),
-            (0.0, 0.0),
-        );
-        let child_id = tree.add_node(
-            DecisionNodeType::Action,
-            "Action".to_string(),
-            (0.0, 100.0),
-        );
-        tree.add_child(root_id, child_id).unwrap();
+        let root_id = tree.add_node(DecisionNodeType::Selector, "Root".to_string(), (0.0, 0.0));
+        let child_id = tree.add_node(DecisionNodeType::Action, "Action".to_string(), (0.0, 100.0));
+        tree.add_child(root_id, child_id).expect("Failed to add child in test");
         assert!(tree.validate().is_ok());
     }
 }
-

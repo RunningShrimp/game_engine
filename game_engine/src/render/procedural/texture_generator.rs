@@ -13,8 +13,8 @@
 //  - 特效纹理
 //  - UI纹理
 
+use super::noise::{NoiseConfig, NoiseGenerator, PerlinNoise, SimplexNoise, WorleyNoise};
 use image::{ImageBuffer, Rgba, RgbaImage};
-use super::noise::{NoiseGenerator, PerlinNoise, SimplexNoise, WorleyNoise, NoiseConfig};
 
 /// 纹理生成器trait
 pub trait TextureGenerator {
@@ -88,12 +88,7 @@ impl TextureGenerator for CloudTextureGenerator {
                 let alpha = alpha.clamp(0.0, 1.0);
 
                 // 白色云层
-                let color = Rgba([
-                    255,
-                    255,
-                    255,
-                    (alpha * 255.0) as u8,
-                ]);
+                let color = Rgba([255, 255, 255, (alpha * 255.0) as u8]);
 
                 img.put_pixel(x, y, color);
             }
@@ -220,8 +215,8 @@ impl WoodTextureGenerator {
     pub fn default_config() -> Self {
         Self::new(
             NoiseConfig::default(),
-            [139, 90, 43],  // 棕色
-            [80, 50, 20],    // 深棕色
+            [139, 90, 43], // 棕色
+            [80, 50, 20],  // 深棕色
             15.0,
             0.3,
         )
@@ -247,18 +242,20 @@ impl TextureGenerator for WoodTextureGenerator {
                 let ring = (dist * self.rings * 2.0 * std::f32::consts::PI).sin();
 
                 // 添加噪声
-                let noise = perlin.noise2d(
-                    nx * self.noise_config.scale,
-                    ny * self.noise_config.scale,
-                ) * self.noise_strength;
+                let noise = perlin
+                    .noise2d(nx * self.noise_config.scale, ny * self.noise_config.scale)
+                    * self.noise_strength;
 
                 let value = ring + noise;
                 let t = ((value + 1.0) / 2.0).clamp(0.0, 1.0);
 
                 // 混合颜色
-                let r = (self.base_color[0] as f32 * (1.0 - t) + self.grain_color[0] as f32 * t) as u8;
-                let g = (self.base_color[1] as f32 * (1.0 - t) + self.grain_color[1] as f32 * t) as u8;
-                let b = (self.base_color[2] as f32 * (1.0 - t) + self.grain_color[2] as f32 * t) as u8;
+                let r =
+                    (self.base_color[0] as f32 * (1.0 - t) + self.grain_color[0] as f32 * t) as u8;
+                let g =
+                    (self.base_color[1] as f32 * (1.0 - t) + self.grain_color[1] as f32 * t) as u8;
+                let b =
+                    (self.base_color[2] as f32 * (1.0 - t) + self.grain_color[2] as f32 * t) as u8;
 
                 img.put_pixel(x, y, Rgba([r, g, b, 255]));
             }
@@ -322,14 +319,7 @@ impl NoiseTextureGenerator {
                 let v = (t * 255.0) as u8;
                 Rgba([v, v, v, 255])
             }
-            ColorMode::Rgb => {
-                Rgba([
-                    (t * 255.0) as u8,
-                    ((1.0 - t) * 255.0) as u8,
-                    128,
-                    255,
-                ])
-            }
+            ColorMode::Rgb => Rgba([(t * 255.0) as u8, ((1.0 - t) * 255.0) as u8, 128, 255]),
             ColorMode::Heatmap => {
                 // 热力图：蓝->绿->黄->红
                 let (r, g, b) = if t < 0.25 {
@@ -354,7 +344,7 @@ impl NoiseTextureGenerator {
 impl TextureGenerator for NoiseTextureGenerator {
     fn generate(&self, width: u32, height: u32) -> RgbaImage {
         let perlin = PerlinNoise::new(self.noise_config.seed);
-        let simplex = SimplexNoise::new(self.noise_config.seed);
+        let _simplex = SimplexNoise::new(self.noise_config.seed);
         let worley = WorleyNoise::new(self.noise_config.seed);
 
         let mut img = ImageBuffer::new(width, height);

@@ -122,3 +122,121 @@ impl_default!(SpotLight {
     outer_cutoff: 0.7,
     radius: 10.0,
 });
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_pbr_material_default() {
+        let material = PbrMaterial::default();
+        assert_eq!(material.base_color, Vec4::ONE);
+        assert_eq!(material.metallic, 0.0);
+        assert_eq!(material.roughness, 0.5);
+        assert_eq!(material.ambient_occlusion, 1.0);
+        assert_eq!(material.emissive, Vec3::ZERO);
+        assert_eq!(material.normal_scale, 1.0);
+    }
+
+    #[test]
+    fn test_pbr_material_clone() {
+        let material = PbrMaterial {
+            base_color: Vec4::new(0.5, 0.5, 0.5, 1.0),
+            metallic: 0.8,
+            roughness: 0.2,
+            ..Default::default()
+        };
+        let cloned = material.clone();
+        assert_eq!(cloned.base_color, material.base_color);
+        assert_eq!(cloned.metallic, material.metallic);
+        assert_eq!(cloned.roughness, material.roughness);
+    }
+
+    #[test]
+    fn test_pbr_textures_default() {
+        let textures = PbrTextures::default();
+        assert!(textures.base_color_texture.is_none());
+        assert!(textures.metallic_roughness_texture.is_none());
+        assert!(textures.normal_texture.is_none());
+    }
+
+    #[test]
+    fn test_pbr_textures_with_textures() {
+        let textures = PbrTextures {
+            base_color_texture: Some(1),
+            metallic_roughness_texture: Some(2),
+            normal_texture: Some(3),
+            ao_texture: Some(4),
+            emissive_texture: Some(5),
+        };
+        assert_eq!(textures.base_color_texture, Some(1));
+        assert_eq!(textures.metallic_roughness_texture, Some(2));
+    }
+
+    #[test]
+    fn test_pbr_material_full_default() {
+        let full = PbrMaterialFull::default();
+        assert_eq!(full.material.base_color, Vec4::ONE);
+        assert!(full.textures.base_color_texture.is_none());
+    }
+
+    #[test]
+    fn test_point_light_default() {
+        let light = PointLight3D::default();
+        assert_eq!(light.position, Vec3::ZERO);
+        assert_eq!(light.color, Vec3::ONE);
+        assert_eq!(light.intensity, 1.0);
+        assert_eq!(light.radius, 10.0);
+    }
+
+    #[test]
+    fn test_point_light_custom() {
+        let light = PointLight3D {
+            position: Vec3::new(1.0, 2.0, 3.0),
+            color: Vec3::new(1.0, 0.0, 0.0),
+            intensity: 5.0,
+            radius: 20.0,
+        };
+        assert_eq!(light.position, Vec3::new(1.0, 2.0, 3.0));
+        assert_eq!(light.intensity, 5.0);
+    }
+
+    #[test]
+    fn test_directional_light_default() {
+        let light = DirectionalLight::default();
+        assert_eq!(light.direction, Vec3::new(0.0, -1.0, 0.0));
+        assert_eq!(light.color, Vec3::ONE);
+        assert_eq!(light.intensity, 1.0);
+    }
+
+    #[test]
+    fn test_spot_light_default() {
+        let light = SpotLight::default();
+        assert_eq!(light.position, Vec3::ZERO);
+        assert_eq!(light.direction, Vec3::new(0.0, -1.0, 0.0));
+        assert_eq!(light.inner_cutoff, 0.5);
+        assert_eq!(light.outer_cutoff, 0.7);
+    }
+
+    #[test]
+    fn test_uv_transform_defaults() {
+        let material = PbrMaterial::default();
+        assert_eq!(material.uv_offset, [0.0, 0.0]);
+        assert_eq!(material.uv_scale, [1.0, 1.0]);
+        assert_eq!(material.uv_rotation, 0.0);
+    }
+
+    #[test]
+    fn test_clearcoat_defaults() {
+        let material = PbrMaterial::default();
+        assert_eq!(material.clearcoat, 0.0);
+        assert_eq!(material.clearcoat_roughness, 0.5);
+    }
+
+    #[test]
+    fn test_anisotropy_defaults() {
+        let material = PbrMaterial::default();
+        assert_eq!(material.anisotropy, 0.0);
+        assert_eq!(material.anisotropy_direction, [1.0, 0.0]);
+    }
+}

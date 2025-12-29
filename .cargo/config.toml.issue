@@ -1,0 +1,32 @@
+# Cargo配置 - 使用国内镜像源
+[source.crates-io]
+replace-with = 'mirror'
+
+# 中科大镜像源（推荐）
+[source.mirror]
+registry = "sparse+https://mirrors.ustc.edu.cn/crates.io-index/"
+
+# 备选镜像源（如果上面的不可用，可以取消注释其他镜像尝试）
+# 上海交通大学镜像
+# [source.sjtu]
+# registry = "sparse+https://mirrors.sjtug.sjtu.edu.cn/crates.io-index/"
+
+# 清华大学镜像
+# [source.tuna]
+# registry = "https://mirrors.tuna.tsinghua.edu.cn/git/crates.io-index.git"
+
+# 字节跳动镜像
+# [source.rsproxy]
+# registry = "https://rsproxy.cn/crates.io-index"
+
+[http]
+# 如果需要使用代理，取消注释并配置
+# proxy = "127.0.0.1:7890"
+
+[net]
+# 如果需要重试，可以配置
+retry = 3
+git-fetch-with-cli = true
+
+[registry]
+default = "mirror"

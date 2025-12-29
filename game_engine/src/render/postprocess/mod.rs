@@ -24,11 +24,11 @@ pub mod color_correction;
 pub mod depth_of_field;
 pub mod effect_manager;
 pub mod motion_blur;
+pub mod procedural_noise;
 pub mod ssao;
 pub mod ssr;
 pub mod tonemap;
 pub mod volumetric_lighting;
-pub mod procedural_noise;
 
 pub use antialiasing::{AntialiasingMode, FxaaPass, FxaaQuality, TaaPass};
 pub use bloom::BloomPass;
@@ -38,11 +38,13 @@ pub use effect_manager::{
     EffectPerformanceStats, EffectPreset, PostProcessEffect, PostProcessEffectManager, QualityMode,
 };
 pub use motion_blur::MotionBlurPass;
+pub use procedural_noise::{ProceduralNoiseConfig, ProceduralNoisePass, ProceduralNoiseUniforms};
 pub use ssao::SsaoPass;
 pub use ssr::{SsrConfig, SsrPass, SsrUniforms};
 pub use tonemap::{TonemapOperator, TonemapPass};
-pub use volumetric_lighting::{VolumetricLightingConfig, VolumetricLightingPass, VolumetricLightingUniforms};
-pub use procedural_noise::{ProceduralNoiseConfig, ProceduralNoisePass, ProceduralNoiseUniforms};
+pub use volumetric_lighting::{
+    VolumetricLightingConfig, VolumetricLightingPass, VolumetricLightingUniforms,
+};
 
 use wgpu::TextureFormat;
 
@@ -376,19 +378,20 @@ impl PostProcessPipeline {
 
         // 1. SSAO 通道
         if self.config.ssao_enabled
-            && let Some(depth) = depth_view {
-                self.ssao_pass.render(
-                    encoder,
-                    device,
-                    queue,
-                    current_input,
-                    depth,
-                    self.config.ssao_radius,
-                    self.config.ssao_intensity,
-                    self.config.ssao_bias,
-                );
-                current_input = self.ssao_pass.output_view();
-            }
+            && let Some(depth) = depth_view
+        {
+            self.ssao_pass.render(
+                encoder,
+                device,
+                queue,
+                current_input,
+                depth,
+                self.config.ssao_radius,
+                self.config.ssao_intensity,
+                self.config.ssao_bias,
+            );
+            current_input = self.ssao_pass.output_view();
+        }
 
         // 2. Bloom 通道
         if self.config.bloom_enabled {
@@ -406,40 +409,42 @@ impl PostProcessPipeline {
 
         // 3. 运动模糊通道
         if self.config.motion_blur_enabled
-            && let Some(motion_vectors) = motion_vector_view {
-                self.motion_blur_pass.render(
-                    encoder,
-                    device,
-                    queue,
-                    current_input,
-                    motion_vectors,
-                    current_input,
-                    self.width,
-                    self.height,
-                    self.config.motion_blur_intensity,
-                    self.config.motion_blur_max_samples,
-                );
-            }
+            && let Some(motion_vectors) = motion_vector_view
+        {
+            self.motion_blur_pass.render(
+                encoder,
+                device,
+                queue,
+                current_input,
+                motion_vectors,
+                current_input,
+                self.width,
+                self.height,
+                self.config.motion_blur_intensity,
+                self.config.motion_blur_max_samples,
+            );
+        }
 
         // 4. 景深通道
         if self.config.depth_of_field_enabled
-            && let Some(depth) = depth_view {
-                self.depth_of_field_pass.render(
-                    encoder,
-                    device,
-                    queue,
-                    current_input,
-                    depth,
-                    current_input,
-                    self.width,
-                    self.height,
-                    self.config.focus_distance,
-                    self.config.aperture,
-                    self.config.near_blur,
-                    self.config.far_blur,
-                    self.config.max_blur_radius,
-                );
-            }
+            && let Some(depth) = depth_view
+        {
+            self.depth_of_field_pass.render(
+                encoder,
+                device,
+                queue,
+                current_input,
+                depth,
+                current_input,
+                self.width,
+                self.height,
+                self.config.focus_distance,
+                self.config.aperture,
+                self.config.near_blur,
+                self.config.far_blur,
+                self.config.max_blur_radius,
+            );
+        }
 
         // 5. 色彩校正通道
         if self.config.color_correction_enabled {
