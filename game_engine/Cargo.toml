@@ -370,7 +370,14 @@ wasm = []
 ## cargo build --no-default-features --features gltf,secure_key_exchange,physics,parallel,dashmap
 ## ```
 ##
-default = ["gltf", "secure_key_exchange", "physics", "parallel", "dashmap"]
+default = ["gltf", "secure_key_exchange", "physics", "parallel", "dashmap", "message-optimization"]
+
+# ============================================================================
+# 性能优化特性 (Performance Optimization Features)
+# ============================================================================
+
+## 消息序列化优化 (Message Serialization Optimization)
+message-optimization = []
 
 # ============================================================================
 # Feature 组合验证
@@ -442,6 +449,11 @@ harness = false
 [[bench]]
 name = "serialization_benchmarks"
 harness = false
+
+[[bench]]
+name = "simd_vector_bench"
+harness = false
+path = "../benches/simd_vector_bench.rs"
 
 [[bench]]
 name = "memory_benchmarks"

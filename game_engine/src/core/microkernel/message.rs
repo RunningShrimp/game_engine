@@ -49,11 +49,24 @@ impl MessagePayload {
         Self { type_, data }
     }
 
+    #[cfg(feature = "message-optimization")]
+    pub fn serialize<T: Serialize>(value: &T) -> Result<Self, Box<dyn std::error::Error>> {
+        let data = bincode::serialize(value)?;
+        Ok(Self::new(std::any::type_name::<T>().to_string(), data))
+    }
+
+    #[cfg(feature = "message-optimization")]
+    pub fn deserialize<T: for<'de> Deserialize<'de>>(&self) -> Result<T, Box<dyn std::error::Error>> {
+        Ok(bincode::deserialize(&self.data)?)
+    }
+
+    #[cfg(not(feature = "message-optimization"))]
     pub fn serialize<T: Serialize>(value: &T) -> Result<Self, serde_json::Error> {
         let data = serde_json::to_vec(value)?;
         Ok(Self::new(std::any::type_name::<T>().to_string(), data))
     }
 
+    #[cfg(not(feature = "message-optimization"))]
     pub fn deserialize<T: for<'de> Deserialize<'de>>(&self) -> Result<T, serde_json::Error> {
         serde_json::from_slice(&self.data)
     }
