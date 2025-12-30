@@ -3,8 +3,10 @@
 //! This module contains all GLTF-related code to reduce conditional compilation
 //! complexity in the main manager.rs file.
 
-use bevy_ecs::world::World;
+#[cfg(feature = "gltf")]
 use std::sync::Arc;
+#[cfg(feature = "gltf")]
+use bevy_ecs::prelude::World;
 
 #[cfg(feature = "gltf")]
 use gltf;
@@ -14,6 +16,7 @@ use gltf;
 pub use super::gltf_loader::GltfScene;
 
 // Import Handle, generate_tangents, and MaterialRegistry from manager module
+#[cfg(feature = "gltf")]
 use super::manager::{Handle, MaterialRegistry, generate_tangents};
 
 /// GLTF-specific asset loading operations

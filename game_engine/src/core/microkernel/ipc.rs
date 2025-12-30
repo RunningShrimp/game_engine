@@ -94,14 +94,14 @@ impl RequestHandler {
     }
 
     /// 检查是否有待处理的请求
-    pub async fn has_pending_request(&self, id: &super::MessageId) -> bool {
-        let pending = self.pending_requests.read().await;
+    pub fn has_pending_request(&self, id: &super::MessageId) -> bool {
+        let pending = self.pending_requests.blocking_read();
         pending.contains_key(id)
     }
 
     /// 获取待处理请求数量
-    pub async fn pending_count(&self) -> usize {
-        let pending = self.pending_requests.read().await;
+    pub fn pending_count(&self) -> usize {
+        let pending = self.pending_requests.blocking_read();
         pending.len()
     }
 

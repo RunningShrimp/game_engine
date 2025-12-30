@@ -7,6 +7,7 @@ pub use system_monitor::{
 };
 
 // 向后兼容：重新导出monitoring_legacy中的类型
+#[allow(deprecated)]
 pub use monitoring_legacy::{
     IssueSeverity, Metric, MetricStats, MetricType, OptimizationRecommendation, PerformanceIssue,
     PerformanceMonitor, PerformanceReport as MonitoringReport,

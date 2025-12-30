@@ -236,8 +236,8 @@ mod actor_system_tests {
         );
     }
 
-    #[tokio::test]
-    async fn test_actor_system_register() {
+    #[test]
+    fn test_actor_system_register() {
         let mut system = ActorSystem::new();
 
         let handle = system.register("test_actor", RecordingActor::new());

@@ -363,7 +363,7 @@ proptest! {
     #[test]
 #[ignore]  // TODO: Fix compilation errors
     fn test_bvh_insert_query(
-        positions in prop::collection::vec(strategies::vec3(), 10..50)
+        _positions in prop::collection::vec(strategies::vec3(), 10..50)
     ) {
         let _bvh = BVHTree::new(8, 4);
 
@@ -513,9 +513,9 @@ proptest! {
     #[test]
 #[ignore]  // TODO: Fix compilation errors - BatchSyncBuffer API needs implementation
     fn test_batch_sync_data_integrity(
-        positions in prop::collection::vec(strategies::vec3(), 10..100)
+        _positions in prop::collection::vec(strategies::vec3(), 10..100)
     ) {
-        let mut buffer = BatchSyncBuffer::with_capacity(100);
+        let _buffer = BatchSyncBuffer::with_capacity(100);
 
         // TODO: Implement add_position and get_position methods on BatchSyncBuffer
         // 添加多个刚体的数据
@@ -537,7 +537,7 @@ proptest! {
     #[test]
 #[ignore]  // TODO: Fix compilation errors - BatchSyncBuffer needs capacity() method
     fn test_batch_sync_capacity(capacity in 10usize..1000) {
-        let buffer = BatchSyncBuffer::with_capacity(capacity);
+        let _buffer = BatchSyncBuffer::with_capacity(capacity);
 
         // TODO: Implement capacity() method on BatchSyncBuffer
         // 验证容量

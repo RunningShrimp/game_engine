@@ -170,7 +170,6 @@ pub mod interpolation;
 pub mod key_exchange;
 /// 统一网络同步管理器（整合状态和事件同步）
 pub mod network_sync;
-pub mod network_sync_enhanced;
 /// 并行网络消息处理
 /// 并行功能默认启用，使用线程池进行并行消息处理
 pub mod parallel;
@@ -192,11 +191,6 @@ pub use key_exchange::{
 };
 
 // Re-export priority sync types
-pub use network_sync_enhanced::{
-    ClientInterpolator, EnhancedNetworkSync, EnhancedNetworkSyncConfig, InterpolationStats,
-    NetworkQuality, NetworkSyncPerformanceStats, PacketRecoveryStrategy, QualityLevel,
-    RetransmissionStats,
-};
 pub use priority_sync::{
     BandwidthBudget, BandwidthStats, EntitySyncInfo, PrioritySyncManager, SyncPriority,
 };

@@ -1,22 +1,21 @@
 use bevy_ecs::prelude::*;
 use std::{
+    any::{Any, TypeId},
     path::{Path, PathBuf},
     sync::{Arc, RwLock},
     time::Duration,
 };
-// use crossbeam_channel:: {unbounded, Receiver, Sender};
 use tokio::sync::mpsc;
 use tokio::sync::oneshot;
-// 移除未使用的AsyncReadExt导入，如果将来需要异步读取，可以重新导入
-// use futures::future::FutureExt;
+
 use super::atlas::Atlas;
+use super::asset_loader_trait::{AssetLoader, AssetLoaderRegistry};
 use crate::render::wgpu_utils::WgpuRenderer;
-// use super::runtime::global_runtime;
 use std::collections::HashMap;
 
-// --- GLTF Support ---
-// GLTF-specific code has been extracted to gltf_assets.rs
-// Consolidated GLTF imports with single cfg block
+// =============================================================================
+// Conditional Compilation Area 1/3: GLTF Type Definitions
+// =============================================================================
 #[cfg(feature = "gltf")]
 pub use super::gltf_assets::{GltfAssetLoader, import_gltf_to_world};
 #[cfg(feature = "gltf")]
@@ -184,22 +183,27 @@ impl<T: 'static + Send + Sync> Handle<T> {
 
 // --- Asset Server ---
 
+// =============================================================================
+// Unified Asset Task System (using trait objects, minimal conditional compilation)
+// =============================================================================
+
 enum AssetTask {
     Texture {
         path: PathBuf,
-        handle: Arc<AssetContainer<u32>>, // Use Arc directly to avoid Handle cloning
+        handle: Arc<AssetContainer<u32>>,
         is_linear: bool,
         start: std::time::Instant,
     },
     Atlas {
         path: PathBuf,
-        handle: Arc<AssetContainer<Atlas>>, // Use Arc directly
+        handle: Arc<AssetContainer<Atlas>>,
         start: std::time::Instant,
     },
-    #[cfg(feature = "gltf")]
-    Gltf {
+    /// Generic loading task (uses dynamic loader registration)
+    Generic {
         path: PathBuf,
-        handle: Arc<AssetContainer<GltfScene>>, // Use Arc directly
+        handle_type_id: TypeId,
+        handle: Arc<AssetContainer<Box<dyn Any + Send + Sync>>>,
         start: std::time::Instant,
     },
 }
@@ -207,27 +211,19 @@ enum AssetTask {
 pub enum AssetResult {
     Bytes(Vec<u8>),
     Image(image::RgbaImage),
-    #[cfg(feature = "gltf")]
-    Gltf(GltfScene),
+    Custom(Box<dyn Any + Send + Sync>),
 }
 
-/// 资源统计信息
+/// 资源统计信息（feature-independent）
 #[derive(Debug, Default, Clone)]
 pub struct AssetStats {
-    /// 已加载的纹理数量
     pub loaded_textures: usize,
-    /// 已加载的图集数量
     pub loaded_atlases: usize,
-    /// 已加载的GLTF场景数量
-    #[cfg(feature = "gltf")]
-    pub loaded_gltf_scenes: usize,
-    /// 失败的纹理加载次数
+    pub loaded_custom: usize, // Replaces loaded_gltf_scenes
     pub failed_textures: usize,
-    /// 失败的图集加载次数
     pub failed_atlases: usize,
-    /// 总内存使用（字节）
+    pub failed_custom: usize, // Replaces gltf failures
     pub total_memory_bytes: usize,
-    /// 平均加载时间（毫秒）
     pub average_load_time_ms: f64,
 }
 
@@ -237,9 +233,9 @@ pub struct AssetServer {
     rx: mpsc::UnboundedReceiver<(AssetTask, Result<AssetResult, String>)>,
     worker_handle: Option<std::thread::JoinHandle<()>>,
     shutdown_tx: Option<oneshot::Sender<()>>,
-    /// 已加载纹理数量统计（原子操作，用于快速查询）
+    /// Loader registry - runtime dynamic management
+    loader_registry: Arc<RwLock<AssetLoaderRegistry>>,
     texture_count: std::sync::atomic::AtomicUsize,
-    /// 资源统计信息（详细统计）
     stats: std::sync::RwLock<AssetStats>,
 }
 
@@ -247,12 +243,17 @@ pub struct AssetServer {
 pub enum AssetEvent {
     TextureLoaded(Handle<u32>, f32),
     AtlasLoaded(Handle<Atlas>, f32),
-    #[cfg(feature = "gltf")]
-    GltfLoaded(Handle<GltfScene>, f32),
+    CustomLoaded {
+        type_name: String,
+        handle: Arc<AssetContainer<Box<dyn Any + Send + Sync>>>,
+        time_ms: f32,
+    },
     TextureFailed(Handle<u32>, String),
     AtlasFailed(Handle<Atlas>, String),
-    #[cfg(feature = "gltf")]
-    GltfFailed(Handle<GltfScene>, String),
+    CustomFailed {
+        type_name: String,
+        error: String,
+    },
 }
 
 impl Default for AssetServer {
@@ -262,6 +263,136 @@ impl Default for AssetServer {
 }
 
 impl AssetServer {
+    pub fn new() -> Self {
+        let (task_tx, task_rx) = mpsc::unbounded_channel::<AssetTask>();
+        let (done_tx, done_rx) = mpsc::unbounded_channel();
+        let (shutdown_tx, shutdown_rx) = oneshot::channel();
+
+        let loader_registry = Arc::new(RwLock::new(AssetLoaderRegistry::with_defaults()));
+
+        let worker_handle = std::thread::Builder::new()
+            .name("asset-loader".to_string())
+            .spawn({
+                let registry = loader_registry.clone();
+                move || {
+                    let rt = match tokio::runtime::Builder::new_current_thread()
+                        .enable_all()
+                        .build()
+                    {
+                        Ok(rt) => rt,
+                        Err(e) => {
+                            log::error!("Failed to create asset loader runtime: {e}");
+                            return;
+                        }
+                    };
+
+                    rt.block_on(async move {
+                        let mut shutdown_rx = shutdown_rx;
+                        let mut task_rx = task_rx;
+
+                        loop {
+                            tokio::select! {
+                                _ = &mut shutdown_rx => {
+                                    log::info!("Asset loader received shutdown signal");
+                                    break;
+                                }
+                                task = task_rx.recv() => {
+                                    match task {
+                                        Some(task) => {
+                                            let tx = done_tx.clone();
+                                            let registry = registry.clone();
+                                            tokio::spawn(async move {
+                                                let result = Self::process_task(&task, &registry).await;
+                                                let _ = tx.send((task, result));
+                                            });
+                                        }
+                                        None => {
+                                            log::info!("Asset task channel closed");
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            })
+            .unwrap_or_else(|e| {
+                log::error!("Failed to spawn asset loader thread: {e}");
+                panic!("Failed to spawn asset loader thread: {e}");
+            });
+
+        Self {
+            tx: task_tx,
+            rx: done_rx,
+            worker_handle: Some(worker_handle),
+            shutdown_tx: Some(shutdown_tx),
+            loader_registry,
+            texture_count: std::sync::atomic::AtomicUsize::new(0),
+            stats: std::sync::RwLock::new(AssetStats::default()),
+        }
+    }
+
+    /// Process task using loader registry
+    async fn process_task(
+        task: &AssetTask,
+        _registry: &Arc<RwLock<AssetLoaderRegistry>>,
+    ) -> Result<AssetResult, String> {
+        match task {
+            AssetTask::Texture { path, .. } => {
+                match tokio::fs::read(path).await {
+                    Ok(bytes) => {
+                        let decode_res = tokio::task::spawn_blocking(move || {
+                            image::load_from_memory(&bytes)
+                                .map(|img| AssetResult::Image(img.to_rgba8()))
+                                .map_err(|e| e.to_string())
+                        }).await;
+
+                        match decode_res {
+                            Ok(res) => res,
+                            Err(e) => Err(e.to_string()),
+                        }
+                    },
+                    Err(e) => Err(e.to_string()),
+                }
+            }
+            AssetTask::Atlas { path, .. } => {
+                tokio::fs::read(path).await
+                    .map(AssetResult::Bytes)
+                    .map_err(|e| e.to_string())
+            }
+            AssetTask::Generic { path, .. } => {
+                // For GLTF loading, use the specialized loader directly
+                // This avoids holding RwLock across await points
+                #[cfg(feature = "gltf")]
+                {
+                    use super::asset_loader_trait::BoxedAssetResult;
+                    use super::asset_loader_trait::GltfAssetLoaderWrapper;
+                    let gltf_loader = GltfAssetLoaderWrapper {
+                        inner: super::gltf_assets::GltfAssetLoader,
+                    };
+
+                    let bytes = tokio::fs::read(&path).await
+                        .map_err(|e| e.to_string())?;
+
+                    match gltf_loader.load(&path, bytes).await {
+                        Ok(BoxedAssetResult::Custom(custom)) => {
+                            Ok(AssetResult::Custom(custom))
+                        }
+                        Err(e) => Err(e.to_string()),
+                        _ => Err("Unexpected result type from GLTF loader".to_string()),
+                    }
+                }
+                #[cfg(not(feature = "gltf"))]
+                {
+                    // Path is unused when gltf feature is disabled
+                    let _ = path;
+                    Err("GLTF feature not enabled".to_string())
+                }
+            }
+        }
+    }
+
     /// Helper method to wait for asset loading with timeout (reduces code duplication)
     async fn wait_for_load<T>(&self, handle: &Handle<T>) -> Result<Handle<T>, String>
     where
@@ -287,108 +418,6 @@ impl AssetServer {
         }
 
         Err("Timeout waiting for asset to load".to_string())
-    }
-
-    pub fn new() -> Self {
-        let (task_tx, task_rx) = mpsc::unbounded_channel::<AssetTask>();
-        let (done_tx, done_rx) = mpsc::unbounded_channel();
-        let (shutdown_tx, shutdown_rx) = oneshot::channel();
-
-        let worker_handle = std::thread::Builder::new()
-            .name("asset-loader".to_string())
-            .spawn(move || {
-                let rt = match tokio::runtime::Builder::new_current_thread()
-                    .enable_all()
-                    .build()
-                {
-                    Ok(rt) => rt,
-                    Err(e) => {
-                        log::error!("Failed to create asset loader runtime: {e}");
-                        // 如果无法创建runtime，线程将退出，AssetServer将无法工作
-                        // 这是一个严重的初始化错误，应该被上层代码检测到
-                        return;
-                    }
-                };
-
-                rt.block_on(async move {
-                    let mut shutdown_rx = shutdown_rx;
-                    let mut task_rx = task_rx;
-
-                    loop {
-                        tokio::select! {
-                            _ = &mut shutdown_rx => {
-                                log::info!("Asset loader received shutdown signal");
-                                break;
-                            }
-                            task = task_rx.recv() => {
-                                match task {
-                                    Some(task) => {
-                                        let tx = done_tx.clone();
-                                        tokio::spawn(async move {
-                                            let result = match &task {
-                                                AssetTask::Texture { path, .. } => {
-                                                    match tokio::fs::read(path).await {
-                                                        Ok(bytes) => {
-                                                            // Decode in blocking task
-                                                            let decode_res = tokio::task::spawn_blocking(move || {
-                                                                image::load_from_memory(&bytes)
-                                                                    .map(|img| AssetResult::Image(img.to_rgba8()))
-                                                                    .map_err(|e| e.to_string())
-                                                            }).await;
-
-                                                            match decode_res {
-                                                                Ok(res) => res,
-                                                                Err(e) => Err(e.to_string()),
-                                                            }
-                                                        },
-                                                        Err(e) => Err(e.to_string()),
-                                                    }
-                                                },
-                                                AssetTask::Atlas { path, .. } => {
-                                                    tokio::fs::read(path).await
-                                                        .map(AssetResult::Bytes)
-                                                        .map_err(|e| e.to_string())
-                                                },
-                                                #[cfg(feature = "gltf")]
-                                                AssetTask::Gltf { path, .. } => {
-                                                    match tokio::fs::read(path).await {
-                                                        Ok(bytes) => {
-                                                            super::gltf_assets::GltfAssetLoader::load_from_bytes(bytes).await
-                                                                .map(AssetResult::Gltf)
-                                                        },
-                                                        Err(e) => Err(e.to_string()),
-                                                    }
-                                                },
-                                            };
-
-                                            let _ = tx.send((task, result));
-                                        });
-                                    }
-                                    None => {
-                                        log::info!("Asset task channel closed");
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                });
-            })
-            .unwrap_or_else(|e| {
-                // 如果无法创建线程，这是一个严重的初始化错误
-                // 记录错误并panic，因为AssetServer无法在没有工作线程的情况下工作
-                log::error!("Failed to spawn asset loader thread: {e}");
-                panic!("Failed to spawn asset loader thread: {e}");
-            });
-
-        Self {
-            tx: task_tx,
-            rx: done_rx,
-            worker_handle: Some(worker_handle),
-            shutdown_tx: Some(shutdown_tx),
-            texture_count: std::sync::atomic::AtomicUsize::new(0),
-            stats: std::sync::RwLock::new(AssetStats::default()),
-        }
     }
 
     /// 异步加载纹理
@@ -433,32 +462,64 @@ impl AssetServer {
     /// 异步加载图集
     pub async fn load_atlas_async(&self, path: &Path) -> Result<Handle<Atlas>, String> {
         let handle = Handle::new_loading();
-        let container = handle.container.clone(); // Single Arc clone
+        let container = handle.container.clone();
         let task = AssetTask::Atlas {
             path: path.to_path_buf(),
             handle: container,
             start: std::time::Instant::now(),
         };
 
-        // 发送任务并等待结果
         let _ = self.tx.send(task);
         self.wait_for_load(&handle).await
     }
 
+    // =============================================================================
+    // Conditional Compilation Area 2/3 & 3/3: GLTF Specific Interfaces
+    // =============================================================================
+    // These methods are only available when feature="gltf" is enabled
+    // Uses the loader registry, avoiding repetitive conditional compilation
     #[cfg(feature = "gltf")]
     /// 异步加载GLTF场景
     pub async fn load_gltf_async(&self, path: &Path) -> Result<Handle<GltfScene>, String> {
-        let handle = Handle::new_loading();
-        let container = handle.container.clone(); // Single Arc clone
-        let task = AssetTask::Gltf {
+        // Load through generic interface with explicit type
+        let handle: Handle<GltfScene> = Handle::new_loading();
+        let container: Arc<AssetContainer<Box<dyn Any + Send + Sync>>> =
+            unsafe { std::mem::transmute(handle.container.clone()) };
+
+        let task = AssetTask::Generic {
             path: path.to_path_buf(),
+            handle_type_id: TypeId::of::<GltfScene>(),
             handle: container,
             start: std::time::Instant::now(),
         };
 
-        // 发送任务并等待结果
         let _ = self.tx.send(task);
-        self.wait_for_load(&handle).await
+
+        // Manual polling loop (avoiding Clone requirement)
+        let mut timeout_counter = 0;
+        const MAX_TIMEOUT: u32 = 1000;
+
+        loop {
+            if let Some(result) = handle.get_state_non_blocking() {
+                return match result {
+                    LoadState::Loaded(_) => Ok(handle),
+                    LoadState::Failed(e) => Err(e),
+                    LoadState::Loading => {
+                        timeout_counter += 1;
+                        if timeout_counter >= MAX_TIMEOUT {
+                            return Err("Timeout waiting for asset to load".to_string());
+                        }
+                        tokio::time::sleep(Duration::from_millis(1)).await;
+                        continue;
+                    }
+                };
+            }
+            timeout_counter += 1;
+            if timeout_counter >= MAX_TIMEOUT {
+                return Err("Timeout waiting for asset to load".to_string());
+            }
+            tokio::time::sleep(Duration::from_millis(1)).await;
+        }
     }
 
     pub fn load_texture(&self, path: &Path) -> Handle<u32> {
@@ -489,7 +550,7 @@ impl AssetServer {
 
     pub fn load_atlas(&self, path: &Path) -> Handle<Atlas> {
         let handle = Handle::new_loading();
-        let container = handle.container.clone(); // Single Arc clone
+        let container = handle.container.clone();
         let task = AssetTask::Atlas {
             path: path.to_path_buf(),
             handle: container,
@@ -501,13 +562,18 @@ impl AssetServer {
 
     #[cfg(feature = "gltf")]
     pub fn load_gltf(&self, path: &Path) -> Handle<GltfScene> {
-        let handle = Handle::new_loading();
-        let container = handle.container.clone(); // Single Arc clone
-        let task = AssetTask::Gltf {
+        // Create handle with explicit type
+        let handle: Handle<GltfScene> = Handle::new_loading();
+        let container: Arc<AssetContainer<Box<dyn Any + Send + Sync>>> =
+            unsafe { std::mem::transmute(handle.container.clone()) };
+
+        let task = AssetTask::Generic {
             path: path.to_path_buf(),
+            handle_type_id: TypeId::of::<GltfScene>(),
             handle: container,
             start: std::time::Instant::now(),
         };
+
         let _ = self.tx.send(task);
         handle
     }
@@ -530,14 +596,12 @@ impl AssetServer {
                     if let Some(tex_id) = renderer.load_texture_from_image(img.clone(), is_linear) {
                         if let Ok(mut state) = handle.state.write() {
                             *state = LoadState::Loaded(tex_id);
-                        } // ✅ 处理锁中毒情况，忽略更新失败
+                        }
 
-                        // 更新统计信息
                         self.texture_count.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
                         if let Ok(mut stats) = self.stats.write() {
                             stats.loaded_textures += 1;
-                            stats.total_memory_bytes += img.len() * 4; // RGBA = 4 bytes per pixel
-                            // 更新平均加载时间
+                            stats.total_memory_bytes += img.len() * 4;
                             let total_loads = stats.loaded_textures + stats.failed_textures;
                             if total_loads > 0 {
                                 stats.average_load_time_ms =
@@ -553,9 +617,8 @@ impl AssetServer {
                     } else {
                         if let Ok(mut state) = handle.state.write() {
                             *state = LoadState::Failed("Failed to create texture".to_string());
-                        } // ✅ 处理锁中毒情况，忽略更新失败
+                        }
 
-                        // 更新失败统计
                         if let Ok(mut stats) = self.stats.write() {
                             stats.failed_textures += 1;
                         }
@@ -574,9 +637,8 @@ impl AssetServer {
                         if let Some(atlas) = Atlas::from_json(&json_str) {
                             if let Ok(mut state) = handle.state.write() {
                                 *state = LoadState::Loaded(atlas);
-                            } // ✅ 处理锁中毒情况，忽略更新失败
+                            }
 
-                            // 更新统计信息
                             if let Ok(mut stats) = self.stats.write() {
                                 stats.loaded_atlases += 1;
                                 stats.total_memory_bytes += bytes_len;
@@ -587,9 +649,8 @@ impl AssetServer {
                         } else {
                             if let Ok(mut state) = handle.state.write() {
                                 *state = LoadState::Failed("Invalid Atlas JSON".to_string());
-                            } // ✅ 处理锁中毒情况，忽略更新失败
+                            }
 
-                            // 更新统计信息
                             if let Ok(mut stats) = self.stats.write() {
                                 stats.failed_atlases += 1;
                             }
@@ -603,32 +664,32 @@ impl AssetServer {
                     } else {
                         if let Ok(mut state) = handle.state.write() {
                             *state = LoadState::Failed("Invalid UTF-8".to_string());
-                        } // ✅ 处理锁中毒情况，忽略更新失败
+                        }
                         let handle = Handle::from_container(handle.clone());
                         events.push(AssetEvent::AtlasFailed(handle, "Invalid UTF-8".to_string()));
                     }
                 }
-                #[cfg(feature = "gltf")]
-                (AssetTask::Gltf { handle, start, .. }, Ok(AssetResult::Gltf(scene))) => {
+                (AssetTask::Generic { handle, start, .. }, Ok(AssetResult::Custom(data))) => {
                     let ms = std::time::Instant::now().duration_since(start).as_secs_f64() * 1000.0;
                     if let Ok(mut state) = handle.state.write() {
-                        *state = LoadState::Loaded(scene);
-                    } // ✅ 处理锁中毒情况，忽略更新失败
-
-                    // 更新统计信息
-                    if let Ok(mut stats) = self.stats.write() {
-                        stats.loaded_gltf_scenes += 1;
+                        *state = LoadState::Loaded(data);
                     }
 
-                    let handle = Handle::from_container(handle.clone());
-                    events.push(AssetEvent::GltfLoaded(handle, ms as f32));
+                    if let Ok(mut stats) = self.stats.write() {
+                        stats.loaded_custom += 1;
+                    }
+
+                    events.push(AssetEvent::CustomLoaded {
+                        type_name: "Custom".to_string(),
+                        handle,
+                        time_ms: ms as f32,
+                    });
                 }
                 (AssetTask::Texture { handle, .. }, Err(e)) => {
                     if let Ok(mut state) = handle.state.write() {
                         *state = LoadState::Failed(e.clone());
-                    } // ✅ 处理锁中毒情况，忽略更新失败
+                    }
 
-                    // 更新失败统计
                     if let Ok(mut stats) = self.stats.write() {
                         stats.failed_textures += 1;
                     }
@@ -639,9 +700,8 @@ impl AssetServer {
                 (AssetTask::Atlas { handle, .. }, Err(e)) => {
                     if let Ok(mut state) = handle.state.write() {
                         *state = LoadState::Failed(e.clone());
-                    } // ✅ 处理锁中毒情况，忽略更新失败
+                    }
 
-                    // 更新失败统计
                     if let Ok(mut stats) = self.stats.write() {
                         stats.failed_atlases += 1;
                     }
@@ -649,13 +709,15 @@ impl AssetServer {
                     let handle = Handle::from_container(handle.clone());
                     events.push(AssetEvent::AtlasFailed(handle, e));
                 }
-                #[cfg(feature = "gltf")]
-                (AssetTask::Gltf { handle, .. }, Err(e)) => {
-                    if let Ok(mut state) = handle.state.write() {
-                        *state = LoadState::Failed(e.clone());
-                    } // ✅ 处理锁中毒情况，忽略更新失败
-                    let handle = Handle::from_container(handle.clone());
-                    events.push(AssetEvent::GltfFailed(handle, e));
+                (AssetTask::Generic { .. }, Err(e)) => {
+                    if let Ok(mut stats) = self.stats.write() {
+                        stats.failed_custom += 1;
+                    }
+
+                    events.push(AssetEvent::CustomFailed {
+                        type_name: "Custom".to_string(),
+                        error: e,
+                    });
                 }
                 _ => {}
             }
@@ -719,6 +781,13 @@ impl AssetServer {
             *stats = AssetStats::default();
         }
     }
+
+    /// Register custom loader (extensibility)
+    pub fn register_loader(&self, loader: Box<dyn AssetLoader>) {
+        if let Ok(mut registry) = self.loader_registry.write() {
+            registry.register(loader);
+        }
+    }
 }
 
 #[cfg(test)]
@@ -730,8 +799,10 @@ mod tests {
         let stats = AssetStats::default();
         assert_eq!(stats.loaded_textures, 0);
         assert_eq!(stats.loaded_atlases, 0);
+        assert_eq!(stats.loaded_custom, 0);
         assert_eq!(stats.failed_textures, 0);
         assert_eq!(stats.failed_atlases, 0);
+        assert_eq!(stats.failed_custom, 0);
         assert_eq!(stats.total_memory_bytes, 0);
         assert_eq!(stats.average_load_time_ms, 0.0);
     }

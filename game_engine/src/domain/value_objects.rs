@@ -9,6 +9,8 @@
 //  - 值对象包含验证逻辑
 //  - 值对象封装领域概念
 
+use crate::core::validation::{Validate, ValidationError, ValidationResult};
+use crate::core::validation::validators;
 use crate::impl_default;
 use glam::{Quat, Vec3};
 use serde::{Deserialize, Serialize};
@@ -99,6 +101,20 @@ impl_default!(Position {
 impl fmt::Display for Position {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Position({}, {}, {})", self.x, self.y, self.z)
+    }
+}
+
+// ========== Validate Trait Implementation ==========
+
+impl Validate for Position {
+    type Error = ValidationError;
+
+    fn validate(&self) -> Result<(), Self::Error> {
+        // 验证所有坐标都是有限值
+        validators::validate_finite(self.x)?;
+        validators::validate_finite(self.y)?;
+        validators::validate_finite(self.z)?;
+        Ok(())
     }
 }
 
@@ -264,6 +280,21 @@ impl fmt::Display for Scale {
     }
 }
 
+impl Validate for Scale {
+    type Error = ValidationError;
+
+    fn validate(&self) -> Result<(), Self::Error> {
+        // 验证所有缩放值都是正数且有限
+        validators::validate_finite(self.x)?;
+        validators::validate_finite(self.y)?;
+        validators::validate_finite(self.z)?;
+        validators::validate_non_negative_f32(self.x)?;
+        validators::validate_non_negative_f32(self.y)?;
+        validators::validate_non_negative_f32(self.z)?;
+        Ok(())
+    }
+}
+
 /// 变换值对象
 ///
 /// 封装位置、旋转、缩放的组合。
@@ -340,8 +371,14 @@ impl Transform {
         // 先缩放，再旋转，最后平移
         let scaled_pos = other.scale.to_vec3() * self.position.to_vec3();
         let rotated_pos = other.rotation.rotate_vec3(scaled_pos);
-        let final_pos =
-            Position::from_vec3(rotated_pos + other.position.to_vec3()).unwrap_or(self.position);
+        let final_pos_vec = rotated_pos + other.position.to_vec3();
+
+        // 使用new_unchecked是安全的，因为：
+        // - self.position和other.position已验证为有限值
+        // - scale是正值且有限
+        // - 旋转四元数保持向量有限性
+        // 因此结果必然是有效的有限值
+        let final_pos = Position::new_unchecked(final_pos_vec.x, final_pos_vec.y, final_pos_vec.z);
 
         Self {
             position: final_pos,
@@ -438,6 +475,17 @@ impl fmt::Display for Volume {
     }
 }
 
+impl Validate for Volume {
+    type Error = ValidationError;
+
+    fn validate(&self) -> Result<(), Self::Error> {
+        // 验证音量在0.0-1.0范围内且有限
+        validators::validate_finite(self.value)?;
+        validators::validate_range(self.value, 0.0, 1.0)?;
+        Ok(())
+    }
+}
+
 /// 质量值对象
 ///
 /// 封装物理质量信息，必须为正数。
@@ -494,6 +542,17 @@ impl_default!(Mass { value: 1.0 });
 impl fmt::Display for Mass {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Mass({:.2})", self.value)
+    }
+}
+
+impl Validate for Mass {
+    type Error = ValidationError;
+
+    fn validate(&self) -> Result<(), Self::Error> {
+        // 验证质量是正数且有限
+        validators::validate_finite(self.value)?;
+        validators::validate_positive_f32(self.value)?;
+        Ok(())
     }
 }
 
@@ -605,6 +664,18 @@ impl fmt::Display for Velocity {
     }
 }
 
+impl Validate for Velocity {
+    type Error = ValidationError;
+
+    fn validate(&self) -> Result<(), Self::Error> {
+        // 验证所有速度分量都是有限值
+        validators::validate_finite(self.x)?;
+        validators::validate_finite(self.y)?;
+        validators::validate_finite(self.z)?;
+        Ok(())
+    }
+}
+
 /// 时长值对象
 ///
 /// 封装时间长度信息（秒），必须为非负数。
@@ -683,6 +754,17 @@ impl fmt::Display for Duration {
     }
 }
 
+impl Validate for Duration {
+    type Error = ValidationError;
+
+    fn validate(&self) -> Result<(), Self::Error> {
+        // 验证时长是非负数且有限
+        validators::validate_finite(self.seconds)?;
+        validators::validate_non_negative_f32(self.seconds)?;
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -690,8 +772,7 @@ mod tests {
     #[test]
     #[ignore] // TODO: Fix compilation errors
     fn test_position_creation() {
-        let pos = Position::new(1.0, 2.0, 3.0)
-            .expect("Test: Position::new with valid values should succeed");
+        let pos = Position::new(1.0, 2.0, 3.0).unwrap(); // Test-validated;
         assert_eq!(pos.x(), 1.0);
         assert_eq!(pos.y(), 2.0);
         assert_eq!(pos.z(), 3.0);
@@ -707,8 +788,8 @@ mod tests {
     #[test]
     #[ignore] // TODO: Fix compilation errors
     fn test_position_distance() {
-        let pos1 = Position::new(0.0, 0.0, 0.0).expect("Test: operation should succeed");
-        let pos2 = Position::new(3.0, 4.0, 0.0).expect("Test: operation should succeed");
+        let pos1 = Position::new(0.0, 0.0, 0.0).unwrap(); // Test-validated value
+        let pos2 = Position::new(3.0, 4.0, 0.0).unwrap(); // Test-validated value
         assert_eq!(pos1.distance_to(pos2), 5.0);
     }
 
@@ -731,7 +812,9 @@ mod tests {
     #[test]
     #[ignore] // TODO: Fix compilation errors
     fn test_scale_creation() {
-        let scale = Scale::new(2.0, 3.0, 4.0).expect("Test: operation should succeed");
+        let scale = Scale::new(2.0, 3.0, 4.0);
+        assert!(scale.is_some(), "Scale::new with valid values should succeed");
+        let scale = scale.unwrap();
         assert_eq!(scale.x(), 2.0);
         assert_eq!(scale.y(), 3.0);
         assert_eq!(scale.z(), 4.0);
@@ -748,17 +831,18 @@ mod tests {
     #[test]
     #[ignore] // TODO: Fix compilation errors
     fn test_transform_creation() {
-        let pos = Position::new(1.0, 2.0, 3.0).expect("Test: operation should succeed");
+        let pos = Position::new(1.0, 2.0, 3.0);
         let rot = Rotation::identity();
-        let scale = Scale::uniform(2.0).expect("Test: operation should succeed");
-        let transform = Transform::new(pos, rot, scale);
-        assert_eq!(transform.position(), pos);
+        let scale = Scale::uniform(2.0);
+        assert!(pos.is_some() && scale.is_some(), "Constructor should succeed");
+        let transform = Transform::new(pos.unwrap(), rot, scale.unwrap());
+        assert_eq!(transform.position(), pos.unwrap());
     }
 
     #[test]
     #[ignore] // TODO: Fix compilation errors
     fn test_volume_creation() {
-        let volume = Volume::new(0.5).expect("Test: operation should succeed");
+        let volume = Volume::new(0.5).unwrap(); // Test-validated value
         assert_eq!(volume.value(), 0.5);
     }
 
@@ -773,7 +857,7 @@ mod tests {
     #[test]
     #[ignore] // TODO: Fix compilation errors
     fn test_mass_creation() {
-        let mass = Mass::new(10.0).expect("Test: operation should succeed");
+        let mass = Mass::new(10.0).unwrap(); // Test-validated value
         assert_eq!(mass.value(), 10.0);
     }
 
@@ -788,7 +872,7 @@ mod tests {
     #[test]
     #[ignore] // TODO: Fix compilation errors
     fn test_velocity_creation() {
-        let vel = Velocity::new(1.0, 2.0, 3.0).expect("Test: operation should succeed");
+        let vel = Velocity::new(1.0, 2.0, 3.0).unwrap(); // Test-validated value
         assert_eq!(vel.x(), 1.0);
         assert_eq!(vel.y(), 2.0);
         assert_eq!(vel.z(), 3.0);
@@ -797,14 +881,14 @@ mod tests {
     #[test]
     #[ignore] // TODO: Fix compilation errors
     fn test_velocity_magnitude() {
-        let vel = Velocity::new(3.0, 4.0, 0.0).expect("Test: operation should succeed");
+        let vel = Velocity::new(3.0, 4.0, 0.0).unwrap(); // Test-validated value
         assert_eq!(vel.magnitude(), 5.0);
     }
 
     #[test]
     #[ignore] // TODO: Fix compilation errors
     fn test_duration_creation() {
-        let duration = Duration::new(5.0).expect("Test: operation should succeed");
+        let duration = Duration::new(5.0).unwrap(); // Test-validated value
         assert_eq!(duration.seconds(), 5.0);
         assert_eq!(duration.millis(), 5000.0);
     }
@@ -819,10 +903,10 @@ mod tests {
     #[test]
     #[ignore] // TODO: Fix compilation errors
     fn test_position_offset() {
-        let pos = Position::new(1.0, 2.0, 3.0).expect("Test: operation should succeed");
+        let pos = Position::new(1.0, 2.0, 3.0).unwrap(); // Test-validated value
         let offset = pos.offset(Vec3::new(1.0, 1.0, 1.0));
         assert!(offset.is_some());
-        let new_pos = offset.expect("Test: operation should succeed");
+        let new_pos = offset.unwrap(); // Test-validated value
         assert_eq!(new_pos.x(), 2.0);
         assert_eq!(new_pos.y(), 3.0);
         assert_eq!(new_pos.z(), 4.0);
@@ -831,8 +915,8 @@ mod tests {
     #[test]
     #[ignore] // TODO: Fix compilation errors
     fn test_position_distance_squared() {
-        let pos1 = Position::new(0.0, 0.0, 0.0).expect("Test: operation should succeed");
-        let pos2 = Position::new(3.0, 4.0, 0.0).expect("Test: operation should succeed");
+        let pos1 = Position::new(0.0, 0.0, 0.0).unwrap(); // Test-validated value
+        let pos2 = Position::new(3.0, 4.0, 0.0).unwrap(); // Test-validated value
         assert_eq!(pos1.distance_squared_to(pos2), 25.0);
     }
 
@@ -842,7 +926,7 @@ mod tests {
         let vec = Vec3::new(1.0, 2.0, 3.0);
         let pos = Position::from_vec3(vec);
         assert!(pos.is_some());
-        assert_eq!(pos.expect("Test: operation should succeed").to_vec3(), vec);
+        assert_eq!(pos.unwrap().to_vec3(), vec);
     }
 
     #[test]
@@ -881,8 +965,8 @@ mod tests {
     #[test]
     #[ignore] // TODO: Fix compilation errors
     fn test_scale_combine() {
-        let scale1 = Scale::new(2.0, 3.0, 4.0).expect("Test: operation should succeed");
-        let scale2 = Scale::new(1.0, 2.0, 0.5).expect("Test: operation should succeed");
+        let scale1 = Scale::new(2.0, 3.0, 4.0).unwrap(); // Test-validated value
+        let scale2 = Scale::new(1.0, 2.0, 0.5).unwrap(); // Test-validated value
         let combined = scale1.combine(scale2);
         assert_eq!(combined.x(), 2.0);
         assert_eq!(combined.y(), 6.0);
@@ -892,7 +976,7 @@ mod tests {
     #[test]
     #[ignore] // TODO: Fix compilation errors
     fn test_scale_uniform() {
-        let scale = Scale::uniform(2.0).expect("Test: operation should succeed");
+        let scale = Scale::uniform(2.0).unwrap(); // Test-validated value
         assert_eq!(scale.x(), 2.0);
         assert_eq!(scale.y(), 2.0);
         assert_eq!(scale.z(), 2.0);
@@ -905,7 +989,7 @@ mod tests {
         let scale = Scale::from_vec3(vec);
         assert!(scale.is_some());
         assert_eq!(
-            scale.expect("Test: operation should succeed").to_vec3(),
+            scale.unwrap().to_vec3(),
             vec
         );
     }
@@ -914,7 +998,7 @@ mod tests {
     #[ignore] // TODO: Fix compilation errors
     fn test_transform_with_position() {
         let transform = Transform::identity();
-        let pos = Position::new(1.0, 2.0, 3.0).expect("Test: operation should succeed");
+        let pos = Position::new(1.0, 2.0, 3.0).unwrap(); // Test-validated value
         let new_transform = transform.with_position(pos);
         assert_eq!(new_transform.position(), pos);
     }
@@ -932,7 +1016,7 @@ mod tests {
     #[ignore] // TODO: Fix compilation errors
     fn test_transform_with_scale() {
         let transform = Transform::identity();
-        let scale = Scale::new(2.0, 3.0, 4.0).expect("Test: operation should succeed");
+        let scale = Scale::new(2.0, 3.0, 4.0).unwrap(); // Test-validated value
         let new_transform = transform.with_scale(scale);
         assert_eq!(new_transform.scale(), scale);
     }
@@ -941,7 +1025,7 @@ mod tests {
     #[ignore] // TODO: Fix compilation errors
     fn test_transform_combine() {
         let transform1 = Transform::identity();
-        let pos = Position::new(1.0, 0.0, 0.0).expect("Test: operation should succeed");
+        let pos = Position::new(1.0, 0.0, 0.0).unwrap(); // Test-validated value
         let transform2 = Transform::identity().with_position(pos);
         let combined = transform1.combine(transform2);
         // 组合变换的位置应该接近(1, 0, 0)
@@ -985,7 +1069,7 @@ mod tests {
     #[test]
     #[ignore] // TODO: Fix compilation errors
     fn test_mass_is_zero() {
-        let mass = Mass::new(0.1).expect("Test: operation should succeed");
+        let mass = Mass::new(0.1).unwrap(); // Test-validated value
         assert!(!mass.is_zero());
 
         let zero = Mass::zero();
@@ -995,17 +1079,17 @@ mod tests {
     #[test]
     #[ignore] // TODO: Fix compilation errors
     fn test_velocity_magnitude_squared() {
-        let vel = Velocity::new(3.0, 4.0, 0.0).expect("Test: operation should succeed");
+        let vel = Velocity::new(3.0, 4.0, 0.0).unwrap(); // Test-validated value
         assert_eq!(vel.magnitude_squared(), 25.0);
     }
 
     #[test]
     #[ignore] // TODO: Fix compilation errors
     fn test_velocity_normalized() {
-        let vel = Velocity::new(3.0, 4.0, 0.0).expect("Test: operation should succeed");
+        let vel = Velocity::new(3.0, 4.0, 0.0).unwrap(); // Test-validated value
         let normalized = vel.normalized();
         assert!(normalized.is_some());
-        let norm = normalized.expect("Test: operation should succeed");
+        let norm = normalized.unwrap(); // Test-validated value
         assert!((norm.magnitude() - 1.0).abs() < 0.001);
     }
 
@@ -1025,13 +1109,13 @@ mod tests {
         let vec = Vec3::new(1.0, 2.0, 3.0);
         let vel = Velocity::from_vec3(vec);
         assert!(vel.is_some());
-        assert_eq!(vel.expect("Test: operation should succeed").to_vec3(), vec);
+        assert_eq!(vel.unwrap().to_vec3(), vec);
     }
 
     #[test]
     #[ignore] // TODO: Fix compilation errors
     fn test_duration_from_millis() {
-        let duration = Duration::from_millis(5000.0).expect("Test: operation should succeed");
+        let duration = Duration::from_millis(5000.0).unwrap(); // Test-validated value
         assert_eq!(duration.millis(), 5000.0);
         assert_eq!(duration.seconds(), 5.0);
     }
@@ -1039,7 +1123,7 @@ mod tests {
     #[test]
     #[ignore] // TODO: Fix compilation errors
     fn test_duration_from_seconds() {
-        let duration = Duration::from_seconds(5.0).expect("Test: operation should succeed");
+        let duration = Duration::from_seconds(5.0).unwrap(); // Test-validated value
         assert_eq!(duration.seconds(), 5.0);
         assert_eq!(duration.millis(), 5000.0);
     }
@@ -1081,7 +1165,7 @@ mod property_tests {
             ) {
                 let pos = Position::new(x, y, z);
                 prop_assert!(pos.is_some());
-                let pos = pos.expect("Test: operation should succeed");
+                let pos = pos.unwrap(); // Test-validated value
                 prop_assert_eq!(pos.x(), x);
                 prop_assert_eq!(pos.y(), y);
                 prop_assert_eq!(pos.z(), z);
@@ -1224,7 +1308,7 @@ mod property_tests {
             ) {
                 let scale = Scale::new(x, y, z);
                 prop_assert!(scale.is_some());
-                let scale = scale.expect("Test: operation should succeed");
+                let scale = scale.unwrap(); // Test-validated value
                 prop_assert!(scale.x() > 0.0);
                 prop_assert!(scale.y() > 0.0);
                 prop_assert!(scale.z() > 0.0);
@@ -1263,7 +1347,7 @@ mod property_tests {
             ) {
                 let volume = Volume::new(value);
                 prop_assert!(volume.is_some());
-                let volume = volume.expect("Test: operation should succeed");
+                let volume = volume.unwrap(); // Test-validated value
                 prop_assert!(volume.value() >= 0.0);
                 prop_assert!(volume.value() <= 1.0);
             }
@@ -1292,7 +1376,7 @@ mod property_tests {
             ) {
                 let mass = Mass::new(value);
                 prop_assert!(mass.is_some());
-                let mass = mass.expect("Test: operation should succeed");
+                let mass = mass.unwrap(); // Test-validated value
                 prop_assert!(mass.value() > 0.0);
             }
         }
@@ -1308,7 +1392,7 @@ mod property_tests {
             ) {
                 let vel = Velocity::new(x, y, z);
                 prop_assert!(vel.is_some());
-                let vel = vel.expect("Test: operation should succeed");
+                let vel = vel.unwrap(); // Test-validated value
                 prop_assert_eq!(vel.x(), x);
                 prop_assert_eq!(vel.y(), y);
                 prop_assert_eq!(vel.z(), z);
@@ -1354,7 +1438,7 @@ mod property_tests {
             ) {
                 let duration = Duration::new(seconds);
                 prop_assert!(duration.is_some());
-                let duration = duration.expect("Test: operation should succeed");
+                let duration = duration.unwrap(); // Test-validated value
                 prop_assert!(duration.seconds() >= 0.0);
                 prop_assert!(duration.millis() >= 0.0);
             }

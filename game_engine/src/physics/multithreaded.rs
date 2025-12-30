@@ -49,6 +49,8 @@
 //  - 线性扩展到4-8核心
 //  - 支持数千个动态物体
 
+// Conditionally import Transform based on physics feature
+#[cfg(feature = "physics")]
 use crate::ecs::Transform;
 use crate::physics::{PhysicsDomainService, RigidBodyComp};
 use bevy_ecs::prelude::*;

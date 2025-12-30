@@ -166,7 +166,7 @@ impl Microkernel {
     pub async fn update(&self) {
         self.scheduler.update().await;
 
-        let services = self.registry.services().await;
+        let services = self.registry.services();
         for (_, service) in services {
             let mut s = service.lock().await;
             let _ = s.update().await;
@@ -174,7 +174,7 @@ impl Microkernel {
     }
 
     pub async fn shutdown(&self) {
-        let services = self.registry.services().await;
+        let services = self.registry.services();
         for (_, service) in services {
             let mut s = service.lock().await;
             let _ = s.shutdown().await;
@@ -195,7 +195,7 @@ mod tests {
     #[tokio::test]
     async fn test_microkernel_creation() {
         let kernel = Microkernel::new();
-        assert!(kernel.registry().services().await.is_empty());
+        assert!(kernel.registry().services().is_empty());
     }
 
     #[tokio::test]
@@ -205,10 +205,10 @@ mod tests {
 
         let service_id =
             kernel.register_service(service).await.expect("Failed to register test_service");
-        assert_eq!(kernel.registry().services().await.len(), 1);
+        assert_eq!(kernel.registry().services().len(), 1);
 
         // 验证服务已注册，使用实际的元组结构
-        let services = kernel.registry().services().await;
+        let services = kernel.registry().services();
         // services 是 Vec<(ServiceId, Arc<Mutex<dyn Service>>)>
         if let Some((id, _service)) =
             services.iter().find(|(id, _)| id.to_string() == "test_service")

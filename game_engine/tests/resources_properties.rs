@@ -449,18 +449,20 @@ proptest! {
 // ============================================================================
 
 /// 简单的缓存统计结构
+#[allow(dead_code)] // TODO: Use evictions field in future tests
 struct CacheStats {
     hits: usize,
     misses: usize,
-    evictions: usize,
+    _evictions: usize,
 }
 
 impl CacheStats {
+    #[allow(dead_code)] // TODO: Use new() in future tests
     fn new() -> Self {
         Self {
             hits: 0,
             misses: 0,
-            evictions: 0,
+            _evictions: 0,
         }
     }
 

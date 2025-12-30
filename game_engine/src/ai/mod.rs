@@ -70,10 +70,24 @@
 
 /// 行为树系统 - 用于AI决策的行为树实现
 pub mod behavior_tree;
+/// 行为树JSON序列化 - 用于从JSON加载/保存行为树
+pub mod behavior_tree_serialization;
 /// 决策树编辑器 - 用于编辑决策树的可视化工具
 pub mod decision_tree_editor;
 /// 群集系统 - 用于群集行为的寻路和避障
 pub mod flocking;
+/// GOAP系统 - 目标导向的动作规划
+pub mod goap;
+/// A*搜索优化 - 用于GOAP的高效搜索算法
+pub mod astar_search;
+/// 效用AI系统 - 基于数值决策的AI系统
+pub mod utility;
+/// 强化学习集成 - Q-Learning和DQN框架
+pub mod reinforcement_learning;
+/// 覆盖图系统 - 用于空间影响力分析
+pub mod influence_map;
+/// 覆盖图可视化 - 用于调试和可视化覆盖图
+pub mod influence_visualization;
 /// 导航网格 - 用于路径规划的导航网格数据结构
 pub mod navmesh;
 /// 寻路系统 - 基于A*算法的路径规划服务

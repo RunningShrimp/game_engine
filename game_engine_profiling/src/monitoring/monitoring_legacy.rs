@@ -129,6 +129,7 @@ pub struct PerformanceMonitor {
     max_history_size: usize,
 }
 
+#[allow(deprecated)]
 impl PerformanceMonitor {
     pub fn new(max_history_size: usize) -> Self {
         Self {
@@ -184,6 +185,7 @@ impl PerformanceMonitor {
     }
 }
 
+#[allow(deprecated)]
 impl Default for PerformanceMonitor {
     fn default() -> Self {
         Self::new(60 * 60) // 1小时 (60fps)
@@ -377,6 +379,7 @@ impl OptimizationRecommendation {
 }
 
 #[cfg(test)]
+#[allow(deprecated)]
 mod tests {
     use super::*;
 

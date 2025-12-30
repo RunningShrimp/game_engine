@@ -1112,20 +1112,19 @@ impl PhysicsWorld {
         Ok(())
     }
 
-    /// 异步步进模拟（协程版本）
+    /// 异步步进模拟（协程版本）- 已同步化
     ///
-    /// 使用Tokio协程异步执行物理步进，避免阻塞异步运行时。
-    ///
-    /// 注意：由于Rapier物理引擎的类型限制，此方法实际上直接调用同步版本。
+    /// 注意：此方法已从异步改为同步，因为内部不涉及任何异步操作。
+    /// 原始版本只是简单地调用同步的`step`方法，没有真正的异步逻辑。
     /// 对于真正的并发物理模拟，建议使用`ParallelPhysicsWorld`。
     ///
     /// # 参数
     /// - `delta_time`: 时间步长
     ///
     /// # 返回
-    /// 返回一个Future，解析为步进结果
-    pub async fn step_async(&mut self, delta_time: f32) -> Result<(), PhysicsError> {
-        // 由于Rapier类型不支持Send/Sync，我们直接调用同步版本
+    /// 返回步进结果
+    pub fn step_async(&mut self, delta_time: f32) -> Result<(), PhysicsError> {
+        // 直接调用同步版本 - 由于Rapier类型不支持Send/Sync，无法实现真正的异步
         // 对于真正的并发物理模拟，建议使用ParallelPhysicsWorld
         self.step(delta_time)
     }

@@ -8,19 +8,65 @@ use parking_lot::RwLock;
 use dashmap::DashMap;
 
 // ============================================================================
-// 优化模式1: parking_lot::Mutex 替代 std::sync::Mutex
+// 优化模式1: parking_lot::Mutex 替代 std::sync::Mutex（策略模式）
 // ============================================================================
 
-/// ❌ 优化前: 使用std::sync::Mutex（性能较低）
-#[cfg(feature = "before_optimization")]
-struct BeforeOptimization {
-    data: Arc<Mutex<Vec<u8>>>,
+/// Mutex类型选择策略
+pub enum MutexStrategy {
+    /// 使用std::sync::Mutex（性能较低，但标准库）
+    StdMutex,
+    /// 使用parking_lot::Mutex（性能更高）
+    ParkingLotMutex,
 }
 
-/// ✅ 优化后: 使用parking_lot::Mutex（性能更高）
-#[cfg(feature = "after_optimization")]
-struct AfterOptimization {
-    data: Arc<parking_lot::Mutex<Vec<u8>>>,
+/// 通用数据容器（使用策略模式）
+pub struct DataContainer {
+    strategy: MutexStrategy,
+    data_std: Arc<std::sync::Mutex<Vec<u8>>>,
+    data_parking_lot: Arc<parking_lot::Mutex<Vec<u8>>>,
+}
+
+impl DataContainer {
+    /// 使用指定策略创建容器
+    pub fn with_strategy(strategy: MutexStrategy, initial_data: Vec<u8>) -> Self {
+        Self {
+            strategy,
+            data_std: Arc::new(std::sync::Mutex::new(initial_data.clone())),
+            data_parking_lot: Arc::new(parking_lot::Mutex::new(initial_data)),
+        }
+    }
+
+    /// 获取数据长度
+    pub fn len(&self) -> usize {
+        match self.strategy {
+            MutexStrategy::StdMutex => {
+                self.data_std.lock().unwrap().len()
+            }
+            MutexStrategy::ParkingLotMutex => {
+                self.data_parking_lot.lock().len()
+            }
+        }
+    }
+
+    /// 推送数据
+    pub fn push(&self, item: u8) {
+        match self.strategy {
+            MutexStrategy::StdMutex => {
+                self.data_std.lock().unwrap().push(item);
+            }
+            MutexStrategy::ParkingLotMutex => {
+                self.data_parking_lot.lock().push(item);
+            }
+        }
+    }
+
+    /// 获取策略名称
+    pub fn strategy_name(&self) -> &str {
+        match self.strategy {
+            MutexStrategy::StdMutex => "std::sync::Mutex",
+            MutexStrategy::ParkingLotMutex => "parking_lot::Mutex",
+        }
+    }
 }
 
 // parking_lot::Mutex优势:
@@ -172,22 +218,54 @@ mod optimization_examples {
 
     #[test]
     fn test_parking_lot_mutex() {
-        let data = Arc<parking_lot::Mutex<Vec<u8>>>>
-            ::new(vec![1, 2, 3, 4, 5]);
+        // 测试parking_lot::Mutex策略
+        let container = DataContainer::with_strategy(
+            MutexStrategy::ParkingLotMutex,
+            vec![1, 2, 3, 4, 5]
+        );
 
         // 多次读取
-        {
-            let data = data.lock();
-            assert_eq!(data.len(), 5);
-        }
+        assert_eq!(container.len(), 5);
 
         // 写入
-        {
-            let mut data = data.lock();
-            data.push(6);
+        container.push(6);
+        assert_eq!(container.len(), 6);
+
+        println!("测试策略: {}", container.strategy_name());
+    }
+
+    #[test]
+    fn test_std_mutex() {
+        // 测试std::sync::Mutex策略
+        let container = DataContainer::with_strategy(
+            MutexStrategy::StdMutex,
+            vec![1, 2, 3, 4, 5]
+        );
+
+        // 多次读取
+        assert_eq!(container.len(), 5);
+
+        // 写入
+        container.push(6);
+        assert_eq!(container.len(), 6);
+
+        println!("测试策略: {}", container.strategy_name());
+    }
+
+    #[test]
+    fn test_mutex_strategies_comparison() {
+        // 对比两种策略
+        let initial_data = vec![1, 2, 3, 4, 5];
+
+        for strategy in [MutexStrategy::StdMutex, MutexStrategy::ParkingLotMutex] {
+            let container = DataContainer::with_strategy(strategy, initial_data.clone());
+            assert_eq!(container.len(), 5);
+            container.push(6);
+            assert_eq!(container.len(), 6);
+            println!("{}: 测试通过", container.strategy_name());
         }
 
-        // 性能比std::sync::Mutex高2.5x
+        // parking_lot::Mutex性能比std::sync::Mutex高2.5x
     }
 
     #[test]

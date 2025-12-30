@@ -23,8 +23,6 @@ pub mod rust_scripting;
 pub mod system;
 /// 线程安全模块
 pub mod thread_safe;
-/// WebAssembly支持模块 (优化版 - 使用trait抽象减少条件编译)
-pub mod wasm_support_optimized;
 
 #[cfg(test)]
 mod lua_tests;

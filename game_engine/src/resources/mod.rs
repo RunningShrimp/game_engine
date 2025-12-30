@@ -122,6 +122,7 @@
 //!
 
 pub mod async_upload;
+pub mod asset_loader_trait;
 pub mod atlas;
 pub mod coroutine_loader;
 pub mod dependency_manager;

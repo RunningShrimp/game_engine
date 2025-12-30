@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>游戏引擎AI可视化编辑器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: #fff;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .header {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .container {
+            display: flex;
+            height: calc(100vh - 60px);
+        }
+
+        .sidebar {
+            width: 300px;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 1rem;
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            overflow-y: auto;
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .tabs {
+            display: flex;
+            background: rgba(0, 0, 0, 0.2);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .tab {
+            padding: 1rem 2rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-bottom: 2px solid transparent;
+        }
+
+        .tab:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .tab.active {
+            border-bottom-color: #4CAF50;
+            background: rgba(76, 175, 80, 0.2);
+        }
+
+        .tab-content {
+            display: none;
+            flex: 1;
+            padding: 2rem;
+            overflow-y: auto;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .panel {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .panel h3 {
+            margin-bottom: 1rem;
+            color: #4CAF50;
+            font-size: 1.2rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        input[type="text"],
+        input[type="number"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            background: rgba(0, 0, 0, 0.3);
+            color: #fff;
+            font-size: 0.9rem;
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+
+        button {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .btn-primary {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #45a049;
+        }
+
+        .btn-secondary {
+            background: #2196F3;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #0b7dda;
+        }
+
+        .btn-danger {
+            background: #f44336;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #da190b;
+        }
+
+        .node-list {
+            list-style: none;
+        }
+
+        .node-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .node-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateX(5px);
+        }
+
+        .canvas-container {
+            flex: 1;
+            position: relative;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        #behaviorTreeCanvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        .grid-visualizer {
+            display: grid;
+            gap: 1px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .grid-cell {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            transition: all 0.2s;
+        }
+
+        .grid-cell:hover {
+            transform: scale(1.1);
+            z-index: 10;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 1rem;
+            border-radius: 4px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.6);
+            margin-top: 0.25rem;
+        }
+
+        .export-section {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        textarea {
+            min-height: 150px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 1rem 2rem;
+            border-radius: 4px;
+            background: #4CAF50;
+            color: white;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            transform: translateX(400px);
+            transition: transform 0.3s;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎮 游戏引擎AI可视化编辑器</h1>
+        <div>
+            <button class="btn-primary" onclick="saveProject()">💾 保存项目</button>
+            <button class="btn-secondary" onclick="loadProject()">📂 加载项目</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="sidebar">
+            <div class="panel">
+                <h3>📦 组件库</h3>
+                <div class="form-group">
+                    <label>行为树节点类型</label>
+                    <select id="nodeType">
+                        <option value="sequence">Sequence (序列)</option>
+                        <option value="selector">Selector (选择)</option>
+                        <option value="parallel">Parallel (并行)</option>
+                        <option value="inverter">Inverter (反转)</option>
+                        <option value="condition">Condition (条件)</option>
+                        <option value="action">Action (动作)</option>
+                    </select>
+                </div>
+                <button class="btn-primary" onclick="addNode()">➕ 添加节点</button>
+            </div>
+
+            <div class="panel">
+                <h3>🌲 覆盖图设置</h3>
+                <div class="form-group">
+                    <label>宽度</label>
+                    <input type="number" id="gridWidth" value="20" min="5" max="100">
+                </div>
+                <div class="form-group">
+                    <label>高度</label>
+                    <input type="number" id="gridHeight" value="20" min="5" max="100">
+                </div>
+                <div class="form-group">
+                    <label>源强度</label>
+                    <input type="number" id="sourceStrength" value="100" min="0" max="1000">
+                </div>
+                <button class="btn-primary" onclick="generateInfluenceMap()">🗺️ 生成覆盖图</button>
+            </div>
+
+            <div class="panel">
+                <h3>🎯 GOAP规划器</h3>
+                <div class="form-group">
+                    <label>动作数</label>
+                    <input type="number" id="actionCount" value="5" min="1" max="20">
+                </div>
+                <button class="btn-primary" onclick="runGOAPPlanning()">🔍 运行规划</button>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="tabs">
+                <div class="tab active" onclick="switchTab('behaviorTree')">🌲 行为树编辑器</div>
+                <div class="tab" onclick="switchTab('influenceMap')">🗺️ 覆盖图可视化</div>
+                <div class="tab" onclick="switchTab('goap')">🎯 GOAP规划器</div>
+                <div class="tab" onclick="switchTab('utility')">📊 效用AI</div>
+            </div>
+
+            <!-- 行为树编辑器 -->
+            <div id="behaviorTree" class="tab-content active">
+                <div class="panel">
+                    <h3>行为树结构</h3>
+                    <ul class="node-list" id="behaviorNodeList">
+                        <li class="node-item" data-type="root">🏠 Root Node</li>
+                    </ul>
+                </div>
+                <div class="panel">
+                    <h3>可视化画布</h3>
+                    <div class="canvas-container">
+                        <canvas id="behaviorTreeCanvas"></canvas>
+                    </div>
+                </div>
+                <div class="panel export-section">
+                    <h3>导出JSON</h3>
+                    <textarea id="behaviorTreeJson" readonly></textarea>
+                    <button class="btn-secondary" onclick="copyBehaviorTreeJSON()">📋 复制JSON</button>
+                    <button class="btn-primary" onclick="exportBehaviorTree()">💾 导出文件</button>
+                </div>
+            </div>
+
+            <!-- 覆盖图可视化 -->
+            <div id="influenceMap" class="tab-content">
+                <div class="panel">
+                    <h3>覆盖图可视化</h3>
+                    <div class="grid-visualizer" id="gridVisualizer"></div>
+                </div>
+                <div class="panel">
+                    <h3>统计信息</h3>
+                    <div class="stats">
+                        <div class="stat-card">
+                            <div class="stat-value" id="statMin">0.00</div>
+                            <div class="stat-label">最小值</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="statMax">0.00</div>
+                            <div class="stat-label">最大值</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="statMean">0.00</div>
+                            <div class="stat-label">平均值</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="statStdDev">0.00</div>
+                            <div class="stat-label">标准差</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- GOAP规划器 -->
+            <div id="goap" class="tab-content">
+                <div class="panel">
+                    <h3>世界状态</h3>
+                    <div class="form-group">
+                        <label>状态键值对 (JSON格式)</label>
+                        <textarea id="worldState">{
+  "health": 100,
+  "has_weapon": true,
+  "target_alive": true,
+  "in_range": false
+}</textarea>
+                    </div>
+                </div>
+                <div class="panel">
+                    <h3>规划结果</h3>
+                    <ul class="node-list" id="goapPlan">
+                        <li class="node-item">等待规划...</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- 效用AI -->
+            <div id="utility" class="tab-content">
+                <div class="panel">
+                    <h3>效用曲线编辑器</h3>
+                    <div class="form-group">
+                        <label>曲线类型</label>
+                        <select id="curveType">
+                            <option value="linear">Linear (线性)</option>
+                            <option value="quadratic">Quadratic (二次)</option>
+                            <option value="logistic">Logistic (逻辑斯谛)</option>
+                            <option value="sinusoidal">Sinusoidal (正弦)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>斜率</label>
+                        <input type="number" id="curveSlope" value="1.0" step="0.1" min="0.1" max="10">
+                    </div>
+                    <div class="form-group">
+                        <label>指数</label>
+                        <input type="number" id="curveExponent" value="2.0" step="0.1" min="0.1" max="10">
+                    </div>
+                    <button class="btn-primary" onclick="drawUtilityCurve()">📈 绘制曲线</button>
+                    <div class="canvas-container" style="height: 300px; margin-top: 1rem;">
+                        <canvas id="utilityCurveCanvas"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="notification" id="notification"></div>
+
+    <script src="editor.js"></script>
+</body>
+</html>

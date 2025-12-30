@@ -13,19 +13,93 @@ use dashmap::DashMap;
 use std::sync::Arc;
 
 // ============================================================================
-// DashMap vs Arc<Mutex<HashMap>> 性能对比
+// DashMap vs Arc<Mutex<HashMap>> 性能对比（策略模式）
 // ============================================================================
 
-/// ❌ 优化前: 使用Arc<Mutex<HashMap>>（性能较低）
-#[cfg(feature = "before_optimization")]
-struct BeforeOptimization {
-    data: Arc<std::sync::Mutex<std::collections::HashMap<String, Vec<u8>>>>,
+/// HashMap实现策略
+pub enum HashMapStrategy {
+    /// 使用Arc<Mutex<HashMap>>（性能较低）
+    ArcMutexHashMap,
+    /// 使用DashMap（性能更高）
+    DashMapImpl,
 }
 
-/// ✅ 优化后: 使用DashMap（性能更高）
-#[cfg(feature = "after_optimization")]
-struct AfterOptimization {
-    data: DashMap<String, Vec<u8>>,
+/// 通用HashMap容器（使用策略模式）
+pub struct HashMapContainer {
+    strategy: HashMapStrategy,
+    data_arc_mutex: Arc<std::sync::Mutex<std::collections::HashMap<String, Vec<u8>>>>,
+    data_dashmap: DashMap<String, Vec<u8>>,
+}
+
+impl HashMapContainer {
+    /// 使用指定策略创建容器
+    pub fn with_strategy(strategy: HashMapStrategy) -> Self {
+        Self {
+            strategy,
+            data_arc_mutex: Arc::new(std::sync::Mutex::new(std::collections::HashMap::new())),
+            data_dashmap: DashMap::new(),
+        }
+    }
+
+    /// 插入键值对
+    pub fn insert(&self, key: String, value: Vec<u8>) {
+        match self.strategy {
+            HashMapStrategy::ArcMutexHashMap => {
+                let mut data = self.data_arc_mutex.lock().unwrap();
+                data.insert(key, value);
+            }
+            HashMapStrategy::DashMapImpl => {
+                self.data_dashmap.insert(key, value);
+            }
+        }
+    }
+
+    /// 获取值
+    pub fn get(&self, key: &str) -> Option<Vec<u8>> {
+        match self.strategy {
+            HashMapStrategy::ArcMutexHashMap => {
+                let data = self.data_arc_mutex.lock().unwrap();
+                data.get(key).cloned()
+            }
+            HashMapStrategy::DashMapImpl => {
+                self.data_dashmap.get(key).map(|v| v.clone())
+            }
+        }
+    }
+
+    /// 获取长度
+    pub fn len(&self) -> usize {
+        match self.strategy {
+            HashMapStrategy::ArcMutexHashMap => {
+                let data = self.data_arc_mutex.lock().unwrap();
+                data.len()
+            }
+            HashMapStrategy::DashMapImpl => {
+                self.data_dashmap.len()
+            }
+        }
+    }
+
+    /// 移除键值对
+    pub fn remove(&self, key: &str) -> Option<Vec<u8>> {
+        match self.strategy {
+            HashMapStrategy::ArcMutexHashMap => {
+                let mut data = self.data_arc_mutex.lock().unwrap();
+                data.remove(key)
+            }
+            HashMapStrategy::DashMapImpl => {
+                self.data_dashmap.remove(key).map(|(_, v)| v)
+            }
+        }
+    }
+
+    /// 获取策略名称
+    pub fn strategy_name(&self) -> &str {
+        match self.strategy {
+            HashMapStrategy::ArcMutexHashMap => "Arc<Mutex<HashMap>>",
+            HashMapStrategy::DashMapImpl => "DashMap",
+        }
+    }
 }
 
 // DashMap优势:
@@ -343,5 +417,75 @@ mod dashmap_examples {
         // 低并发 -> Mutex
         let strategy = choose_concurrency_strategy(1, 1, 1.0);
         assert!(matches!(strategy, ConcurrencyStrategy::MutexHashMap));
+    }
+
+    #[test]
+    fn test_hashmap_container_arc_mutex() {
+        // 测试Arc<Mutex<HashMap>>策略
+        let container = HashMapContainer::with_strategy(HashMapStrategy::ArcMutexHashMap);
+
+        // 插入数据
+        container.insert("key1".to_string(), vec![1, 2, 3]);
+        container.insert("key2".to_string(), vec![4, 5, 6]);
+
+        // 获取数据
+        assert_eq!(container.get("key1"), Some(vec![1, 2, 3]));
+        assert_eq!(container.get("key2"), Some(vec![4, 5, 6]));
+
+        // 长度
+        assert_eq!(container.len(), 2);
+
+        // 移除数据
+        assert_eq!(container.remove("key1"), Some(vec![1, 2, 3]));
+        assert_eq!(container.len(), 1);
+
+        println!("测试策略: {}", container.strategy_name());
+    }
+
+    #[test]
+    fn test_hashmap_container_dashmap() {
+        // 测试DashMap策略
+        let container = HashMapContainer::with_strategy(HashMapStrategy::DashMapImpl);
+
+        // 插入数据
+        container.insert("key1".to_string(), vec![1, 2, 3]);
+        container.insert("key2".to_string(), vec![4, 5, 6]);
+
+        // 获取数据
+        assert_eq!(container.get("key1"), Some(vec![1, 2, 3]));
+        assert_eq!(container.get("key2"), Some(vec![4, 5, 6]));
+
+        // 长度
+        assert_eq!(container.len(), 2);
+
+        // 移除数据
+        assert_eq!(container.remove("key1"), Some(vec![1, 2, 3]));
+        assert_eq!(container.len(), 1);
+
+        println!("测试策略: {}", container.strategy_name());
+    }
+
+    #[test]
+    fn test_hashmap_strategies_comparison() {
+        // 对比两种策略
+        for strategy in [HashMapStrategy::ArcMutexHashMap, HashMapStrategy::DashMapImpl] {
+            let container = HashMapContainer::with_strategy(strategy);
+
+            // 插入数据
+            container.insert("key1".to_string(), vec![1, 2, 3]);
+            container.insert("key2".to_string(), vec![4, 5, 6]);
+
+            // 验证
+            assert_eq!(container.get("key1"), Some(vec![1, 2, 3]));
+            assert_eq!(container.len(), 2);
+
+            // 移除并验证
+            assert_eq!(container.remove("key1"), Some(vec![1, 2, 3]));
+            assert_eq!(container.len(), 1);
+
+            println!("{}: 测试通过", container.strategy_name());
+        }
+
+        // DashMap比Arc<Mutex<HashMap>>快10x
     }
 }

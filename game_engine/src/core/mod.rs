@@ -41,6 +41,7 @@ pub mod scheduler;
 pub mod system_scheduler;
 pub mod systems;
 pub mod utils;
+pub mod validation;  // 输入验证框架
 #[macro_use]
 pub mod macros;
 

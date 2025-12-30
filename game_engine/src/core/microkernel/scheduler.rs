@@ -262,22 +262,22 @@ impl ServiceScheduler {
         }
     }
 
-    pub async fn stats(&self) -> SchedulerStats {
-        self.stats.lock().await.clone()
+    pub fn stats(&self) -> SchedulerStats {
+        self.stats.blocking_lock().clone()
     }
 
-    pub async fn next_update_time(&self, service_id: &ServiceId) -> Option<Duration> {
-        let map = self.service_map.read().await;
+    pub fn next_update_time(&self, service_id: &ServiceId) -> Option<Duration> {
+        let map = self.service_map.blocking_read();
         map.get(service_id).map(|s| s.update_time_remaining(Instant::now()))
     }
 
-    pub async fn is_scheduled(&self, service_id: &ServiceId) -> bool {
-        let map = self.service_map.read().await;
+    pub fn is_scheduled(&self, service_id: &ServiceId) -> bool {
+        let map = self.service_map.blocking_read();
         map.contains_key(service_id)
     }
 
-    pub async fn scheduled_count(&self) -> usize {
-        let map = self.service_map.read().await;
+    pub fn scheduled_count(&self) -> usize {
+        let map = self.service_map.blocking_read();
         map.len()
     }
 }
@@ -295,7 +295,7 @@ mod tests {
     #[tokio::test]
     async fn test_scheduler_creation() {
         let scheduler = ServiceScheduler::new(SchedulerConfig::default());
-        assert_eq!(scheduler.scheduled_count().await, 0);
+        assert_eq!(scheduler.scheduled_count(), 0);
     }
 
     #[tokio::test]
@@ -305,8 +305,8 @@ mod tests {
 
         scheduler.schedule(service_id.clone(), 0, Duration::from_millis(100)).await;
 
-        assert!(scheduler.is_scheduled(&service_id).await);
-        assert_eq!(scheduler.scheduled_count().await, 1);
+        assert!(scheduler.is_scheduled(&service_id));
+        assert_eq!(scheduler.scheduled_count(), 1);
     }
 
     #[tokio::test]
@@ -317,6 +317,6 @@ mod tests {
         scheduler.schedule(service_id.clone(), 0, Duration::from_millis(100)).await;
         scheduler.unschedule(&service_id).await;
 
-        assert!(!scheduler.is_scheduled(&service_id).await);
+        assert!(!scheduler.is_scheduled(&service_id));
     }
 }

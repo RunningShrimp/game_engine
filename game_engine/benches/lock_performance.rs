@@ -2,13 +2,13 @@
 //
 // 运行: cargo bench --bench lock_performance
 
-use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
+use criterion::{criterion_group, criterion_main, Criterion};
 use game_engine::resources::{
     dashmap_optimizations::{ConcurrentEntityManager, ConcurrentResourceCache},
     optimized_manager::OptimizedAssetManager,
 };
 use std::sync::{Arc, Mutex, RwLock};
-use std::time::Duration;
+use std::hint::black_box;
 
 /// 基准测试：parking_lot::RwLock vs std::sync::RwLock
 fn bench_rwlock_read(c: &mut Criterion) {
@@ -275,12 +275,12 @@ fn bench_lock_granularity(c: &mut Criterion) {
         b.iter(|| {
             let locks = locks.clone();
             let handles: Vec<_> = (0..10)
-                .map(|i| {
+                .map(|_i| {
                     let locks = locks.clone();
                     std::thread::spawn(move || {
-                        for j in 0..100 {
+                        for _j in 0..100 {
                             let locks = locks.lock().unwrap();
-                            if let Some(lock) = locks.get(&format!("resource_{}", j % 100)) {
+                            if let Some(lock) = locks.get(&format!("resource_{}", _j % 100)) {
                                 let _data = lock.read();
                                 black_box(&_data);
                             }
@@ -315,7 +315,7 @@ fn bench_lock_granularity(c: &mut Criterion) {
                 .map(|_| {
                     let lock = lock.clone();
                     std::thread::spawn(move || {
-                        for j in 0..100 {
+                        for _j in 0..100 {
                             let _data = lock.read();
                             black_box(&_data);
                         }

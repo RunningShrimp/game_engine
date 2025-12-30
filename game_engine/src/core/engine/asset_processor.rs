@@ -47,7 +47,8 @@ pub fn process_asset_events(
         // 记录日志
         log_asset_event(&event, world);
 
-        // 处理GLTF导入
+        // 处理GLTF导入（仅在gltf feature启用时）
+        #[cfg(feature = "gltf")]
         process_gltf_loaded_event(&event, world, renderer);
     }
 }
@@ -93,10 +94,12 @@ fn update_asset_metrics(event: &AssetEvent, world: &mut World) {
                 am.atlases_loaded += 1;
                 tracing::debug!(target: "assets", "Atlas loaded in {:.1}ms, total: {}", ms, am.atlases_loaded);
             }
-            AssetEvent::GltfLoaded(_, ms) => {
-                am.last_latency_ms = Some(*ms);
-                am.models_loaded += 1;
-                tracing::debug!(target: "assets", "GLTF loaded in {:.1}ms, total: {}", ms, am.models_loaded);
+            AssetEvent::CustomLoaded { type_name, time_ms: ms, .. } => {
+                if type_name == "GltfScene" {
+                    am.last_latency_ms = Some(*ms);
+                    am.models_loaded += 1;
+                    tracing::debug!(target: "assets", "GLTF loaded in {:.1}ms, total: {}", ms, am.models_loaded);
+                }
             }
             AssetEvent::TextureFailed(_, e) => {
                 am.texture_errors += 1;
@@ -106,9 +109,11 @@ fn update_asset_metrics(event: &AssetEvent, world: &mut World) {
                 am.atlas_errors += 1;
                 tracing::error!(target: "assets", "Atlas load failed: {}", e);
             }
-            AssetEvent::GltfFailed(_, e) => {
-                am.model_errors += 1;
-                tracing::error!(target: "assets", "GLTF load failed: {}", e);
+            AssetEvent::CustomFailed { type_name, error } => {
+                if type_name == "GltfScene" {
+                    am.model_errors += 1;
+                    tracing::error!(target: "assets", "GLTF load failed: {}", error);
+                }
             }
         }
     }
@@ -129,8 +134,20 @@ fn log_asset_event(event: &AssetEvent, world: &mut World) {
             AssetEvent::AtlasLoaded(_, ms) => format!("AtlasLoaded {ms:.1}ms"),
             AssetEvent::TextureFailed(_, e) => format!("TextureFailed {e}"),
             AssetEvent::AtlasFailed(_, e) => format!("AtlasFailed {e}"),
-            AssetEvent::GltfLoaded(_, ms) => format!("GltfLoaded {ms:.1}ms"),
-            AssetEvent::GltfFailed(_, e) => format!("GltfFailed {e}"),
+            AssetEvent::CustomLoaded { type_name, time_ms: ms, .. } => {
+                if type_name == "GltfScene" {
+                    format!("GltfLoaded {ms:.1}ms")
+                } else {
+                    format!("CustomLoaded({}) {ms:.1}ms", type_name)
+                }
+            }
+            AssetEvent::CustomFailed { type_name, error } => {
+                if type_name == "GltfScene" {
+                    format!("GltfFailed {error}")
+                } else {
+                    format!("CustomFailed({}) {error}", type_name)
+                }
+            }
         };
 
         // 维护日志队列大小
@@ -150,10 +167,21 @@ fn log_asset_event(event: &AssetEvent, world: &mut World) {
 /// * `event` - 资源事件
 /// * `world` - ECS世界
 /// * `renderer` - wgpu渲染器
+#[cfg(feature = "gltf")]
 fn process_gltf_loaded_event(event: &AssetEvent, world: &mut World, renderer: &mut WgpuRenderer) {
-    if let AssetEvent::GltfLoaded(handle, _) = &event {
-        crate::resources::manager::import_gltf_to_world(world, renderer, handle);
-        tracing::info!(target: "assets", "GLTF model imported to world");
+    if let AssetEvent::CustomLoaded { type_name, handle, .. } = &event {
+        if type_name == "GltfScene" {
+            #[cfg(feature = "gltf")]
+            {
+                use crate::resources::gltf_loader::GltfScene;
+                use crate::resources::manager::Handle;
+
+                // SAFETY: We know this is a Handle<GltfScene> from the GLTF loader
+                let handle_gltf: Handle<GltfScene> = unsafe { std::mem::transmute_copy(handle) };
+                crate::resources::manager::import_gltf_to_world(world, renderer, &handle_gltf);
+                tracing::info!(target: "assets", "GLTF model imported to world");
+            }
+        }
     }
 }
 
@@ -239,7 +267,14 @@ pub async fn preload_resources(
         if path.ends_with(".png") || path.ends_with(".jpg") || path.ends_with(".jpeg") {
             let _ = asset_server.load_texture(std::path::Path::new(path));
         } else if path.ends_with(".gltf") || path.ends_with(".glb") {
-            let _ = asset_server.load_gltf(std::path::Path::new(path));
+            #[cfg(feature = "gltf")]
+            {
+                let _ = asset_server.load_gltf(std::path::Path::new(path));
+            }
+            #[cfg(not(feature = "gltf"))]
+            {
+                tracing::warn!("GLTF file '{}' requested but 'gltf' feature is not enabled", path);
+            }
         }
     }
 

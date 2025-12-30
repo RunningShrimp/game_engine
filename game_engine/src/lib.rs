@@ -34,6 +34,14 @@
 #![allow(unknown_lints)] // Allow for compatibility - 兼容性考虑
 #![allow(improper_ctypes_definitions)] // FFI boundary for plugins - 插件的 FFI 边界
 #![allow(async_fn_in_trait)]
+// Test code allowances - 测试代码许可
+#![allow(unused_imports)] // Common in test code - 测试代码中常见
+#![allow(unused_variables)] // Test placeholders - 测试占位符
+#![allow(unused_mut)] // Variables that may be used in test variations - 测试变体中可能使用的变量
+#![allow(unused_parens)] // Stylistic choices in tests - 测试中的样式选择
+#![allow(unused_attributes)] // Test markers - 测试标记
+#![allow(unused_comparisons)] // Assertion sanity checks - 断言完整性检查
+#![allow(unused_must_use)] // Ignored Result types in tests - 测试中忽略的 Result 类型
 // Acceptable for resource API design - 资源 API 设计中可接受
 // Note: async_fn_in_trait warnings are Rust compiler warnings, not clippy
 // 注意：async_fn_in_trait 是 Rust 编译器警告，不是 clippy

@@ -14,9 +14,9 @@
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use game_engine::network::compression::*;
-use game_engine::network::delta_serialization::*;
+// use game_engine::network::delta_serialization::*; // Unused import
 use proptest::prelude::*;
-use std::io::{Read, Write};
+// use std::io::{Read, Write}; // Unused imports
 
 // ============================================================================
 // Test helpers (copied from property_tests.rs)
@@ -291,7 +291,7 @@ proptest! {
         vec1 in strategies::vec3(),
         vec2 in strategies::vec3()
     ) {
-        use std::io::Write;
+        // use std::io::Write; // Unused import
 
         let mut buf1 = Vec::new();
         buf1.write_f32::<LittleEndian>(vec1.x).unwrap();

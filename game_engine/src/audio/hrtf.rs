@@ -29,6 +29,8 @@
 //! let (left_samples, right_samples) = hrtf.process_mono(&mono_samples);
 //! ```
 
+use crate::core::validation::{Validate, ValidationError};
+use crate::core::validation::validators;
 use glam::Vec3;
 use std::f32::consts::PI;
 
@@ -65,6 +67,29 @@ impl Default for HrtfConfig {
             max_itd_delay: 0.0007, // 约0.7ms，对应90度方位角
             shadow_filter_cutoff: 2000.0,
         }
+    }
+}
+
+impl Validate for HrtfConfig {
+    type Error = ValidationError;
+
+    fn validate(&self) -> Result<(), Self::Error> {
+        // 验证采样率（常见音频采样率：8000 - 192000 Hz）
+        validators::validate_range(self.sample_rate, 8000.0, 192000.0)?;
+
+        // 验证头部半径（0.01m - 0.15m）
+        validators::validate_range(self.head_radius, 0.01, 0.15)?;
+
+        // 验证声速（300 - 400 m/s，考虑不同温度和海拔）
+        validators::validate_range(self.speed_of_sound, 300.0, 400.0)?;
+
+        // 验证最大ITD延迟（0 - 0.001秒，即1ms）
+        validators::validate_range(self.max_itd_delay, 0.0, 0.001)?;
+
+        // 验证低通滤波截止频率（20 - 20000 Hz，人耳听力范围）
+        validators::validate_range(self.shadow_filter_cutoff, 20.0, 20000.0)?;
+
+        Ok(())
     }
 }
 

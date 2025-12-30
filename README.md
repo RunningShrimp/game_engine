@@ -65,14 +65,24 @@ DashMap:                100ns (10x faster)
 Mutex<HashMap>:        1,000ns
 ```
 
-**详细报告**: [性能优化报告](docs/PERFORMANCE_OPTIMIZATION_REPORT.md)
+**详细报告**: [性能优化报告](docs/PERFORMANCE_BEST_PRACTICES.md)
 
 ## 文档
 
+### 核心文档
 - [快速开始](QUICKSTART.md)
 - [贡献指南](CONTRIBUTING.md)
 - [变更日志](CHANGELOG.md)
-- [完成报告](docs/FINAL_COMPLETION_REPORT.md)
+
+### 优化文档
+- [优化指南](docs/OPTIMIZATION_GUIDE.md) - 综合优化策略和最佳实践
+- [性能最佳实践](docs/PERFORMANCE_BEST_PRACTICES.md) - 性能优化详细指南
+- [优化状态](docs/OPTIMIZATION_STATUS.md) - 优化进度和性能指标
+
+### 项目文档
+- [完成报告](docs/FINAL_COMPLETION_REPORT.md) - 项目完成总结
+- [维护计划](docs/MAINTENANCE_PLAN.md) - 维护和升级计划
+- [故障排除](docs/TROUBLESHOOTING_GUIDE.md) - 常见问题解决
 
 ## 贡献
 

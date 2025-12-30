@@ -66,37 +66,36 @@ impl ServiceRegistry {
         Ok(())
     }
 
-    pub async fn get(&self, service_id: &ServiceId) -> Option<Arc<Mutex<dyn Service>>> {
-        let services = self.services.read().await;
+    pub fn get(&self, service_id: &ServiceId) -> Option<Arc<Mutex<dyn Service>>> {
+        let services = self.services.blocking_read();
         services.get(service_id).cloned()
     }
 
-    pub async fn services(&self) -> HashMap<ServiceId, Arc<Mutex<dyn Service>>> {
-        let services = self.services.read().await;
+    pub fn services(&self) -> HashMap<ServiceId, Arc<Mutex<dyn Service>>> {
+        let services = self.services.blocking_read();
         services.clone()
     }
 
-    pub async fn service_info(&self, service_id: &ServiceId) -> Option<ServiceInfo> {
-        let info = self.service_info.read().await;
+    pub fn service_info(&self, service_id: &ServiceId) -> Option<ServiceInfo> {
+        let info = self.service_info.blocking_read();
         info.get(service_id).cloned()
     }
 
-    pub async fn all_service_info(&self) -> Vec<ServiceInfo> {
-        let info = self.service_info.read().await;
+    pub fn all_service_info(&self) -> Vec<ServiceInfo> {
+        let info = self.service_info.blocking_read();
         info.values().cloned().collect()
     }
 
-    pub async fn resolve_dependencies(
+    pub fn resolve_dependencies(
         &self,
         service_id: &ServiceId,
     ) -> Result<Vec<ServiceId>, ServiceRegistryError> {
         let mut visited = Vec::new();
         let mut visiting = Vec::new();
         self.resolve_dependencies_recursive(service_id, &mut visited, &mut visiting)
-            .await
     }
 
-    async fn resolve_dependencies_recursive<'a>(
+    fn resolve_dependencies_recursive<'a>(
         &'a self,
         service_id: &'a ServiceId,
         visited: &'a mut Vec<ServiceId>,
@@ -116,10 +115,9 @@ impl ServiceRegistry {
 
         let service = self
             .get(service_id)
-            .await
             .ok_or_else(|| ServiceRegistryError::NotFound(service_id.as_str().to_string()))?;
 
-        let service_guard = service.lock().await;
+        let service_guard = service.blocking_lock();
         let dependencies = service_guard.dependencies();
         drop(service_guard);
 
@@ -127,8 +125,7 @@ impl ServiceRegistry {
         for dep_id in dependencies {
             let dep_id_clone = dep_id.clone();
             resolved.extend(
-                Box::pin(self.resolve_dependencies_recursive(&dep_id_clone, visited, visiting))
-                    .await?,
+                self.resolve_dependencies_recursive(&dep_id_clone, visited, visiting)?
             );
         }
 
@@ -139,19 +136,19 @@ impl ServiceRegistry {
         Ok(resolved)
     }
 
-    pub async fn get_startup_order(&self) -> Result<Vec<ServiceId>, ServiceRegistryError> {
-        let services = self.services.read().await;
+    pub fn get_startup_order(&self) -> Result<Vec<ServiceId>, ServiceRegistryError> {
+        let services = self.services.blocking_read();
         let mut order = Vec::new();
         let mut visited = std::collections::HashSet::new();
 
         for service_id in services.keys() {
-            self.get_startup_order_recursive(service_id, &mut order, &mut visited).await?;
+            self.get_startup_order_recursive(service_id, &mut order, &mut visited)?;
         }
 
         Ok(order)
     }
 
-    async fn get_startup_order_recursive<'a>(
+    fn get_startup_order_recursive<'a>(
         &'a self,
         service_id: &'a ServiceId,
         order: &'a mut Vec<ServiceId>,
@@ -165,16 +162,15 @@ impl ServiceRegistry {
 
         let service = self
             .get(service_id)
-            .await
             .ok_or_else(|| ServiceRegistryError::NotFound(service_id.as_str().to_string()))?;
 
-        let service_guard = service.lock().await;
+        let service_guard = service.blocking_lock();
         let dependencies = service_guard.dependencies();
         drop(service_guard);
 
         for dep_id in dependencies {
             let dep_id_clone = dep_id.clone();
-            Box::pin(self.get_startup_order_recursive(&dep_id_clone, order, visited)).await?;
+            self.get_startup_order_recursive(&dep_id_clone, order, visited)?;
         }
 
         if !order.contains(service_id) {
@@ -185,10 +181,10 @@ impl ServiceRegistry {
     }
 
     pub async fn start_all(&self) -> Result<(), ServiceRegistryError> {
-        let startup_order = self.get_startup_order().await?;
+        let startup_order = self.get_startup_order()?;
 
         for service_id in &startup_order {
-            if let Some(service) = self.get(service_id).await {
+            if let Some(service) = self.get(service_id) {
                 let mut service_guard = service.lock().await;
                 let _ = service_guard.start().await;
             }
@@ -198,7 +194,7 @@ impl ServiceRegistry {
     }
 
     pub async fn update_all(&self) {
-        let services = self.services.read().await;
+        let services = self.services.blocking_read();
         for (_, service) in services.iter() {
             let mut service_guard = service.lock().await;
             let _ = service_guard.update().await;
@@ -206,15 +202,15 @@ impl ServiceRegistry {
     }
 
     pub async fn shutdown_all(&self) {
-        let services = self.services.read().await;
+        let services = self.services.blocking_read();
         for (_, service) in services.iter() {
             let mut service_guard = service.lock().await;
             let _ = service_guard.shutdown().await;
         }
     }
 
-    pub async fn count(&self) -> usize {
-        let services = self.services.read().await;
+    pub fn count(&self) -> usize {
+        let services = self.services.blocking_read();
         services.len()
     }
 }
@@ -232,6 +228,6 @@ mod tests {
     #[tokio::test]
     async fn test_registry_creation() {
         let registry = ServiceRegistry::new();
-        assert_eq!(registry.count().await, 0);
+        assert_eq!(registry.count(), 0);
     }
 }

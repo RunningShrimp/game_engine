@@ -207,12 +207,12 @@ impl CoroutineTaskManager {
         }
     }
 
-    pub async fn task_count(&self) -> usize {
-        self.active_tasks.lock().await.len()
+    pub fn task_count(&self) -> usize {
+        self.active_tasks.blocking_lock().len()
     }
 
-    pub async fn stats(&self) -> LoopStats {
-        self.stats.read().await.clone()
+    pub fn stats(&self) -> LoopStats {
+        self.stats.blocking_read().clone()
     }
 
     async fn task_processor(
@@ -449,12 +449,12 @@ impl CoroutineGameLoop {
         }
     }
 
-    pub async fn task_count(&self) -> usize {
-        self.active_tasks.lock().await.len()
+    pub fn task_count(&self) -> usize {
+        self.active_tasks.blocking_lock().len()
     }
 
-    pub async fn stats(&self) -> LoopStats {
-        self.stats.read().await.clone()
+    pub fn stats(&self) -> LoopStats {
+        self.stats.blocking_read().clone()
     }
 
     async fn task_processor(
@@ -597,7 +597,7 @@ mod tests {
 
         // 验证任务ID已分配
         assert!(task_id > 0);
-        assert!(loop_.task_count().await > 0);
+        assert!(loop_.task_count() > 0);
 
         tokio::time::sleep(Duration::from_millis(50)).await;
     }
