@@ -15,6 +15,7 @@ use crate::domain::scene::{Scene, SceneId};
 use crate::ecs::World;
 use crate::performance::benchmarking::BenchmarkRunner;
 use crate::profiling::ContinuousProfiler;
+use crate::serialization::compat::bincode_compat;
 use std::collections::HashMap;
 use std::time::Instant;
 
@@ -103,7 +104,7 @@ impl PerformanceRegressionSuite {
 
         for i in 0..iterations {
             let scene_id = SceneId(i as u64);
-            let scene = Scene::new(scene_id, format!("test_scene_{}", i));
+            let scene = Scene::new(scene_id, format!("test_scene_{i}"));
             scene_map.insert(scene_id, scene);
         }
 
@@ -140,7 +141,7 @@ impl PerformanceRegressionSuite {
         for _ in 0..iterations {
             // 处理物理步进的错误（测试中应该不会发生，但如果发生则记录）
             if let Err(e) = physics_world.step(0.016) {
-                eprintln!("Physics step error in test: {:?}", e);
+                eprintln!("Physics step error in test: {e:?}");
                 // 在测试中继续执行，但记录错误
             }
         }
@@ -188,7 +189,7 @@ impl PerformanceRegressionSuite {
         let iterations = 10000;
 
         for _ in 0..iterations {
-            let _ = bincode::serialize(&test_data);
+            let _ = bincode_compat::serialize(&test_data).map_err(Box::new);
         }
 
         let duration = start.elapsed();
@@ -257,7 +258,7 @@ impl PerformanceRegressionSuite {
         let passed = results.iter().filter(|r| r.passed).count();
         let total = results.len();
 
-        println!("Passed: {}/{}", passed, total);
+        println!("Passed: {passed}/{total}");
 
         println!("\nDetailed Results:");
         println!(

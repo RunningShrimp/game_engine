@@ -279,7 +279,5 @@ mod render_batch_tests;
 #[cfg(test)]
 mod extended_tests;
 
-// TODO: extended_tests_v2 has many missing type issues and needs to be fixed
 // Commenting out temporarily to allow compilation
 // #[cfg(test)]
-// mod extended_tests_v2;

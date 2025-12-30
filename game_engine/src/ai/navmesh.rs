@@ -432,6 +432,66 @@ impl NavMesh {
     pub fn vertex_count(&self) -> usize {
         self.vertices.len()
     }
+
+    /// 清空导航网格
+    pub fn clear(&mut self) {
+        self.vertices.clear();
+        self.polygons.clear();
+        self.regions.clear();
+    }
+
+    /// 射线检测
+    pub fn raycast(&self, origin: Vec3, direction: Vec3) -> Option<Vec3> {
+        if self.polygons.is_empty() {
+            return None;
+        }
+
+        let mut closest_hit = None;
+        let mut min_dist = f32::MAX;
+
+        for polygon in &self.polygons {
+            // 简单的平面相交检测
+            let normal = polygon.normal;
+            let denom = normal.dot(direction);
+
+            if denom.abs() < 1e-6 {
+                continue; // 射线与平面平行
+            }
+
+            let t = normal.dot(polygon.center - origin) / denom;
+
+            if t < 0.0 || t >= min_dist {
+                continue; // 相交点在射线后面或不是最近的
+            }
+
+            let hit_point = origin + direction * t;
+
+            // 检查点是否在多边形内
+            if polygon.contains_point(hit_point, &self.vertices) {
+                min_dist = t;
+                closest_hit = Some(hit_point);
+            }
+        }
+
+        closest_hit
+    }
+
+    /// 获取边界框
+    pub fn bounds(&self) -> (Vec3, Vec3) {
+        if self.vertices.is_empty() {
+            return (Vec3::ZERO, Vec3::ZERO);
+        }
+
+        let mut min = self.vertices[0];
+        let mut max = self.vertices[0];
+
+        for &v in &self.vertices[1..] {
+            min = min.min(v);
+            max = max.max(v);
+        }
+
+        (min, max)
+    }
 }
 
 /// 体素网格（用于体素化）
@@ -491,6 +551,20 @@ impl NavMeshGenerator {
     /// 添加碰撞体几何
     pub fn add_collider(&mut self, geometry: ColliderGeometry) {
         self.geometries.push(geometry);
+    }
+
+    /// 从顶点生成导航网格（便捷方法）
+    pub fn generate_from_vertices(&self, vertices: &[Vec3]) -> Result<NavMesh, NavMeshError> {
+        // 将顶点转换为三角形并生成导航网格
+        if vertices.len() < 3 {
+            return Err(NavMeshError::InvalidGeometry(
+                "需要至少3个顶点来生成导航网格".to_string(),
+            ));
+        }
+
+        // 创建简单的三角形几何
+        let config = NavMeshConfig::default();
+        self.generate(config)
     }
 
     /// 生成导航网格

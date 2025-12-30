@@ -48,8 +48,14 @@ mod resources_tests {
         // 超出容量应该移除最老的
         log.push("msg4".to_string());
         assert_eq!(log.entries.len(), 3);
-        assert_eq!(log.entries.front().expect("Test: operation should succeed"), "msg2");
-        assert_eq!(log.entries.back().expect("Test: operation should succeed"), "msg4");
+        assert_eq!(
+            log.entries.front().expect("Test: operation should succeed"),
+            "msg2"
+        );
+        assert_eq!(
+            log.entries.back().expect("Test: operation should succeed"),
+            "msg4"
+        );
     }
 }
 
@@ -134,7 +140,8 @@ mod ecs_integration_tests {
 
         // 修改transform
         {
-            let mut transform = world.get_mut::<Transform>(entity).expect("Test: operation should succeed");
+            let mut transform =
+                world.get_mut::<Transform>(entity).expect("Test: operation should succeed");
             transform.pos = Vec3::new(10.0, 20.0, 30.0);
         }
 

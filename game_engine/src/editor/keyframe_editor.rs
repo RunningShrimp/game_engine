@@ -38,7 +38,7 @@ impl KeyframeEditor {
         ui.separator();
 
         // 实体ID
-        ui.label(format!("Entity ID: {}", entity_id));
+        ui.label(format!("Entity ID: {entity_id}"));
         ui.separator();
 
         // 轨道类型选择
@@ -135,7 +135,7 @@ impl KeyframeEditor {
             ui.horizontal(|ui| {
                 let is_selected = self.selected_keyframe == Some(i);
 
-                if ui.selectable_label(is_selected, format!("Frame {}", i)).clicked() {
+                if ui.selectable_label(is_selected, format!("Frame {i}")).clicked() {
                     self.selected_keyframe = Some(i);
                 }
 
@@ -270,7 +270,7 @@ impl KeyframeEditor {
             ui.horizontal(|ui| {
                 let is_selected = self.selected_keyframe == Some(i);
 
-                if ui.selectable_label(is_selected, format!("Frame {}", i)).clicked() {
+                if ui.selectable_label(is_selected, format!("Frame {i}")).clicked() {
                     self.selected_keyframe = Some(i);
                 }
 
@@ -433,7 +433,7 @@ impl KeyframeEditor {
             ui.horizontal(|ui| {
                 let is_selected = self.selected_keyframe == Some(i);
 
-                if ui.selectable_label(is_selected, format!("Frame {}", i)).clicked() {
+                if ui.selectable_label(is_selected, format!("Frame {i}")).clicked() {
                     self.selected_keyframe = Some(i);
                 }
 

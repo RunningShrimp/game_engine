@@ -254,11 +254,17 @@ mod tests {
 
         // 切换场景
         manager.switch_to_scene_immediate(scene1_id);
-        assert_eq!(manager.current_scene().expect("Test: operation should succeed").name, "Main Menu");
+        assert_eq!(
+            manager.current_scene().expect("Test: operation should succeed").name,
+            "Main Menu"
+        );
 
         // 重命名场景
         manager.rename_scene(scene1_id, "Updated Menu".to_string());
-        assert_eq!(manager.current_scene().expect("Test: operation should succeed").name, "Updated Menu");
+        assert_eq!(
+            manager.current_scene().expect("Test: operation should succeed").name,
+            "Updated Menu"
+        );
 
         // 设置元数据
         manager.set_scene_metadata(scene1_id, "difficulty".to_string(), "easy".to_string());
@@ -290,6 +296,9 @@ mod tests {
         manager.update_transition(0.6);
         assert_eq!(manager.transition_progress(), 1.0);
         assert!(!manager.is_transitioning());
-        assert_eq!(manager.current_scene().expect("Test: operation should succeed").name, "Scene 2");
+        assert_eq!(
+            manager.current_scene().expect("Test: operation should succeed").name,
+            "Scene 2"
+        );
     }
 }

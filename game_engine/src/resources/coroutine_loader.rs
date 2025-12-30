@@ -637,7 +637,7 @@ impl CoroutineAssetLoader {
                     // 许可将在函数结束时自动释放
                 })
                 .await
-                .map_err(|e| LoadError::IoError(format!("Spawn blocking task failed: {}", e)))??;
+                .map_err(|e| LoadError::IoError(format!("Spawn blocking task failed: {e}")))??;
 
                 Ok(LoadResult::Texture { image, is_linear })
             }
@@ -959,9 +959,10 @@ impl LoadHandle {
     /// 取消加载请求
     pub fn cancel(&self) {
         if let Ok(mut cancel_senders) = safe_lock(&self.cancel_senders, "LoadHandle.cancel_senders")
-            && let Some(tx) = cancel_senders.remove(&self.id) {
-                let _ = tx.send(());
-            }
+            && let Some(tx) = cancel_senders.remove(&self.id)
+        {
+            let _ = tx.send(());
+        }
     }
 }
 

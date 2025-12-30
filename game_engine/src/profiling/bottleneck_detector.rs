@@ -212,9 +212,9 @@ impl BottleneckDetector {
     pub fn get_critical_bottlenecks(&self, count: usize) -> Vec<BottleneckDiagnosis> {
         let mut bottlenecks = self.detect_all_bottlenecks();
         bottlenecks.sort_by(|a, b| {
-            b.severity
-                .cmp(&a.severity)
-                .then_with(|| b.variance.partial_cmp(&a.variance).expect("Test: operation should succeed"))
+            b.severity.cmp(&a.severity).then_with(|| {
+                b.variance.partial_cmp(&a.variance).expect("Test: operation should succeed")
+            })
         });
         bottlenecks.truncate(count);
         bottlenecks

@@ -521,15 +521,27 @@ impl VisualScript {
     /// 验证连接
     fn validate_connection(&self, connection: &Connection) -> Result<(), ConnectionError> {
         // 检查节点是否存在
-        let from_node = self.nodes.iter().find(|n| n.id == connection.from_node)
+        let from_node = self
+            .nodes
+            .iter()
+            .find(|n| n.id == connection.from_node)
             .ok_or(ConnectionError::NodeNotFound(connection.from_node))?;
-        let to_node = self.nodes.iter().find(|n| n.id == connection.to_node)
+        let to_node = self
+            .nodes
+            .iter()
+            .find(|n| n.id == connection.to_node)
             .ok_or(ConnectionError::NodeNotFound(connection.to_node))?;
 
         // 检查端口是否存在
-        let from_port = from_node.output_ports.iter().find(|p| p.id == connection.from_port)
+        let from_port = from_node
+            .output_ports
+            .iter()
+            .find(|p| p.id == connection.from_port)
             .ok_or(ConnectionError::PortNotFound)?;
-        let to_port = to_node.input_ports.iter().find(|p| p.id == connection.to_port)
+        let to_port = to_node
+            .input_ports
+            .iter()
+            .find(|p| p.id == connection.to_port)
             .ok_or(ConnectionError::PortNotFound)?;
 
         // 检查连接类型是否匹配

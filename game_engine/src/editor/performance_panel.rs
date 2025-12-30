@@ -128,8 +128,8 @@ impl PerformancePanel {
         if let (Some(&fps), Some(&frame_time)) =
             (self.fps_history.back(), self.frame_time_history.back())
         {
-            ui.label(format!("FPS: {:.1}", fps));
-            ui.label(format!("Frame Time: {:.2} ms", frame_time));
+            ui.label(format!("FPS: {fps:.1}"));
+            ui.label(format!("Frame Time: {frame_time:.2} ms"));
 
             // FPS颜色指示
             let fps_color = if fps >= 60.0 {
@@ -163,9 +163,9 @@ impl PerformancePanel {
             let min_fps = self.fps_history.iter().cloned().fold(f32::INFINITY, f32::min);
             let max_fps = self.fps_history.iter().cloned().fold(f32::NEG_INFINITY, f32::max);
 
-            ui.label(format!("Average FPS: {:.1}", avg_fps));
-            ui.label(format!("Min FPS: {:.1}", min_fps));
-            ui.label(format!("Max FPS: {:.1}", max_fps));
+            ui.label(format!("Average FPS: {avg_fps:.1}"));
+            ui.label(format!("Min FPS: {min_fps:.1}"));
+            ui.label(format!("Max FPS: {max_fps:.1}"));
         }
 
         ui.separator();
@@ -179,9 +179,9 @@ impl PerformancePanel {
             let max_frame_time =
                 self.frame_time_history.iter().cloned().fold(f32::NEG_INFINITY, f32::max);
 
-            ui.label(format!("Average Frame Time: {:.2} ms", avg_frame_time));
-            ui.label(format!("Min Frame Time: {:.2} ms", min_frame_time));
-            ui.label(format!("Max Frame Time: {:.2} ms", max_frame_time));
+            ui.label(format!("Average Frame Time: {avg_frame_time:.2} ms"));
+            ui.label(format!("Min Frame Time: {min_frame_time:.2} ms"));
+            ui.label(format!("Max Frame Time: {max_frame_time:.2} ms"));
         }
 
         ui.separator();
@@ -303,7 +303,7 @@ impl PerformancePanel {
 
         // 显示当前值
         if let Some(&current_fps) = self.fps_history.back() {
-            ui.label(format!("Current: {:.1} FPS", current_fps));
+            ui.label(format!("Current: {current_fps:.1} FPS"));
         }
     }
 
@@ -395,7 +395,7 @@ impl PerformancePanel {
 
         // 显示当前值
         if let Some(&current_time) = self.frame_time_history.back() {
-            ui.label(format!("Current: {:.2} ms", current_time));
+            ui.label(format!("Current: {current_time:.2} ms"));
         }
     }
 }

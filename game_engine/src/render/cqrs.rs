@@ -96,10 +96,7 @@ impl RenderQueryModel {
 
     /// Get object visibility by ID
     pub fn get_visibility(&self, id: RenderObjectId) -> Option<bool> {
-        self.object_ids
-            .iter()
-            .position(|&oid| oid == id)
-            .map(|idx| self.visible[idx])
+        self.object_ids.iter().position(|&oid| oid == id).map(|idx| self.visible[idx])
     }
 
     /// Get world transform by ID (fast lookup)
@@ -112,10 +109,7 @@ impl RenderQueryModel {
 
     /// Get position by ID
     pub fn get_position(&self, id: RenderObjectId) -> Option<Vec3> {
-        self.object_ids
-            .iter()
-            .position(|&oid| oid == id)
-            .map(|idx| self.positions[idx])
+        self.object_ids.iter().position(|&oid| oid == id).map(|idx| self.positions[idx])
     }
 
     /// Query all visible objects (legacy - returns Vec)
@@ -138,7 +132,11 @@ impl RenderQueryModel {
 
     /// Query objects intersecting frustum (legacy - returns Vec)
     #[deprecated(note = "Use iter_in_frustum for zero-allocation queries")]
-    pub fn query_in_frustum(&self, frustum_center: Vec3, frustum_radius: f32) -> Vec<RenderObjectId> {
+    pub fn query_in_frustum(
+        &self,
+        frustum_center: Vec3,
+        frustum_radius: f32,
+    ) -> Vec<RenderObjectId> {
         self.iter_in_frustum(frustum_center, frustum_radius).collect()
     }
 
@@ -198,7 +196,11 @@ impl RenderQueryModel {
     /// let nearby: Vec<_> = model.iter_in_radius(center, 100.0)
     ///     .collect();
     /// ```
-    pub fn iter_in_radius(&self, center: Vec3, radius: f32) -> impl Iterator<Item = RenderObjectId> + '_ {
+    pub fn iter_in_radius(
+        &self,
+        center: Vec3,
+        radius: f32,
+    ) -> impl Iterator<Item = RenderObjectId> + '_ {
         let radius_sq = radius * radius;
         self.positions
             .iter()
@@ -222,7 +224,11 @@ impl RenderQueryModel {
     /// let visible: Vec<_> = model.iter_in_frustum(camera_center, camera_radius)
     ///     .collect();
     /// ```
-    pub fn iter_in_frustum(&self, frustum_center: Vec3, frustum_radius: f32) -> impl Iterator<Item = RenderObjectId> + '_ {
+    pub fn iter_in_frustum(
+        &self,
+        frustum_center: Vec3,
+        frustum_radius: f32,
+    ) -> impl Iterator<Item = RenderObjectId> + '_ {
         let _radius_sq = frustum_radius * frustum_radius;
         self.bounding_centers
             .iter()
@@ -241,9 +247,7 @@ impl RenderQueryModel {
     /// Batch query multiple transforms (legacy - allocates Vec)
     #[deprecated(note = "Use batch_get_transforms_to for buffer reuse")]
     pub fn batch_get_transforms(&self, ids: &[RenderObjectId]) -> Vec<Option<Mat4>> {
-        ids.iter()
-            .map(|&id| self.get_world_transform(id))
-            .collect()
+        ids.iter().map(|&id| self.get_world_transform(id)).collect()
     }
 
     /// Batch query multiple transforms with buffer reuse (zero-allocation)
@@ -344,12 +348,7 @@ impl RenderBatchData {
                 .filter(|(_, vis)| **vis)
                 .map(|(p, _)| *p)
                 .collect(),
-            visible: self
-                .visible
-                .iter()
-                .filter(|&&vis| vis)
-                .copied()
-                .collect(),
+            visible: self.visible.iter().filter(|&&vis| vis).copied().collect(),
         }
     }
 }
@@ -754,7 +753,7 @@ impl CommandHandler<UpdateTransformCommand> for UpdateTransformHandler {
         let _event = TransformUpdatedEvent {
             id: command.id,
             old_transform: _old_transform,
-            new_transform: command.new_transform.clone(),
+            new_transform: command.new_transform,
         };
 
         Ok(crate::domain::cqrs::CommandResult::success(None))
@@ -865,9 +864,7 @@ impl CommandHandler<RemoveRenderObjectCommand> for RemoveRenderObjectHandler {
         }
 
         // Publish event
-        let _event = RenderObjectRemovedEvent {
-            id: command.id,
-        };
+        let _event = RenderObjectRemovedEvent { id: command.id };
 
         // In a real implementation, this would remove the object from the render scene
         Ok(crate::domain::cqrs::CommandResult::success(None))
@@ -1065,15 +1062,9 @@ impl RenderApplicationService {
     }
 
     /// Batch get transforms (query - read operation)
-    pub fn batch_get_transforms(
-        &self,
-        ids: &[RenderObjectId],
-        world: &World,
-    ) -> Vec<Option<Mat4>> {
+    pub fn batch_get_transforms(&self, ids: &[RenderObjectId], world: &World) -> Vec<Option<Mat4>> {
         let query = BatchGetTransformsQuery { ids: ids.to_vec() };
-        self.cqrs
-            .execute_query(query, world)
-            .unwrap_or_default()
+        self.cqrs.execute_query(query, world).unwrap_or_default()
     }
 
     /// Update transform (command - write operation)
@@ -1205,11 +1196,19 @@ mod tests {
                 RenderObjectId::new(3),
             ],
             world_transforms: vec![Mat4::IDENTITY, Mat4::IDENTITY, Mat4::IDENTITY],
-            positions: vec![Vec3::ZERO, Vec3::new(5.0, 0.0, 0.0), Vec3::new(20.0, 0.0, 0.0)],
+            positions: vec![
+                Vec3::ZERO,
+                Vec3::new(5.0, 0.0, 0.0),
+                Vec3::new(20.0, 0.0, 0.0),
+            ],
             visible: vec![true, true, true],
             is_static: vec![true, false, true],
             lod_levels: vec![0, 0, 0],
-            bounding_centers: vec![Vec3::ZERO, Vec3::new(5.0, 0.0, 0.0), Vec3::new(20.0, 0.0, 0.0)],
+            bounding_centers: vec![
+                Vec3::ZERO,
+                Vec3::new(5.0, 0.0, 0.0),
+                Vec3::new(20.0, 0.0, 0.0),
+            ],
             bounding_radii: vec![1.0, 1.0, 1.0],
         };
 

@@ -145,7 +145,7 @@ impl AllocationTrace {
     pub fn lifetime_description(&self) -> String {
         if let Some(lifetime_us) = self.lifetime_us {
             if lifetime_us < 1000 {
-                format!("{}μs", lifetime_us)
+                format!("{lifetime_us}μs")
             } else if lifetime_us < 1_000_000 {
                 format!("{}ms", lifetime_us / 1000)
             } else {

@@ -6,15 +6,15 @@
 mod tests {
     use super::*;
     use crate::profiling::dashboard::RenderMetrics;
-    use crate::render::*;
     use crate::render::shader_cache::{ShaderCache, ShaderCacheConfig};
+    use crate::render::*;
 
     // ========================================
     // BatchKey Tests
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_batch_key_default() {
         let key = BatchKey::default();
         assert_eq!(key.mesh_id, 0);
@@ -22,7 +22,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_batch_key_with_mesh() {
         let key = BatchKey {
             mesh_id: 5,
@@ -36,7 +36,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_batch_key_equality() {
         let key1 = BatchKey {
             mesh_id: 10,
@@ -72,14 +72,14 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_batch_manager_new() {
         let manager = BatchManager::new();
         assert_eq!(manager.batch_count(), 0);
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_batch_manager_add_batch() {
         let mut manager = BatchManager::new();
 
@@ -98,7 +98,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_batch_manager_multiple_batches() {
         // Create multiple batch keys
         for i in 0..5 {
@@ -116,7 +116,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_batch_manager_clear() {
         let manager = BatchManager::new();
         // Test that manager can be created
@@ -128,7 +128,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_instance_batch_new() {
         // Note: InstanceBatch::new takes BatchKey, mesh, and material_bind_group
         // This is a structural test to verify the types exist
@@ -145,7 +145,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_instance_batch_different_capacity() {
         let key = BatchKey {
             mesh_id: 5,
@@ -164,7 +164,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_frustum_default() {
         let frustum = Frustum::default();
         // Should create valid frustum
@@ -172,7 +172,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_frustum_planes() {
         // Frustum should have 6 planes
         // Left, Right, Top, Bottom, Near, Far
@@ -180,7 +180,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_culling_result_default() {
         // TODO: CullingResult is an enum (Outside/Intersecting/Inside), not a struct with counts
         // These tests need to be reworked to test the actual enum variants
@@ -189,7 +189,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_culling_result_variants() {
         // Test the enum variants instead of struct syntax
         let outside = CullingResult::Outside;
@@ -208,7 +208,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_lod_config_default() {
         let config = LodConfig::default();
 
@@ -217,7 +217,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_lod_config_builder() {
         let config = LodConfig::builder()
             .add_level(0.0, 10.0, LodQuality::High)
@@ -229,7 +229,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_lod_level_properties() {
         let level = LodLevel {
             min_distance: 0.0,
@@ -246,7 +246,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_lod_quality_levels() {
         let high = LodQuality::High;
         let medium = LodQuality::Medium;
@@ -257,7 +257,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_lod_selection() {
         let config = LodConfig::builder()
             .add_level(0.0, 10.0, LodQuality::High)
@@ -267,12 +267,18 @@ mod tests {
         // At distance 5.0, should select High LOD
         let selection = config.get_level_for_distance(5.0);
         assert!(selection.is_some());
-        assert_eq!(selection.expect("Test: operation should succeed").quality, LodQuality::High);
+        assert_eq!(
+            selection.expect("Test: operation should succeed").quality,
+            LodQuality::High
+        );
 
         // At distance 15.0, should select Medium LOD
         let selection = config.get_level_for_distance(15.0);
         assert!(selection.is_some());
-        assert_eq!(selection.expect("Test: operation should succeed").quality, LodQuality::Medium);
+        assert_eq!(
+            selection.expect("Test: operation should succeed").quality,
+            LodQuality::Medium
+        );
     }
 
     // ========================================
@@ -280,7 +286,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_material_sorter_new() {
         let config = MaterialSortConfig::default();
         let sorter = MaterialSorter::new(config);
@@ -289,7 +295,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_sort_strategy() {
         // Different sorting strategies
         // SortStrategy has: Material, Pipeline, Texture, Depth, Hybrid
@@ -301,7 +307,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_sort_stats_default() {
         let stats = SortStats::default();
 
@@ -315,7 +321,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_draw_call_merger_config() {
         let config = DrawCallMergeConfig::default();
 
@@ -324,7 +330,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_merge_stats() {
         let stats = MergeStats::default();
 
@@ -333,7 +339,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_merge_improvement() {
         let stats = MergeStats {
             original_draw_calls: 100,
@@ -353,7 +359,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_pipeline_optimizer_config() {
         let config = RenderPipelineOptimizerConfig::default();
 
@@ -362,7 +368,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_performance_stats() {
         let stats = PerformanceStats::default();
 
@@ -376,7 +382,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_scene_traversal_config() {
         let config = SceneTraversalConfig::default();
 
@@ -385,7 +391,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_traversal_stats() {
         let stats = TraversalStats::default();
 
@@ -400,7 +406,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_csm_config_default() {
         let config = CsmConfig::default();
 
@@ -408,7 +414,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_shadow_quality_levels() {
         let low = ShadowQuality::Low;
         let medium = ShadowQuality::Medium;
@@ -423,7 +429,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_vxgi_config_default() {
         let config = VxgiConfig::default();
 
@@ -431,7 +437,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_voxel_default() {
         let voxel = Voxel::default();
 
@@ -440,7 +446,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_voxel_with_color() {
         // Voxel has fields: color: [u8; 3], normal: [u8; 2], occlusion: u8, emissive: u8
         // No 'active' field
@@ -459,7 +465,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_ray_tracing_config() {
         let config = RayTracingConfig::default();
 
@@ -467,7 +473,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_sphere_creation() {
         let sphere = Sphere {
             center: glam::Vec3::new(0.0, 0.0, 0.0),
@@ -480,7 +486,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_sphere_at_position() {
         let sphere = Sphere {
             center: glam::Vec3::new(10.0, 20.0, 30.0),
@@ -493,19 +499,22 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_light_types() {
         use glam::Vec3;
 
         let _point = LightType::Point;
         let _directional = LightType::Directional { direction: Vec3::X };
-        let _spot = LightType::Spot { direction: Vec3::X, angle: 45.0 };
+        let _spot = LightType::Spot {
+            direction: Vec3::X,
+            angle: 45.0,
+        };
 
         assert!(true);
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_ray_tracing_camera() {
         let camera = RayTracingCamera {
             view: glam::Mat4::IDENTITY,
@@ -523,7 +532,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_postprocess_config() {
         let config = crate::render::postprocess::PostProcessConfig::default();
 
@@ -532,7 +541,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_tonemap_operators() {
         let _none = crate::render::postprocess::TonemapOperator::None;
         let _reinhard = crate::render::postprocess::TonemapOperator::Reinhard;
@@ -543,7 +552,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_bloom_settings() {
         let config = crate::render::postprocess::PostProcessConfig {
             bloom_threshold: 0.8,
@@ -560,7 +569,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_material_default() {
         let material = Material::default();
 
@@ -571,7 +580,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_material_properties() {
         let material = Material {
             albedo: glam::Vec3::new(0.8, 0.2, 0.1),
@@ -590,7 +599,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_batch_optimizer_new() {
         let optimizer = BatchOptimizer::new(1000); // max_instances_per_batch
         // Should create valid optimizer
@@ -598,7 +607,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_optimized_batch() {
         // Note: OptimizedBatch structure doesn't exist with texture_id field
         // Using BatchKey instead which is the actual API
@@ -619,7 +628,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_render_metrics() {
         let metrics = RenderMetrics {
             fps: 0.0,
@@ -637,7 +646,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_render_metrics_accumulation() {
         let mut metrics = RenderMetrics {
             fps: 0.0,
@@ -662,7 +671,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_instance_data() {
         // Use the correct InstanceData from batch_builder module
         use crate::render::batch_builder::InstanceData;
@@ -676,7 +685,10 @@ mod tests {
         };
 
         assert_eq!(data.position.x, 1.0);
-        assert_eq!(data.custom_data.expect("Test: operation should succeed")[1], 0.5);
+        assert_eq!(
+            data.custom_data.expect("Test: operation should succeed")[1],
+            0.5
+        );
     }
 
     // ========================================
@@ -684,7 +696,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_gpu_instancing_config() {
         let config = GpuInstancingConfig::default();
 
@@ -693,7 +705,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_gpu_instancing_stats() {
         let stats = GpuInstancingStats::default();
 
@@ -707,7 +719,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_lod_transition() {
         // Test the Instant variant
         let instant = LodTransition::Instant;
@@ -737,7 +749,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_scene_traversal_result() {
         let result = SceneTraversalResult {
             batches: vec![],
@@ -755,14 +767,14 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_culling_system_config() {
         // Culling system configuration
         assert!(true);
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_occlusion_culling() {
         // Occlusion culling system
         assert!(true);
@@ -773,7 +785,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_shader_cache_new() {
         let config = ShaderCacheConfig::default();
         let cache = ShaderCache::new(config).expect("Failed to create ShaderCache");
@@ -782,7 +794,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_shader_cache_operations() {
         let config = ShaderCacheConfig::default();
         let mut cache = ShaderCache::new(config).expect("Failed to create ShaderCache");
@@ -796,7 +808,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_batch_sorting_performance() {
         let start = std::time::Instant::now();
 
@@ -820,7 +832,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_lod_selection_performance() {
         let config = LodConfig::builder()
             .add_level(0.0, 10.0, LodQuality::High)
@@ -847,7 +859,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_zero_instances() {
         // Test BatchKey with zero mesh_id
         let key = BatchKey {
@@ -862,7 +874,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_very_large_capacity() {
         // Test BatchKey with large mesh_id
         let key = BatchKey {
@@ -877,19 +889,20 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_zero_distance_lod() {
-        let config = LodConfig::builder()
-            .add_level(0.0, 10.0, LodQuality::High)
-            .build();
+        let config = LodConfig::builder().add_level(0.0, 10.0, LodQuality::High).build();
 
         let selection = config.get_level_for_distance(0.0);
         assert!(selection.is_some());
-        assert_eq!(selection.expect("Test: operation should succeed").quality, LodQuality::High);
+        assert_eq!(
+            selection.expect("Test: operation should succeed").quality,
+            LodQuality::High
+        );
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_very_far_distance_lod() {
         let config = LodConfig::builder()
             .add_level(0.0, 10.0, LodQuality::High)
@@ -904,7 +917,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_negative_culling_ratio() {
         // TODO: CullingResult is an enum, not a struct with counts
         // This test needs actual culling system with count tracking
@@ -913,7 +926,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_full_culling() {
         // Test culling states
         let outside = CullingResult::Outside;

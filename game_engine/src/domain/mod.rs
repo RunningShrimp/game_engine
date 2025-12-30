@@ -81,6 +81,8 @@
 // - 实现依赖注入容器
 // - 使用Actor模式处理领域逻辑
 pub mod actor;
+#[cfg(test)]
+mod aggregate_invariants_tests;
 pub mod audio;
 pub mod cqrs;
 pub mod entity;
@@ -91,8 +93,6 @@ pub mod event_bus;
 pub mod event_registry;
 pub mod event_sourcing;
 pub mod events;
-#[cfg(test)]
-mod aggregate_invariants_tests;
 pub mod physics;
 #[cfg(test)]
 mod property_tests;

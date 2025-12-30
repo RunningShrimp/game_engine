@@ -577,7 +577,7 @@ mod tests {
 
         println!("可用后端:");
         for backend in manager.available_backends() {
-            println!("  - {:?}", backend);
+            println!("  - {backend:?}");
             println!("    推荐格式: {:?}", manager.recommended_format(*backend));
         }
 

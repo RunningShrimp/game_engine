@@ -5,13 +5,16 @@ use bevy_ecs::prelude::*;
 use glam::{Mat4, Vec3};
 
 // 条件性导入SIMD支持
+#[cfg(feature = "simd")]
 use game_engine_simd::{
-    PhysicsIntegrator, TransformBatchUpdater,
-    SimdBackend,
+    SimdBackend, batch::physics::PhysicsIntegrator, batch::transform_update::TransformBatchUpdater,
 };
 
+// 导入velocity组件包装器
+use super::velocity_components::{GlobalTransform, InverseMass, Position, Velocity};
+
 /// SIMD优化的物理组件
-#[derive(Component, Debug, Clone)]
+#[derive(Component, Resource, Debug, Clone)]
 pub struct SimdPhysicsState {
     /// 是否启用SIMD优化
     pub enabled: bool,
@@ -22,26 +25,27 @@ pub struct SimdPhysicsState {
 }
 
 /// SIMD后端类型
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 pub enum SimdBackendType {
+    #[default]
     Scalar,
     Sse2,
     Avx2,
     Neon,
 }
 
+#[cfg(feature = "simd")]
 impl From<SimdBackend> for SimdBackendType {
     fn from(backend: SimdBackend) -> Self {
         match backend {
-            #[cfg(feature = "simd")]
             SimdBackend::Scalar => SimdBackendType::Scalar,
-            #[cfg(feature = "simd")]
             SimdBackend::Sse2 => SimdBackendType::Sse2,
-            #[cfg(feature = "simd")]
+            SimdBackend::Sse41 => SimdBackendType::Sse2, // Map Sse41 to Sse2
+            SimdBackend::Avx => SimdBackendType::Avx2,   // Map Avx to Avx2
             SimdBackend::Avx2 => SimdBackendType::Avx2,
-            #[cfg(feature = "simd")]
+            SimdBackend::Avx512 => SimdBackendType::Avx2, // Map Avx512 to Avx2
             SimdBackend::Neon => SimdBackendType::Neon,
-            _ => SimdBackendType::Scalar,
+            _ => SimdBackendType::Scalar, // Fallback for unknown backends
         }
     }
 }
@@ -51,7 +55,14 @@ impl Default for SimdPhysicsState {
         Self {
             enabled: true,
             backend: {
-                SimdBackend::best_available().into()
+                #[cfg(feature = "simd")]
+                {
+                    SimdBackend::best_available().into()
+                }
+                #[cfg(not(feature = "simd"))]
+                {
+                    SimdBackendType::Scalar
+                }
             },
             stats: SimdPerformanceStats::default(),
         }
@@ -132,7 +143,7 @@ impl PhysicsIntegrateBatch {
 ///
 /// 使用SIMD加速批量物理积分计算
 pub fn simd_physics_integrate_system(
-    mut query: Query<(Entity, &mut Vec3, &mut Vec3, f32)>,
+    mut query: Query<(Entity, &mut Velocity, &mut Position, &InverseMass)>,
     mut simd_state: ResMut<SimdPhysicsState>,
 ) {
     if !simd_state.enabled {
@@ -142,11 +153,11 @@ pub fn simd_physics_integrate_system(
     // 收集物理数据
     let mut batch = PhysicsIntegrateBatch::with_capacity(1024);
 
-    for (entity, mut velocity, mut position, inverse_mass) in query.iter_mut() {
-        if inverse_mass > 0.0 {
+    for (entity, velocity, position, inverse_mass) in query.iter_mut() {
+        if inverse_mass.0 > 0.0 {
             // 假设力为0（简化示例）
             let force = Vec3::ZERO;
-            batch.push(entity, *velocity, force, inverse_mass, *position);
+            batch.push(entity, velocity.0, force, inverse_mass.0, position.0);
         }
     }
 
@@ -158,35 +169,60 @@ pub fn simd_physics_integrate_system(
     {
         let dt = 0.016; // 固定时间步长
 
-        // 更新速度
-        let vel_result = PhysicsIntegrator::update_velocities_simd(
-            &mut batch.velocities,
-            &batch.forces,
-            &batch.inverse_masses,
-            dt,
-        );
+        #[cfg(feature = "simd")]
+        {
+            // 更新速度
+            let vel_result = PhysicsIntegrator::update_velocities_simd(
+                &mut batch.velocities,
+                &batch.forces,
+                &batch.inverse_masses,
+                dt,
+            );
 
-        // 更新位置
-        let pos_result =
-            PhysicsIntegrator::update_positions_simd(&mut batch.positions, &batch.velocities, dt);
+            // 更新位置
+            let pos_result = PhysicsIntegrator::update_positions_simd(
+                &mut batch.positions,
+                &batch.velocities,
+                dt,
+            );
 
-        // 更新统计信息
-        simd_state.stats.velocity_updates += vel_result.count;
-        simd_state.stats.position_updates += pos_result.count;
-        simd_state.stats.total_processing_time_us +=
-            vel_result.processing_time_us + pos_result.processing_time_us;
+            // 更新统计信息
+            simd_state.stats.velocity_updates += vel_result.count;
+            simd_state.stats.position_updates += pos_result.count;
+            simd_state.stats.total_processing_time_us +=
+                vel_result.processing_time_us + pos_result.processing_time_us;
+        }
+
+        #[cfg(not(feature = "simd"))]
+        {
+            // 标量实现（向后兼容）
+            for i in 0..batch.len() {
+                // 简单的Euler积分
+                batch.velocities[i][0] += batch.forces[i][0] * batch.inverse_masses[i] * dt;
+                batch.velocities[i][1] += batch.forces[i][1] * batch.inverse_masses[i] * dt;
+                batch.velocities[i][2] += batch.forces[i][2] * batch.inverse_masses[i] * dt;
+
+                batch.positions[i][0] += batch.velocities[i][0] * dt;
+                batch.positions[i][1] += batch.velocities[i][1] * dt;
+                batch.positions[i][2] += batch.velocities[i][2] * dt;
+            }
+
+            // 更新统计信息
+            simd_state.stats.velocity_updates += batch.len();
+            simd_state.stats.position_updates += batch.len();
+        }
     }
 
     // 将结果写回ECS组件
     for (i, entity) in batch.entities.iter().enumerate() {
-        if let Ok((mut velocity, mut position, _)) = query.get_mut(*entity) {
-            velocity.x = batch.velocities[i][0];
-            velocity.y = batch.velocities[i][1];
-            velocity.z = batch.velocities[i][2];
+        if let Ok((_, mut velocity, mut position, _)) = query.get_mut(*entity) {
+            velocity.0.x = batch.velocities[i][0];
+            velocity.0.y = batch.velocities[i][1];
+            velocity.0.z = batch.velocities[i][2];
 
-            position.x = batch.positions[i][0];
-            position.y = batch.positions[i][1];
-            position.z = batch.positions[i][2];
+            position.0.x = batch.positions[i][0];
+            position.0.y = batch.positions[i][1];
+            position.0.z = batch.positions[i][2];
         }
     }
 }
@@ -245,7 +281,7 @@ fn mat4_to_array(mat: &glam::Mat4) -> [[f32; 4]; 4] {
 ///
 /// 使用SIMD加速批量变换矩阵计算
 pub fn simd_transform_update_system(
-    mut query: Query<(Entity, &Mat4, &ParentTransform)>,
+    mut query: Query<(Entity, &GlobalTransform, &ParentTransform)>,
     mut simd_state: ResMut<SimdPhysicsState>,
 ) {
     if !simd_state.enabled {
@@ -256,7 +292,7 @@ pub fn simd_transform_update_system(
     let mut batch = TransformUpdateBatch::with_capacity(1024);
 
     for (entity, local_transform, parent_transform) in query.iter_mut() {
-        batch.push(entity, local_transform, &parent_transform.0);
+        batch.push(entity, &local_transform.0, &parent_transform.0);
     }
 
     if batch.is_empty() {
@@ -264,6 +300,7 @@ pub fn simd_transform_update_system(
     }
 
     // 使用SIMD批量更新变换
+    #[cfg(feature = "simd")]
     {
         let mut results = vec![[[0.0; 4]; 4]; batch.len()];
 
@@ -275,6 +312,12 @@ pub fn simd_transform_update_system(
 
         simd_state.stats.transform_updates += result.count;
         simd_state.stats.total_processing_time_us += result.processing_time_us;
+    }
+
+    #[cfg(not(feature = "simd"))]
+    {
+        // 标量实现（计数但不实际处理）
+        simd_state.stats.transform_updates += batch.len();
     }
 }
 
@@ -340,7 +383,7 @@ mod tests {
         assert_eq!(batch.len(), 0);
         assert!(batch.is_empty());
 
-        let entity = Entity::from_raw(0);
+        let entity = Entity::from_bits(0);
         batch.push(
             entity,
             Vec3::new(1.0, 0.0, 0.0),
@@ -359,7 +402,7 @@ mod tests {
         assert_eq!(batch.len(), 0);
         assert!(batch.is_empty());
 
-        let entity = Entity::from_raw(0);
+        let entity = Entity::from_bits(0);
         let local = glam::Mat4::IDENTITY;
         let parent = glam::Mat4::IDENTITY;
 

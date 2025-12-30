@@ -36,8 +36,8 @@ use crate::domain::errors::DomainError;
 use crate::domain::physics::{ColliderId, RigidBodyId, RigidBodyType, ShapeType};
 use bevy_ecs::prelude::Entity;
 use glam::{Quat, Vec3};
-use std::collections::HashMap;
 use std::clone::Clone;
+use std::collections::HashMap;
 
 /// SoA storage for RigidBody objects
 ///
@@ -72,7 +72,7 @@ use std::clone::Clone;
 /// use glam::Vec3;
 ///
 /// let mut storage = RigidBodyStorage::new();
-/// let entity = Entity::from_raw(1);
+/// let entity = Entity::from_bits(1);
 /// let id = RigidBodyId::new(100);
 ///
 /// // Insert a rigid body
@@ -224,72 +224,67 @@ impl RigidBodyStorage {
             Ok(())
         } else {
             Err(DomainError::General(format!(
-                "Entity {:?} not found in RigidBodyStorage",
-                entity
+                "Entity {entity:?} not found in RigidBodyStorage"
             )))
         }
     }
 
     /// Get position by entity
     pub fn get_position(&self, entity: Entity) -> Option<Vec3> {
-        self.entity_to_index
-            .get(&entity)
-            .map(|&index| self.positions[index])
+        self.entity_to_index.get(&entity).map(|&index| self.positions[index])
     }
 
     /// Set position by entity
     pub fn set_position(&mut self, entity: Entity, position: Vec3) -> Result<(), DomainError> {
-        let index = *self.entity_to_index.get(&entity).ok_or_else(|| {
-            DomainError::General(format!("Entity {:?} not found", entity))
-        })?;
+        let index = *self
+            .entity_to_index
+            .get(&entity)
+            .ok_or_else(|| DomainError::General(format!("Entity {entity:?} not found")))?;
         self.positions[index] = position;
         Ok(())
     }
 
     /// Get rotation by entity
     pub fn get_rotation(&self, entity: Entity) -> Option<Quat> {
-        self.entity_to_index
-            .get(&entity)
-            .map(|&index| self.rotations[index])
+        self.entity_to_index.get(&entity).map(|&index| self.rotations[index])
     }
 
     /// Set rotation by entity
     pub fn set_rotation(&mut self, entity: Entity, rotation: Quat) -> Result<(), DomainError> {
-        let index = *self.entity_to_index.get(&entity).ok_or_else(|| {
-            DomainError::General(format!("Entity {:?} not found", entity))
-        })?;
+        let index = *self
+            .entity_to_index
+            .get(&entity)
+            .ok_or_else(|| DomainError::General(format!("Entity {entity:?} not found")))?;
         self.rotations[index] = rotation;
         Ok(())
     }
 
     /// Get velocity by entity
     pub fn get_velocity(&self, entity: Entity) -> Option<Vec3> {
-        self.entity_to_index
-            .get(&entity)
-            .map(|&index| self.velocities[index])
+        self.entity_to_index.get(&entity).map(|&index| self.velocities[index])
     }
 
     /// Set velocity by entity
     pub fn set_velocity(&mut self, entity: Entity, velocity: Vec3) -> Result<(), DomainError> {
-        let index = *self.entity_to_index.get(&entity).ok_or_else(|| {
-            DomainError::General(format!("Entity {:?} not found", entity))
-        })?;
+        let index = *self
+            .entity_to_index
+            .get(&entity)
+            .ok_or_else(|| DomainError::General(format!("Entity {entity:?} not found")))?;
         self.velocities[index] = velocity;
         Ok(())
     }
 
     /// Get mass by entity
     pub fn get_mass(&self, entity: Entity) -> Option<f32> {
-        self.entity_to_index
-            .get(&entity)
-            .map(|&index| self.masses[index])
+        self.entity_to_index.get(&entity).map(|&index| self.masses[index])
     }
 
     /// Set mass by entity
     pub fn set_mass(&mut self, entity: Entity, mass: f32) -> Result<(), DomainError> {
-        let index = *self.entity_to_index.get(&entity).ok_or_else(|| {
-            DomainError::General(format!("Entity {:?} not found", entity))
-        })?;
+        let index = *self
+            .entity_to_index
+            .get(&entity)
+            .ok_or_else(|| DomainError::General(format!("Entity {entity:?} not found")))?;
         self.masses[index] = mass;
         Ok(())
     }
@@ -512,7 +507,11 @@ impl RigidBodyStorage {
     }
 
     /// Convert from RigidBody domain object (integration helper)
-    pub fn from_rigid_body(&mut self, entity: Entity, body: &crate::domain::physics::RigidBody) -> usize {
+    pub fn from_rigid_body(
+        &mut self,
+        entity: Entity,
+        body: &crate::domain::physics::RigidBody,
+    ) -> usize {
         self.insert(
             entity,
             body.id(),
@@ -543,9 +542,8 @@ impl RigidBodyStorage {
     /// Returns indices in a cache-friendly order for large datasets.
     /// This helps with cache prefetching on modern CPUs.
     pub fn cache_friendly_indices(&self) -> Vec<usize> {
-        let mut indices: Vec<usize> = (0..self.ids.len())
-            .filter(|&i| !self.free_indices.contains(&i))
-            .collect();
+        let mut indices: Vec<usize> =
+            (0..self.ids.len()).filter(|&i| !self.free_indices.contains(&i)).collect();
 
         // Sort by memory address (already sorted due to sequential allocation)
         // but we ensure compact layout
@@ -635,7 +633,7 @@ impl Clone for RigidBodyStorage {
 /// use glam::Vec3;
 ///
 /// let mut storage = ColliderStorage::new();
-/// let entity = Entity::from_raw(1);
+/// let entity = Entity::from_bits(1);
 /// let id = ColliderId::new(100);
 /// let body_id = RigidBodyId::new(50);
 ///
@@ -734,17 +732,14 @@ impl ColliderStorage {
             Ok(())
         } else {
             Err(DomainError::General(format!(
-                "Entity {:?} not found in ColliderStorage",
-                entity
+                "Entity {entity:?} not found in ColliderStorage"
             )))
         }
     }
 
     /// Get shape type by entity
     pub fn get_shape_type(&self, entity: Entity) -> Option<ShapeType> {
-        self.entity_to_index
-            .get(&entity)
-            .map(|&index| self.shape_types[index].clone())
+        self.entity_to_index.get(&entity).map(|&index| self.shape_types[index].clone())
     }
 
     /// Set shape type by entity
@@ -753,25 +748,25 @@ impl ColliderStorage {
         entity: Entity,
         shape_type: ShapeType,
     ) -> Result<(), DomainError> {
-        let index = *self.entity_to_index.get(&entity).ok_or_else(|| {
-            DomainError::General(format!("Entity {:?} not found", entity))
-        })?;
+        let index = *self
+            .entity_to_index
+            .get(&entity)
+            .ok_or_else(|| DomainError::General(format!("Entity {entity:?} not found")))?;
         self.shape_types[index] = shape_type;
         Ok(())
     }
 
     /// Get density by entity
     pub fn get_density(&self, entity: Entity) -> Option<f32> {
-        self.entity_to_index
-            .get(&entity)
-            .map(|&index| self.densities[index])
+        self.entity_to_index.get(&entity).map(|&index| self.densities[index])
     }
 
     /// Set density by entity
     pub fn set_density(&mut self, entity: Entity, density: f32) -> Result<(), DomainError> {
-        let index = *self.entity_to_index.get(&entity).ok_or_else(|| {
-            DomainError::General(format!("Entity {:?} not found", entity))
-        })?;
+        let index = *self
+            .entity_to_index
+            .get(&entity)
+            .ok_or_else(|| DomainError::General(format!("Entity {entity:?} not found")))?;
         self.densities[index] = density;
         Ok(())
     }
@@ -828,7 +823,7 @@ mod tests {
     #[test]
     fn test_rigid_body_storage_insert() {
         let mut storage = RigidBodyStorage::new();
-        let entity = Entity::from_raw(1);
+        let entity = Entity::from_bits(1);
         let id = RigidBodyId::new(100);
 
         let index = storage.insert(
@@ -848,7 +843,7 @@ mod tests {
     #[test]
     fn test_rigid_body_storage_remove() {
         let mut storage = RigidBodyStorage::new();
-        let entity = Entity::from_raw(1);
+        let entity = Entity::from_bits(1);
         let id = RigidBodyId::new(100);
 
         storage.insert(
@@ -869,7 +864,7 @@ mod tests {
         let mut storage = RigidBodyStorage::new();
 
         for i in 0..100 {
-            let entity = Entity::from_raw(i);
+            let entity = Entity::from_bits(i);
             let id = RigidBodyId::new(i as u64);
             let pos = Vec3::new(i as f32, 0.0, 0.0);
 
@@ -890,19 +885,27 @@ mod tests {
         let mut storage = RigidBodyStorage::new();
 
         for i in 0..100 {
-            let entity = Entity::from_raw(i);
+            let entity = Entity::from_bits(i);
             let id = RigidBodyId::new(i as u64);
             let vel = Vec3::new(1.0, 0.0, 0.0);
 
-            storage.insert(entity, id, Vec3::ZERO, Quat::IDENTITY, 1.0, RigidBodyType::Dynamic);
+            storage.insert(
+                entity,
+                id,
+                Vec3::ZERO,
+                Quat::IDENTITY,
+                1.0,
+                RigidBodyType::Dynamic,
+            );
             storage.set_velocity(entity, vel).expect("Test: velocity should be set");
         }
 
         storage.update_positions_batch(1.0);
 
         for i in 0..100 {
-            let entity = Entity::from_raw(i);
-            let pos = storage.get_position(entity).expect("Test: position should exist after update");
+            let entity = Entity::from_bits(i);
+            let pos =
+                storage.get_position(entity).expect("Test: position should exist after update");
             assert_eq!(pos.x, 1.0);
         }
     }
@@ -913,7 +916,7 @@ mod tests {
 
         // Add mix of dynamic and fixed bodies
         for i in 0..10 {
-            let entity = Entity::from_raw(i);
+            let entity = Entity::from_bits(i);
             let id = RigidBodyId::new(i as u64);
             let body_type = if i % 2 == 0 {
                 RigidBodyType::Dynamic
@@ -931,17 +934,11 @@ mod tests {
     #[test]
     fn test_collider_storage_insert() {
         let mut storage = ColliderStorage::new();
-        let entity = Entity::from_raw(1);
+        let entity = Entity::from_bits(1);
         let id = ColliderId::new(100);
         let body_id = RigidBodyId::new(50);
 
-        storage.insert(
-            entity,
-            id,
-            body_id,
-            ShapeType::Ball { radius: 1.0 },
-            1.0,
-        );
+        storage.insert(entity, id, body_id, ShapeType::Ball { radius: 1.0 }, 1.0);
 
         assert_eq!(storage.len(), 1);
         assert_eq!(
@@ -953,17 +950,11 @@ mod tests {
     #[test]
     fn test_collider_storage_remove() {
         let mut storage = ColliderStorage::new();
-        let entity = Entity::from_raw(1);
+        let entity = Entity::from_bits(1);
         let id = ColliderId::new(100);
         let body_id = RigidBodyId::new(50);
 
-        storage.insert(
-            entity,
-            id,
-            body_id,
-            ShapeType::Ball { radius: 1.0 },
-            1.0,
-        );
+        storage.insert(entity, id, body_id, ShapeType::Ball { radius: 1.0 }, 1.0);
 
         assert!(storage.remove(entity).is_ok());
         assert_eq!(storage.len(), 0);
@@ -972,8 +963,8 @@ mod tests {
     #[test]
     fn test_storage_slot_reuse() {
         let mut storage = RigidBodyStorage::new();
-        let entity1 = Entity::from_raw(1);
-        let entity2 = Entity::from_raw(2);
+        let entity1 = Entity::from_bits(1);
+        let entity2 = Entity::from_bits(2);
 
         let id1 = RigidBodyId::new(100);
         let id2 = RigidBodyId::new(200);

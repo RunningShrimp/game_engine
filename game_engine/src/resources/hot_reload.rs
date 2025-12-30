@@ -311,21 +311,22 @@ impl ResourceHotReloadManager {
         // 检查文件系统最后修改时间
         if let Ok(metadata) = std::fs::metadata(path)
             && let Ok(modified) = metadata.modified()
-            && let Ok(last_modified) = self.last_modified.read() {
-                if let Some(&last_known) = last_modified.get(path) {
-                    if modified > last_known {
-                        // 文件已被修改
-                        return true;
-                    }
-                } else {
-                    // 首次检查，记录修改时间
-                    drop(last_modified);
-                    if let Ok(mut last_modified) = self.last_modified.write() {
-                        last_modified.insert(path.clone(), modified);
-                    }
-                    return false;
+            && let Ok(last_modified) = self.last_modified.read()
+        {
+            if let Some(&last_known) = last_modified.get(path) {
+                if modified > last_known {
+                    // 文件已被修改
+                    return true;
                 }
+            } else {
+                // 首次检查，记录修改时间
+                drop(last_modified);
+                if let Ok(mut last_modified) = self.last_modified.write() {
+                    last_modified.insert(path.clone(), modified);
+                }
+                return false;
             }
+        }
         false
     }
 
@@ -411,7 +412,7 @@ mod tests {
     use tempfile::TempDir;
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_hot_reload_event_creation() {
         let path = PathBuf::from("/test/resource.txt");
 
@@ -421,23 +422,29 @@ mod tests {
 
         // 验证事件创建成功
         match modified_event {
-            HotReloadEvent::ResourceModified(p) => assert_eq!(p, PathBuf::from("/test/resource.txt")),
+            HotReloadEvent::ResourceModified(p) => {
+                assert_eq!(p, PathBuf::from("/test/resource.txt"))
+            }
             _ => panic!("Expected ResourceModified event"),
         }
 
         match deleted_event {
-            HotReloadEvent::ResourceDeleted(p) => assert_eq!(p, PathBuf::from("/test/resource.txt")),
+            HotReloadEvent::ResourceDeleted(p) => {
+                assert_eq!(p, PathBuf::from("/test/resource.txt"))
+            }
             _ => panic!("Expected ResourceDeleted event"),
         }
 
         match created_event {
-            HotReloadEvent::ResourceCreated(p) => assert_eq!(p, PathBuf::from("/test/resource.txt")),
+            HotReloadEvent::ResourceCreated(p) => {
+                assert_eq!(p, PathBuf::from("/test/resource.txt"))
+            }
             _ => panic!("Expected ResourceCreated event"),
         }
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_hot_reload_manager_watch_resource() {
         let temp_dir = TempDir::new().unwrap_or_else(|e| {
             panic!("Failed to create temp dir: {}", e);
@@ -461,7 +468,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_hot_reload_manager_set_debounce_delay() {
         let temp_dir = TempDir::new().unwrap_or_else(|e| {
             panic!("Failed to create temp dir: {}", e);
@@ -481,14 +488,14 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_hot_reload_service_creation() {
         let temp_dir = TempDir::new().unwrap_or_else(|e| {
             panic!("Failed to create temp dir: {}", e);
         });
 
-        let service = HotReloadService::watch_dir(temp_dir.path().to_path_buf())
-            .unwrap_or_else(|e| {
+        let service =
+            HotReloadService::watch_dir(temp_dir.path().to_path_buf()).unwrap_or_else(|e| {
                 panic!("Failed to create service: {}", e);
             });
 
@@ -497,7 +504,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_get_reload_targets_empty() {
         let temp_dir = TempDir::new().unwrap_or_else(|e| {
             panic!("Failed to create temp dir: {}", e);
@@ -517,7 +524,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_needs_reload_nonexistent_file() {
         let temp_dir = TempDir::new().unwrap_or_else(|e| {
             panic!("Failed to create temp dir: {}", e);
@@ -535,7 +542,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_update_last_modified() {
         let temp_dir = TempDir::new().unwrap_or_else(|e| {
             panic!("Failed to create temp dir: {}", e);
@@ -575,7 +582,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_debounce_events() {
         let temp_dir = TempDir::new().unwrap_or_else(|e| {
             panic!("Failed to create temp dir: {}", e);
@@ -602,7 +609,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_dependency_graph_access() {
         let temp_dir = TempDir::new().unwrap_or_else(|e| {
             panic!("Failed to create temp dir: {}", e);
@@ -619,4 +626,3 @@ mod tests {
         assert!(Arc::ptr_eq(&graph, &dependency_graph));
     }
 }
-

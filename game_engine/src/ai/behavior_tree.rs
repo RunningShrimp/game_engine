@@ -152,18 +152,19 @@ mod tests {
     // Mock node for testing
     struct MockNode {
         status: Status,
-        call_count: std::sync::Arc<std::sync::Mutex<usize>>,
+        call_count: std::sync::Arc<parking_lot::Mutex<usize>>,
     }
 
     impl Node for MockNode {
         fn tick(&mut self) -> Status {
-            *self.call_count.lock().expect("Test: operation should succeed") += 1;
+            // parking_lot::Mutex直接返回Guard
+            *self.call_count.lock() += 1;
             self.status
         }
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_status_equality() {
         assert_eq!(Status::Success, Status::Success);
         assert_eq!(Status::Failure, Status::Failure);
@@ -172,7 +173,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_sequence_all_success() {
         let mut sequence = Sequence {
             children: vec![Box::new(Action), Box::new(Action)],
@@ -182,9 +183,9 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_sequence_with_failure() {
-        let call_count = std::sync::Arc::new(std::sync::Mutex::new(0));
+        let call_count = std::sync::Arc::new(parking_lot::Mutex::new(0usize));
         let mut sequence = Sequence {
             children: vec![
                 Box::new(MockNode {
@@ -204,11 +205,11 @@ mod tests {
 
         assert_eq!(sequence.tick(), Status::Failure);
         // Third child should not be called
-        assert_eq!(*call_count.lock().expect("Test: operation should succeed"), 2);
+        assert_eq!(*call_count.lock(), 2);
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_sequence_with_running() {
         let mut sequence = Sequence {
             children: vec![Box::new(Action), Box::new(Action)],
@@ -220,9 +221,9 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_selector_with_success() {
-        let call_count = std::sync::Arc::new(std::sync::Mutex::new(0));
+        let call_count = std::sync::Arc::new(parking_lot::Mutex::new(0usize));
         let mut selector = Selector {
             children: vec![
                 Box::new(MockNode {
@@ -242,21 +243,21 @@ mod tests {
 
         assert_eq!(selector.tick(), Status::Success);
         // Third child should not be called
-        assert_eq!(*call_count.lock().expect("Test: operation should succeed"), 2);
+        assert_eq!(*call_count.lock(), 2);
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_selector_all_failure() {
         let mut selector = Selector {
             children: vec![
                 Box::new(MockNode {
                     status: Status::Failure,
-                    call_count: std::sync::Arc::new(std::sync::Mutex::new(0)),
+                    call_count: std::sync::Arc::new(parking_lot::Mutex::new(0usize)),
                 }),
                 Box::new(MockNode {
                     status: Status::Failure,
-                    call_count: std::sync::Arc::new(std::sync::Mutex::new(0)),
+                    call_count: std::sync::Arc::new(parking_lot::Mutex::new(0usize)),
                 }),
             ],
         };
@@ -265,7 +266,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_inverter_success_to_failure() {
         let mut inverter = Inverter {
             child: Box::new(Action),
@@ -275,12 +276,12 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_inverter_failure_to_success() {
         let mut inverter = Inverter {
             child: Box::new(MockNode {
                 status: Status::Failure,
-                call_count: std::sync::Arc::new(std::sync::Mutex::new(0)),
+                call_count: std::sync::Arc::new(parking_lot::Mutex::new(0usize)),
             }),
         };
 
@@ -288,12 +289,12 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_inverter_running() {
         let mut inverter = Inverter {
             child: Box::new(MockNode {
                 status: Status::Running,
-                call_count: std::sync::Arc::new(std::sync::Mutex::new(0)),
+                call_count: std::sync::Arc::new(parking_lot::Mutex::new(0usize)),
             }),
         };
 
@@ -301,12 +302,12 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_succeeder_always_success() {
         let mut succeeder = Succeeder {
             child: Box::new(MockNode {
                 status: Status::Failure,
-                call_count: std::sync::Arc::new(std::sync::Mutex::new(0)),
+                call_count: std::sync::Arc::new(parking_lot::Mutex::new(0usize)),
             }),
         };
 
@@ -314,9 +315,9 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_repeat() {
-        let call_count = std::sync::Arc::new(std::sync::Mutex::new(0));
+        let call_count = std::sync::Arc::new(parking_lot::Mutex::new(0usize));
         let mut repeat = Repeat {
             child: Box::new(MockNode {
                 status: Status::Success,
@@ -326,25 +327,25 @@ mod tests {
 
         // Repeat will loop forever on success, so we can't test it directly
         // Just verify it has the right child
-        assert_eq!(*call_count.lock().expect("Test: operation should succeed"), 0);
+        assert_eq!(*call_count.lock(), 0);
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_action_node() {
         let mut action = Action;
         assert_eq!(action.tick(), Status::Success);
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_condition_node() {
         let mut condition = Condition;
         assert_eq!(condition.tick(), Status::Success);
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_behavior_tree_creation() {
         let mut tree = BehaviorTree {
             root: Box::new(Action),
@@ -354,7 +355,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_behavior_tree_with_sequence() {
         let mut tree = BehaviorTree {
             root: Box::new(Sequence {
@@ -366,14 +367,14 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_behavior_tree_with_selector() {
         let mut tree = BehaviorTree {
             root: Box::new(Selector {
                 children: vec![
                     Box::new(MockNode {
                         status: Status::Failure,
-                        call_count: std::sync::Arc::new(std::sync::Mutex::new(0)),
+                        call_count: std::sync::Arc::new(parking_lot::Mutex::new(0usize)),
                     }),
                     Box::new(Action),
                 ],
@@ -384,7 +385,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_complex_behavior_tree() {
         // Create a more complex tree: Sequence(Selector(A, B), Inverter(C))
         let mut tree = BehaviorTree {
@@ -394,7 +395,7 @@ mod tests {
                         children: vec![
                             Box::new(MockNode {
                                 status: Status::Failure,
-                                call_count: std::sync::Arc::new(std::sync::Mutex::new(0)),
+                                call_count: std::sync::Arc::new(parking_lot::Mutex::new(0usize)),
                             }),
                             Box::new(Action),
                         ],
@@ -402,7 +403,7 @@ mod tests {
                     Box::new(Inverter {
                         child: Box::new(MockNode {
                             status: Status::Success,
-                            call_count: std::sync::Arc::new(std::sync::Mutex::new(0)),
+                            call_count: std::sync::Arc::new(parking_lot::Mutex::new(0usize)),
                         }),
                     }),
                 ],
@@ -413,14 +414,14 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_empty_sequence() {
         let mut sequence = Sequence { children: vec![] };
         assert_eq!(sequence.tick(), Status::Success);
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_empty_selector() {
         let mut selector = Selector { children: vec![] };
         assert_eq!(selector.tick(), Status::Failure);

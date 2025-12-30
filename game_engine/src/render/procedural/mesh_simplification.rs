@@ -675,7 +675,7 @@ mod tests {
     use crate::render::procedural::mesh_generator::PrimitiveGenerator;
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_mesh_simplification() {
         // 创建一个球体
         let sphere = PrimitiveGenerator::sphere(1.0, 16, 16);
@@ -701,7 +701,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_lod_generation() {
         let sphere = PrimitiveGenerator::sphere(1.0, 16, 16);
 
@@ -722,7 +722,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_quadric_matrix() {
         let normal = Vec3::new(0.0, 1.0, 0.0);
         let d = -1.0;
@@ -735,7 +735,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_boundary_protection() {
         let sphere = PrimitiveGenerator::sphere(1.0, 8, 8);
 

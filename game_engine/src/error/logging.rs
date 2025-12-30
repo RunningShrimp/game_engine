@@ -99,7 +99,7 @@ impl LogEntry {
         };
 
         let level = LogLevel::from_error_severity(severity);
-        let msg = message.unwrap_or_else(|| format!("{}", error));
+        let msg = message.unwrap_or_else(|| format!("{error}"));
 
         // 提取分类
         let category = match error {
@@ -119,7 +119,7 @@ impl LogEntry {
             module: Some(category.as_str().to_string()),
             file: None,
             line: None,
-            error: Some(format!("{}", error)),
+            error: Some(format!("{error}")),
         }
     }
 
@@ -135,15 +135,15 @@ impl LogEntry {
 
         // 模块
         if let Some(ref module) = self.module {
-            parts.push(format!("[{}]", module));
+            parts.push(format!("[{module}]"));
         }
 
         // 文件位置
         if let Some(ref file) = self.file {
             if let Some(line) = self.line {
-                parts.push(format!("[{}:{}]", file, line));
+                parts.push(format!("[{file}:{line}]"));
             } else {
-                parts.push(format!("[{}]", file));
+                parts.push(format!("[{file}]"));
             }
         }
 
@@ -152,7 +152,7 @@ impl LogEntry {
 
         // 错误信息
         if let Some(ref error) = self.error {
-            parts.push(format!("(Error: {})", error));
+            parts.push(format!("(Error: {error})"));
         }
 
         parts.join(" ")
@@ -185,15 +185,15 @@ impl LogSink for ConsoleLogSink {
         if self.color_enabled {
             // 根据日志级别添加颜色（简化版本）
             match entry.level {
-                LogLevel::Error => eprintln!("{}", formatted),
-                LogLevel::Warn => eprintln!("{}", formatted),
-                _ => println!("{}", formatted),
+                LogLevel::Error => eprintln!("{formatted}"),
+                LogLevel::Warn => eprintln!("{formatted}"),
+                _ => println!("{formatted}"),
             }
         } else {
             match entry.level {
-                LogLevel::Error => eprintln!("{}", formatted),
-                LogLevel::Warn => eprintln!("{}", formatted),
-                _ => println!("{}", formatted),
+                LogLevel::Error => eprintln!("{formatted}"),
+                LogLevel::Warn => eprintln!("{formatted}"),
+                _ => println!("{formatted}"),
             }
         }
     }

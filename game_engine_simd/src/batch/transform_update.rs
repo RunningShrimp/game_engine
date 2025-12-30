@@ -83,14 +83,8 @@ impl TransformBatchUpdater {
             for row in 0..4 {
                 // 加载父矩阵的当前行（两个矩阵交错）
                 let p_row = _mm256_set_ps(
-                    p1[row][3],
-                    p1[row][2],
-                    p1[row][1],
-                    p1[row][0],
-                    p0[row][3],
-                    p0[row][2],
-                    p0[row][1],
-                    p0[row][0],
+                    p1[row][3], p1[row][2], p1[row][1], p1[row][0], p0[row][3], p0[row][2],
+                    p0[row][1], p0[row][0],
                 );
 
                 // 计算结果矩阵的当前行
@@ -98,14 +92,8 @@ impl TransformBatchUpdater {
                 for col in 0..4 {
                     // 加载子矩阵的当前列（两个矩阵交错）
                     let t_col = _mm256_set_ps(
-                        t1[3][col],
-                        t1[2][col],
-                        t1[1][col],
-                        t1[0][col],
-                        t0[3][col],
-                        t0[2][col],
-                        t0[1][col],
-                        t0[0][col],
+                        t1[3][col], t1[2][col], t1[1][col], t1[0][col], t0[3][col], t0[2][col],
+                        t0[1][col], t0[0][col],
                     );
 
                     // 计算点积
@@ -142,11 +130,7 @@ impl TransformBatchUpdater {
     }
 
     /// 标量回退的矩阵乘法
-    fn mat4_mul_fallback(
-        a: &[[f32; 4]; 4],
-        b: &[[f32; 4]; 4],
-        result: &mut [[f32; 4]; 4],
-    ) {
+    fn mat4_mul_fallback(a: &[[f32; 4]; 4], b: &[[f32; 4]; 4], result: &mut [[f32; 4]; 4]) {
         for i in 0..4 {
             for j in 0..4 {
                 let mut sum = 0.0;
@@ -475,8 +459,12 @@ mod tests {
         let scales = vec![[1.0, 1.0, 1.0]];
         let mut output = vec![[[0.0; 4]; 4]; 1];
 
-        let result =
-            TransformBatchUpdater::compose_trs_batch(&translations, &rotations, &scales, &mut output);
+        let result = TransformBatchUpdater::compose_trs_batch(
+            &translations,
+            &rotations,
+            &scales,
+            &mut output,
+        );
 
         assert_eq!(result.count, 1);
         assert!((output[0][3][0] - 1.0).abs() < 1e-5);
@@ -486,26 +474,26 @@ mod tests {
 
     #[test]
     fn test_lerp_transforms() {
-        let transforms_a = vec![
-            [
-                [1.0, 0.0, 0.0, 0.0],
-                [0.0, 1.0, 0.0, 0.0],
-                [0.0, 0.0, 1.0, 0.0],
-                [0.0, 0.0, 0.0, 1.0],
-            ],
-        ];
-        let transforms_b = vec![
-            [
-                [2.0, 0.0, 0.0, 0.0],
-                [0.0, 2.0, 0.0, 0.0],
-                [0.0, 0.0, 2.0, 0.0],
-                [0.0, 0.0, 0.0, 1.0],
-            ],
-        ];
+        let transforms_a = vec![[
+            [1.0, 0.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0],
+            [0.0, 0.0, 0.0, 1.0],
+        ]];
+        let transforms_b = vec![[
+            [2.0, 0.0, 0.0, 0.0],
+            [0.0, 2.0, 0.0, 0.0],
+            [0.0, 0.0, 2.0, 0.0],
+            [0.0, 0.0, 0.0, 1.0],
+        ]];
         let mut output = vec![[[0.0; 4]; 4]; 1];
 
-        let result =
-            TransformBatchUpdater::lerp_transforms_batch(&transforms_a, &transforms_b, 0.5, &mut output);
+        let result = TransformBatchUpdater::lerp_transforms_batch(
+            &transforms_a,
+            &transforms_b,
+            0.5,
+            &mut output,
+        );
 
         assert_eq!(result.count, 1);
         assert!((output[0][0][0] - 1.5).abs() < 1e-5);

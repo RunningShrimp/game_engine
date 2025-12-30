@@ -193,7 +193,8 @@ impl RenderPipelineOptimizer {
         }
 
         // 性能报告
-        let should_report = self.frame_count.is_multiple_of(self.config.performance_monitor_interval);
+        let should_report =
+            self.frame_count.is_multiple_of(self.config.performance_monitor_interval);
         self.frame_count += 1;
 
         PipelineOptimizationResult {
@@ -383,12 +384,10 @@ impl Default for RenderPipelineOptimizerResource {
 }
 
 /// 批次资源（用于ECS）
-#[derive(Resource)]
-#[derive(Default)]
+#[derive(Resource, Default)]
 pub struct OptimizedBatchesResource {
     pub batches: Vec<OptimizedBatch>,
 }
-
 
 /// 渲染管线优化系统
 ///

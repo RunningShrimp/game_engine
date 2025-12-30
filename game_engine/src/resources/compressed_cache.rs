@@ -457,30 +457,41 @@ mod tests {
     #[tokio::test]
     async fn test_cache_get_or_create() {
         let temp_dir = TempDir::new().expect("Test: operation should succeed");
-        let cache = CompressedResourceCache::with_default_config(temp_dir.path()).expect("Test: operation should succeed");
+        let cache = CompressedResourceCache::with_default_config(temp_dir.path())
+            .expect("Test: operation should succeed");
 
         let resource_path = PathBuf::from("test_resource.txt");
         let data = b"Test resource data";
 
         // 创建缓存
-        let cached_path = cache.get_or_create(&resource_path, data).await.expect("Test: operation should succeed");
+        let cached_path = cache
+            .get_or_create(&resource_path, data)
+            .await
+            .expect("Test: operation should succeed");
         assert!(cached_path.exists());
 
         // 再次获取应该返回相同的路径
-        let cached_path2 = cache.get_or_create(&resource_path, data).await.expect("Test: operation should succeed");
+        let cached_path2 = cache
+            .get_or_create(&resource_path, data)
+            .await
+            .expect("Test: operation should succeed");
         assert_eq!(cached_path, cached_path2);
     }
 
     #[tokio::test]
     async fn test_cache_load() {
         let temp_dir = TempDir::new().expect("Test: operation should succeed");
-        let cache = CompressedResourceCache::with_default_config(temp_dir.path()).expect("Test: operation should succeed");
+        let cache = CompressedResourceCache::with_default_config(temp_dir.path())
+            .expect("Test: operation should succeed");
 
         let resource_path = PathBuf::from("test_resource.txt");
         let original_data = b"Test resource data for loading";
 
         // 创建缓存
-        cache.get_or_create(&resource_path, original_data).await.expect("Test: operation should succeed");
+        cache
+            .get_or_create(&resource_path, original_data)
+            .await
+            .expect("Test: operation should succeed");
 
         // 从缓存加载
         let loaded_data = cache.load(&resource_path).await.expect("Test: operation should succeed");
@@ -490,11 +501,18 @@ mod tests {
     #[tokio::test]
     async fn test_cache_stats() {
         let temp_dir = TempDir::new().expect("Test: operation should succeed");
-        let cache = CompressedResourceCache::with_default_config(temp_dir.path()).expect("Test: operation should succeed");
+        let cache = CompressedResourceCache::with_default_config(temp_dir.path())
+            .expect("Test: operation should succeed");
 
         let data = b"Test data";
-        cache.get_or_create(PathBuf::from("test1.txt"), data).await.expect("Test: operation should succeed");
-        cache.get_or_create(PathBuf::from("test2.txt"), data).await.expect("Test: operation should succeed");
+        cache
+            .get_or_create(PathBuf::from("test1.txt"), data)
+            .await
+            .expect("Test: operation should succeed");
+        cache
+            .get_or_create(PathBuf::from("test2.txt"), data)
+            .await
+            .expect("Test: operation should succeed");
 
         let stats = cache.stats();
         assert_eq!(stats.entry_count, 2);

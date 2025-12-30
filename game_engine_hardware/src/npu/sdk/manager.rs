@@ -162,7 +162,7 @@ impl SdkManager {
         if !self.available_backends.contains(&backend) {
             return Err(HardwareError::NpuAccelerationError {
                 operation: "create_engine_with_backend".to_string(),
-                reason: format!("Backend {:?} is not available", backend),
+                reason: format!("Backend {backend:?} is not available"),
             });
         }
 
@@ -207,7 +207,7 @@ impl SdkManager {
             }
             _ => Err(HardwareError::NpuAccelerationError {
                 operation: "create_engine_with_backend".to_string(),
-                reason: format!("Backend {:?} is not yet implemented", backend),
+                reason: format!("Backend {backend:?} is not yet implemented"),
             }),
         }
     }
@@ -227,7 +227,7 @@ impl SdkManager {
         }
         println!();
         if let Some(backend) = self.preferred_backend {
-            println!("Preferred backend: {:?}", backend);
+            println!("Preferred backend: {backend:?}");
         } else {
             println!("No preferred backend selected");
         }

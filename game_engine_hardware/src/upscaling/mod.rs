@@ -139,7 +139,7 @@ impl UpscalingManager {
     /// 设置激活的技术
     pub fn set_active_tech(&mut self, tech: UpscalingTech) -> Result<(), String> {
         if !self.available_techs.contains(&tech) {
-            return Err(format!("{:?} 在当前硬件上不可用", tech));
+            return Err(format!("{tech:?} 在当前硬件上不可用"));
         }
         self.active_tech = tech;
         Ok(())
@@ -220,7 +220,7 @@ impl UpscalingManager {
         ));
 
         let (render_w, render_h) = self.calculate_render_resolution(1920, 1080);
-        recommendations.push(format!("1080p输出时内部渲染: {}x{}", render_w, render_h));
+        recommendations.push(format!("1080p输出时内部渲染: {render_w}x{render_h}"));
 
         recommendations.push(format!(
             "预期性能提升: {:.1}x",
@@ -268,7 +268,7 @@ mod tests {
         println!("Quality Mode: {:?}", manager.quality_mode());
 
         let (w, h) = manager.calculate_render_resolution(3840, 2160);
-        println!("\n4K Output -> Internal Resolution: {}x{}", w, h);
+        println!("\n4K Output -> Internal Resolution: {w}x{h}");
 
         println!(
             "\nEstimated Performance Gain: {:.2}x",
@@ -283,7 +283,7 @@ mod tests {
 
         println!("Upscaling Recommendations:");
         for rec in manager.get_recommendations() {
-            println!("  {}", rec);
+            println!("  {rec}");
         }
     }
 }

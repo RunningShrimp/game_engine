@@ -20,8 +20,8 @@ use std::collections::HashMap;
 // ============================================================================
 
 pub mod strategies {
-    use proptest::prelude::*;
     use glam::Vec3;
+    use proptest::prelude::*;
 
     /// 小坐标策略：生成小范围的坐标（适合局部测试）
     pub fn coord_small() -> impl Strategy<Value = f32> {
@@ -181,14 +181,9 @@ struct SimpleMemoryPool {
 
 impl SimpleMemoryPool {
     fn new(block_size: usize, initial_blocks: usize) -> Self {
-        let blocks = (0..initial_blocks)
-            .map(|_| vec![0u8; block_size])
-            .collect();
+        let blocks = (0..initial_blocks).map(|_| vec![0u8; block_size]).collect();
 
-        Self {
-            blocks,
-            block_size,
-        }
+        Self { blocks, block_size }
     }
 
     fn allocate(&mut self) -> Option<Vec<u8>> {
@@ -612,7 +607,7 @@ proptest! {
 // ============================================================================
 
 #[test]
-#[ignore]  // TODO: Fix compilation errors
+#[ignore] // TODO: Fix compilation errors
 fn test_resource_manager_integration() {
     // 测试资源加载和缓存的集成
     let mut cache = SimpleLRUCache::new(10);

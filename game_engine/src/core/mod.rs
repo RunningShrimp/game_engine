@@ -70,6 +70,9 @@ pub use error_aggregator::{ErrorAggregator, ErrorRecord, ErrorStats, ErrorSummar
 pub use crate::EngineConfig;
 pub use crate::core::engine::Engine;
 pub use resources::{AssetMetrics, Benchmark, LogEvents, RenderStats};
+
+// 重新导出任务调度器
+pub use scheduler::{SchedulerState, SchedulerStats, TaskPriority, TaskScheduler};
 // 系统模块重新导出以避免循环依赖
 pub use systems::ai_system;
 pub use systems::animation_system;

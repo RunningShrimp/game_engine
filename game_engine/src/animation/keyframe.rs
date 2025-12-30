@@ -47,11 +47,10 @@ where
 
         // 按时间排序插入
         let index = match self.keyframes.binary_search_by(|k| {
-            k.time.partial_cmp(&time)
-                .unwrap_or({
-                    // Handle NaN by treating it as greater than any time
-                    std::cmp::Ordering::Greater
-                })
+            k.time.partial_cmp(&time).unwrap_or({
+                // Handle NaN by treating it as greater than any time
+                std::cmp::Ordering::Greater
+            })
         }) {
             Ok(i) | Err(i) => i,
         };

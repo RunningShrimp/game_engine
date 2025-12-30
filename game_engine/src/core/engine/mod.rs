@@ -10,7 +10,7 @@
 //! - [`initialization`](initialization) - Engine initialization logic
 // 本模块提供游戏引擎的核心运行时和主循环实现
 
-#![allow(clippy::module_inception)]  // Intentional module structure - 故意的模块结构
+#![allow(clippy::module_inception)] // Intentional module structure - 故意的模块结构
 //!
 //! ### Game Loop
 //! - [`GameLoop`](game_loop::GameLoop) - Game loop trait defining the loop interface
@@ -105,7 +105,6 @@
 //! - [`crate::audio`][]: Audio system - 音频系统
 //! - [`crate::resources`][]: Resource management - 资源管理
 //!
-
 
 pub mod asset_processor;
 pub mod demo_scene;

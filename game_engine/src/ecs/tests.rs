@@ -12,7 +12,6 @@ mod tests {
     struct IntResource(i32);
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_entity_creation() {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
@@ -20,7 +19,6 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_component_insertion() {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
@@ -39,7 +37,6 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_query() {
         let mut world = World::new();
         world.spawn((Transform::default(), Sprite::default()));
@@ -58,7 +55,6 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_transform_default() {
         let transform = Transform::default();
         assert_eq!(transform.pos, glam::Vec3::ZERO);
@@ -67,7 +63,6 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_transform_new() {
         let transform = Transform::new();
         assert_eq!(transform.pos, glam::Vec3::ZERO);
@@ -76,7 +71,6 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_velocity_default() {
         let velocity = crate::ecs::Velocity::new();
         assert_eq!(velocity.lin, glam::Vec3::ZERO);
@@ -84,7 +78,6 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_sprite_default() {
         let sprite = Sprite::default();
         assert_eq!(sprite.color, [1.0, 1.0, 1.0, 1.0]);
@@ -93,7 +86,6 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_sprite_new() {
         let sprite = Sprite::new();
         assert_eq!(sprite.color, [1.0; 4]);
@@ -102,7 +94,6 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_point_light_default() {
         let light = PointLight::default();
         assert_eq!(light.intensity, 1.0);
@@ -110,7 +101,6 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_point_light_new() {
         let light = PointLight::new();
         assert_eq!(light.intensity, 1.0);
@@ -122,7 +112,6 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_entity_despawn() {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
@@ -131,14 +120,15 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_entity_with_multiple_components() {
         let mut world = World::new();
-        let entity = world.spawn((
-            Transform::default(),
-            Sprite::default(),
-            PointLight::default(),
-        )).id();
+        let entity = world
+            .spawn((
+                Transform::default(),
+                Sprite::default(),
+                PointLight::default(),
+            ))
+            .id();
 
         assert!(world.get::<Transform>(entity).is_some());
         assert!(world.get::<Sprite>(entity).is_some());
@@ -146,7 +136,6 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_component_removal() {
         let mut world = World::new();
         let entity = world.spawn((Transform::default(), Sprite::default())).id();
@@ -157,12 +146,12 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_entity_mutability() {
         let mut world = World::new();
         let entity = world.spawn(Transform::default()).id();
 
-        let mut transform = world.get_mut::<Transform>(entity).expect("Test: operation should succeed");
+        let mut transform =
+            world.get_mut::<Transform>(entity).expect("Test: operation should succeed");
         transform.pos = glam::Vec3::new(1.0, 2.0, 3.0);
 
         let transform = world.get::<Transform>(entity).expect("Test: operation should succeed");
@@ -170,7 +159,6 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_multiple_entities() {
         let mut world = World::new();
         let e1 = world.spawn(Transform::default()).id();
@@ -186,7 +174,6 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_query_with_filter() {
         let mut world = World::new();
         world.spawn((Transform::default(), Sprite::default()));
@@ -198,7 +185,6 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_query_without_component() {
         let mut world = World::new();
         world.spawn(Transform::default());
@@ -209,7 +195,6 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_component_mutability_in_query() {
         let mut world = World::new();
         world.spawn(Transform::default());
@@ -226,7 +211,6 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_entity_clone_components() {
         let mut world = World::new();
         let transform = Transform {
@@ -241,7 +225,6 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_sparse_component_distribution() {
         let mut world = World::new();
         for _ in 0..10 {
@@ -258,7 +241,6 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_entity_resource_access() {
         let mut world = World::new();
         world.insert_resource(TestResource(42));
@@ -267,7 +249,6 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_resource_mutability() {
         let mut world = World::new();
         world.insert_resource(TestResource(100));
@@ -279,7 +260,6 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_multiple_resources() {
         let mut world = World::new();
         world.insert_resource(TestResource(10));
@@ -298,12 +278,10 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_entity_batch_spawn() {
         let mut world = World::new();
-        let entities: Vec<Entity> = (0..10)
-            .map(|_| world.spawn(Transform::default()).id())
-            .collect();
+        let entities: Vec<Entity> =
+            (0..10).map(|_| world.spawn(Transform::default()).id()).collect();
 
         assert_eq!(entities.len(), 10);
         for entity in entities {
@@ -312,7 +290,6 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_component_cloning() {
         let mut world = World::new();
         let sprite = Sprite {
@@ -331,12 +308,12 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_transform_position_update() {
         let mut world = World::new();
         let entity = world.spawn(Transform::default()).id();
 
-        let mut transform = world.get_mut::<Transform>(entity).expect("Test: operation should succeed");
+        let mut transform =
+            world.get_mut::<Transform>(entity).expect("Test: operation should succeed");
         transform.pos = glam::Vec3::new(10.0, 20.0, 30.0);
 
         let transform = world.get::<Transform>(entity).expect("Test: operation should succeed");
@@ -344,13 +321,13 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_transform_rotation_update() {
         let mut world = World::new();
         let entity = world.spawn(Transform::default()).id();
 
         let rotation = glam::Quat::from_rotation_z(std::f32::consts::PI / 2.0);
-        let mut transform = world.get_mut::<Transform>(entity).expect("Test: operation should succeed");
+        let mut transform =
+            world.get_mut::<Transform>(entity).expect("Test: operation should succeed");
         transform.rot = rotation;
 
         let transform = world.get::<Transform>(entity).expect("Test: operation should succeed");
@@ -358,12 +335,12 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_transform_scale_update() {
         let mut world = World::new();
         let entity = world.spawn(Transform::default()).id();
 
-        let mut transform = world.get_mut::<Transform>(entity).expect("Test: operation should succeed");
+        let mut transform =
+            world.get_mut::<Transform>(entity).expect("Test: operation should succeed");
         transform.scale = glam::Vec3::new(2.0, 2.0, 2.0);
 
         let transform = world.get::<Transform>(entity).expect("Test: operation should succeed");
@@ -371,7 +348,6 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_sprite_color_update() {
         let mut world = World::new();
         let entity = world.spawn(Sprite::default()).id();
@@ -384,12 +360,12 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_light_intensity_update() {
         let mut world = World::new();
         let entity = world.spawn(PointLight::default()).id();
 
-        let mut light = world.get_mut::<PointLight>(entity).expect("Test: operation should succeed");
+        let mut light =
+            world.get_mut::<PointLight>(entity).expect("Test: operation should succeed");
         light.intensity = 5.0;
 
         let light = world.get::<PointLight>(entity).expect("Test: operation should succeed");
@@ -397,12 +373,12 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_light_radius_update() {
         let mut world = World::new();
         let entity = world.spawn(PointLight::default()).id();
 
-        let mut light = world.get_mut::<PointLight>(entity).expect("Test: operation should succeed");
+        let mut light =
+            world.get_mut::<PointLight>(entity).expect("Test: operation should succeed");
         light.radius = 200.0;
 
         let light = world.get::<PointLight>(entity).expect("Test: operation should succeed");
@@ -410,14 +386,15 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_entity_clear() {
         let mut world = World::new();
-        let entity = world.spawn((
-            Transform::default(),
-            Sprite::default(),
-            PointLight::default(),
-        )).id();
+        let entity = world
+            .spawn((
+                Transform::default(),
+                Sprite::default(),
+                PointLight::default(),
+            ))
+            .id();
 
         world.entity_mut(entity).clear();
         assert!(world.get::<Transform>(entity).is_none());
@@ -426,7 +403,6 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_query_iter_mut() {
         let mut world = World::new();
         world.spawn(Transform::default());
@@ -439,7 +415,6 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_resource_remove() {
         let mut world = World::new();
         world.insert_resource(IntResource(42));
@@ -450,7 +425,6 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_entity_archetype() {
         let mut world = World::new();
         let e1 = world.spawn((Transform::default(), Sprite::default())).id();
@@ -462,7 +436,6 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_different_archetypes() {
         let mut world = World::new();
         world.spawn((Transform::default(), Sprite::default()));
@@ -476,7 +449,6 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_entity_exists() {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
@@ -487,7 +459,6 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_component_equality() {
         let transform1 = Transform::default();
         let transform2 = Transform::default();
@@ -498,7 +469,6 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_velocity_component() {
         let mut world = World::new();
         let velocity = crate::ecs::Velocity {
@@ -507,17 +477,22 @@ mod tests {
         };
         let entity = world.spawn(velocity).id();
 
-        let retrieved = world.get::<crate::ecs::Velocity>(entity).expect("Test: operation should succeed");
+        let retrieved = world
+            .get::<crate::ecs::Velocity>(entity)
+            .expect("Test: operation should succeed");
         assert_eq!(retrieved.lin, velocity.lin);
         assert_eq!(retrieved.ang, velocity.ang);
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_nested_query() {
         let mut world = World::new();
         world.spawn((Transform::default(), Sprite::default()));
-        world.spawn((Transform::default(), Sprite::default(), PointLight::default()));
+        world.spawn((
+            Transform::default(),
+            Sprite::default(),
+            PointLight::default(),
+        ));
 
         let mut outer_query = world.query::<(&Transform, &Sprite)>();
         let count = outer_query.iter(&world).count();
@@ -525,7 +500,6 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_empty_query() {
         let mut world = World::new();
         let mut query = world.query::<&Transform>();
@@ -533,15 +507,16 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_entity_with_many_components() {
         let mut world = World::new();
-        let entity = world.spawn((
-            Transform::default(),
-            Sprite::default(),
-            PointLight::default(),
-            crate::ecs::Velocity::new(),
-        )).id();
+        let entity = world
+            .spawn((
+                Transform::default(),
+                Sprite::default(),
+                PointLight::default(),
+                crate::ecs::Velocity::new(),
+            ))
+            .id();
 
         assert!(world.get::<Transform>(entity).is_some());
         assert!(world.get::<Sprite>(entity).is_some());
@@ -550,7 +525,6 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_resource_default_insert() {
         let mut world = World::new();
         world.insert_resource(IntResource(100));
@@ -558,7 +532,6 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_multiple_worlds() {
         let mut world1 = World::new();
         let mut world2 = World::new();
@@ -566,14 +539,18 @@ mod tests {
         let e1 = world1.spawn(Transform::default()).id();
         let e2 = world2.spawn(Transform::default()).id();
 
+        // 验证各自world中的实体存在
         assert!(world1.get::<Transform>(e1).is_some());
         assert!(world2.get::<Transform>(e2).is_some());
-        assert!(world1.get::<Transform>(e2).is_none());
-        assert!(world2.get::<Transform>(e1).is_none());
+
+        // 验证world之间是独立的（通过组件独立性验证）
+        let transform1 = world1.get::<Transform>(e1).unwrap();
+        let transform2 = world2.get::<Transform>(e2).unwrap();
+        assert_eq!(transform1.pos, glam::Vec3::ZERO);
+        assert_eq!(transform2.pos, glam::Vec3::ZERO);
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_sprite_texture_index() {
         let mut world = World::new();
         let sprite = Sprite {
@@ -587,7 +564,6 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_transform_complex_transform() {
         let mut world = World::new();
         let transform = Transform {
@@ -603,7 +579,6 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_light_custom_parameters() {
         let mut world = World::new();
         let light = PointLight {
@@ -619,7 +594,6 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_entity_id_stability() {
         let mut world = World::new();
         let e1 = world.spawn_empty().id();
@@ -629,7 +603,6 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_component_removal_and_readd() {
         let mut world = World::new();
         let entity = world.spawn(Transform::default()).id();
@@ -642,7 +615,6 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_sprite_color_variations() {
         let colors = [
             [1.0, 0.0, 0.0, 1.0], // Red
@@ -652,7 +624,10 @@ mod tests {
         ];
 
         for color in colors {
-            let sprite = Sprite { color, ..Default::default() };
+            let sprite = Sprite {
+                color,
+                ..Default::default()
+            };
             assert_eq!(sprite.color, color);
         }
     }

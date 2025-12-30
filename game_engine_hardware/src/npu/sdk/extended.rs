@@ -51,7 +51,7 @@ impl NpuInferenceEngine for OpenVINOEngine {
         // 2. 编译模型到目标设备
         // 3. 创建推理请求
 
-        println!("[OpenVINO] 加载模型: {:?}", model_path);
+        println!("[OpenVINO] 加载模型: {model_path:?}");
         println!("[OpenVINO] 目标设备: {}", self.device);
         Ok(())
     }
@@ -157,7 +157,7 @@ impl NpuInferenceEngine for ROCmEngine {
         // 2. 编译到AMD GPU
         // 3. 优化计算图
 
-        println!("[ROCm] 加载模型: {:?}", model_path);
+        println!("[ROCm] 加载模型: {model_path:?}");
         println!("[ROCm] GPU设备: {}", self.device_id);
         Ok(())
     }
@@ -251,7 +251,7 @@ impl NpuInferenceEngine for AscendEngine {
         // 2. 创建模型描述
         // 3. 准备输入输出缓冲区
 
-        println!("[Ascend] 加载模型: {:?}", model_path);
+        println!("[Ascend] 加载模型: {model_path:?}");
         println!("[Ascend] 设备ID: {}", self.device_id);
         Ok(())
     }
@@ -343,7 +343,7 @@ impl SNPEEngine {
     /// 设置运行时
     pub fn set_runtime(&mut self, runtime: SNPERuntime) -> HardwareResult<()> {
         self.runtime = runtime;
-        println!("[SNPE] 切换运行时: {:?}", runtime);
+        println!("[SNPE] 切换运行时: {runtime:?}");
         Ok(())
     }
 }
@@ -355,7 +355,7 @@ impl NpuInferenceEngine for SNPEEngine {
         // 2. 构建SNPE网络
         // 3. 设置输入输出层
 
-        println!("[SNPE] 加载模型: {:?}", model_path);
+        println!("[SNPE] 加载模型: {model_path:?}");
         println!("[SNPE] 运行时: {:?}", self.runtime);
         Ok(())
     }
@@ -448,7 +448,7 @@ impl NpuInferenceEngine for NeuroPilotEngine {
         // 2. 应用APU代理 (如果启用)
         // 3. 优化模型
 
-        println!("[NeuroPilot] 加载模型: {:?}", model_path);
+        println!("[NeuroPilot] 加载模型: {model_path:?}");
         println!("[NeuroPilot] APU加速: {}", self.use_apu);
         Ok(())
     }

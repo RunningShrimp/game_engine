@@ -119,8 +119,7 @@ impl GraphicsUiBindings {
             ) {
                 // 实际实现需要将线条添加到调试渲染队列
                 ScriptResult::Success(format!(
-                    "Drawing line from ({}, {}) to ({}, {}) with color ({}, {}, {})",
-                    x1, y1, x2, y2, r, g, b
+                    "Drawing line from ({x1}, {y1}) to ({x2}, {y2}) with color ({r}, {g}, {b})"
                 ))
             } else {
                 ScriptResult::Error("draw_line() requires x1, y1, x2, y2, r, g, b".to_string())
@@ -145,8 +144,7 @@ impl GraphicsUiBindings {
                 args.get(5),
             ) {
                 ScriptResult::Success(format!(
-                    "Drawing circle at ({}, {}) with radius {} and color ({}, {}, {})",
-                    x, y, radius, r, g, b
+                    "Drawing circle at ({x}, {y}) with radius {radius} and color ({r}, {g}, {b})"
                 ))
             } else {
                 ScriptResult::Error("draw_circle() requires x, y, radius, r, g, b".to_string())
@@ -173,8 +171,7 @@ impl GraphicsUiBindings {
                 args.get(6),
             ) {
                 ScriptResult::Success(format!(
-                    "Drawing rect at ({}, {}) with size {}x{} and color ({}, {}, {})",
-                    x, y, width, height, r, g, b
+                    "Drawing rect at ({x}, {y}) with size {width}x{height} and color ({r}, {g}, {b})"
                 ))
             } else {
                 ScriptResult::Error("draw_rect() requires x, y, width, height, r, g, b".to_string())
@@ -192,7 +189,7 @@ impl GraphicsUiBindings {
             ) = (args.first(), args.get(1), args.get(2))
             {
                 // 实际实现需要找到Camera组件并更新其Transform
-                ScriptResult::Success(format!("Camera position set to ({}, {}, {})", x, y, z))
+                ScriptResult::Success(format!("Camera position set to ({x}, {y}, {z})"))
             } else {
                 ScriptResult::Error("set_camera_position() requires x, y, z".to_string())
             }
@@ -209,7 +206,7 @@ impl GraphicsUiBindings {
                 Some(ScriptValue::Float(y)),
             ) = (args.first(), args.get(1), args.get(2))
             {
-                ScriptResult::Success(format!("Displaying text '{}' at ({}, {})", text, x, y))
+                ScriptResult::Success(format!("Displaying text '{text}' at ({x}, {y})"))
             } else {
                 ScriptResult::Error("ui_text() requires text, x, y".to_string())
             }
@@ -224,7 +221,7 @@ impl GraphicsUiBindings {
             ) = (args.first(), args.get(1), args.get(2))
             {
                 // 实际实现需要集成UI系统
-                ScriptResult::Success(format!("Button '{}' at ({}, {})", label, x, y))
+                ScriptResult::Success(format!("Button '{label}' at ({x}, {y})"))
             } else {
                 ScriptResult::Error("ui_button() requires label, x, y".to_string())
             }
@@ -240,8 +237,7 @@ impl GraphicsUiBindings {
             ) = (args.first(), args.get(1), args.get(2), args.get(3))
             {
                 ScriptResult::Success(format!(
-                    "Slider '{}' with range [{}, {}] and value {}",
-                    label, min, max, value
+                    "Slider '{label}' with range [{min}, {max}] and value {value}"
                 ))
             } else {
                 ScriptResult::Error("ui_slider() requires label, min, max, value".to_string())
@@ -264,8 +260,7 @@ impl GraphicsUiBindings {
                 args.get(4),
             ) {
                 ScriptResult::Success(format!(
-                    "Image '{}' at ({}, {}) with size {}x{}",
-                    image_path, x, y, width, height
+                    "Image '{image_path}' at ({x}, {y}) with size {width}x{height}"
                 ))
             } else {
                 ScriptResult::Error(
@@ -290,8 +285,7 @@ impl GraphicsUiBindings {
                 args.get(4),
             ) {
                 ScriptResult::Success(format!(
-                    "Panel '{}' at ({}, {}) with size {}x{}",
-                    title, x, y, width, height
+                    "Panel '{title}' at ({x}, {y}) with size {width}x{height}"
                 ))
             } else {
                 ScriptResult::Error("ui_panel() requires title, x, y, width, height".to_string())
@@ -308,7 +302,7 @@ impl GraphicsUiBindings {
         api.register_function("is_key_pressed", move |args| {
             if let Some(ScriptValue::String(key)) = args.first() {
                 // 实际实现需要从输入系统查询按键状态
-                ScriptResult::Success(format!("Key '{}' is not pressed", key))
+                ScriptResult::Success(format!("Key '{key}' is not pressed"))
             } else {
                 ScriptResult::Error("is_key_pressed() requires a key name".to_string())
             }
@@ -321,7 +315,7 @@ mod tests {
     use super::*;
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_graphics_bindings() {
         let mut world = World::new();
         let world_arc = Arc::new(Mutex::new(world));
@@ -354,7 +348,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_ui_bindings() {
         let mut world = World::new();
         let world_arc = Arc::new(Mutex::new(world));

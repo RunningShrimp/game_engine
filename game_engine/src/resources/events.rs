@@ -1,5 +1,5 @@
-use crate::error::safe_lock;
-use std::sync::Mutex;
+use crate::error::safe_lock_pl;
+use parking_lot::Mutex;
 
 pub enum AssetEvent {
     FontJsonReady { name: String, data: String },
@@ -10,25 +10,25 @@ pub enum AssetEvent {
 static QUEUE: Mutex<Vec<AssetEvent>> = Mutex::new(Vec::new());
 
 pub fn push_font_json_ready(name: String, data: String) {
-    if let Ok(mut q) = safe_lock(&QUEUE, "AssetEvent.QUEUE") {
+    if let Ok(mut q) = safe_lock_pl(&QUEUE, "AssetEvent.QUEUE") {
         q.push(AssetEvent::FontJsonReady { name, data });
     }
 }
 
 pub fn push_texture_ready(name: String) {
-    if let Ok(mut q) = safe_lock(&QUEUE, "AssetEvent.QUEUE") {
+    if let Ok(mut q) = safe_lock_pl(&QUEUE, "AssetEvent.QUEUE") {
         q.push(AssetEvent::TextureReady { name });
     }
 }
 
 pub fn push_atlas_ready(name: String) {
-    if let Ok(mut q) = safe_lock(&QUEUE, "AssetEvent.QUEUE") {
+    if let Ok(mut q) = safe_lock_pl(&QUEUE, "AssetEvent.QUEUE") {
         q.push(AssetEvent::AtlasReady { name });
     }
 }
 
 pub fn drain_events() -> Vec<AssetEvent> {
-    if let Ok(mut q) = safe_lock(&QUEUE, "AssetEvent.QUEUE") {
+    if let Ok(mut q) = safe_lock_pl(&QUEUE, "AssetEvent.QUEUE") {
         let mut out = Vec::new();
         std::mem::swap(&mut *q, &mut out);
         out

@@ -125,12 +125,12 @@ fn update_asset_metrics(event: &AssetEvent, world: &mut World) {
 fn log_asset_event(event: &AssetEvent, world: &mut World) {
     if let Some(mut logs) = world.get_resource_mut::<LogEvents>() {
         let msg = match &event {
-            AssetEvent::TextureLoaded(_, ms) => format!("TextureLoaded {:.1}ms", ms),
-            AssetEvent::AtlasLoaded(_, ms) => format!("AtlasLoaded {:.1}ms", ms),
-            AssetEvent::TextureFailed(_, e) => format!("TextureFailed {}", e),
-            AssetEvent::AtlasFailed(_, e) => format!("AtlasFailed {}", e),
-            AssetEvent::GltfLoaded(_, ms) => format!("GltfLoaded {:.1}ms", ms),
-            AssetEvent::GltfFailed(_, e) => format!("GltfFailed {}", e),
+            AssetEvent::TextureLoaded(_, ms) => format!("TextureLoaded {ms:.1}ms"),
+            AssetEvent::AtlasLoaded(_, ms) => format!("AtlasLoaded {ms:.1}ms"),
+            AssetEvent::TextureFailed(_, e) => format!("TextureFailed {e}"),
+            AssetEvent::AtlasFailed(_, e) => format!("AtlasFailed {e}"),
+            AssetEvent::GltfLoaded(_, ms) => format!("GltfLoaded {ms:.1}ms"),
+            AssetEvent::GltfFailed(_, e) => format!("GltfFailed {e}"),
         };
 
         // 维护日志队列大小

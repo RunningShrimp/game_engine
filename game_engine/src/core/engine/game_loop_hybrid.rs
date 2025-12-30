@@ -67,8 +67,8 @@
 
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-use tokio::sync::{mpsc, oneshot, Mutex};
 use tokio::runtime::Runtime;
+use tokio::sync::{Mutex, mpsc, oneshot};
 
 use bevy_ecs::prelude::*;
 
@@ -295,10 +295,7 @@ impl HybridGameLoop {
 
                 // 防止过多的物理步
                 if physics_steps > 10 {
-                    tracing::warn!(
-                        "Too many physics steps in one frame: {}",
-                        physics_steps
-                    );
+                    tracing::warn!("Too many physics steps in one frame: {}", physics_steps);
                     accumulator = Duration::ZERO;
                     break;
                 }
@@ -369,11 +366,7 @@ impl HybridGameLoop {
     fn handle_async_result(&mut self, _world: &mut World, result: AsyncResult) {
         match result {
             AsyncResult::ResourceLoaded(data) => {
-                tracing::debug!(
-                    "Resource loaded: {} ({} bytes)",
-                    data.id,
-                    data.size
-                );
+                tracing::debug!("Resource loaded: {} ({} bytes)", data.id, data.size);
                 self.stats.async_tasks_completed += 1;
             }
             AsyncResult::NetworkResponse(url, data) => {
@@ -449,11 +442,18 @@ impl HybridGameLoop {
 
         while let Some(task) = task_rx.recv().await {
             match task {
-                AsyncTask::ResourceLoad { id, path, result_tx: _task_tx } => {
+                AsyncTask::ResourceLoad {
+                    id,
+                    path,
+                    result_tx: _task_tx,
+                } => {
                     let result = Self::process_resource_load(&id, &path).await;
                     let _ = result_tx.send(result);
                 }
-                AsyncTask::NetworkRequest { url, result_tx: _task_tx } => {
+                AsyncTask::NetworkRequest {
+                    url,
+                    result_tx: _task_tx,
+                } => {
                     let result = Self::process_network_request(&url).await;
                     let _ = result_tx.send(result);
                 }
@@ -462,11 +462,13 @@ impl HybridGameLoop {
                     computation_type,
                     result_tx: _task_tx,
                 } => {
-                    let result =
-                        Self::process_ai_computation(entity_id, &computation_type).await;
+                    let result = Self::process_ai_computation(entity_id, &computation_type).await;
                     let _ = result_tx.send(result);
                 }
-                AsyncTask::Generic { name, result_tx: _task_tx } => {
+                AsyncTask::Generic {
+                    name,
+                    result_tx: _task_tx,
+                } => {
                     let _ = result_tx.send(AsyncResult::TaskCompleted(name));
                 }
             }
@@ -476,10 +478,7 @@ impl HybridGameLoop {
     }
 
     /// 处理资源加载 (异步)
-    async fn process_resource_load(
-        id: &str,
-        path: &std::path::Path,
-    ) -> AsyncResult {
+    async fn process_resource_load(id: &str, path: &std::path::Path) -> AsyncResult {
         let start = Instant::now();
 
         // 模拟异步文件读取
@@ -515,10 +514,7 @@ impl HybridGameLoop {
     }
 
     /// 处理 AI 计算 (异步)
-    async fn process_ai_computation(
-        entity_id: Entity,
-        computation_type: &str,
-    ) -> AsyncResult {
+    async fn process_ai_computation(entity_id: Entity, computation_type: &str) -> AsyncResult {
         let start = Instant::now();
 
         // 模拟 AI 计算
@@ -553,16 +549,16 @@ impl HybridGameLoop {
     /// let game_loop = HybridGameLoop::new(60);
     /// game_loop.submit_resource_load("texture1", "/path/to/texture.png");
     /// ```
-    pub fn submit_resource_load(
-        &self,
-        id: impl Into<String>,
-        path: impl Into<std::path::PathBuf>,
-    ) {
+    pub fn submit_resource_load(&self, id: impl Into<String>, path: impl Into<std::path::PathBuf>) {
         let id = id.into();
         let path = path.into();
         let (result_tx, _) = oneshot::channel();
 
-        let task = AsyncTask::ResourceLoad { id, path, result_tx };
+        let task = AsyncTask::ResourceLoad {
+            id,
+            path,
+            result_tx,
+        };
 
         if let Err(e) = self.async_task_sender.try_send(task) {
             tracing::warn!("Failed to submit resource load task: {}", e);
@@ -582,11 +578,7 @@ impl HybridGameLoop {
     }
 
     /// 提交 AI 计算任务
-    pub fn submit_ai_computation(
-        &self,
-        entity_id: Entity,
-        computation_type: impl Into<String>,
-    ) {
+    pub fn submit_ai_computation(&self, entity_id: Entity, computation_type: impl Into<String>) {
         let computation_type = computation_type.into();
         let (result_tx, _) = oneshot::channel();
 
@@ -616,11 +608,14 @@ impl HybridGameLoop {
         println!("目标帧率: {} FPS", self.target_fps);
         println!("实际帧率: {:.2} FPS", 1000.0 / avg_ms);
         println!("总帧数: {}", self.stats.total_frames);
-        println!("总运行时间: {:.2}s", self.stats.total_duration.as_secs_f64());
+        println!(
+            "总运行时间: {:.2}s",
+            self.stats.total_duration.as_secs_f64()
+        );
         println!("\n帧时间统计:");
-        println!("  平均: {:.3}ms", avg_ms);
-        println!("  最小: {:.3}ms", min_ms);
-        println!("  最大: {:.3}ms", max_ms);
+        println!("  平均: {avg_ms:.3}ms");
+        println!("  最小: {min_ms:.3}ms");
+        println!("  最大: {max_ms:.3}ms");
         println!("  标准差: {:.2}μs", self.stats.frame_time_stddev / 1000.0);
         println!("\n异步任务:");
         println!("  已完成: {}", self.stats.async_tasks_completed);
@@ -673,13 +668,13 @@ mod tests {
         game_loop.submit_network_request("http://example.com");
 
         // 提交 AI 计算
-        let entity_id = Entity::from_raw(1);
+        let entity_id = Entity::from_bits(1);
         game_loop.submit_ai_computation(entity_id, "pathfinding");
     }
 
     #[test]
     fn test_async_task_polling() {
-        let game_loop = HybridGameLoop::new(60);
+        let mut game_loop = HybridGameLoop::new(60);
         let mut world = World::new();
 
         // 轮询应该不阻塞

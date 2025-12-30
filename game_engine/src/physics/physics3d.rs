@@ -10,8 +10,7 @@ use rapier3d::prelude::*;
 ///
 /// 注意：这是简化的实现中使用的占位符。
 /// TODO: 实现proper handle -> Entity映射，使用实际的Entity关联
-const PLACEHOLDER_ENTITY: Entity = Entity::from_raw_u32(0)
-    .expect("Invalid placeholder entity: from_raw_u32(0) should always succeed");
+const PLACEHOLDER_ENTITY: Entity = Entity::from_bits(u64::MAX);
 
 // --- Components ---
 

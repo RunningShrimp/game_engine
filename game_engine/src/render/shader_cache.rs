@@ -144,8 +144,8 @@ impl ShaderCacheKey {
             &self.compile_options_hash
         };
 
-        let combined = format!("{}_{}", source_slice, compile_slice);
-        format!("{}.spv", combined)
+        let combined = format!("{source_slice}_{compile_slice}");
+        format!("{combined}.spv")
     }
 
     /// 获取元数据文件名
@@ -241,7 +241,7 @@ impl ShaderCache {
         // 确保缓存目录存在
         if config.enabled {
             fs::create_dir_all(&config.cache_dir).map_err(|e| RenderError::InvalidState {
-                message: format!("Failed to create shader cache directory: {}", e),
+                message: format!("Failed to create shader cache directory: {e}"),
                 severity: crate::error::ErrorSeverity::Error,
             })?;
         }
@@ -335,7 +335,7 @@ impl ShaderCache {
         // 读取缓存文件
         // 注意：当前缓存的是WGSL源码（用于验证），未来可以缓存SPIR-V二进制
         let cached_data = fs::read(&cache_path).map_err(|e| RenderError::InvalidState {
-            message: format!("Failed to read shader cache file: {}", e),
+            message: format!("Failed to read shader cache file: {e}"),
             severity: crate::error::ErrorSeverity::Error,
         })?;
 
@@ -377,7 +377,7 @@ impl ShaderCache {
         // 注意：当前实现存储WGSL源码，未来可以编译为SPIR-V并缓存二进制
         // 未来优化：集成naga库，编译WGSL到SPIR-V，减少运行时编译开销
         fs::write(&cache_path, source_code.as_bytes()).map_err(|e| RenderError::InvalidState {
-            message: format!("Failed to write shader cache file: {}", e),
+            message: format!("Failed to write shader cache file: {e}"),
             severity: crate::error::ErrorSeverity::Error,
         })?;
 
@@ -414,7 +414,7 @@ impl ShaderCache {
 
         // 写入二进制数据
         fs::write(&cache_path, binary_data).map_err(|e| RenderError::InvalidState {
-            message: format!("Failed to write shader cache file: {}", e),
+            message: format!("Failed to write shader cache file: {e}"),
             severity: crate::error::ErrorSeverity::Error,
         })?;
 
@@ -437,13 +437,13 @@ impl ShaderCache {
     /// 加载元数据
     fn load_metadata(&self, path: &Path) -> Result<CacheMetadata, RenderError> {
         let data = fs::read(path).map_err(|e| RenderError::InvalidState {
-            message: format!("Failed to read metadata: {}", e),
+            message: format!("Failed to read metadata: {e}"),
             severity: crate::error::ErrorSeverity::Error,
         })?;
 
         let metadata: CacheMetadata =
             toml::from_slice(&data).map_err(|e| RenderError::InvalidState {
-                message: format!("Failed to parse metadata: {}", e),
+                message: format!("Failed to parse metadata: {e}"),
                 severity: crate::error::ErrorSeverity::Error,
             })?;
 
@@ -453,12 +453,12 @@ impl ShaderCache {
     /// 保存元数据
     fn save_metadata(&self, path: &Path, metadata: &CacheMetadata) -> Result<(), RenderError> {
         let data = toml::to_string(metadata).map_err(|e| RenderError::InvalidState {
-            message: format!("Failed to serialize metadata: {}", e),
+            message: format!("Failed to serialize metadata: {e}"),
             severity: crate::error::ErrorSeverity::Error,
         })?;
 
         fs::write(path, data).map_err(|e| RenderError::InvalidState {
-            message: format!("Failed to write metadata: {}", e),
+            message: format!("Failed to write metadata: {e}"),
             severity: crate::error::ErrorSeverity::Error,
         })?;
 
@@ -687,7 +687,7 @@ mod tests {
     use tempfile::TempDir;
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_cache_key_generation() {
         let source1 = "fn main() {}";
         let source2 = "fn main() {}";
@@ -705,7 +705,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_cache_key_filename() {
         let key = ShaderCacheKey::from_source("test", "");
         let filename = key.cache_filename();
@@ -716,7 +716,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_shader_cache_basic() {
         let temp_dir = TempDir::new().unwrap_or_else(|e| {
             panic!("Failed to create temporary directory: {}", e);
@@ -763,7 +763,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_cache_invalidation() {
         let temp_dir = TempDir::new().unwrap_or_else(|e| {
             panic!("Failed to create temporary directory: {}", e);
@@ -800,7 +800,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_cache_stats() {
         let temp_dir = TempDir::new().unwrap_or_else(|e| {
             panic!("Failed to create temporary directory: {}", e);

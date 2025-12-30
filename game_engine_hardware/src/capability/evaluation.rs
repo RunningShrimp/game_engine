@@ -216,7 +216,7 @@ mod tests {
 
         let capability = HardwareCapability::evaluate(&gpu, &npu, &soc);
 
-        println!("Hardware Capability: {:#?}", capability);
+        println!("Hardware Capability: {capability:#?}");
 
         assert!(capability.system_ram_mb > 0);
         assert!(capability.gpu_vram_mb > 0);

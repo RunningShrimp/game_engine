@@ -25,11 +25,11 @@
 
 use crate::core::utils::current_timestamp_ms;
 use crate::network::NetworkError;
+use crate::serialization::compat::bincode_compat;
 use aes_gcm::{
     Aes256Gcm, Nonce,
     aead::{Aead, KeyInit},
 };
-use bincode;
 use hmac::{Hmac, Mac};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -62,13 +62,7 @@ impl AuthToken {
         // 生成签名（包含版本以防止版本混淆攻击）
         let mut mac =
             <HmacSha256 as Mac>::new_from_slice(secret_key).expect("HMAC can take key of any size");
-        mac.update(
-            format!(
-                "{}_{}_{}_{}",
-                CURRENT_VERSION, token_id, client_id, expires_at
-            )
-            .as_bytes(),
-        );
+        mac.update(format!("{CURRENT_VERSION}_{token_id}_{client_id}_{expires_at}").as_bytes());
         let signature = mac.finalize().into_bytes().to_vec();
 
         Self {
@@ -160,7 +154,7 @@ impl MessageEncryptor {
         let ciphertext = self
             .cipher
             .encrypt(nonce, plaintext)
-            .map_err(|e| NetworkError::CompressionError(format!("Encryption error: {}", e)))?;
+            .map_err(|e| NetworkError::CompressionError(format!("Encryption error: {e}")))?;
 
         // AES-GCM 已经包含认证标签（附加在密文末尾），但我们分开存储以保持 API 兼容性
         // 密文长度 = 原始长度 + 16字节标签
@@ -222,7 +216,7 @@ impl MessageEncryptor {
     #[allow(dead_code)]
     fn generate_auth_tag(&self, ciphertext: &[u8], nonce: &[u8]) -> Result<Vec<u8>, NetworkError> {
         let mut mac = <HmacSha256 as Mac>::new_from_slice(&self.key)
-            .map_err(|e| NetworkError::CompressionError(format!("HMAC error: {}", e)))?;
+            .map_err(|e| NetworkError::CompressionError(format!("HMAC error: {e}")))?;
         mac.update(ciphertext);
         mac.update(nonce);
         Ok(mac.finalize().into_bytes().to_vec())
@@ -377,7 +371,8 @@ impl SecureSession {
         let encrypted = self.encryptor.encrypt(message)?;
 
         // 再签名
-        let encrypted_bytes = bincode::serialize(&encrypted)
+        let encrypted_bytes = bincode_compat::serialize(&encrypted)
+            .map_err(Box::new)
             .map_err(|e| NetworkError::SerializationError(e.to_string()))?;
         let signature = self.signer.sign(&encrypted_bytes);
 
@@ -393,7 +388,8 @@ impl SecureSession {
         signed_encrypted: &SignedEncryptedMessage,
     ) -> Result<Vec<u8>, NetworkError> {
         // 先验证签名
-        let encrypted_bytes = bincode::serialize(&signed_encrypted.encrypted)
+        let encrypted_bytes = bincode_compat::serialize(&signed_encrypted.encrypted)
+            .map_err(Box::new)
             .map_err(|e| NetworkError::SerializationError(e.to_string()))?;
         if !self.signer.verify(&encrypted_bytes, &signed_encrypted.signature) {
             return Err(NetworkError::CompressionError(
@@ -501,8 +497,11 @@ mod tests {
         let mut session = SecureSession::new(1, token, encryption_key, signing_key);
 
         let message = b"Secure message";
-        let signed_encrypted = session.encrypt_and_sign(message).expect("Test: operation should succeed");
-        let decrypted = session.verify_and_decrypt(&signed_encrypted).expect("Test: operation should succeed");
+        let signed_encrypted =
+            session.encrypt_and_sign(message).expect("Test: operation should succeed");
+        let decrypted = session
+            .verify_and_decrypt(&signed_encrypted)
+            .expect("Test: operation should succeed");
 
         assert_eq!(message, decrypted.as_slice());
     }

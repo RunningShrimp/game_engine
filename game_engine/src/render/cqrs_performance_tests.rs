@@ -39,26 +39,11 @@ impl RenderPerformanceMetrics {
     }
 
     pub fn print(&self) {
-        println!(
-            "=== {} ===",
-            self.operation_name
-        );
-        println!(
-            "  Iterations: {}",
-            self.iterations
-        );
-        println!(
-            "  Total time: {:?}",
-            self.total_time
-        );
-        println!(
-            "  Avg time/op: {:?}",
-            self.avg_time_per_operation
-        );
-        println!(
-            "  Ops/sec: {:.2}",
-            self.operations_per_second
-        );
+        println!("=== {} ===", self.operation_name);
+        println!("  Iterations: {}", self.iterations);
+        println!("  Total time: {:?}", self.total_time);
+        println!("  Avg time/op: {:?}", self.avg_time_per_operation);
+        println!("  Ops/sec: {:.2}", self.operations_per_second);
     }
 }
 
@@ -67,6 +52,12 @@ pub struct RenderCqrsBenchmarkSuite {
     world: World,
     cqrs_manager: Arc<crate::domain::cqrs::CqrsManager>,
     query_model: Arc<RwLock<RenderQueryModel>>,
+}
+
+impl Default for RenderCqrsBenchmarkSuite {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl RenderCqrsBenchmarkSuite {
@@ -95,9 +86,7 @@ impl RenderCqrsBenchmarkSuite {
     pub fn setup_scenario(&mut self, object_count: usize) {
         let mut model = self.query_model.write().expect("Test: operation should succeed");
 
-        model.object_ids = (0..object_count)
-            .map(|i| RenderObjectId::new(i as u64))
-            .collect();
+        model.object_ids = (0..object_count).map(|i| RenderObjectId::new(i as u64)).collect();
 
         model.world_transforms = (0..object_count)
             .map(|i| {
@@ -181,7 +170,7 @@ impl RenderCqrsBenchmarkSuite {
 
         let total_time = start.elapsed();
         RenderPerformanceMetrics::new(
-            format!("BatchGetTransforms (batch_size={})", batch_size),
+            format!("BatchGetTransforms (batch_size={batch_size})"),
             iterations * batch_size,
             total_time,
         )
@@ -203,7 +192,7 @@ impl RenderCqrsBenchmarkSuite {
 
     /// Run full benchmark suite
     pub fn run_full_benchmark_suite(&mut self, object_count: usize) -> RenderBenchmarkReport {
-        println!("Setting up render benchmark with {} objects...", object_count);
+        println!("Setting up render benchmark with {object_count} objects...");
         self.setup_scenario(object_count);
         println!("Setup complete.\n");
 
@@ -301,7 +290,8 @@ impl RenderBenchmarkReport {
 
         for metric in &self.metrics {
             println!("│ {:<50} │", metric.operation_name);
-            println!("│ {:<20} │ {:>15.0} │ {:>15.0} │",
+            println!(
+                "│ {:<20} │ {:>15.0} │ {:>15.0} │",
                 "",
                 metric.metrics.avg_time_per_operation.as_nanos(),
                 metric.metrics.operations_per_second
@@ -313,11 +303,11 @@ impl RenderBenchmarkReport {
         println!();
 
         // Calculate average ops/sec
-        let avg_ops_per_sec: f64 = self.metrics.iter()
-            .map(|m| m.metrics.operations_per_second)
-            .sum::<f64>() / self.metrics.len() as f64;
+        let avg_ops_per_sec: f64 =
+            self.metrics.iter().map(|m| m.metrics.operations_per_second).sum::<f64>()
+                / self.metrics.len() as f64;
 
-        println!("Average Operations Per Second: {:.2}", avg_ops_per_sec);
+        println!("Average Operations Per Second: {avg_ops_per_sec:.2}");
         println!();
     }
 }
@@ -376,11 +366,19 @@ mod tests {
                 RenderObjectId::new(3),
             ],
             world_transforms: vec![Mat4::IDENTITY, Mat4::IDENTITY, Mat4::IDENTITY],
-            positions: vec![Vec3::ZERO, Vec3::new(5.0, 0.0, 0.0), Vec3::new(20.0, 0.0, 0.0)],
+            positions: vec![
+                Vec3::ZERO,
+                Vec3::new(5.0, 0.0, 0.0),
+                Vec3::new(20.0, 0.0, 0.0),
+            ],
             visible: vec![true, true, true],
             is_static: vec![true, false, true],
             lod_levels: vec![0, 0, 0],
-            bounding_centers: vec![Vec3::ZERO, Vec3::new(5.0, 0.0, 0.0), Vec3::new(20.0, 0.0, 0.0)],
+            bounding_centers: vec![
+                Vec3::ZERO,
+                Vec3::new(5.0, 0.0, 0.0),
+                Vec3::new(20.0, 0.0, 0.0),
+            ],
             bounding_radii: vec![1.0, 1.0, 1.0],
         };
 

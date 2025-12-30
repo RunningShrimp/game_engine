@@ -10,7 +10,7 @@ mod core_systems_e2e_tests {
     use glam::{Quat, Vec3};
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_ecs_physics_integration() {
         // 测试ECS系统与物理系统的集成
         let mut world = bevy_ecs::prelude::World::new();
@@ -41,7 +41,7 @@ mod core_systems_e2e_tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_rigid_body_creation_workflow() {
         // 测试刚体创建工作流程
         let body_id = RigidBodyId::new(1);
@@ -55,7 +55,7 @@ mod core_systems_e2e_tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_multiple_rigid_bodies_creation() {
         // 测试多个刚体的创建
         for i in 1..=5 {
@@ -73,7 +73,7 @@ mod core_systems_e2e_tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_all_rigid_body_types() {
         // 测试所有类型的刚体
         let fixed_id = RigidBodyId::new(1);
@@ -95,7 +95,7 @@ mod core_systems_e2e_tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_rigid_body_mass_operations() {
         // 测试刚体质量操作
         let body_id = RigidBodyId::new(1);
@@ -111,7 +111,7 @@ mod core_systems_e2e_tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_rigid_body_state_workflow() {
         // 测试刚体状态的完整工作流程
         let state = RigidBodyState {
@@ -136,7 +136,7 @@ mod core_systems_e2e_tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_error_conversion_workflow() {
         // 测试错误转换工作流程
         use game_engine::error::ErrorSeverity;
@@ -158,7 +158,7 @@ mod core_systems_e2e_tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_recovery_strategies() {
         // 测试不同的恢复策略
         let retry = RecoveryStrategy::Retry {
@@ -186,7 +186,7 @@ mod core_systems_e2e_tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_compensation_action_workflow() {
         // 测试补偿操作工作流程
         let action = CompensationAction::new(
@@ -202,7 +202,7 @@ mod core_systems_e2e_tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_physics_shape_types() {
         // 测试物理形状类型
         let sphere = ShapeType::Sphere { radius: 1.0 };
@@ -215,7 +215,7 @@ mod core_systems_e2e_tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_id_generation_and_uniqueness() {
         // 测试ID生成和唯一性
         let id1 = RigidBodyId::new(1);
@@ -231,7 +231,7 @@ mod core_systems_e2e_tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_all_error_types() {
         // 测试所有错误类型的可构造性
         use game_engine::error::ErrorSeverity;
@@ -248,7 +248,7 @@ mod core_systems_e2e_tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_ecs_component_combinations() {
         // 测试ECS组件组合
         let mut world = bevy_ecs::prelude::World::new();

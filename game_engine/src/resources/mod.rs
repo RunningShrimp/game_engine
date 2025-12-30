@@ -148,6 +148,11 @@ pub mod texture_decoder;
 pub mod time;
 pub mod upload_queue;
 
+// 性能优化模块
+#[cfg(feature = "dashmap")]
+pub mod dashmap_optimizations;
+pub mod optimized_manager;
+
 // 统一资源接口
 pub mod compressed_cache;
 pub mod loader_trait;

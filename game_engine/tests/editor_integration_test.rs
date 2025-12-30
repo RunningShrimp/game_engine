@@ -4,7 +4,7 @@ use game_engine::editor::EditorState;
 use glam::Vec3;
 
 #[test]
-#[ignore]  // TODO: Fix compilation errors
+#[ignore] // TODO: Fix compilation errors
 fn test_editor_integration() {
     let mut world = World::new();
 

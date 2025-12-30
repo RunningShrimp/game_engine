@@ -631,7 +631,9 @@ mod tests {
 
         // 验证路径包含目标点
         assert!(
-            result.path.contains(&target) || result.path.last().expect("Test: operation should succeed").distance(target) < 1.0
+            result.path.contains(&target)
+                || result.path.last().expect("Test: operation should succeed").distance(target)
+                    < 1.0
         );
     }
 }

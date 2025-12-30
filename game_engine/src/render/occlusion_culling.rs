@@ -440,14 +440,14 @@ impl HierarchicalZCulling {
             });
 
             let hi_z_mip_view = hi_z_texture.create_view(&wgpu::TextureViewDescriptor {
-                label: Some(&format!("Hi-Z Mip {}", mip_level)),
+                label: Some(&format!("Hi-Z Mip {mip_level}")),
                 base_mip_level: mip_level,
                 mip_level_count: Some(1),
                 ..Default::default()
             });
 
             let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some(&format!("Hi-Z Build BG {}", mip_level)),
+                label: Some(&format!("Hi-Z Build BG {mip_level}")),
                 layout: &build_bind_group_layout,
                 entries: &[
                     wgpu::BindGroupEntry {
@@ -471,7 +471,7 @@ impl HierarchicalZCulling {
             // 优化：对于小mip级别，可以合并到同一个pass中
             // 但为了简单性和正确性，我们仍然为每个mip级别创建单独的pass
             let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some(&format!("Hi-Z Build Mip {}", mip_level)),
+                label: Some(&format!("Hi-Z Build Mip {mip_level}")),
                 timestamp_writes: None,
             });
 
@@ -1188,7 +1188,7 @@ mod tests {
     use super::*;
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_hi_z_creation() {
         // 测试Hi-Z创建（不需要WGPU设备）
         let width = 1024;
@@ -1201,7 +1201,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_hi_z_mip_levels() {
         // 测试Hi-Z层级数计算
         let width = 1920;
@@ -1218,7 +1218,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_aabb_projection() {
         // 测试AABB投影逻辑（单元测试）
         // 这里只测试基本的AABB计算，实际的投影在着色器中完成

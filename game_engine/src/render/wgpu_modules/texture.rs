@@ -161,7 +161,7 @@ impl TextureManager {
         };
 
         let texture = device.create_texture(&wgpu::TextureDescriptor {
-            label: Some(&format!("Texture: {:?}", path)),
+            label: Some(&format!("Texture: {path:?}")),
             size: wgpu::Extent3d {
                 width: w,
                 height: h,
@@ -199,7 +199,7 @@ impl TextureManager {
         let sampler = device.create_sampler(&wgpu::SamplerDescriptor::default());
 
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some(&format!("Texture BG: {:?}", path)),
+            label: Some(&format!("Texture BG: {path:?}")),
             layout: &self.texture_bgl,
             entries: &[
                 wgpu::BindGroupEntry {

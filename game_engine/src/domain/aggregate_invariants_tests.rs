@@ -70,7 +70,12 @@ mod scene_invariants_tests {
         assert!(scene.validate().is_ok());
 
         // 验证实体已激活
-        assert!(scene.get_entity(EntityId(1)).expect("Test: operation should succeed").is_active());
+        assert!(
+            scene
+                .get_entity(EntityId(1))
+                .expect("Test: operation should succeed")
+                .is_active()
+        );
     }
 
     /// 测试所有实体必须有效的不变式

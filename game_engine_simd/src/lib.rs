@@ -208,7 +208,7 @@ mod tests {
     #[test]
     fn test_backend_detection() {
         let backend = SimdBackend::best_available();
-        println!("Detected SIMD backend: {:?}", backend);
+        println!("Detected SIMD backend: {backend:?}");
         // 现代CPU应该至少支持SSE2或NEON
         #[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
         assert_ne!(backend, SimdBackend::Scalar);

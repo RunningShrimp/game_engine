@@ -80,7 +80,7 @@ impl NpuInferenceEngine for OnnxRuntimeEngine {
         if !model_path.exists() {
             return Err(HardwareError::NpuAccelerationError {
                 operation: "load_model".to_string(),
-                reason: format!("Model file not found: {:?}", model_path),
+                reason: format!("Model file not found: {model_path:?}"),
             });
         }
 

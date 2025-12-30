@@ -273,7 +273,7 @@ mod tests {
         let capability = HardwareCapability::evaluate(&gpu, &npu, &soc);
         let config = AutoConfig::from_capability(&capability);
 
-        println!("Auto Config: {:#?}", config);
+        println!("Auto Config: {config:#?}");
 
         assert!(config.resolution_scale > 0.0);
         assert!(config.target_fps > 0);

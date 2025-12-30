@@ -108,22 +108,14 @@ impl Default for CachePolicy {
 
 impl ResourceMetadata {
     /// 创建新的资源元数据
-    pub fn new(
-        id: impl Into<String>,
-        resource_type: ResourceType,
-        path: impl AsRef<Path>,
-    ) -> Self {
+    pub fn new(id: impl Into<String>, resource_type: ResourceType, path: impl AsRef<Path>) -> Self {
         let path = path.as_ref();
 
         Self {
             id: id.into(),
             resource_type,
             path: path.to_path_buf(),
-            name: path
-                .file_name()
-                .and_then(|n| n.to_str())
-                .unwrap_or("unknown")
-                .to_string(),
+            name: path.file_name().and_then(|n| n.to_str()).unwrap_or("unknown").to_string(),
             description: String::new(),
             tags: Vec::new(),
             size_bytes: 0,
@@ -260,18 +252,12 @@ impl ResourcePackMetadata {
 
     /// 按类型查找资源
     pub fn find_resources_by_type(&self, resource_type: &ResourceType) -> Vec<&ResourceMetadata> {
-        self.resources
-            .iter()
-            .filter(|r| &r.resource_type == resource_type)
-            .collect()
+        self.resources.iter().filter(|r| &r.resource_type == resource_type).collect()
     }
 
     /// 按标签查找资源
     pub fn find_resources_by_tag(&self, tag: &str) -> Vec<&ResourceMetadata> {
-        self.resources
-            .iter()
-            .filter(|r| r.has_tag(tag))
-            .collect()
+        self.resources.iter().filter(|r| r.has_tag(tag)).collect()
     }
 
     /// 获取资源总数
@@ -324,17 +310,11 @@ impl ResourceIndex {
 
         // 添加到标签索引
         for tag in &metadata.tags {
-            self.tag_index
-                .entry(tag.clone())
-                .or_insert_with(Vec::new)
-                .push(id.clone());
+            self.tag_index.entry(tag.clone()).or_default().push(id.clone());
         }
 
         // 添加到类型索引
-        self.type_index
-            .entry(type_str)
-            .or_insert_with(Vec::new)
-            .push(id);
+        self.type_index.entry(type_str).or_default().push(id);
     }
 
     /// 按ID查找资源
@@ -353,24 +333,16 @@ impl ResourceIndex {
     pub fn find_by_tag(&self, tag: &str) -> Vec<&ResourceMetadata> {
         self.tag_index
             .get(tag)
-            .map(|ids| {
-                ids.iter()
-                    .filter_map(|id| self.id_index.get(id))
-                    .collect()
-            })
+            .map(|ids| ids.iter().filter_map(|id| self.id_index.get(id)).collect())
             .unwrap_or_default()
     }
 
     /// 按类型查找资源
     pub fn find_by_type(&self, resource_type: &ResourceType) -> Vec<&ResourceMetadata> {
-        let type_str = format!("{:?}", resource_type);
+        let type_str = format!("{resource_type:?}");
         self.type_index
             .get(&type_str)
-            .map(|ids| {
-                ids.iter()
-                    .filter_map(|id| self.id_index.get(id))
-                    .collect()
-            })
+            .map(|ids| ids.iter().filter_map(|id| self.id_index.get(id)).collect())
             .unwrap_or_default()
     }
 
@@ -431,10 +403,9 @@ mod tests {
             "/assets/textures/player.png",
         );
 
-        metadata
-            .add_tag("player")
-            .add_tag("character")
-            .add_dependency("shader_default");
+        metadata.add_tag("player");
+        metadata.add_tag("character");
+        metadata.add_dependency("shader_default");
         metadata.set_property("compression", "png");
         metadata.set_property("mipmaps", "true");
 
@@ -476,16 +447,13 @@ mod tests {
     fn test_resource_index() {
         let mut index = ResourceIndex::new();
 
-        let mut tex1 =
-            ResourceMetadata::new("tex1", ResourceType::Texture, "/assets/player.png");
+        let mut tex1 = ResourceMetadata::new("tex1", ResourceType::Texture, "/assets/player.png");
         tex1.add_tag("player");
 
-        let mut tex2 =
-            ResourceMetadata::new("tex2", ResourceType::Texture, "/assets/enemy.png");
+        let mut tex2 = ResourceMetadata::new("tex2", ResourceType::Texture, "/assets/enemy.png");
         tex2.add_tag("enemy");
 
-        let mut audio1 =
-            ResourceMetadata::new("audio1", ResourceType::Audio, "/assets/bgm.mp3");
+        let mut audio1 = ResourceMetadata::new("audio1", ResourceType::Audio, "/assets/bgm.mp3");
         audio1.add_tag("player"); // 相同标签
 
         index.add(tex1);
@@ -497,9 +465,7 @@ mod tests {
         assert!(index.find_by_id("nonexistent").is_none());
 
         // 测试路径查找
-        assert!(index
-            .find_by_path(Path::new("/assets/player.png"))
-            .is_some());
+        assert!(index.find_by_path(Path::new("/assets/player.png")).is_some());
 
         // 测试标签查找
         let player_tagged = index.find_by_tag("player");

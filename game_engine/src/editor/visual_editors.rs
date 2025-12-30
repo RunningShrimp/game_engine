@@ -774,7 +774,8 @@ mod tests {
     fn test_json_export_import() {
         let sm = create_default_state_machine();
         let json = sm.export_json().expect("Test: operation should succeed");
-        let sm2 = AnimationStateMachine::import_json(&json).expect("Test: operation should succeed");
+        let sm2 =
+            AnimationStateMachine::import_json(&json).expect("Test: operation should succeed");
 
         assert_eq!(sm.name, sm2.name);
         assert_eq!(sm.states.len(), sm2.states.len());

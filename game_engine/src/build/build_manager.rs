@@ -142,8 +142,9 @@ impl BuildManager {
 
         // 初始化进度
         {
-            let mut progress = self.progress.lock()
-                .map_err(|e| BuildError::TaskError(format!("Failed to acquire progress lock: {}", e)))?;
+            let mut progress = self.progress.lock().map_err(|e| {
+                BuildError::TaskError(format!("Failed to acquire progress lock: {e}"))
+            })?;
             progress.total = packages.len();
             progress.completed = 0;
             progress.start_time = Some(Instant::now());
@@ -165,13 +166,16 @@ impl BuildManager {
                 let _permit = match semaphore.acquire().await {
                     Ok(permit) => permit,
                     Err(e) => {
-                        return (package_clone.clone(), BuildResult {
-                            package: package_clone.clone(),
-                            success: false,
-                            duration: 0.0,
-                            error: Some(format!("Failed to acquire semaphore permit: {}", e)),
-                            output_size: None,
-                        });
+                        return (
+                            package_clone.clone(),
+                            BuildResult {
+                                package: package_clone.clone(),
+                                success: false,
+                                duration: 0.0,
+                                error: Some(format!("Failed to acquire semaphore permit: {e}")),
+                                output_size: None,
+                            },
+                        );
                     }
                 };
 
@@ -180,13 +184,16 @@ impl BuildManager {
                     let mut prog = match progress.lock() {
                         Ok(g) => g,
                         Err(e) => {
-                            return (package_clone.clone(), BuildResult {
-                                package: package_clone.clone(),
-                                success: false,
-                                duration: 0.0,
-                                error: Some(format!("Failed to acquire progress lock: {}", e)),
-                                output_size: None,
-                            });
+                            return (
+                                package_clone.clone(),
+                                BuildResult {
+                                    package: package_clone.clone(),
+                                    success: false,
+                                    duration: 0.0,
+                                    error: Some(format!("Failed to acquire progress lock: {e}")),
+                                    output_size: None,
+                                },
+                            );
                         }
                     };
                     prog.current_packages.push(package_clone.clone());
@@ -199,7 +206,7 @@ impl BuildManager {
                     let mut prog = match progress.lock() {
                         Ok(g) => g,
                         Err(e) => {
-                            eprintln!("Failed to acquire progress lock: {}", e);
+                            eprintln!("Failed to acquire progress lock: {e}");
                             return (package_clone, result);
                         }
                     };
@@ -209,9 +216,10 @@ impl BuildManager {
 
                 // 更新缓存
                 if result.success
-                    && let Ok(mut cache) = cache.lock() {
-                        cache.insert(package_clone.clone(), Instant::now());
-                    }
+                    && let Ok(mut cache) = cache.lock()
+                {
+                    cache.insert(package_clone.clone(), Instant::now());
+                }
 
                 (package_clone, result)
             });
@@ -321,8 +329,7 @@ impl BuildManager {
         // 简化实现：对于增量构建，暂时返回所有包
         // 实际实现应该检查源文件的修改时间
         // 这里使用简化的逻辑：如果缓存存在且时间较近，跳过构建
-        let cache = self.build_cache.lock()
-            .expect("Build cache lock poisoned");
+        let cache = self.build_cache.lock().expect("Build cache lock poisoned");
         let mut changed = Vec::new();
 
         for package in packages {
@@ -431,8 +438,7 @@ impl BuildManager {
         println!("各包构建时间:");
         let mut sorted_results: Vec<_> = results.iter().collect();
         sorted_results.sort_by(|a, b| {
-            b.1.duration.partial_cmp(&a.1.duration)
-                .unwrap_or(std::cmp::Ordering::Equal)
+            b.1.duration.partial_cmp(&a.1.duration).unwrap_or(std::cmp::Ordering::Equal)
         });
 
         for (package, result) in sorted_results.iter().take(10) {
@@ -443,8 +449,7 @@ impl BuildManager {
 
     /// 获取当前构建进度
     pub fn get_progress(&self) -> (usize, usize, Vec<String>) {
-        let progress = self.progress.lock()
-            .expect("Progress lock poisoned");
+        let progress = self.progress.lock().expect("Progress lock poisoned");
         (
             progress.completed,
             progress.total,
@@ -470,9 +475,9 @@ pub enum BuildError {
 impl std::fmt::Display for BuildError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            BuildError::CommandError(msg) => write!(f, "Command error: {}", msg),
-            BuildError::ParseError(msg) => write!(f, "Parse error: {}", msg),
-            BuildError::TaskError(msg) => write!(f, "Task error: {}", msg),
+            BuildError::CommandError(msg) => write!(f, "Command error: {msg}"),
+            BuildError::ParseError(msg) => write!(f, "Parse error: {msg}"),
+            BuildError::TaskError(msg) => write!(f, "Task error: {msg}"),
             BuildError::BuildFailed(errors) => {
                 write!(f, "Build failed:\n{}", errors.join("\n"))
             }

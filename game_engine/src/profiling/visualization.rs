@@ -248,12 +248,11 @@ impl TrendAnalyzer {
         }
 
         let metric_name = data_points[0].metric_name.clone();
-        let start_time = data_points.first()
+        let start_time = data_points
+            .first()
             .map(|p| p.timestamp)
             .unwrap_or_else(|| data_points.first().map(|p| p.timestamp).unwrap_or(0));
-        let end_time = data_points.last()
-            .map(|p| p.timestamp)
-            .unwrap_or_else(|| start_time);
+        let end_time = data_points.last().map(|p| p.timestamp).unwrap_or_else(|| start_time);
         let period = Duration::from_millis(end_time.saturating_sub(start_time));
 
         // 提取数值
@@ -770,7 +769,8 @@ mod tests {
             DataPoint::new("test_metric", 20.0, MetricCategory::Render),
         ];
 
-        let analysis = analyzer.analyze_trend(&data_points).expect("Test: operation should succeed");
+        let analysis =
+            analyzer.analyze_trend(&data_points).expect("Test: operation should succeed");
 
         assert_eq!(analysis.metric_name, "test_metric");
         assert_eq!(analysis.data_points, 5);

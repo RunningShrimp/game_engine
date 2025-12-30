@@ -122,10 +122,7 @@ impl EnginePlugin for ResourcePlugin {
 }
 
 /// 资源加载系统
-pub fn resource_loading_system(
-    loader: ResMut<CoroutineAssetLoader>,
-    time: Res<crate::ecs::Time>,
-) {
+pub fn resource_loading_system(loader: ResMut<CoroutineAssetLoader>, time: Res<crate::ecs::Time>) {
     // 更新加载器 - 处理所有已完成的加载请求
     // crate::ecs::Time 使用 delta_seconds 字段
     loader.update(time.delta_seconds);

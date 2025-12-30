@@ -77,7 +77,7 @@ pub async fn create_shader_module_async(
     // 提交异步编译请求
     let rx = compiler.compile_async(label, source, "", priority).map_err(|e| {
         RenderError::InvalidState {
-            message: format!("Failed to submit compile request: {}", e),
+            message: format!("Failed to submit compile request: {e}"),
             severity: crate::error::ErrorSeverity::Error,
         }
     })?;
@@ -108,7 +108,7 @@ pub async fn compile_shaders_async(
     for (label, source, priority) in requests {
         let rx = compiler.compile_async(label, source, "", priority).map_err(|e| {
             RenderError::InvalidState {
-                message: format!("Failed to submit compile request: {}", e),
+                message: format!("Failed to submit compile request: {e}"),
                 severity: crate::error::ErrorSeverity::Error,
             }
         })?;

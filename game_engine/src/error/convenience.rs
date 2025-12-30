@@ -29,7 +29,7 @@ pub fn safe_unwrap_option<T>(
     context: &str,
     error_msg: &str,
 ) -> Result<T, String> {
-    option.ok_or_else(|| format!("{}: {}", context, error_msg))
+    option.ok_or_else(|| format!("{context}: {error_msg}"))
 }
 
 /// 安全的 unwrap 替代品 - Result 版本
@@ -39,7 +39,7 @@ pub fn safe_unwrap_result<T, E: fmt::Display>(
     result: Result<T, E>,
     context: &str,
 ) -> Result<T, String> {
-    result.map_err(|e| format!("{}: {}", context, e))
+    result.map_err(|e| format!("{context}: {e}"))
 }
 
 /// Option 的默认值或错误
@@ -89,7 +89,7 @@ pub fn unwrap_or_context<T, E: fmt::Display>(
     result: Result<T, E>,
     context: &str,
 ) -> Result<T, String> {
-    result.map_err(|e| format!("{}: {}", context, e))
+    result.map_err(|e| format!("{context}: {e}"))
 }
 
 /// Vec get 或错误（替代 vec.get(i).expect("Test: operation should succeed")）
@@ -151,7 +151,7 @@ pub fn map_get_or_err<'a, K: std::hash::Hash + Eq + fmt::Display, V>(
     key: &K,
     context: &str,
 ) -> Result<&'a V, String> {
-    map.get(key).ok_or_else(|| format!("{}: key '{}' not found", context, key))
+    map.get(key).ok_or_else(|| format!("{context}: key '{key}' not found"))
 }
 
 /// HashMap get mut 或错误
@@ -160,7 +160,7 @@ pub fn map_get_mut_or_err<'a, K: std::hash::Hash + Eq + fmt::Display, V>(
     key: &K,
     context: &str,
 ) -> Result<&'a mut V, String> {
-    map.get_mut(key).ok_or_else(|| format!("{}: key '{}' not found", context, key))
+    map.get_mut(key).ok_or_else(|| format!("{context}: key '{key}' not found"))
 }
 
 /// 检查布尔值或错误
@@ -242,7 +242,7 @@ pub fn check_non_empty_or_err(s: &str, context: &str) -> Result<(), String> {
 /// // 返回 Err("Failed to parse: invalid digit found in string")
 /// ```
 pub fn parse_to_number_or_err<T: std::str::FromStr>(s: &str, context: &str) -> Result<T, String> {
-    s.parse::<T>().map_err(|_| format!("{}: '{}'", context, s))
+    s.parse::<T>().map_err(|_| format!("{context}: '{s}'"))
 }
 
 /// Option 到 Result 的转换（与 error/traits.rs 中的 OptionExt 类似，但更简单）
@@ -278,8 +278,8 @@ pub fn safe_unwrap_with_log<T>(option: Option<T>, msg: &str) -> Result<T, String
     if let Some(value) = option {
         Ok(value)
     } else {
-        eprintln!("[WARNING] unwrap_or_log: {}", msg);
-        Err(format!("unwrap_or_log failed: {}", msg))
+        eprintln!("[WARNING] unwrap_or_log: {msg}");
+        Err(format!("unwrap_or_log failed: {msg}"))
     }
 }
 
@@ -350,7 +350,7 @@ impl Default for Validator {
 /// ```
 pub fn log_option<T>(option: Option<T>, label: &str) -> Option<T> {
     if option.is_none() {
-        eprintln!("[DEBUG] Option '{}' is None", label);
+        eprintln!("[DEBUG] Option '{label}' is None");
     }
     option
 }
@@ -368,7 +368,7 @@ pub fn log_option<T>(option: Option<T>, label: &str) -> Option<T> {
 /// ```
 pub fn log_result<T, E: fmt::Display>(result: Result<T, E>, label: &str) -> Result<T, E> {
     if let Err(ref e) = result {
-        eprintln!("[DEBUG] Result '{}' is Err: {}", label, e);
+        eprintln!("[DEBUG] Result '{label}' is Err: {e}");
     }
     result
 }
@@ -378,14 +378,17 @@ mod tests {
     use super::*;
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_safe_unwrap_option_ok() {
         let value = Some(42);
-        assert_eq!(safe_unwrap_option(value, "test", "error").expect("Test: operation should succeed"), 42);
+        assert_eq!(
+            safe_unwrap_option(value, "test", "error").expect("Test: operation should succeed"),
+            42
+        );
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_safe_unwrap_option_err() {
         let value: Option<i32> = None;
         let result = safe_unwrap_option(value, "test context", "error message");
@@ -396,14 +399,17 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_vec_get_or_err_ok() {
         let vec = vec![1, 2, 3];
-        assert_eq!(*vec_get_or_err(&vec, 1, "test").expect("Test: operation should succeed"), 2);
+        assert_eq!(
+            *vec_get_or_err(&vec, 1, "test").expect("Test: operation should succeed"),
+            2
+        );
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_vec_get_or_err_err() {
         let vec = vec![1, 2, 3];
         let result = vec_get_or_err(&vec, 5, "test");
@@ -414,15 +420,18 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_map_get_or_err_ok() {
         let mut map = std::collections::HashMap::new();
         map.insert("key1", 100);
-        assert_eq!(*map_get_or_err(&map, &"key1", "test").expect("Test: operation should succeed"), 100);
+        assert_eq!(
+            *map_get_or_err(&map, &"key1", "test").expect("Test: operation should succeed"),
+            100
+        );
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_map_get_or_err_err() {
         let mut map = std::collections::HashMap::new();
         map.insert("key1", 100);
@@ -432,13 +441,13 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_check_range_or_err_ok() {
         assert!(check_range_or_err(50, 0..100, "test").is_ok());
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_check_range_or_err_err() {
         let result = check_range_or_err(150, 0..100, "test");
         assert!(result.is_err());
@@ -446,13 +455,13 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_check_non_empty_or_err_ok() {
         assert!(check_non_empty_or_err("hello", "test").is_ok());
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_check_non_empty_or_err_err() {
         let result = check_non_empty_or_err("", "test");
         assert!(result.is_err());
@@ -460,14 +469,14 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_parse_to_number_or_err_ok() {
         let result: Result<i32, String> = parse_to_number_or_err("42", "test");
         assert_eq!(result.expect("Test: operation should succeed"), 42);
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_parse_to_number_or_err_err() {
         let result: Result<i32, String> = parse_to_number_or_err("invalid", "test");
         assert!(result.is_err());
@@ -475,7 +484,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_validator_ok() {
         let result = Validator::new()
             .validate(|| 5 > 0, "Value must be positive")
@@ -485,7 +494,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_validator_err() {
         let result = Validator::new()
             .validate(|| -1 > 0, "Value must be positive")
@@ -496,28 +505,31 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_unwrap_or_default() {
         assert_eq!(unwrap_or_default(Some(42), 0), 42);
         assert_eq!(unwrap_or_default(None::<i32>, 0), 0);
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_unwrap_or_else_default() {
         assert_eq!(unwrap_or_else_default(Some(42), || 0), 42);
         assert_eq!(unwrap_or_else_default(None::<i32>, || 100), 100);
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_option_to_result() {
-        assert_eq!(option_to_result(Some(42), "error").expect("Test: operation should succeed"), 42);
+        assert_eq!(
+            option_to_result(Some(42), "error").expect("Test: operation should succeed"),
+            42
+        );
         assert!(option_to_result(None::<i32>, "error").is_err());
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_ok_or_else_err() {
         assert!(ok_or_else_err(true, "error").is_ok());
         assert!(ok_or_else_err(false, "error").is_err());

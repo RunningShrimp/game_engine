@@ -255,8 +255,7 @@ impl DecisionTree {
         for node_id in self.nodes.keys() {
             if !visited.contains(node_id) {
                 return Err(DecisionTreeError::InvalidTree(format!(
-                    "Isolated node: {}",
-                    node_id
+                    "Isolated node: {node_id}"
                 )));
             }
         }
@@ -319,13 +318,13 @@ impl std::fmt::Display for DecisionTreeError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             DecisionTreeError::NodeNotFound(id) => {
-                write!(f, "Node not found: {}", id)
+                write!(f, "Node not found: {id}")
             }
             DecisionTreeError::InvalidOperation(msg) => {
-                write!(f, "Invalid operation: {}", msg)
+                write!(f, "Invalid operation: {msg}")
             }
             DecisionTreeError::InvalidTree(msg) => {
-                write!(f, "Invalid tree: {}", msg)
+                write!(f, "Invalid tree: {msg}")
             }
         }
     }
@@ -364,8 +363,7 @@ impl DecisionTreeEditor {
     /// 加载决策树
     pub fn load_tree(&mut self, name: &str) -> Result<&mut DecisionTree, DecisionTreeError> {
         let tree = self.tree_library.get(name).ok_or(DecisionTreeError::InvalidTree(format!(
-            "Tree not found: {}",
-            name
+            "Tree not found: {name}"
         )))?;
         self.current_tree = Some(tree.clone());
         self.current_tree

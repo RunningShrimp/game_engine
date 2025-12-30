@@ -133,7 +133,7 @@ impl BenchmarkRunner {
             .unwrap_or_default();
 
         let mut content = String::from("# Performance Benchmark Report\n\n");
-        content.push_str(&format!("Generated: {}\n\n", timestamp));
+        content.push_str(&format!("Generated: {timestamp}\n\n"));
 
         content.push_str("## Summary\n\n");
         content.push_str("| Benchmark | Avg Time (µs) | Min Time (µs) | Max Time (µs) | Stddev (µs) | Throughput (ops/sec) |\n");

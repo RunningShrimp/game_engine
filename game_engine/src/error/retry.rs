@@ -132,8 +132,8 @@ impl std::fmt::Debug for RetryCondition {
         match self {
             RetryCondition::Always => write!(f, "Always"),
             RetryCondition::Never => write!(f, "Never"),
-            RetryCondition::OnSeverity(severity) => write!(f, "OnSeverity({:?})", severity),
-            RetryCondition::OnCategory(category) => write!(f, "OnCategory({:?})", category),
+            RetryCondition::OnSeverity(severity) => write!(f, "OnSeverity({severity:?})"),
+            RetryCondition::OnCategory(category) => write!(f, "OnCategory({category:?})"),
             RetryCondition::Custom(_) => write!(f, "Custom(<function>)"),
         }
     }
@@ -557,8 +557,7 @@ impl std::fmt::Debug for RetryPolicy {
             } => {
                 write!(
                     f,
-                    "FixedInterval {{ interval: {:?}, max_attempts: {} }}",
-                    interval, max_attempts
+                    "FixedInterval {{ interval: {interval:?}, max_attempts: {max_attempts} }}"
                 )
             }
             RetryPolicy::ExponentialBackoff {
@@ -569,8 +568,7 @@ impl std::fmt::Debug for RetryPolicy {
             } => {
                 write!(
                     f,
-                    "ExponentialBackoff {{ base_interval: {:?}, backoff_multiplier: {}, max_interval: {:?}, max_attempts: {} }}",
-                    base_interval, backoff_multiplier, max_interval, max_attempts
+                    "ExponentialBackoff {{ base_interval: {base_interval:?}, backoff_multiplier: {backoff_multiplier}, max_interval: {max_interval:?}, max_attempts: {max_attempts} }}"
                 )
             }
             RetryPolicy::LinearBackoff {
@@ -581,12 +579,11 @@ impl std::fmt::Debug for RetryPolicy {
             } => {
                 write!(
                     f,
-                    "LinearBackoff {{ base_interval: {:?}, increment: {:?}, max_interval: {:?}, max_attempts: {} }}",
-                    base_interval, increment, max_interval, max_attempts
+                    "LinearBackoff {{ base_interval: {base_interval:?}, increment: {increment:?}, max_interval: {max_interval:?}, max_attempts: {max_attempts} }}"
                 )
             }
             RetryPolicy::Custom { max_attempts, .. } => {
-                write!(f, "Custom {{ max_attempts: {} }}", max_attempts)
+                write!(f, "Custom {{ max_attempts: {max_attempts} }}")
             }
         }
     }

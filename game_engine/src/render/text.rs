@@ -159,7 +159,7 @@ impl MsdfFont {
     /// 从 JSON 元数据加载字体
     pub fn from_json(json_data: &str, atlas_texture: u32) -> Result<Self, String> {
         let data: serde_json::Value = serde_json::from_str(json_data)
-            .map_err(|e| format!("Failed to parse font JSON: {}", e))?;
+            .map_err(|e| format!("Failed to parse font JSON: {e}"))?;
 
         let atlas = &data["atlas"];
         let metrics = &data["metrics"];

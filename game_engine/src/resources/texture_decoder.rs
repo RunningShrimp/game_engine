@@ -325,10 +325,10 @@ pub enum TextureDecodeError {
 impl std::fmt::Display for TextureDecodeError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            TextureDecodeError::DecodeError(msg) => write!(f, "Decode error: {}", msg),
+            TextureDecodeError::DecodeError(msg) => write!(f, "Decode error: {msg}"),
             TextureDecodeError::InvalidData => write!(f, "Invalid image data"),
             TextureDecodeError::UnsupportedFormat => write!(f, "Unsupported image format"),
-            TextureDecodeError::TaskError(msg) => write!(f, "Task error: {}", msg),
+            TextureDecodeError::TaskError(msg) => write!(f, "Task error: {msg}"),
         }
     }
 }
@@ -343,11 +343,17 @@ mod tests {
     fn test_image_format_detection() {
         // PNG签名
         let png_data = vec![0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
-        assert_eq!(detect_image_format(&png_data).expect("Test: operation should succeed"), ImageFormat::Png);
+        assert_eq!(
+            detect_image_format(&png_data).expect("Test: operation should succeed"),
+            ImageFormat::Png
+        );
 
         // JPEG签名
         let jpeg_data = vec![0xFF, 0xD8, 0xFF, 0xE0];
-        assert_eq!(detect_image_format(&jpeg_data).expect("Test: operation should succeed"), ImageFormat::Jpeg);
+        assert_eq!(
+            detect_image_format(&jpeg_data).expect("Test: operation should succeed"),
+            ImageFormat::Jpeg
+        );
     }
 
     #[test]

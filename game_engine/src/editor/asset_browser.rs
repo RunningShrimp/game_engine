@@ -407,7 +407,7 @@ impl AssetBrowser {
                             if let Ok(metadata) = fs::metadata(&asset.path) {
                                 let size_kb = metadata.len() as f64 / 1024.0;
                                 if size_kb < 1024.0 {
-                                    ui.label(format!("{:.2} KB", size_kb));
+                                    ui.label(format!("{size_kb:.2} KB"));
                                 } else {
                                     ui.label(format!("{:.2} MB", size_kb / 1024.0));
                                 }
@@ -415,7 +415,7 @@ impl AssetBrowser {
                                 ui.separator();
 
                                 if let Ok(modified) = metadata.modified() {
-                                    ui.label(format!("{:?}", modified));
+                                    ui.label(format!("{modified:?}"));
                                 }
                             }
                         });
@@ -456,7 +456,7 @@ impl AssetBrowser {
                 if let Ok(metadata) = fs::metadata(&asset.path) {
                     let size_kb = metadata.len() as f64 / 1024.0;
                     if size_kb < 1024.0 {
-                        ui.label(format!("Size: {:.2} KB", size_kb));
+                        ui.label(format!("Size: {size_kb:.2} KB"));
                     } else {
                         ui.label(format!("Size: {:.2} MB", size_kb / 1024.0));
                     }

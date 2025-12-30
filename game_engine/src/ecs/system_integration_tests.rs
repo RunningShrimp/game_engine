@@ -15,7 +15,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_tilemap_build_system_basic() {
         let mut world = World::new();
 
@@ -62,7 +62,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_tilemap_build_system_with_viewport_culling() {
         let mut world = World::new();
 
@@ -104,7 +104,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_tilemap_not_dirty() {
         let mut world = World::new();
 
@@ -141,7 +141,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_tilemap_chunk_system_basic() {
         let mut world = World::new();
 
@@ -189,7 +189,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_tilemap_chunk_system_with_camera() {
         let mut world = World::new();
 
@@ -244,7 +244,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_flipbook_system_basic() {
         let mut world = World::new();
 
@@ -290,7 +290,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_flipbook_system_looping() {
         let mut world = World::new();
 
@@ -336,7 +336,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_flipbook_system_non_looping() {
         let mut world = World::new();
 
@@ -384,7 +384,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_flipbook_system_empty_frames() {
         let mut world = World::new();
 
@@ -419,7 +419,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_tile_entity_pool_new() {
         let pool = TileEntityPool::new();
         assert!(pool.unused.is_empty());
@@ -427,7 +427,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_tile_entity_pool_default() {
         let pool = TileEntityPool::default();
         assert!(pool.unused.is_empty());
@@ -435,7 +435,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_tile_entity_pool_get_or_spawn() {
         let mut world = World::new();
         let mut pool = TileEntityPool::new();
@@ -467,7 +467,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_tile_entity_pool_recycle() {
         let mut world = World::new();
         let mut pool = TileEntityPool::new();
@@ -495,7 +495,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_tile_entity_pool_capacity() {
         let mut world = World::new();
         let mut pool = TileEntityPool {
@@ -528,7 +528,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_time_resource_default() {
         let time = Time::default();
         assert_eq!(time.delta_seconds, 0.0);
@@ -537,7 +537,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_time_as_resource() {
         let mut world = World::new();
         world.insert_resource(Time::default());
@@ -551,7 +551,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_viewport_default() {
         let viewport = Viewport::default();
         assert_eq!(viewport.width, 0);
@@ -559,7 +559,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_viewport_as_resource() {
         let mut world = World::new();
         world.insert_resource(Viewport {
@@ -577,14 +577,14 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_tileset_default() {
         let tileset = TileSet::default();
         assert!(tileset.tiles.is_empty());
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_tileset_with_tiles() {
         let mut tileset = TileSet::default();
         tileset.tiles.insert("grass".to_string(), ([0.0, 0.0], [0.5, 0.5]));
@@ -598,7 +598,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_tile_chunk_config_default() {
         let config = TileChunkConfig::default();
         assert_eq!(config.size[0], 0);
@@ -606,7 +606,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_tile_chunk_config_custom() {
         let config = TileChunkConfig { size: [32, 32] };
 
@@ -619,7 +619,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_previous_transform_default() {
         let prev = PreviousTransform::default();
         assert_eq!(prev.pos, Vec3::ZERO);
@@ -628,7 +628,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_previous_transform_tracking() {
         let mut world = World::new();
 
@@ -653,9 +653,9 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_chunk_tag_fields() {
-        let map_entity = Entity::from_raw_u32(1).expect("Test: operation should succeed");
+        let map_entity = Entity::from_bits(1);
         let tag = ChunkTag {
             map: map_entity,
             cx: 5,
@@ -672,14 +672,14 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_tile_chunks_default() {
         let chunks = TileChunks::default();
         assert!(chunks.visible.is_empty());
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_tile_chunks_with_visibility() {
         let mut chunks = TileChunks::default();
         chunks.visible.insert((0, 0));
@@ -694,7 +694,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_flip_frame_fields() {
         let frame = FlipFrame {
             uv_off: [0.5, 0.5],
@@ -711,7 +711,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_multiple_systems_integration() {
         let mut world = World::new();
 
@@ -775,7 +775,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_entity_lifecycle() {
         let mut world = World::new();
 
@@ -804,7 +804,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_large_number_of_entities() {
         let mut world = World::new();
 
@@ -820,7 +820,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_query_performance() {
         let mut world = World::new();
 

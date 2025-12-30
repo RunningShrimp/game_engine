@@ -348,7 +348,7 @@ impl SpatialAnchorManager {
         let store = self
             .persistence_store
             .lock()
-            .map_err(|e| XrError::RuntimeFailure(format!("Lock error: {}", e)))?;
+            .map_err(|e| XrError::RuntimeFailure(format!("Lock error: {e}")))?;
 
         if let Some(data) = store.get(persistence_key) {
             let id = data.anchor_id;
@@ -615,7 +615,7 @@ impl SpatialAnchorManager {
             let mut store = self
                 .persistence_store
                 .lock()
-                .map_err(|e| XrError::RuntimeFailure(format!("Lock error: {}", e)))?;
+                .map_err(|e| XrError::RuntimeFailure(format!("Lock error: {e}")))?;
             store.insert(key.clone(), persistence_data);
 
             // 更新锚点的持久化键
@@ -660,7 +660,7 @@ impl SpatialAnchorManager {
                 let mut store = self
                     .persistence_store
                     .lock()
-                    .map_err(|e| XrError::RuntimeFailure(format!("Lock error: {}", e)))?;
+                    .map_err(|e| XrError::RuntimeFailure(format!("Lock error: {e}")))?;
                 store.remove(key);
 
                 anchor.persistence_key = None;
@@ -750,7 +750,9 @@ mod tests {
             orientation: Quat::IDENTITY,
         };
 
-        let id = manager.create_anchor(pose, "TestAnchor").expect("Test: operation should succeed");
+        let id = manager
+            .create_anchor(pose, "TestAnchor")
+            .expect("Test: operation should succeed");
         assert!(manager.get_anchor(id).is_some());
         assert_eq!(manager.anchor_count(), 1);
     }
@@ -760,7 +762,9 @@ mod tests {
         let mut manager = SpatialAnchorManager::new().expect("Test: operation should succeed");
 
         let pose = Pose::default();
-        let id = manager.create_anchor(pose, "TestAnchor").expect("Test: operation should succeed");
+        let id = manager
+            .create_anchor(pose, "TestAnchor")
+            .expect("Test: operation should succeed");
 
         assert_eq!(manager.anchor_count(), 1);
         manager.destroy_anchor(id).expect("Test: operation should succeed");
@@ -775,7 +779,9 @@ mod tests {
             position: Vec3::new(0.0, 0.0, -1.0),
             orientation: Quat::IDENTITY,
         };
-        let id = manager.create_anchor(pose1, "TestAnchor").expect("Test: operation should succeed");
+        let id = manager
+            .create_anchor(pose1, "TestAnchor")
+            .expect("Test: operation should succeed");
 
         let pose2 = Pose {
             position: Vec3::new(1.0, 0.0, -1.0),
@@ -794,7 +800,8 @@ mod tests {
         let pose = Pose::default();
         let _id = manager.create_anchor(pose, "MyAnchor").expect("Test: operation should succeed");
 
-        let anchor = manager.find_anchor_by_name("MyAnchor").expect("Test: operation should succeed");
+        let anchor =
+            manager.find_anchor_by_name("MyAnchor").expect("Test: operation should succeed");
         assert_eq!(anchor.name, "MyAnchor");
     }
 
@@ -824,7 +831,9 @@ mod tests {
         let mut manager = SpatialAnchorManager::new().expect("Test: operation should succeed");
 
         let pose = Pose::default();
-        let id = manager.create_anchor(pose, "TestAnchor").expect("Test: operation should succeed");
+        let id = manager
+            .create_anchor(pose, "TestAnchor")
+            .expect("Test: operation should succeed");
 
         let anchor = manager.get_anchor_mut(id).expect("Test: operation should succeed");
         anchor.set_metadata("type".to_string(), "waypoint".to_string());

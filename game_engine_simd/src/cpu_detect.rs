@@ -315,7 +315,7 @@ mod tests {
     #[test]
     fn test_cpu_detection() {
         let features = detect_cpu_features();
-        println!("Detected CPU features: {:#?}", features);
+        println!("Detected CPU features: {features:#?}");
 
         // 验证基本特性
         #[cfg(target_arch = "x86_64")]

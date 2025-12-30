@@ -219,11 +219,7 @@ impl PhysicsIntegrator {
     /// AVX2优化的位置更新
     #[cfg(target_arch = "x86_64")]
     #[target_feature(enable = "avx2")]
-    unsafe fn update_positions_avx2(
-        positions: &mut [[f32; 4]],
-        velocities: &[[f32; 4]],
-        dt: f32,
-    ) {
+    unsafe fn update_positions_avx2(positions: &mut [[f32; 4]], velocities: &[[f32; 4]], dt: f32) {
         let dt_vec = _mm256_set1_ps(dt);
 
         // 批量处理8个向量
@@ -293,11 +289,7 @@ impl PhysicsIntegrator {
     }
 
     /// 标量回退实现
-    fn update_positions_fallback(
-        positions: &mut [[f32; 4]],
-        velocities: &[[f32; 4]],
-        dt: f32,
-    ) {
+    fn update_positions_fallback(positions: &mut [[f32; 4]], velocities: &[[f32; 4]], dt: f32) {
         for i in 0..positions.len() {
             positions[i][0] += velocities[i][0] * dt;
             positions[i][1] += velocities[i][1] * dt;
@@ -315,7 +307,10 @@ impl PhysicsIntegrator {
     /// * `velocities` - 速度数组
     /// * `damping` - 阻尼系数 (0.0 - 1.0)
     #[inline]
-    pub fn apply_damping_simd(velocities: &mut [[f32; 4]], damping: f32) -> PhysicsIntegrationResult {
+    pub fn apply_damping_simd(
+        velocities: &mut [[f32; 4]],
+        damping: f32,
+    ) -> PhysicsIntegrationResult {
         let start = std::time::Instant::now();
         let count = velocities.len();
 
@@ -471,8 +466,7 @@ mod tests {
         ];
         let dt = 0.016;
 
-        let result =
-            PhysicsIntegrator::update_positions_simd(&mut positions, &velocities, dt);
+        let result = PhysicsIntegrator::update_positions_simd(&mut positions, &velocities, dt);
 
         assert_eq!(result.count, 4);
         assert!((positions[0][0] - 0.016).abs() < 1e-5);

@@ -307,7 +307,7 @@ mod tests {
         let gpu = detect_gpu();
         let optimization = GpuOptimization::for_gpu(&gpu);
 
-        println!("GPU Optimization: {:#?}", optimization);
+        println!("GPU Optimization: {optimization:#?}");
 
         assert!(optimization.max_draw_calls_per_frame > 0);
         assert!(optimization.particle_budget > 0);

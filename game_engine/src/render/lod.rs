@@ -996,7 +996,7 @@ mod tests {
     use proptest::prelude::*;
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_lod_config_builder() {
         let config = LodConfig::builder()
             .add_level(0.0, 10.0, LodQuality::High)
@@ -1010,7 +1010,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_lod_level_distance() {
         let level = LodLevel::new(10.0, 30.0, LodQuality::Medium);
 
@@ -1021,7 +1021,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_lod_selector_instant() {
         let config = LodConfig::builder()
             .add_level(0.0, 10.0, LodQuality::High)
@@ -1043,7 +1043,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_lod_selector_hysteresis() {
         let config = LodConfig::builder()
             .add_level(0.0, 10.0, LodQuality::High)
@@ -1067,99 +1067,99 @@ mod tests {
     }
 
     proptest! {
-        #[test]
-#[ignore]  // TODO: Fix compilation errors
-        fn test_lod_selection_properties(
-            distance in 0.0f32..1000.0,
-            delta_time in 0.0f32..0.1,
-        ) {
-            let config = LodConfig::builder()
-                .add_level(0.0, 20.0, LodQuality::High)
-                .add_level(20.0, 50.0, LodQuality::Medium)
-                .add_level(50.0, 100.0, LodQuality::Low)
-                .add_level(100.0, f32::INFINITY, LodQuality::VeryLow)
-                .with_transition(LodTransition::Instant)
-                .build();
+            #[test]
+    #[ignore]  // TODO: Fix compilation errors
+            fn test_lod_selection_properties(
+                distance in 0.0f32..1000.0,
+                delta_time in 0.0f32..0.1,
+            ) {
+                let config = LodConfig::builder()
+                    .add_level(0.0, 20.0, LodQuality::High)
+                    .add_level(20.0, 50.0, LodQuality::Medium)
+                    .add_level(50.0, 100.0, LodQuality::Low)
+                    .add_level(100.0, f32::INFINITY, LodQuality::VeryLow)
+                    .with_transition(LodTransition::Instant)
+                    .build();
 
-            let selector = LodSelector::new(config.clone());
-            let view_proj = Mat4::IDENTITY;
+                let selector = LodSelector::new(config.clone());
+                let view_proj = Mat4::IDENTITY;
 
-            // 属性1: LOD选择应该总是返回有效的质量级别
-            let selection = selector.select_stateless(distance, delta_time, &view_proj);
-            prop_assert!(matches!(
-                selection.quality,
-                LodQuality::High | LodQuality::Medium | LodQuality::Low | LodQuality::VeryLow | LodQuality::Culled
-            ));
+                // 属性1: LOD选择应该总是返回有效的质量级别
+                let selection = selector.select_stateless(distance, delta_time, &view_proj);
+                prop_assert!(matches!(
+                    selection.quality,
+                    LodQuality::High | LodQuality::Medium | LodQuality::Low | LodQuality::VeryLow | LodQuality::Culled
+                ));
 
-            // 属性2: 距离越远，质量应该越低（或相等）
-            let selection_close = selector.select_stateless(10.0, delta_time, &view_proj);
-            let selection_far = selector.select_stateless(200.0, delta_time, &view_proj);
+                // 属性2: 距离越远，质量应该越低（或相等）
+                let selection_close = selector.select_stateless(10.0, delta_time, &view_proj);
+                let selection_far = selector.select_stateless(200.0, delta_time, &view_proj);
 
-            // 远距离的质量级别索引应该 >= 近距离的
-            let quality_order = |q: LodQuality| -> u8 {
-                match q {
-                    LodQuality::High => 4,
-                    LodQuality::Medium => 3,
-                    LodQuality::Low => 2,
-                    LodQuality::VeryLow => 1,
-                    LodQuality::Culled => 0,
+                // 远距离的质量级别索引应该 >= 近距离的
+                let quality_order = |q: LodQuality| -> u8 {
+                    match q {
+                        LodQuality::High => 4,
+                        LodQuality::Medium => 3,
+                        LodQuality::Low => 2,
+                        LodQuality::VeryLow => 1,
+                        LodQuality::Culled => 0,
+                    }
+                };
+                prop_assert!(quality_order(selection_far.quality) <= quality_order(selection_close.quality));
+            }
+
+            #[test]
+    #[ignore]  // TODO: Fix compilation errors
+            fn test_lod_level_contains_properties(
+                min_dist in 0.0f32..100.0,
+                max_dist in 0.0f32..100.0,
+                test_dist in -10.0f32..200.0,
+            ) {
+                // 确保min < max
+                let min = min_dist.min(max_dist);
+                let max = min_dist.max(max_dist);
+
+                if max - min < 0.1 {
+                    return Ok(());
                 }
-            };
-            prop_assert!(quality_order(selection_far.quality) <= quality_order(selection_close.quality));
-        }
 
-        #[test]
-#[ignore]  // TODO: Fix compilation errors
-        fn test_lod_level_contains_properties(
-            min_dist in 0.0f32..100.0,
-            max_dist in 0.0f32..100.0,
-            test_dist in -10.0f32..200.0,
-        ) {
-            // 确保min < max
-            let min = min_dist.min(max_dist);
-            let max = min_dist.max(max_dist);
+                let level = LodLevel::new(min, max, LodQuality::Medium);
 
-            if max - min < 0.1 {
-                return Ok(());
+                // 属性: contains_distance应该正确判断距离是否在范围内
+                let contains = level.contains_distance(test_dist);
+
+                if test_dist >= min && test_dist < max {
+                    prop_assert!(contains);
+                } else {
+                    prop_assert!(!contains);
+                }
             }
 
-            let level = LodLevel::new(min, max, LodQuality::Medium);
+            #[test]
+    #[ignore]  // TODO: Fix compilation errors
+            fn test_lod_transition_properties(
+                distance in 0.0f32..100.0,
+                delta_time in 0.0f32..0.1,
+            ) {
+                let config = LodConfig::builder()
+                    .add_level(0.0, 20.0, LodQuality::High)
+                    .add_level(20.0, 50.0, LodQuality::Medium)
+                    .with_transition(LodTransition::Crossfade { duration: 1.0 })
+                    .build();
 
-            // 属性: contains_distance应该正确判断距离是否在范围内
-            let contains = level.contains_distance(test_dist);
+                let mut selector = LodSelector::new(config);
+                let entity_id = 1u64;
 
-            if test_dist >= min && test_dist < max {
-                prop_assert!(contains);
-            } else {
-                prop_assert!(!contains);
+                // 属性: 选择LOD应该总是成功，不会panic
+                let selection = selector.select(entity_id, distance, delta_time);
+
+                // 验证选择结果有效
+                prop_assert!(matches!(
+                    selection.quality,
+                    LodQuality::High | LodQuality::Medium | LodQuality::Low | LodQuality::VeryLow | LodQuality::Culled
+                ));
+                prop_assert!(selection.transition_factor >= 0.0);
+                prop_assert!(selection.transition_factor <= 1.0);
             }
         }
-
-        #[test]
-#[ignore]  // TODO: Fix compilation errors
-        fn test_lod_transition_properties(
-            distance in 0.0f32..100.0,
-            delta_time in 0.0f32..0.1,
-        ) {
-            let config = LodConfig::builder()
-                .add_level(0.0, 20.0, LodQuality::High)
-                .add_level(20.0, 50.0, LodQuality::Medium)
-                .with_transition(LodTransition::Crossfade { duration: 1.0 })
-                .build();
-
-            let mut selector = LodSelector::new(config);
-            let entity_id = 1u64;
-
-            // 属性: 选择LOD应该总是成功，不会panic
-            let selection = selector.select(entity_id, distance, delta_time);
-
-            // 验证选择结果有效
-            prop_assert!(matches!(
-                selection.quality,
-                LodQuality::High | LodQuality::Medium | LodQuality::Low | LodQuality::VeryLow | LodQuality::Culled
-            ));
-            prop_assert!(selection.transition_factor >= 0.0);
-            prop_assert!(selection.transition_factor <= 1.0);
-        }
-    }
 }

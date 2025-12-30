@@ -47,6 +47,12 @@ pub struct PhysicsQueryModel {
     sleeping: Vec<bool>,
 }
 
+impl Default for PhysicsQueryModel {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PhysicsQueryModel {
     /// Create a new empty query model (for testing)
     pub fn new() -> Self {
@@ -94,24 +100,18 @@ impl PhysicsQueryModel {
 
     /// Get position by body ID (fast lookup)
     pub fn get_position(&self, id: RigidBodyId) -> Option<Vec3> {
-        self.body_ids
-            .iter()
-            .position(|&bid| bid == id)
-            .map(|idx| self.positions[idx])
+        self.body_ids.iter().position(|&bid| bid == id).map(|idx| self.positions[idx])
     }
 
     /// Get body state by ID
     pub fn get_body_state(&self, id: RigidBodyId) -> Option<RigidBodyState> {
-        self.body_ids
-            .iter()
-            .position(|&bid| bid == id)
-            .map(|idx| RigidBodyState {
-                position: self.positions[idx],
-                rotation: glam::Quat::from_array(self.rotations[idx]),
-                linear_velocity: self.linear_velocities[idx],
-                angular_velocity: Vec3::ZERO, // Not stored in query model
-                sleeping: self.sleeping[idx],
-            })
+        self.body_ids.iter().position(|&bid| bid == id).map(|idx| RigidBodyState {
+            position: self.positions[idx],
+            rotation: glam::Quat::from_array(self.rotations[idx]),
+            linear_velocity: self.linear_velocities[idx],
+            angular_velocity: Vec3::ZERO, // Not stored in query model
+            sleeping: self.sleeping[idx],
+        })
     }
 
     /// Query bodies in radius (optimized for spatial queries)
@@ -150,9 +150,7 @@ impl PhysicsQueryModel {
 
     /// Batch query multiple positions (very efficient)
     pub fn batch_get_positions(&self, ids: &[RigidBodyId]) -> Vec<Option<Vec3>> {
-        ids.iter()
-            .map(|&id| self.get_position(id))
-            .collect()
+        ids.iter().map(|&id| self.get_position(id)).collect()
     }
 
     /// Get total body count
@@ -365,13 +363,11 @@ impl CommandHandler<CreateRigidBodyCommand> for CreateRigidBodyHandler {
         // Add to physics world
         let mut physics_world = world
             .get_resource_mut::<crate::domain::services::PhysicsDomainService>()
-            .ok_or_else(|| {
-                EventError::ApplyFailed("PhysicsDomainService not found".to_string())
-            })?;
+            .ok_or_else(|| EventError::ApplyFailed("PhysicsDomainService not found".to_string()))?;
 
-        physics_world.create_body(command.body.clone()).map_err(|e| {
-            EventError::ApplyFailed(format!("Failed to create body: {:?}", e))
-        })?;
+        physics_world
+            .create_body(command.body.clone())
+            .map_err(|e| EventError::ApplyFailed(format!("Failed to create body: {e:?}")))?;
 
         // Publish event
         let _event = BodyCreatedEvent {
@@ -415,14 +411,12 @@ impl CommandHandler<UpdatePositionCommand> for UpdatePositionHandler {
         // Update in physics world
         let mut physics_service = world
             .get_resource_mut::<crate::domain::services::PhysicsDomainService>()
-            .ok_or_else(|| {
-                EventError::ApplyFailed("PhysicsDomainService not found".to_string())
-            })?;
+            .ok_or_else(|| EventError::ApplyFailed("PhysicsDomainService not found".to_string()))?;
 
         physics_service
             .get_world_mut()
             .set_body_position(command.id, command.new_position)
-            .map_err(|e| EventError::ApplyFailed(format!("Failed to update position: {:?}", e)))?;
+            .map_err(|e| EventError::ApplyFailed(format!("Failed to update position: {e:?}")))?;
 
         // Publish event
         let _event = PositionUpdatedEvent {
@@ -465,14 +459,12 @@ impl CommandHandler<ApplyImpulseCommand> for ApplyImpulseHandler {
         // Apply impulse
         let mut physics_service = world
             .get_resource_mut::<crate::domain::services::PhysicsDomainService>()
-            .ok_or_else(|| {
-                EventError::ApplyFailed("PhysicsDomainService not found".to_string())
-            })?;
+            .ok_or_else(|| EventError::ApplyFailed("PhysicsDomainService not found".to_string()))?;
 
         physics_service
             .get_world_mut()
             .apply_impulse(command.id, command.impulse)
-            .map_err(|e| EventError::ApplyFailed(format!("Failed to apply impulse: {:?}", e)))?;
+            .map_err(|e| EventError::ApplyFailed(format!("Failed to apply impulse: {e:?}")))?;
 
         // Publish event - would integrate with event bus in real implementation
         let _event = ImpulseAppliedEvent {
@@ -514,22 +506,17 @@ impl CommandHandler<SetVelocityCommand> for SetVelocityHandler {
         // Set velocity using rapier's API
         let mut physics_service = world
             .get_resource_mut::<crate::domain::services::PhysicsDomainService>()
-            .ok_or_else(|| {
-                EventError::ApplyFailed("PhysicsDomainService not found".to_string())
-            })?;
+            .ok_or_else(|| EventError::ApplyFailed("PhysicsDomainService not found".to_string()))?;
 
         // Get mutable body and set velocity
-        let body = physics_service
-            .get_world_mut()
-            .get_body_mut(command.id)
-            .ok_or_else(|| {
-                EventError::ApplyFailed(format!("Body {:?} not found in physics world", command.id))
-            })?;
+        let body = physics_service.get_world_mut().get_body_mut(command.id).ok_or_else(|| {
+            EventError::ApplyFailed(format!("Body {:?} not found in physics world", command.id))
+        })?;
 
         use rapier3d::na::Vector3;
         body.set_linvel(
             Vector3::new(command.velocity.x, command.velocity.y, command.velocity.z),
-            true
+            true,
         );
 
         // Publish velocity changed event
@@ -572,19 +559,15 @@ impl CommandHandler<RemoveRigidBodyCommand> for RemoveRigidBodyHandler {
         // Remove from physics world
         let mut physics_service = world
             .get_resource_mut::<crate::domain::services::PhysicsDomainService>()
-            .ok_or_else(|| {
-                EventError::ApplyFailed("PhysicsDomainService not found".to_string())
-            })?;
+            .ok_or_else(|| EventError::ApplyFailed("PhysicsDomainService not found".to_string()))?;
 
         physics_service
             .get_world_mut()
             .remove_body(command.id)
-            .map_err(|e| EventError::ApplyFailed(format!("Failed to remove body: {:?}", e)))?;
+            .map_err(|e| EventError::ApplyFailed(format!("Failed to remove body: {e:?}")))?;
 
         // Publish event
-        let _event = BodyRemovedEvent {
-            id: command.id,
-        };
+        let _event = BodyRemovedEvent { id: command.id };
 
         Ok(crate::domain::cqrs::CommandResult::success(None))
     }

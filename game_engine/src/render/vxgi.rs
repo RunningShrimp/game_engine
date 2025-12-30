@@ -812,7 +812,7 @@ mod tests {
     use super::*;
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_vxgi_config() {
         let config = VxgiConfig::default();
         assert!(!config.enabled);
@@ -820,7 +820,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_voxel() {
         let voxel = Voxel {
             color: [128, 128, 128],

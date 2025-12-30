@@ -15,7 +15,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_error_stats_new() {
         let stats = ErrorStats::new();
         assert_eq!(stats.total_count, 0);
@@ -26,7 +26,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_error_stats_default() {
         let stats = ErrorStats::default();
         assert_eq!(stats.total_count, 0);
@@ -34,7 +34,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_error_stats_most_common_error_type() {
         let mut stats = ErrorStats::new();
         stats.by_type.insert("IoError".to_string(), 10);
@@ -43,12 +43,15 @@ mod tests {
 
         let most_common = stats.most_common_error_type();
         assert!(most_common.is_some());
-        assert_eq!(most_common.expect("Test: operation should succeed").0, "NetworkError");
+        assert_eq!(
+            most_common.expect("Test: operation should succeed").0,
+            "NetworkError"
+        );
         assert_eq!(most_common.expect("Test: operation should succeed").1, &15);
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_error_stats_most_common_error_type_empty() {
         let stats = ErrorStats::new();
         let most_common = stats.most_common_error_type();
@@ -56,7 +59,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_error_stats_most_common_error_source() {
         let mut stats = ErrorStats::new();
         stats.by_source.insert("render".to_string(), 20);
@@ -65,23 +68,22 @@ mod tests {
 
         let most_common = stats.most_common_error_source();
         assert!(most_common.is_some());
-        assert_eq!(most_common.expect("Test: operation should succeed").0, "render");
+        assert_eq!(
+            most_common.expect("Test: operation should succeed").0,
+            "render"
+        );
         assert_eq!(most_common.expect("Test: operation should succeed").1, &20);
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_error_stats_trend() {
         let mut stats = ErrorStats::new();
         let now = current_timestamp();
 
         // 添加一些最近的错误
         for i in 0..5 {
-            let mut record = ErrorRecord::new(
-                "TestError",
-                "test",
-                format!("Error {}", i)
-            );
+            let mut record = ErrorRecord::new("TestError", "test", format!("Error {}", i));
             record.timestamp = now - i;
             stats.recent_errors.push(record);
         }
@@ -92,16 +94,12 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_error_stats_trend_outside_window() {
         let mut stats = ErrorStats::new();
         let old_timestamp = current_timestamp() - 100;
 
-        let mut record = ErrorRecord::new(
-            "OldError",
-            "test",
-            "Old error".to_string()
-        );
+        let mut record = ErrorRecord::new("OldError", "test", "Old error".to_string());
         record.timestamp = old_timestamp;
         stats.recent_errors.push(record);
 
@@ -115,13 +113,10 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_error_record_creation() {
-        let record = ErrorRecord::new(
-            "TestError",
-            "test_module",
-            "Test error message"
-        ).with_details("stack trace here");
+        let record = ErrorRecord::new("TestError", "test_module", "Test error message")
+            .with_details("stack trace here");
 
         assert_eq!(record.error_type, "TestError");
         assert_eq!(record.source, "test_module");
@@ -129,13 +124,9 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_error_record_without_stack_trace() {
-        let record = ErrorRecord::new(
-            "SimpleError",
-            "simple",
-            "Simple error"
-        );
+        let record = ErrorRecord::new("SimpleError", "simple", "Simple error");
 
         assert!(record.details.is_none());
     }
@@ -145,7 +136,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_error_aggregator_new() {
         let aggregator = ErrorAggregator::new();
         let stats = aggregator.get_stats();
@@ -155,7 +146,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_error_aggregator_record_error() {
         let aggregator = ErrorAggregator::new();
 
@@ -173,7 +164,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_error_aggregator_record_multiple_errors() {
         let aggregator = ErrorAggregator::new();
 
@@ -192,7 +183,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_error_aggregator_record_error_with_stack() {
         let aggregator = ErrorAggregator::new();
 
@@ -210,7 +201,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_error_aggregator_recent_errors_limit() {
         let aggregator = ErrorAggregator::new();
 
@@ -232,13 +223,28 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_error_aggregator_get_stats() {
         let aggregator = ErrorAggregator::new();
 
-        aggregator.record_custom_error("Type1".to_string(), "mod1".to_string(), "msg1".to_string(), None);
-        aggregator.record_custom_error("Type2".to_string(), "mod2".to_string(), "msg2".to_string(), None);
-        aggregator.record_custom_error("Type1".to_string(), "mod1".to_string(), "msg3".to_string(), None);
+        aggregator.record_custom_error(
+            "Type1".to_string(),
+            "mod1".to_string(),
+            "msg1".to_string(),
+            None,
+        );
+        aggregator.record_custom_error(
+            "Type2".to_string(),
+            "mod2".to_string(),
+            "msg2".to_string(),
+            None,
+        );
+        aggregator.record_custom_error(
+            "Type1".to_string(),
+            "mod1".to_string(),
+            "msg3".to_string(),
+            None,
+        );
 
         let stats = aggregator.get_stats();
         assert_eq!(stats.total_count, 3);
@@ -247,7 +253,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_error_aggregator_clear() {
         let aggregator = ErrorAggregator::new();
 
@@ -270,7 +276,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_error_summary_from_stats() {
         let mut stats = ErrorStats::new();
         stats.total_count = 100;
@@ -281,13 +287,15 @@ mod tests {
         let summary = ErrorSummary {
             total_errors: stats.total_count,
             error_rate: stats.error_rate,
-            most_common_type: stats.by_type
+            most_common_type: stats
+                .by_type
                 .iter()
-                .max_by_key(|(_, &count)| count)
+                .max_by_key(|&(_, &count)| count)
                 .map(|(name, &count)| (name.clone(), count)),
-            most_common_source: stats.by_source
+            most_common_source: stats
+                .by_source
                 .iter()
-                .max_by_key(|(_, &count)| count)
+                .max_by_key(|&(_, &count)| count)
                 .map(|(name, &count)| (name.clone(), count)),
             recent_error_count: stats.recent_errors.len(),
             last_updated: stats.last_updated,
@@ -298,7 +306,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_error_summary_empty_stats() {
         let stats = ErrorStats::new();
         let summary = ErrorSummary {
@@ -316,7 +324,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_error_summary_most_common() {
         let mut stats = ErrorStats::new();
         stats.by_type.insert("CommonError".to_string(), 100);
@@ -325,13 +333,15 @@ mod tests {
         let summary = ErrorSummary {
             total_errors: stats.total_count,
             error_rate: stats.error_rate,
-            most_common_type: stats.by_type
+            most_common_type: stats
+                .by_type
                 .iter()
-                .max_by_key(|(_, &count)| count)
+                .max_by_key(|&(_, &count)| count)
                 .map(|(name, &count)| (name.clone(), count)),
-            most_common_source: stats.by_source
+            most_common_source: stats
+                .by_source
                 .iter()
-                .max_by_key(|(_, &count)| count)
+                .max_by_key(|&(_, &count)| count)
                 .map(|(name, &count)| (name.clone(), count)),
             recent_error_count: stats.recent_errors.len(),
             last_updated: stats.last_updated,
@@ -348,7 +358,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_error_rate_calculation() {
         let aggregator = ErrorAggregator::new();
 
@@ -375,13 +385,28 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_error_count_by_type() {
         let aggregator = ErrorAggregator::new();
 
-        aggregator.record_custom_error("Type1".to_string(), "mod".to_string(), "msg".to_string(), None);
-        aggregator.record_custom_error("Type1".to_string(), "mod".to_string(), "msg".to_string(), None);
-        aggregator.record_custom_error("Type2".to_string(), "mod".to_string(), "msg".to_string(), None);
+        aggregator.record_custom_error(
+            "Type1".to_string(),
+            "mod".to_string(),
+            "msg".to_string(),
+            None,
+        );
+        aggregator.record_custom_error(
+            "Type1".to_string(),
+            "mod".to_string(),
+            "msg".to_string(),
+            None,
+        );
+        aggregator.record_custom_error(
+            "Type2".to_string(),
+            "mod".to_string(),
+            "msg".to_string(),
+            None,
+        );
 
         let stats = aggregator.get_stats();
         assert_eq!(stats.by_type.get("Type1"), Some(&2));
@@ -389,13 +414,28 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_error_count_by_source() {
         let aggregator = ErrorAggregator::new();
 
-        aggregator.record_custom_error("Error".to_string(), "render".to_string(), "msg".to_string(), None);
-        aggregator.record_custom_error("Error".to_string(), "render".to_string(), "msg".to_string(), None);
-        aggregator.record_custom_error("Error".to_string(), "physics".to_string(), "msg".to_string(), None);
+        aggregator.record_custom_error(
+            "Error".to_string(),
+            "render".to_string(),
+            "msg".to_string(),
+            None,
+        );
+        aggregator.record_custom_error(
+            "Error".to_string(),
+            "render".to_string(),
+            "msg".to_string(),
+            None,
+        );
+        aggregator.record_custom_error(
+            "Error".to_string(),
+            "physics".to_string(),
+            "msg".to_string(),
+            None,
+        );
 
         let stats = aggregator.get_stats();
         assert_eq!(stats.by_source.get("render"), Some(&2));
@@ -407,7 +447,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_empty_error_aggregator() {
         let aggregator = ErrorAggregator::new();
         let stats = aggregator.get_stats();
@@ -418,7 +458,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_error_with_empty_strings() {
         let aggregator = ErrorAggregator::new();
 
@@ -429,12 +469,17 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_error_with_very_long_message() {
         let aggregator = ErrorAggregator::new();
         let long_message = "x".repeat(10000);
 
-        aggregator.record_custom_error("LongError".to_string(), "test".to_string(), long_message, None);
+        aggregator.record_custom_error(
+            "LongError".to_string(),
+            "test".to_string(),
+            long_message,
+            None,
+        );
 
         let stats = aggregator.get_stats();
         assert_eq!(stats.total_count, 1);
@@ -446,7 +491,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_concurrent_error_recording() {
         use std::sync::{Arc, Mutex};
         use std::thread;
@@ -485,7 +530,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_error_recording_performance() {
         let aggregator = ErrorAggregator::new();
 
@@ -505,7 +550,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_stats_retrieval_performance() {
         let aggregator = ErrorAggregator::new();
 

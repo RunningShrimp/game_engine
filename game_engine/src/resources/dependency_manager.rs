@@ -429,9 +429,12 @@ mod tests {
         let load_order = graph.get_load_order().expect("Test: operation should succeed");
 
         // c应该在b之前，b应该在a之前
-        let c_idx = load_order.iter().position(|p| p == &c).expect("Test: operation should succeed");
-        let b_idx = load_order.iter().position(|p| p == &b).expect("Test: operation should succeed");
-        let a_idx = load_order.iter().position(|p| p == &a).expect("Test: operation should succeed");
+        let c_idx =
+            load_order.iter().position(|p| p == &c).expect("Test: operation should succeed");
+        let b_idx =
+            load_order.iter().position(|p| p == &b).expect("Test: operation should succeed");
+        let a_idx =
+            load_order.iter().position(|p| p == &a).expect("Test: operation should succeed");
 
         assert!(c_idx < b_idx);
         assert!(b_idx < a_idx);

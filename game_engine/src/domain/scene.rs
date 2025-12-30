@@ -184,7 +184,7 @@ impl Scene {
         Self {
             id,
             name: name.into(),
-            state: SceneState::Unloaded,
+            state: SceneState::Inactive, // 新创建的场景默认为Inactive状态，可以被激活
             entities: HashMap::new(),
             metadata: SceneMetadata {
                 created_at: now,
@@ -235,7 +235,7 @@ impl Scene {
         Ok(Self {
             id,
             name,
-            state: SceneState::Unloaded,
+            state: SceneState::Inactive, // 新创建的场景默认为Inactive状态
             entities: HashMap::new(),
             metadata: SceneMetadata {
                 created_at: now,
@@ -354,8 +354,7 @@ impl Scene {
         for ch in name.chars() {
             if !ch.is_alphanumeric() && ch != '_' && ch != '-' && ch != ' ' {
                 return Err(DomainError::Scene(SceneError::SceneNotFound(format!(
-                    "Invalid character in scene name: '{}'",
-                    ch
+                    "Invalid character in scene name: '{ch}'"
                 ))));
             }
         }
@@ -1098,7 +1097,12 @@ mod tests {
         assert!(scene.validate().is_ok());
 
         // 验证实体已激活
-        assert!(scene.get_entity(EntityId(1)).expect("Test: operation should succeed").is_active());
+        assert!(
+            scene
+                .get_entity(EntityId(1))
+                .expect("Test: operation should succeed")
+                .is_active()
+        );
     }
 
     #[test]
@@ -1184,7 +1188,12 @@ mod tests {
         // 激活场景应该激活所有实体
         scene.activate().expect("Test: operation should succeed");
         assert_eq!(scene.state, SceneState::Active);
-        assert!(scene.get_entity(EntityId(1)).expect("Test: operation should succeed").is_active());
+        assert!(
+            scene
+                .get_entity(EntityId(1))
+                .expect("Test: operation should succeed")
+                .is_active()
+        );
     }
 
     #[test]
@@ -1200,7 +1209,12 @@ mod tests {
         // 停用场景应该停用所有实体
         scene.deactivate().expect("Test: operation should succeed");
         assert_eq!(scene.state, SceneState::Inactive);
-        assert!(!scene.get_entity(EntityId(1)).expect("Test: operation should succeed").is_active());
+        assert!(
+            !scene
+                .get_entity(EntityId(1))
+                .expect("Test: operation should succeed")
+                .is_active()
+        );
     }
 
     #[test]
@@ -1227,7 +1241,10 @@ mod tests {
 
         // 获取存在的实体
         assert!(scene.get_entity(EntityId(1)).is_some());
-        assert_eq!(scene.get_entity(EntityId(1)).expect("Test: operation should succeed").id, EntityId(1));
+        assert_eq!(
+            scene.get_entity(EntityId(1)).expect("Test: operation should succeed").id,
+            EntityId(1)
+        );
 
         // 获取不存在的实体
         assert!(scene.get_entity(EntityId(999)).is_none());
@@ -1247,7 +1264,10 @@ mod tests {
         }
 
         assert_eq!(
-            scene.get_entity(EntityId(1)).expect("Test: operation should succeed").position(),
+            scene
+                .get_entity(EntityId(1))
+                .expect("Test: operation should succeed")
+                .position(),
             Some(Vec3::ONE)
         );
     }
@@ -1256,20 +1276,38 @@ mod tests {
     fn test_scene_manager() {
         let mut manager = SceneManager::new();
 
-        manager.create_scene(SceneId(1), "Scene 1").expect("Test: operation should succeed");
-        manager.create_scene(SceneId(2), "Scene 2").expect("Test: operation should succeed");
+        manager
+            .create_scene(SceneId(1), "Scene 1")
+            .expect("Test: operation should succeed");
+        manager
+            .create_scene(SceneId(2), "Scene 2")
+            .expect("Test: operation should succeed");
 
         assert_eq!(manager.scene_ids().len(), 2);
 
         // 加载场景（switch_to_scene会自动激活）
-        manager.get_scene_mut(SceneId(1)).expect("Test: operation should succeed").load().expect("Test: operation should succeed");
-        manager.get_scene_mut(SceneId(2)).expect("Test: operation should succeed").load().expect("Test: operation should succeed");
+        manager
+            .get_scene_mut(SceneId(1))
+            .expect("Test: operation should succeed")
+            .load()
+            .expect("Test: operation should succeed");
+        manager
+            .get_scene_mut(SceneId(2))
+            .expect("Test: operation should succeed")
+            .load()
+            .expect("Test: operation should succeed");
 
         manager.switch_to_scene(SceneId(1)).expect("Test: operation should succeed");
-        assert_eq!(manager.active_scene().expect("Test: operation should succeed").id, SceneId(1));
+        assert_eq!(
+            manager.active_scene().expect("Test: operation should succeed").id,
+            SceneId(1)
+        );
 
         manager.switch_to_scene(SceneId(2)).expect("Test: operation should succeed");
-        assert_eq!(manager.active_scene().expect("Test: operation should succeed").id, SceneId(2));
+        assert_eq!(
+            manager.active_scene().expect("Test: operation should succeed").id,
+            SceneId(2)
+        );
     }
 
     #[test]
@@ -1282,7 +1320,10 @@ mod tests {
 
         let found = scene.find_entity_by_name("Test Entity");
         assert!(found.is_some());
-        assert_eq!(found.expect("Test: operation should succeed").id, EntityId(1));
+        assert_eq!(
+            found.expect("Test: operation should succeed").id,
+            EntityId(1)
+        );
 
         let not_found = scene.find_entity_by_name("Nonexistent");
         assert!(not_found.is_none());
@@ -1293,8 +1334,12 @@ mod tests {
         let mut scene = Scene::new(SceneId(1), "Test Scene");
         scene.load().expect("Test: operation should succeed");
 
-        scene.add_entity(EntityFactory::create_basic(EntityId(1), Vec3::ZERO)).expect("Test: operation should succeed");
-        scene.add_entity(EntityFactory::create_basic(EntityId(2), Vec3::ZERO)).expect("Test: operation should succeed");
+        scene
+            .add_entity(EntityFactory::create_basic(EntityId(1), Vec3::ZERO))
+            .expect("Test: operation should succeed");
+        scene
+            .add_entity(EntityFactory::create_basic(EntityId(2), Vec3::ZERO))
+            .expect("Test: operation should succeed");
 
         let ids = scene.entity_ids();
         assert_eq!(ids.len(), 2);
@@ -1335,11 +1380,19 @@ mod tests {
         let mut scene = Scene::new(SceneId(1), "Test Scene");
         scene.load().expect("Test: operation should succeed");
 
-        scene.add_entity(EntityFactory::create_basic(EntityId(1), Vec3::ZERO)).expect("Test: operation should succeed");
-        scene.add_entity(EntityFactory::create_basic(EntityId(2), Vec3::ZERO)).expect("Test: operation should succeed");
-        scene.add_entity(EntityFactory::create_basic(EntityId(3), Vec3::ZERO)).expect("Test: operation should succeed");
+        scene
+            .add_entity(EntityFactory::create_basic(EntityId(1), Vec3::ZERO))
+            .expect("Test: operation should succeed");
+        scene
+            .add_entity(EntityFactory::create_basic(EntityId(2), Vec3::ZERO))
+            .expect("Test: operation should succeed");
+        scene
+            .add_entity(EntityFactory::create_basic(EntityId(3), Vec3::ZERO))
+            .expect("Test: operation should succeed");
 
-        let removed = scene.remove_entities(vec![EntityId(1), EntityId(3)]).expect("Test: operation should succeed");
+        let removed = scene
+            .remove_entities(vec![EntityId(1), EntityId(3)])
+            .expect("Test: operation should succeed");
         assert_eq!(removed.len(), 2);
         assert_eq!(scene.total_entity_count(), 1);
     }
@@ -1419,7 +1472,9 @@ mod tests {
         let mut scene = Scene::new(SceneId(1), "Test Scene");
         scene.load().expect("Test: operation should succeed");
 
-        scene.add_entity(EntityFactory::create_basic(EntityId(1), Vec3::ZERO)).expect("Test: operation should succeed");
+        scene
+            .add_entity(EntityFactory::create_basic(EntityId(1), Vec3::ZERO))
+            .expect("Test: operation should succeed");
 
         let snapshot = scene.create_snapshot();
         assert_eq!(snapshot.scene_id, SceneId(1));
@@ -1431,7 +1486,9 @@ mod tests {
     #[test]
     fn test_scene_manager_get_scene() {
         let mut manager = SceneManager::new();
-        manager.create_scene(SceneId(1), "Scene 1").expect("Test: operation should succeed");
+        manager
+            .create_scene(SceneId(1), "Scene 1")
+            .expect("Test: operation should succeed");
 
         assert!(manager.get_scene(SceneId(1)).is_some());
         assert!(manager.get_scene(SceneId(999)).is_none());
@@ -1440,8 +1497,14 @@ mod tests {
     #[test]
     fn test_scene_manager_delete_scene() {
         let mut manager = SceneManager::new();
-        manager.create_scene(SceneId(1), "Scene 1").expect("Test: operation should succeed");
-        manager.get_scene_mut(SceneId(1)).expect("Test: operation should succeed").load().expect("Test: operation should succeed");
+        manager
+            .create_scene(SceneId(1), "Scene 1")
+            .expect("Test: operation should succeed");
+        manager
+            .get_scene_mut(SceneId(1))
+            .expect("Test: operation should succeed")
+            .load()
+            .expect("Test: operation should succeed");
         manager.switch_to_scene(SceneId(1)).expect("Test: operation should succeed");
 
         let deleted = manager.delete_scene(SceneId(1)).expect("Test: operation should succeed");
@@ -1458,8 +1521,14 @@ mod tests {
     #[test]
     fn test_scene_manager_update() {
         let mut manager = SceneManager::new();
-        manager.create_scene(SceneId(1), "Scene 1").expect("Test: operation should succeed");
-        manager.get_scene_mut(SceneId(1)).expect("Test: operation should succeed").load().expect("Test: operation should succeed");
+        manager
+            .create_scene(SceneId(1), "Scene 1")
+            .expect("Test: operation should succeed");
+        manager
+            .get_scene_mut(SceneId(1))
+            .expect("Test: operation should succeed")
+            .load()
+            .expect("Test: operation should succeed");
 
         manager.update(0.016).expect("Test: operation should succeed");
         // 验证更新成功（通过行为验证）
@@ -1468,7 +1537,9 @@ mod tests {
     #[test]
     fn test_scene_manager_validate() {
         let mut manager = SceneManager::new();
-        manager.create_scene(SceneId(1), "Scene 1").expect("Test: operation should succeed");
+        manager
+            .create_scene(SceneId(1), "Scene 1")
+            .expect("Test: operation should succeed");
 
         assert!(manager.validate().is_ok());
     }
@@ -1524,7 +1595,9 @@ mod tests {
     fn test_scene_recover_from_error_use_default() {
         let mut scene = Scene::new(SceneId(1), "Test Scene");
         scene.load().expect("Test: operation should succeed");
-        scene.add_entity(EntityFactory::create_basic(EntityId(1), Vec3::ZERO)).expect("Test: operation should succeed");
+        scene
+            .add_entity(EntityFactory::create_basic(EntityId(1), Vec3::ZERO))
+            .expect("Test: operation should succeed");
         scene.recovery_strategy = RecoveryStrategy::UseDefault;
 
         let error = SceneError::SerializationFailed("test".to_string());
@@ -1581,7 +1654,9 @@ mod tests {
     fn test_scene_create_compensation() {
         let mut scene = Scene::new(SceneId(1), "Test Scene");
         scene.load().expect("Test: operation should succeed");
-        scene.add_entity(EntityFactory::create_basic(EntityId(1), Vec3::ZERO)).expect("Test: operation should succeed");
+        scene
+            .add_entity(EntityFactory::create_basic(EntityId(1), Vec3::ZERO))
+            .expect("Test: operation should succeed");
 
         let compensation = scene.create_compensation();
 

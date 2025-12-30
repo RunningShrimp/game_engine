@@ -22,7 +22,7 @@ pub fn global_runtime() -> &'static Runtime {
             .enable_all()
             .build()
             .unwrap_or_else(|e| {
-                panic!("Failed to create global tokio runtime: {}", e);
+                panic!("Failed to create global tokio runtime: {e}");
             })
     })
 }

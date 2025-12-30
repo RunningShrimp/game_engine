@@ -274,7 +274,7 @@ impl MaterialEditor {
         ui.label("Materials:");
         for (i, _material) in self.materials.iter().enumerate() {
             let is_selected = self.selected_material == Some(i);
-            if ui.selectable_label(is_selected, format!("Material {}", i)).clicked() {
+            if ui.selectable_label(is_selected, format!("Material {i}")).clicked() {
                 self.selected_material = Some(i);
             }
         }
@@ -379,7 +379,7 @@ impl MaterialEditor {
         // 材质属性编辑
         if let Some(index) = self.selected_material {
             // 先获取材质名称
-            let material_name = format!("Editing Material {}", index);
+            let material_name = format!("Editing Material {index}");
             ui.label(material_name);
             ui.separator();
 
@@ -536,7 +536,7 @@ impl MaterialEditor {
                         }
                         let tags =
                             entry.as_ref().map(|e| e.tags.join(", ")).unwrap_or_else(String::new);
-                        ui.label(format!("Tags: {}", tags));
+                        ui.label(format!("Tags: {tags}"));
                     });
                 }
             });

@@ -896,7 +896,7 @@ mod tests {
     use crate::render::lod::{LodConfigBuilder, LodQuality};
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_render_service_creation() {
         let mut service = RenderService::new();
         // LOD选择器现在由RenderScene管理，RenderService不再直接持有
@@ -905,7 +905,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_configure_lod() {
         let mut service = RenderService::new();
         let config = LodConfigBuilder::new()
@@ -919,7 +919,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_use_default_lod() {
         let mut service = RenderService::new();
         service.use_default_lod();
@@ -928,7 +928,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_update_frustum() {
         let mut service = RenderService::new();
         let view_proj = Mat4::IDENTITY;
@@ -938,7 +938,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_build_pbr_scene_empty() {
         let mut service = RenderService::new();
         let mut world = World::new();
@@ -949,7 +949,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_build_pbr_scene_with_lights() {
         let mut service = RenderService::new();
         let mut world = World::new();
@@ -984,7 +984,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_build_pbr_scene_filters_invalid_lights() {
         let mut service = RenderService::new();
         let mut world = World::new();
@@ -1026,7 +1026,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_update_scene() {
         let mut service = RenderService::new();
         service.use_default_lod();
@@ -1041,7 +1041,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_get_renderable_objects_empty() {
         let mut service = RenderService::new();
         let count = service.get_renderable_objects().count();
@@ -1049,7 +1049,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_layer_cache() {
         let mut cache = LayerCache::default();
 
@@ -1070,7 +1070,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_pbr_scene_structure() {
         let scene = PbrScene {
             point_lights: vec![PointLight3D {

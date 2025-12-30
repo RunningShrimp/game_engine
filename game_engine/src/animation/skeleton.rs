@@ -330,7 +330,7 @@ pub fn build_skeleton_from_gltf(
             .get(&joint.index())
             .and_then(|parent_node_idx| joint_to_index.get(parent_node_idx).copied());
 
-        let name = joint.name().map(|s| s.to_string()).unwrap_or_else(|| format!("bone_{}", i));
+        let name = joint.name().map(|s| s.to_string()).unwrap_or_else(|| format!("bone_{i}"));
 
         let mut bone = Bone::new(name, parent_index);
 

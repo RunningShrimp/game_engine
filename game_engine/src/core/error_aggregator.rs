@@ -467,11 +467,11 @@ impl ErrorSummary {
         lines.push(format!("错误率: {:.2} 错误/秒", self.error_rate));
 
         if let Some((ref error_type, count)) = self.most_common_type {
-            lines.push(format!("最常见错误类型: {} ({}次)", error_type, count));
+            lines.push(format!("最常见错误类型: {error_type} ({count}次)"));
         }
 
         if let Some((ref source, count)) = self.most_common_source {
-            lines.push(format!("最常见错误来源: {} ({}次)", source, count));
+            lines.push(format!("最常见错误来源: {source} ({count}次)"));
         }
 
         lines.push(format!("最近错误数: {}", self.recent_error_count));
@@ -534,8 +534,9 @@ mod tests {
 
         aggregator.record_custom_error("TestError", "test_module", "Test message", None);
 
-        let report = aggregator.export_report()
-            .expect("Failed to export error report: serialization should not fail for valid error data");
+        let report = aggregator.export_report().expect(
+            "Failed to export error report: serialization should not fail for valid error data",
+        );
         assert!(report.contains("TestError"));
         assert!(report.contains("test_module"));
     }

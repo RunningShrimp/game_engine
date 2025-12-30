@@ -12,19 +12,19 @@
 // 4. **加密/解密**: 加密后再解密应该得到原始数据
 // 5. **消息顺序**: 消息序列号应该单调递增
 
-use proptest::prelude::*;
-use game_engine::network::delta_serialization::*;
-use game_engine::network::compression::*;
-use std::io::{Read, Write};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use game_engine::network::compression::*;
+use game_engine::network::delta_serialization::*;
+use proptest::prelude::*;
+use std::io::{Read, Write};
 
 // ============================================================================
 // Test helpers (copied from property_tests.rs)
 // ============================================================================
 
 pub mod strategies {
-    use proptest::prelude::*;
     use glam::Vec3;
+    use proptest::prelude::*;
 
     /// 坐标策略：生成合理的浮点数坐标
     pub fn coord() -> impl Strategy<Value = f32> {
@@ -68,10 +68,7 @@ struct DeltaEncoder;
 impl DeltaEncoder {
     /// Simple delta encoding: store differences from baseline
     pub fn encode(baseline: &[u8], current: &[u8]) -> Vec<u8> {
-        baseline.iter()
-            .zip(current.iter())
-            .map(|(b, c)| c.wrapping_sub(*b))
-            .collect()
+        baseline.iter().zip(current.iter()).map(|(b, c)| c.wrapping_sub(*b)).collect()
     }
 }
 
@@ -82,10 +79,7 @@ struct DeltaDecoder;
 impl DeltaDecoder {
     /// Simple delta decoding: reconstruct from baseline and delta
     pub fn decode(baseline: &[u8], delta: &[u8]) -> Vec<u8> {
-        baseline.iter()
-            .zip(delta.iter())
-            .map(|(b, d)| b.wrapping_add(*d))
-            .collect()
+        baseline.iter().zip(delta.iter()).map(|(b, d)| b.wrapping_add(*d)).collect()
     }
 }
 
@@ -506,7 +500,7 @@ proptest! {
 // ============================================================================
 
 #[test]
-#[ignore]  // TODO: Fix compilation errors
+#[ignore] // TODO: Fix compilation errors
 fn test_network_compression_delta_combined() {
     let baseline = vec![1u8, 2, 3, 4, 5, 6, 7, 8, 9, 10];
     let current = vec![1u8, 2, 3, 4, 15, 16, 7, 8, 9, 10];

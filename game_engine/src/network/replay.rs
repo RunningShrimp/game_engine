@@ -618,10 +618,10 @@ impl From<serde_json::Error> for ReplayError {
 impl std::fmt::Display for ReplayError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ReplayError::IoError(e) => write!(f, "IO error: {}", e),
-            ReplayError::SerializationError(e) => write!(f, "Serialization error: {}", e),
-            ReplayError::InvalidTick(tick) => write!(f, "Invalid tick: {}", tick),
-            ReplayError::InvalidFile(e) => write!(f, "Invalid file: {}", e),
+            ReplayError::IoError(e) => write!(f, "IO error: {e}"),
+            ReplayError::SerializationError(e) => write!(f, "Serialization error: {e}"),
+            ReplayError::InvalidTick(tick) => write!(f, "Invalid tick: {tick}"),
+            ReplayError::InvalidFile(e) => write!(f, "Invalid file: {e}"),
         }
     }
 }
@@ -671,7 +671,8 @@ mod tests {
         recorder.stop_recording();
         recorder.save_to_file(&temp_path).expect("Test: operation should succeed");
 
-        let player = ReplayPlayer::load_from_file(&temp_path).expect("Test: operation should succeed");
+        let player =
+            ReplayPlayer::load_from_file(&temp_path).expect("Test: operation should succeed");
         assert_eq!(player.total_ticks(), 1);
     }
 }

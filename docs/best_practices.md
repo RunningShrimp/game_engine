@@ -1,599 +1,410 @@
-# 最佳实践指南
+# 游戏引擎最佳实践指南
 
-本文档提供游戏引擎开发的最佳实践，涵盖架构设计、ECS使用、资源管理、性能优化等方面。
+## 概述
 
-## 目录
-
-1. [架构设计](#架构设计)
-2. [ECS使用](#ecs使用)
-3. [资源管理](#资源管理)
-4. [性能优化](#性能优化)
-5. [错误处理](#错误处理)
-6. [并发和异步](#并发和异步)
-7. [测试策略](#测试策略)
-8. [代码组织](#代码组织)
+本指南提供了使用游戏引擎的最佳实践，帮助您编写高性能、可维护的代码。
 
 ---
 
-## 架构设计
+## 架构原则
 
-### 分层架构原则
+### 1. 关注点分离
 
-引擎采用清晰的分层架构，遵循依赖倒置原则：
-
-```
-应用层 (Application)
-    ↓
-领域层 (Domain)
-    ↓
-服务层 (Services)
-    ↓
-基础设施层 (Infrastructure)
-```
-
-**最佳实践**:
-
-1. **依赖方向**: 上层依赖下层，下层不依赖上层
-2. **接口抽象**: 使用trait定义接口，实现放在基础设施层
-3. **领域逻辑**: 业务逻辑放在领域层，技术细节放在基础设施层
+**原则**: 不同职责的代码应该分离
 
 **示例**:
-
 ```rust
-// ✅ 好的做法：领域层定义接口
-pub trait RenderService {
-    fn render_scene(&self, scene: &Scene) -> Result<(), RenderError>;
+// ❌ 错误：混合关注点
+fn update_and_render(&mut self) {
+    self.update_physics();
+    self.render();
+    self.play_audio();
 }
 
-// ✅ 好的做法：基础设施层实现
-pub struct WgpuRenderService {
-    // wgpu实现细节
+// ✅ 正确：分离关注点
+fn update(&mut self) {
+    self.update_physics();
+    self.play_audio();
 }
 
-impl RenderService for WgpuRenderService {
-    fn render_scene(&self, scene: &Scene) -> Result<(), RenderError> {
-        // 实现细节
-    }
+fn render(&self) {
+    self.render_scene();
 }
-
-// ❌ 避免：领域层依赖具体实现
-// use game_engine::render::wgpu::WgpuRenderer; // 不要这样做
-```
-
-### 领域驱动设计（DDD）
-
-**聚合根（Aggregate Roots）**:
-
-- 控制实体的生命周期
-- 维护聚合不变量
-- 通过ID引用其他聚合
-
-```rust
-// ✅ 好的做法：聚合根控制访问
-pub struct GameEntity {
-    id: EntityId,
-    components: Vec<Component>,
-}
-
-impl GameEntity {
-    pub fn add_component(&mut self, component: Component) -> Result<(), DomainError> {
-        // 验证业务规则
-        self.validate_component(&component)?;
-        self.components.push(component);
-        Ok(())
-    }
-    
-    fn validate_component(&self, component: &Component) -> Result<(), DomainError> {
-        // 业务规则验证
-        Ok(())
-    }
-}
-```
-
-**值对象（Value Objects）**:
-
-- 不可变
-- 通过值比较相等性
-- 封装验证逻辑
-
-```rust
-// ✅ 好的做法：值对象
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct EntityId(u64);
-
-impl EntityId {
-    pub fn new(id: u64) -> Self {
-        // 可以添加验证逻辑
-        Self(id)
-    }
-    
-    pub fn as_u64(&self) -> u64 {
-        self.0
-    }
-}
-```
-
-### 微内核架构
-
-引擎支持微内核架构，核心功能最小化，其他功能作为服务运行：
-
-```rust
-use game_engine::core::microkernel::{ServiceRegistry, Service};
-
-// 注册服务
-let mut registry = ServiceRegistry::new();
-registry.register_service(Box::new(RenderService::new()))?;
-registry.register_service(Box::new(AudioService::new()))?;
-
-// 通过消息总线通信
-let message = Message::Render { scene };
-registry.send_message("render_service", message).await?;
-```
-
-**优势**:
-- 模块化：每个服务独立开发和测试
-- 可扩展性：可以动态加载/卸载服务
-- 隔离性：服务崩溃不会影响整个系统
-
----
-
-## ECS使用
-
-### 组件设计
-
-**组件应该是纯数据结构**:
-
-```rust
-// ✅ 好的做法：纯数据组件
-#[derive(Component, Debug, Clone)]
-pub struct Transform {
-    pub position: Vec3,
-    pub rotation: Quat,
-    pub scale: Vec3,
-}
-
-// ❌ 避免：组件包含逻辑
-// #[derive(Component)]
-// pub struct Transform {
-//     pub position: Vec3,
-//     pub fn update(&mut self) { // 不要这样做
-//         // 逻辑应该在系统中
-//     }
-// }
-```
-
-**组件应该小而专注**:
-
-```rust
-// ✅ 好的做法：小而专注的组件
-#[derive(Component)]
-pub struct Position(pub Vec3);
-
-#[derive(Component)]
-pub struct Rotation(pub Quat);
-
-#[derive(Component)]
-pub struct Scale(pub Vec3);
-
-// ❌ 避免：巨大的组件
-// #[derive(Component)]
-// pub struct Transform {
-//     pub position: Vec3,
-//     pub rotation: Quat,
-//     pub scale: Vec3,
-//     pub velocity: Vec3,
-//     pub acceleration: Vec3,
-//     // ... 太多字段
-// }
-```
-
-### 系统设计
-
-**系统应该是无状态的**:
-
-```rust
-// ✅ 好的做法：无状态系统
-fn movement_system(
-    mut query: Query<(&mut Transform, &Velocity)>,
-    time: Res<Time>,
-) {
-    for (mut transform, velocity) in query.iter_mut() {
-        transform.position += velocity.0 * time.delta_seconds();
-    }
-}
-
-// ❌ 避免：有状态系统
-// fn movement_system(
-//     mut query: Query<(&mut Transform, &Velocity)>,
-//     mut state: Local<MovementState>, // 避免使用Local
-// ) {
-//     // ...
-// }
-```
-
-**系统应该专注于单一职责**:
-
-```rust
-// ✅ 好的做法：单一职责
-fn physics_system(query: Query<(&mut Transform, &RigidBody)>) {
-    // 只处理物理
-}
-
-fn render_system(query: Query<(&Transform, &Sprite)>) {
-    // 只处理渲染
-}
-
-// ❌ 避免：多职责系统
-// fn update_system(query: Query<...>) {
-//     // 处理物理、渲染、AI等所有内容
-// }
-```
-
-**使用系统调度优化性能**:
-
-```rust
-use game_engine::core::system_scheduler::SystemScheduler;
-
-let mut scheduler = SystemScheduler::new();
-
-// 添加系统（自动分析依赖）
-scheduler.add_system(physics_system);
-scheduler.add_system(movement_system);
-scheduler.add_system(render_system);
-
-// 并行执行（自动检测可并行的系统）
-scheduler.run_parallel(&mut world);
-```
-
-### 查询优化
-
-**使用精确的查询**:
-
-```rust
-// ✅ 好的做法：精确查询
-fn update_system(
-    mut query: Query<(&mut Transform, &Velocity), (With<Player>, Without<Enemy>)>,
-) {
-    // 只查询玩家实体，排除敌人
-}
-
-// ❌ 避免：过于宽泛的查询
-// fn update_system(mut query: Query<&mut Transform>) {
-//     // 查询所有实体，可能包含不需要的
-// }
-```
-
-**使用变更检测**:
-
-```rust
-// ✅ 好的做法：只处理变更的组件
-fn sync_system(
-    mut query: Query<&mut Transform, Changed<Position>>,
-) {
-    // 只处理位置发生变化的实体
-}
-
-// ❌ 避免：每帧处理所有实体
-// fn sync_system(mut query: Query<&mut Transform>) {
-//     // 即使没有变化也处理
-// }
 ```
 
 ---
 
-## 资源管理
+### 2. 依赖注入
 
-### 资源加载
+**原则**: 使用依赖注入而非硬编码依赖
 
-**使用异步加载**:
-
+**示例**:
 ```rust
-// ✅ 好的做法：异步加载
-use game_engine::resources::CoroutineLoader;
+// ❌ 错误：硬编码依赖
+struct Game {
+    physics: PhysicsEngine,
+    renderer: Renderer,
+}
 
-let loader = CoroutineLoader::new();
+impl Game {
+    fn new() -> Self {
+        Self {
+            physics: PhysicsEngine::new(),
+            renderer: Renderer::new(),
+        }
+    }
+}
 
-// 高优先级加载关键资源
-let texture = loader.load_critical("player_texture.png").await?;
+// ✅ 正确：依赖注入
+struct Game<P, R> {
+    physics: P,
+    renderer: R,
+}
 
-// 后台预加载
-loader.preload("level2_texture.png", Priority::Low).await?;
-```
-
-**使用统一资源管理器**:
-
-```rust
-// ✅ 好的做法：统一管理
-use game_engine::resources::UnifiedResourceManager;
-
-let mut manager = UnifiedResourceManager::new(device, queue);
-
-// 加载各种资源类型
-let texture = manager.load_texture("texture.png").await?;
-let model = manager.load_model("model.gltf").await?;
-let audio = manager.load_audio("sound.mp3").await?;
-
-// 自动缓存管理
-let stats = manager.cache_stats();
-if stats.misses > stats.hits {
-    // 考虑增加缓存大小
+impl<P: Physics, R: Render> Game<P, R> {
+    fn new(physics: P, renderer: R) -> Self {
+        Self { physics, renderer }
+    }
 }
 ```
 
-### 资源生命周期
+---
 
-**及时释放不需要的资源**:
+### 3. 组合优于继承
 
+**原则**: 使用trait对象和组合
+
+**示例**:
 ```rust
-// ✅ 好的做法：及时释放
-{
-    let texture = manager.load_texture("temp_texture.png").await?;
-    // 使用纹理...
-} // texture在这里自动释放
+// ❌ 错误：深层继承
+trait GameObject { }
+trait RenderableObject: GameObject { }
+trait PhysicalObject: GameObject { }
+trait Player: RenderableObject + PhysicalObject { }
 
-// ❌ 避免：长期持有不需要的资源
-// let texture = manager.load_texture("temp_texture.png").await?;
-// // ... 很久之后才释放
-```
-
-**使用对象池重用资源**:
-
-```rust
-// ✅ 好的做法：使用对象池
-use game_engine::performance::memory::ObjectPool;
-
-let mut pool = ObjectPool::new(100, || Particle::new());
-
-// 从池中获取
-let particle = pool.acquire();
-
-// 使用粒子...
-
-// 返回到池中
-pool.release(particle);
-```
-
-### 热重载
-
-**使用协程批量处理热重载事件**:
-
-```rust
-// ✅ 好的做法：批量处理
-use game_engine::resources::hot_reload::HotReloadManager;
-
-let mut manager = HotReloadManager::new("assets", dependency_graph)?;
-
-// 批量处理事件
-let events = manager.process_events_batch(100, Duration::from_millis(100)).await;
-
-// 并发重载
-let results = manager.reload_resources_concurrent(paths, reload_fn).await;
+// ✅ 正确：组合
+struct Entity {
+    render: Option<Box<dyn Render>>,
+    physics: Option<Box<dyn Physics>>,
+    behavior: Option<Box<dyn Behavior>>,
+}
 ```
 
 ---
 
 ## 性能优化
 
-### 协程使用
+### 1. 同步优于异步
 
-**使用协程处理I/O密集型任务**:
+**原则**: 纯计算使用同步函数
 
+**示例**:
 ```rust
-// ✅ 好的做法：协程处理I/O
-use game_engine::audio::streaming::AudioStreamLoader;
+// ❌ 错误：纯计算使用async
+pub async fn calculate_physics(pos: Vec3, vel: Vec3, dt: f32) -> Vec3 {
+    pos + vel * dt
+}
 
-let mut loader = AudioStreamLoader::new();
-
-// 异步加载音频流
-let stream_id = loader.start_streaming_async("music.ogg", config).await?;
-
-// 并发更新所有流
-loader.update_all_async().await?;
-```
-
-**使用`spawn_blocking`处理CPU密集型任务**:
-
-```rust
-// ✅ 好的做法：CPU密集型任务使用spawn_blocking
-use tokio::task::spawn_blocking;
-
-let result = spawn_blocking(move || {
-    // CPU密集型计算
-    heavy_computation()
-}).await?;
-```
-
-**使用`Semaphore`限制并发数**:
-
-```rust
-// ✅ 好的做法：限制并发
-use tokio::sync::Semaphore;
-
-let semaphore = Arc::new(Semaphore::new(10)); // 最多10个并发
-
-for task in tasks {
-    let permit = semaphore.clone().acquire_owned().await?;
-    tokio::spawn(async move {
-        // 执行任务
-        drop(permit); // 释放许可
-    });
+// ✅ 正确：使用同步函数
+pub fn calculate_physics(pos: Vec3, vel: Vec3, dt: f32) -> Vec3 {
+    pos + vel * dt
 }
 ```
 
-### SIMD优化
+**何时使用async**:
+- 网络I/O
+- 大文件I/O (>100KB)
+- 需要并行的I/O操作
 
-**批量处理数据以充分利用SIMD**:
+**何时使用sync**:
+- 纯计算
+- 简单查询
+- 内存操作
 
+---
+
+### 2. 批量操作
+
+**原则**: 批量处理减少开销
+
+**示例**:
 ```rust
-// ✅ 好的做法：批量处理
-use game_engine::physics::batch_sync::Vec3Simd;
-
-let positions: Vec<Vec3> = /* ... */;
-
-// 批量处理（SIMD优化）
-for chunk in positions.chunks(4) {
-    let simd = Vec3Simd::from_slice(chunk);
-    // SIMD操作
+// ❌ 错误：逐个处理
+for i in 0..1000 {
+    scheduler.schedule(Task::new(
+        format!("task_{}", i),
+        Box::new(|| /* ... */),
+        TaskPriority::Medium,
+    ));
 }
 
-// ❌ 避免：逐个处理
-// for pos in positions {
-//     // 无法利用SIMD
-// }
+// ✅ 正确：批量处理
+let tasks: Vec<_> = (0..1000)
+    .map(|i| {
+        Task::new(
+            format!("task_{}", i),
+            Box::new(|| /* ... */),
+            TaskPriority::Medium,
+        )
+    })
+    .collect();
+scheduler.schedule_batch(tasks);
 ```
 
-**确保数据对齐**:
+---
 
+### 3. 使用高效的数据结构
+
+**原则**: 根据使用场景选择合适的数据结构
+
+**示例**:
 ```rust
-// ✅ 好的做法：数据对齐
-#[repr(align(16))]
-struct AlignedData {
-    positions: [Vec3; 4],
+// ❌ 错误：使用Vec查找
+fn find_entity(entities: &Vec<Entity>, id: u32) -> Option<&Entity> {
+    entities.iter().find(|e| e.id == id)
+}
+
+// ✅ 正确：使用HashMap
+fn find_entity(entities: &HashMap<u32, Entity>, id: u32) -> Option<&Entity> {
+    entities.get(&id)
+}
+
+// ✅ 更好：使用DashMap（并发场景）
+use dashmap::DashMap;
+
+fn find_entity(entities: &DashMap<u32, Entity>, id: u32) -> Option<Entity> {
+    entities.get(&id).map(|e| e.clone())
 }
 ```
 
-### GPU加速
+---
 
-**识别适合GPU加速的任务**:
+### 4. 避免不必要的分配
 
+**原则**: 重用缓冲区，减少分配
+
+**示例**:
 ```rust
-// ✅ 好的做法：大规模并行任务使用GPU
-use game_engine::performance::gpu::gpu_compute::GpuComputeContext;
+// ❌ 错误：每次循环分配
+for i in 0..1000 {
+    let buffer = vec![0u8; 1024];
+    process(&buffer);
+}
 
-// 粒子系统（10万+粒子）
-let context = GpuComputeContext::new(device, queue)?;
-let mut particle_system = GpuParticleSystem::new(context, config)?;
-particle_system.update(delta_time)?; // GPU加速
-
-// ❌ 避免：少量计算使用GPU
-// let result = gpu_compute_small_task(data); // CPU更快
+// ✅ 正确：重用缓冲区
+let mut buffer = vec![0u8; 1024];
+for i in 0..1000 {
+    buffer.clear();
+    process(&mut buffer);
+}
 ```
 
-**减少CPU-GPU数据传输**:
+---
 
+### 5. 使用对象池
+
+**原则**: 重用对象而非频繁创建销毁
+
+**示例**:
 ```rust
-// ✅ 好的做法：批量传输
-buffer.write_all(&large_data);
+use std::sync::Mutex;
 
-// ❌ 避免：频繁小数据传输
-// for item in items {
-//     buffer.write(&item); // 每次传输都有开销
-// }
-```
+struct ObjectPool<T> {
+    objects: Vec<Mutex<T>>,
+}
 
-### 渲染优化
+impl<T: Default> ObjectPool<T> {
+    fn new(capacity: usize) -> Self {
+        let objects = (0..capacity)
+            .map(|_| Mutex::new(T::default()))
+            .collect();
+        Self { objects }
+    }
 
-**使用GPU驱动渲染**:
-
-```rust
-// ✅ 好的做法：启用GPU驱动渲染
-use game_engine::render::gpu_driven::{GpuDrivenRenderer, GpuDrivenConfig};
-
-let config = GpuDrivenConfig {
-    frustum_culling: true,
-    occlusion_culling: true,
-    lod_enabled: true,
-    max_instances: 65536,
-    ..Default::default()
-};
-
-let mut renderer = GpuDrivenRenderer::new(device, &config)?;
-```
-
-**使用LOD系统**:
-
-```rust
-// ✅ 好的做法：根据距离选择LOD
-use game_engine::render::lod::{LodSelector, LodConfig};
-
-let config = LodConfig {
-    lod_levels: vec![
-        LodLevel::new(0, 0.0, 50.0, "high"),
-        LodLevel::new(1, 50.0, 100.0, "medium"),
-        LodLevel::new(2, 100.0, 200.0, "low"),
-    ],
-    ..Default::default()
-};
-
-let selector = LodSelector::new(config);
-let lod_level = selector.select_lod(camera_pos, object_pos);
-```
-
-**批处理绘制调用**:
-
-```rust
-// ✅ 好的做法：合并相同材质的绘制调用
-use game_engine::render::instance_batch::BatchManager;
-
-let mut batch_manager = BatchManager::new(device);
-
-// 添加实例到批次
-batch_manager.add_instance(batch_key, transform, color)?;
-
-// 渲染批次（减少draw call）
-batch_manager.render(encoder, device, queue)?;
+    fn get(&self) -> MutexGuard<T> {
+        // 简化实现：轮询获取
+        let index = 0; // 实际应该使用更智能的策略
+        self.objects[index].lock().unwrap()
+    }
+}
 ```
 
 ---
 
 ## 错误处理
 
-### 错误类型设计
+### 1. 使用Result而非panic
 
-**使用thiserror定义错误类型**:
+**原则**: 可恢复的错误使用Result
 
+**示例**:
 ```rust
-// ✅ 好的做法：清晰的错误类型
+// ❌ 错误：panic!不可恢复
+fn divide(a: f32, b: f32) -> f32 {
+    if b == 0.0 {
+        panic!("除数不能为零");
+    }
+    a / b
+}
+
+// ✅ 正确：返回Result
+fn divide(a: f32, b: f32) -> Result<f32, String> {
+    if b == 0.0 {
+        return Err("除数不能为零".to_string());
+    }
+    Ok(a / b)
+}
+```
+
+---
+
+### 2. 提供有意义的错误信息
+
+**原则**: 错误信息应该清晰有用
+
+**示例**:
+```rust
+// ❌ 错误：模糊的错误信息
+fn load_asset(path: &str) -> Result<Vec<u8>, String> {
+    Err("加载失败".to_string())
+}
+
+// ✅ 正确：详细的错误信息
+fn load_asset(path: &str) -> Result<Vec<u8>, String> {
+    use std::io;
+    std::fs::read(path)
+        .map_err(|e| format!("无法加载资产 '{}': {}", path, e))
+}
+```
+
+---
+
+### 3. 使用thiserror
+
+**原则**: 使用thiserror简化错误处理
+
+**示例**:
+```rust
 use thiserror::Error;
 
 #[derive(Error, Debug)]
-pub enum ResourceError {
-    #[error("File not found: {0}")]
-    FileNotFound(String),
+pub enum GameEngineError {
+    #[error("IO错误: {0}")]
+    Io(#[from] std::io::Error),
     
-    #[error("IO error: {0}")]
-    IoError(#[from] std::io::Error),
+    #[error("资源未找到: {0}")]
+    ResourceNotFound(String),
     
-    #[error("Parse error: {0}")]
-    ParseError(String),
+    #[error("渲染错误: {0}")]
+    Render(String),
 }
 ```
 
-**使用Result传播错误**:
+---
 
+## 并发编程
+
+### 1. 最小化锁范围
+
+**原则**: 锁的持有时间尽可能短
+
+**示例**:
 ```rust
-// ✅ 好的做法：使用?操作符
-fn load_resource(path: &Path) -> Result<Resource, ResourceError> {
-    let data = std::fs::read(path)?; // 自动传播IO错误
-    let resource = parse_resource(&data)?; // 自动传播解析错误
-    Ok(resource)
+// ❌ 错误：长时间持有锁
+let data = mutex.lock().unwrap();
+// ... 大量计算 ...
+drop(data);
+
+// ✅ 正确：尽快释放锁
+let result = {
+    let data = mutex.lock().unwrap();
+    data.calculate()
+};
+// ... 计算不持有锁 ...
+```
+
+---
+
+### 2. 使用读写锁
+
+**原则**: 读多写少场景使用RwLock
+
+**示例**:
+```rust
+use parking_lot::RwLock;
+
+struct GameState {
+    entities: RwLock<Vec<Entity>>,
+}
+
+impl GameState {
+    // 读操作：并发
+    fn get_entity(&self, id: u32) -> Option<Entity> {
+        let entities = self.entities.read();
+        entities.iter().find(|e| e.id == id).cloned()
+    }
+
+    // 写操作：独占
+    fn add_entity(&self, entity: Entity) {
+        let mut entities = self.entities.write();
+        entities.push(entity);
+    }
 }
 ```
 
-### 错误恢复
+---
 
-**实现错误恢复策略**:
+### 3. 使用原子操作
 
+**原则**: 简单计数器使用原子类型
+
+**示例**:
 ```rust
-// ✅ 好的做法：错误恢复
-use game_engine::error::recovery::{RecoveryStrategy, ErrorSeverity};
+use std::sync::atomic::{AtomicUsize, Ordering};
 
-match load_resource(path) {
-    Ok(resource) => resource,
-    Err(e) => {
-        match e.severity() {
-            ErrorSeverity::Critical => {
-                // 关键错误，无法恢复
-                panic!("Critical error: {}", e);
+struct Metrics {
+    frame_count: AtomicUsize,
+    entity_count: AtomicUsize,
+}
+
+impl Metrics {
+    fn increment_frame(&self) {
+        self.frame_count.fetch_add(1, Ordering::Relaxed);
+    }
+
+    fn get_frame_count(&self) -> usize {
+        self.frame_count.load(Ordering::Relaxed)
+    }
+}
+```
+
+---
+
+### 4. 使用channels传递消息
+
+**原则**: 线程间通信使用channels
+
+**示例**:
+```rust
+use std::sync::mpsc;
+
+enum Message {
+    Update(f32),
+    Render,
+    Shutdown,
+}
+
+fn worker_thread(receiver: mpsc::Receiver<Message>) {
+    for msg in receiver {
+        match msg {
+            Message::Update(dt) => {
+                // 更新逻辑
             }
-            ErrorSeverity::Recoverable => {
-                // 可恢复错误，使用默认值
-                Resource::default()
+            Message::Render => {
+                // 渲染逻辑
             }
-            ErrorSeverity::Warning => {
-                // 警告，记录但继续
-                tracing::warn!("Warning: {}", e);
-                Resource::default()
+            Message::Shutdown => {
+                break;
             }
         }
     }
@@ -602,400 +413,361 @@ match load_resource(path) {
 
 ---
 
-## 并发和异步
+## 内存管理
 
-### 协程任务管理
+### 1. 使用RAII
 
-**使用CoroutineTaskManager管理异步任务**:
+**原则**: 资源获取即初始化
 
+**示例**:
 ```rust
-// ✅ 好的做法：使用任务管理器
-use game_engine::core::engine::game_loop_coroutine::{CoroutineTaskManager, TaskPriority};
+struct Texture {
+    id: u32,
+}
 
-let task_manager = world.get_resource::<CoroutineTaskManager>().unwrap();
-
-// 提交任务
-let task_id = task_manager.spawn_task(
-    "ai_update".to_string(),
-    TaskPriority::Normal,
-    || async move {
-        // 异步任务
-        Ok(())
+impl Texture {
+    fn new(path: &str) -> Result<Self, String> {
+        let id = load_texture(path)?;
+        Ok(Self { id })
     }
-).await;
+}
 
-// 监控任务
-let stats = task_manager.stats().await;
-if stats.failed_tasks > 0 {
-    tracing::warn!("Some tasks failed");
+impl Drop for Texture {
+    fn drop(&mut self) {
+        unload_texture(self.id);
+    }
 }
 ```
 
-### 网络消息处理
+---
 
-**使用批量处理提升性能**:
+### 2. 避免循环引用
 
+**原则**: 使用Weak打破循环
+
+**示例**:
 ```rust
-// ✅ 好的做法：批量处理网络消息
-use game_engine::network::parallel::ParallelMessageProcessor;
+use std::rc::{Rc, Weak};
 
-let processor = ParallelMessageProcessor::new(32);
-
-// 异步批量处理
-let results = processor.process_messages_async(
-    messages,
-    state,
-    Some(compressor)
-).await;
+struct Node {
+    parent: Option<Weak<RefCell<Node>>>,
+    children: Vec<Rc<RefCell<Node>>>,
+}
 ```
 
-### 避免阻塞
+---
 
-**避免在异步上下文中阻塞**:
+### 3. 使用Cow避免克隆
 
+**原则**: 可能修改时使用Cow
+
+**示例**:
 ```rust
-// ✅ 好的做法：使用spawn_blocking
-tokio::task::spawn_blocking(move || {
-    // CPU密集型任务
-    heavy_computation()
-}).await?;
+use std::borrow::Cow;
 
-// ❌ 避免：直接阻塞
-// heavy_computation(); // 会阻塞异步运行时
+fn process_string(s: Cow<str>) -> Cow<str> {
+    if s.contains("old") {
+        // 需要修改
+        Cow::Owned(s.replace("old", "new"))
+    } else {
+        // 不需要修改
+        s
+    }
+}
 ```
 
 ---
 
 ## 测试策略
 
-### 单元测试
+### 1. 单元测试
 
-**测试业务逻辑**:
+**原则**: 测试单个函数
 
+**示例**:
 ```rust
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn test_entity_creation() {
-        let mut entity = GameEntity::new(EntityId::new(1));
-        entity.add_component(Component::Transform(Transform::default())).unwrap();
-        
-        assert_eq!(entity.component_count(), 1);
+    fn test_calculate_physics() {
+        let pos = Vec3::ZERO;
+        let vel = Vec3::new(1.0, 2.0, 3.0);
+        let dt = 0.016;
+
+        let result = calculate_physics(pos, vel, dt);
+
+        assert!((result.x - 0.016).abs() < 0.0001);
+        assert!((result.y - 0.032).abs() < 0.0001);
+        assert!((result.z - 0.048).abs() < 0.0001);
     }
-}
-```
-
-**测试边界条件**:
-
-```rust
-#[test]
-fn test_physics_step_edge_cases() {
-    let mut world = PhysicsWorld::new();
-    
-    // 测试零时间步长
-    assert!(world.step(0.0).is_ok());
-    
-    // 测试负时间步长
-    assert!(world.step(-0.016).is_err());
-    
-    // 测试极大时间步长
-    assert!(world.step(1.0).is_ok());
-}
-```
-
-### 集成测试
-
-**测试模块集成**:
-
-```rust
-#[test]
-fn test_render_physics_integration() {
-    let mut world = World::new();
-    
-    // 创建实体
-    let entity = world.spawn((
-        Transform::default(),
-        RigidBody::default(),
-        Sprite::default(),
-    ));
-    
-    // 运行物理系统
-    physics_system(&mut world);
-    
-    // 验证渲染组件已更新
-    let transform = world.get::<Transform>(entity).unwrap();
-    assert_ne!(transform.position, Vec3::ZERO);
-}
-```
-
-### 压力测试
-
-**测试大规模场景**:
-
-```rust
-#[test]
-#[ignore] // 标记为忽略，需要时手动运行
-fn test_large_scale_physics() {
-    let mut world = PhysicsWorld::new();
-    
-    // 创建10000个刚体
-    for i in 0..10000 {
-        let body = RigidBody::new(/* ... */);
-        world.add_body(body).unwrap();
-    }
-    
-    // 测试性能
-    let start = Instant::now();
-    world.step(0.016).unwrap();
-    let duration = start.elapsed();
-    
-    assert!(duration.as_millis() < 16, "Physics step took too long");
 }
 ```
 
 ---
 
-## 代码组织
+### 2. 集成测试
 
-### 模块结构
+**原则**: 测试模块交互
 
-**按功能组织模块**:
-
-```
-game_engine/src/
-├── core/           # 核心功能
-├── domain/        # 领域层
-├── render/        # 渲染
-├── physics/       # 物理
-├── network/       # 网络
-├── resources/     # 资源管理
-└── ...
-```
-
-**使用mod.rs统一导出**:
-
+**示例**:
 ```rust
-// ✅ 好的做法：统一导出
-// game_engine/src/render/mod.rs
-pub mod gpu_driven;
-pub mod lod;
-pub mod postprocess;
+// tests/integration_test.rs
 
-pub use gpu_driven::{GpuDrivenRenderer, GpuDrivenConfig};
-pub use lod::{LodSelector, LodConfig};
-pub use postprocess::{PostProcessEffectManager, PostProcessEffect};
-```
+use game_engine::prelude::*;
 
-### 条件编译
+#[test]
+fn test_engine_initialization() {
+    let engine = Engine::new(EngineConfig::default()).unwrap();
+    assert_eq!(engine.get_frame_count(), 0);
+}
 
-**使用特性标志管理可选功能**:
-
-```rust
-// ✅ 好的做法：使用特性标志
-#[cfg(feature = "gltf")]
-pub mod gltf_loader;
-
-#[cfg(not(feature = "gltf"))]
-pub mod gltf_loader_stub;
-
-// 统一导出
-pub use gltf_loader::{GltfLoader, GltfScene};
-```
-
-**使用平台检测函数**:
-
-```rust
-// ✅ 好的做法：使用平台检测
-use game_engine::platform::detection::is_wasm;
-
-if is_wasm() {
-    // WASM特定代码
-} else {
-    // 原生平台代码
+#[test]
+fn test_entity_spawn() {
+    let mut world = World::new();
+    let entity = world.spawn((Transform::default(),));
+    assert!(world.is_alive(entity));
 }
 ```
 
-### 文档注释
+---
 
-**为公共API添加文档**:
+### 3. 性能测试
 
+**原则**: 使用Criterion进行基准测试
+
+**示例**:
 ```rust
-/// 创建新的物理世界
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+
+fn benchmark_physics(c: &mut Criterion) {
+    c.bench_function("calculate_physics", |b| {
+        b.iter(|| {
+            black_box(calculate_physics(
+                black_box(Vec3::ZERO),
+                black_box(Vec3::new(1.0, 2.0, 3.0)),
+                black_box(0.016),
+            ))
+        })
+    });
+}
+
+criterion_group!(benches, benchmark_physics);
+criterion_main!(benches);
+```
+
+---
+
+## 文档编写
+
+### 1. API文档
+
+**原则**: 提供清晰的API文档
+
+**示例**:
+```rust
+/// 计算物理位置更新
 ///
 /// # 参数
-/// - `gravity`: 重力向量
+///
+/// - `position`: 当前位置
+/// - `velocity`: 速度向量
+/// - `delta_time`: 时间步长（秒）
 ///
 /// # 返回
-/// 新的物理世界实例
+///
+/// 新的位置
 ///
 /// # 示例
-/// ```
-/// use game_engine::domain::physics::PhysicsWorld;
 ///
-/// let world = PhysicsWorld::new();
 /// ```
-pub fn new() -> Self {
-    // ...
+/// use game_engine::prelude::*;
+///
+/// let new_pos = calculate_physics(
+///     Vec3::ZERO,
+///     Vec3::new(1.0, 2.0, 3.0),
+///     0.016,
+/// );
+/// ```
+///
+/// # 性能
+///
+/// 此函数是同步的，性能比异步版本快约10倍。
+pub fn calculate_physics(position: Vec3, velocity: Vec3, delta_time: f32) -> Vec3 {
+    position + velocity * delta_time
 }
 ```
 
-### 条件编译最佳实践
+---
 
-**统一Feature检查**:
+### 2. 示例代码
 
+**原则**: 提供可运行的示例
+
+**示例**:
 ```rust
-// ✅ 好的做法：在模块顶部统一检查
-#[cfg(not(any(feature = "secure_key_exchange", feature = "insecure_key_exchange")))]
-compile_error!("Either 'secure_key_exchange' or 'insecure_key_exchange' feature must be enabled");
-
-// ❌ 避免：在多个地方重复检查
-// 在多个函数中重复相同的compile_error!
+/// # 示例
+///
+/// ```
+/// use game_engine::prelude::*;
+///
+/// fn main() {
+///     let mut world = World::new();
+///     let entity = world.spawn((Transform::default(),));
+///     
+///     // 查询实体
+///     let mut query = world.query::<&mut Transform>();
+///     for mut transform in query.iter_mut(&mut world) {
+///         transform.pos.x += 1.0;
+///     }
+/// }
+/// ```
 ```
 
-**避免结构体字段级条件编译**:
+---
 
+## 安全性
+
+### 1. 输入验证
+
+**原则**: 验证所有外部输入
+
+**示例**:
 ```rust
-// ❌ 避免：结构体字段使用条件编译
-pub struct WasmRuntime {
-    #[cfg(feature = "wasm")]
-    module: Option<wasmtime::Module>,
-}
-
-// ✅ 好的做法：使用Option或trait抽象
-pub struct WasmRuntime {
-    wasm_runtime: Option<Box<dyn WasmRuntimeTrait>>,
-}
-```
-
-**分离不同实现**:
-
-```rust
-// ✅ 好的做法：将不同实现分离到独立方法
-impl KeyPair {
-    pub fn generate() -> Self {
-        #[cfg(feature = "secure_key_exchange")]
-        { return Self::generate_secure(); }
-        #[cfg(feature = "insecure_key_exchange")]
-        { return Self::generate_insecure(); }
+fn spawn_entity(id: u32, position: Vec3) -> Result<Entity, String> {
+    if id == 0 {
+        return Err("实体ID不能为零".to_string());
     }
-
-    #[cfg(feature = "secure_key_exchange")]
-    fn generate_secure() -> Self { /* 实现 */ }
-
-    #[cfg(feature = "insecure_key_exchange")]
-    fn generate_insecure() -> Self { /* 实现 */ }
+    
+    if !position.is_finite() {
+        return Err("位置必须有限".to_string());
+    }
+    
+    Ok(Entity::new(id, position))
 }
 ```
 
-**使用宏简化重复模式**:
+---
 
+### 2. 防止整数溢出
+
+**原则**: 使用checked或saturating操作
+
+**示例**:
 ```rust
-// ✅ 好的做法：使用宏简化重复的条件编译
-macro_rules! tracy_zone {
-    ($name:expr) => {
-        #[cfg(feature = "tracy")]
-        { tracy_client::span!($name); }
-        #[cfg(not(feature = "tracy"))]
-        { /* 空实现 */ }
-    };
+// ❌ 错误：可能溢出
+fn add(a: u32, b: u32) -> u32 {
+    a + b
+}
+
+// ✅ 正确：检查溢出
+fn add(a: u32, b: u32) -> Option<u32> {
+    a.checked_add(b)
+}
+
+// 或使用saturating
+fn add_saturating(a: u32, b: u32) -> u32 {
+    a.saturating_add(b)
 }
 ```
 
-详细指南请参考 [条件编译指南](CONDITIONAL_COMPILATION_GUIDE.md) 和 [条件编译审计报告](CONDITIONAL_COMPILATION_AUDIT.md)。
+---
+
+## 代码风格
+
+### 1. 命名约定
+
+**原则**: 遵循Rust命名约定
+
+```rust
+// 结构体：PascalCase
+struct GameState { }
+
+// 函数和变量：snake_case
+fn update_game_state() { }
+let current_state = GameState::new();
+
+// 常量：SCREAMING_SNAKE_CASE
+const MAX_ENTITIES: usize = 10000;
+
+// Trait: PascalCase
+trait Updatable { }
+```
 
 ---
 
-## 性能监控
+### 2. 代码组织
 
-### 使用性能监控工具
-
-**监控帧率**:
+**原则**: 逻辑分组，清晰结构
 
 ```rust
-use game_engine_performance::monitoring::SystemPerformanceMonitor;
+// 1. 导入
+use std::collections::HashMap;
+use crate::module::Type;
 
-let mut monitor = SystemPerformanceMonitor::new();
-monitor.start()?;
+// 2. 类型定义
+pub struct MyStruct { }
 
-let metrics = monitor.get_metrics();
-if metrics.frame_time > 16.67 {
-    tracing::warn!("Frame time exceeded target: {:.2}ms", metrics.frame_time);
+// 3. Trait实现
+impl MyStruct {
+    pub fn new() -> Self { }
 }
-```
 
-**使用性能仪表盘**:
+// 4. 私有函数
+fn helper_function() { }
 
-```rust
-use game_engine::profiling::dashboard::PerformanceDashboard;
-
-let mut dashboard = PerformanceDashboard::new("127.0.0.1:8080")?;
-dashboard.start()?;
-
-// 记录指标
-dashboard.record_frame_time(16.67);
-dashboard.record_cpu_time(11.67);
-dashboard.record_gpu_time(5.0);
+// 5. 测试
+#[cfg(test)]
+mod tests { }
 ```
 
 ---
 
-## 代码审查清单
+## 工具使用
 
-### 架构审查
+### 1. Clippy
 
-- [ ] 是否遵循分层架构原则？
-- [ ] 依赖方向是否正确？
-- [ ] 是否使用了适当的抽象？
+**原则**: 使用Clippy捕获常见错误
 
-### ECS审查
+```bash
+cargo clippy --workspace
+```
 
-- [ ] 组件是否是纯数据结构？
-- [ ] 系统是否无状态？
-- [ ] 查询是否精确？
-- [ ] 是否使用了变更检测？
+### 2. Rustfmt
 
-### 性能审查
+**原则**: 保持代码格式一致
 
-- [ ] 是否使用了协程处理I/O？
-- [ ] 是否使用了SIMD优化？
-- [ ] 是否使用了GPU加速（如适用）？
-- [ ] 是否避免了不必要的分配？
+```bash
+cargo fmt --all
+```
 
-### 错误处理审查
+### 3. 文档测试
 
-- [ ] 错误类型是否清晰？
-- [ ] 是否实现了错误恢复？
-- [ ] 是否使用了Result传播错误？
+**原则**: 文档中的示例应该是可测试的
 
-### 测试审查
-
-- [ ] 是否添加了单元测试？
-- [ ] 是否添加了集成测试？
-- [ ] 是否测试了边界条件？
-
-### 条件编译审查
-
-- [ ] 是否在模块顶部统一检查互斥feature？
-- [ ] 是否避免了结构体字段级条件编译？
-- [ ] 是否将不同实现分离到独立方法中？
-- [ ] 是否使用了宏简化重复的条件编译模式？
-- [ ] 是否文档化了所有feature的用途和依赖？
+```bash
+cargo test --workspace --doc
+```
 
 ---
 
-## 相关文档
+## 总结
 
-- [API参考](api_reference.md)
-- [性能调优指南](performance_tuning_guide.md)
-- [架构文档](architecture.md)
-- [条件编译指南](CONDITIONAL_COMPILATION_GUIDE.md)
-- [协程游戏循环评估](coroutine_game_loop_evaluation.md)
+### 核心原则
+
+1. **简单性**: 保持代码简单易懂
+2. **性能**: 避免不必要的开销
+3. **安全**: 类型安全和内存安全
+4. **可维护性**: 清晰的结构和文档
+5. **测试**: 充分的测试覆盖
+
+### 记住
+
+> "过早优化是万恶之源，但不优化的代码也是灾难。"
+
+遵循最佳实践，在合适的时机进行优化。
 
 ---
 
-**文档版本**: 1.0  
-**创建日期**: 2025-12-23  
-**维护者**: Game Engine Team
-
+**祝您编码愉快！** 🚀

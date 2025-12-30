@@ -16,7 +16,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_soa_transform_storage_new() {
         let storage = SoATransformStorage::new();
         assert_eq!(storage.len(), 0);
@@ -26,7 +26,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_soa_transform_storage_default() {
         let storage = SoATransformStorage::default();
         assert_eq!(storage.len(), 0);
@@ -34,10 +34,10 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_soa_transform_storage_add_single_entity() {
         let mut storage = SoATransformStorage::new();
-        let entity = Entity::from_raw_u32(1).expect("Test: operation should succeed");
+        let entity = Entity::from_bits(1);
 
         let transform = Transform {
             pos: Vec3::new(1.0, 2.0, 3.0),
@@ -55,12 +55,12 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_soa_transform_storage_add_multiple_entities() {
         let mut storage = SoATransformStorage::new();
 
         for i in 0..10 {
-            let entity = Entity::from_raw_u32(i as u32).expect("Test: operation should succeed");
+            let entity = Entity::from_bits(i as u64);
             let transform = Transform {
                 pos: Vec3::new(i as f32, 0.0, 0.0),
                 rot: Quat::IDENTITY,
@@ -74,10 +74,10 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_soa_transform_storage_get_transform() {
         let mut storage = SoATransformStorage::new();
-        let entity = Entity::from_raw_u32(1).expect("Test: operation should succeed");
+        let entity = Entity::from_bits(1);
 
         let transform = Transform {
             pos: Vec3::new(5.0, 10.0, 15.0),
@@ -97,20 +97,20 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_soa_transform_storage_get_nonexistent_entity() {
         let storage = SoATransformStorage::new();
-        let entity = Entity::from_raw_u32(999).expect("Test: operation should succeed");
+        let entity = Entity::from_bits(999);
 
         let result = storage.get_transform(entity);
         assert!(result.is_none());
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_soa_transform_storage_set_transform() {
         let mut storage = SoATransformStorage::new();
-        let entity = Entity::from_raw_u32(1).expect("Test: operation should succeed");
+        let entity = Entity::from_bits(1);
 
         let original = Transform::default();
         storage.add_entity(entity, original);
@@ -124,16 +124,16 @@ mod tests {
         let success = storage.set_transform(entity, modified);
         assert!(success);
 
-        let retrieved = storage.get_transform(entity).expect("Test: operation should succeed");
+        let retrieved = storage.get_transform(entity).expect("Transform should exist");
         assert_eq!(retrieved.pos, modified.pos);
         assert_eq!(retrieved.scale, modified.scale);
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_soa_transform_storage_set_nonexistent_entity() {
         let mut storage = SoATransformStorage::new();
-        let entity = Entity::from_raw_u32(999).expect("Test: operation should succeed");
+        let entity = Entity::from_bits(999);
 
         let transform = Transform::default();
         let success = storage.set_transform(entity, transform);
@@ -145,10 +145,10 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_soa_transform_storage_remove_single_entity() {
         let mut storage = SoATransformStorage::new();
-        let entity = Entity::from_raw_u32(1).expect("Test: operation should succeed");
+        let entity = Entity::from_bits(1);
 
         storage.add_entity(entity, Transform::default());
         assert_eq!(storage.len(), 1);
@@ -160,23 +160,23 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_soa_transform_storage_remove_nonexistent_entity() {
         let mut storage = SoATransformStorage::new();
-        let entity = Entity::from_raw_u32(999).expect("Test: operation should succeed");
+        let entity = Entity::from_bits(999);
 
         let removed = storage.remove_entity(entity);
         assert!(!removed);
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_soa_transform_storage_remove_middle_entity() {
         let mut storage = SoATransformStorage::new();
 
-        let e1 = Entity::from_raw_u32(1).expect("Test: operation should succeed");
-        let e2 = Entity::from_raw_u32(2).expect("Test: operation should succeed");
-        let e3 = Entity::from_raw_u32(3).expect("Test: operation should succeed");
+        let e1 = Entity::from_bits(1);
+        let e2 = Entity::from_bits(2);
+        let e3 = Entity::from_bits(3);
 
         storage.add_entity(e1, Transform::default());
         storage.add_entity(e2, Transform::default());
@@ -196,12 +196,12 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_soa_transform_storage_remove_last_entity() {
         let mut storage = SoATransformStorage::new();
 
-        let e1 = Entity::from_raw_u32(1).expect("Test: operation should succeed");
-        let e2 = Entity::from_raw_u32(2).expect("Test: operation should succeed");
+        let e1 = Entity::from_bits(1);
+        let e2 = Entity::from_bits(2);
 
         storage.add_entity(e1, Transform::default());
         storage.add_entity(e2, Transform::default());
@@ -214,10 +214,10 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_soa_transform_storage_remove_and_reinsert() {
         let mut storage = SoATransformStorage::new();
-        let entity = Entity::from_raw_u32(1).expect("Test: operation should succeed");
+        let entity = Entity::from_bits(1);
 
         storage.add_entity(entity, Transform::default());
         storage.remove_entity(entity);
@@ -234,12 +234,12 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_soa_transform_storage_update_positions_batch() {
         let mut storage = SoATransformStorage::new();
 
         for i in 0..10 {
-            let entity = Entity::from_raw_u32(i as u32).expect("Test: operation should succeed");
+            let entity = Entity::from_bits(i as u64);
             let transform = Transform {
                 pos: Vec3::new(i as f32, 0.0, 0.0),
                 ..Default::default()
@@ -259,12 +259,12 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_soa_transform_storage_update_rotations_batch() {
         let mut storage = SoATransformStorage::new();
 
         for i in 0..10 {
-            let entity = Entity::from_raw_u32(i as u32).expect("Test: operation should succeed");
+            let entity = Entity::from_bits(i as u64);
             storage.add_entity(entity, Transform::default());
         }
 
@@ -280,12 +280,12 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_soa_transform_storage_update_scales_batch() {
         let mut storage = SoATransformStorage::new();
 
         for i in 0..10 {
-            let entity = Entity::from_raw_u32(i as u32).expect("Test: operation should succeed");
+            let entity = Entity::from_bits(i as u64);
             storage.add_entity(entity, Transform::default());
         }
 
@@ -307,7 +307,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_soa_transform_storage_from_world_empty() {
         let mut world = World::new();
         let storage = SoATransformStorage::from_world(&mut world);
@@ -317,7 +317,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_soa_transform_storage_from_world_single_entity() {
         let mut world = World::new();
 
@@ -333,7 +333,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_soa_transform_storage_from_world_multiple_entities() {
         let mut world = World::new();
 
@@ -350,7 +350,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_soa_transform_storage_from_world_mixed_entities() {
         let mut world = World::new();
 
@@ -377,12 +377,12 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_soa_transform_storage_sync_to_ecs() {
         let mut world = World::new();
         let mut storage = SoATransformStorage::new();
 
-        let entity = Entity::from_raw_u32(1).expect("Test: operation should succeed");
+        let entity = Entity::from_bits(1);
         storage.add_entity(
             entity,
             Transform {
@@ -408,7 +408,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_soa_velocity_storage_new() {
         let storage = SoAVelocityStorage::new();
         assert_eq!(storage.len(), 0);
@@ -416,14 +416,14 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_soa_velocity_storage_default() {
         let storage = SoAVelocityStorage::default();
         assert_eq!(storage.len(), 0);
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_soa_velocity_storage_from_world() {
         let world = World::new();
         let storage = SoAVelocityStorage::from_world(&world);
@@ -437,7 +437,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_soa_layout_manager_new() {
         let manager = SoALayoutManager::new();
         assert!(!manager.is_enabled());
@@ -446,14 +446,14 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_soa_layout_manager_default() {
         let manager = SoALayoutManager::default();
         assert!(!manager.is_enabled());
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_soa_layout_manager_enable() {
         let mut manager = SoALayoutManager::new();
         assert!(!manager.is_enabled());
@@ -463,7 +463,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_soa_layout_manager_disable() {
         let mut manager = SoALayoutManager::new();
         manager.enable();
@@ -474,7 +474,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_soa_layout_manager_toggle() {
         let mut manager = SoALayoutManager::new();
 
@@ -493,7 +493,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_soa_layout_manager_stats_empty() {
         let manager = SoALayoutManager::new();
         let stats = manager.stats();
@@ -504,7 +504,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors - SoALayoutManager needs public method to add transforms
+    #[ignore] // TODO: Fix compilation errors - SoALayoutManager needs public method to add transforms
     fn test_soa_layout_manager_stats_with_transforms() {
         // TODO: Add public method to SoALayoutManager to add entities
         // For now, this test cannot be implemented without internal access
@@ -516,7 +516,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_soa_layout_manager_stats_enabled() {
         let mut manager = SoALayoutManager::new();
         manager.enable();
@@ -530,7 +530,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_soa_stats_struct() {
         let stats = SoAStats {
             transform_count: 100,
@@ -548,12 +548,12 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_soa_memory_layout_contiguous() {
         let mut storage = SoATransformStorage::new();
 
         for i in 0..100 {
-            let entity = Entity::from_raw_u32(i as u32).expect("Test: operation should succeed");
+            let entity = Entity::from_bits(i as u64);
             storage.add_entity(entity, Transform::default());
         }
 
@@ -578,13 +578,13 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_soa_batch_update_performance() {
         let mut storage = SoATransformStorage::new();
 
         // 创建1000个实体
         for i in 0..1000 {
-            let entity = Entity::from_raw_u32(i as u32).expect("Test: operation should succeed");
+            let entity = Entity::from_bits(i as u64);
             storage.add_entity(entity, Transform::default());
         }
 
@@ -600,13 +600,13 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_soa_random_access_performance() {
         let mut storage = SoATransformStorage::new();
 
         // 创建100个实体
         for i in 0..100 {
-            let entity = Entity::from_raw_u32(i as u32).expect("Test: operation should succeed");
+            let entity = Entity::from_bits(i as u64);
             storage.add_entity(
                 entity,
                 Transform {
@@ -619,7 +619,7 @@ mod tests {
         // 测量随机访问性能
         let start = std::time::Instant::now();
         for i in 0..100 {
-            let entity = Entity::from_raw_u32(i as u32).expect("Test: operation should succeed");
+            let entity = Entity::from_bits(i as u64);
             let _ = storage.get_transform(entity);
         }
         let duration = start.elapsed();
@@ -633,7 +633,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_soa_empty_storage_operations() {
         let mut storage = SoATransformStorage::new();
 
@@ -646,10 +646,10 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_soa_single_entity_operations() {
         let mut storage = SoATransformStorage::new();
-        let entity = Entity::from_raw_u32(1).expect("Test: operation should succeed");
+        let entity = Entity::from_bits(1);
 
         storage.add_entity(entity, Transform::default());
 
@@ -658,18 +658,18 @@ mod tests {
             pos.x = 100.0;
         });
 
-        let retrieved = storage.get_transform(entity).expect("Test: operation should succeed");
+        let retrieved = storage.get_transform(entity).expect("Transform should exist");
         assert_eq!(retrieved.pos.x, 100.0);
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_soa_large_number_of_entities() {
         let mut storage = SoATransformStorage::new();
 
         // 添加大量实体
         for i in 0..10000 {
-            let entity = Entity::from_raw_u32(i as u32).expect("Test: operation should succeed");
+            let entity = Entity::from_bits(i as u64);
             storage.add_entity(entity, Transform::default());
         }
 
@@ -677,7 +677,7 @@ mod tests {
 
         // 验证可以访问所有实体
         for i in 0..10000 {
-            let entity = Entity::from_raw_u32(i as u32).expect("Test: operation should succeed");
+            let entity = Entity::from_bits(i as u64);
             assert!(storage.get_transform(entity).is_some());
         }
     }
@@ -687,12 +687,12 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_soa_entity_to_index_mapping_consistency() {
         let mut storage = SoATransformStorage::new();
 
         for i in 0..10 {
-            let entity = Entity::from_raw_u32(i as u32).expect("Test: operation should succeed");
+            let entity = Entity::from_bits(i as u64);
             storage.add_entity(entity, Transform::default());
         }
 
@@ -703,18 +703,18 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_soa_removal_preserves_consistency() {
         let mut storage = SoATransformStorage::new();
 
         for i in 0..10 {
-            let entity = Entity::from_raw_u32(i as u32).expect("Test: operation should succeed");
+            let entity = Entity::from_bits(i as u64);
             storage.add_entity(entity, Transform::default());
         }
 
         // 移除一些实体
-        storage.remove_entity(Entity::from_raw_u32(2).expect("Test: operation should succeed"));
-        storage.remove_entity(Entity::from_raw_u32(5).expect("Test: operation should succeed"));
+        storage.remove_entity(Entity::from_bits(2));
+        storage.remove_entity(Entity::from_bits(5));
 
         // 验证一致性
         for (&entity, &index) in &storage.entity_to_index {

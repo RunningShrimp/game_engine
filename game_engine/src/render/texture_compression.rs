@@ -221,8 +221,7 @@ impl AstcDecoder {
         // 相关任务：评估astc-rs库的性能和兼容性，集成到项目中
         Err(RenderError::InvalidState {
             message: format!(
-                "ASTC CPU decoding not yet implemented. Block size: {:?}, Size: {}x{}",
-                block_size, width, height
+                "ASTC CPU decoding not yet implemented. Block size: {block_size:?}, Size: {width}x{height}"
             ),
             severity: crate::error::ErrorSeverity::Error,
         })
@@ -302,10 +301,7 @@ impl BcDecoder {
         // 未来计划：集成BC解码库（如dxt-compressor）实现BC3解码
         // 相关任务：评估BC解码库的性能和兼容性，集成到项目中
         Err(RenderError::InvalidState {
-            message: format!(
-                "BC3 CPU decoding not yet implemented. Size: {}x{}",
-                width, height
-            ),
+            message: format!("BC3 CPU decoding not yet implemented. Size: {width}x{height}"),
             severity: crate::error::ErrorSeverity::Error,
         })
     }
@@ -321,10 +317,7 @@ impl BcDecoder {
         // 未来计划：集成BC解码库实现BC7解码
         // 相关任务：评估BC解码库的性能和兼容性，集成到项目中
         Err(RenderError::InvalidState {
-            message: format!(
-                "BC7 CPU decoding not yet implemented. Size: {}x{}",
-                width, height
-            ),
+            message: format!("BC7 CPU decoding not yet implemented. Size: {width}x{height}"),
             severity: crate::error::ErrorSeverity::Error,
         })
     }

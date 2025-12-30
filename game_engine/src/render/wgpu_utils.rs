@@ -573,7 +573,7 @@ impl WgpuRenderer {
         let instance = wgpu::Instance::default();
         let surface = instance.create_surface(window.clone());
         let surface = surface.map_err(|e| RenderError::SurfaceCreation {
-            message: format!("{}", e),
+            message: format!("{e}"),
             severity: crate::error::ErrorSeverity::Critical,
         })?;
         let adapter = instance
@@ -584,7 +584,7 @@ impl WgpuRenderer {
             })
             .await
             .map_err(|e| RenderError::Adapter {
-                message: format!("No suitable graphics adapter found: {}", e),
+                message: format!("No suitable graphics adapter found: {e}"),
                 severity: crate::error::ErrorSeverity::Critical,
             })?;
         let supported = adapter.features();
@@ -613,7 +613,7 @@ impl WgpuRenderer {
             })
             .await
             .map_err(|e| RenderError::DeviceCreation {
-                message: format!("Failed to request device: {}", e),
+                message: format!("Failed to request device: {e}"),
                 severity: crate::error::ErrorSeverity::Critical,
             })?;
         let caps = surface.get_capabilities(&adapter);
@@ -1445,7 +1445,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
 
     pub fn create_offscreen_target(&mut self, id: u32, width: u32, height: u32) {
         let texture = self.device.create_texture(&wgpu::TextureDescriptor {
-            label: Some(&format!("Offscreen Target {}", id)),
+            label: Some(&format!("Offscreen Target {id}")),
             size: wgpu::Extent3d {
                 width,
                 height,
@@ -3042,7 +3042,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                             e,
                             e2
                         );
-                        return Err(format!("Failed to get surface texture: {}", e2).into());
+                        return Err(format!("Failed to get surface texture: {e2}").into());
                     }
                 }
             }

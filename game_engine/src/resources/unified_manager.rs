@@ -101,7 +101,7 @@ impl UnifiedResourceManager {
         let mut loaders = self
             .loaders
             .write()
-            .map_err(|e| ResourceError::Other(format!("Failed to acquire loaders lock: {}", e)))?;
+            .map_err(|e| ResourceError::Other(format!("Failed to acquire loaders lock: {e}")))?;
         loaders.register(resource_type, loader);
         Ok(())
     }
@@ -126,8 +126,7 @@ impl UnifiedResourceManager {
     ) -> Result<(), DependencyError> {
         let mut graph = self.dependency_graph.write().map_err(|e| {
             DependencyError::ResolutionFailed(format!(
-                "Failed to acquire dependency graph lock: {}",
-                e
+                "Failed to acquire dependency graph lock: {e}"
             ))
         })?;
         graph.add_dependency(resource_path, dependency)
@@ -140,8 +139,7 @@ impl UnifiedResourceManager {
     pub fn get_load_order(&self) -> Result<Vec<PathBuf>, DependencyError> {
         let graph = self.dependency_graph.read().map_err(|e| {
             DependencyError::ResolutionFailed(format!(
-                "Failed to acquire dependency graph lock: {}",
-                e
+                "Failed to acquire dependency graph lock: {e}"
             ))
         })?;
         graph.get_load_order()
@@ -154,8 +152,7 @@ impl UnifiedResourceManager {
     ) -> Result<Vec<PathBuf>, DependencyError> {
         let graph = self.dependency_graph.read().map_err(|e| {
             DependencyError::ResolutionFailed(format!(
-                "Failed to acquire dependency graph lock: {}",
-                e
+                "Failed to acquire dependency graph lock: {e}"
             ))
         })?;
         Ok(graph.get_all_dependencies(resource_path))
@@ -165,8 +162,7 @@ impl UnifiedResourceManager {
     pub fn can_load(&self, resource_path: &PathBuf) -> Result<bool, DependencyError> {
         let graph = self.dependency_graph.read().map_err(|e| {
             DependencyError::ResolutionFailed(format!(
-                "Failed to acquire dependency graph lock: {}",
-                e
+                "Failed to acquire dependency graph lock: {e}"
             ))
         })?;
         Ok(graph.can_load(resource_path))
@@ -194,9 +190,10 @@ impl UnifiedResourceManager {
 
         // 检查缓存
         {
-            let cache = self.cache.read().map_err(|e| {
-                ResourceError::Other(format!("Failed to acquire cache lock: {}", e))
-            })?;
+            let cache = self
+                .cache
+                .read()
+                .map_err(|e| ResourceError::Other(format!("Failed to acquire cache lock: {e}")))?;
             if let Some(resource) = cache.get(&path_buf) {
                 // 尝试向下转型并克隆Arc
                 if let Some(_typed_resource) = resource.as_any().downcast_ref::<R>() {
@@ -220,7 +217,7 @@ impl UnifiedResourceManager {
         // 检查并加载依赖
         {
             let graph = self.dependency_graph.read().map_err(|e| {
-                ResourceError::Other(format!("Failed to acquire dependency graph lock: {}", e))
+                ResourceError::Other(format!("Failed to acquire dependency graph lock: {e}"))
             })?;
             let dependencies = graph.get_all_dependencies(&path_buf);
             drop(graph);
@@ -229,7 +226,7 @@ impl UnifiedResourceManager {
             for dep_path in dependencies {
                 // 检查依赖是否已加载
                 let graph = self.dependency_graph.read().map_err(|e| {
-                    ResourceError::Other(format!("Failed to acquire dependency graph lock: {}", e))
+                    ResourceError::Other(format!("Failed to acquire dependency graph lock: {e}"))
                 })?;
                 let dep_state = graph.get_load_state(&dep_path);
                 drop(graph);
@@ -244,7 +241,7 @@ impl UnifiedResourceManager {
         // 更新加载状态
         {
             let mut graph = self.dependency_graph.write().map_err(|e| {
-                ResourceError::Other(format!("Failed to acquire dependency graph lock: {}", e))
+                ResourceError::Other(format!("Failed to acquire dependency graph lock: {e}"))
             })?;
             graph.set_load_state(&path_buf, LoadState::Loading);
         }
@@ -254,7 +251,7 @@ impl UnifiedResourceManager {
         let loaders = self
             .loaders
             .read()
-            .map_err(|e| ResourceError::Other(format!("Failed to acquire loaders lock: {}", e)))?;
+            .map_err(|e| ResourceError::Other(format!("Failed to acquire loaders lock: {e}")))?;
         if let Some(_loader) = loaders.get(resource_type) {
             // 实际加载逻辑
             // 由于类型擦除的限制，这里需要更复杂的实现
@@ -263,7 +260,7 @@ impl UnifiedResourceManager {
         // 更新加载状态为失败（因为未实现完整加载逻辑）
         {
             let mut graph = self.dependency_graph.write().map_err(|e| {
-                ResourceError::Other(format!("Failed to acquire dependency graph lock: {}", e))
+                ResourceError::Other(format!("Failed to acquire dependency graph lock: {e}"))
             })?;
             graph.set_load_state(&path_buf, LoadState::Failed);
         }
@@ -365,7 +362,7 @@ impl UnifiedResourceManager {
         let cache = self
             .cache
             .read()
-            .map_err(|e| ResourceError::Other(format!("Failed to acquire cache lock: {}", e)))?;
+            .map_err(|e| ResourceError::Other(format!("Failed to acquire cache lock: {e}")))?;
         let mut total_size = 0;
         let mut type_counts = HashMap::new();
 
@@ -387,7 +384,7 @@ impl UnifiedResourceManager {
         let mut cache = self
             .cache
             .write()
-            .map_err(|e| ResourceError::Other(format!("Failed to acquire cache lock: {}", e)))?;
+            .map_err(|e| ResourceError::Other(format!("Failed to acquire cache lock: {e}")))?;
         cache.clear();
         Ok(())
     }

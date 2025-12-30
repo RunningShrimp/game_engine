@@ -8,8 +8,8 @@
 //! cargo run --example audio
 //! ```
 
-use game_engine::audio::{AudioDomainService, AudioSource, AudioSourceId, AudioSourceState};
 use game_engine::audio::SpatialAudioSource;
+use game_engine::audio::{AudioDomainService, AudioSource, AudioSourceId, AudioSourceState};
 use game_engine::domain::audio::SpatialAudioSource as RichSpatialAudioSource;
 use glam::Vec3;
 
@@ -46,7 +46,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         10.0, // max_distance
     );
     audio_service.create_spatial_source(sfx_source)?;
-    println!("   Created spatial SFX source at (10.0, 0.0, 0.0) (ID: {})", sfx_id);
+    println!(
+        "   Created spatial SFX source at (10.0, 0.0, 0.0) (ID: {})",
+        sfx_id
+    );
 
     // 创建移动音效（如飞行物体）
     let flyby_id = AudioSourceId::new(3);
@@ -71,8 +74,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         if let Ok(source) = audio_service.get_spatial_source(flyby_id) {
             let new_pos = source.position() + Vec3::new(1.5, 0.0, 0.0);
             audio_service.set_source_position(flyby_id, new_pos)?;
-            println!("Flyby sound position: ({:.1}, {:.1}, {:.1})",
-                     new_pos.x, new_pos.y, new_pos.z);
+            println!(
+                "Flyby sound position: ({:.1}, {:.1}, {:.1})",
+                new_pos.x, new_pos.y, new_pos.z
+            );
 
             // 计算到听者的距离
             let listener_pos = Vec3::new(0.0, 0.0, 5.0);
@@ -106,7 +111,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 /// 更多音频功能示例（伪代码，展示API）
 fn _advanced_audio_features() {
-    use game_engine::audio::{EffectChain, ReverbConfig, EqualizerConfig};
+    use game_engine::audio::{EffectChain, EqualizerConfig, ReverbConfig};
 
     println!("Advanced Audio Features:");
     println!("  - Audio effects chain (reverb, EQ, delay, compressor)");

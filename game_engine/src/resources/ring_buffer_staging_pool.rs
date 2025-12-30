@@ -427,7 +427,7 @@ impl RingBufferStagingPool {
 
         // 获取内存压力级别
         let pressure = self.allocator.lock().current_pressure();
-        stats.memory_pressure = format!("{:?}", pressure);
+        stats.memory_pressure = format!("{pressure:?}");
 
         // 更新预分配命中率和内存节省率
         stats.preallocation_hit_rate = stats.preallocation_stats.hit_rate;

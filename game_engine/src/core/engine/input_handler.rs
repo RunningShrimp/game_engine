@@ -270,7 +270,7 @@ fn handle_keyboard_input(
     // 使用 input_config 进行基本的上下文检查，实现逻辑闭环
     if let Some(config) = input_config {
         // 检查按键是否匹配任何绑定的操作，并更新InputActions
-        let key_str = format!("{:?}", kc);
+        let key_str = format!("{kc:?}");
 
         // 如果不存在InputActions资源，插入默认的
         if !world.contains_resource::<InputActions>() {
@@ -285,7 +285,9 @@ fn handle_keyboard_input(
             Some(actions) => actions,
             None => {
                 // This should never happen due to the check above, but handle it gracefully
-                log::warn!("InputActions resource not found after insertion, skipping keyboard input handling");
+                log::warn!(
+                    "InputActions resource not found after insertion, skipping keyboard input handling"
+                );
                 return;
             }
         };
@@ -513,7 +515,9 @@ fn update_input_actions(
         Some(actions) => actions,
         None => {
             // This should never happen due to the check above, but handle it gracefully
-            log::warn!("InputActions resource not found after insertion in update_input_actions, skipping update");
+            log::warn!(
+                "InputActions resource not found after insertion in update_input_actions, skipping update"
+            );
             return;
         }
     };
@@ -546,7 +550,7 @@ fn update_action_state(
     pressed: bool,
     config: &InputConfig,
 ) {
-    let key_str = format!("{:?}", key);
+    let key_str = format!("{key:?}");
     if key_str == config.key_bindings.forward {
         actions.move_forward = pressed;
     }
@@ -729,7 +733,8 @@ mod tests {
 
         handle_touch_input(&touch_event, &mut world);
 
-        let buf = world.get_resource::<crate::platform::InputBuffer>()
+        let buf = world
+            .get_resource::<crate::platform::InputBuffer>()
             .expect("InputBuffer resource should exist after being inserted in test setup");
         assert_eq!(buf.events.len(), 1);
         match &buf.events[0] {
@@ -757,7 +762,8 @@ mod tests {
 
         handle_touch_input(&touch_event, &mut world);
 
-        let buf = world.get_resource::<crate::platform::InputBuffer>()
+        let buf = world
+            .get_resource::<crate::platform::InputBuffer>()
             .expect("InputBuffer resource should exist after being inserted in test setup");
         assert_eq!(buf.events.len(), 1);
         match &buf.events[0] {
@@ -785,7 +791,8 @@ mod tests {
 
         handle_touch_input(&touch_event, &mut world);
 
-        let buf = world.get_resource::<crate::platform::InputBuffer>()
+        let buf = world
+            .get_resource::<crate::platform::InputBuffer>()
             .expect("InputBuffer resource should exist after being inserted in test setup");
         assert_eq!(buf.events.len(), 1);
         match &buf.events[0] {
@@ -813,7 +820,8 @@ mod tests {
 
         handle_touch_input(&touch_event, &mut world);
 
-        let buf = world.get_resource::<crate::platform::InputBuffer>()
+        let buf = world
+            .get_resource::<crate::platform::InputBuffer>()
             .expect("InputBuffer resource should exist after being inserted in test setup");
         assert_eq!(buf.events.len(), 1);
         // Cancelled应该转换为TouchEnd
@@ -840,7 +848,8 @@ mod tests {
 
         handle_gamepad_input(&gamepad_event, &mut world);
 
-        let buf = world.get_resource::<crate::platform::InputBuffer>()
+        let buf = world
+            .get_resource::<crate::platform::InputBuffer>()
             .expect("InputBuffer resource should exist after being inserted in test setup");
         assert_eq!(buf.events.len(), 1);
         match &buf.events[0] {
@@ -870,7 +879,8 @@ mod tests {
 
         handle_gamepad_input(&gamepad_event, &mut world);
 
-        let buf = world.get_resource::<crate::platform::InputBuffer>()
+        let buf = world
+            .get_resource::<crate::platform::InputBuffer>()
             .expect("InputBuffer resource should exist after being inserted in test setup");
         assert_eq!(buf.events.len(), 1);
         match &buf.events[0] {
@@ -892,7 +902,8 @@ mod tests {
 
         handle_gamepad_input(&gamepad_event, &mut world);
 
-        let buf = world.get_resource::<crate::platform::InputBuffer>()
+        let buf = world
+            .get_resource::<crate::platform::InputBuffer>()
             .expect("InputBuffer resource should exist after being inserted in test setup");
         assert_eq!(buf.events.len(), 1);
         match &buf.events[0] {
@@ -912,7 +923,8 @@ mod tests {
 
         handle_gamepad_input(&gamepad_event, &mut world);
 
-        let buf = world.get_resource::<crate::platform::InputBuffer>()
+        let buf = world
+            .get_resource::<crate::platform::InputBuffer>()
             .expect("InputBuffer resource should exist after being inserted in test setup");
         assert_eq!(buf.events.len(), 1);
         match &buf.events[0] {

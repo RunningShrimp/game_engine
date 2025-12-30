@@ -4,7 +4,7 @@ use game_engine::ui::{LayoutType, UIRoot, UIService, UIState, UITheme, UIWidget,
 use glam::Vec2;
 
 #[test]
-#[ignore]  // TODO: Fix compilation errors
+#[ignore] // TODO: Fix compilation errors
 fn test_ui_root_default() {
     let root = UIRoot::default();
     assert_eq!(root.width, 800.0);
@@ -14,7 +14,7 @@ fn test_ui_root_default() {
 }
 
 #[test]
-#[ignore]  // TODO: Fix compilation errors
+#[ignore] // TODO: Fix compilation errors
 fn test_ui_root_custom() {
     let root = UIRoot {
         width: 1920.0,
@@ -29,7 +29,7 @@ fn test_ui_root_custom() {
 }
 
 #[test]
-#[ignore]  // TODO: Fix compilation errors
+#[ignore] // TODO: Fix compilation errors
 fn test_ui_widget_default() {
     let widget = UIWidget::default();
     assert_eq!(widget.position, Vec2::ZERO);
@@ -40,7 +40,7 @@ fn test_ui_widget_default() {
 }
 
 #[test]
-#[ignore]  // TODO: Fix compilation errors
+#[ignore] // TODO: Fix compilation errors
 fn test_ui_widget_custom() {
     let widget = UIWidget {
         position: Vec2::new(10.0, 20.0),
@@ -58,7 +58,7 @@ fn test_ui_widget_custom() {
 }
 
 #[test]
-#[ignore]  // TODO: Fix compilation errors
+#[ignore] // TODO: Fix compilation errors
 fn test_ui_service_create_button() {
     let button = UIService::create_button(
         "Click me".to_string(),
@@ -82,7 +82,7 @@ fn test_ui_service_create_button() {
 }
 
 #[test]
-#[ignore]  // TODO: Fix compilation errors
+#[ignore] // TODO: Fix compilation errors
 fn test_ui_service_create_label() {
     let label = UIService::create_label("Hello World".to_string(), Vec2::new(5.0, 10.0), 24.0);
 
@@ -101,7 +101,7 @@ fn test_ui_service_create_label() {
 }
 
 #[test]
-#[ignore]  // TODO: Fix compilation errors
+#[ignore] // TODO: Fix compilation errors
 fn test_ui_service_create_input() {
     let input = UIService::create_input(
         "Enter text...".to_string(),
@@ -127,7 +127,7 @@ fn test_ui_service_create_input() {
 }
 
 #[test]
-#[ignore]  // TODO: Fix compilation errors
+#[ignore] // TODO: Fix compilation errors
 fn test_ui_service_create_container() {
     let container = UIService::create_container(
         LayoutType::Vertical,
@@ -147,7 +147,7 @@ fn test_ui_service_create_container() {
 }
 
 #[test]
-#[ignore]  // TODO: Fix compilation errors
+#[ignore] // TODO: Fix compilation errors
 fn test_ui_service_is_point_inside() {
     let widget = UIWidget {
         position: Vec2::new(10.0, 20.0),
@@ -170,7 +170,7 @@ fn test_ui_service_is_point_inside() {
 }
 
 #[test]
-#[ignore]  // TODO: Fix compilation errors
+#[ignore] // TODO: Fix compilation errors
 fn test_ui_service_is_point_inside_invisible() {
     let widget = UIWidget {
         position: Vec2::new(10.0, 20.0),
@@ -185,7 +185,7 @@ fn test_ui_service_is_point_inside_invisible() {
 }
 
 #[test]
-#[ignore]  // TODO: Fix compilation errors
+#[ignore] // TODO: Fix compilation errors
 fn test_ui_service_is_point_inside_disabled() {
     let widget = UIWidget {
         position: Vec2::new(10.0, 20.0),
@@ -200,7 +200,7 @@ fn test_ui_service_is_point_inside_disabled() {
 }
 
 #[test]
-#[ignore]  // TODO: Fix compilation errors
+#[ignore] // TODO: Fix compilation errors
 fn test_ui_state_default() {
     let state = UIState::default();
     assert!(state.focused_widget.is_none());
@@ -210,7 +210,7 @@ fn test_ui_state_default() {
 }
 
 #[test]
-#[ignore]  // TODO: Fix compilation errors
+#[ignore] // TODO: Fix compilation errors
 fn test_ui_theme_default() {
     let theme = UITheme::default();
     assert_eq!(theme.primary_color, [0.2, 0.6, 1.0, 1.0]);
@@ -222,7 +222,7 @@ fn test_ui_theme_default() {
 }
 
 #[test]
-#[ignore]  // TODO: Fix compilation errors
+#[ignore] // TODO: Fix compilation errors
 fn test_ui_theme_custom() {
     let theme = UITheme {
         primary_color: [1.0, 0.0, 0.0, 1.0],
@@ -239,7 +239,7 @@ fn test_ui_theme_custom() {
 }
 
 #[test]
-#[ignore]  // TODO: Fix compilation errors
+#[ignore] // TODO: Fix compilation errors
 fn test_layout_types() {
     let vertical = LayoutType::Vertical;
     let horizontal = LayoutType::Horizontal;
@@ -262,7 +262,7 @@ fn test_layout_types() {
 }
 
 #[test]
-#[ignore]  // TODO: Fix compilation errors
+#[ignore] // TODO: Fix compilation errors
 fn test_widget_types() {
     // 测试按钮
     let button = WidgetType::Button {
@@ -343,7 +343,7 @@ fn test_widget_types() {
 }
 
 #[test]
-#[ignore]  // TODO: Fix compilation errors
+#[ignore] // TODO: Fix compilation errors
 fn test_ui_widget_z_index_ordering() {
     let mut widgets = vec![
         UIWidget {

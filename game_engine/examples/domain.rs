@@ -8,13 +8,13 @@
 //! cargo run --example domain
 //! ```
 
+use game_engine::domain::cqrs::*;
+use game_engine::domain::entity::*;
+use game_engine::domain::event_sourcing::*;
+use game_engine::domain::physics::*;
 use game_engine::domain::prelude::*;
 use game_engine::domain::services::*;
-use game_engine::domain::physics::*;
-use game_engine::domain::entity::*;
 use game_engine::domain::value_objects::*;
-use game_engine::domain::cqrs::*;
-use game_engine::domain::event_sourcing::*;
 use glam::Vec3;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -96,21 +96,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 5. 领域事件 - 事件总线
     println!("\n5. Using Domain Event Bus:");
 
-    use game_engine::domain::event_bus::{EnhancedEventBus, DomainEvent};
+    use game_engine::domain::event_bus::{DomainEvent, EnhancedEventBus};
 
     let mut event_bus = EnhancedEventBus::new();
 
     // 订阅事件
-    event_bus.subscribe(Box::new(|event: &DomainEvent| {
-        match event {
-            DomainEvent::EntityCreated { id } => {
-                println!("   [Subscriber] Entity created: {:?}", id);
-            }
-            DomainEvent::EntityMoved { id, from, to } => {
-                println!("   [Subscriber] Entity {:?} moved: {:?} -> {:?}", id, from, to);
-            }
-            _ => {}
+    event_bus.subscribe(Box::new(|event: &DomainEvent| match event {
+        DomainEvent::EntityCreated { id } => {
+            println!("   [Subscriber] Entity created: {:?}", id);
         }
+        DomainEvent::EntityMoved { id, from, to } => {
+            println!(
+                "   [Subscriber] Entity {:?} moved: {:?} -> {:?}",
+                id, from, to
+            );
+        }
+        _ => {}
     }));
 
     // 发布事件

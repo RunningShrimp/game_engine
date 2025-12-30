@@ -52,9 +52,6 @@ pub fn import_gltf_to_world(
     renderer: &mut crate::render::wgpu_utils::WgpuRenderer,
     handle: &Handle<GltfScene>,
 ) {
-    
-    
-
     if let Some(scene) = handle.get() {
         let (doc, buffers, images) = &*scene.data;
 

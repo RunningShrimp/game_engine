@@ -328,7 +328,7 @@ mod tests {
     use super::*;
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_buffer_usage_bitor() {
         let usage = BufferUsage::VERTEX | BufferUsage::COPY_DST;
         assert!(usage.contains(BufferUsage::VERTEX));
@@ -337,7 +337,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_buffer_usage_all_flags() {
         assert!(BufferUsage::VERTEX.0 == 1);
         assert!(BufferUsage::INDEX.0 == 2);
@@ -348,7 +348,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_buffer_usage_combined() {
         let combined = BufferUsage::VERTEX | BufferUsage::INDEX | BufferUsage::UNIFORM;
         assert!(combined.contains(BufferUsage::VERTEX));
@@ -358,7 +358,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_texture_usage_bitor() {
         let usage = TextureUsage::TEXTURE_BINDING | TextureUsage::RENDER_ATTACHMENT;
         assert!(usage.contains(TextureUsage::TEXTURE_BINDING));
@@ -367,14 +367,14 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_texture_format_equality() {
         assert_eq!(TextureFormat::Rgba8Unorm, TextureFormat::Rgba8Unorm);
         assert_ne!(TextureFormat::Rgba8Unorm, TextureFormat::Rgba16Float);
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_buffer_descriptor() {
         let desc = BufferDescriptor {
             label: Some("Test Buffer".to_string()),
@@ -388,7 +388,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_texture_descriptor() {
         let desc = TextureDescriptor {
             label: Some("Test Texture".to_string()),
@@ -406,11 +406,14 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_render_commands() {
         let commands = vec![
             RenderCommand::SetPipeline { pipeline_id: 1 },
-            RenderCommand::SetVertexBuffer { slot: 0, buffer_id: 2 },
+            RenderCommand::SetVertexBuffer {
+                slot: 0,
+                buffer_id: 2,
+            },
             RenderCommand::Draw {
                 vertex_count: 3,
                 instance_count: 1,
@@ -420,7 +423,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_color_attachment() {
         let attachment = ColorAttachment {
             texture_id: 1,
@@ -434,7 +437,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_depth_attachment() {
         let attachment = DepthAttachment {
             texture_id: 2,
@@ -447,7 +450,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_load_op_variants() {
         let load = LoadOp::Load;
         let clear = LoadOp::Clear;
@@ -456,7 +459,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_store_op_variants() {
         let store = StoreOp::Store;
         let discard = StoreOp::Discard;
@@ -465,7 +468,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_index_format() {
         let format16 = IndexFormat::Uint16;
         let format32 = IndexFormat::Uint32;
@@ -474,7 +477,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_buffer_handle() {
         let handle1 = BufferHandle(1);
         let handle2 = BufferHandle(2);
@@ -485,7 +488,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_texture_handle() {
         let handle1 = TextureHandle(100);
         let handle2 = TextureHandle(200);
@@ -496,7 +499,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_backend_capabilities_default() {
         let caps = BackendCapabilities::default();
         assert_eq!(caps.max_texture_size, 8192);
@@ -508,7 +511,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_backend_capabilities_custom() {
         let caps = BackendCapabilities {
             max_texture_size: 16384,
@@ -524,7 +527,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_null_backend() {
         let mut backend = NullBackend::new();
 
@@ -555,7 +558,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_null_backend_multiple_buffers() {
         let backend = NullBackend::new();
         let buffer1 = backend.create_buffer(&BufferDescriptor {
@@ -575,7 +578,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_null_backend_capabilities() {
         let backend = NullBackend::new();
         let caps = backend.capabilities();
@@ -584,7 +587,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_null_backend_write_operations() {
         let backend = NullBackend::new();
         let buffer = backend.create_buffer(&BufferDescriptor {

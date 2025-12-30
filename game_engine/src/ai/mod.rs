@@ -81,11 +81,22 @@ pub mod pathfinding;
 /// 状态机 - 用于AI状态管理的状态机实现
 pub mod state_machine;
 
+// 测试模块
+#[cfg(test)]
+mod flocking_tests;
+#[cfg(test)]
+mod navmesh_tests;
+#[cfg(test)]
+mod pathfinding_tests;
+
 pub use navmesh::{
     ColliderGeometry, NavMesh, NavMeshConfig, NavMeshError, NavMeshGenerator, NavPolygon,
 };
 
 pub use flocking::{Agent, AgentId, FlockConfig, FlockManager, FlockingError, Obstacle};
+
+// Re-export state machine types
+pub use state_machine::IdleState;
 
 // 重新导出寻路相关类型（仅导出非废弃类型）
 pub use pathfinding::{
@@ -103,6 +114,7 @@ type StateCallback = Box<dyn Fn(&mut World, Entity) + Send + Sync>;
 type StateUpdateCallback = Box<dyn Fn(&mut World, Entity) -> StateTransition + Send + Sync>;
 
 /// AI状态类型
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AIStatus {
     /// 空闲状态
     Idle,
@@ -225,6 +237,9 @@ pub enum StateTransition {
 
 /// AI 服务 - 封装 AI 业务逻辑
 pub struct AIService;
+
+#[cfg(test)]
+mod tests;
 
 impl AIService {
     /// 创建行为树

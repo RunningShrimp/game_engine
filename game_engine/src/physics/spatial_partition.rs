@@ -3,10 +3,10 @@
 //! 提供BVH（Bounding Volume Hierarchy）和空间哈希等空间分区算法，
 //! 用于优化碰撞检测性能。
 
+use glam::Vec3;
 use rapier3d::parry::bounding_volume::Aabb;
 use rapier3d::prelude::*;
 use std::collections::HashMap;
-use glam::Vec3;
 
 /// 空间分区类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -466,7 +466,9 @@ impl BVHTree {
             node.colliders.retain(|&x| x != target_handle);
         }
         // Remove empty nodes
-        self.nodes.retain(|node| !node.colliders.is_empty() || node.left.is_some() || node.right.is_some());
+        self.nodes.retain(|node| {
+            !node.colliders.is_empty() || node.left.is_some() || node.right.is_some()
+        });
     }
 
     /// Get object count for testing
@@ -1256,7 +1258,7 @@ mod tests {
     use rapier3d::na::Point3 as NaPoint3;
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_bvh_build() {
         let mut collider_set = ColliderSet::new();
 
@@ -1276,7 +1278,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_bvh_query() {
         let mut collider_set = ColliderSet::new();
 
@@ -1303,7 +1305,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_spatial_hash_build() {
         let mut collider_set = ColliderSet::new();
 
@@ -1323,7 +1325,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_spatial_hash_query() {
         let mut collider_set = ColliderSet::new();
 

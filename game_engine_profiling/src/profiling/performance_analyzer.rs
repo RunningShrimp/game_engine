@@ -84,7 +84,7 @@ impl PerformanceAnalyzer {
             analysis.bottlenecks.push(Bottleneck {
                 name: "High Memory Usage".to_string(),
                 severity: 70,
-                description: format!("Memory usage is {:.2} MB", memory_mb),
+                description: format!("Memory usage is {memory_mb:.2} MB"),
                 suggestion: "Reduce number of active audio sources or use compression".to_string(),
             });
         }
@@ -126,8 +126,7 @@ impl PerformanceAnalyzer {
                 name: "Physics Simulation Too Slow".to_string(),
                 severity: 85,
                 description: format!(
-                    "Physics performance degrading: {:.4} FPS per body",
-                    fps_per_body
+                    "Physics performance degrading: {fps_per_body:.4} FPS per body"
                 ),
                 suggestion: "Reduce body count or use GPU physics acceleration".to_string(),
             });
@@ -137,7 +136,7 @@ impl PerformanceAnalyzer {
             analysis.bottlenecks.push(Bottleneck {
                 name: "Too Many Physics Bodies".to_string(),
                 severity: 75,
-                description: format!("Simulating {} physics bodies", body_count),
+                description: format!("Simulating {body_count} physics bodies"),
                 suggestion: "Use batch processing or GPU compute for large body counts".to_string(),
             });
         }
@@ -169,7 +168,7 @@ impl PerformanceAnalyzer {
             analysis.bottlenecks.push(Bottleneck {
                 name: "High Agent Load".to_string(),
                 severity: 80,
-                description: format!("Too many agents ({}) for {:.1} FPS", agent_count, fps),
+                description: format!("Too many agents ({agent_count}) for {fps:.1} FPS"),
                 suggestion: "Use batch pathfinding or reduce update frequency".to_string(),
             });
         }
@@ -178,7 +177,7 @@ impl PerformanceAnalyzer {
             analysis.bottlenecks.push(Bottleneck {
                 name: "Long Paths".to_string(),
                 severity: 60,
-                description: format!("Average path length is {:.0}", path_length_avg),
+                description: format!("Average path length is {path_length_avg:.0}"),
                 suggestion: "Use hierarchical pathfinding or waypoint optimization".to_string(),
             });
         }
@@ -309,8 +308,7 @@ impl PerformanceAnalyzer {
             html.push_str("        <div class=\"metrics\">\n");
             for (key, value) in &analysis.metrics {
                 html.push_str(&format!(
-                    "            <div class=\"metric\">\n                <div class=\"metric-label\">{}</div>\n                <div class=\"metric-value\">{:.2}</div>\n            </div>\n",
-                    key, value
+                    "            <div class=\"metric\">\n                <div class=\"metric-label\">{key}</div>\n                <div class=\"metric-value\">{value:.2}</div>\n            </div>\n"
                 ));
             }
             html.push_str("        </div>\n");
@@ -343,8 +341,7 @@ impl PerformanceAnalyzer {
                 html.push_str("        <div>\n            <h3>✅ Recommendations</h3>\n");
                 for rec in &analysis.recommendations {
                     html.push_str(&format!(
-                        "            <div class=\"recommendation\">{}</div>\n",
-                        rec
+                        "            <div class=\"recommendation\">{rec}</div>\n"
                     ));
                 }
                 html.push_str("        </div>\n");

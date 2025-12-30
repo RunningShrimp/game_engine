@@ -365,7 +365,7 @@ pub fn batch_position_changed_simd(
 
     // 使用SIMD批量处理（根据backend选择最优实现）
     // 当前使用通用SIMD实现，未来可以根据backend类型选择特定优化
-    let _backend_type = format!("{:?}", backend); // 记录backend类型用于日志
+    let _backend_type = format!("{backend:?}"); // 记录backend类型用于日志
     for (old, new) in old_positions.iter().zip(new_positions.iter()) {
         results.push(position_changed_simd(*old, *new, threshold_sq));
     }
@@ -437,7 +437,7 @@ mod tests {
     use super::*;
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_batch_sync_buffer() {
         let mut buffer = BatchSyncBuffer::with_capacity(10);
         assert!(buffer.is_empty());
@@ -460,7 +460,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_batch_sync_manager() {
         let manager = BatchSyncManager::with_default_capacity();
         let buffer = manager.acquire_buffer();
@@ -469,7 +469,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_position_changed_simd() {
         let old_pos = Vec3::ZERO;
         let new_pos = Vec3::new(0.0001, 0.0, 0.0);
@@ -482,7 +482,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_rotation_changed_simd() {
         let old_rot = Quat::IDENTITY;
         let new_rot = Quat::from_rotation_x(0.0001);
@@ -495,7 +495,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_batch_sync_resource_default() {
         let resource = BatchSyncResource::default();
         assert_eq!(resource.position_threshold_sq, 0.0001 * 0.0001);
@@ -503,7 +503,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_batch_sync_resource_with_thresholds() {
         let resource = BatchSyncResource::with_thresholds(0.001, 0.002);
         assert_eq!(resource.position_threshold_sq, 0.001 * 0.001);

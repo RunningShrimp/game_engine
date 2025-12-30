@@ -97,7 +97,8 @@ mod lock_safety_tests {
             let mutex_clone = Arc::clone(&mutex);
             let handle = thread::spawn(move || {
                 for _ in 0..1000 {
-                    let mut guard = safe_lock(&mutex_clone, "test_mutex").expect("Test: operation should succeed");
+                    let mut guard = safe_lock(&mutex_clone, "test_mutex")
+                        .expect("Test: operation should succeed");
                     *guard += 1;
                 }
             });
@@ -123,7 +124,8 @@ mod lock_safety_tests {
             let rw_lock_clone = Arc::clone(&rw_lock);
             let handle = thread::spawn(move || {
                 for _ in 0..100 {
-                    let mut guard = safe_write(&rw_lock_clone, "test_rwlock").expect("Test: operation should succeed");
+                    let mut guard = safe_write(&rw_lock_clone, "test_rwlock")
+                        .expect("Test: operation should succeed");
                     *guard += 1;
                 }
             });
@@ -135,7 +137,8 @@ mod lock_safety_tests {
             let rw_lock_clone = Arc::clone(&rw_lock);
             let handle = thread::spawn(move || {
                 for _ in 0..100 {
-                    let guard = safe_read(&rw_lock_clone, "test_rwlock").expect("Test: operation should succeed");
+                    let guard = safe_read(&rw_lock_clone, "test_rwlock")
+                        .expect("Test: operation should succeed");
                     let _value = *guard; // 读取值
                 }
             });
@@ -147,7 +150,8 @@ mod lock_safety_tests {
             .expect("Threads did not complete within timeout");
 
         // 验证最终值（写操作应该完成）
-        let guard = safe_read(&rw_lock, "test_rwlock_final").expect("Test: operation should succeed");
+        let guard =
+            safe_read(&rw_lock, "test_rwlock_final").expect("Test: operation should succeed");
         assert_eq!(*guard, 500);
     }
 
@@ -159,7 +163,8 @@ mod lock_safety_tests {
         // 第一个线程持有锁
         let mutex_clone = Arc::clone(&mutex);
         let handle1 = thread::spawn(move || {
-            let _guard = safe_lock(&mutex_clone, "test_try_lock").expect("Test: operation should succeed");
+            let _guard =
+                safe_lock(&mutex_clone, "test_try_lock").expect("Test: operation should succeed");
             thread::sleep(Duration::from_millis(100));
         });
         handles.push(handle1);
@@ -213,9 +218,11 @@ mod lock_safety_tests {
             let lock2_clone = Arc::clone(&lock2);
             let handle = thread::spawn(move || {
                 // 所有线程都以相同顺序获取锁（lock1 -> lock2），避免死锁
-                let _guard1 = safe_lock(&lock1_clone, "lock1").expect("Test: operation should succeed");
+                let _guard1 =
+                    safe_lock(&lock1_clone, "lock1").expect("Test: operation should succeed");
                 thread::sleep(Duration::from_micros(10));
-                let _guard2 = safe_lock(&lock2_clone, "lock2").expect("Test: operation should succeed");
+                let _guard2 =
+                    safe_lock(&lock2_clone, "lock2").expect("Test: operation should succeed");
                 // 锁会在作用域结束时自动释放
             });
             handles.push(handle);
@@ -335,7 +342,8 @@ mod event_bus_concurrency_tests {
         // 订阅事件
         let counter_clone = Arc::clone(&counter);
         bus.subscribe::<TestEvent>(move |event: &TestEvent| {
-            let mut guard = safe_lock(&counter_clone, "event_counter").expect("Test: operation should succeed");
+            let mut guard =
+                safe_lock(&counter_clone, "event_counter").expect("Test: operation should succeed");
             *guard += event.value;
         });
 
@@ -363,7 +371,8 @@ mod event_bus_concurrency_tests {
         thread::sleep(Duration::from_millis(100));
 
         // 验证计数器值（0+1+2+...+999 = 499500）
-        let guard = safe_lock(&counter, "event_counter_final").expect("Test: operation should succeed");
+        let guard =
+            safe_lock(&counter, "event_counter_final").expect("Test: operation should succeed");
         let expected: u32 = (0..1000).sum();
         assert_eq!(*guard, expected);
     }
@@ -381,7 +390,8 @@ mod event_bus_concurrency_tests {
                 let local_counter = Arc::new(Mutex::new(0u32));
                 let counter_clone = Arc::clone(&local_counter);
                 bus_clone.subscribe::<TestEvent>(move |event: &TestEvent| {
-                    let mut guard = safe_lock(&counter_clone, "local_counter").expect("Test: operation should succeed");
+                    let mut guard = safe_lock(&counter_clone, "local_counter")
+                        .expect("Test: operation should succeed");
                     *guard += event.value;
                 });
 
@@ -399,7 +409,8 @@ mod event_bus_concurrency_tests {
 
                 // 验证本地计数器至少收到了自己发布的事件
                 // 注意：由于并发，可能收到其他线程的事件，所以只验证至少收到自己发布的
-                let guard = safe_lock(&local_counter, "local_counter_final").expect("Test: operation should succeed");
+                let guard = safe_lock(&local_counter, "local_counter_final")
+                    .expect("Test: operation should succeed");
                 assert!(
                     *guard >= expected_sum,
                     "Counter {} should be at least {} (received: {})",
@@ -455,7 +466,9 @@ mod event_sourcing_concurrency_tests {
         // 注册事件类型
         {
             let registry = event_registry.write().expect("Test: operation should succeed");
-            registry.register::<TestEvent>("TestEvent", 1).expect("Test: operation should succeed");
+            registry
+                .register::<TestEvent>("TestEvent", 1)
+                .expect("Test: operation should succeed");
         }
 
         let manager = Arc::new(EventSourcingManager::with_registry(
@@ -487,7 +500,9 @@ mod event_sourcing_concurrency_tests {
             .expect("Threads did not complete within timeout");
 
         // 验证事件已保存（通过重放事件）
-        let events = manager.replay_aggregate_events("test_aggregate", None).expect("Test: operation should succeed");
+        let events = manager
+            .replay_aggregate_events("test_aggregate", None)
+            .expect("Test: operation should succeed");
         assert_eq!(events.len(), 500); // 10线程 * 50事件
     }
 }
@@ -508,7 +523,8 @@ mod performance_stress_tests {
             let mutex_clone = Arc::clone(&mutex);
             let handle = thread::spawn(move || {
                 for _ in 0..1000 {
-                    let mut guard = safe_lock(&mutex_clone, "perf_test").expect("Test: operation should succeed");
+                    let mut guard = safe_lock(&mutex_clone, "perf_test")
+                        .expect("Test: operation should succeed");
                     *guard += 1;
                 }
             });
@@ -587,7 +603,8 @@ mod performance_stress_tests {
             let rw_lock_clone = Arc::clone(&rw_lock);
             let handle = thread::spawn(move || {
                 for _ in 0..1000 {
-                    let _guard = safe_read(&rw_lock_clone, "read_heavy").expect("Test: operation should succeed");
+                    let _guard = safe_read(&rw_lock_clone, "read_heavy")
+                        .expect("Test: operation should succeed");
                     // 模拟读取操作
                     thread::sleep(Duration::from_micros(1));
                 }

@@ -99,7 +99,7 @@ impl AdaptivePerformance {
 
     /// 降低画质
     fn decrease_quality(&mut self, reason: &str) {
-        println!("[自适应] 降低画质 - 原因: {}", reason);
+        println!("[自适应] 降低画质 - 原因: {reason}");
 
         // 优先级：分辨率 > 阴影 > 粒子 > 后处理
 
@@ -142,7 +142,7 @@ impl AdaptivePerformance {
             return;
         }
 
-        println!("[自适应] 提升画质 - 原因: {}", reason);
+        println!("[自适应] 提升画质 - 原因: {reason}");
 
         // 按降低的逆序提升
 
@@ -284,7 +284,7 @@ mod tests {
         adaptive.update(25.0);
 
         let stats = adaptive.stats();
-        println!("Stats: {:#?}", stats);
+        println!("Stats: {stats:#?}");
 
         // 模拟性能恢复
         println!("\n=== 模拟性能恢复 ===");
@@ -297,6 +297,6 @@ mod tests {
         adaptive.update(10.0);
 
         let stats = adaptive.stats();
-        println!("Stats: {:#?}", stats);
+        println!("Stats: {stats:#?}");
     }
 }

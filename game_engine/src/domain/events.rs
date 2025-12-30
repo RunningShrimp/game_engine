@@ -10,6 +10,7 @@
 //! 4. **并行分发**：支持异步事件处理
 
 use crate::error::{safe_lock, safe_read, safe_write};
+use crate::serialization::compat::bincode_compat;
 use bevy_ecs::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::any::TypeId;
@@ -135,7 +136,7 @@ impl<E: DomainEvent + Serialize + for<'de> Deserialize<'de>> EventHandlerWrapper
         }
 
         // 反序列化事件（类型安全）
-        match bincode::deserialize::<E>(event_data) {
+        match bincode_compat::deserialize::<E>(event_data) {
             Ok(event) => {
                 self.handler.handle(&event);
                 Ok(())
@@ -191,7 +192,7 @@ impl SafeEventBus {
         let event_type = event.event_type();
 
         // 序列化事件（用于类型安全的分发）
-        let event_data = match bincode::serialize(event) {
+        let event_data: Vec<u8> = match bincode_compat::serialize(event).map_err(Box::new) {
             Ok(data) => data,
             Err(e) => {
                 tracing::error!("Failed to serialize event {}: {}", event_type, e);

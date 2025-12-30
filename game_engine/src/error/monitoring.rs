@@ -507,7 +507,7 @@ impl ErrorMonitor {
                 trend_type: trend_type.clone(),
                 time_range: Duration::from_secs(3600),
                 change_rate: std_dev,
-                description: format!("Error rate trend: {:?}", trend_type),
+                description: format!("Error rate trend: {trend_type:?}"),
             });
         }
 
@@ -517,7 +517,7 @@ impl ErrorMonitor {
                 trend_type: TrendType::Fluctuating,
                 time_range: Duration::from_secs(3600),
                 change_rate: 0.0,
-                description: format!("Most frequent severity: {:?}", most_severe),
+                description: format!("Most frequent severity: {most_severe:?}"),
             });
         }
 
@@ -527,7 +527,7 @@ impl ErrorMonitor {
                 trend_type: TrendType::Fluctuating,
                 time_range: Duration::from_secs(3600),
                 change_rate: 0.0,
-                description: format!("Most frequent category: {:?}", most_frequent),
+                description: format!("Most frequent category: {most_frequent:?}"),
             });
         }
 
@@ -609,7 +609,7 @@ impl ErrorMonitor {
     /// 触发告警
     fn trigger_alert(&self, message: String) {
         // 这里可以实现告警逻辑，如发送到监控系统、日志记录等
-        eprintln!("ERROR ALERT: {}", message);
+        eprintln!("ERROR ALERT: {message}");
 
         // 可以扩展为实际的告警系统
         // 例如：发送到监控系统、邮件通知、Slack等

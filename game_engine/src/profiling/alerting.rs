@@ -524,7 +524,7 @@ impl AlertingEngine {
                         .expect("System time should be after UNIX_EPOCH")
                         .as_millis()
                 ),
-                name: format!("{}阈值告警", metric_name),
+                name: format!("{metric_name}阈值告警"),
                 level: strategy.level,
                 metric_name: metric_name.to_string(),
                 current_value,
@@ -604,7 +604,7 @@ impl AlertingEngine {
                         .expect("System time should be after UNIX_EPOCH")
                         .as_millis()
                 ),
-                name: format!("{}趋势告警", metric_name),
+                name: format!("{metric_name}趋势告警"),
                 level: strategy.level,
                 metric_name: metric_name.to_string(),
                 current_value: *window_data.last().unwrap_or(&0.0),
@@ -685,11 +685,11 @@ impl AlertingEngine {
                         .expect("System time should be after UNIX_EPOCH")
                         .as_millis()
                 ),
-                name: format!("{}异常检测告警", metric_name),
+                name: format!("{metric_name}异常检测告警"),
                 level: strategy.level,
                 metric_name: metric_name.to_string(),
                 current_value: *historical_values.back().unwrap_or(&0.0),
-                condition: format!("异常分数 {:.2} (阈值: {:.2})", anomaly_score, threshold),
+                condition: format!("异常分数 {anomaly_score:.2} (阈值: {threshold:.2})"),
                 message: format!(
                     "{}检测到异常，异常分数: {:.2}，算法: {:?}",
                     metric_name, anomaly_score, strategy.algorithm
@@ -767,7 +767,7 @@ impl AlertingEngine {
                         .expect("System time should be after UNIX_EPOCH")
                         .as_millis()
                 ),
-                name: format!("{}复合告警", metric_name),
+                name: format!("{metric_name}复合告警"),
                 level: highest_level,
                 metric_name: metric_name.to_string(),
                 current_value,

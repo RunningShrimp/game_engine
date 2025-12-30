@@ -230,12 +230,12 @@ impl GpuProfiler {
         sorted_queries.sort_by(|a, b| b.1.partial_cmp(a.1).unwrap_or(std::cmp::Ordering::Equal));
 
         let total_time: f32 = self.queries.values().sum();
-        report.push_str(&format!("Total GPU Time: {:.2}ms\n\n", total_time));
+        report.push_str(&format!("Total GPU Time: {total_time:.2}ms\n\n"));
 
         report.push_str("Query Times:\n");
         for (name, time) in sorted_queries {
             let percentage = (time / total_time) * 100.0;
-            report.push_str(&format!("  {}: {:.2}ms ({:.1}%)\n", name, time, percentage));
+            report.push_str(&format!("  {name}: {time:.2}ms ({percentage:.1}%)\n"));
         }
 
         report

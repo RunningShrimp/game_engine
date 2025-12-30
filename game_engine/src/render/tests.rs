@@ -12,7 +12,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_instance_default() {
         let instance = Instance::default();
         assert_eq!(instance.pos, [0.0, 0.0]);
@@ -22,7 +22,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_instance_equals() {
         let a = Instance::default();
         let b = Instance::default();
@@ -34,7 +34,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_instance_with_custom_values() {
         let instance = Instance {
             pos: [10.0, 20.0],
@@ -60,7 +60,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_ui_instance_default() {
         let ui = UiInstance::default();
         assert_eq!(ui.pos, [0.0, 0.0]);
@@ -69,7 +69,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_ui_instance_with_custom_values() {
         let ui = UiInstance {
             pos: [50.0, 50.0],
@@ -89,7 +89,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_vertex_quad() {
         let quad = Vertex::quad();
         assert_eq!(quad.len(), 6);
@@ -99,11 +99,9 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_vertex_custom() {
-        let vertex = Vertex {
-            pos: [1.0, 2.0],
-        };
+        let vertex = Vertex { pos: [1.0, 2.0] };
         assert_eq!(vertex.pos[0], 1.0);
         assert_eq!(vertex.pos[1], 2.0);
     }
@@ -113,7 +111,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_gpu_point_light_default() {
         let light = GpuPointLight::default();
         assert_eq!(light.pos, [0.0, 0.0]);
@@ -123,7 +121,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_gpu_point_light_custom() {
         let light = GpuPointLight {
             pos: [10.0, 20.0],
@@ -142,7 +140,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_draw_group_creation() {
         let group = DrawGroup::new(0, 10, 0, 0.0);
         assert_eq!(group.start, 0);
@@ -152,7 +150,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_draw_group_with_scissor() {
         let group = DrawGroup::new(0, 10, 0, 0.0);
         let group_with_scissor = group.with_scissor(Some([0, 0, 100, 100]));
@@ -160,7 +158,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_draw_group_with_layer() {
         let group = DrawGroup::new(0, 10, 5, 1.0);
         assert_eq!(group.tex_idx, 5);
@@ -172,14 +170,14 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_dirty_tracker_creation() {
         let tracker = InstanceDirtyTracker::with_capacity(1024);
         assert_eq!(tracker.dirty_range_count(), 0);
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_dirty_tracker_mark_dirty() {
         let mut tracker = InstanceDirtyTracker::with_capacity(256);
         tracker.mark_instance_dirty(10);
@@ -188,7 +186,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_dirty_tracker_mark_range() {
         let mut tracker = InstanceDirtyTracker::with_capacity(256);
         tracker.mark_range_dirty(0, 50);
@@ -196,7 +194,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_dirty_tracker_mark_all() {
         let mut tracker = InstanceDirtyTracker::with_capacity(256);
         tracker.mark_all_dirty();
@@ -204,7 +202,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_dirty_tracker_update_empty() {
         let mut tracker = InstanceDirtyTracker::with_capacity(256);
         let ranges = tracker.update(&[]);
@@ -212,7 +210,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_dirty_tracker_update_new_instances() {
         let mut tracker = InstanceDirtyTracker::with_capacity(256);
 
@@ -227,7 +225,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_dirty_tracker_update_unchanged() {
         let mut tracker = InstanceDirtyTracker::with_capacity(256);
 
@@ -242,7 +240,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_dirty_tracker_update_partial_change() {
         let mut tracker = InstanceDirtyTracker::with_capacity(256);
 
@@ -265,7 +263,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_dirty_tracker_reset() {
         let mut tracker = InstanceDirtyTracker::with_capacity(256);
 
@@ -279,7 +277,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_dirty_tracker_dirty_instance_count() {
         let mut tracker = InstanceDirtyTracker::with_capacity(256);
         tracker.mark_instance_dirty(5);
@@ -292,7 +290,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_postprocess_config_default() {
         use super::super::postprocess::PostProcessConfig;
 
@@ -305,7 +303,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_tonemap_operator() {
         use super::super::postprocess::TonemapOperator;
 
@@ -316,7 +314,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_postprocess_bloom_threshold() {
         use super::super::postprocess::PostProcessConfig;
 
@@ -328,7 +326,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_postprocess_bloom_intensity() {
         use super::super::postprocess::PostProcessConfig;
 
@@ -344,7 +342,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_render_config_default() {
         use crate::plugins::builtin::render::RenderConfig;
 
@@ -354,7 +352,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_render_config_custom() {
         use crate::plugins::builtin::render::RenderConfig;
 
@@ -374,7 +372,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_light_source_default() {
         use super::super::domain_objects::LightSource;
 
@@ -395,7 +393,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_light_source_custom() {
         use super::super::domain_objects::LightSource;
 
@@ -424,7 +422,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors - RenderObject requires Arc<GpuMesh> which needs GPU setup
+    #[ignore] // TODO: Fix compilation errors - RenderObject requires Arc<GpuMesh> which needs GPU setup
     fn test_render_object_default() {
         use super::super::domain_objects::RenderObject;
 
@@ -435,7 +433,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors - RenderObject requires Arc<GpuMesh> which needs GPU setup
+    #[ignore] // TODO: Fix compilation errors - RenderObject requires Arc<GpuMesh> which needs GPU setup
     fn test_render_object_custom() {
         use super::super::domain_objects::RenderObject;
         use crate::ecs::Transform;
@@ -451,7 +449,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_material_default() {
         use crate::render::Material;
 
@@ -461,7 +459,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_material_custom() {
         use crate::render::Material;
 
@@ -480,7 +478,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_batch_key_default() {
         use crate::render::BatchKey;
 
@@ -490,7 +488,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_batch_manager_creation() {
         use crate::render::BatchManager;
 
@@ -499,7 +497,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_instance_batch_creation() {
         use super::super::instance_batch::BatchKey;
 
@@ -514,7 +512,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_frustum_default() {
         use super::super::frustum::Frustum;
 
@@ -524,7 +522,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_culling_result_default() {
         use super::super::frustum::CullingResult;
 
@@ -538,7 +536,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_lod_config_default() {
         use super::super::lod::LodConfig;
 
@@ -548,7 +546,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_lod_level_creation() {
         use super::super::lod::{LodLevel, LodQuality};
 
@@ -569,7 +567,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_csm_config_default() {
         use super::super::csm::CsmConfig;
 
@@ -578,7 +576,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_shadow_quality_values() {
         use super::super::csm::ShadowQuality;
 
@@ -592,7 +590,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_vxgi_config_default() {
         use super::super::vxgi::VxgiConfig;
 
@@ -601,7 +599,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_voxel_default() {
         use super::super::vxgi::Voxel;
 
@@ -615,7 +613,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_ray_tracing_config_default() {
         use super::super::ray_tracing::RayTracingConfig;
 
@@ -624,7 +622,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_sphere_creation() {
         use super::super::ray_tracing::Sphere;
         use crate::render::Material;
@@ -638,7 +636,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_light_type_values() {
         use super::super::ray_tracing::LightType;
         use glam::Vec3;
@@ -647,7 +645,10 @@ mod tests {
         // Just verify the variants exist and can be created
         let _point = LightType::Point;
         let _directional = LightType::Directional { direction: Vec3::X };
-        let _spot = LightType::Spot { direction: Vec3::X, angle: 45.0 };
+        let _spot = LightType::Spot {
+            direction: Vec3::X,
+            angle: 45.0,
+        };
     }
 
     // ========================================
@@ -655,7 +656,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_draw_call_merger_config_default() {
         use super::super::draw_call_merger::DrawCallMergeConfig;
 
@@ -665,7 +666,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_merge_stats_default() {
         use super::super::draw_call_merger::MergeStats;
 
@@ -679,7 +680,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_pipeline_optimizer_config_default() {
         use super::super::render_pipeline_optimizer::RenderPipelineOptimizerConfig;
 
@@ -689,7 +690,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_performance_stats_default() {
         use super::super::render_pipeline_optimizer::PerformanceStats;
 
@@ -703,7 +704,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_scene_traversal_config_default() {
         use super::super::scene_traversal::SceneTraversalConfig;
 
@@ -713,7 +714,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_traversal_stats_default() {
         use super::super::scene_traversal::TraversalStats;
 
@@ -727,7 +728,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_texture_format_support() {
         // 验证纹理格式枚举存在
         assert!(true);
@@ -738,7 +739,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_shader_cache_creation() {
         use super::super::shader_cache::{ShaderCache, ShaderCacheConfig};
 
@@ -752,14 +753,14 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_buffer_creation() {
         // 验证buffer创建逻辑
         assert!(true);
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_buffer_update() {
         // 验证buffer更新逻辑
         assert!(true);

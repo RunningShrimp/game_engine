@@ -288,7 +288,7 @@ impl PerformanceReportGenerator {
         if !report.detailed_metrics.is_empty() {
             output.push_str("--- 详细指标 ---\n");
             for (name, metric) in &report.detailed_metrics {
-                output.push_str(&format!("\n{}:\n", name));
+                output.push_str(&format!("\n{name}:\n"));
                 output.push_str(&format!(
                     "  当前值: {:.2} {}\n",
                     metric.current_value, metric.unit
@@ -317,7 +317,7 @@ impl PerformanceReportGenerator {
                 ));
                 output.push_str(&format!("   {}\n", rec.description));
                 if let Some(ref improvement) = rec.expected_improvement {
-                    output.push_str(&format!("   预期改进: {}\n", improvement));
+                    output.push_str(&format!("   预期改进: {improvement}\n"));
                 }
             }
             output.push('\n');
@@ -384,7 +384,7 @@ impl PerformanceReportGenerator {
         if !report.detailed_metrics.is_empty() {
             output.push_str("## 详细指标\n\n");
             for (name, metric) in &report.detailed_metrics {
-                output.push_str(&format!("### {}\n\n", name));
+                output.push_str(&format!("### {name}\n\n"));
                 output.push_str("| 属性 | 值 |\n");
                 output.push_str("|------|-----|\n");
                 output.push_str(&format!(
@@ -419,7 +419,7 @@ impl PerformanceReportGenerator {
                 ));
                 output.push_str(&format!("{}\n\n", rec.description));
                 if let Some(ref improvement) = rec.expected_improvement {
-                    output.push_str(&format!("**预期改进**: {}\n\n", improvement));
+                    output.push_str(&format!("**预期改进**: {improvement}\n\n"));
                 }
             }
         }
@@ -578,11 +578,10 @@ impl PerformanceReportGenerator {
         for (label, value) in summary_items {
             output.push_str(&format!(
                 r#"            <div class="summary-item">
-                <div class="label">{}</div>
-                <div class="value">{}</div>
+                <div class="label">{label}</div>
+                <div class="value">{value}</div>
             </div>
-"#,
-                label, value
+"#
             ));
         }
 
@@ -690,9 +689,8 @@ impl PerformanceReportGenerator {
 
                 if let Some(ref improvement) = rec.expected_improvement {
                     output.push_str(&format!(
-                        r#"            <p><strong>预期改进</strong>: {}</p>
-"#,
-                        improvement
+                        r#"            <p><strong>预期改进</strong>: {improvement}</p>
+"#
                     ));
                 }
 
@@ -813,7 +811,7 @@ fn format_timestamp(time: SystemTime) -> String {
     // 简单的格式化（不使用外部依赖）
     // 这里使用RFC3339格式的简化版本
     let datetime = secs_to_datetime(secs);
-    format!("{} UTC", datetime)
+    format!("{datetime} UTC")
 }
 
 /// 将秒数转换为日期时间字符串（简化版本）
@@ -833,10 +831,7 @@ fn secs_to_datetime(secs: u64) -> String {
     let month = ((day_of_year - 1) / 30) + 1;
     let day = ((day_of_year - 1) % 30) + 1;
 
-    format!(
-        "{:04}-{:02}-{:02} {:02}:{:02}:{:02}",
-        year, month, day, hours, minutes, seconds
-    )
+    format!("{year:04}-{month:02}-{day:02} {hours:02}:{minutes:02}:{seconds:02}")
 }
 
 #[cfg(test)]

@@ -335,8 +335,7 @@ impl EqualizerEffect {
     pub fn set_band_gain(&mut self, band_index: usize, gain_db: f32) -> Result<(), EffectError> {
         if band_index >= self.config.bands.len() {
             return Err(EffectError::InvalidParameter(format!(
-                "Band index {} out of range",
-                band_index
+                "Band index {band_index} out of range"
             )));
         }
         self.config.bands[band_index].gain = gain_db;
@@ -868,8 +867,7 @@ impl EffectChain {
     pub fn remove_effect(&mut self, index: usize) -> Result<(), EffectError> {
         if index >= self.effects.len() {
             return Err(EffectError::InvalidParameter(format!(
-                "Effect index {} out of range",
-                index
+                "Effect index {index} out of range"
             )));
         }
         self.effects.remove(index);

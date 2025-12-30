@@ -223,8 +223,7 @@ impl ActorSystem {
         let name = name.into();
         if self.actors.contains_key(&name) {
             return Err(DomainError::General(format!(
-                "Actor '{}' already exists",
-                name
+                "Actor '{name}' already exists"
             )));
         }
 
@@ -582,7 +581,9 @@ mod tests {
         let mut system = ActorSystem::new();
 
         // 注册音频Actor
-        let audio_handle = system.register("audio", AudioActor::new()).expect("Test: operation should succeed");
+        let audio_handle = system
+            .register("audio", AudioActor::new())
+            .expect("Test: operation should succeed");
 
         // 发送消息
         audio_handle
@@ -603,14 +604,26 @@ mod tests {
         let mut system = ActorSystem::new();
 
         // 注册多个Actor
-        let audio_handle = system.register("audio", AudioActor::new()).expect("Test: operation should succeed");
-        let physics_handle = system.register("physics", PhysicsActor::new()).expect("Test: operation should succeed");
-        let render_handle = system.register("render", RenderActor::new()).expect("Test: operation should succeed");
+        let audio_handle = system
+            .register("audio", AudioActor::new())
+            .expect("Test: operation should succeed");
+        let physics_handle = system
+            .register("physics", PhysicsActor::new())
+            .expect("Test: operation should succeed");
+        let render_handle = system
+            .register("render", RenderActor::new())
+            .expect("Test: operation should succeed");
 
         // 发送消息到不同Actor
-        audio_handle.send(AudioActorMessage::SetMasterVolume { volume: 0.8 }).expect("Test: operation should succeed");
-        physics_handle.send(PhysicsActorMessage::Step { delta_time: 0.016 }).expect("Test: operation should succeed");
-        render_handle.send(RenderActorMessage::RenderFrame).expect("Test: operation should succeed");
+        audio_handle
+            .send(AudioActorMessage::SetMasterVolume { volume: 0.8 })
+            .expect("Test: operation should succeed");
+        physics_handle
+            .send(PhysicsActorMessage::Step { delta_time: 0.016 })
+            .expect("Test: operation should succeed");
+        render_handle
+            .send(RenderActorMessage::RenderFrame)
+            .expect("Test: operation should succeed");
 
         // 停止所有Actor
         audio_handle.stop().expect("Test: operation should succeed");

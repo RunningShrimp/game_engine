@@ -2,6 +2,7 @@
 //
 //  提供安全的锁获取和死锁预防机制。
 
+use parking_lot;
 use std::sync::{Mutex, MutexGuard, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use tracing;
 
@@ -21,10 +22,10 @@ pub enum LockError {
 impl std::fmt::Display for LockError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::PoisonedMutex(msg) => write!(f, "Poisoned Mutex: {}", msg),
-            Self::PoisonedRwLock(msg) => write!(f, "Poisoned RwLock: {}", msg),
-            Self::ReadLockTimeout(msg) => write!(f, "Read lock timeout: {}", msg),
-            Self::WriteLockTimeout(msg) => write!(f, "Write lock timeout: {}", msg),
+            Self::PoisonedMutex(msg) => write!(f, "Poisoned Mutex: {msg}"),
+            Self::PoisonedRwLock(msg) => write!(f, "Poisoned RwLock: {msg}"),
+            Self::ReadLockTimeout(msg) => write!(f, "Read lock timeout: {msg}"),
+            Self::WriteLockTimeout(msg) => write!(f, "Write lock timeout: {msg}"),
         }
     }
 }
@@ -62,8 +63,7 @@ pub fn try_lock<'a, T>(mutex: &'a Mutex<T>, name: &str) -> Result<MutexGuard<'a,
             Ok(guard)
         }
         Err(std::sync::TryLockError::WouldBlock) => Err(LockError::WriteLockTimeout(format!(
-            "Cannot acquire lock: {}",
-            name
+            "Cannot acquire lock: {name}"
         ))),
     }
 }
@@ -123,8 +123,7 @@ pub fn try_read<'a, T>(
             Ok(guard)
         }
         Err(std::sync::TryLockError::WouldBlock) => Err(LockError::ReadLockTimeout(format!(
-            "Cannot acquire read lock: {}",
-            name
+            "Cannot acquire read lock: {name}"
         ))),
     }
 }
@@ -146,8 +145,111 @@ pub fn try_write<'a, T>(
             Ok(guard)
         }
         Err(std::sync::TryLockError::WouldBlock) => Err(LockError::WriteLockTimeout(format!(
-            "Cannot acquire write lock: {}",
-            name
+            "Cannot acquire write lock: {name}"
+        ))),
+    }
+}
+
+// ============================================================================
+// parking_lot::Mutex 支持 (性能优化)
+// ============================================================================
+
+/// 安全获取parking_lot::Mutex锁
+///
+/// parking_lot::Mutex的lock()方法不会返回Result，它直接返回MutexGuard
+/// 这是一个包装函数，保持与safe_lock相同的API风格
+pub fn safe_lock_pl<'a, T: ?Sized>(
+    mutex: &'a parking_lot::Mutex<T>,
+    _name: &str,
+) -> Result<parking_lot::MutexGuard<'a, T>, LockError> {
+    // parking_lot::Mutex的lock()不返回Result，直接返回Guard
+    // 如果需要处理poison，可以使用lock()然后检查
+    Ok(mutex.lock())
+}
+
+/// 尝试获取parking_lot::Mutex锁（非阻塞）
+pub fn try_lock_pl<'a, T>(
+    mutex: &'a parking_lot::Mutex<T>,
+    name: &str,
+) -> Result<parking_lot::MutexGuard<'a, T>, LockError> {
+    match mutex.try_lock() {
+        Some(guard) => Ok(guard),
+        None => Err(LockError::WriteLockTimeout(format!(
+            "Cannot acquire lock: {name}"
+        ))),
+    }
+}
+
+// ============================================================================
+// parking_lot::RwLock 支持 (性能优化 - 读多写少场景)
+// ============================================================================
+
+/// 安全获取parking_lot::RwLock读锁
+///
+/// parking_lot::RwLock的read()方法不会返回Result，它直接返回Guard
+pub fn safe_read_pl<'a, T>(
+    rw_lock: &'a parking_lot::RwLock<T>,
+    _name: &str,
+) -> Result<parking_lot::RwLockReadGuard<'a, T>, LockError> {
+    // parking_lot::RwLock的read()不返回Result，直接返回Guard
+    Ok(rw_lock.read())
+}
+
+/// 安全获取parking_lot::RwLock写锁
+pub fn safe_write_pl<'a, T>(
+    rw_lock: &'a parking_lot::RwLock<T>,
+    _name: &str,
+) -> Result<parking_lot::RwLockWriteGuard<'a, T>, LockError> {
+    // parking_lot::RwLock的write()不返回Result，直接返回Guard
+    Ok(rw_lock.write())
+}
+
+// ============================================================================
+// Arc<parking_lot::RwLock> 支持 (EventSourcing优化场景)
+// ============================================================================
+
+/// 安全获取Arc<parking_lot::RwLock>读锁
+///
+/// 用于EventSourcing等读多写少场景，支持Arc包装的RwLock
+pub fn safe_read_arc_pl<'a, T>(
+    rw_lock: &'a std::sync::Arc<parking_lot::RwLock<T>>,
+    _name: &str,
+) -> Result<parking_lot::RwLockReadGuard<'a, T>, LockError> {
+    Ok(rw_lock.read())
+}
+
+/// 安全获取Arc<parking_lot::RwLock>写锁
+///
+/// 用于EventSourcing等读多写少场景，支持Arc包装的RwLock
+pub fn safe_write_arc_pl<'a, T>(
+    rw_lock: &'a std::sync::Arc<parking_lot::RwLock<T>>,
+    _name: &str,
+) -> Result<parking_lot::RwLockWriteGuard<'a, T>, LockError> {
+    Ok(rw_lock.write())
+}
+
+/// 尝试获取parking_lot::RwLock读锁（非阻塞）
+pub fn try_read_pl<'a, T>(
+    rw_lock: &'a parking_lot::RwLock<T>,
+    name: &str,
+) -> Result<parking_lot::RwLockReadGuard<'a, T>, LockError> {
+    match rw_lock.try_read() {
+        Some(guard) => Ok(guard),
+        None => Err(LockError::ReadLockTimeout(format!(
+            "Cannot acquire read lock: {name}"
+        ))),
+    }
+}
+
+/// 尝试获取parking_lot::RwLock写锁（非阻塞）
+pub fn try_write_pl<'a, T>(
+    rw_lock: &'a parking_lot::RwLock<T>,
+    name: &str,
+) -> Result<parking_lot::RwLockWriteGuard<'a, T>, LockError> {
+    match rw_lock.try_write() {
+        Some(guard) => Ok(guard),
+        None => Err(LockError::WriteLockTimeout(format!(
+            "Cannot acquire write lock: {name}"
         ))),
     }
 }

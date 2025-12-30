@@ -328,7 +328,7 @@ mod tests {
         let mut world = World::new();
         let entity_manager = EntityManager::new();
 
-        let invalid_entity = Entity::from_raw_and_generation(0, u32::MAX);
+        let invalid_entity = Entity::from_bits_and_generation(0, u32::MAX);
         let result = entity_manager.validate_entity(invalid_entity, &world);
         assert!(result.is_err());
     }

@@ -280,7 +280,7 @@ impl TextureCompressionManager {
             CompressionFormat::BC2 => BC2Format::compress_rgba(data, width, height)?,
             CompressionFormat::BC3 => BC3Format::compress_rgba(data, width, height)?,
             _ => {
-                return Err(CompressionError::UnsupportedFormat(format!("{:?}", format)));
+                return Err(CompressionError::UnsupportedFormat(format!("{format:?}")));
             }
         };
 
@@ -300,7 +300,7 @@ impl TextureCompressionManager {
             CompressionFormat::BC2 => BC2Format::decompress(data, width, height)?,
             CompressionFormat::BC3 => BC3Format::decompress(data, width, height)?,
             _ => {
-                return Err(CompressionError::UnsupportedFormat(format!("{:?}", format)));
+                return Err(CompressionError::UnsupportedFormat(format!("{format:?}")));
             }
         };
 
@@ -430,7 +430,10 @@ mod tests {
         let cached = manager.get_cached("test");
 
         assert!(cached.is_some());
-        assert_eq!(cached.expect("Test: operation should succeed").compressed_size, 8);
+        assert_eq!(
+            cached.expect("Test: operation should succeed").compressed_size,
+            8
+        );
         assert_eq!(manager.cache_size(), 1);
 
         manager.clear_cache();

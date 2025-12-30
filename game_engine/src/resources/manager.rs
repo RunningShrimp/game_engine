@@ -177,7 +177,7 @@ impl<T: 'static + Send + Sync> Handle<T> {
             .map(|state| match &*state {
                 LoadState::Loading => "loading".to_string(),
                 LoadState::Loaded(_) => "loaded".to_string(),
-                LoadState::Failed(err) => format!("failed: {}", err),
+                LoadState::Failed(err) => format!("failed: {err}"),
             })
     }
 }
@@ -187,19 +187,19 @@ impl<T: 'static + Send + Sync> Handle<T> {
 enum AssetTask {
     Texture {
         path: PathBuf,
-        handle: Arc<AssetContainer<u32>>,  // Use Arc directly to avoid Handle cloning
+        handle: Arc<AssetContainer<u32>>, // Use Arc directly to avoid Handle cloning
         is_linear: bool,
         start: std::time::Instant,
     },
     Atlas {
         path: PathBuf,
-        handle: Arc<AssetContainer<Atlas>>,  // Use Arc directly
+        handle: Arc<AssetContainer<Atlas>>, // Use Arc directly
         start: std::time::Instant,
     },
     #[cfg(feature = "gltf")]
     Gltf {
         path: PathBuf,
-        handle: Arc<AssetContainer<GltfScene>>,  // Use Arc directly
+        handle: Arc<AssetContainer<GltfScene>>, // Use Arc directly
         start: std::time::Instant,
     },
 }
@@ -303,7 +303,7 @@ impl AssetServer {
                 {
                     Ok(rt) => rt,
                     Err(e) => {
-                        log::error!("Failed to create asset loader runtime: {}", e);
+                        log::error!("Failed to create asset loader runtime: {e}");
                         // 如果无法创建runtime，线程将退出，AssetServer将无法工作
                         // 这是一个严重的初始化错误，应该被上层代码检测到
                         return;
@@ -377,8 +377,8 @@ impl AssetServer {
             .unwrap_or_else(|e| {
                 // 如果无法创建线程，这是一个严重的初始化错误
                 // 记录错误并panic，因为AssetServer无法在没有工作线程的情况下工作
-                log::error!("Failed to spawn asset loader thread: {}", e);
-                panic!("Failed to spawn asset loader thread: {}", e);
+                log::error!("Failed to spawn asset loader thread: {e}");
+                panic!("Failed to spawn asset loader thread: {e}");
             });
 
         Self {
@@ -401,7 +401,7 @@ impl AssetServer {
             .entered();
 
         let handle = Handle::new_loading();
-        let container = handle.container.clone();  // Single Arc clone
+        let container = handle.container.clone(); // Single Arc clone
         let task = AssetTask::Texture {
             path: path.to_path_buf(),
             handle: container,
@@ -417,7 +417,7 @@ impl AssetServer {
     /// 异步加载线性纹理
     pub async fn load_texture_linear_async(&self, path: &Path) -> Result<Handle<u32>, String> {
         let handle = Handle::new_loading();
-        let container = handle.container.clone();  // Single Arc clone
+        let container = handle.container.clone(); // Single Arc clone
         let task = AssetTask::Texture {
             path: path.to_path_buf(),
             handle: container,
@@ -433,7 +433,7 @@ impl AssetServer {
     /// 异步加载图集
     pub async fn load_atlas_async(&self, path: &Path) -> Result<Handle<Atlas>, String> {
         let handle = Handle::new_loading();
-        let container = handle.container.clone();  // Single Arc clone
+        let container = handle.container.clone(); // Single Arc clone
         let task = AssetTask::Atlas {
             path: path.to_path_buf(),
             handle: container,
@@ -449,7 +449,7 @@ impl AssetServer {
     /// 异步加载GLTF场景
     pub async fn load_gltf_async(&self, path: &Path) -> Result<Handle<GltfScene>, String> {
         let handle = Handle::new_loading();
-        let container = handle.container.clone();  // Single Arc clone
+        let container = handle.container.clone(); // Single Arc clone
         let task = AssetTask::Gltf {
             path: path.to_path_buf(),
             handle: container,
@@ -463,7 +463,7 @@ impl AssetServer {
 
     pub fn load_texture(&self, path: &Path) -> Handle<u32> {
         let handle = Handle::new_loading();
-        let container = handle.container.clone();  // Single Arc clone
+        let container = handle.container.clone(); // Single Arc clone
         let task = AssetTask::Texture {
             path: path.to_path_buf(),
             handle: container,
@@ -476,7 +476,7 @@ impl AssetServer {
 
     pub fn load_texture_linear(&self, path: &Path) -> Handle<u32> {
         let handle = Handle::new_loading();
-        let container = handle.container.clone();  // Single Arc clone
+        let container = handle.container.clone(); // Single Arc clone
         let task = AssetTask::Texture {
             path: path.to_path_buf(),
             handle: container,
@@ -489,7 +489,7 @@ impl AssetServer {
 
     pub fn load_atlas(&self, path: &Path) -> Handle<Atlas> {
         let handle = Handle::new_loading();
-        let container = handle.container.clone();  // Single Arc clone
+        let container = handle.container.clone(); // Single Arc clone
         let task = AssetTask::Atlas {
             path: path.to_path_buf(),
             handle: container,
@@ -502,7 +502,7 @@ impl AssetServer {
     #[cfg(feature = "gltf")]
     pub fn load_gltf(&self, path: &Path) -> Handle<GltfScene> {
         let handle = Handle::new_loading();
-        let container = handle.container.clone();  // Single Arc clone
+        let container = handle.container.clone(); // Single Arc clone
         let task = AssetTask::Gltf {
             path: path.to_path_buf(),
             handle: container,
@@ -605,10 +605,7 @@ impl AssetServer {
                             *state = LoadState::Failed("Invalid UTF-8".to_string());
                         } // ✅ 处理锁中毒情况，忽略更新失败
                         let handle = Handle::from_container(handle.clone());
-                        events.push(AssetEvent::AtlasFailed(
-                            handle,
-                            "Invalid UTF-8".to_string(),
-                        ));
+                        events.push(AssetEvent::AtlasFailed(handle, "Invalid UTF-8".to_string()));
                     }
                 }
                 #[cfg(feature = "gltf")]
@@ -779,7 +776,7 @@ impl Drop for AssetServer {
         if let Some(handle) = self.worker_handle.take()
             && let Err(e) = handle.join()
         {
-            log::error!("Asset loader thread panicked: {:?}", e);
+            log::error!("Asset loader thread panicked: {e:?}");
         }
     }
 }

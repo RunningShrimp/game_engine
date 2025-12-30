@@ -250,11 +250,7 @@ impl BatchBuilder {
     /// NOTE: This is a test helper method.
     pub fn draw_call_count(&self) -> usize {
         // Each non-empty batch is one draw call
-        if self.instances.is_empty() {
-            0
-        } else {
-            1
-        }
+        if self.instances.is_empty() { 0 } else { 1 }
     }
 
     /// Add a draw call (for testing with test_helpers::DrawCall)

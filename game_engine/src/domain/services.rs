@@ -255,6 +255,14 @@ impl AudioDomainService {
         id: AudioSourceId,
         path: impl Into<String>,
     ) -> Result<(), DomainError> {
+        // 检查ID是否已存在
+        if self.sources.contains_key(&id) {
+            return Err(DomainError::Audio(AudioError::SourceNotFound {
+                source_id: format!("Source {} already exists", id.as_u64()),
+                severity: crate::error::ErrorSeverity::Error,
+            }));
+        }
+
         let source = AudioSource::from_file(id, path)?;
         self.sources.insert(id, source);
         self.last_updated = Self::current_timestamp();
@@ -350,7 +358,7 @@ impl AudioDomainService {
     ) -> Result<(), DomainError> {
         let volume = Volume::new(value).ok_or_else(|| {
             DomainError::Audio(AudioError::DeviceConfiguration {
-                message: format!("Invalid volume: {}", value),
+                message: format!("Invalid volume: {value}"),
                 severity: crate::error::ErrorSeverity::Warning,
             })
         })?;
@@ -368,7 +376,7 @@ impl AudioDomainService {
     pub fn set_master_volume_f32(&mut self, value: f32) -> Result<(), DomainError> {
         let volume = Volume::new(value).ok_or_else(|| {
             DomainError::Audio(AudioError::DeviceConfiguration {
-                message: format!("Invalid volume: {}", value),
+                message: format!("Invalid volume: {value}"),
                 severity: crate::error::ErrorSeverity::Warning,
             })
         })?;
@@ -572,7 +580,9 @@ impl PhysicsDomainService {
         self.world.remove_body(id)?;
 
         // 从SoA存储中移除
-        if let Some((&entity, _)) = self.entity_to_body_id.iter().find(|&(_, &body_id)| body_id == id) {
+        if let Some((&entity, _)) =
+            self.entity_to_body_id.iter().find(|&(_, &body_id)| body_id == id)
+        {
             self.soa_storage.remove(entity)?;
             self.entity_to_body_id.remove(&entity);
         }
@@ -636,10 +646,11 @@ impl PhysicsDomainService {
         body_id: RigidBodyId,
         force: glam::Vec3,
     ) -> Result<(), DomainError> {
+        // 如果刚体不存在，静默成功（不执行任何操作）
         if let Some(rb) = self.world.get_body_mut(body_id) {
             rb.add_force(vector![force.x, force.y, force.z], true);
+            self.last_updated = Self::current_timestamp();
         }
-        self.last_updated = Self::current_timestamp();
         Ok(())
     }
 
@@ -786,7 +797,10 @@ impl PhysicsDomainService {
         angular_velocity: glam::Vec3,
     ) -> Result<(), DomainError> {
         if let Some(rb) = self.world.get_body_mut(body_id) {
-            rb.set_angvel(vector![angular_velocity.x, angular_velocity.y, angular_velocity.z], true);
+            rb.set_angvel(
+                vector![angular_velocity.x, angular_velocity.y, angular_velocity.z],
+                true,
+            );
             self.last_updated = Self::current_timestamp();
             Ok(())
         } else {
@@ -887,7 +901,9 @@ impl PhysicsDomainService {
             .iter()
             .map(|&id| {
                 // 从SoA存储查询（更快）
-                if let Some((&entity, _)) = self.entity_to_body_id.iter().find(|&(_, &bid)| bid == id) {
+                if let Some((&entity, _)) =
+                    self.entity_to_body_id.iter().find(|&(_, &bid)| bid == id)
+                {
                     self.soa_storage.get_position(entity)
                 } else {
                     // 回退到PhysicsWorld
@@ -902,7 +918,9 @@ impl PhysicsDomainService {
         body_ids
             .iter()
             .map(|&id| {
-                if let Some((&entity, _)) = self.entity_to_body_id.iter().find(|&(_, &bid)| bid == id) {
+                if let Some((&entity, _)) =
+                    self.entity_to_body_id.iter().find(|&(_, &bid)| bid == id)
+                {
                     self.soa_storage.get_velocity(entity)
                 } else {
                     self.world.get_body_linear_velocity(id)
@@ -916,7 +934,9 @@ impl PhysicsDomainService {
         body_ids
             .iter()
             .map(|&id| {
-                if let Some((&entity, _)) = self.entity_to_body_id.iter().find(|&(_, &bid)| bid == id) {
+                if let Some((&entity, _)) =
+                    self.entity_to_body_id.iter().find(|&(_, &bid)| bid == id)
+                {
                     self.soa_storage.get_mass(entity)
                 } else {
                     // 回退到PhysicsWorld（需要通过RigidBody对象）
@@ -1272,7 +1292,7 @@ mod tests {
     use super::*;
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_di_container() {
         let mut container = DIContainer::new();
 
@@ -1294,12 +1314,14 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_audio_domain_service() {
         let mut service = AudioDomainService::new();
 
         // 创建音频源
-        service.create_source(AudioSourceId(1), "test.wav").expect("Test: operation should succeed");
+        service
+            .create_source(AudioSourceId(1), "test.wav")
+            .expect("Test: operation should succeed");
         assert_eq!(service.source_ids().len(), 1);
 
         // 播放音频源
@@ -1311,12 +1333,14 @@ mod tests {
         assert_eq!(service.playing_sources_count(), 0);
 
         // 销毁音频源
-        service.destroy_source(AudioSourceId(1)).expect("Test: operation should succeed");
+        service
+            .destroy_source(AudioSourceId(1))
+            .expect("Test: operation should succeed");
         assert_eq!(service.source_ids().len(), 0);
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_physics_domain_service() {
         let mut service = PhysicsDomainService::new();
 
@@ -1326,33 +1350,49 @@ mod tests {
 
         // 创建碰撞体
         let collider = Collider::ball(ColliderId(1), 0.5);
-        service.create_collider(collider, RigidBodyId(1)).expect("Test: operation should succeed");
+        service
+            .create_collider(collider, RigidBodyId(1))
+            .expect("Test: operation should succeed");
 
         // 应用力
-        service.apply_force(RigidBodyId(1), glam::Vec3::new(10.0, 0.0, 0.0)).expect("Test: operation should succeed");
+        service
+            .apply_force(RigidBodyId(1), glam::Vec3::new(10.0, 0.0, 0.0))
+            .expect("Test: operation should succeed");
 
         // 步进模拟
         service.step_simulation(1.0 / 60.0).expect("Test: operation should succeed");
 
         // 获取位置
-        let position = service.get_body_position(RigidBodyId(1)).expect("Test: operation should succeed");
+        let position = service
+            .get_body_position(RigidBodyId(1))
+            .expect("Test: operation should succeed");
         assert!(position.x > 0.0); // 应该移动了
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_scene_domain_service() {
         let mut service = SceneDomainService::new();
 
         // 创建场景
-        service.create_scene(SceneId(1), "Test Scene").expect("Test: operation should succeed");
-        service.create_scene(SceneId(2), "Another Scene").expect("Test: operation should succeed");
+        service
+            .create_scene(SceneId(1), "Test Scene")
+            .expect("Test: operation should succeed");
+        service
+            .create_scene(SceneId(2), "Another Scene")
+            .expect("Test: operation should succeed");
 
         // 切换场景
         service.switch_to_scene(SceneId(1)).expect("Test: operation should succeed");
-        assert_eq!(service.get_active_scene().expect("Test: operation should succeed").id, SceneId(1));
+        assert_eq!(
+            service.get_active_scene().expect("Test: operation should succeed").id,
+            SceneId(1)
+        );
 
         service.switch_to_scene(SceneId(2)).expect("Test: operation should succeed");
-        assert_eq!(service.get_active_scene().expect("Test: operation should succeed").id, SceneId(2));
+        assert_eq!(
+            service.get_active_scene().expect("Test: operation should succeed").id,
+            SceneId(2)
+        );
     }
 }

@@ -93,7 +93,7 @@ impl RustScriptEngine {
                 func();
                 Ok(())
             } else {
-                Err(format!("Function '{}' not found", name))
+                Err(format!("Function '{name}' not found"))
             }
         } else {
             Err("Failed to access script context".to_string())

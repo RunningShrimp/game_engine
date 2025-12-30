@@ -132,10 +132,10 @@ impl NetworkCompressor {
 
         let mut encoder = DeflateEncoder::new(Vec::new(), self.compression_level.to_flate2());
         encoder.write_all(data).map_err(|e| {
-            NetworkError::SerializationError(format!("Compression write failed: {}", e))
+            NetworkError::SerializationError(format!("Compression write failed: {e}"))
         })?;
         let compressed = encoder.finish().map_err(|e| {
-            NetworkError::SerializationError(format!("Compression finish failed: {}", e))
+            NetworkError::SerializationError(format!("Compression finish failed: {e}"))
         })?;
 
         // 如果压缩后数据更大，返回原始数据
@@ -158,9 +158,9 @@ impl NetworkCompressor {
         // 尝试解压缩
         let mut decoder = DeflateDecoder::new(data);
         let mut decompressed = Vec::new();
-        decoder.read_to_end(&mut decompressed).map_err(|e| {
-            NetworkError::SerializationError(format!("Decompression failed: {}", e))
-        })?;
+        decoder
+            .read_to_end(&mut decompressed)
+            .map_err(|e| NetworkError::SerializationError(format!("Decompression failed: {e}")))?;
         Ok(decompressed)
     }
 
@@ -311,7 +311,8 @@ mod tests {
         assert!(compressed.len() < data.len());
 
         // 解压缩
-        let decompressed = compressor.decompress(&compressed).expect("Test: operation should succeed");
+        let decompressed =
+            compressor.decompress(&compressed).expect("Test: operation should succeed");
         assert_eq!(data, decompressed);
     }
 
@@ -331,13 +332,16 @@ mod tests {
 
         // 测试带标志的压缩
         let data = vec![0u8; 1000];
-        let compressed = compressor.compress_with_flag(&data).expect("Test: operation should succeed");
+        let compressed =
+            compressor.compress_with_flag(&data).expect("Test: operation should succeed");
 
         // 第一个字节应该是压缩标志
         assert_eq!(compressed[0], 1);
 
         // 解压缩
-        let decompressed = compressor.decompress_with_flag(&compressed).expect("Test: operation should succeed");
+        let decompressed = compressor
+            .decompress_with_flag(&compressed)
+            .expect("Test: operation should succeed");
         assert_eq!(data, decompressed);
     }
 
@@ -367,13 +371,17 @@ mod tests {
         let data3 = vec![2u8; 500];
 
         let data_list = vec![data1.as_slice(), data2.as_slice(), data3.as_slice()];
-        let compressed = batch_compressor.compress_batch(&data_list).expect("Test: operation should succeed");
+        let compressed = batch_compressor
+            .compress_batch(&data_list)
+            .expect("Test: operation should succeed");
 
         assert_eq!(compressed.len(), 3);
 
         // 解压缩
         let compressed_refs: Vec<&[u8]> = compressed.iter().map(|v| v.as_slice()).collect();
-        let decompressed = batch_compressor.decompress_batch(&compressed_refs).expect("Test: operation should succeed");
+        let decompressed = batch_compressor
+            .decompress_batch(&compressed_refs)
+            .expect("Test: operation should succeed");
 
         assert_eq!(decompressed.len(), 3);
         assert_eq!(decompressed[0], data1);
@@ -396,7 +404,8 @@ mod tests {
 
         // 解压缩验证
         let compressor = NetworkCompressor::new();
-        let decompressed = compressor.decompress(&compressed).expect("Test: operation should succeed");
+        let decompressed =
+            compressor.decompress(&compressed).expect("Test: operation should succeed");
         assert_eq!(decompressed.len(), 1500);
     }
 }

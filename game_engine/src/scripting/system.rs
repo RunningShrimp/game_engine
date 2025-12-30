@@ -99,13 +99,13 @@ impl ScriptSystem {
             Ok(c) => c,
             Err(e) => {
                 tracing::error!(target: "scripting", "Failed to acquire contexts lock: {}", e);
-                return ScriptResult::Error(format!("Failed to acquire contexts lock: {}", e));
+                return ScriptResult::Error(format!("Failed to acquire contexts lock: {e}"));
             }
         };
         if let Some(context) = contexts.get_mut(&language) {
             context.execute(code)
         } else {
-            ScriptResult::Error(format!("No context registered for {:?}", language))
+            ScriptResult::Error(format!("No context registered for {language:?}"))
         }
     }
 
@@ -130,13 +130,13 @@ impl ScriptSystem {
             Ok(c) => c,
             Err(e) => {
                 tracing::error!(target: "scripting", "Failed to acquire contexts lock: {}", e);
-                return ScriptResult::Error(format!("Failed to acquire contexts lock: {}", e));
+                return ScriptResult::Error(format!("Failed to acquire contexts lock: {e}"));
             }
         };
         if let Some(context) = contexts.get_mut(&language) {
             context.call_function(name, args)
         } else {
-            ScriptResult::Error(format!("No context registered for {:?}", language))
+            ScriptResult::Error(format!("No context registered for {language:?}"))
         }
     }
 
@@ -151,13 +151,13 @@ impl ScriptSystem {
             Ok(c) => c,
             Err(e) => {
                 tracing::error!(target: "scripting", "Failed to acquire contexts lock: {}", e);
-                return ScriptResult::Error(format!("Failed to acquire contexts lock: {}", e));
+                return ScriptResult::Error(format!("Failed to acquire contexts lock: {e}"));
             }
         };
         if let Some(context) = contexts.get_mut(&language) {
             context.set_global(name, value)
         } else {
-            ScriptResult::Error(format!("No context registered for {:?}", language))
+            ScriptResult::Error(format!("No context registered for {language:?}"))
         }
     }
 
@@ -310,7 +310,7 @@ impl JavaScriptContext {
                                 }
                             }
                             Err(e) => {
-                                result = ScriptResult::Error(format!("{:?}", e));
+                                result = ScriptResult::Error(format!("{e:?}"));
                             }
                         });
                         let _ = response.send(result);
@@ -332,7 +332,7 @@ impl JavaScriptContext {
                             .collect::<Vec<_>>()
                             .join(", ");
 
-                        let call_code = format!("{}({})", name, args_json);
+                        let call_code = format!("{name}({args_json})");
                         let mut result = ScriptResult::Void;
                         context.with(|ctx| {
                             match ctx.eval::<rquickjs::Value, _>(call_code.as_str()) {
@@ -348,7 +348,7 @@ impl JavaScriptContext {
                                     }
                                 }
                                 Err(e) => {
-                                    result = ScriptResult::Error(format!("{:?}", e));
+                                    result = ScriptResult::Error(format!("{e:?}"));
                                 }
                             }
                         });
@@ -364,12 +364,12 @@ impl JavaScriptContext {
                             ScriptValue::Array(_) => "[]".to_string(),
                             ScriptValue::Object(_) => "{}".to_string(),
                         };
-                        let set_code = format!("globalThis.{} = {}", name, js_value);
+                        let set_code = format!("globalThis.{name} = {js_value}");
 
                         let mut result = ScriptResult::Void;
                         context.with(|ctx| {
                             if let Err(e) = ctx.eval::<(), _>(set_code.as_str()) {
-                                result = ScriptResult::Error(format!("{:?}", e));
+                                result = ScriptResult::Error(format!("{e:?}"));
                             }
                         });
 
@@ -416,7 +416,9 @@ impl ScriptContext for JavaScriptContext {
         let (tx, rx) = mpsc::channel();
         if self.sender.send(JsCommand::Execute(code.to_string(), tx)).is_ok() {
             // Safe to unwrap_or: channel closure indicates JavaScript thread crashed
-            rx.recv().unwrap_or(ScriptResult::Error("JavaScript thread channel closed".to_string()))
+            rx.recv().unwrap_or(ScriptResult::Error(
+                "JavaScript thread channel closed".to_string(),
+            ))
         } else {
             ScriptResult::Error("Failed to send command".to_string())
         }
@@ -430,7 +432,9 @@ impl ScriptContext for JavaScriptContext {
             .is_ok()
         {
             // Safe to unwrap_or: channel closure indicates JavaScript thread crashed
-            rx.recv().unwrap_or(ScriptResult::Error("JavaScript thread channel closed".to_string()))
+            rx.recv().unwrap_or(ScriptResult::Error(
+                "JavaScript thread channel closed".to_string(),
+            ))
         } else {
             ScriptResult::Error("Failed to send command".to_string())
         }
@@ -440,7 +444,9 @@ impl ScriptContext for JavaScriptContext {
         let (tx, rx) = mpsc::channel();
         if self.sender.send(JsCommand::SetGlobal(name.to_string(), value, tx)).is_ok() {
             // Safe to unwrap_or: channel closure indicates JavaScript thread crashed
-            rx.recv().unwrap_or(ScriptResult::Error("JavaScript thread channel closed".to_string()))
+            rx.recv().unwrap_or(ScriptResult::Error(
+                "JavaScript thread channel closed".to_string(),
+            ))
         } else {
             ScriptResult::Error("Failed to send command".to_string())
         }
@@ -485,11 +491,11 @@ impl PythonContext {
 impl ScriptContext for PythonContext {
     fn execute(&mut self, code: &str) -> ScriptResult {
         // 占位实现
-        ScriptResult::Success(format!("Executed Python: {}", code))
+        ScriptResult::Success(format!("Executed Python: {code}"))
     }
 
     fn call_function(&mut self, name: &str, _args: &[ScriptValue]) -> ScriptResult {
-        ScriptResult::Success(format!("Called Python function: {}", name))
+        ScriptResult::Success(format!("Called Python function: {name}"))
     }
 
     fn set_global(&mut self, name: &str, value: ScriptValue) -> ScriptResult {

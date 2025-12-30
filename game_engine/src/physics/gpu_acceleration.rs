@@ -723,7 +723,7 @@ impl RigidSoftCollisionDetector {
                 // 转换 RigidBodyHandle 到 RigidBodyId
                 // 使用索引作为临时的 ID 映射
                 // 记录rigid_handle用于调试和日志
-                let _handle_debug = format!("{:?}", rigid_handle);
+                let _handle_debug = format!("{rigid_handle:?}");
                 let body_id = crate::domain::physics::RigidBodyId::new(rigid_idx as u64 + 1);
                 if let Some(body_state) = physics_world.get_body_state(body_id) {
                     // 简化的球-AABB碰撞检测

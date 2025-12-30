@@ -1,8 +1,8 @@
 //  事件类型注册系统
 
 use super::{DomainEvent, EventError};
+use crate::serialization::compat::bincode_compat;
 use bevy_ecs::prelude::*;
-use bincode;
 use serde::{Deserialize, Serialize};
 use std::any::TypeId;
 use std::collections::HashMap;
@@ -35,7 +35,7 @@ impl<E: DomainEvent + Serialize + for<'de> Deserialize<'de> + std::default::Defa
     for GenericEventFactory<E>
 {
     fn create_event(&self, data: &[u8]) -> Result<Box<dyn DomainEvent>, EventError> {
-        bincode::deserialize::<E>(data)
+        bincode_compat::deserialize::<E>(data)
             .map(|event| Box::new(event) as Box<dyn DomainEvent>)
             .map_err(|e| EventError::SerializationError(e.to_string()))
     }
@@ -102,8 +102,7 @@ impl EventTypeRegistry {
             factory.create_event(data)
         } else {
             Err(EventError::SerializationError(format!(
-                "Unknown event type: {}",
-                event_type
+                "Unknown event type: {event_type}"
             )))
         }
     }
@@ -194,7 +193,8 @@ mod tests {
         let test_data = TestEvent {
             data: "test".to_string(),
         };
-        let serialized = bincode::serialize(&test_data)
+        let serialized = bincode_compat::serialize(&test_data)
+            .map_err(|e| Box::new(e))
             .expect("Failed to serialize TestEvent data");
 
         let created_event = registry

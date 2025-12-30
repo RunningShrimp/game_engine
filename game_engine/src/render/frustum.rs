@@ -5,7 +5,7 @@
 use glam::{Mat4, Vec3};
 
 /// 视锥体的6个平面
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct Frustum {
     /// 左平面
     pub left: Plane,
@@ -62,19 +62,6 @@ impl Default for Plane {
         Self {
             normal: Vec3::Z,
             distance: 0.0,
-        }
-    }
-}
-
-impl Default for Frustum {
-    fn default() -> Self {
-        Self {
-            left: Plane::default(),
-            right: Plane::default(),
-            top: Plane::default(),
-            bottom: Plane::default(),
-            near: Plane::default(),
-            far: Plane::default(),
         }
     }
 }
@@ -373,7 +360,7 @@ mod tests {
     use proptest::prelude::*;
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_plane_creation() {
         let plane = Plane::new(Vec3::Z, 5.0);
         assert_eq!(plane.normal, Vec3::Z);
@@ -381,7 +368,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_point_in_plane() {
         let plane = Plane::new(Vec3::Z, 0.0);
         assert!(plane.point_in_front(Vec3::new(0.0, 0.0, 1.0)));
@@ -389,7 +376,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_frustum_sphere_intersection() {
         let view_proj = Mat4::perspective_rh(std::f32::consts::PI / 4.0, 1.0, 0.1, 100.0);
         let frustum = Frustum::from_view_projection(view_proj);
@@ -404,7 +391,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_culling_system() {
         let view_proj = Mat4::perspective_rh(std::f32::consts::PI / 4.0, 1.0, 0.1, 100.0);
         let culling = CullingSystem::new(view_proj);
@@ -419,111 +406,111 @@ mod tests {
     }
 
     proptest! {
-        #[test]
-#[ignore]  // TODO: Fix compilation errors
-        fn test_frustum_culling_properties(
-            center_x in -50.0f32..50.0,
-            center_y in -50.0f32..50.0,
-            center_z in 1.0f32..100.0,
-            radius in 0.1f32..10.0,
-        ) {
-            // 创建标准的透视投影视锥体
-            let view_proj = Mat4::perspective_rh(
-                std::f32::consts::PI / 4.0,
-                16.0 / 9.0,
-                0.1,
-                100.0,
-            );
-            let frustum = Frustum::from_view_projection(view_proj);
-            let center = Vec3::new(center_x, center_y, center_z);
+            #[test]
+    #[ignore]  // TODO: Fix compilation errors
+            fn test_frustum_culling_properties(
+                center_x in -50.0f32..50.0,
+                center_y in -50.0f32..50.0,
+                center_z in 1.0f32..100.0,
+                radius in 0.1f32..10.0,
+            ) {
+                // 创建标准的透视投影视锥体
+                let view_proj = Mat4::perspective_rh(
+                    std::f32::consts::PI / 4.0,
+                    16.0 / 9.0,
+                    0.1,
+                    100.0,
+                );
+                let frustum = Frustum::from_view_projection(view_proj);
+                let center = Vec3::new(center_x, center_y, center_z);
 
-            // 属性1: 原点附近的球体应该可见
-            if center.distance(Vec3::ZERO) < 10.0 && radius > 0.5 {
-                let visible = frustum.intersects_sphere(center, radius);
-                // 原点附近的球体通常应该可见（取决于视锥体参数）
-                // 这里只验证函数不会panic
-                let _ = visible;
+                // 属性1: 原点附近的球体应该可见
+                if center.distance(Vec3::ZERO) < 10.0 && radius > 0.5 {
+                    let visible = frustum.intersects_sphere(center, radius);
+                    // 原点附近的球体通常应该可见（取决于视锥体参数）
+                    // 这里只验证函数不会panic
+                    let _ = visible;
+                }
+
+                // 属性2: 非常远的球体可能不可见
+                if center_z > 90.0 && radius < 1.0 {
+                    let visible = frustum.intersects_sphere(center, radius);
+                    // 只验证函数不会panic
+                    let _ = visible;
+                }
+
+                // 属性3: 非常大的球体应该可见（如果中心在视锥体内）
+                if radius > 50.0 {
+                    let visible = frustum.intersects_sphere(center, radius);
+                    // 大球体通常应该可见
+                    // 这里只验证函数不会panic
+                    let _ = visible;
+                }
             }
 
-            // 属性2: 非常远的球体可能不可见
-            if center_z > 90.0 && radius < 1.0 {
-                let visible = frustum.intersects_sphere(center, radius);
+            #[test]
+    #[ignore]  // TODO: Fix compilation errors
+            fn test_plane_distance_properties(
+                normal_x in -1.0f32..1.0,
+                normal_y in -1.0f32..1.0,
+                normal_z in -1.0f32..1.0,
+                distance in -10.0f32..10.0,
+                point_x in -100.0f32..100.0,
+                point_y in -100.0f32..100.0,
+                point_z in -100.0f32..100.0,
+            ) {
+                let normal = Vec3::new(normal_x, normal_y, normal_z);
+                // 跳过零向量
+                if normal.length() < 0.001 {
+                    return Ok(());
+                }
+
+                let plane = Plane::new(normal, distance);
+                let point = Vec3::new(point_x, point_y, point_z);
+
+                // 属性1: 点到平面的距离应该是有符号的
+                let dist = plane.distance_to_point(point);
+                prop_assert!(dist.is_finite());
+
+                // 属性2: 点在平面正面当且仅当距离 >= 0
+                let in_front = plane.point_in_front(point);
+                prop_assert_eq!(in_front, dist >= 0.0);
+            }
+
+            #[test]
+    #[ignore]  // TODO: Fix compilation errors
+            fn test_aabb_culling_properties(
+                min_x in -10.0f32..10.0,
+                min_y in -10.0f32..10.0,
+                min_z in 1.0f32..50.0,
+                max_x in -10.0f32..10.0,
+                max_y in -10.0f32..10.0,
+                max_z in 1.0f32..50.0,
+            ) {
+                let view_proj = Mat4::perspective_rh(
+                    std::f32::consts::PI / 4.0,
+                    16.0 / 9.0,
+                    0.1,
+                    100.0,
+                );
+                let frustum = Frustum::from_view_projection(view_proj);
+
+                // 确保min < max
+                let min = Vec3::new(
+                    min_x.min(max_x),
+                    min_y.min(max_y),
+                    min_z.min(max_z),
+                );
+                let max = Vec3::new(
+                    min_x.max(max_x),
+                    min_y.max(max_y),
+                    min_z.max(max_z),
+                );
+
+                // 属性: AABB剔除应该返回布尔值，不会panic
+                let visible = frustum.intersects_aabb(min, max);
                 // 只验证函数不会panic
                 let _ = visible;
             }
-
-            // 属性3: 非常大的球体应该可见（如果中心在视锥体内）
-            if radius > 50.0 {
-                let visible = frustum.intersects_sphere(center, radius);
-                // 大球体通常应该可见
-                // 这里只验证函数不会panic
-                let _ = visible;
-            }
         }
-
-        #[test]
-#[ignore]  // TODO: Fix compilation errors
-        fn test_plane_distance_properties(
-            normal_x in -1.0f32..1.0,
-            normal_y in -1.0f32..1.0,
-            normal_z in -1.0f32..1.0,
-            distance in -10.0f32..10.0,
-            point_x in -100.0f32..100.0,
-            point_y in -100.0f32..100.0,
-            point_z in -100.0f32..100.0,
-        ) {
-            let normal = Vec3::new(normal_x, normal_y, normal_z);
-            // 跳过零向量
-            if normal.length() < 0.001 {
-                return Ok(());
-            }
-
-            let plane = Plane::new(normal, distance);
-            let point = Vec3::new(point_x, point_y, point_z);
-
-            // 属性1: 点到平面的距离应该是有符号的
-            let dist = plane.distance_to_point(point);
-            prop_assert!(dist.is_finite());
-
-            // 属性2: 点在平面正面当且仅当距离 >= 0
-            let in_front = plane.point_in_front(point);
-            prop_assert_eq!(in_front, dist >= 0.0);
-        }
-
-        #[test]
-#[ignore]  // TODO: Fix compilation errors
-        fn test_aabb_culling_properties(
-            min_x in -10.0f32..10.0,
-            min_y in -10.0f32..10.0,
-            min_z in 1.0f32..50.0,
-            max_x in -10.0f32..10.0,
-            max_y in -10.0f32..10.0,
-            max_z in 1.0f32..50.0,
-        ) {
-            let view_proj = Mat4::perspective_rh(
-                std::f32::consts::PI / 4.0,
-                16.0 / 9.0,
-                0.1,
-                100.0,
-            );
-            let frustum = Frustum::from_view_projection(view_proj);
-
-            // 确保min < max
-            let min = Vec3::new(
-                min_x.min(max_x),
-                min_y.min(max_y),
-                min_z.min(max_z),
-            );
-            let max = Vec3::new(
-                min_x.max(max_x),
-                min_y.max(max_y),
-                min_z.max(max_z),
-            );
-
-            // 属性: AABB剔除应该返回布尔值，不会panic
-            let visible = frustum.intersects_aabb(min, max);
-            // 只验证函数不会panic
-            let _ = visible;
-        }
-    }
 }

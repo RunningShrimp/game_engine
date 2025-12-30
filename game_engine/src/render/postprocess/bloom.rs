@@ -230,7 +230,7 @@ impl BloomPass {
             let mip_height = (height / scale).max(1);
 
             let texture = device.create_texture(&wgpu::TextureDescriptor {
-                label: Some(&format!("Bloom {} Mip {}", label_prefix, i)),
+                label: Some(&format!("Bloom {label_prefix} Mip {i}")),
                 size: wgpu::Extent3d {
                     width: mip_width,
                     height: mip_height,
@@ -263,7 +263,7 @@ impl BloomPass {
         format: wgpu::TextureFormat,
     ) -> wgpu::RenderPipeline {
         device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some(&format!("Bloom {} Pipeline", fs_entry)),
+            label: Some(&format!("Bloom {fs_entry} Pipeline")),
             layout: Some(layout),
             vertex: wgpu::VertexState {
                 module: shader,

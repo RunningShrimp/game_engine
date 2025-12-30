@@ -244,7 +244,7 @@ impl CascadedShadowMap {
         // 创建级联阴影贴图
         for i in 0..config.cascade_count {
             let shadow_map = device.create_texture(&wgpu::TextureDescriptor {
-                label: Some(&format!("CSM Shadow Map {}", i)),
+                label: Some(&format!("CSM Shadow Map {i}")),
                 size: wgpu::Extent3d {
                     width: config.shadow_map_size,
                     height: config.shadow_map_size,

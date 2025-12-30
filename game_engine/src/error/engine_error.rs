@@ -396,7 +396,7 @@ impl From<crate::common_errors::GameEngineError> for EngineError {
                     }
                     crate::common_errors::InfrastructureError::Asset(asset_err) => {
                         EngineError::Resource(ResourceError::NotFound {
-                            path: format!("{:?}", asset_err),
+                            path: format!("{asset_err:?}"),
                             severity: ErrorSeverity::Error,
                         })
                     }
@@ -446,18 +446,18 @@ impl From<crate::common_errors::GameEngineError> for EngineError {
             crate::common_errors::GameEngineError::Domain(domain_err) => match domain_err {
                 crate::common_errors::DomainError::Audio(audio_err) => {
                     EngineError::Audio(AudioError::SourceNotFound {
-                        source_id: format!("{:?}", audio_err),
+                        source_id: format!("{audio_err:?}"),
                         severity: ErrorSeverity::Error,
                     })
                 }
                 crate::common_errors::DomainError::Physics(physics_err) => {
                     EngineError::Physics(PhysicsError::RigidBodyNotFound {
-                        body_id: format!("{:?}", physics_err),
+                        body_id: format!("{physics_err:?}"),
                         severity: ErrorSeverity::Error,
                     })
                 }
                 crate::common_errors::DomainError::Scene(scene_err) => {
-                    EngineError::general(format!("Scene error: {}", scene_err))
+                    EngineError::general(format!("Scene error: {scene_err}"))
                 }
                 crate::common_errors::DomainError::General(msg) => EngineError::general(msg),
             },
@@ -471,18 +471,18 @@ impl From<crate::domain::errors::DomainError> for EngineError {
         match error {
             crate::domain::errors::DomainError::Audio(audio_err) => {
                 EngineError::Audio(AudioError::SourceNotFound {
-                    source_id: format!("{:?}", audio_err),
+                    source_id: format!("{audio_err:?}"),
                     severity: ErrorSeverity::Error,
                 })
             }
             crate::domain::errors::DomainError::Physics(physics_err) => {
                 EngineError::Physics(PhysicsError::RigidBodyNotFound {
-                    body_id: format!("{:?}", physics_err),
+                    body_id: format!("{physics_err:?}"),
                     severity: ErrorSeverity::Error,
                 })
             }
             crate::domain::errors::DomainError::Scene(scene_err) => {
-                EngineError::general(format!("Scene error: {}", scene_err))
+                EngineError::general(format!("Scene error: {scene_err}"))
             }
             crate::domain::errors::DomainError::General(msg) => EngineError::general(msg),
         }

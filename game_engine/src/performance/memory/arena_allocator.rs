@@ -403,7 +403,8 @@ mod tests {
 
     #[test]
     fn test_arena_allocate() {
-        let mut arena = ArenaAllocator::with_capacity(1024).expect("Test: operation should succeed");
+        let mut arena =
+            ArenaAllocator::with_capacity(1024).expect("Test: operation should succeed");
 
         let ptr1 = arena.allocate(100, 8);
         assert!(ptr1.is_some());
@@ -416,7 +417,8 @@ mod tests {
 
     #[test]
     fn test_arena_allocate_obj() {
-        let mut arena = ArenaAllocator::with_capacity(1024).expect("Test: operation should succeed");
+        let mut arena =
+            ArenaAllocator::with_capacity(1024).expect("Test: operation should succeed");
 
         let obj = arena.allocate_obj(42u32);
         assert!(obj.is_some());
@@ -425,7 +427,8 @@ mod tests {
 
     #[test]
     fn test_arena_reset() {
-        let mut arena = ArenaAllocator::with_capacity(1024).expect("Test: operation should succeed");
+        let mut arena =
+            ArenaAllocator::with_capacity(1024).expect("Test: operation should succeed");
 
         arena.allocate(500, 8).expect("Test: operation should succeed");
         assert_eq!(arena.used(), 500);

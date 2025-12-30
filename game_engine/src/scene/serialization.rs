@@ -5,6 +5,7 @@ use crate::ecs::{
 };
 use crate::physics::{ColliderDesc, RigidBodyDesc};
 use crate::platform::run_sync;
+use crate::serialization::compat::bincode_compat;
 use bevy_ecs::prelude::*;
 use glam::{Quat, Vec3};
 use serde::{Deserialize, Serialize};
@@ -551,25 +552,30 @@ impl SerializedScene {
         let data = match format {
             crate::serialization::SerializationFormat::Ron => {
                 ron::ser::to_string_pretty(self, ron::ser::PrettyConfig::default())
-                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send>)?
+                    .map_err(|e| -> Box<dyn std::error::Error + Send> { Box::new(e) })?
             }
             crate::serialization::SerializationFormat::Bincode => {
-                let bytes = bincode::serialize(self)
-                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send>)?;
+                let bytes = bincode_compat::serialize(self).map_err(
+                    |e| -> Box<dyn std::error::Error + Send> {
+                        // Convert Box<dyn Error> to Box<dyn Error + Send> by using anyhow or similar
+                        // For now, just create a new error string
+                        Box::new(std::io::Error::other(e.to_string()))
+                    },
+                )?;
                 tokio::fs::write(path, bytes)
                     .await
-                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send>)?;
+                    .map_err(|e| -> Box<dyn std::error::Error + Send> { Box::new(e) })?;
                 return Ok(());
             }
             crate::serialization::SerializationFormat::Json => {
                 serde_json::to_string_pretty(self)
-                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send>)?
+                    .map_err(|e| -> Box<dyn std::error::Error + Send> { Box::new(e) })?
             }
         };
 
         tokio::fs::write(path, data)
             .await
-            .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send>)?;
+            .map_err(|e| -> Box<dyn std::error::Error + Send> { Box::new(e) })?;
         Ok(())
     }
 
@@ -581,24 +587,26 @@ impl SerializedScene {
         let format = crate::serialization::SerializationFormat::from_path(path);
         let data = tokio::fs::read(path)
             .await
-            .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send>)?;
+            .map_err(|e| -> Box<dyn std::error::Error + Send> { Box::new(e) })?;
 
         let scene = match format {
             crate::serialization::SerializationFormat::Ron => {
                 let s = std::str::from_utf8(&data)
-                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send>)?;
+                    .map_err(|e| -> Box<dyn std::error::Error + Send> { Box::new(e) })?;
                 ron::from_str(s)
-                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send>)?
+                    .map_err(|e| -> Box<dyn std::error::Error + Send> { Box::new(e) })?
             }
-            crate::serialization::SerializationFormat::Bincode => {
-                bincode::deserialize(&data)
-                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send>)?
-            }
+            crate::serialization::SerializationFormat::Bincode => bincode_compat::deserialize(
+                &data,
+            )
+            .map_err(|e| -> Box<dyn std::error::Error + Send> {
+                Box::new(std::io::Error::other(e.to_string()))
+            })?,
             crate::serialization::SerializationFormat::Json => {
                 let s = std::str::from_utf8(&data)
-                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send>)?;
+                    .map_err(|e| -> Box<dyn std::error::Error + Send> { Box::new(e) })?;
                 serde_json::from_str(s)
-                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send>)?
+                    .map_err(|e| -> Box<dyn std::error::Error + Send> { Box::new(e) })?
             }
         };
 
@@ -670,21 +678,24 @@ mod tests {
         // 测试JSON格式
         let json_path = "/tmp/test_scene.json";
         scene.save_to_file(json_path).expect("Test: operation should succeed");
-        let loaded_scene = SerializedScene::load_from_file(json_path).expect("Test: operation should succeed");
+        let loaded_scene =
+            SerializedScene::load_from_file(json_path).expect("Test: operation should succeed");
         assert_eq!(loaded_scene.name, "test_scene");
         assert_eq!(loaded_scene.entities.len(), 1);
 
         // 测试RON格式
         let ron_path = "/tmp/test_scene.ron";
         scene.save_to_file(ron_path).expect("Test: operation should succeed");
-        let loaded_scene_ron = SerializedScene::load_from_file(ron_path).expect("Test: operation should succeed");
+        let loaded_scene_ron =
+            SerializedScene::load_from_file(ron_path).expect("Test: operation should succeed");
         assert_eq!(loaded_scene_ron.name, "test_scene");
         assert_eq!(loaded_scene_ron.entities.len(), 1);
 
         // 测试Bincode格式
         let bin_path = "/tmp/test_scene.bin";
         scene.save_to_file(bin_path).expect("Test: operation should succeed");
-        let loaded_scene_bin = SerializedScene::load_from_file(bin_path).expect("Test: operation should succeed");
+        let loaded_scene_bin =
+            SerializedScene::load_from_file(bin_path).expect("Test: operation should succeed");
         assert_eq!(loaded_scene_bin.name, "test_scene");
         assert_eq!(loaded_scene_bin.entities.len(), 1);
 
@@ -708,7 +719,8 @@ mod tests {
 
         // Call the synchronous API from inside a runtime; should use block_in_place internally
         scene.save_to_file(path).expect("Test: operation should succeed");
-        let loaded_scene = SerializedScene::load_from_file(path).expect("Test: operation should succeed");
+        let loaded_scene =
+            SerializedScene::load_from_file(path).expect("Test: operation should succeed");
         assert_eq!(loaded_scene.name, "test_scene_rt");
         assert_eq!(loaded_scene.entities.len(), 1);
 

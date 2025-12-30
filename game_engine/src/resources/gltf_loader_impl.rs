@@ -35,7 +35,7 @@ impl GltfScene {
     /// 如果 GLTF 数据无效或解析失败，返回错误
     pub fn from_bytes(bytes: Vec<u8>, json: Option<Value>) -> Result<Self, GltfLoadError> {
         let data = gltf::import_slice(&bytes)
-            .map_err(|e| GltfLoadError::parse(format!("Failed to import GLTF data: {}", e)))?;
+            .map_err(|e| GltfLoadError::parse(format!("Failed to import GLTF data: {e}")))?;
         Ok(Self {
             data: Arc::new(data),
             json,
@@ -109,14 +109,13 @@ impl GltfLoader {
     pub async fn load_from_path(path: &Path) -> Result<GltfScene, String> {
         let bytes = tokio::fs::read(path)
             .await
-            .map_err(|e| format!("Failed to read GLTF file: {}", e))?;
+            .map_err(|e| format!("Failed to read GLTF file: {e}"))?;
 
         let json = String::from_utf8(bytes.clone())
             .ok()
             .and_then(|s| serde_json::from_str::<Value>(&s).ok());
 
-        let data =
-            gltf::import_slice(&bytes).map_err(|e| format!("Failed to import GLTF: {}", e))?;
+        let data = gltf::import_slice(&bytes).map_err(|e| format!("Failed to import GLTF: {e}"))?;
 
         Ok(GltfScene {
             data: Arc::new(data),
@@ -169,7 +168,8 @@ mod tests {
         let scene = GltfScene::from_bytes(
             gltf_data.to_vec(),
             serde_json::from_str(std::str::from_utf8(gltf_data).unwrap_or("")).ok(),
-        ).expect("Failed to create GLTF scene in test");
+        )
+        .expect("Failed to create GLTF scene in test");
 
         assert_eq!(scene.scene_count(), 1);
         assert_eq!(scene.mesh_count(), 0);

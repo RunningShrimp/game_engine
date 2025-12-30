@@ -261,7 +261,7 @@ mod tests {
         let mut storage = SoATransformStorage::new();
 
         // 创建测试实体
-        let entity = Entity::from_raw_u32(1).expect("Test: operation should succeed");
+        let entity = Entity::from_bits(1);
 
         let transform = Transform {
             pos: Vec3::new(1.0, 2.0, 3.0),

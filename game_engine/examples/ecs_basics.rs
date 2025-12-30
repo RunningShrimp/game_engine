@@ -31,10 +31,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 创建Schedule
     let mut schedule = Schedule::default();
-    schedule.add_stage("update", SystemStage::parallel()
-        .with_system(spawn_entities.system())
-        .with_system(print_positions.system())
-        .with_system(rotate_system.system())
+    schedule.add_stage(
+        "update",
+        SystemStage::parallel()
+            .with_system(spawn_entities.system())
+            .with_system(print_positions.system())
+            .with_system(rotate_system.system()),
     );
 
     // 运行几个帧

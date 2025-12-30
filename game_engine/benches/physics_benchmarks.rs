@@ -3,7 +3,7 @@
 // 测试物理模拟、碰撞检测、空间查询等核心物理功能
 
 use bevy_ecs::prelude::*;
-use criterion::{black_box, BenchmarkId, Criterion, criterion_group, criterion_main};
+use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
 use game_engine::physics::physics3d::*;
 use glam::{Quat, Vec3};
 use rapier3d::prelude::*;
@@ -52,15 +52,19 @@ fn bench_physics_step(c: &mut Criterion) {
     let mut group = c.benchmark_group("physics_step");
 
     for body_count in [10, 50, 100, 500].iter() {
-        group.bench_with_input(BenchmarkId::from_parameter(body_count), body_count, |b, &count| {
-            let (mut world, _) = create_physics_world_with_bodies(count);
+        group.bench_with_input(
+            BenchmarkId::from_parameter(body_count),
+            body_count,
+            |b, &count| {
+                let (mut world, _) = create_physics_world_with_bodies(count);
 
-            b.iter(|| {
-                let mut physics_world = world.resource_mut::<PhysicsWorld3D>();
-                physics_world.step();
-                black_box(&mut physics_world);
-            });
-        });
+                b.iter(|| {
+                    let mut physics_world = world.resource_mut::<PhysicsWorld3D>();
+                    physics_world.step();
+                    black_box(&mut physics_world);
+                });
+            },
+        );
     }
 
     group.finish();
@@ -71,16 +75,20 @@ fn bench_collision_detection(c: &mut Criterion) {
     let mut group = c.benchmark_group("collision_detection");
 
     for body_count in [10, 50, 100].iter() {
-        group.bench_with_input(BenchmarkId::from_parameter(body_count), body_count, |b, &count| {
-            let (mut world, _) = create_physics_world_with_bodies(count);
+        group.bench_with_input(
+            BenchmarkId::from_parameter(body_count),
+            body_count,
+            |b, &count| {
+                let (mut world, _) = create_physics_world_with_bodies(count);
 
-            // Run a physics step to trigger collision detection
-            b.iter(|| {
-                let mut physics_world = world.resource_mut::<PhysicsWorld3D>();
-                physics_world.step();
-                black_box(&physics_world.narrow_phase);
-            });
-        });
+                // Run a physics step to trigger collision detection
+                b.iter(|| {
+                    let mut physics_world = world.resource_mut::<PhysicsWorld3D>();
+                    physics_world.step();
+                    black_box(&physics_world.narrow_phase);
+                });
+            },
+        );
     }
 
     group.finish();
@@ -141,39 +149,43 @@ fn bench_physics_ecs_integration(c: &mut Criterion) {
     let mut group = c.benchmark_group("physics_ecs_integration");
 
     for entity_count in [100, 500, 1000].iter() {
-        group.bench_with_input(BenchmarkId::from_parameter(entity_count), entity_count, |b, &count| {
-            b.iter(|| {
-                let mut world = World::new();
-                let mut physics_world = PhysicsWorld3D::new();
+        group.bench_with_input(
+            BenchmarkId::from_parameter(entity_count),
+            entity_count,
+            |b, &count| {
+                b.iter(|| {
+                    let mut world = World::new();
+                    let mut physics_world = PhysicsWorld3D::new();
 
-                for i in 0..count {
-                    let rigid_body = RigidBodyBuilder::new(RigidBodyType::Dynamic)
-                        .translation(vector![i as f32 % 10.0, 10.0, (i as f32 / 10.0).floor()])
-                        .build();
+                    for i in 0..count {
+                        let rigid_body = RigidBodyBuilder::new(RigidBodyType::Dynamic)
+                            .translation(vector![i as f32 % 10.0, 10.0, (i as f32 / 10.0).floor()])
+                            .build();
 
-                    let handle = physics_world.rigid_body_set.insert(rigid_body);
+                        let handle = physics_world.rigid_body_set.insert(rigid_body);
 
-                    let collider = ColliderBuilder::ball(0.5).build();
-                    physics_world.collider_set.insert_with_parent(
-                        collider,
-                        handle,
-                        &mut physics_world.rigid_body_set,
-                    );
+                        let collider = ColliderBuilder::ball(0.5).build();
+                        physics_world.collider_set.insert_with_parent(
+                            collider,
+                            handle,
+                            &mut physics_world.rigid_body_set,
+                        );
 
-                    world.spawn((
-                        RigidBody3D { handle },
-                        Transform {
-                            pos: Vec3::new(i as f32, 10.0, 0.0),
-                            rot: Quat::IDENTITY,
-                            scale: Vec3::ONE,
-                        },
-                    ));
-                }
+                        world.spawn((
+                            RigidBody3D { handle },
+                            Transform {
+                                pos: Vec3::new(i as f32, 10.0, 0.0),
+                                rot: Quat::IDENTITY,
+                                scale: Vec3::ONE,
+                            },
+                        ));
+                    }
 
-                world.insert_resource(physics_world);
-                black_box(world);
-            });
-        });
+                    world.insert_resource(physics_world);
+                    black_box(world);
+                });
+            },
+        );
     }
 
     group.finish();

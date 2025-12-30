@@ -400,8 +400,7 @@ impl BatchSync {
     }
 
     pub fn flush(&mut self) -> Vec<(u64, glam::Vec3)> {
-        let updates = std::mem::take(&mut self.pending);
-        updates
+        std::mem::take(&mut self.pending)
     }
 }
 
@@ -412,21 +411,21 @@ impl Default for BatchSync {
 }
 
 /// Parallel computation helpers
-pub fn parallel_for_each<T, F>(data: &mut [T], mut f: F)
+pub fn parallel_for_each<T, F>(data: &mut [T], f: F)
 where
     T: Send,
     F: FnMut(&mut T) + Send + Sync,
 {
-    data.iter_mut().for_each(|item| f(item));
+    data.iter_mut().for_each(f);
 }
 
-pub fn parallel_map<T, U, F>(input: &[T], mut f: F) -> Vec<U>
+pub fn parallel_map<T, U, F>(input: &[T], f: F) -> Vec<U>
 where
     T: Sync,
     U: Send,
     F: FnMut(&T) -> U + Send + Sync,
 {
-    input.iter().map(|item| f(item)).collect()
+    input.iter().map(f).collect()
 }
 
 pub fn parallel_reduce<T, F>(input: &[T], init: T, f: F) -> T
@@ -434,7 +433,7 @@ where
     T: Clone + Sync + Send,
     F: Fn(T, &T) -> T + Send + Sync,
 {
-    input.iter().fold(init, |acc, item| f(acc, item))
+    input.iter().fold(init, f)
 }
 
 pub fn parallel_filter<T, F>(input: &[T], f: F) -> Vec<T>

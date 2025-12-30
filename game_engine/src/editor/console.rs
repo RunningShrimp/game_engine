@@ -248,7 +248,10 @@ mod tests {
         assert!(result.is_ok());
 
         let result = console.execute_command("echo Hello World");
-        assert_eq!(result.expect("Test: operation should succeed"), "Hello World");
+        assert_eq!(
+            result.expect("Test: operation should succeed"),
+            "Hello World"
+        );
 
         let result = console.execute_command("unknown");
         assert!(result.is_err());

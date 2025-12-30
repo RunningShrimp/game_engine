@@ -478,7 +478,11 @@ impl serde::Serialize for PerformanceBaseline {
         state.serialize_field("avg_memory_mb", &self.avg_memory_mb)?;
         state.serialize_field(
             "timestamp",
-            &self.timestamp.duration_since(std::time::UNIX_EPOCH).expect("Test: operation should succeed").as_secs(),
+            &self
+                .timestamp
+                .duration_since(std::time::UNIX_EPOCH)
+                .expect("Test: operation should succeed")
+                .as_secs(),
         )?;
         state.serialize_field("sample_count", &self.sample_count)?;
         state.serialize_field("environment", &self.environment)?;
@@ -671,6 +675,11 @@ mod tests {
         let report = detector.generate_cicd_report();
 
         assert!(report["has_regression"].as_bool().expect("Test: operation should succeed"));
-        assert!(report["regression_count"]["total"].as_u64().expect("Test: operation should succeed") > 0);
+        assert!(
+            report["regression_count"]["total"]
+                .as_u64()
+                .expect("Test: operation should succeed")
+                > 0
+        );
     }
 }

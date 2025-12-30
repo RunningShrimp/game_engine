@@ -227,7 +227,8 @@ mod tests {
         for i in 0..5 {
             let context_clone = Arc::clone(&context);
             let handle = thread::spawn(move || {
-                let mut ctx = safe_lock(&context_clone, "test_lua_thread_safety.context").expect("Test: operation should succeed");
+                let mut ctx = safe_lock(&context_clone, "test_lua_thread_safety.context")
+                    .expect("Test: operation should succeed");
                 let script = format!(
                     r#"
                     return "thread_{}"

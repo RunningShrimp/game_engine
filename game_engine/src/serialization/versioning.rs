@@ -63,13 +63,9 @@ impl VersionManager {
             let rule = self
                 .migration_rules
                 .get(&current)
-                .ok_or_else(|| format!("No migration rule found for version {}", current))?;
+                .ok_or_else(|| format!("No migration rule found for version {current}"))?;
 
-            tracing::info!(
-                "Migrating from version {} to {}",
-                current,
-                rule.to_version
-            );
+            tracing::info!("Migrating from version {} to {}", current, rule.to_version);
 
             data = (rule.migrate_fn)(data)?;
             current = rule.to_version;
@@ -215,18 +211,12 @@ impl SemanticVersion {
     pub fn from_str(s: &str) -> Result<Self, String> {
         let parts: Vec<&str> = s.split('.').collect();
         if parts.len() != 3 {
-            return Err(format!("Invalid semantic version: {}", s));
+            return Err(format!("Invalid semantic version: {s}"));
         }
 
-        let major = parts[0]
-            .parse()
-            .map_err(|_| format!("Invalid major version: {}", parts[0]))?;
-        let minor = parts[1]
-            .parse()
-            .map_err(|_| format!("Invalid minor version: {}", parts[1]))?;
-        let patch = parts[2]
-            .parse()
-            .map_err(|_| format!("Invalid patch version: {}", parts[2]))?;
+        let major = parts[0].parse().map_err(|_| format!("Invalid major version: {}", parts[0]))?;
+        let minor = parts[1].parse().map_err(|_| format!("Invalid minor version: {}", parts[1]))?;
+        let patch = parts[2].parse().map_err(|_| format!("Invalid patch version: {}", parts[2]))?;
 
         Ok(Self::new(major, minor, patch))
     }

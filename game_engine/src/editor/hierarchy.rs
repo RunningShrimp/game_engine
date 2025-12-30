@@ -30,10 +30,7 @@ impl HierarchyView {
 
             // 显示实体
             let is_selected = self.selected_entity == Some(entity);
-            if ui
-                .selectable_label(is_selected, format!("{} (ID: {:?})", name, entity))
-                .clicked()
-            {
+            if ui.selectable_label(is_selected, format!("{name} (ID: {entity:?})")).clicked() {
                 self.selected_entity = Some(entity);
             }
         }

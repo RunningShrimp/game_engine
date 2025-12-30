@@ -34,7 +34,7 @@ use crate::impl_default;
 use crate::network::compression;
 use crate::network::delay_compensation;
 use crate::network::{ConnectionState, NetworkError, NetworkMessage, NetworkState};
-use bincode;
+use crate::serialization::compat::bincode_compat;
 use crossbeam_channel::unbounded;
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -150,7 +150,7 @@ impl GameClient {
         let address = format!("{}:{}", self.config.server_address, self.config.server_port);
         let addr: SocketAddr = address
             .parse()
-            .map_err(|e| NetworkError::ConnectionError(format!("Invalid address: {}", e)))?;
+            .map_err(|e| NetworkError::ConnectionError(format!("Invalid address: {e}")))?;
 
         match TokioTcpStream::connect(&addr).await {
             Ok(stream) => {
@@ -197,8 +197,7 @@ impl GameClient {
                 Ok(())
             }
             Err(e) => Err(NetworkError::ConnectionError(format!(
-                "Connection failed: {}",
-                e
+                "Connection failed: {e}"
             ))),
         }
     }
@@ -210,7 +209,7 @@ impl GameClient {
         if let Some(mut stream) = self.stream.lock().await.take() {
             let client_id = self.state.lock().await.client_id.unwrap_or(0);
             let disconnect_msg = NetworkMessage::Disconnect { client_id };
-            if let Ok(data) = bincode::serialize(&disconnect_msg) {
+            if let Ok(data) = bincode_compat::serialize(&disconnect_msg) {
                 let _ = stream.write_all(&data).await;
             }
             let _ = stream.shutdown().await;
@@ -225,44 +224,42 @@ impl GameClient {
 
     /// 同步连接到服务器（阻塞版本）
     pub fn connect_sync(&self) -> Result<(), NetworkError> {
-        let rt = tokio::runtime::Runtime::new().map_err(|e| {
-            NetworkError::ConnectionError(format!("Failed to create runtime: {}", e))
-        })?;
+        let rt = tokio::runtime::Runtime::new()
+            .map_err(|e| NetworkError::ConnectionError(format!("Failed to create runtime: {e}")))?;
         rt.block_on(self.connect())
     }
 
     /// 同步断开连接（阻塞版本）
     pub fn disconnect_sync(&self) -> Result<(), NetworkError> {
-        let rt = tokio::runtime::Runtime::new().map_err(|e| {
-            NetworkError::ConnectionError(format!("Failed to create runtime: {}", e))
-        })?;
+        let rt = tokio::runtime::Runtime::new()
+            .map_err(|e| NetworkError::ConnectionError(format!("Failed to create runtime: {e}")))?;
         rt.block_on(self.disconnect())
     }
 
     /// 异步发送消息
     pub async fn send_message(&self, msg: &NetworkMessage) -> Result<(), NetworkError> {
-        let mut data = bincode::serialize(msg).map_err(|e| {
-            NetworkError::SerializationError(format!("Failed to serialize message: {}", e))
+        let mut data = bincode_compat::serialize(msg).map_err(|e| {
+            NetworkError::SerializationError(format!("Failed to serialize message: {e}"))
         })?;
 
         if self.config.enable_compression
             && let Some(compressor) = &self.compressor
         {
-            data = compressor.compress(&data).map_err(|e| {
-                NetworkError::CompressionError(format!("Compression failed: {}", e))
-            })?;
+            data = compressor
+                .compress(&data)
+                .map_err(|e| NetworkError::CompressionError(format!("Compression failed: {e}")))?;
         }
 
         let mut stream_guard = self.stream.lock().await;
         if let Some(stream) = stream_guard.as_mut() {
             let len = data.len() as u32;
             stream.write_all(&len.to_be_bytes()).await.map_err(|e| {
-                NetworkError::SendError(format!("Failed to write message length: {}", e))
+                NetworkError::SendError(format!("Failed to write message length: {e}"))
             })?;
             stream
                 .write_all(&data)
                 .await
-                .map_err(|e| NetworkError::SendError(format!("Failed to write message: {}", e)))?;
+                .map_err(|e| NetworkError::SendError(format!("Failed to write message: {e}")))?;
             drop(stream_guard);
 
             let mut state = self.state.lock().await;
@@ -279,9 +276,8 @@ impl GameClient {
 
     /// 同步发送消息（阻塞版本）
     pub fn send_message_sync(&self, msg: NetworkMessage) -> Result<(), NetworkError> {
-        let rt = tokio::runtime::Runtime::new().map_err(|e| {
-            NetworkError::ConnectionError(format!("Failed to create runtime: {}", e))
-        })?;
+        let rt = tokio::runtime::Runtime::new()
+            .map_err(|e| NetworkError::ConnectionError(format!("Failed to create runtime: {e}")))?;
         rt.block_on(self.send_message(&msg))
     }
 
@@ -300,9 +296,8 @@ impl GameClient {
 
     /// 同步接收消息（阻塞版本）
     pub fn receive_message_sync(&self) -> Result<Option<NetworkMessage>, NetworkError> {
-        let rt = tokio::runtime::Runtime::new().map_err(|e| {
-            NetworkError::ConnectionError(format!("Failed to create runtime: {}", e))
-        })?;
+        let rt = tokio::runtime::Runtime::new()
+            .map_err(|e| NetworkError::ConnectionError(format!("Failed to create runtime: {e}")))?;
         rt.block_on(self.receive_message())
     }
 
@@ -357,7 +352,7 @@ impl GameClient {
                                     data_buf.clone()
                                 };
 
-                                match bincode::deserialize::<NetworkMessage>(&data) {
+                                match bincode_compat::deserialize_send::<NetworkMessage>(&data) {
                                     Ok(msg) => {
                                         state_guard.stats.bytes_received += len as u64;
                                         state_guard.stats.messages_received += 1;
@@ -365,18 +360,18 @@ impl GameClient {
                                         let _ = recv_tx.lock().await.send(msg);
                                     }
                                     Err(e) => {
-                                        log::warn!("Failed to deserialize message: {}", e);
+                                        log::warn!("Failed to deserialize message: {e}");
                                     }
                                 }
                             }
                             Err(e) => {
-                                log::warn!("Failed to read message: {}", e);
+                                log::warn!("Failed to read message: {e}");
                                 break;
                             }
                         }
                     }
                     Err(e) => {
-                        log::warn!("Failed to read message length: {}", e);
+                        log::warn!("Failed to read message length: {e}");
                         break;
                     }
                 }
@@ -400,7 +395,7 @@ impl GameClient {
                 let heartbeat_msg = NetworkMessage::Heartbeat {
                     timestamp: current_timestamp_ms(),
                 };
-                if let Ok(data) = bincode::serialize(&heartbeat_msg) {
+                if let Ok(data) = bincode_compat::serialize_send(&heartbeat_msg) {
                     let len = data.len() as u32;
                     let _ = stream.write_all(&len.to_be_bytes()).await;
                     let _ = stream.write_all(&data).await;
@@ -554,16 +549,15 @@ mod tests {
 
     #[test]
     fn test_message_serialization() {
-        let msg = NetworkMessage::Heartbeat {
-            timestamp: 12345,
-        };
+        let msg = NetworkMessage::Heartbeat { timestamp: 12345 };
 
-        let serialized = bincode::serialize(&msg);
+        let serialized = bincode_compat::serialize(&msg);
         assert!(serialized.is_ok());
 
-        let deserialized: Result<NetworkMessage, _> = bincode::deserialize(&serialized.unwrap_or_else(|e| {
-            panic!("Serialization failed: {}", e);
-        }));
+        let deserialized: Result<NetworkMessage, _> =
+            bincode_compat::deserialize(&serialized.unwrap_or_else(|e| {
+                panic!("Serialization failed: {}", e);
+            }));
         assert!(deserialized.is_ok());
     }
 
@@ -574,11 +568,11 @@ mod tests {
             name: "TestClient".to_string(),
         };
 
-        let serialized = bincode::serialize(&msg);
+        let serialized = bincode_compat::serialize(&msg);
         assert!(serialized.is_ok());
 
         if let Ok(NetworkMessage::Connect { client_id, name }) =
-            bincode::deserialize::<NetworkMessage>(&serialized.unwrap_or_else(|e| {
+            bincode_compat::deserialize::<NetworkMessage>(&serialized.unwrap_or_else(|e| {
                 panic!("Serialization failed: {}", e);
             }))
         {
@@ -593,11 +587,11 @@ mod tests {
     fn test_disconnect_message_creation() {
         let msg = NetworkMessage::Disconnect { client_id: 12345 };
 
-        let serialized = bincode::serialize(&msg);
+        let serialized = bincode_compat::serialize(&msg);
         assert!(serialized.is_ok());
 
         if let Ok(NetworkMessage::Disconnect { client_id }) =
-            bincode::deserialize::<NetworkMessage>(&serialized.unwrap_or_else(|e| {
+            bincode_compat::deserialize::<NetworkMessage>(&serialized.unwrap_or_else(|e| {
                 panic!("Serialization failed: {}", e);
             }))
         {

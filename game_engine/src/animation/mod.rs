@@ -93,3 +93,7 @@ pub use skinned_mesh::{SkinnedMesh, SkinnedMeshPipeline, SkinnedVertex3D};
 // GLTF 骨骼加载（需要启用 gltf feature）
 #[cfg(feature = "gltf")]
 pub use skeleton::build_skeleton_from_gltf;
+
+// 测试模块
+#[cfg(test)]
+mod tests;

@@ -16,7 +16,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_batch_builder_new() {
         let builder = BatchBuilder::new();
         assert_eq!(builder.batch_count(), 0);
@@ -24,14 +24,14 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_batch_builder_default() {
         let builder = BatchBuilder::default();
         assert_eq!(builder.batch_count(), 0);
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_batch_builder_add_draw_call() {
         let mut builder = BatchBuilder::new();
 
@@ -49,7 +49,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_batch_builder_add_multiple_draw_calls() {
         let mut builder = BatchBuilder::new();
 
@@ -69,7 +69,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_batch_builder_build() {
         let mut builder = BatchBuilder::new();
 
@@ -90,7 +90,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_batch_builder_clear() {
         let mut builder = BatchBuilder::new();
 
@@ -115,21 +115,21 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_batch_optimizer_new() {
         let mut optimizer = BatchOptimizer::default();
         assert!(optimizer.is_enabled());
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_batch_optimizer_default() {
         let mut optimizer = BatchOptimizer::default();
         assert!(optimizer.is_enabled());
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_batch_optimizer_enable() {
         let mut optimizer = BatchOptimizer::default();
         optimizer.enable();
@@ -137,7 +137,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_batch_optimizer_disable() {
         let mut optimizer = BatchOptimizer::default();
         optimizer.disable();
@@ -145,7 +145,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_batch_optimizer_merge_by_pipeline() {
         let mut optimizer = BatchOptimizer::default();
         let mut batches = vec![
@@ -181,7 +181,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_batch_optimizer_merge_by_material() {
         let mut optimizer = BatchOptimizer::default();
         optimizer.set_strategy(OptimizationStrategy::MergeByMaterial);
@@ -223,7 +223,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_instance_batch_new() {
         // Note: InstanceBatch::new requires BatchKey, mesh, and material_bind_group
         // This is a structural test to verify types exist
@@ -241,7 +241,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_instance_batch_add_instance() {
         // Use InstanceData from batch_builder which has position, rotation, scale, custom_data
         use crate::render::batch_builder::InstanceData;
@@ -259,7 +259,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_instance_batch_add_multiple_instances() {
         // Use InstanceData from batch_builder
         use crate::render::batch_builder::InstanceData;
@@ -278,7 +278,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_instance_batch_clear() {
         // Test BatchKey structure
         let key = BatchKey {
@@ -294,7 +294,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_instance_batch_is_full() {
         // Test that we can create batch keys
         let key = BatchKey {
@@ -310,7 +310,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_instance_batch_capacity() {
         // Test BatchKey structure
         let key = BatchKey {
@@ -330,7 +330,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_draw_call_new() {
         let draw_call = DrawCall {
             pipeline_id: 1,
@@ -348,7 +348,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_draw_call_without_index_buffer() {
         let draw_call = DrawCall {
             pipeline_id: 1,
@@ -365,7 +365,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_draw_call_instanced() {
         let draw_call = DrawCall {
             pipeline_id: 1,
@@ -385,7 +385,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_render_batch_new() {
         let batch = RenderBatch {
             pipeline_id: 1,
@@ -397,7 +397,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_render_batch_with_draw_calls() {
         let batch = RenderBatch {
             pipeline_id: 1,
@@ -431,7 +431,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_batch_builder_performance() {
         let mut builder = BatchBuilder::new();
 
@@ -456,7 +456,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_batch_optimizer_performance() {
         let mut optimizer = BatchOptimizer::default();
         let mut batches = vec![];
@@ -489,7 +489,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_instance_batch_performance() {
         use crate::render::batch_builder::InstanceData;
         use glam::{Quat, Vec3};
@@ -516,7 +516,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_batch_builder_empty() {
         let builder = BatchBuilder::new();
         let mut manager = BatchManager::new();
@@ -526,7 +526,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_instance_batch_empty() {
         // Test BatchKey structure
         let key = BatchKey {
@@ -542,7 +542,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_render_batch_empty() {
         let batch = RenderBatch {
             pipeline_id: 1,
@@ -553,7 +553,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_batch_optimizer_empty() {
         let mut optimizer = BatchOptimizer::default();
         let batches = vec![];
@@ -562,7 +562,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_draw_call_zero_vertices() {
         let draw_call = DrawCall {
             pipeline_id: 1,
@@ -578,7 +578,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_draw_call_zero_instances() {
         let draw_call = DrawCall {
             pipeline_id: 1,
@@ -598,7 +598,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_complete_batch_pipeline() {
         // 1. 创建批次构建器
         let mut builder = BatchBuilder::new();
@@ -626,7 +626,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_instanced_rendering_scenario() {
         use crate::render::batch_builder::InstanceData;
         use glam::{Quat, Vec3};
@@ -650,7 +650,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_multi_material_scenario() {
         let mut builder = BatchBuilder::new();
 
@@ -675,7 +675,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_multi_pipeline_scenario() {
         let mut builder = BatchBuilder::new();
 
@@ -703,7 +703,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_instance_batch_memory_efficiency() {
         use crate::render::batch_builder::InstanceData;
         use glam::{Quat, Vec3};
@@ -724,7 +724,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_batch_builder_memory_growth() {
         let mut builder = BatchBuilder::new();
 

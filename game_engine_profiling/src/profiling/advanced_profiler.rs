@@ -215,7 +215,7 @@ impl AdvancedProfiler {
         if !bottlenecks.is_empty() {
             report.push_str("Detected Bottlenecks:\n");
             for bottleneck in bottlenecks {
-                report.push_str(&format!("  - {}\n", bottleneck));
+                report.push_str(&format!("  - {bottleneck}\n"));
             }
         } else {
             report.push_str("No bottlenecks detected.\n");

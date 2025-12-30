@@ -86,7 +86,7 @@ pub trait ErrorContext<T> {
 
 impl<T, E: std::error::Error + 'static> ErrorContext<T> for Result<T, E> {
     fn context(self, context: &str) -> HardwareResult<T> {
-        self.map_err(|e| HardwareError::Other(format!("{}: {}", context, e)))
+        self.map_err(|e| HardwareError::Other(format!("{context}: {e}")))
     }
 
     fn with_context<F>(self, f: F) -> HardwareResult<T>
@@ -179,25 +179,25 @@ impl ErrorHandler {
                 "SoC优化将被禁用。游戏将使用通用配置。".to_string()
             }
             HardwareError::CacheError { operation, .. } => {
-                format!("缓存操作({})失败，将直接检测硬件。", operation)
+                format!("缓存操作({operation})失败，将直接检测硬件。")
             }
             HardwareError::NpuAccelerationError { .. } => {
                 "NPU加速失败，将使用CPU进行计算。".to_string()
             }
             HardwareError::UpscalingError { technology, .. } => {
-                format!("{}超分辨率失败，将使用原生分辨率或其他技术。", technology)
+                format!("{technology}超分辨率失败，将使用原生分辨率或其他技术。")
             }
             HardwareError::UnsupportedPlatform { platform, feature } => {
-                format!("平台{}不支持{}，将使用替代方案。", platform, feature)
+                format!("平台{platform}不支持{feature}，将使用替代方案。")
             }
             HardwareError::UnsupportedHardware { hardware, feature } => {
-                format!("硬件{}不支持{}，将使用替代方案。", hardware, feature)
+                format!("硬件{hardware}不支持{feature}，将使用替代方案。")
             }
             HardwareError::InsufficientResources { resource, .. } => {
-                format!("{}不足，将降低画质或性能要求。", resource)
+                format!("{resource}不足，将降低画质或性能要求。")
             }
             HardwareError::Timeout { operation, .. } => {
-                format!("操作{}超时，将重试或使用默认值。", operation)
+                format!("操作{operation}超时，将重试或使用默认值。")
             }
             _ => "将尝试使用默认配置继续运行。".to_string(),
         };

@@ -6,8 +6,8 @@ use super::*;
 use super::{EntityCreatedEvent, EntityDeletedEvent, EntityUpdatedEvent};
 use crate::domain::EventPriority;
 use crate::error::safe_lock;
+use crate::serialization::compat::bincode_compat;
 use bevy_ecs::prelude::*;
-use bincode;
 
 /// 命令trait
 pub trait Command: Send + Sync + 'static {
@@ -41,7 +41,7 @@ impl Command for CreateEntityCommand {
         event.apply(world)?;
 
         // 序列化事件
-        let data = bincode::serialize(&event).map_err(|e| {
+        let data = bincode_compat::serialize(&event).map_err(Box::new).map_err(|e| {
             EventError::SerializationError(format!(
                 "Failed to serialize {}: {}",
                 event.event_type(),
@@ -75,7 +75,7 @@ impl Command for DeleteEntityCommand {
         event.apply(world)?;
 
         // 序列化事件
-        let data = bincode::serialize(&event).map_err(|e| {
+        let data = bincode_compat::serialize(&event).map_err(Box::new).map_err(|e| {
             EventError::SerializationError(format!(
                 "Failed to serialize {}: {}",
                 event.event_type(),
@@ -112,7 +112,7 @@ impl Command for UpdateEntityCommand {
         event.apply(world)?;
 
         // 序列化事件
-        let data = bincode::serialize(&event).map_err(|e| {
+        let data = bincode_compat::serialize(&event).map_err(Box::new).map_err(|e| {
             EventError::SerializationError(format!(
                 "Failed to serialize {}: {}",
                 event.event_type(),
@@ -140,7 +140,7 @@ impl EventWrapper {
     pub fn new<E: DomainEvent + serde::Serialize>(event: &E, priority: EventPriority) -> Self {
         // 根据优先级选择序列化策略
         // 高优先级事件可能需要更快的序列化，但当前统一使用bincode
-        let data = bincode::serialize(event).unwrap_or_default();
+        let data = bincode_compat::serialize(event).map_err(Box::new).unwrap_or_default();
 
         // 记录优先级信息（可用于后续的事件处理优化）
         let _priority_level = priority as u8; // 将优先级转换为数值用于日志或统计
@@ -189,8 +189,7 @@ impl CommandHandler {
         let mut sequence = safe_lock(&self.manager.sequence_generator, "sequence_generator")
             .map_err(|e| {
                 EventError::LockError(format!(
-                    "Failed to acquire lock for sequence_generator: {}",
-                    e
+                    "Failed to acquire lock for sequence_generator: {e}"
                 ))
             })?;
         *sequence += 1;
@@ -207,7 +206,7 @@ impl CommandHandler {
         // 保存事件
         safe_lock(&self.manager.event_store, "event_store")
             .map_err(|e| {
-                EventError::LockError(format!("Failed to acquire lock for event_store: {}", e))
+                EventError::LockError(format!("Failed to acquire lock for event_store: {e}"))
             })?
             .save_event(stored_event)?;
 

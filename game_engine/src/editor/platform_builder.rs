@@ -53,10 +53,10 @@ impl PlatformBuilder {
                     })
                 } else {
                     let error = String::from_utf8_lossy(&output.stderr).to_string();
-                    Err(format!("Web build failed: {}", error))
+                    Err(format!("Web build failed: {error}"))
                 }
             }
-            Err(e) => Err(format!("Failed to execute wasm-pack: {}", e)),
+            Err(e) => Err(format!("Failed to execute wasm-pack: {e}")),
         }
     }
 
@@ -99,7 +99,7 @@ impl PlatformBuilder {
 
         let html_path = output_dir.join("index.html");
         std::fs::write(html_path, html_content)
-            .map_err(|e| format!("Failed to write HTML template: {}", e))?;
+            .map_err(|e| format!("Failed to write HTML template: {e}"))?;
 
         Ok(())
     }
@@ -153,10 +153,10 @@ impl PlatformBuilder {
                     })
                 } else {
                     let error = String::from_utf8_lossy(&output.stderr).to_string();
-                    Err(format!("Android build failed: {}", error))
+                    Err(format!("Android build failed: {error}"))
                 }
             }
-            Err(e) => Err(format!("Failed to execute cargo-ndk: {}", e)),
+            Err(e) => Err(format!("Failed to execute cargo-ndk: {e}")),
         }
     }
 
@@ -196,10 +196,10 @@ impl PlatformBuilder {
                     })
                 } else {
                     let error = String::from_utf8_lossy(&output.stderr).to_string();
-                    Err(format!("iOS build failed: {}", error))
+                    Err(format!("iOS build failed: {error}"))
                 }
             }
-            Err(e) => Err(format!("Failed to execute cargo: {}", e)),
+            Err(e) => Err(format!("Failed to execute cargo: {e}")),
         }
     }
 
@@ -256,10 +256,10 @@ impl PlatformBuilder {
                     })
                 } else {
                     let error = String::from_utf8_lossy(&output.stderr).to_string();
-                    Err(format!("Build failed: {}", error))
+                    Err(format!("Build failed: {error}"))
                 }
             }
-            Err(e) => Err(format!("Failed to execute cargo: {}", e)),
+            Err(e) => Err(format!("Failed to execute cargo: {e}")),
         }
     }
 }

@@ -1316,7 +1316,8 @@ mod tests {
 
         let data = b"Hello, World! This is a test string for compression.";
         let compressed = compressor.compress(data).expect("Test: operation should succeed");
-        let decompressed = compressor.decompress(&compressed).expect("Test: operation should succeed");
+        let decompressed =
+            compressor.decompress(&compressed).expect("Test: operation should succeed");
 
         assert_eq!(data, &decompressed[..]);
         assert!(compressed.len() < data.len()); // 压缩后应该更小
@@ -1387,8 +1388,12 @@ mod tests {
         let mut storage = PersistentStorage::new_sync(cfg).expect("new_sync failed");
 
         // Store two points to trigger flush
-        storage.store(DataPoint::new("m1", 1.0, MetricCategory::System)).expect("Test: operation should succeed");
-        storage.store(DataPoint::new("m2", 2.0, MetricCategory::Memory)).expect("Test: operation should succeed");
+        storage
+            .store(DataPoint::new("m1", 1.0, MetricCategory::System))
+            .expect("Test: operation should succeed");
+        storage
+            .store(DataPoint::new("m2", 2.0, MetricCategory::Memory))
+            .expect("Test: operation should succeed");
 
         // flush cache sync
         storage.flush_cache_sync().expect("flush_cache_sync failed");

@@ -43,11 +43,10 @@ impl AnimationCurve {
 
         // 按时间排序插入
         let index = match self.control_points.binary_search_by(|p| {
-            p.time.partial_cmp(&time)
-                .unwrap_or({
-                    // Handle NaN by treating it as greater than any time
-                    std::cmp::Ordering::Greater
-                })
+            p.time.partial_cmp(&time).unwrap_or({
+                // Handle NaN by treating it as greater than any time
+                std::cmp::Ordering::Greater
+            })
         }) {
             Ok(i) | Err(i) => i,
         };
@@ -202,8 +201,10 @@ impl CurveEditor {
             let mut points = Vec::new();
             let steps = 100;
 
-            let min_time = self.curve.control_points.first().expect("Test: operation should succeed").time;
-            let max_time = self.curve.control_points.last().expect("Test: operation should succeed").time;
+            let min_time =
+                self.curve.control_points.first().expect("Test: operation should succeed").time;
+            let max_time =
+                self.curve.control_points.last().expect("Test: operation should succeed").time;
 
             for i in 0..=steps {
                 let t = i as f32 / steps as f32;
@@ -238,7 +239,8 @@ impl CurveEditor {
 
             // 检测点击
             if response.clicked() {
-                let click_pos = response.interact_pointer_pos().expect("Test: operation should succeed");
+                let click_pos =
+                    response.interact_pointer_pos().expect("Test: operation should succeed");
                 let distance = ((click_pos.x - x).powi(2) + (click_pos.y - y).powi(2)).sqrt();
 
                 if distance < 10.0 {
@@ -253,7 +255,7 @@ impl CurveEditor {
         if let Some(index) = self.selected_point
             && let Some(point) = self.curve.control_points.get_mut(index)
         {
-            ui.label(format!("Control Point {}", index));
+            ui.label(format!("Control Point {index}"));
 
             ui.horizontal(|ui| {
                 ui.label("Time:");

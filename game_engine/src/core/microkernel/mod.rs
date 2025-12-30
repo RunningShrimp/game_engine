@@ -203,10 +203,8 @@ mod tests {
         let kernel = Microkernel::new();
         let service = DummyService::new("test_service".to_string());
 
-        let service_id = kernel
-            .register_service(service)
-            .await
-            .expect("Failed to register test_service");
+        let service_id =
+            kernel.register_service(service).await.expect("Failed to register test_service");
         assert_eq!(kernel.registry().services().await.len(), 1);
 
         // 验证服务已注册，使用实际的元组结构

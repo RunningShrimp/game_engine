@@ -8,6 +8,7 @@
 use crate::domain::event_registry::EventRegistry;
 use crate::domain::events::{AggregateRoot, DomainEvent, EventError};
 use crate::error::{safe_lock, safe_read, safe_write};
+use crate::serialization::compat::bincode_compat;
 use bevy_ecs::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -227,8 +228,7 @@ impl SnapshotStore for MemorySnapshotStore {
             .max_by_key(|s| s.id)
             .cloned()
             .ok_or(EventError::UnknownEventType(format!(
-                "Snapshot for aggregate {} not found",
-                aggregate_id
+                "Snapshot for aggregate {aggregate_id} not found"
             )))
     }
 
@@ -362,13 +362,13 @@ impl EventSourcingManager {
             // 这里简化处理，实际应该使用事件类型注册表
             let event_type = event.event_type();
             let mut sequence = safe_lock(&self.sequence_generator, "sequence_generator")
-                .map_err(|e| EventError::ApplyFailed(format!("Failed to acquire lock: {}", e)))?;
+                .map_err(|e| EventError::ApplyFailed(format!("Failed to acquire lock: {e}")))?;
             *sequence += 1;
             let event_id = EventId::now(*sequence);
 
             // 使用事件注册表序列化事件
             let registry = safe_read(&self.event_registry, "event_registry")
-                .map_err(|e| EventError::ApplyFailed(format!("Failed to acquire lock: {}", e)))?;
+                .map_err(|e| EventError::ApplyFailed(format!("Failed to acquire lock: {e}")))?;
 
             // 注意：由于DomainEvent trait object的限制，我们需要通过类型ID来序列化
             // 这里简化处理：如果事件类型已注册，尝试序列化；否则使用空数据
@@ -390,7 +390,7 @@ impl EventSourcingManager {
             };
 
             let mut store = safe_write(&self.event_store, "event_store")
-                .map_err(|e| EventError::ApplyFailed(format!("Failed to acquire lock: {}", e)))?;
+                .map_err(|e| EventError::ApplyFailed(format!("Failed to acquire lock: {e}")))?;
             store.save_event(stored_event)?;
             last_event_id = Some(event_id);
         }
@@ -423,14 +423,15 @@ impl EventSourcingManager {
         _world: &World,
     ) -> Result<EventId, EventError> {
         let mut sequence = safe_lock(&self.sequence_generator, "sequence_generator")
-            .map_err(|e| EventError::ApplyFailed(format!("Failed to acquire lock: {}", e)))?;
+            .map_err(|e| EventError::ApplyFailed(format!("Failed to acquire lock: {e}")))?;
         *sequence += 1;
         let event_id = EventId::now(*sequence);
 
         // 序列化事件
         let event_type = event.event_type();
-        let data =
-            bincode::serialize(event).map_err(|e| EventError::SerializationError(e.to_string()))?;
+        let data = bincode_compat::serialize(event)
+            .map_err(Box::new)
+            .map_err(|e| EventError::SerializationError(e.to_string()))?;
 
         let stored_event = StoredEvent {
             id: event_id,
@@ -442,7 +443,7 @@ impl EventSourcingManager {
 
         // 保存事件
         let mut store = safe_write(&self.event_store, "event_store")
-            .map_err(|e| EventError::ApplyFailed(format!("Failed to acquire lock: {}", e)))?;
+            .map_err(|e| EventError::ApplyFailed(format!("Failed to acquire lock: {e}")))?;
         store.save_event(stored_event)?;
 
         Ok(event_id)
@@ -451,7 +452,7 @@ impl EventSourcingManager {
     /// 获取聚合的当前版本号
     fn get_aggregate_version(&self, aggregate_id: &str) -> Result<u64, EventError> {
         let store = safe_read(&self.event_store, "event_store")
-            .map_err(|e| EventError::ApplyFailed(format!("Failed to acquire lock: {}", e)))?;
+            .map_err(|e| EventError::ApplyFailed(format!("Failed to acquire lock: {e}")))?;
         let events = store.get_aggregate_events(aggregate_id);
         Ok(events.iter().map(|e| e.aggregate_version).max().unwrap_or(0))
     }
@@ -466,11 +467,12 @@ impl EventSourcingManager {
         version: u64,
     ) -> Result<EventId, EventError> {
         // 序列化聚合状态
-        let data = bincode::serialize(aggregate)
+        let data = bincode_compat::serialize(aggregate)
+            .map_err(Box::new)
             .map_err(|e| EventError::SerializationError(e.to_string()))?;
 
         let mut sequence = safe_lock(&self.sequence_generator, "sequence_generator")
-            .map_err(|e| EventError::ApplyFailed(format!("Failed to acquire lock: {}", e)))?;
+            .map_err(|e| EventError::ApplyFailed(format!("Failed to acquire lock: {e}")))?;
         *sequence += 1;
         let snapshot_id = EventId::now(*sequence);
 
@@ -483,7 +485,7 @@ impl EventSourcingManager {
         };
 
         let mut store = safe_write(&self.snapshot_store, "snapshot_store")
-            .map_err(|e| EventError::ApplyFailed(format!("Failed to acquire lock: {}", e)))?;
+            .map_err(|e| EventError::ApplyFailed(format!("Failed to acquire lock: {e}")))?;
         store.save_snapshot(snapshot)?;
 
         Ok(snapshot_id)
@@ -492,7 +494,7 @@ impl EventSourcingManager {
     /// 清理旧事件
     fn cleanup_old_events(&self) -> Result<(), EventError> {
         let store = safe_read(&self.event_store, "event_store")
-            .map_err(|e| EventError::ApplyFailed(format!("Failed to acquire lock: {}", e)))?;
+            .map_err(|e| EventError::ApplyFailed(format!("Failed to acquire lock: {e}")))?;
         let all_events = store.get_all_events();
 
         if all_events.len() > self.max_history_length {
@@ -504,7 +506,7 @@ impl EventSourcingManager {
                 .unwrap_or(0);
 
             let mut store = safe_write(&self.event_store, "event_store")
-                .map_err(|e| EventError::ApplyFailed(format!("Failed to acquire lock: {}", e)))?;
+                .map_err(|e| EventError::ApplyFailed(format!("Failed to acquire lock: {e}")))?;
             store.delete_events_before(cutoff_sequence);
         }
 
@@ -520,7 +522,7 @@ impl EventSourcingManager {
         from_version: Option<u64>,
     ) -> Result<Vec<StoredEvent>, EventError> {
         let store = safe_read(&self.event_store, "event_store")
-            .map_err(|e| EventError::ApplyFailed(format!("Failed to acquire lock: {}", e)))?;
+            .map_err(|e| EventError::ApplyFailed(format!("Failed to acquire lock: {e}")))?;
 
         let events = if let Some(from_ver) = from_version {
             store.get_aggregate_events_from_version(aggregate_id, from_ver)
@@ -541,7 +543,7 @@ impl EventSourcingManager {
     ) -> Result<Vec<Box<dyn DomainEvent>>, EventError> {
         let stored_events = self.replay_aggregate_events(aggregate_id, from_version)?;
         let registry = safe_read(&self.event_registry, "event_registry")
-            .map_err(|e| EventError::ApplyFailed(format!("Failed to acquire lock: {}", e)))?;
+            .map_err(|e| EventError::ApplyFailed(format!("Failed to acquire lock: {e}")))?;
 
         let mut deserialized_events = Vec::new();
         for stored_event in stored_events {
@@ -569,10 +571,10 @@ impl EventSourcingManager {
         aggregate_id: &str,
     ) -> Result<(A, u64), EventError> {
         let store = safe_read(&self.snapshot_store, "snapshot_store")
-            .map_err(|e| EventError::ApplyFailed(format!("Failed to acquire lock: {}", e)))?;
+            .map_err(|e| EventError::ApplyFailed(format!("Failed to acquire lock: {e}")))?;
         let snapshot = store.get_latest_snapshot(aggregate_id)?;
 
-        let aggregate: A = bincode::deserialize(&snapshot.data)
+        let aggregate: A = bincode_compat::deserialize(&snapshot.data)
             .map_err(|e| EventError::SerializationError(e.to_string()))?;
 
         Ok((aggregate, snapshot.aggregate_version))
@@ -583,7 +585,7 @@ impl EventSourcingManager {
     /// 用于需要自定义反序列化逻辑的场景
     pub fn get_snapshot_data(&self, aggregate_id: &str) -> Result<(Vec<u8>, u64), EventError> {
         let store = safe_read(&self.snapshot_store, "snapshot_store")
-            .map_err(|e| EventError::ApplyFailed(format!("Failed to acquire lock: {}", e)))?;
+            .map_err(|e| EventError::ApplyFailed(format!("Failed to acquire lock: {e}")))?;
         let snapshot = store.get_latest_snapshot(aggregate_id)?;
         Ok((snapshot.data, snapshot.aggregate_version))
     }
@@ -600,7 +602,7 @@ impl EventSourcingManager {
     /// 查询事件（增强功能）
     pub fn query_events(&self, query: EventQuery) -> Result<Vec<StoredEvent>, EventError> {
         let store = safe_read(&self.event_store, "event_store")
-            .map_err(|e| EventError::ApplyFailed(format!("Failed to acquire lock: {}", e)))?;
+            .map_err(|e| EventError::ApplyFailed(format!("Failed to acquire lock: {e}")))?;
 
         let mut events = if let Some(agg_id) = &query.aggregate_id {
             store.get_aggregate_events(agg_id)
@@ -664,7 +666,7 @@ impl EventSourcingManager {
 
         // 反序列化并应用事件
         let registry = safe_read(&self.event_registry, "event_registry")
-            .map_err(|e| EventError::ApplyFailed(format!("Failed to acquire lock: {}", e)))?;
+            .map_err(|e| EventError::ApplyFailed(format!("Failed to acquire lock: {e}")))?;
 
         for stored_event in events_to_replay {
             if let Ok(event) = registry.deserialize(&stored_event.event_type, &stored_event.data) {
@@ -678,7 +680,7 @@ impl EventSourcingManager {
     /// 获取事件统计（增强功能）
     pub fn get_event_stats(&self, aggregate_id: Option<&str>) -> Result<EventStats, EventError> {
         let store = safe_read(&self.event_store, "event_store")
-            .map_err(|e| EventError::ApplyFailed(format!("Failed to acquire lock: {}", e)))?;
+            .map_err(|e| EventError::ApplyFailed(format!("Failed to acquire lock: {e}")))?;
 
         let events = if let Some(agg_id) = aggregate_id {
             store.get_aggregate_events(agg_id)
@@ -704,13 +706,13 @@ impl EventSourcingManager {
             }
 
             // 时间范围
-            let should_update_oldest = stats.oldest_event_time
-                .map_or(true, |oldest| event.id.timestamp_ns < oldest);
+            let should_update_oldest =
+                stats.oldest_event_time.is_none_or(|oldest| event.id.timestamp_ns < oldest);
             if should_update_oldest {
                 stats.oldest_event_time = Some(event.id.timestamp_ns);
             }
-            let should_update_newest = stats.newest_event_time
-                .map_or(true, |newest| event.id.timestamp_ns > newest);
+            let should_update_newest =
+                stats.newest_event_time.is_none_or(|newest| event.id.timestamp_ns > newest);
             if should_update_newest {
                 stats.newest_event_time = Some(event.id.timestamp_ns);
             }
@@ -862,7 +864,7 @@ impl EventProjectionManager {
     ) -> Result<(), EventError> {
         let name = projection.name().to_string();
         let mut projections = safe_write(&self.projections, "projections")
-            .map_err(|e| EventError::ApplyFailed(format!("Failed to acquire lock: {}", e)))?;
+            .map_err(|e| EventError::ApplyFailed(format!("Failed to acquire lock: {e}")))?;
         projections.insert(name, projection);
         Ok(())
     }
@@ -873,7 +875,7 @@ impl EventProjectionManager {
         // 实际实现需要使用内部可变性（如RefCell）或重新设计
         // 或者使用消息传递模式
         let mut projections = safe_write(&self.projections, "projections")
-            .map_err(|e| EventError::ApplyFailed(format!("Failed to acquire lock: {}", e)))?;
+            .map_err(|e| EventError::ApplyFailed(format!("Failed to acquire lock: {e}")))?;
 
         for projection in projections.values_mut() {
             projection.handle_event(event)?;
@@ -968,9 +970,14 @@ mod tests {
             scene_name: "Test Scene".to_string(),
         };
 
-        let event_id = manager.save_event(&event, Some("Scene_1"), 1, &World::default()).expect("Test: save_event should succeed");
+        let event_id = manager
+            .save_event(&event, Some("Scene_1"), 1, &World::default())
+            .expect("Test: save_event should succeed");
 
-        let stored = safe_read(&store, "event_store").expect("Test: event_store lock should be available").get_event(event_id).expect("Test: event should be found");
+        let stored = safe_read(&store, "event_store")
+            .expect("Test: event_store lock should be available")
+            .get_event(event_id)
+            .expect("Test: event should be found");
 
         assert_eq!(stored.event_type, "SceneLoaded");
         assert_eq!(stored.aggregate_id, Some("Scene_1".to_string()));
@@ -988,10 +995,15 @@ mod tests {
         let mut scene = Scene::new(SceneId(1), "Test Scene");
         scene.load().expect("Test: scene load should succeed"); // 这会添加SceneLoadedEvent
 
-        let event_id = manager.commit_aggregate_events(&mut scene, &mut World::default()).expect("Test: commit events should succeed");
+        let event_id = manager
+            .commit_aggregate_events(&mut scene, &mut World::default())
+            .expect("Test: commit events should succeed");
 
         // 验证事件已保存
-        let stored = safe_read(&store, "event_store").expect("Test: event_store lock should be available").get_event(event_id).expect("Test: event should be found");
+        let stored = safe_read(&store, "event_store")
+            .expect("Test: event_store lock should be available")
+            .get_event(event_id)
+            .expect("Test: event should be found");
         assert_eq!(stored.event_type, "SceneLoaded");
 
         // 验证事件已清除
@@ -1010,9 +1022,13 @@ mod tests {
         scene.load().expect("Test: scene load should succeed");
         scene.activate().expect("Test: scene activate should succeed");
 
-        manager.commit_aggregate_events(&mut scene, &mut World::default()).expect("Test: commit events should succeed");
+        manager
+            .commit_aggregate_events(&mut scene, &mut World::default())
+            .expect("Test: commit events should succeed");
 
-        let events = manager.replay_aggregate_events("Scene_1", None).expect("Test: replay events should succeed");
+        let events = manager
+            .replay_aggregate_events("Scene_1", None)
+            .expect("Test: replay events should succeed");
 
         assert_eq!(events.len(), 2); // SceneLoaded + SceneActivated
     }

@@ -125,15 +125,11 @@ pub mod simd_integration;
 pub mod soft_body;
 pub mod spatial_partition;
 pub mod test_helpers;
+pub mod velocity_components;
 
 pub use batch_sync::{
     BatchSyncBuffer, BatchSyncManager, BatchSyncResource, batch_collect_physics_state_system,
     batch_physics_to_transform_system, position_changed_simd, rotation_changed_simd,
-};
-pub use simd_integration::{
-    ParentTransform, SimdBackendType, SimdPerformanceMonitor, SimdPerformanceStats,
-    SimdPhysicsState, simd_performance_monitor_system, simd_physics_integrate_system,
-    simd_transform_update_system, PhysicsIntegrateBatch, TransformUpdateBatch,
 };
 pub use collision_performance::{
     CollisionPerformanceMonitor, CollisionPerformanceStats, CollisionProfiler,
@@ -146,6 +142,11 @@ pub use multithreaded::{
     MultithreadedPhysicsConfig, MultithreadedPhysicsWorld, PhysicsPerformanceStats,
     multithreaded_physics_step_system, sync_multithreaded_physics_to_transform_system,
 };
+pub use simd_integration::{
+    ParentTransform, PhysicsIntegrateBatch, SimdBackendType, SimdPerformanceMonitor,
+    SimdPerformanceStats, SimdPhysicsState, TransformUpdateBatch, simd_performance_monitor_system,
+    simd_physics_integrate_system, simd_transform_update_system,
+};
 pub use soft_body::{
     ClothConfig, ClothSoftBody, FluidSoftBody, Particle, SoftBodyComponent, SoftBodyPhysicsWorld,
     SoftBodyType, SphParameters, soft_body_physics_system,
@@ -154,6 +155,7 @@ pub use spatial_partition::{
     BVHTree, SpatialHash, SpatialPartitionEnhancedConfig, SpatialPartitionManager,
     SpatialPartitionType,
 };
+pub use velocity_components::{GlobalTransform, InverseMass, Position, Velocity};
 
 // 向后兼容：Enhanced类型现在指向基础版本的增强功能
 /// 增强的空间分区配置（向后兼容别名）
@@ -189,10 +191,10 @@ pub use gpu_particle_physics::{
 // CQRS exports
 pub use cqrs::{
     ApplyImpulseCommand, ApplyImpulseHandler, CreateRigidBodyCommand, CreateRigidBodyHandler,
-    GetBodiesInRadiusHandler, GetBodiesInRadiusQuery, GetBodyPositionHandler,
-    GetBodyPositionQuery, GetDynamicBodiesHandler, GetDynamicBodiesQuery, PhysicsApplicationService,
-    PhysicsQueryModel, RigidBodySnapshot, RemoveRigidBodyCommand, SetVelocityCommand,
-    UpdatePositionCommand, UpdatePositionHandler,
+    GetBodiesInRadiusHandler, GetBodiesInRadiusQuery, GetBodyPositionHandler, GetBodyPositionQuery,
+    GetDynamicBodiesHandler, GetDynamicBodiesQuery, PhysicsApplicationService, PhysicsQueryModel,
+    RemoveRigidBodyCommand, RigidBodySnapshot, SetVelocityCommand, UpdatePositionCommand,
+    UpdatePositionHandler,
 };
 
 // 重新导出富领域对象（推荐使用）

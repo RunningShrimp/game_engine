@@ -369,10 +369,10 @@ mod tests {
         }
 
         let stats = manager.get_stats();
-        println!("Stats: {:#?}", stats);
+        println!("Stats: {stats:#?}");
 
         if let Some(adjustment) = manager.get_adjustment_recommendation() {
-            println!("Adjustment: {:#?}", adjustment);
+            println!("Adjustment: {adjustment:#?}");
         }
     }
 
@@ -383,7 +383,7 @@ mod tests {
 
         println!("Battery Optimization Tips:");
         for tip in manager.get_battery_optimization() {
-            println!("  {}", tip);
+            println!("  {tip}");
         }
     }
 }

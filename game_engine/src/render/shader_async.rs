@@ -530,7 +530,7 @@ impl AsyncShaderCompiler {
                 }
                 Err(e) => {
                     return Err(RenderError::InvalidState {
-                        message: format!("Failed to acquire shader_compile_id lock: {}", e),
+                        message: format!("Failed to acquire shader_compile_id lock: {e}"),
                         severity: crate::error::ErrorSeverity::Error,
                     });
                 }
@@ -550,7 +550,7 @@ impl AsyncShaderCompiler {
         };
 
         self.request_tx.send(request).map_err(|e| RenderError::InvalidState {
-            message: format!("Failed to send compile request: {}", e),
+            message: format!("Failed to send compile request: {e}"),
             severity: crate::error::ErrorSeverity::Error,
         })?;
 

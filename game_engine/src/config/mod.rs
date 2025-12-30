@@ -193,9 +193,10 @@ impl EngineConfig {
             self.graphics.resolution.height = height;
         }
         if let Ok(val) = env::var("ENGINE_GRAPHICS_VSYNC")
-            && let Ok(vsync) = val.parse::<bool>() {
-                self.graphics.vsync = vsync;
-            }
+            && let Ok(vsync) = val.parse::<bool>()
+        {
+            self.graphics.vsync = vsync;
+        }
 
         // 性能配置
         if let Ok(val) = env::var("ENGINE_PERFORMANCE_TARGET_FPS")
@@ -204,9 +205,10 @@ impl EngineConfig {
             self.performance.target_fps = fps;
         }
         if let Ok(val) = env::var("ENGINE_PERFORMANCE_AUTO_OPTIMIZE")
-            && let Ok(auto_optimize) = val.parse::<bool>() {
-                self.performance.auto_optimize = auto_optimize;
-            }
+            && let Ok(auto_optimize) = val.parse::<bool>()
+        {
+            self.performance.auto_optimize = auto_optimize;
+        }
 
         // 音频配置
         if let Ok(val) = env::var("ENGINE_AUDIO_MASTER_VOLUME")
@@ -251,7 +253,7 @@ impl EngineConfig {
                 PathBuf::from(home).join(".config").join("game_engine").join("config.toml");
 
             if let Ok(config) = Self::from_toml_file(&config_path) {
-                println!("Loaded config from {:?}", config_path);
+                println!("Loaded config from {config_path:?}");
                 return config;
             }
         }

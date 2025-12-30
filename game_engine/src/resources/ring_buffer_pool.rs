@@ -101,7 +101,7 @@ impl std::fmt::Display for BlockSize {
             BlockSize::Small => write!(f, "Small(64KB)"),
             BlockSize::Medium => write!(f, "Medium(1MB)"),
             BlockSize::Large => write!(f, "Large(4MB)"),
-            BlockSize::Custom(size) => write!(f, "Custom({}B)", size),
+            BlockSize::Custom(size) => write!(f, "Custom({size}B)"),
         }
     }
 }
@@ -516,7 +516,7 @@ impl RingBufferPool {
 
         // 创建三个环形缓冲区
         for i in 0..TRIPLE_BUFFER_COUNT {
-            let buffer = RingBuffer::new(&device, buffer_size, Some(&format!("Ring Buffer {}", i)));
+            let buffer = RingBuffer::new(&device, buffer_size, Some(&format!("Ring Buffer {i}")));
             ring_buffers.push(buffer);
         }
 

@@ -191,9 +191,7 @@ impl Chunk {
         // 安全检查：验证对齐后的地址确实对齐
         debug_assert!(
             aligned_addr.is_multiple_of(align),
-            "地址对齐失败：地址 {:#x} 未按 {} 字节对齐",
-            aligned_addr,
-            align
+            "地址对齐失败：地址 {aligned_addr:#x} 未按 {align} 字节对齐"
         );
 
         self.used += padding + size;
@@ -634,7 +632,9 @@ mod tests {
         let preallocator = MemoryPoolPreallocator::new();
 
         // 预分配常用大小
-        preallocator.preallocate_common_sizes(2).expect("Test: operation should succeed");
+        preallocator
+            .preallocate_common_sizes(2)
+            .expect("Test: operation should succeed");
 
         // 获取Arena
         let arena = preallocator.get_arena(4096).expect("Test: operation should succeed");

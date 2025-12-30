@@ -543,7 +543,7 @@ mod tests {
         let mut world = World::new();
         let validator = ComponentValidator::new();
 
-        let invalid_entity = Entity::from_raw_and_generation(999, u32::MAX);
+        let invalid_entity = Entity::from_bits_and_generation(999, u32::MAX);
         use std::any::TypeId;
 
         let result = validator.validate_component_insertion(

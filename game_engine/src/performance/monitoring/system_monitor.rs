@@ -434,6 +434,9 @@ mod tests {
 
         let p50 = sampler.percentile(50.0);
         assert!(p50.is_some());
-        assert_eq!(p50.expect("Test: operation should succeed"), Duration::from_millis(16));
+        assert_eq!(
+            p50.expect("Test: operation should succeed"),
+            Duration::from_millis(16)
+        );
     }
 }

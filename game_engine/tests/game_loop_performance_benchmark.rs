@@ -7,8 +7,8 @@
 //! - 验证混合模式减少 1-2% 帧时间
 //! - 测量帧率稳定性 (标准差)
 
-use std::time::{Duration, Instant};
 use bevy_ecs::prelude::*;
+use std::time::{Duration, Instant};
 
 // 导入混合模式游戏循环
 use game_engine::core::engine::game_loop_hybrid::HybridGameLoop;
@@ -55,9 +55,9 @@ async fn async_game_loop_simulation(iterations: u64) -> BenchmarkResult {
 
         // 模拟异步开销 - 每个 await 约 0.5-2μs
         tokio::task::yield_now().await; // 模拟异步调度
-        simulate_physics_update().await;  // 模拟异步物理更新
-        simulate_game_logic().await;      // 模拟异步逻辑更新
-        simulate_render().await;          // 模拟异步渲染
+        simulate_physics_update().await; // 模拟异步物理更新
+        simulate_game_logic().await; // 模拟异步逻辑更新
+        simulate_render().await; // 模拟异步渲染
 
         let frame_time = frame_start.elapsed();
         frame_times.push(frame_time);
@@ -237,7 +237,12 @@ fn sync_game_loop_test(iterations: u64) -> BenchmarkResult {
     }
 
     let total_duration = start.elapsed();
-    calculate_stats("Pure Sync Game Loop", iterations, total_duration, &frame_times)
+    calculate_stats(
+        "Pure Sync Game Loop",
+        iterations,
+        total_duration,
+        &frame_times,
+    )
 }
 
 /// 计算统计数据
@@ -330,13 +335,22 @@ pub async fn run_complete_benchmark() {
         (hybrid_result.avg_frame_time - sync_result.avg_frame_time).as_micros() as f64;
 
     println!("异步 vs 混合模式:");
-    println!("  帧时间减少: {:.2}μs ({:.2}%)", async_vs_hybrid_improvement, async_vs_hybrid_percent);
+    println!(
+        "  帧时间减少: {:.2}μs ({:.2}%)",
+        async_vs_hybrid_improvement, async_vs_hybrid_percent
+    );
     println!("  异步开销估计: {:.2}μs", async_vs_hybrid_improvement);
     println!("\n异步 vs 纯同步:");
-    println!("  帧时间减少: {:.2}μs ({:.2}%)", async_vs_sync_improvement, async_vs_sync_percent);
+    println!(
+        "  帧时间减少: {:.2}μs ({:.2}%)",
+        async_vs_sync_improvement, async_vs_sync_percent
+    );
     println!("  总异步开销: {:.2}μs", async_vs_sync_improvement);
     println!("\n混合模式 vs 纯同步:");
-    println!("  额外开销: {:.2}μs (异步任务轮询)", hybrid_vs_async_overhead);
+    println!(
+        "  额外开销: {:.2}μs (异步任务轮询)",
+        hybrid_vs_async_overhead
+    );
 
     // 帧率稳定性对比
     println!("\n帧率稳定性 (标准差):");
@@ -345,7 +359,8 @@ pub async fn run_complete_benchmark() {
     println!("  纯同步: {:.2}μs", sync_result.stddev_us);
 
     let stability_improvement = async_result.stddev_us - hybrid_result.stddev_us;
-    println!("  稳定性提升: {:.2}μs ({:.1}%)",
+    println!(
+        "  稳定性提升: {:.2}μs ({:.1}%)",
         stability_improvement,
         (stability_improvement / async_result.stddev_us) * 100.0
     );
@@ -437,7 +452,8 @@ fn generate_performance_report(
         hybrid_result.fps,
         hybrid_result.stddev_us,
         ((async_result.avg_frame_time - hybrid_result.avg_frame_time).as_micros() as f64
-            / async_result.avg_frame_time.as_micros() as f64) * 100.0,
+            / async_result.avg_frame_time.as_micros() as f64)
+            * 100.0,
         (async_result.avg_frame_time - hybrid_result.avg_frame_time).as_micros(),
         sync_result.avg_frame_time.as_secs_f64() * 1000.0,
         sync_result.fps,
@@ -446,16 +462,13 @@ fn generate_performance_report(
         (hybrid_result.avg_frame_time - sync_result.avg_frame_time).as_micros(),
         (async_result.avg_frame_time - hybrid_result.avg_frame_time).as_micros(),
         (async_result.avg_frame_time - sync_result.avg_frame_time).as_micros(),
-        (async_result.avg_frame_time - sync_result.avg_frame_time).as_micros() as f64
-            / 16_667.0
+        (async_result.avg_frame_time - sync_result.avg_frame_time).as_micros() as f64 / 16_667.0
             * 100.0,
         (async_result.avg_frame_time - sync_result.avg_frame_time).as_micros(),
-        (async_result.avg_frame_time - sync_result.avg_frame_time).as_micros() as f64
-            / 16_667.0
+        (async_result.avg_frame_time - sync_result.avg_frame_time).as_micros() as f64 / 16_667.0
             * 100.0,
         (hybrid_result.avg_frame_time - sync_result.avg_frame_time).as_micros(),
-        (hybrid_result.avg_frame_time - sync_result.avg_frame_time).as_micros() as f64
-            / 16_667.0
+        (hybrid_result.avg_frame_time - sync_result.avg_frame_time).as_micros() as f64 / 16_667.0
             * 100.0
     );
 

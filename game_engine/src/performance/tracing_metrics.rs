@@ -197,7 +197,7 @@ impl TracingMetricsManager {
                 .map(|anomaly| Bottleneck {
                     name: "Performance Anomaly".to_string(),
                     severity: 50,
-                    description: format!("Performance anomaly detected: {:?}", anomaly),
+                    description: format!("Performance anomaly detected: {anomaly:?}"),
                     suggestion: "Investigate recent changes or system load".to_string(),
                 })
                 .collect();

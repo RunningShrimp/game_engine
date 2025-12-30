@@ -39,6 +39,7 @@
 //! ```
 
 use crate::domain::events::DomainEvent;
+use crate::serialization::compat::bincode_compat;
 use bevy_ecs::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
@@ -108,7 +109,9 @@ impl EventData {
     /// 创建新的事件数据
     pub fn new<E: DomainEvent + serde::Serialize>(event: &E, priority: EventPriority) -> Self {
         let event_type_name = event.event_type().to_string();
-        let data = bincode::serialize(event).unwrap_or_else(|_| Vec::new());
+        let data = bincode_compat::serialize(event)
+            .map_err(Box::new)
+            .unwrap_or_else(|_| Vec::new());
 
         Self {
             event_type_name,
@@ -297,14 +300,14 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_enhanced_event_bus_creation() {
         let bus = EnhancedEventBus::new();
         assert_eq!(bus.get_stats().total_published, 0);
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_event_data_creation() {
         let event = TestEvent { value: 42 };
         let event_data = EventData::new(&event, EventPriority::High);
@@ -313,7 +316,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_event_queue() {
         let mut queue = EventQueue::default();
         assert!(queue.is_empty());

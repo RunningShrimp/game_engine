@@ -16,6 +16,10 @@ pub mod theme;
 /// UI组件模块
 pub mod widgets;
 
+// 测试模块
+#[cfg(test)]
+mod tests;
+
 use crate::impl_default;
 use bevy_ecs::prelude::*;
 use glam::Vec2;

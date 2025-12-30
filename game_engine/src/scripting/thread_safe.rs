@@ -126,7 +126,7 @@ impl ThreadSafeScriptSystem {
                     } else {
                         let _ = result_tx.send(ScriptResult::Error {
                             script_id,
-                            message: format!("Script {} not found", script_id),
+                            message: format!("Script {script_id} not found"),
                         });
                     }
                 }
@@ -158,7 +158,7 @@ impl ThreadSafeScriptSystem {
     pub fn execute(&self, script_id: u64, code: String) -> Result<(), String> {
         self.command_sender
             .send(ScriptCommand::Execute { script_id, code })
-            .map_err(|e| format!("Failed to send command: {}", e))
+            .map_err(|e| format!("Failed to send command: {e}"))
     }
 
     /// 调用函数
@@ -174,14 +174,14 @@ impl ThreadSafeScriptSystem {
                 function_name,
                 args,
             })
-            .map_err(|e| format!("Failed to send command: {}", e))
+            .map_err(|e| format!("Failed to send command: {e}"))
     }
 
     /// 停止脚本
     pub fn stop(&self, script_id: u64) -> Result<(), String> {
         self.command_sender
             .send(ScriptCommand::Stop { script_id })
-            .map_err(|e| format!("Failed to send command: {}", e))
+            .map_err(|e| format!("Failed to send command: {e}"))
     }
 
     /// 获取所有结果
@@ -238,10 +238,8 @@ mod tests {
         let script_system = ThreadSafeScriptSystem::new();
 
         // 先执行脚本 - test context, safe to unwrap for channel send
-        if let Err(e) = script_system.execute(
-            1,
-            "function add(a, b) { return a + b; }".to_string(),
-        ) {
+        if let Err(e) = script_system.execute(1, "function add(a, b) { return a + b; }".to_string())
+        {
             panic!("Failed to execute script: {}", e);
         }
 

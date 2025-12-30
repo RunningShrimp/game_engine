@@ -256,7 +256,7 @@ impl PhysicsAudioBindings {
         api.register_function("play_sound", move |args| {
             if let Some(ScriptValue::String(sound_name)) = args.first() {
                 // 实际实现需要集成音频库
-                ScriptResult::Success(format!("Playing sound: {}", sound_name))
+                ScriptResult::Success(format!("Playing sound: {sound_name}"))
             } else {
                 ScriptResult::Error("play_sound() requires a sound name".to_string())
             }
@@ -265,7 +265,7 @@ impl PhysicsAudioBindings {
         // 播放音乐 (占位实现)
         api.register_function("play_music", move |args| {
             if let Some(ScriptValue::String(music_name)) = args.first() {
-                ScriptResult::Success(format!("Playing music: {}", music_name))
+                ScriptResult::Success(format!("Playing music: {music_name}"))
             } else {
                 ScriptResult::Error("play_music() requires a music name".to_string())
             }
@@ -280,7 +280,7 @@ impl PhysicsAudioBindings {
         api.register_function("set_volume", move |args| {
             if let Some(ScriptValue::Float(volume)) = args.first() {
                 let volume = (*volume as f32).clamp(0.0, 1.0);
-                ScriptResult::Success(format!("Volume set to {}", volume))
+                ScriptResult::Success(format!("Volume set to {volume}"))
             } else {
                 ScriptResult::Error("set_volume() requires a volume value (0.0-1.0)".to_string())
             }
@@ -296,8 +296,7 @@ impl PhysicsAudioBindings {
             ) = (args.first(), args.get(1), args.get(2), args.get(3))
             {
                 ScriptResult::Success(format!(
-                    "Playing 3D sound '{}' at position ({}, {}, {})",
-                    sound_name, x, y, z
+                    "Playing 3D sound '{sound_name}' at position ({x}, {y}, {z})"
                 ))
             } else {
                 ScriptResult::Error("play_sound_3d() requires sound_name, x, y, z".to_string())
@@ -311,7 +310,7 @@ mod tests {
     use super::*;
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_physics_bindings() {
         let mut world = World::new();
         let world_arc = Arc::new(Mutex::new(world));
@@ -347,7 +346,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_audio_bindings() {
         let mut world = World::new();
         let world_arc = Arc::new(Mutex::new(world));

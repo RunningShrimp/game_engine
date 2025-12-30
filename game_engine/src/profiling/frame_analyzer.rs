@@ -292,7 +292,10 @@ mod tests {
         assert_eq!(phase.phase_name, "render");
         assert_eq!(phase.duration.as_micros(), 1000);
         assert_eq!(phase.net_memory(), 512);
-        assert_eq!(phase.gpu_time.expect("Test: operation should succeed").as_micros(), 500);
+        assert_eq!(
+            phase.gpu_time.expect("Test: operation should succeed").as_micros(),
+            500
+        );
         assert_eq!(phase.total_time().as_micros(), 1500);
     }
 
@@ -305,8 +308,14 @@ mod tests {
         assert_eq!(snapshot.phases.len(), 2);
         assert!((snapshot.fps - 62.5).abs() < 0.1);
 
-        assert_eq!(snapshot.phase_percentage("physics").expect("Test: operation should succeed") as i32, 33);
-        assert_eq!(snapshot.phase_percentage("render").expect("Test: operation should succeed") as i32, 66);
+        assert_eq!(
+            snapshot.phase_percentage("physics").expect("Test: operation should succeed") as i32,
+            33
+        );
+        assert_eq!(
+            snapshot.phase_percentage("render").expect("Test: operation should succeed") as i32,
+            66
+        );
     }
 
     #[test]
@@ -334,7 +343,8 @@ mod tests {
         assert_eq!(analyzer.get_frame_count(), 2);
         assert!((analyzer.average_fps() - 60.0).abs() < 5.0);
 
-        let physics_avg = analyzer.average_phase_time("physics").expect("Test: operation should succeed");
+        let physics_avg =
+            analyzer.average_phase_time("physics").expect("Test: operation should succeed");
         assert!(physics_avg.as_micros() > 3000 && physics_avg.as_micros() < 3100);
     }
 

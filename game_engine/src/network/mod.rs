@@ -184,6 +184,7 @@ pub mod synchronization;
 pub mod webrtc;
 
 use crate::impl_default;
+use crate::serialization::compat::bincode_compat;
 
 // Re-export key exchange types
 pub use key_exchange::{
@@ -654,7 +655,7 @@ impl NetworkService {
         let final_data = if let Some(ref compressor) = state.compressor {
             compressor
                 .compress_with_flag(data)
-                .map_err(|e| format!("Compression failed: {}", e))?
+                .map_err(|e| format!("Compression failed: {e}"))?
         } else {
             data.to_vec()
         };
@@ -673,7 +674,7 @@ impl NetworkService {
         let compressor = compression::NetworkCompressor::new();
         let compressed = compressor
             .compress_with_flag(data)
-            .map_err(|e| format!("Compression failed: {}", e))?;
+            .map_err(|e| format!("Compression failed: {e}"))?;
 
         Self::send(
             state,
@@ -757,10 +758,10 @@ pub fn network_update_system(mut state: ResMut<NetworkState>) {
     for msg in messages {
         match msg {
             NetworkMessage::Connect { client_id: _, name } => {
-                log::info!("Client connected: {}", name);
+                log::info!("Client connected: {name}");
             }
             NetworkMessage::Disconnect { client_id } => {
-                log::info!("Client disconnected: {}", client_id);
+                log::info!("Client disconnected: {client_id}");
             }
             NetworkMessage::StateSync { tick, data } => {
                 let decompressed_data = if let Some(ref compressor) = state.compressor {
@@ -772,8 +773,9 @@ pub fn network_update_system(mut state: ResMut<NetworkState>) {
                     data.clone()
                 };
 
-                if let Ok(delta_packet) =
-                    bincode::deserialize::<delta_serialization::DeltaPacket>(&decompressed_data)
+                if let Ok(delta_packet) = bincode_compat::deserialize::<
+                    delta_serialization::DeltaPacket,
+                >(&decompressed_data)
                 {
                     for delta in delta_packet.deltas {
                         log::debug!(
@@ -785,10 +787,10 @@ pub fn network_update_system(mut state: ResMut<NetworkState>) {
                 }
             }
             NetworkMessage::Rpc { id, method, params } => {
-                log::debug!("RPC call: {} (id: {}), params: {:?}", method, id, params);
+                log::debug!("RPC call: {method} (id: {id}), params: {params:?}");
             }
             NetworkMessage::RpcResponse { id, result } => {
-                log::debug!("RPC response for id {}: {:?}", id, result);
+                log::debug!("RPC response for id {id}: {result:?}");
             }
             NetworkMessage::Heartbeat { timestamp } => {
                 let now = crate::core::utils::current_timestamp_ms();
@@ -798,7 +800,7 @@ pub fn network_update_system(mut state: ResMut<NetworkState>) {
                 log::debug!("Received input for tick {}: {} bytes", tick, inputs.len());
             }
             NetworkMessage::TimeSyncRequest { client_send_time } => {
-                log::debug!("Time sync request from client: {}", client_send_time);
+                log::debug!("Time sync request from client: {client_send_time}");
             }
             NetworkMessage::TimeSyncResponse { mut sync } => {
                 if let Some(ref compensation) = state.delay_compensation
@@ -847,7 +849,7 @@ pub fn network_sync_send_system(
     let mut serializer_guard = match serializer.lock() {
         Ok(guard) => guard,
         Err(e) => {
-            eprintln!("Failed to lock delta serializer: {}", e);
+            eprintln!("Failed to lock delta serializer: {e}");
             return;
         }
     };

@@ -89,7 +89,7 @@ pub fn run_event_loop(
 
     // 实际实现需要调用 event_loop.run_app(&mut app)
     // 这里我们保持对 event_loop 的引用以满足编译要求
-    let _loop_id = format!("{:?}", event_loop);
+    let _loop_id = format!("{event_loop:?}");
 
     Ok(())
 }

@@ -381,13 +381,10 @@ impl XrRenderer {
             }));
         }
 
-        let buffer = self.atw_params_buffer.as_ref()
-            .ok_or_else(|| XrError::RuntimeFailure("ATW params buffer not initialized".to_string()))?;
-        self.queue.write_buffer(
-            buffer,
-            0,
-            bytemuck::bytes_of(&params),
-        );
+        let buffer = self.atw_params_buffer.as_ref().ok_or_else(|| {
+            XrError::RuntimeFailure("ATW params buffer not initialized".to_string())
+        })?;
+        self.queue.write_buffer(buffer, 0, bytemuck::bytes_of(&params));
 
         Ok(())
     }
@@ -514,13 +511,10 @@ impl XrRenderer {
             }));
         }
 
-        let buffer = self.foveated_params_buffer.as_ref()
-            .ok_or_else(|| XrError::RuntimeFailure("Foveated params buffer not initialized".to_string()))?;
-        self.queue.write_buffer(
-            buffer,
-            0,
-            bytemuck::bytes_of(&params),
-        );
+        let buffer = self.foveated_params_buffer.as_ref().ok_or_else(|| {
+            XrError::RuntimeFailure("Foveated params buffer not initialized".to_string())
+        })?;
+        self.queue.write_buffer(buffer, 0, bytemuck::bytes_of(&params));
 
         Ok(())
     }

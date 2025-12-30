@@ -150,16 +150,13 @@ impl PluginHotReloadManager {
         // - Box::from_raw() 将原始指针转换为 Box，确保正确释放
         unsafe {
             let library = Library::new(&plugin_path)
-                .map_err(|e| HotReloadError::LoadError(format!("Failed to load library: {}", e)))?;
+                .map_err(|e| HotReloadError::LoadError(format!("Failed to load library: {e}")))?;
 
             // 获取插件创建函数
             // 约定：插件库必须导出 `create_plugin` 函数
             let create_plugin: Symbol<unsafe extern "C" fn() -> *mut dyn EnginePlugin> =
                 library.get(b"create_plugin").map_err(|e| {
-                    HotReloadError::SymbolError(format!(
-                        "Failed to get create_plugin symbol: {}",
-                        e
-                    ))
+                    HotReloadError::SymbolError(format!("Failed to get create_plugin symbol: {e}"))
                 })?;
 
             // 创建插件实例
@@ -370,7 +367,7 @@ mod tests {
     use std::env;
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_new_creates_plugin_directory() {
         let temp = env::temp_dir().join("test_hot_reload_plugins");
         let _ = std::fs::remove_dir_all(&temp);
@@ -381,11 +378,12 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_scan_and_load_empty_returns_empty() {
         let temp = env::temp_dir().join("test_hot_reload_scan");
         let _ = std::fs::remove_dir_all(&temp);
-        let mut mgr = PluginHotReloadManager::new(temp.clone()).expect("Test: operation should succeed");
+        let mut mgr =
+            PluginHotReloadManager::new(temp.clone()).expect("Test: operation should succeed");
         let mut registry = PluginRegistry::new();
         let loaded = mgr.scan_and_load(&mut registry).expect("Test: operation should succeed");
         assert!(loaded.is_empty());

@@ -307,7 +307,7 @@ mod tests {
         if accelerator.is_enabled() {
             println!("Recommended use cases:");
             for use_case in accelerator.recommended_use_cases() {
-                println!("  - {}", use_case);
+                println!("  - {use_case}");
             }
         }
     }
@@ -320,7 +320,7 @@ mod tests {
         if let Some(prediction) =
             accelerator.predict_physics(1, [0.0, 10.0, 0.0], [1.0, 0.0, 0.0], 1.0)
         {
-            println!("Physics Prediction: {:#?}", prediction);
+            println!("Physics Prediction: {prediction:#?}");
             assert!(prediction.confidence > 0.0);
         }
     }
@@ -333,7 +333,7 @@ mod tests {
         if let Some(decision) =
             accelerator.decide_npc_behavior(1, [10.0, 0.0, 0.0], [0.0, 0.0, 0.0], 0.5, 10)
         {
-            println!("NPC Decision: {:#?}", decision);
+            println!("NPC Decision: {decision:#?}");
             assert!(decision.priority > 0.0);
         }
     }

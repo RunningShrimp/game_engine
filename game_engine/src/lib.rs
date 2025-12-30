@@ -23,17 +23,18 @@
 
 // Clippy allowances for game engine architecture
 // Clippy 许可设置：针对游戏引擎架构的特殊需求
-#![allow(dead_code)]  // Optional/test/development features - 可选/测试/开发功能
-#![allow(clippy::too_many_arguments)]  // Complex render/physics APIs justified - 复杂的渲染/物理 API 需要更多参数
-#![allow(clippy::type_complexity)]  // Generic system architecture requires complex types - 泛型系统架构需要复杂类型
-#![allow(clippy::module_inception)]  // Intentional module structure - 故意的模块结构
-#![allow(clippy::useless_conversion)]  // Type conversions for clarity - 为清晰度进行的类型转换
-#![allow(clippy::await_holding_lock)]  // Acceptable in async context - 异步上下文中可接受
-#![allow(unsafe_code)]  // FFI bindings require unsafe - FFI 绑定需要 unsafe
-#![allow(private_interfaces)]  // Trait encapsulation - Trait 封装
-#![allow(unknown_lints)]  // Allow for compatibility - 兼容性考虑
-#![allow(improper_ctypes_definitions)]  // FFI boundary for plugins - 插件的 FFI 边界
-#![allow(async_fn_in_trait)]  // Acceptable for resource API design - 资源 API 设计中可接受
+#![allow(dead_code)] // Optional/test/development features - 可选/测试/开发功能
+#![allow(clippy::too_many_arguments)] // Complex render/physics APIs justified - 复杂的渲染/物理 API 需要更多参数
+#![allow(clippy::type_complexity)] // Generic system architecture requires complex types - 泛型系统架构需要复杂类型
+#![allow(clippy::module_inception)] // Intentional module structure - 故意的模块结构
+#![allow(clippy::useless_conversion)] // Type conversions for clarity - 为清晰度进行的类型转换
+#![allow(clippy::await_holding_lock)] // Acceptable in async context - 异步上下文中可接受
+#![allow(unsafe_code)] // FFI bindings require unsafe - FFI 绑定需要 unsafe
+#![allow(private_interfaces)] // Trait encapsulation - Trait 封装
+#![allow(unknown_lints)] // Allow for compatibility - 兼容性考虑
+#![allow(improper_ctypes_definitions)] // FFI boundary for plugins - 插件的 FFI 边界
+#![allow(async_fn_in_trait)]
+// Acceptable for resource API design - 资源 API 设计中可接受
 // Note: async_fn_in_trait warnings are Rust compiler warnings, not clippy
 // 注意：async_fn_in_trait 是 Rust 编译器警告，不是 clippy
 // These are acceptable trade-offs for the async resource API - 异步资源 API 的可接受权衡
@@ -88,7 +89,6 @@
 //! Status: Active development
 //!
 
-
 // Clippy lint allowances for gradual code quality improvement
 // Clippy lint 许可：渐进式改进代码质量
 #![allow(
@@ -120,6 +120,7 @@ pub mod ecs;
 pub mod editor;
 pub mod engine;
 pub mod error;
+pub mod examples;
 pub mod network;
 pub mod performance;
 pub mod physics;
@@ -132,6 +133,7 @@ pub mod scene;
 pub mod scripting;
 pub mod serialization;
 pub mod services;
+pub mod traits;
 pub mod ui;
 pub mod world;
 pub mod xr;

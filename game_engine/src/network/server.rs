@@ -38,7 +38,7 @@ use crate::network::delay_compensation;
 use crate::network::delta_serialization;
 use crate::network::synchronization;
 use crate::network::{ConnectionState, NetworkError, NetworkMessage};
-use bincode;
+use crate::serialization::compat::bincode_compat;
 use std::collections::HashMap;
 use std::io::Write;
 use std::net::SocketAddr;
@@ -124,7 +124,8 @@ impl ClientConnection {
 
     /// 异步发送消息
     pub async fn send_message(&mut self, message: &NetworkMessage) -> Result<(), NetworkError> {
-        let data = bincode::serialize(message)
+        let data = bincode_compat::serialize(message)
+            .map_err(Box::new)
             .map_err(|e| NetworkError::SerializationError(e.to_string()))?;
 
         self.stream
@@ -153,13 +154,13 @@ impl ClientConnection {
     }
 
     /// 序列化消息
-    fn serialize_message(message: &NetworkMessage) -> Result<Vec<u8>, bincode::Error> {
-        bincode::serialize(message)
+    fn serialize_message(message: &NetworkMessage) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+        bincode_compat::serialize(message)
     }
 
     /// 反序列化消息
-    fn deserialize_message(data: &[u8]) -> Result<NetworkMessage, bincode::Error> {
-        bincode::deserialize::<(NetworkMessage, ())>(data).map(|(msg, _)| msg)
+    fn deserialize_message(data: &[u8]) -> Result<NetworkMessage, Box<dyn std::error::Error>> {
+        bincode_compat::deserialize::<(NetworkMessage, ())>(data).map(|(msg, _)| msg)
     }
 }
 
@@ -213,8 +214,11 @@ pub struct GameServer {
 
 impl GameServer {
     /// 序列化消息（支持压缩）
-    fn serialize_message(&self, message: &NetworkMessage) -> Result<Vec<u8>, bincode::Error> {
-        let data = bincode::serialize(message)?;
+    fn serialize_message(
+        &self,
+        message: &NetworkMessage,
+    ) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+        let data = bincode_compat::serialize(message)?;
 
         // 如果启用了压缩，使用压缩器
         if let Some(compressor) = &self.compressor {
@@ -228,24 +232,27 @@ impl GameServer {
     }
 
     /// 反序列化消息（支持解压）
-    pub fn deserialize_message(&self, data: &[u8]) -> Result<NetworkMessage, bincode::Error> {
+    pub fn deserialize_message(
+        &self,
+        data: &[u8],
+    ) -> Result<NetworkMessage, Box<dyn std::error::Error>> {
         // 首先尝试直接反序列化（未压缩数据）
-        match bincode::deserialize::<NetworkMessage>(data) {
+        match bincode_compat::deserialize::<NetworkMessage>(data) {
             Ok(msg) => Ok(msg),
             Err(_) => {
                 // 如果失败，尝试解压后反序列化
                 if let Some(compressor) = &self.compressor {
                     if let Ok(decompressed) = compressor.decompress(data) {
-                        bincode::deserialize::<NetworkMessage>(&decompressed)
+                        bincode_compat::deserialize::<NetworkMessage>(&decompressed)
                     } else {
-                        Err(bincode::Error::new(bincode::ErrorKind::Custom(
+                        Err(Box::<dyn std::error::Error>::from(
                             "Failed to decompress data".to_string(),
-                        )))
+                        ))
                     }
                 } else {
-                    Err(bincode::Error::new(bincode::ErrorKind::Custom(
+                    Err(Box::<dyn std::error::Error>::from(
                         "Invalid data format".to_string(),
-                    )))
+                    ))
                 }
             }
         }
@@ -306,7 +313,11 @@ impl GameServer {
 
                 // 发送压缩消息
                 let data = Self::serialize_message_with_compression(&response_msg, compressor)
-                    .unwrap_or_else(|_| bincode::serialize(&response_msg).unwrap_or_default());
+                    .unwrap_or_else(|_| {
+                        bincode_compat::serialize(&response_msg)
+                            .map_err(Box::new)
+                            .unwrap_or_default()
+                    });
                 let _ = conn.stream.write_all(&data).await;
             }
             _ => {
@@ -319,8 +330,8 @@ impl GameServer {
     fn serialize_message_with_compression(
         message: &NetworkMessage,
         compressor: Option<&Arc<compression::NetworkCompressor>>,
-    ) -> Result<Vec<u8>, bincode::Error> {
-        let data = bincode::serialize(message)?;
+    ) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+        let data = bincode_compat::serialize(message)?;
 
         // 如果启用了压缩，使用压缩器
         if let Some(compressor) = compressor {
@@ -337,24 +348,24 @@ impl GameServer {
     fn deserialize_message_with_compression(
         data: &[u8],
         compressor: Option<&Arc<compression::NetworkCompressor>>,
-    ) -> Result<NetworkMessage, bincode::Error> {
+    ) -> Result<NetworkMessage, Box<dyn std::error::Error>> {
         // 首先尝试直接反序列化（未压缩数据）
-        match bincode::deserialize::<NetworkMessage>(data) {
+        match bincode_compat::deserialize::<NetworkMessage>(data) {
             Ok(msg) => Ok(msg),
             Err(_) => {
                 // 如果失败，尝试解压后反序列化
                 if let Some(compressor) = compressor {
                     if let Ok(decompressed) = compressor.decompress(data) {
-                        bincode::deserialize::<NetworkMessage>(&decompressed)
+                        bincode_compat::deserialize::<NetworkMessage>(&decompressed)
                     } else {
-                        Err(bincode::Error::new(bincode::ErrorKind::Custom(
+                        Err(Box::<dyn std::error::Error>::from(
                             "Failed to decompress data".to_string(),
-                        )))
+                        ))
                     }
                 } else {
-                    Err(bincode::Error::new(bincode::ErrorKind::Custom(
+                    Err(Box::<dyn std::error::Error>::from(
                         "Invalid data format".to_string(),
-                    )))
+                    ))
                 }
             }
         }
@@ -378,7 +389,8 @@ impl GameServer {
         // 如果有数据需要同步
         if !delta_packet.deltas.is_empty() {
             // 序列化增量包
-            let data = bincode::serialize(&delta_packet)
+            let data = bincode_compat::serialize(&delta_packet)
+                .map_err(Box::new)
                 .map_err(|e| NetworkError::SerializationError(e.to_string()))?;
 
             // 创建状态同步消息
@@ -423,7 +435,7 @@ impl GameServer {
         let address = format!("{}:{}", self.config.bind_address, self.config.port);
         let listener = TcpListener::bind(&address)
             .await
-            .map_err(|e| NetworkError::ConnectionError(format!("Failed to bind: {}", e)))?;
+            .map_err(|e| NetworkError::ConnectionError(format!("Failed to bind: {e}")))?;
 
         *self.running.lock().await = true;
 
@@ -466,10 +478,10 @@ impl GameServer {
     pub fn start_sync(&mut self) -> Result<(), NetworkError> {
         let address = format!("{}:{}", self.config.bind_address, self.config.port);
         let listener = std::net::TcpListener::bind(&address)
-            .map_err(|e| NetworkError::ConnectionError(format!("Failed to bind: {}", e)))?;
+            .map_err(|e| NetworkError::ConnectionError(format!("Failed to bind: {e}")))?;
 
         listener.set_nonblocking(true).map_err(|e| {
-            NetworkError::ConnectionError(format!("Failed to set nonblocking: {}", e))
+            NetworkError::ConnectionError(format!("Failed to set nonblocking: {e}"))
         })?;
 
         // 设置running状态，使用try_lock避免unwrap()导致的panic
@@ -555,7 +567,7 @@ impl GameServer {
                     });
                 }
                 Err(e) => {
-                    eprintln!("Accept error: {}", e);
+                    eprintln!("Accept error: {e}");
                 }
             }
         }
@@ -633,7 +645,7 @@ impl GameServer {
                     std::thread::sleep(Duration::from_millis(10));
                 }
                 Err(e) => {
-                    eprintln!("Accept error: {}", e);
+                    eprintln!("Accept error: {e}");
                 }
             }
         }
@@ -672,7 +684,7 @@ impl GameServer {
                         break;
                     }
                     Err(e) => {
-                        eprintln!("Read error for client {}: {}", client_id, e);
+                        eprintln!("Read error for client {client_id}: {e}");
                         break;
                     }
                 }
@@ -735,7 +747,7 @@ impl GameServer {
                         std::thread::sleep(Duration::from_millis(10));
                     }
                     Err(e) => {
-                        eprintln!("Read error for client {}: {}", client_id, e);
+                        eprintln!("Read error for client {client_id}: {e}");
                         break;
                     }
                 }
@@ -914,11 +926,11 @@ impl GameServer {
             match self.send_compressed_message(conn, message).await {
                 Ok(_) => {
                     // 消息发送成功
-                    println!("Broadcasting message to client {}", client_id);
+                    println!("Broadcasting message to client {client_id}");
                 }
                 Err(e) => {
                     // 发送失败，标记客户端连接需要移除
-                    eprintln!("Failed to broadcast to client {}: {}", client_id, e);
+                    eprintln!("Failed to broadcast to client {client_id}: {e}");
                     clients_to_remove.push(*client_id);
                 }
             }
@@ -954,7 +966,7 @@ impl GameServer {
         let mut clients_guard = self
             .sync_clients
             .try_lock()
-            .map_err(|e| NetworkError::SendError(format!("Lock error: {}", e)))?;
+            .map_err(|e| NetworkError::SendError(format!("Lock error: {e}")))?;
 
         let data = Self::serialize_message_with_compression(message, self.compressor.as_ref())
             .map_err(|e| NetworkError::SerializationError(e.to_string()))?;
@@ -966,11 +978,11 @@ impl GameServer {
             match conn.stream.write_all(&data) {
                 Ok(_) => {
                     // 消息发送成功
-                    println!("Broadcasting message to client {}", client_id);
+                    println!("Broadcasting message to client {client_id}");
                 }
                 Err(e) => {
                     // 发送失败，标记客户端连接需要移除
-                    eprintln!("Failed to broadcast to client {}: {}", client_id, e);
+                    eprintln!("Failed to broadcast to client {client_id}: {e}");
                     clients_to_remove.push(*client_id);
                 }
             }
@@ -992,7 +1004,7 @@ impl GameServer {
         let mut clients_guard = self
             .sync_clients
             .try_lock()
-            .map_err(|e| NetworkError::SendError(format!("Lock error: {}", e)))?;
+            .map_err(|e| NetworkError::SendError(format!("Lock error: {e}")))?;
 
         let data = Self::serialize_message_with_compression(message, self.compressor.as_ref())
             .map_err(|e| NetworkError::SerializationError(e.to_string()))?;
@@ -1004,11 +1016,11 @@ impl GameServer {
             match conn.stream.write_all(&data) {
                 Ok(_) => {
                     // 消息发送成功
-                    println!("Broadcasting message to sync client {}", client_id);
+                    println!("Broadcasting message to sync client {client_id}");
                 }
                 Err(e) => {
                     // 发送失败，标记客户端连接需要移除
-                    eprintln!("Failed to broadcast to sync client {}: {}", client_id, e);
+                    eprintln!("Failed to broadcast to sync client {client_id}: {e}");
                     clients_to_remove.push(*client_id);
                 }
             }
@@ -1031,7 +1043,7 @@ impl GameServer {
         let clients_guard = self
             .clients
             .try_lock()
-            .map_err(|e| NetworkError::SendError(format!("Lock error: {}", e)))?;
+            .map_err(|e| NetworkError::SendError(format!("Lock error: {e}")))?;
 
         if !clients_guard.contains_key(&client_id) {
             return Err(NetworkError::InvalidPeerId);
@@ -1061,7 +1073,7 @@ impl GameServer {
         let mut clients_guard = self
             .sync_clients
             .try_lock()
-            .map_err(|e| NetworkError::SendError(format!("Lock error: {}", e)))?;
+            .map_err(|e| NetworkError::SendError(format!("Lock error: {e}")))?;
 
         if !clients_guard.contains_key(&client_id) {
             return Err(NetworkError::InvalidPeerId);
@@ -1220,7 +1232,7 @@ mod tests {
     use super::*;
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_server_config() {
         let config = ServerConfig::default();
         assert_eq!(config.port, 8080);
@@ -1228,7 +1240,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_server_config_custom() {
         let config = ServerConfig {
             port: 9000,
@@ -1247,7 +1259,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_server_creation() {
         let config = ServerConfig::default();
         let server = GameServer::new(config);
@@ -1255,7 +1267,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_server_address_parsing() {
         let addr_str = "127.0.0.1:8080";
         let addr: SocketAddr = addr_str.parse().unwrap_or_else(|e| {
@@ -1267,7 +1279,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_server_address_parsing_invalid() {
         let addr_str = "invalid_address";
         let addr_result: Result<SocketAddr, _> = addr_str.parse();
@@ -1276,17 +1288,15 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_message_serialization_server() {
-        let msg = NetworkMessage::Heartbeat {
-            timestamp: 54321,
-        };
+        let msg = NetworkMessage::Heartbeat { timestamp: 54321 };
 
-        let serialized = bincode::serialize(&msg);
+        let serialized = bincode_compat::serialize(&msg).map_err(|e| Box::new(e));
         assert!(serialized.is_ok());
 
         let deserialized: Result<NetworkMessage, _> =
-            bincode::deserialize(&serialized.unwrap_or_else(|e| {
+            bincode_compat::deserialize(&serialized.unwrap_or_else(|e| {
                 panic!("Serialization failed: {}", e);
             }));
         assert!(deserialized.is_ok());
@@ -1299,11 +1309,11 @@ mod tests {
             data: vec![],
         };
 
-        let serialized = bincode::serialize(&msg);
+        let serialized = bincode_compat::serialize(&msg).map_err(|e| Box::new(e));
         assert!(serialized.is_ok());
 
         if let Ok(NetworkMessage::StateSync { tick, data }) =
-            bincode::deserialize::<NetworkMessage>(&serialized.unwrap_or_else(|e| {
+            bincode_compat::deserialize::<NetworkMessage>(&serialized.unwrap_or_else(|e| {
                 panic!("Serialization failed: {}", e);
             }))
         {
@@ -1315,7 +1325,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_sync_client_connection_heartbeat() {
         let addr: SocketAddr = "127.0.0.1:8080".parse().unwrap_or_else(|e| {
             panic!("Failed to parse address: {}", e);
@@ -1331,7 +1341,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_timeout_detection() {
         let current = current_timestamp_ms();
         let old_timestamp = current.saturating_sub(20000); // 20秒前
@@ -1344,7 +1354,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_client_id_generation() {
         let id1: u64 = rand::random();
         let id2: u64 = rand::random();

@@ -16,7 +16,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_spatial_hash_insert() {
         let mut spatial_hash = SpatialHash::new(10.0);
 
@@ -25,7 +25,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_spatial_hash_query_nearby() {
         let mut spatial_hash = SpatialHash::new(10.0);
 
@@ -40,7 +40,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_spatial_hash_remove() {
         let mut spatial_hash = SpatialHash::new(10.0);
 
@@ -52,7 +52,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_spatial_hash_update_position() {
         let mut spatial_hash = SpatialHash::new(10.0);
 
@@ -69,7 +69,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_spatial_hash_clear() {
         let mut spatial_hash = SpatialHash::new(10.0);
 
@@ -92,7 +92,8 @@ mod tests {
     // These tests should be revisited when the BVH API is finalized or a simpler wrapper is created
     //
     // #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore]
+    // TODO: Fix compilation errors
     // fn test_bvh_insert() {
     //     let mut bvh = BVHTree::new();
     //
@@ -101,7 +102,8 @@ mod tests {
     // }
     //
     // #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore]
+    // TODO: Fix compilation errors
     // fn test_bvh_query() {
     //     let mut bvh = BVHTree::new();
     //
@@ -114,7 +116,8 @@ mod tests {
     // }
     //
     // #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore]
+    // TODO: Fix compilation errors
     // fn test_bvh_remove() {
     //     let mut bvh = BVHTree::new();
     //
@@ -128,9 +131,8 @@ mod tests {
     // ========================================
     // RigidBodyDesc Tests
     // ========================================
-
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_rigid_body_desc_default() {
         let desc = RigidBodyDesc::default();
 
@@ -152,7 +154,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_rigid_body_desc_kinematic() {
         let desc = RigidBodyDesc {
             body_type: RigidBodyType::Kinematic,
@@ -168,7 +170,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_collider_desc_default() {
         let desc = ColliderDesc::default();
 
@@ -177,7 +179,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_collider_desc_ball() {
         let desc = ColliderDesc {
             shape_type: crate::domain::physics::ShapeType::Ball { radius: 1.5 },
@@ -194,7 +196,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_collider_desc_cuboid() {
         let half_extents = Vec3::new(2.0, 3.0, 4.0);
         let desc = ColliderDesc {
@@ -218,7 +220,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_rigid_body_comp_creation() {
         let comp = RigidBodyComp {
             body_id: RigidBodyId::new(123),
@@ -228,7 +230,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_rigid_body_comp_copy() {
         let comp1 = RigidBodyComp {
             body_id: RigidBodyId::new(456),
@@ -243,7 +245,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_collider_comp_creation() {
         let comp = ColliderComp {
             collider_id: ColliderId::new(789),
@@ -257,7 +259,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_physics_domain_service_create_collider() {
         let mut service = PhysicsDomainService::new();
         let body_id = RigidBodyId::new(1);
@@ -281,7 +283,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_physics_domain_service_step_simulation() {
         let mut service = PhysicsDomainService::new();
         let body_id = RigidBodyId::new(1);
@@ -295,7 +297,8 @@ mod tests {
         );
         service.create_body(body).expect("Test: operation should succeed");
 
-        let initial_pos = service.get_body_position(body_id).expect("Test: operation should succeed");
+        let initial_pos =
+            service.get_body_position(body_id).expect("Test: operation should succeed");
 
         // Step simulation
         service.step_simulation(0.016).expect("Test: operation should succeed");
@@ -307,7 +310,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_physics_domain_service_multiple_steps() {
         let mut service = PhysicsDomainService::new();
         let body_id = RigidBodyId::new(1);
@@ -337,7 +340,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_rigid_body_mass_properties() {
         let body_id = RigidBodyId::new(1);
         let mass = 10.0;
@@ -354,7 +357,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_heavy_vs_light_body() {
         let mut service = PhysicsDomainService::new();
 
@@ -381,12 +384,18 @@ mod tests {
         service.create_body(heavy_body).expect("Test: operation should succeed");
 
         // Apply same impulse
-        service.apply_impulse(light_id, Vec3::new(10.0, 0.0, 0.0)).expect("Test: operation should succeed");
-        service.apply_impulse(heavy_id, Vec3::new(10.0, 0.0, 0.0)).expect("Test: operation should succeed");
+        service
+            .apply_impulse(light_id, Vec3::new(10.0, 0.0, 0.0))
+            .expect("Test: operation should succeed");
+        service
+            .apply_impulse(heavy_id, Vec3::new(10.0, 0.0, 0.0))
+            .expect("Test: operation should succeed");
 
         // Light body should have higher velocity
-        let light_vel = service.get_body_velocity(light_id).expect("Test: operation should succeed");
-        let heavy_vel = service.get_body_velocity(heavy_id).expect("Test: operation should succeed");
+        let light_vel =
+            service.get_body_velocity(light_id).expect("Test: operation should succeed");
+        let heavy_vel =
+            service.get_body_velocity(heavy_id).expect("Test: operation should succeed");
 
         assert!(light_vel.x > heavy_vel.x);
     }
@@ -396,7 +405,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_sphere_sphere_collision() {
         let mut service = PhysicsDomainService::new();
 
@@ -426,8 +435,12 @@ mod tests {
         let collider1 = Collider::ball(ColliderId::new(101), 1.0);
         let collider2 = Collider::ball(ColliderId::new(102), 1.0);
 
-        service.create_collider(collider1, body1_id).expect("Test: operation should succeed");
-        service.create_collider(collider2, body2_id).expect("Test: operation should succeed");
+        service
+            .create_collider(collider1, body1_id)
+            .expect("Test: operation should succeed");
+        service
+            .create_collider(collider2, body2_id)
+            .expect("Test: operation should succeed");
 
         // Step simulation
         service.step_simulation(0.016).expect("Test: operation should succeed");
@@ -441,7 +454,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_spatial_hash_performance() {
         let mut spatial_hash = SpatialHash::new(10.0);
 
@@ -460,7 +473,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_spatial_hash_query_performance() {
         let mut spatial_hash = SpatialHash::new(10.0);
 
@@ -489,7 +502,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_physics_step_performance() {
         let mut service = PhysicsDomainService::new();
 
@@ -524,7 +537,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_concurrent_body_creation() {
         use std::sync::{Arc, Mutex};
         use std::thread;
@@ -564,7 +577,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_very_small_velocity() {
         let mut service = PhysicsDomainService::new();
         let body_id = RigidBodyId::new(1);
@@ -579,7 +592,9 @@ mod tests {
         service.create_body(body).expect("Test: operation should succeed");
 
         // Apply very small impulse
-        service.apply_impulse(body_id, Vec3::new(0.0001, 0.0, 0.0)).expect("Test: operation should succeed");
+        service
+            .apply_impulse(body_id, Vec3::new(0.0001, 0.0, 0.0))
+            .expect("Test: operation should succeed");
 
         // Should handle small values gracefully
         let vel = service.get_body_velocity(body_id).expect("Test: operation should succeed");
@@ -587,7 +602,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_very_large_velocity() {
         let mut service = PhysicsDomainService::new();
         let body_id = RigidBodyId::new(1);
@@ -602,7 +617,9 @@ mod tests {
         service.create_body(body).expect("Test: operation should succeed");
 
         // Apply very large impulse
-        service.apply_impulse(body_id, Vec3::new(10000.0, 0.0, 0.0)).expect("Test: operation should succeed");
+        service
+            .apply_impulse(body_id, Vec3::new(10000.0, 0.0, 0.0))
+            .expect("Test: operation should succeed");
 
         // Should handle large values
         let vel = service.get_body_velocity(body_id).expect("Test: operation should succeed");
@@ -610,7 +627,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_zero_timestep() {
         let mut service = PhysicsDomainService::new();
         let body_id = RigidBodyId::new(1);
@@ -624,7 +641,8 @@ mod tests {
         );
         service.create_body(body).expect("Test: operation should succeed");
 
-        let initial_pos = service.get_body_position(body_id).expect("Test: operation should succeed");
+        let initial_pos =
+            service.get_body_position(body_id).expect("Test: operation should succeed");
 
         // Zero timestep should not change position
         service.step_simulation(0.0).expect("Test: operation should succeed");
@@ -634,7 +652,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_negative_timestep() {
         let mut service = PhysicsDomainService::new();
         let body_id = RigidBodyId::new(1);

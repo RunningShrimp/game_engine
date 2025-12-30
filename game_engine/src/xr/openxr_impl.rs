@@ -65,7 +65,7 @@ impl OpenXrBackend {
         // OpenXR 库保证在成功返回时 Entry 是有效的，失败时返回错误。
         // 这是 OpenXR API 的标准用法，符合库的设计。
         let entry = unsafe { xr::Entry::load() }.map_err(|e| {
-            OpenXrError::InitializationFailed(format!("Failed to load OpenXR: {}", e))
+            OpenXrError::InitializationFailed(format!("Failed to load OpenXR: {e}"))
         })?;
 
         // 创建OpenXR 0.18版本的ApplicationInfo
@@ -88,17 +88,17 @@ impl OpenXrBackend {
                 &[], // 配置层数组
             )
             .map_err(|e| {
-                OpenXrError::InitializationFailed(format!("Failed to create instance: {:?}", e))
+                OpenXrError::InitializationFailed(format!("Failed to create instance: {e:?}"))
             })?;
 
         // 2. 获取系统（HMD）
         let system = instance.system(xr::FormFactor::HEAD_MOUNTED_DISPLAY).map_err(|e| {
-            OpenXrError::InitializationFailed(format!("System query failed: {:?}", e))
+            OpenXrError::InitializationFailed(format!("System query failed: {e:?}"))
         })?;
 
         // 3. 检查系统属性
         let system_properties = instance.system_properties(system).map_err(|e| {
-            OpenXrError::InitializationFailed(format!("Failed to get system properties: {:?}", e))
+            OpenXrError::InitializationFailed(format!("Failed to get system properties: {e:?}"))
         })?;
 
         tracing::info!("OpenXR System: {}", system_properties.system_name);
@@ -107,7 +107,7 @@ impl OpenXrBackend {
         // 4. 获取视图配置
         let view_configs = instance
             .enumerate_view_configurations(system)
-            .map_err(|e| OpenXrError::SystemNotFound(format!("无法获取视图配置: {}", e)))?;
+            .map_err(|e| OpenXrError::SystemNotFound(format!("无法获取视图配置: {e}")))?;
 
         if view_configs.is_empty() {
             return Err(OpenXrError::SystemNotFound(
@@ -121,7 +121,7 @@ impl OpenXrBackend {
         // 5. 获取视图数量（通常是2，左右眼）
         let _view_count = instance
             .enumerate_view_configuration_views(system, _view_config)
-            .map_err(|e| OpenXrError::SystemNotFound(format!("无法获取视图配置视图: {}", e)))?
+            .map_err(|e| OpenXrError::SystemNotFound(format!("无法获取视图配置视图: {e}")))?
             .len();
 
         Ok(Self {
@@ -153,14 +153,14 @@ impl OpenXrBackend {
     /// 获取实例信息（用于调试）
     pub fn instance_info(&self) -> Result<xr::InstanceProperties, OpenXrError> {
         self.instance.properties().map_err(|e| {
-            OpenXrError::InitializationFailed(format!("Failed to get instance properties: {:?}", e))
+            OpenXrError::InitializationFailed(format!("Failed to get instance properties: {e:?}"))
         })
     }
 
     /// 获取系统信息（用于调试）
     pub fn system_info(&self) -> Result<xr::SystemProperties, OpenXrError> {
         self.instance.system_properties(self.system).map_err(|e| {
-            OpenXrError::InitializationFailed(format!("Failed to get system properties: {:?}", e))
+            OpenXrError::InitializationFailed(format!("Failed to get system properties: {e:?}"))
         })
     }
 
@@ -201,8 +201,7 @@ impl OpenXrBackend {
             .create_reference_space(reference_space_type, xr::Posef::IDENTITY)
             .map_err(|e| {
                 OpenXrError::ReferenceSpaceFailed(format!(
-                    "Failed to create reference space: {:?}",
-                    e
+                    "Failed to create reference space: {e:?}"
                 ))
             })?;
 
@@ -320,7 +319,7 @@ impl XrSession for OpenXrBackend {
         // 更新视图
         let time = xr::Time::from_nanos(0); // 实际应该从运行时获取
         self.update_views(time)
-            .map_err(|e: OpenXrError| XrError::RuntimeFailure(format!("{:?}", e)))?;
+            .map_err(|e: OpenXrError| XrError::RuntimeFailure(format!("{e:?}")))?;
 
         Ok(XrFrameState {
             predicted_display_time: 0,

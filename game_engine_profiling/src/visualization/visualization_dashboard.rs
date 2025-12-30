@@ -265,7 +265,7 @@ impl VisualizationDashboard {
         output.push_str("╠════════════════════════════════════════════════╣\n");
 
         for (name, value) in &self.gauge_values {
-            output.push_str(&format!("║ {:<30} │ {:>12.2} ║\n", name, value));
+            output.push_str(&format!("║ {name:<30} │ {value:>12.2} ║\n"));
         }
 
         output.push_str("╚════════════════════════════════════════════════╝\n");
@@ -278,14 +278,14 @@ impl VisualizationDashboard {
             ));
 
             if let (Some(min), Some(max)) = (chart.get_min(), chart.get_max()) {
-                output.push_str(&format!("  Range: {:.2} - {:.2}\n", min, max));
+                output.push_str(&format!("  Range: {min:.2} - {max:.2}\n"));
 
                 if let Some(avg) = chart.get_average() {
-                    output.push_str(&format!("  Average: {:.2}\n", avg));
+                    output.push_str(&format!("  Average: {avg:.2}\n"));
                 }
 
                 if let Some(p95) = chart.get_percentile_95() {
-                    output.push_str(&format!("  P95: {:.2}\n", p95));
+                    output.push_str(&format!("  P95: {p95:.2}\n"));
                 }
             }
         }
@@ -375,7 +375,7 @@ mod tests {
     fn test_chart_percentile() {
         let mut chart = Chart::new("latency", ChartType::LineChart);
         for i in 0..100 {
-            chart.add_value(format!("sample_{}", i), i as f64, i as u64);
+            chart.add_value(format!("sample_{i}"), i as f64, i as u64);
         }
 
         let p95 = chart.get_percentile_95();
@@ -389,7 +389,7 @@ mod tests {
         chart.max_points = 10;
 
         for i in 0..20 {
-            chart.add_value(format!("p_{}", i), i as f64, i as u64);
+            chart.add_value(format!("p_{i}"), i as f64, i as u64);
         }
 
         assert_eq!(chart.point_count(), 10);

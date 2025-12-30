@@ -3,7 +3,7 @@
 // 测试内存分配、组件布局、内存池等内存相关性能
 
 use bevy_ecs::prelude::*;
-use criterion::{black_box, BenchmarkId, Criterion, criterion_group, criterion_main};
+use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
 use game_engine::ecs::{Mesh, Sprite, Transform, Velocity};
 use glam::{Quat, Vec3};
 use std::alloc::{GlobalAlloc, Layout, System};
@@ -51,21 +51,25 @@ fn bench_entity_memory_allocation(c: &mut Criterion) {
     let mut group = c.benchmark_group("entity_memory_allocation");
 
     for entity_count in [100, 1000, 10000].iter() {
-        group.bench_with_input(BenchmarkId::from_parameter(entity_count), entity_count, |b, &count| {
-            b.iter(|| {
-                reset_memory_stats();
-                let mut world = World::new();
+        group.bench_with_input(
+            BenchmarkId::from_parameter(entity_count),
+            entity_count,
+            |b, &count| {
+                b.iter(|| {
+                    reset_memory_stats();
+                    let mut world = World::new();
 
-                for _ in 0..count {
-                    world.spawn((Transform::default(), Velocity::default()));
-                }
+                    for _ in 0..count {
+                        world.spawn((Transform::default(), Velocity::default()));
+                    }
 
-                let alloc_count = get_allocation_count();
-                let bytes_allocated = get_bytes_allocated();
+                    let alloc_count = get_allocation_count();
+                    let bytes_allocated = get_bytes_allocated();
 
-                black_box((world, alloc_count, bytes_allocated));
-            });
-        });
+                    black_box((world, alloc_count, bytes_allocated));
+                });
+            },
+        );
     }
 
     group.finish();
@@ -76,27 +80,33 @@ fn bench_component_memory_allocation(c: &mut Criterion) {
     let mut group = c.benchmark_group("component_memory_allocation");
 
     for component_count in [100, 1000, 10000].iter() {
-        group.bench_with_input(BenchmarkId::from_parameter(component_count), component_count, |b, &count| {
-            b.iter(|| {
-                reset_memory_stats();
-                let mut world = World::new();
+        group.bench_with_input(
+            BenchmarkId::from_parameter(component_count),
+            component_count,
+            |b, &count| {
+                b.iter(|| {
+                    reset_memory_stats();
+                    let mut world = World::new();
 
-                let entities: Vec<Entity> = (0..count)
-                    .map(|_| world.spawn(Transform::default()).id())
-                    .collect();
+                    let entities: Vec<Entity> =
+                        (0..count).map(|_| world.spawn(Transform::default()).id()).collect();
 
-                for entity in entities {
-                    world.entity_mut(entity).insert((
-                        Velocity::default(),
-                        Sprite::default(),
-                        Mesh { vertex_count: 1000, triangle_count: 500 },
-                    ));
-                }
+                    for entity in entities {
+                        world.entity_mut(entity).insert((
+                            Velocity::default(),
+                            Sprite::default(),
+                            Mesh {
+                                vertex_count: 1000,
+                                triangle_count: 500,
+                            },
+                        ));
+                    }
 
-                let alloc_count = get_allocation_count();
-                black_box((world, alloc_count));
-            });
-        });
+                    let alloc_count = get_allocation_count();
+                    black_box((world, alloc_count));
+                });
+            },
+        );
     }
 
     group.finish();
@@ -185,10 +195,13 @@ fn bench_component_layout(c: &mut Criterion) {
                 if i % 2 == 0 {
                     world.spawn((Transform::default(), Velocity::default()));
                 } else {
-                    world.spawn((Transform::default(), Mesh {
-                        vertex_count: 1000,
-                        triangle_count: 500,
-                    }));
+                    world.spawn((
+                        Transform::default(),
+                        Mesh {
+                            vertex_count: 1000,
+                            triangle_count: 500,
+                        },
+                    ));
                 }
             }
 
@@ -205,35 +218,39 @@ fn bench_query_memory_access(c: &mut Criterion) {
     let mut group = c.benchmark_group("query_memory_access");
 
     for entity_count in [100, 1000, 10000].iter() {
-        group.bench_with_input(BenchmarkId::from_parameter(entity_count), entity_count, |b, &count| {
-            let mut world = World::new();
+        group.bench_with_input(
+            BenchmarkId::from_parameter(entity_count),
+            entity_count,
+            |b, &count| {
+                let mut world = World::new();
 
-            for _ in 0..count {
-                world.spawn((
-                    Transform {
-                        pos: Vec3::new(0.0, 0.0, 0.0),
-                        rot: Quat::IDENTITY,
-                        scale: Vec3::ONE,
-                    },
-                    Velocity {
-                        lin: Vec3::new(1.0, 0.0, 0.0),
-                        ang: Vec3::ZERO,
-                    },
-                ));
-            }
-
-            b.iter(|| {
-                let mut query = world.query::<(&mut Transform, &Velocity)>();
-                let mut sum = Vec3::ZERO;
-
-                for (mut transform, velocity) in query.iter_mut(&mut world) {
-                    transform.pos += velocity.lin;
-                    sum += transform.pos;
+                for _ in 0..count {
+                    world.spawn((
+                        Transform {
+                            pos: Vec3::new(0.0, 0.0, 0.0),
+                            rot: Quat::IDENTITY,
+                            scale: Vec3::ONE,
+                        },
+                        Velocity {
+                            lin: Vec3::new(1.0, 0.0, 0.0),
+                            ang: Vec3::ZERO,
+                        },
+                    ));
                 }
 
-                black_box(sum);
-            });
-        });
+                b.iter(|| {
+                    let mut query = world.query::<(&mut Transform, &Velocity)>();
+                    let mut sum = Vec3::ZERO;
+
+                    for (mut transform, velocity) in query.iter_mut(&mut world) {
+                        transform.pos += velocity.lin;
+                        sum += transform.pos;
+                    }
+
+                    black_box(sum);
+                });
+            },
+        );
     }
 
     group.finish();
@@ -244,20 +261,26 @@ fn bench_batch_operations(c: &mut Criterion) {
     let mut group = c.benchmark_group("batch_operations");
 
     for entity_count in [100, 1000, 10000].iter() {
-        group.bench_with_input(BenchmarkId::from_parameter(entity_count), entity_count, |b, &count| {
-            b.iter(|| {
-                reset_memory_stats();
-                let mut world = World::new();
+        group.bench_with_input(
+            BenchmarkId::from_parameter(entity_count),
+            entity_count,
+            |b, &count| {
+                b.iter(|| {
+                    reset_memory_stats();
+                    let mut world = World::new();
 
-                // 批量创建
-                world.spawn_batch((0..count).map(|_| {
-                    (Transform::default(), Velocity::default(), Sprite::default())
-                }));
+                    // 批量创建
+                    world.spawn_batch(
+                        (0..count).map(|_| {
+                            (Transform::default(), Velocity::default(), Sprite::default())
+                        }),
+                    );
 
-                let alloc_count = get_allocation_count();
-                black_box((world, alloc_count));
-            });
-        });
+                    let alloc_count = get_allocation_count();
+                    black_box((world, alloc_count));
+                });
+            },
+        );
     }
 
     group.finish();
@@ -316,7 +339,10 @@ fn bench_memory_fragmentation(c: &mut Criterion) {
                         Transform::default(),
                         Velocity::default(),
                         Sprite::default(),
-                        Mesh { vertex_count: 1000, triangle_count: 500 },
+                        Mesh {
+                            vertex_count: 1000,
+                            triangle_count: 500,
+                        },
                     ));
                 }
             }
@@ -334,11 +360,7 @@ fn bench_memory_fragmentation(c: &mut Criterion) {
 
             // 创建相同大小的分配
             for _ in 0..1000 {
-                world.spawn((
-                    Transform::default(),
-                    Velocity::default(),
-                    Sprite::default(),
-                ));
+                world.spawn((Transform::default(), Velocity::default(), Sprite::default()));
             }
 
             let alloc_count = get_allocation_count();

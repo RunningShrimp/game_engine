@@ -12,17 +12,17 @@
 // 4. **Entity生命周期**: 实体创建、删除、回收的行为应该正确
 // 5. **Transform不变性**: Transform操作应该满足数学属性
 
-use proptest::prelude::*;
-use game_engine::ecs::*;
 use bevy_ecs::prelude::*;
+use game_engine::ecs::*;
+use proptest::prelude::*;
 
 // ============================================================================
 // Test helpers (copied from property_tests.rs)
 // ============================================================================
 
 pub mod strategies {
-    use proptest::prelude::*;
     use glam::Vec3;
+    use proptest::prelude::*;
 
     /// 实体索引策略：生成合理的实体索引
     pub fn entity_index() -> impl Strategy<Value = u32> {
@@ -429,7 +429,7 @@ proptest! {
 // ============================================================================
 
 #[test]
-#[ignore]  // TODO: Fix compilation errors
+#[ignore] // TODO: Fix compilation errors
 fn test_ecs_integration() {
     let mut world = World::new();
     world.insert_resource(game_engine::ecs::Time::default());

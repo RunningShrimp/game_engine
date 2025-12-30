@@ -103,7 +103,7 @@ impl Benchmark {
     pub fn print_results(&self) {
         println!("\n=== Benchmark Results ===\n");
         for result in self.results.values() {
-            println!("{}\n", result);
+            println!("{result}\n");
         }
     }
 

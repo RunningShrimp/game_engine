@@ -50,7 +50,7 @@ pub trait ResultExt<T, E>: Sized {
         location: &'static str,
         context: impl fmt::Display,
     ) -> Result<T, ContextError<E>> {
-        self.context(format!("[{}] {}", location, context))
+        self.context(format!("[{location}] {context}"))
     }
 
     /// 添加文件和行号信息到错误（便捷方法）
@@ -150,7 +150,7 @@ impl<T> IoResultExt<T> for Result<T, io::Error> {
     }
 
     fn context_io(self, context: &str) -> Result<T, String> {
-        self.map_err(|e| format!("{}: {}", context, e))
+        self.map_err(|e| format!("{context}: {e}"))
     }
 }
 
@@ -181,7 +181,7 @@ mod tests {
     use std::io;
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_result_context() {
         let result: Result<(), io::Error> =
             Err(io::Error::new(io::ErrorKind::NotFound, "file.txt"));
@@ -197,7 +197,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_result_with_context() {
         let result: Result<(), io::Error> = Err(io::Error::new(
             io::ErrorKind::PermissionDenied,
@@ -209,7 +209,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_io_result_ext() {
         let result: Result<(), io::Error> =
             Err(io::Error::new(io::ErrorKind::InvalidData, "invalid"));
@@ -223,7 +223,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_option_ext() {
         let option: Option<i32> = None;
 

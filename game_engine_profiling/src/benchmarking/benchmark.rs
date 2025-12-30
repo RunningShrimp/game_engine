@@ -103,7 +103,7 @@ impl Benchmark {
     pub fn print_results(&self) {
         println!("\n=== Benchmark Results ===\n");
         for result in self.results.values() {
-            println!("{}\n", result);
+            println!("{result}\n");
         }
     }
 
@@ -251,7 +251,7 @@ mod tests {
             counter += 1;
         });
 
-        println!("{}", result);
+        println!("{result}");
         assert!(result.avg_duration < Duration::from_millis(1));
     }
 

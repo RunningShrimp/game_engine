@@ -90,7 +90,7 @@ impl EcsScriptBindings {
                         .into_iter()
                         .collect(),
                     );
-                    ScriptResult::Success(format!("{:?}", value))
+                    ScriptResult::Success(format!("{value:?}"))
                 } else {
                     ScriptResult::Error("Transform component not found".to_string())
                 }
@@ -231,7 +231,7 @@ mod tests {
     use super::*;
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_ecs_bindings() {
         let mut world = World::new();
         let world_arc = Arc::new(Mutex::new(world));

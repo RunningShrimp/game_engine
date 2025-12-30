@@ -261,7 +261,7 @@ mod tests {
     #[test]
     fn test_npu_detection() {
         if let Some(npu) = detect_npu() {
-            println!("Detected NPU: {:#?}", npu);
+            println!("Detected NPU: {npu:#?}");
             assert!(npu.tops > 0.0);
         } else {
             println!("No NPU detected");
@@ -271,6 +271,6 @@ mod tests {
     #[test]
     fn test_npu_availability() {
         let available = is_npu_available();
-        println!("NPU available: {}", available);
+        println!("NPU available: {available}");
     }
 }

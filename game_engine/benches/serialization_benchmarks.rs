@@ -3,7 +3,7 @@
 // 测试消息序列化、场景保存/加载等序列化功能
 
 use bincode;
-use criterion::{black_box, BenchmarkId, Criterion, criterion_group, criterion_main};
+use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -19,10 +19,21 @@ struct NetworkMessage {
 
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 enum MessageType {
-    PlayerUpdate { position: (f32, f32, f32), rotation: (f32, f32, f32, f32) },
-    GameState { score: u32, level: u32 },
-    ChatMessage { text: String },
-    EntitySpawn { entity_type: u32, position: (f32, f32, f32) },
+    PlayerUpdate {
+        position: (f32, f32, f32),
+        rotation: (f32, f32, f32, f32),
+    },
+    GameState {
+        score: u32,
+        level: u32,
+    },
+    ChatMessage {
+        text: String,
+    },
+    EntitySpawn {
+        entity_type: u32,
+        position: (f32, f32, f32),
+    },
 }
 
 /// 测试用的场景数据结构
@@ -70,23 +81,27 @@ fn bench_message_serialization(c: &mut Criterion) {
     let mut group = c.benchmark_group("message_serialization");
 
     for message_size in [64, 256, 1024, 4096].iter() {
-        group.bench_with_input(BenchmarkId::from_parameter(message_size), message_size, |b, &size| {
-            let message = NetworkMessage {
-                message_id: 12345,
-                timestamp: 1234567890,
-                player_id: 1,
-                message_type: MessageType::PlayerUpdate {
-                    position: (1.0, 2.0, 3.0),
-                    rotation: (0.0, 0.0, 0.0, 1.0),
-                },
-                data: vec![0u8; size],
-            };
+        group.bench_with_input(
+            BenchmarkId::from_parameter(message_size),
+            message_size,
+            |b, &size| {
+                let message = NetworkMessage {
+                    message_id: 12345,
+                    timestamp: 1234567890,
+                    player_id: 1,
+                    message_type: MessageType::PlayerUpdate {
+                        position: (1.0, 2.0, 3.0),
+                        rotation: (0.0, 0.0, 0.0, 1.0),
+                    },
+                    data: vec![0u8; size],
+                };
 
-            b.iter(|| {
-                let serialized = bincode::serialize(black_box(&message)).unwrap();
-                black_box(serialized)
-            });
-        });
+                b.iter(|| {
+                    let serialized = bincode::serialize(black_box(&message)).unwrap();
+                    black_box(serialized)
+                });
+            },
+        );
     }
 
     group.finish();
@@ -97,25 +112,30 @@ fn bench_message_deserialization(c: &mut Criterion) {
     let mut group = c.benchmark_group("message_deserialization");
 
     for message_size in [64, 256, 1024, 4096].iter() {
-        group.bench_with_input(BenchmarkId::from_parameter(message_size), message_size, |b, &size| {
-            let message = NetworkMessage {
-                message_id: 12345,
-                timestamp: 1234567890,
-                player_id: 1,
-                message_type: MessageType::PlayerUpdate {
-                    position: (1.0, 2.0, 3.0),
-                    rotation: (0.0, 0.0, 0.0, 1.0),
-                },
-                data: vec![0u8; size],
-            };
+        group.bench_with_input(
+            BenchmarkId::from_parameter(message_size),
+            message_size,
+            |b, &size| {
+                let message = NetworkMessage {
+                    message_id: 12345,
+                    timestamp: 1234567890,
+                    player_id: 1,
+                    message_type: MessageType::PlayerUpdate {
+                        position: (1.0, 2.0, 3.0),
+                        rotation: (0.0, 0.0, 0.0, 1.0),
+                    },
+                    data: vec![0u8; size],
+                };
 
-            let serialized = bincode::serialize(&message).unwrap();
+                let serialized = bincode::serialize(&message).unwrap();
 
-            b.iter(|| {
-                let deserialized: NetworkMessage = bincode::deserialize(black_box(&serialized)).unwrap();
-                black_box(deserialized)
-            });
-        });
+                b.iter(|| {
+                    let deserialized: NetworkMessage =
+                        bincode::deserialize(black_box(&serialized)).unwrap();
+                    black_box(deserialized)
+                });
+            },
+        );
     }
 
     group.finish();
@@ -126,14 +146,18 @@ fn bench_scene_serialization(c: &mut Criterion) {
     let mut group = c.benchmark_group("scene_serialization");
 
     for entity_count in [10, 100, 1000].iter() {
-        group.bench_with_input(BenchmarkId::from_parameter(entity_count), entity_count, |b, &count| {
-            let scene = create_test_scene(count);
+        group.bench_with_input(
+            BenchmarkId::from_parameter(entity_count),
+            entity_count,
+            |b, &count| {
+                let scene = create_test_scene(count);
 
-            b.iter(|| {
-                let serialized = bincode::serialize(black_box(&scene)).unwrap();
-                black_box(serialized)
-            });
-        });
+                b.iter(|| {
+                    let serialized = bincode::serialize(black_box(&scene)).unwrap();
+                    black_box(serialized)
+                });
+            },
+        );
     }
 
     group.finish();
@@ -144,15 +168,20 @@ fn bench_scene_deserialization(c: &mut Criterion) {
     let mut group = c.benchmark_group("scene_deserialization");
 
     for entity_count in [10, 100, 1000].iter() {
-        group.bench_with_input(BenchmarkId::from_parameter(entity_count), entity_count, |b, &count| {
-            let scene = create_test_scene(count);
-            let serialized = bincode::serialize(&scene).unwrap();
+        group.bench_with_input(
+            BenchmarkId::from_parameter(entity_count),
+            entity_count,
+            |b, &count| {
+                let scene = create_test_scene(count);
+                let serialized = bincode::serialize(&scene).unwrap();
 
-            b.iter(|| {
-                let deserialized: SceneData = bincode::deserialize(black_box(&serialized)).unwrap();
-                black_box(deserialized)
-            });
-        });
+                b.iter(|| {
+                    let deserialized: SceneData =
+                        bincode::deserialize(black_box(&serialized)).unwrap();
+                    black_box(deserialized)
+                });
+            },
+        );
     }
 
     group.finish();
@@ -163,14 +192,18 @@ fn bench_json_serialization(c: &mut Criterion) {
     let mut group = c.benchmark_group("json_serialization");
 
     for entity_count in [10, 100].iter() {
-        group.bench_with_input(BenchmarkId::from_parameter(entity_count), entity_count, |b, &count| {
-            let scene = create_test_scene(count);
+        group.bench_with_input(
+            BenchmarkId::from_parameter(entity_count),
+            entity_count,
+            |b, &count| {
+                let scene = create_test_scene(count);
 
-            b.iter(|| {
-                let serialized = serde_json::to_string(black_box(&scene)).unwrap();
-                black_box(serialized)
-            });
-        });
+                b.iter(|| {
+                    let serialized = serde_json::to_string(black_box(&scene)).unwrap();
+                    black_box(serialized)
+                });
+            },
+        );
     }
 
     group.finish();
@@ -181,15 +214,20 @@ fn bench_json_deserialization(c: &mut Criterion) {
     let mut group = c.benchmark_group("json_deserialization");
 
     for entity_count in [10, 100].iter() {
-        group.bench_with_input(BenchmarkId::from_parameter(entity_count), entity_count, |b, &count| {
-            let scene = create_test_scene(count);
-            let serialized = serde_json::to_string(&scene).unwrap();
+        group.bench_with_input(
+            BenchmarkId::from_parameter(entity_count),
+            entity_count,
+            |b, &count| {
+                let scene = create_test_scene(count);
+                let serialized = serde_json::to_string(&scene).unwrap();
 
-            b.iter(|| {
-                let deserialized: SceneData = serde_json::from_str(black_box(&serialized)).unwrap();
-                black_box(deserialized)
-            });
-        });
+                b.iter(|| {
+                    let deserialized: SceneData =
+                        serde_json::from_str(black_box(&serialized)).unwrap();
+                    black_box(deserialized)
+                });
+            },
+        );
     }
 
     group.finish();
@@ -230,8 +268,8 @@ fn bench_load_game(c: &mut Criterion) {
 
 /// Benchmark压缩性能
 fn bench_compression(c: &mut Criterion) {
-    use flate2::write::{GzEncoder, DeflateEncoder};
     use flate2::Compression;
+    use flate2::write::{DeflateEncoder, GzEncoder};
     use std::io::Write;
 
     let mut group = c.benchmark_group("compression");
@@ -363,17 +401,21 @@ fn create_large_save_data() -> SaveGameData {
             visited_areas: (0..100).map(|i| format!("Area_{}", i)).collect(),
             world_time: 12345.67,
         },
-        inventory: (0..50).map(|i| ItemData {
-            item_id: i,
-            quantity: 10,
-            durability: 100.0,
-        }).collect(),
-        quest_progress: (0..20).map(|i| QuestData {
-            quest_id: i,
-            status: 1,
-            objectives_completed: 3,
-            total_objectives: 5,
-        }).collect(),
+        inventory: (0..50)
+            .map(|i| ItemData {
+                item_id: i,
+                quantity: 10,
+                durability: 100.0,
+            })
+            .collect(),
+        quest_progress: (0..20)
+            .map(|i| QuestData {
+                quest_id: i,
+                status: 1,
+                objectives_completed: 3,
+                total_objectives: 5,
+            })
+            .collect(),
     }
 }
 

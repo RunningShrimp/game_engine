@@ -356,9 +356,10 @@ impl BehaviorTreeEditor {
         ui.separator();
 
         if ui.button("New").clicked()
-            && let Err(e) = self.create_tree("New Behavior Tree".to_string()) {
-                tracing::warn!("Failed to create tree: {}", e);
-            }
+            && let Err(e) = self.create_tree("New Behavior Tree".to_string())
+        {
+            tracing::warn!("Failed to create tree: {}", e);
+        }
 
         if ui.button("Save").clicked()
             && let Err(e) = self.save_current_tree()

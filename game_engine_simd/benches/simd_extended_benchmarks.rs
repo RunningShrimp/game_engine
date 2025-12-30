@@ -1,9 +1,9 @@
 // SIMD扩展性能基准测试
 //
 // 验证SIMD优化带来的15-25%性能提升
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use criterion::{BenchmarkId, Criterion, Throughput, black_box, criterion_group, criterion_main};
 use game_engine_simd::{
-    PhysicsIntegrator, TransformBatchUpdater, Vec3Simd, Vec4Simd, Mat4Simd,
+    Mat4Simd, PhysicsIntegrator, TransformBatchUpdater, Vec3Simd, Vec4Simd, VectorOps,
 };
 
 // ============================================================================
@@ -24,11 +24,7 @@ fn bench_update_velocities_scalar(
     }
 }
 
-fn bench_update_positions_scalar(
-    positions: &mut [[f32; 4]],
-    velocities: &[[f32; 4]],
-    dt: f32,
-) {
+fn bench_update_positions_scalar(positions: &mut [[f32; 4]], velocities: &[[f32; 4]], dt: f32) {
     for i in 0..positions.len() {
         positions[i][0] += velocities[i][0] * dt;
         positions[i][1] += velocities[i][1] * dt;
@@ -142,21 +138,25 @@ fn benchmark_transform_update(c: &mut Criterion) {
 
     for size in [50, 100, 250, 500, 1000].iter() {
         let transforms: Vec<[[f32; 4]; 4]> = (0..*size)
-            .map(|_| [
-                [1.0, 0.0, 0.0, 0.0],
-                [0.0, 1.0, 0.0, 0.0],
-                [0.0, 0.0, 1.0, 0.0],
-                [1.0, 2.0, 3.0, 1.0],
-            ])
+            .map(|_| {
+                [
+                    [1.0, 0.0, 0.0, 0.0],
+                    [0.0, 1.0, 0.0, 0.0],
+                    [0.0, 0.0, 1.0, 0.0],
+                    [1.0, 2.0, 3.0, 1.0],
+                ]
+            })
             .collect();
 
         let parents: Vec<[[f32; 4]; 4]> = (0..*size)
-            .map(|_| [
-                [2.0, 0.0, 0.0, 0.0],
-                [0.0, 2.0, 0.0, 0.0],
-                [0.0, 0.0, 2.0, 0.0],
-                [0.0, 0.0, 0.0, 1.0],
-            ])
+            .map(|_| {
+                [
+                    [2.0, 0.0, 0.0, 0.0],
+                    [0.0, 2.0, 0.0, 0.0],
+                    [0.0, 0.0, 2.0, 0.0],
+                    [0.0, 0.0, 0.0, 1.0],
+                ]
+            })
             .collect();
 
         group.throughput(Throughput::Elements(*size as u64));
@@ -214,7 +214,14 @@ fn benchmark_vec4_dot(c: &mut Criterion) {
             .collect();
 
         let v2: Vec<Vec4Simd> = (0..*size)
-            .map(|i| Vec4Simd::new((i + 4) as f32, (i + 5) as f32, (i + 6) as f32, (i + 7) as f32))
+            .map(|i| {
+                Vec4Simd::new(
+                    (i + 4) as f32,
+                    (i + 5) as f32,
+                    (i + 6) as f32,
+                    (i + 7) as f32,
+                )
+            })
             .collect();
 
         group.throughput(Throughput::Elements(*size as u64));
@@ -226,12 +233,7 @@ fn benchmark_vec4_dot(c: &mut Criterion) {
 
         // SIMD实现
         group.bench_with_input(BenchmarkId::new("simd", size), size, |b, _| {
-            b.iter(|| {
-                v1.iter()
-                    .zip(v2.iter())
-                    .map(|(a, b)| a.dot(b))
-                    .collect::<Vec<_>>()
-            })
+            b.iter(|| v1.iter().zip(v2.iter()).map(|(a, b)| a.dot(b)).collect::<Vec<_>>())
         });
     }
 
@@ -305,36 +307,44 @@ fn benchmark_scene_graph_update(c: &mut Criterion) {
 
     for node_count in [50, 100, 250, 500].iter() {
         let local_transforms: Vec<[[f32; 4]; 4]> = (0..*node_count)
-            .map(|_| [
-                [1.0, 0.0, 0.0, 0.0],
-                [0.0, 1.0, 0.0, 0.0],
-                [0.0, 0.0, 1.0, 0.0],
-                [1.0, 2.0, 3.0, 1.0],
-            ])
+            .map(|_| {
+                [
+                    [1.0, 0.0, 0.0, 0.0],
+                    [0.0, 1.0, 0.0, 0.0],
+                    [0.0, 0.0, 1.0, 0.0],
+                    [1.0, 2.0, 3.0, 1.0],
+                ]
+            })
             .collect();
 
         let parent_transforms: Vec<[[f32; 4]; 4]> = (0..*node_count)
-            .map(|_| [
-                [1.0, 0.0, 0.0, 0.0],
-                [0.0, 1.0, 0.0, 0.0],
-                [0.0, 0.0, 1.0, 0.0],
-                [0.0, 0.0, 0.0, 1.0],
-            ])
+            .map(|_| {
+                [
+                    [1.0, 0.0, 0.0, 0.0],
+                    [0.0, 1.0, 0.0, 0.0],
+                    [0.0, 0.0, 1.0, 0.0],
+                    [0.0, 0.0, 0.0, 1.0],
+                ]
+            })
             .collect();
 
         group.throughput(Throughput::Elements(*node_count as u64));
 
         // 标量场景图更新
-        group.bench_with_input(BenchmarkId::new("scalar", node_count), node_count, |b, _| {
-            let mut results = vec![[[0.0; 4]; 4]; *node_count];
-            b.iter(|| {
-                bench_transform_mul_scalar(
-                    black_box(&local_transforms),
-                    black_box(&parent_transforms),
-                    black_box(&mut results),
-                )
-            })
-        });
+        group.bench_with_input(
+            BenchmarkId::new("scalar", node_count),
+            node_count,
+            |b, _| {
+                let mut results = vec![[[0.0; 4]; 4]; *node_count];
+                b.iter(|| {
+                    bench_transform_mul_scalar(
+                        black_box(&local_transforms),
+                        black_box(&parent_transforms),
+                        black_box(&mut results),
+                    )
+                })
+            },
+        );
 
         // SIMD场景图更新
         group.bench_with_input(BenchmarkId::new("simd", node_count), node_count, |b, _| {

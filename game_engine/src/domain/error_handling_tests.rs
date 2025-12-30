@@ -261,11 +261,19 @@ mod tests {
         );
 
         // 验证JSON数据可以正确访问
-        let pos = action.data.get("position").and_then(|v| v.as_array()).expect("Test: operation should succeed");
+        let pos = action
+            .data
+            .get("position")
+            .and_then(|v| v.as_array())
+            .expect("Test: operation should succeed");
         assert_eq!(pos.len(), 3);
         assert_eq!(pos[0].as_f64(), Some(1.0));
 
-        let mass = action.data.get("mass").and_then(|v| v.as_f64()).expect("Test: operation should succeed");
+        let mass = action
+            .data
+            .get("mass")
+            .and_then(|v| v.as_f64())
+            .expect("Test: operation should succeed");
         assert_eq!(mass, 5.0);
     }
 
@@ -650,7 +658,8 @@ mod tests {
         body.rotation = Quat::IDENTITY;
 
         // 恢复旋转（注意：当前实现不恢复旋转，只恢复位置、速度、质量等）
-        body.restore_from_compensation(&compensation).expect("Test: operation should succeed");
+        body.restore_from_compensation(&compensation)
+            .expect("Test: operation should succeed");
 
         // 验证位置已恢复（旋转恢复需要实现）
         assert_eq!(body.position, Vec3::ZERO);
@@ -711,7 +720,9 @@ mod tests {
             }),
         );
 
-        source.restore_from_compensation(&compensation).expect("Test: operation should succeed");
+        source
+            .restore_from_compensation(&compensation)
+            .expect("Test: operation should succeed");
         // 无效状态应该被设置为Stopped
         assert_eq!(source.state, AudioSourceState::Stopped);
         assert!((source.volume.value() - 0.8).abs() < 0.001);
@@ -730,7 +741,9 @@ mod tests {
             }),
         );
 
-        source.restore_from_compensation(&compensation).expect("Test: operation should succeed");
+        source
+            .restore_from_compensation(&compensation)
+            .expect("Test: operation should succeed");
         // 无效音量应该被忽略，保持原值
         assert_eq!(source.volume.value(), 1.0); // 默认值
     }

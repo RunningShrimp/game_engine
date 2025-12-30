@@ -61,10 +61,14 @@ pub mod render_error;
 pub mod resource_error;
 /// 重试机制 - 错误重试执行器和配置
 pub mod retry;
+/// 序列化错误类型 - 序列化和反序列化错误
+pub mod serialization;
 /// 系统错误类型 - 系统级别的错误
 pub mod system_error;
 /// 错误处理Trait - 减少重复代码的工具trait
 pub mod traits;
+/// 统一错误处理模式 - 提供EngineError统一错误类型
+pub mod unified;
 
 // Serde imports for serialization/deserialization
 use serde::{Deserialize, Serialize};
@@ -82,11 +86,15 @@ pub use render_error::RenderError;
 pub use resource_error::ResourceError;
 /// 脚本相关错误
 pub use script_error::ScriptError;
+pub use serialization::SerializationError;
 pub use system_error::SystemError;
+pub use unified::EngineError as UnifiedEngineError;
 
 // 重新导出错误处理策略
 pub use lock_safety::{
-    LockError, ScopedLock, safe_lock, safe_read, safe_write, try_lock, try_read, try_write,
+    LockError, ScopedLock, safe_lock, safe_lock_pl, safe_read, safe_read_arc_pl, safe_read_pl,
+    safe_write, safe_write_arc_pl, safe_write_pl, try_lock, try_lock_pl, try_read, try_read_pl,
+    try_write, try_write_pl,
 };
 pub use monitoring::{
     DefaultReportGenerator, ErrorDetail, ErrorMonitor, ErrorReport, ErrorReportGenerator,
@@ -113,9 +121,13 @@ pub use traits::{ContextError, IoResultExt, OptionExt, ResultExt};
 pub use convenience::{
     Validator, check_non_empty_or_err, check_range_or_err, log_option, log_result,
     map_get_mut_or_err, map_get_or_err, ok_or_else_err, option_to_result, parse_to_number_or_err,
-    safe_unwrap_option, safe_unwrap_result, safe_unwrap_with_log, unwrap_or_context,
-    unwrap_or_default, unwrap_or_else_default, vec_get_mut_or_err, vec_get_or_err,
+    safe_unwrap_option, safe_unwrap_result, unwrap_or_context, unwrap_or_default,
+    unwrap_or_else_default, vec_get_mut_or_err, vec_get_or_err,
 };
+
+// Only export safe_unwrap_with_log in debug builds
+#[cfg(debug_assertions)]
+pub use convenience::safe_unwrap_with_log;
 
 /// 错误严重级别 - 表示错误的严重程度
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -176,7 +188,7 @@ impl std::str::FromStr for ErrorSeverity {
             "ERROR" => Ok(ErrorSeverity::Error),
             "CRITICAL" => Ok(ErrorSeverity::Critical),
             "FATAL" => Ok(ErrorSeverity::Fatal),
-            _ => Err(format!("Unknown error severity: {}", s)),
+            _ => Err(format!("Unknown error severity: {s}")),
         }
     }
 }
@@ -316,7 +328,7 @@ mod tests {
     use std::str::FromStr;
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_error_severity() {
         assert_eq!(ErrorSeverity::Info.as_str(), "INFO");
         assert_eq!(ErrorSeverity::Fatal.as_str(), "FATAL");
@@ -330,7 +342,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_error_category() {
         assert_eq!(ErrorCategory::Render.as_str(), "RENDER");
         assert_eq!(ErrorCategory::Physics.as_str(), "PHYSICS");

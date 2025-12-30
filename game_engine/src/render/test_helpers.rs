@@ -35,8 +35,7 @@ pub struct RenderBatch {
 }
 
 /// OptimizationStrategy for batch optimizer tests
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum OptimizationStrategy {
     /// No optimization
     None,
@@ -48,4 +47,3 @@ pub enum OptimizationStrategy {
     /// Merge by mesh
     MergeByMesh,
 }
-

@@ -336,12 +336,12 @@ impl GPUComparativeBenchmarkSuite {
         let test_sizes = vec![1000, 10000, 100000];
 
         for size in test_sizes {
-            let bench = PerformanceBenchmark::new(format!("Size {}", size), size, 100);
+            let bench = PerformanceBenchmark::new(format!("Size {size}"), size, 100);
 
             // 物理模拟
             let cpu_physics = bench.benchmark_cpu_physics();
             let gpu_physics = GPUSimulationResult::new(
-                format!("GPU Physics ({})", size),
+                format!("GPU Physics ({size})"),
                 size,
                 100,
                 cpu_physics.duration_us * 0.1, // 假设 GPU 快 10 倍
@@ -351,7 +351,7 @@ impl GPUComparativeBenchmarkSuite {
             // 碰撞检测
             let cpu_collision = bench.benchmark_cpu_collision();
             let gpu_collision = GPUSimulationResult::new(
-                format!("GPU Collision ({})", size),
+                format!("GPU Collision ({size})"),
                 size * size,
                 100,
                 cpu_collision.duration_us * 0.05, // 假设 GPU 快 20 倍
@@ -361,7 +361,7 @@ impl GPUComparativeBenchmarkSuite {
             // 粒子系统
             let cpu_particles = bench.benchmark_cpu_particles();
             let gpu_particles = GPUSimulationResult::new(
-                format!("GPU Particles ({})", size),
+                format!("GPU Particles ({size})"),
                 size,
                 100,
                 cpu_particles.duration_us * 0.15, // 假设 GPU 快 6-7 倍
@@ -371,7 +371,7 @@ impl GPUComparativeBenchmarkSuite {
             // 路径规划
             let cpu_pathfinding = bench.benchmark_cpu_pathfinding();
             let gpu_pathfinding = GPUSimulationResult::new(
-                format!("GPU Pathfinding ({})", size),
+                format!("GPU Pathfinding ({size})"),
                 size,
                 100,
                 cpu_pathfinding.duration_us * 0.08, // 假设 GPU 快 12 倍

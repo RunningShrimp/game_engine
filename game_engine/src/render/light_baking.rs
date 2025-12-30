@@ -135,7 +135,7 @@ impl LightBaker {
     pub fn save_lightmap(&self, entity_id: u64, path: &PathBuf) -> Result<(), RenderError> {
         let Some(lightmap) = self.lightmaps.get(&entity_id) else {
             return Err(RenderError::InvalidState {
-                message: format!("Lightmap not found for entity {}", entity_id),
+                message: format!("Lightmap not found for entity {entity_id}"),
                 severity: crate::error::ErrorSeverity::Error,
             });
         };

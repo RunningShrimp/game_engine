@@ -694,6 +694,9 @@ mod tests {
         let snapshot = manager.rollback_to(5);
         assert!(snapshot.is_some());
         assert_eq!(snapshot.expect("Test: operation should succeed").tick, 5);
-        assert_eq!(snapshot.expect("Test: operation should succeed").entity_states.len(), 1);
+        assert_eq!(
+            snapshot.expect("Test: operation should succeed").entity_states.len(),
+            1
+        );
     }
 }

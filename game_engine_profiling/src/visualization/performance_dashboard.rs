@@ -317,16 +317,16 @@ impl PerformanceDashboard {
 
         let summaries = self.get_all_summaries();
         for (name, summary) in summaries {
-            report.push_str(&format!("### {}\n", name));
+            report.push_str(&format!("### {name}\n"));
             report.push_str(&format!("- 数据点: {}\n", summary.count));
             if let Some(avg) = summary.average {
-                report.push_str(&format!("- 平均值: {:.2}\n", avg));
+                report.push_str(&format!("- 平均值: {avg:.2}\n"));
             }
             if let Some(max) = summary.max {
-                report.push_str(&format!("- 最大值: {:.2}\n", max));
+                report.push_str(&format!("- 最大值: {max:.2}\n"));
             }
             if let Some(min) = summary.min {
-                report.push_str(&format!("- 最小值: {:.2}\n", min));
+                report.push_str(&format!("- 最小值: {min:.2}\n"));
             }
             report.push_str(&format!("- 趋势: {:?}\n", summary.trend));
             report.push_str(&format!("- 告警: {}\n\n", summary.alert_count));

@@ -282,7 +282,7 @@ mod tests {
     #[test]
     fn test_soc_detection() {
         if let Some(soc) = detect_soc() {
-            println!("Detected SoC: {:#?}", soc);
+            println!("Detected SoC: {soc:#?}");
             assert!(soc.cpu_cores > 0);
         } else {
             println!("No SoC detected (likely desktop platform)");
@@ -292,6 +292,6 @@ mod tests {
     #[test]
     fn test_mobile_platform() {
         let is_mobile = is_mobile_platform();
-        println!("Is mobile platform: {}", is_mobile);
+        println!("Is mobile platform: {is_mobile}");
     }
 }

@@ -364,7 +364,7 @@ impl CriticalPathBenchmarks {
         for _ in 0..iterations {
             let mut map: HashMap<i32, String> = HashMap::new();
             for i in 0..100 {
-                map.insert(i, format!("key_{}", i));
+                map.insert(i, format!("key_{i}"));
             }
             let _ = map.len();
         }

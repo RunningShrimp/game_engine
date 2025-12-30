@@ -396,7 +396,7 @@ impl From<crate::error::ResourceError> for CommonAssetError {
             // For other resource errors, convert to generic load failed
             _ => Self::LoadFailed {
                 path: "unknown".to_string(),
-                reason: format!("Resource error: {:?}", error),
+                reason: format!("Resource error: {error:?}"),
             },
         }
     }
@@ -405,14 +405,14 @@ impl From<crate::error::ResourceError> for CommonAssetError {
 impl From<crate::error::PhysicsError> for CommonPhysicsError {
     fn from(error: crate::error::PhysicsError) -> Self {
         // 将具体物理错误压缩为统一的配置/初始化错误描述，避免枚举差异导致编译失败
-        Self::InvalidConfig(format!("{:?}", error))
+        Self::InvalidConfig(format!("{error:?}"))
     }
 }
 
 impl From<crate::error::AudioError> for CommonAudioError {
     fn from(error: crate::error::AudioError) -> Self {
         // 将具体音频错误压缩为统一的播放错误描述，避免枚举差异导致编译失败
-        Self::Playback(format!("{:?}", error))
+        Self::Playback(format!("{error:?}"))
     }
 }
 
@@ -444,7 +444,7 @@ impl From<crate::error::PlatformError> for CommonPlatformError {
 impl From<crate::error::EngineError> for GameEngineError {
     fn from(error: crate::error::EngineError) -> Self {
         // 将引擎错误统一映射为基础设施层的通用错误，避免枚举差异导致编译问题
-        Self::Infrastructure(InfrastructureError::General(format!("{:?}", error)))
+        Self::Infrastructure(InfrastructureError::General(format!("{error:?}")))
     }
 }
 

@@ -598,6 +598,44 @@ impl FlockManager {
         self.agents.len()
     }
 
+    /// 获取代理列表（用于测试）
+    #[cfg(test)]
+    pub fn get_agents(&self) -> &std::collections::HashMap<AgentId, Agent> {
+        &self.agents
+    }
+
+    /// 获取配置（用于测试）
+    #[cfg(test)]
+    pub fn get_config(&self) -> &FlockConfig {
+        &self.config
+    }
+
+    /// 获取障碍物列表（用于测试）
+    #[cfg(test)]
+    pub fn get_obstacles(&self) -> &[Obstacle] {
+        &self.obstacles
+    }
+
+    /// 获取指定代理的邻居（用于测试）
+    #[cfg(test)]
+    pub fn get_neighbors(&self, agent_id: AgentId, radius: f32) -> Vec<AgentId> {
+        let agent = match self.agents.get(&agent_id) {
+            Some(a) => a,
+            None => return vec![],
+        };
+
+        self.agents
+            .iter()
+            .filter(|(id, other)| {
+                **id != agent_id && {
+                    let distance = (other.position - agent.position).length();
+                    distance < radius
+                }
+            })
+            .map(|(id, _)| *id)
+            .collect()
+    }
+
     /// 更新配置
     pub fn update_config(&mut self, config: FlockConfig) {
         self.config = config;

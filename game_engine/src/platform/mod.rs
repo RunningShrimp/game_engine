@@ -8,14 +8,14 @@ pub mod winit;
 use thiserror::Error;
 
 // Platform-specific modules
-#[cfg(target_arch = "wasm32")]
-pub mod web_fs;
+#[cfg(any(target_os = "android", target_os = "ios"))]
+pub mod mobile;
 #[cfg(target_arch = "wasm32")]
 pub mod wasm_performance;
 #[cfg(target_arch = "wasm32")]
+pub mod web_fs;
+#[cfg(target_arch = "wasm32")]
 pub mod web_input;
-#[cfg(any(target_os = "android", target_os = "ios"))]
-pub mod mobile;
 
 pub mod console;
 

@@ -24,11 +24,12 @@
 // loaded.apply_to_world(&mut world)?;
 // ```
 
+pub mod compat;
 pub mod game_state;
 pub mod resource_metadata;
 pub mod versioning;
 
-pub use game_state::{GameTime, GameState, GameStateMetadata, PlayerProgress, SerializationFormat};
+pub use game_state::{GameState, GameStateMetadata, GameTime, PlayerProgress, SerializationFormat};
 pub use resource_metadata::{
     CachePolicy, ResourceIndex, ResourceLoadState, ResourceMetadata, ResourcePackMetadata,
     ResourceType,

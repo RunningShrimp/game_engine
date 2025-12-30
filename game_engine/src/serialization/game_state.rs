@@ -4,6 +4,7 @@
 
 use crate::ecs::Time;
 use crate::scene::SerializedScene;
+use crate::serialization::compat::bincode_compat;
 use bevy_ecs::prelude::World;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -191,7 +192,7 @@ impl GameState {
                 std::fs::write(path, ron_str)?;
             }
             SerializationFormat::Bincode => {
-                let bincode_bytes = bincode::serialize(self)?;
+                let bincode_bytes = bincode_compat::serialize(self)?;
                 std::fs::write(path, bincode_bytes)?;
             }
             SerializationFormat::Json => {
@@ -224,7 +225,7 @@ impl GameState {
                 state
             }
             SerializationFormat::Bincode => {
-                let mut state: GameState = bincode::deserialize(&data)?;
+                let mut state: GameState = bincode_compat::deserialize(&data)?;
 
                 // 版本迁移
                 if state.version < Self::CURRENT_VERSION {
@@ -250,14 +251,10 @@ impl GameState {
     }
 
     /// 自动检测格式并加载
-    pub fn load_from_file_auto(
-        path: impl AsRef<Path>,
-    ) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn load_from_file_auto(path: impl AsRef<Path>) -> Result<Self, Box<dyn std::error::Error>> {
         let path = path.as_ref();
-        let extension = path
-            .extension()
-            .and_then(|ext| ext.to_str())
-            .ok_or("Invalid file extension")?;
+        let extension =
+            path.extension().and_then(|ext| ext.to_str()).ok_or("Invalid file extension")?;
 
         let format = match extension {
             "ron" => SerializationFormat::Ron,
@@ -284,10 +281,7 @@ impl GameState {
             old_state = match old_state.version {
                 0 => Self::migrate_v0_to_v1(old_state)?,
                 _ => {
-                    return Err(format!(
-                        "Unknown version: {}",
-                        old_state.version
-                    ));
+                    return Err(format!("Unknown version: {}", old_state.version));
                 }
             };
         }
@@ -345,7 +339,7 @@ impl GameState {
             }
             SerializationFormat::Bincode => {
                 // Bincode通常是最紧凑的
-                let result: Result<Vec<u8>, _> = bincode::serialize(self);
+                let result: Result<Vec<u8>, _> = bincode_compat::serialize(self).map_err(Box::new);
                 result.map(|v| v.len()).unwrap_or(0)
             }
             SerializationFormat::Json => {
@@ -411,15 +405,13 @@ mod tests {
         // 测试Bincode格式
         let bin_path = "/tmp/test_save.bin";
         state.save_to_file(bin_path, SerializationFormat::Bincode).unwrap();
-        let loaded_bin =
-            GameState::load_from_file(bin_path, SerializationFormat::Bincode).unwrap();
+        let loaded_bin = GameState::load_from_file(bin_path, SerializationFormat::Bincode).unwrap();
         assert_eq!(loaded_bin.scenes.len(), state.scenes.len());
 
         // 测试JSON格式
         let json_path = "/tmp/test_save.json";
         state.save_to_file(json_path, SerializationFormat::Json).unwrap();
-        let loaded_json =
-            GameState::load_from_file(json_path, SerializationFormat::Json).unwrap();
+        let loaded_json = GameState::load_from_file(json_path, SerializationFormat::Json).unwrap();
         assert_eq!(loaded_json.scenes.len(), state.scenes.len());
 
         // 清理

@@ -48,8 +48,8 @@
 // 这些策略在所有属性测试中共享使用，提供一致的测试数据生成。
 
 pub mod strategies {
-    use proptest::prelude::*;
     use glam::Vec3;
+    use proptest::prelude::*;
 
     /// 坐标策略：生成合理的浮点数坐标
     pub fn coord() -> impl Strategy<Value = f32> {
@@ -73,9 +73,9 @@ pub mod strategies {
 
     /// 单位向量策略：生成归一化的3D向量
     pub fn vec3_normalized() -> impl Strategy<Value = Vec3> {
-        vec3().prop_filter("vector too close to zero", |v| {
-            v.length() > 0.001
-        }).prop_map(|v| v.normalize())
+        vec3()
+            .prop_filter("vector too close to zero", |v| v.length() > 0.001)
+            .prop_map(|v| v.normalize())
     }
 
     /// 颜色策略：生成RGBA颜色值（0.0-1.0）
@@ -155,7 +155,7 @@ pub fn quat_approx_eq(a: glam::Quat, b: glam::Quat, epsilon: f32) -> bool {
 // ============================================================================
 
 #[test]
-#[ignore]  // TODO: Fix compilation errors
+#[ignore] // TODO: Fix compilation errors
 fn run_all_property_tests() {
     // proptest会自动运行所有proptest!宏定义的测试
     // 这个函数用于确保所有测试模块被包含
@@ -222,7 +222,7 @@ mod benchmarks {
 
     /// 测试策略生成的性能
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_strategy_generation_performance() {
         use super::strategies::*;
         use std::time::Instant;

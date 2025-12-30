@@ -179,7 +179,9 @@ impl AnimationEditor {
             let events = self.events.entry(index).or_default();
             let event = AnimationEvent { time, name, data };
             events.push(event);
-            events.sort_by(|a, b| a.time.partial_cmp(&b.time).expect("Test: operation should succeed"));
+            events.sort_by(|a, b| {
+                a.time.partial_cmp(&b.time).expect("Test: operation should succeed")
+            });
         }
     }
 

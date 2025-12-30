@@ -3,7 +3,7 @@
 // 测试渲染管线、批处理、视锥剔除等核心渲染功能
 
 use bevy_ecs::prelude::*;
-use criterion::{black_box, BenchmarkId, Criterion, criterion_group, criterion_main};
+use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
 use game_engine::ecs::{Mesh, Transform};
 use game_engine::render::frustum::Frustum;
 use glam::{Mat4, Quat, Vec3};
@@ -22,52 +22,57 @@ fn bench_frustum_culling(c: &mut Criterion) {
     let mut group = c.benchmark_group("frustum_culling");
 
     for entity_count in [100, 1000, 10000].iter() {
-        group.bench_with_input(BenchmarkId::from_parameter(entity_count), entity_count, |b, &count| {
-            let mut world = World::new();
+        group.bench_with_input(
+            BenchmarkId::from_parameter(entity_count),
+            entity_count,
+            |b, &count| {
+                let mut world = World::new();
 
-            // 创建视锥体
-            let projection = Mat4::perspective_rh(PI / 4.0, 16.0 / 9.0, 0.1, 100.0);
-            let view = Mat4::look_at_rh(
-                Vec3::new(0.0, 5.0, 10.0),
-                Vec3::new(0.0, 0.0, 0.0),
-                Vec3::Y,
-            );
-            let view_projection = projection * view;
-            let frustum = Frustum::from_view_projection(view_projection);
+                // 创建视锥体
+                let projection = Mat4::perspective_rh(PI / 4.0, 16.0 / 9.0, 0.1, 100.0);
+                let view =
+                    Mat4::look_at_rh(Vec3::new(0.0, 5.0, 10.0), Vec3::new(0.0, 0.0, 0.0), Vec3::Y);
+                let view_projection = projection * view;
+                let frustum = Frustum::from_view_projection(view_projection);
 
-            // 创建实体
-            for i in 0..count {
-                let angle = (i as f32 / count as f32) * PI * 2.0;
-                let radius = 10.0 + (i % 10) as f32;
+                // 创建实体
+                for i in 0..count {
+                    let angle = (i as f32 / count as f32) * PI * 2.0;
+                    let radius = 10.0 + (i % 10) as f32;
 
-                world.spawn((
-                    Transform {
-                        pos: Vec3::new(angle.cos() * radius, (i % 5) as f32, angle.sin() * radius),
-                        rot: Quat::IDENTITY,
-                        scale: Vec3::ONE,
-                    },
-                    create_test_mesh(),
-                ));
-            }
-
-            b.iter(|| {
-                let mut visible_count = 0;
-                let frustum = black_box(frustum);
-
-                let mut query = world.query::<(&Transform, &Mesh)>();
-                for (transform, _mesh) in query.iter(&world) {
-                    // 简化的边界球计算
-                    let center = transform.pos;
-                    let radius = 1.0;
-
-                    if frustum.contains_sphere(center, radius) {
-                        visible_count += 1;
-                    }
+                    world.spawn((
+                        Transform {
+                            pos: Vec3::new(
+                                angle.cos() * radius,
+                                (i % 5) as f32,
+                                angle.sin() * radius,
+                            ),
+                            rot: Quat::IDENTITY,
+                            scale: Vec3::ONE,
+                        },
+                        create_test_mesh(),
+                    ));
                 }
 
-                black_box(visible_count);
-            });
-        });
+                b.iter(|| {
+                    let mut visible_count = 0;
+                    let frustum = black_box(frustum);
+
+                    let mut query = world.query::<(&Transform, &Mesh)>();
+                    for (transform, _mesh) in query.iter(&world) {
+                        // 简化的边界球计算
+                        let center = transform.pos;
+                        let radius = 1.0;
+
+                        if frustum.contains_sphere(center, radius) {
+                            visible_count += 1;
+                        }
+                    }
+
+                    black_box(visible_count);
+                });
+            },
+        );
     }
 
     group.finish();
@@ -106,41 +111,45 @@ fn bench_render_sorting(c: &mut Criterion) {
     let mut group = c.benchmark_group("render_sorting");
 
     for object_count in [100, 1000, 5000].iter() {
-        group.bench_with_input(BenchmarkId::from_parameter(object_count), object_count, |b, &count| {
-            let mut world = World::new();
+        group.bench_with_input(
+            BenchmarkId::from_parameter(object_count),
+            object_count,
+            |b, &count| {
+                let mut world = World::new();
 
-            // 创建不同材质和距离的对象
-            for i in 0..count {
-                let material_id = i % 10;
-                let z_depth = (i as f32 * 0.1) % 100.0;
+                // 创建不同材质和距离的对象
+                for i in 0..count {
+                    let material_id = i % 10;
+                    let z_depth = (i as f32 * 0.1) % 100.0;
 
-                world.spawn((
-                    Transform {
-                        pos: Vec3::new(0.0, 0.0, z_depth),
-                        rot: Quat::IDENTITY,
-                        scale: Vec3::ONE,
-                    },
-                    create_test_mesh(),
-                ));
+                    world.spawn((
+                        Transform {
+                            pos: Vec3::new(0.0, 0.0, z_depth),
+                            rot: Quat::IDENTITY,
+                            scale: Vec3::ONE,
+                        },
+                        create_test_mesh(),
+                    ));
 
-                // 用于排序的元数据
-                world.insert_resource(material_id);
-            }
-
-            b.iter(|| {
-                let mut objects = Vec::new();
-
-                let mut query = world.query::<(Entity, &Transform)>();
-                for (entity, transform) in query.iter(&world) {
-                    objects.push((entity, transform.pos.z));
+                    // 用于排序的元数据
+                    world.insert_resource(material_id);
                 }
 
-                // 按深度排序（不透明物体从远到近）
-                objects.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+                b.iter(|| {
+                    let mut objects = Vec::new();
 
-                black_box(objects);
-            });
-        });
+                    let mut query = world.query::<(Entity, &Transform)>();
+                    for (entity, transform) in query.iter(&world) {
+                        objects.push((entity, transform.pos.z));
+                    }
+
+                    // 按深度排序（不透明物体从远到近）
+                    objects.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+
+                    black_box(objects);
+                });
+            },
+        );
     }
 
     group.finish();
@@ -151,20 +160,25 @@ fn bench_batching(c: &mut Criterion) {
     let mut group = c.benchmark_group("batching");
 
     for draw_call_count in [10, 100, 1000].iter() {
-        group.bench_with_input(BenchmarkId::from_parameter(draw_call_count), draw_call_count, |b, &count| {
-            b.iter(|| {
-                let mut batches: std::collections::HashMap<u32, Vec<Vec3>> = std::collections::HashMap::new();
+        group.bench_with_input(
+            BenchmarkId::from_parameter(draw_call_count),
+            draw_call_count,
+            |b, &count| {
+                b.iter(|| {
+                    let mut batches: std::collections::HashMap<u32, Vec<Vec3>> =
+                        std::collections::HashMap::new();
 
-                for i in 0..count {
-                    let material_id = (i % 10) as u32;
-                    let position = Vec3::new(i as f32, 0.0, 0.0);
+                    for i in 0..count {
+                        let material_id = (i % 10) as u32;
+                        let position = Vec3::new(i as f32, 0.0, 0.0);
 
-                    batches.entry(material_id).or_default().push(position);
-                }
+                        batches.entry(material_id).or_default().push(position);
+                    }
 
-                black_box(batches);
-            });
-        });
+                    black_box(batches);
+                });
+            },
+        );
     }
 
     group.finish();
@@ -208,7 +222,10 @@ fn bench_skeletal_animation(c: &mut Criterion) {
 
     for (bone_count, vertex_count) in [(10, 100), (50, 1000), (100, 5000)].iter() {
         group.bench_with_input(
-            BenchmarkId::new(format!("bones_{}_vertices_{}", bone_count, vertex_count), (bone_count, vertex_count)),
+            BenchmarkId::new(
+                format!("bones_{}_vertices_{}", bone_count, vertex_count),
+                (bone_count, vertex_count),
+            ),
             &(bone_count, vertex_count),
             |b, &(bone_count, vertex_count)| {
                 // 创建骨骼变换矩阵
@@ -220,9 +237,8 @@ fn bench_skeletal_animation(c: &mut Criterion) {
                     .collect();
 
                 // 创建顶点骨骼绑定数据（简化版）
-                let vertex_bone_weights: Vec<Vec<(u32, f32)>> = (0..*vertex_count)
-                    .map(|_| vec![(0, 1.0)])
-                    .collect();
+                let vertex_bone_weights: Vec<Vec<(u32, f32)>> =
+                    (0..*vertex_count).map(|_| vec![(0, 1.0)]).collect();
 
                 b.iter(|| {
                     let mut skinned_vertices = Vec::with_capacity(*vertex_count);

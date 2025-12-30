@@ -454,7 +454,7 @@ mod tests {
     use super::*;
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_batch_optimizer() {
         let mut optimizer = BatchOptimizer::new(100);
 
@@ -502,7 +502,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_state_switch_cost() {
         let optimizer = BatchOptimizer::new(100);
 

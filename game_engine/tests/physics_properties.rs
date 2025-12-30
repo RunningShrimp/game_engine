@@ -12,21 +12,21 @@
 // 4. **碰撞检测**: 碰撞检测应该满足几何属性
 // 5. **能量守恒**: 弹性碰撞应该保持能量守恒
 
-use proptest::prelude::*;
-use game_engine::physics::*;
+use bevy_ecs::world::World;
 use game_engine::domain::physics::*;
 use game_engine::ecs::Transform;
-use bevy_ecs::world::World;
-use glam::Vec3;
+use game_engine::physics::*;
 use glam::Quat;
+use glam::Vec3;
+use proptest::prelude::*;
 
 // ============================================================================
 // Test helpers (copied from property_tests.rs)
 // ============================================================================
 
 pub mod strategies {
-    use proptest::prelude::*;
     use glam::Vec3;
+    use proptest::prelude::*;
 
     /// 坐标策略：生成合理的浮点数坐标
     pub fn coord() -> impl Strategy<Value = f32> {
@@ -50,9 +50,9 @@ pub mod strategies {
 
     /// 单位向量策略：生成归一化的3D向量
     pub fn vec3_normalized() -> impl Strategy<Value = Vec3> {
-        vec3().prop_filter("vector too close to zero", |v| {
-            v.length() > 0.001
-        }).prop_map(|v| v.normalize())
+        vec3()
+            .prop_filter("vector too close to zero", |v| v.length() > 0.001)
+            .prop_map(|v| v.normalize())
     }
 
     /// 时间步长策略：生成合理的物理时间步长
@@ -551,7 +551,7 @@ proptest! {
 // ============================================================================
 
 #[test]
-#[ignore]  // TODO: Fix compilation errors
+#[ignore] // TODO: Fix compilation errors
 fn test_physics_ecs_integration() {
     let mut world = World::new();
     let mut physics_service = PhysicsDomainService::new();
@@ -566,13 +566,15 @@ fn test_physics_ecs_integration() {
     physics_service.create_body(body).unwrap();
 
     // 添加ECS实体
-    let entity = world.spawn((
-        Transform {
-            pos: glam::Vec3::new(0.0, 10.0, 0.0),
-            ..Default::default()
-        },
-        RigidBodyComp { body_id },
-    )).id();
+    let entity = world
+        .spawn((
+            Transform {
+                pos: glam::Vec3::new(0.0, 10.0, 0.0),
+                ..Default::default()
+            },
+            RigidBodyComp { body_id },
+        ))
+        .id();
 
     // 验证实体存在
     assert!(world.get_entity(entity).is_ok());

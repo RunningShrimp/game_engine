@@ -7,8 +7,8 @@
 //! cargo run --example game_loop_benchmark
 //! ```
 
-use std::time::{Duration, Instant};
 use bevy_ecs::prelude::*;
+use std::time::{Duration, Instant};
 
 // 导入混合模式游戏循环
 use game_engine::core::engine::game_loop_hybrid::HybridGameLoop;
@@ -160,7 +160,12 @@ fn sync_game_loop_test(iterations: u64) -> BenchmarkResult {
     }
 
     let total_duration = start.elapsed();
-    calculate_stats("Pure Sync Game Loop", iterations, total_duration, &frame_times)
+    calculate_stats(
+        "Pure Sync Game Loop",
+        iterations,
+        total_duration,
+        &frame_times,
+    )
 }
 
 /// 计算统计数据
@@ -235,7 +240,10 @@ fn run_complete_benchmark() {
         (hybrid_result.avg_frame_time - sync_result.avg_frame_time).as_micros() as f64;
 
     println!("混合模式 vs 纯同步:");
-    println!("  额外开销: {:.2}μs (异步任务轮询)", hybrid_vs_sync_overhead);
+    println!(
+        "  额外开销: {:.2}μs (异步任务轮询)",
+        hybrid_vs_sync_overhead
+    );
 
     // 帧率稳定性对比
     println!("\n帧率稳定性 (标准差):");
@@ -250,10 +258,7 @@ fn run_complete_benchmark() {
 }
 
 /// 生成性能报告
-fn generate_performance_report(
-    hybrid_result: &BenchmarkResult,
-    sync_result: &BenchmarkResult,
-) {
+fn generate_performance_report(hybrid_result: &BenchmarkResult, sync_result: &BenchmarkResult) {
     let report = format!(
         r#"
 # 游戏循环性能优化报告 (P0-4)
@@ -330,8 +335,7 @@ fn generate_performance_report(
         sync_result.stddev_us,
         (hybrid_result.avg_frame_time - sync_result.avg_frame_time).as_micros(),
         (hybrid_result.avg_frame_time - sync_result.avg_frame_time).as_micros(),
-        (hybrid_result.avg_frame_time - sync_result.avg_frame_time).as_micros() as f64
-            / 16_667.0
+        (hybrid_result.avg_frame_time - sync_result.avg_frame_time).as_micros() as f64 / 16_667.0
             * 100.0
     );
 
@@ -349,9 +353,7 @@ fn generate_performance_report(
 
 fn main() {
     // 初始化日志
-    tracing_subscriber::fmt()
-        .with_max_level(tracing::Level::INFO)
-        .init();
+    tracing_subscriber::fmt().with_max_level(tracing::Level::INFO).init();
 
     run_complete_benchmark();
 }

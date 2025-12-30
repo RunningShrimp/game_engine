@@ -92,7 +92,7 @@ impl BaselineUpdater {
         if self.baseline_file.exists() {
             let backup = self.baseline_file.with_extension("json.backup");
             fs::copy(&self.baseline_file, &backup)?;
-            println!("✓ 已备份现有基线到: {:?}", backup);
+            println!("✓ 已备份现有基线到: {backup:?}");
         }
 
         // 创建结果目录
@@ -132,7 +132,7 @@ impl BaselineUpdater {
                 baselines.benchmarks.insert(
                     bench_name.clone(),
                     BenchmarkBaseline {
-                        description: format!("{}性能基准测试", bench_name),
+                        description: format!("{bench_name}性能基准测试"),
                         baseline: baseline_map,
                         threshold: 1.1,
                     },
@@ -203,7 +203,7 @@ impl BaselineUpdater {
             let output = Command::new("sw_vers").arg("-productVersion").output()?;
             format!("macOS {}", String::from_utf8_lossy(&output.stdout).trim())
         } else {
-            format!("{} {}", os_name, arch)
+            format!("{os_name} {arch}")
         };
 
         // 获取Rust版本（用于元数据）
@@ -249,14 +249,14 @@ impl BaselineUpdater {
         let mut results = HashMap::new();
 
         for bench_name in benchmarks {
-            println!("运行 {}...", bench_name);
+            println!("运行 {bench_name}...");
             match self.run_benchmark(bench_name) {
                 Ok(bench_results) => {
                     results.insert(bench_name.to_string(), bench_results);
-                    println!("✓ {} 完成", bench_name);
+                    println!("✓ {bench_name} 完成");
                 }
                 Err(e) => {
-                    eprintln!("⚠️  {} 失败: {}", bench_name, e);
+                    eprintln!("⚠️  {bench_name} 失败: {e}");
                     // 继续运行其他基准测试
                 }
             }
@@ -286,7 +286,7 @@ impl BaselineUpdater {
             .output()?;
 
         if !output.status.success() {
-            return Err(format!("基准测试 {} 执行失败", bench_name).into());
+            return Err(format!("基准测试 {bench_name} 执行失败").into());
         }
 
         // 解析Criterion JSON输出
@@ -340,7 +340,7 @@ impl BaselineUpdater {
 
                         // 转换为可读格式
                         let formatted = if mean_ns < 1000.0 {
-                            format!("{:.2} ns/iter", mean_ns)
+                            format!("{mean_ns:.2} ns/iter")
                         } else if mean_ns < 1_000_000.0 {
                             format!("{:.2} µs/iter", mean_ns / 1000.0)
                         } else {
@@ -484,7 +484,7 @@ impl BaselineUpdater {
             benchmarks.insert(
                 bench_name.to_string(),
                 BenchmarkBaseline {
-                    description: format!("{}性能基准测试", bench_name),
+                    description: format!("{bench_name}性能基准测试"),
                     baseline: baseline_values,
                     threshold: 1.1,
                 },
@@ -525,7 +525,10 @@ impl BaselineUpdater {
     fn current_date() -> String {
         // 使用标准库获取日期（简化实现）
         // 实际项目中可以使用chrono或time crate
-        let now = SystemTime::now().duration_since(UNIX_EPOCH).expect("Test: operation should succeed").as_secs();
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("Test: operation should succeed")
+            .as_secs();
 
         // 简单的日期格式化（UTC）
         let days_since_epoch = now / 86400;
@@ -552,7 +555,7 @@ impl BaselineUpdater {
         let month = 1 + (days / 30).min(11);
         let day = 1 + (days % 30);
 
-        format!("{:04}-{:02}-{:02}", year, month, day)
+        format!("{year:04}-{month:02}-{day:02}")
     }
 }
 

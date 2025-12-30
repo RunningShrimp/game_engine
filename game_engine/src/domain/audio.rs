@@ -128,7 +128,7 @@ impl AudioSource {
         if !std::path::Path::new(&path_str).exists() {
             return Err(DomainError::Audio(AudioError::FileLoading {
                 file: path_str.clone(),
-                message: format!("Audio file not found: {}", path_str),
+                message: format!("Audio file not found: {path_str}"),
                 severity: crate::error::ErrorSeverity::Error,
             }));
         }
@@ -217,7 +217,7 @@ impl AudioSource {
     pub fn set_volume_f32(&mut self, value: f32) -> Result<(), DomainError> {
         let volume = Volume::new(value).ok_or_else(|| {
             DomainError::Audio(AudioError::DeviceConfiguration {
-                message: format!("Invalid volume: {}", value),
+                message: format!("Invalid volume: {value}"),
                 severity: crate::error::ErrorSeverity::Warning,
             })
         })?;
@@ -473,7 +473,7 @@ mod tests {
     use super::*;
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_audio_source_creation() {
         let source = AudioSource::new(AudioSourceId(1));
         assert_eq!(source.id, AudioSourceId(1));
@@ -482,7 +482,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_audio_source_playback() {
         let mut source = AudioSource::new(AudioSourceId(1));
         source.path = Some("test.wav".to_string());
@@ -506,7 +506,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_audio_source_volume() {
         let mut source = AudioSource::new(AudioSourceId(1));
 
@@ -521,7 +521,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_spatial_audio() {
         let source = SpatialAudioSource::new(AudioSourceId(1), Vec3::new(0.0, 0.0, 5.0));
         let listener = AudioListener::new();
@@ -534,7 +534,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_audio_source_play_without_file() {
         // 测试业务规则：没有加载文件时不能播放
         let mut source = AudioSource::new(AudioSourceId(1));
@@ -542,7 +542,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_audio_source_play_while_loading() {
         // 测试业务规则：加载中不能播放
         let mut source = AudioSource::new(AudioSourceId(1));
@@ -553,7 +553,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_audio_source_load_file_not_found() {
         // 测试业务规则：文件不存在时加载应该失败
         let mut source = AudioSource::new(AudioSourceId(1));
@@ -561,7 +561,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_audio_source_pause_when_not_playing() {
         // 测试：暂停非播放状态应该成功（无操作）
         let mut source = AudioSource::new(AudioSourceId(1));
@@ -572,7 +572,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_audio_source_resume_when_not_paused() {
         // 测试：恢复非暂停状态应该成功（无操作）
         let mut source = AudioSource::new(AudioSourceId(1));
@@ -583,7 +583,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_audio_source_play_resets_position() {
         // 测试：播放时重置位置
         let mut source = AudioSource::new(AudioSourceId(1));
@@ -596,7 +596,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_audio_source_play_from_paused() {
         // 测试：从暂停状态播放应该保持位置
         let mut source = AudioSource::new(AudioSourceId(1));
@@ -610,7 +610,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_audio_source_stop_resets_position() {
         // 测试：停止时重置位置
         let mut source = AudioSource::new(AudioSourceId(1));
@@ -623,14 +623,14 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_audio_source_id_creation() {
         let id = AudioSourceId::new(42);
         assert_eq!(id.as_u64(), 42);
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_audio_source_looped() {
         let mut source = AudioSource::new(AudioSourceId(1));
         source.set_looped(true).expect("Test: operation should succeed");
@@ -641,7 +641,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_audio_source_get_progress() {
         let mut source = AudioSource::new(AudioSourceId(1));
         source.duration = Some(10.0);
@@ -651,14 +651,14 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_audio_source_get_progress_no_duration() {
         let source = AudioSource::new(AudioSourceId(1));
         assert_eq!(source.get_progress(), 0.0);
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_audio_source_seek() {
         let mut source = AudioSource::new(AudioSourceId(1));
         source.duration = Some(10.0);
@@ -676,14 +676,14 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_audio_source_seek_no_duration() {
         let mut source = AudioSource::new(AudioSourceId(1));
         assert!(source.seek(5.0).is_err());
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_audio_source_set_volume() {
         let mut source = AudioSource::new(AudioSourceId(1));
         let volume = Volume::new(0.7).expect("Test: operation should succeed");
@@ -692,7 +692,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_audio_source_set_volume_f32_invalid() {
         let mut source = AudioSource::new(AudioSourceId(1));
         assert!(source.set_volume_f32(1.5).is_err());
@@ -700,7 +700,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_audio_source_set_volume_f32_valid() {
         let mut source = AudioSource::new(AudioSourceId(1));
         source.set_volume_f32(0.8).expect("Test: operation should succeed");
@@ -712,7 +712,7 @@ mod tests {
     // ============================================================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_audio_source_recover_from_error_playback_failed() {
         let mut source = AudioSource::new(AudioSourceId(1));
         source.path = Some("test.wav".to_string());
@@ -742,7 +742,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_audio_source_recover_from_error_source_not_found() {
         let mut source = AudioSource::new(AudioSourceId(1));
         source.recovery_strategy = RecoveryStrategy::Retry {
@@ -757,7 +757,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_audio_source_recover_from_error_use_default() {
         let mut source = AudioSource::new(AudioSourceId(1));
         source.volume = Volume::new_unchecked(0.9);
@@ -773,7 +773,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_audio_source_recover_from_error_skip() {
         let mut source = AudioSource::new(AudioSourceId(1));
         source.volume = Volume::new_unchecked(0.8);
@@ -787,7 +787,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_audio_source_recover_from_error_log_and_continue() {
         let mut source = AudioSource::new(AudioSourceId(1));
         source.volume = Volume::new_unchecked(0.8);
@@ -801,7 +801,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_audio_source_recover_from_error_fail() {
         let mut source = AudioSource::new(AudioSourceId(1));
         source.recovery_strategy = RecoveryStrategy::Fail;
@@ -818,7 +818,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_audio_source_create_compensation() {
         let mut source = AudioSource::new(AudioSourceId(1));
         source.state = AudioSourceState::Playing;
@@ -836,7 +836,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_audio_source_restore_from_compensation() {
         let mut source = AudioSource::new(AudioSourceId(1));
         source.state = AudioSourceState::Playing;
@@ -853,7 +853,9 @@ mod tests {
         source.playback_position = 10.0;
 
         // 恢复状态
-        source.restore_from_compensation(&compensation).expect("Test: operation should succeed");
+        source
+            .restore_from_compensation(&compensation)
+            .expect("Test: operation should succeed");
 
         assert_eq!(source.state, AudioSourceState::Playing);
         assert!((source.volume.value() - 0.7).abs() < 0.001);
@@ -862,7 +864,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_audio_source_restore_from_compensation_partial() {
         // 测试部分数据缺失的情况
         let mut source = AudioSource::new(AudioSourceId(1));
@@ -876,7 +878,9 @@ mod tests {
             }),
         );
 
-        source.restore_from_compensation(&compensation).expect("Test: operation should succeed");
+        source
+            .restore_from_compensation(&compensation)
+            .expect("Test: operation should succeed");
         assert!((source.volume.value() - 0.8).abs() < 0.001);
     }
 }

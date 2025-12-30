@@ -21,6 +21,17 @@ pub struct PathNode {
     pub traversable: bool,
 }
 
+impl PathNode {
+    /// 创建新的寻路节点
+    pub fn new(id: u32, position: Vec3) -> Self {
+        Self {
+            id,
+            position,
+            traversable: true,
+        }
+    }
+}
+
 /// 寻路连接
 #[derive(Debug, Clone)]
 pub struct PathConnection {
@@ -72,6 +83,12 @@ impl NavigationMesh {
             .filter(|conn| conn.from == node_id)
             .map(|conn| (conn.to, conn.cost))
             .collect()
+    }
+
+    /// 清空导航网格
+    pub fn clear(&mut self) {
+        self.nodes.clear();
+        self.connections.clear();
     }
 }
 
@@ -267,9 +284,15 @@ pub struct PathfindingResult {
 // ParallelPathfindingService 已删除 - 请使用 AsyncPathfindingService 替代
 
 /// 寻路服务
-pub struct PathfindingService;
+pub struct PathfindingService {
+    pub nav_mesh: NavigationMesh,
+}
 
 impl PathfindingService {
+    /// 创建新的寻路服务
+    pub fn new(nav_mesh: NavigationMesh) -> Self {
+        Self { nav_mesh }
+    }
     /// 创建导航网格
     pub fn create_nav_mesh() -> NavigationMesh {
         NavigationMesh::new()

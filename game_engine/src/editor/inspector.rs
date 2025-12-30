@@ -14,7 +14,7 @@ impl Inspector {
         if let Some(entity) = selected_entity {
             if let Ok(mut entity_mut) = world.get_entity_mut(entity) {
                 // 显示实体ID
-                ui.label(format!("Entity ID: {:?}", entity));
+                ui.label(format!("Entity ID: {entity:?}"));
                 ui.separator();
 
                 // Name组件编辑 (占位)

@@ -406,7 +406,7 @@ impl SsaoPass {
         format: wgpu::TextureFormat,
     ) -> wgpu::RenderPipeline {
         device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some(&format!("SSAO {} Pipeline", fs_entry)),
+            label: Some(&format!("SSAO {fs_entry} Pipeline")),
             layout: Some(layout),
             cache: None,
             vertex: wgpu::VertexState {

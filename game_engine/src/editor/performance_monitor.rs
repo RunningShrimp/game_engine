@@ -251,15 +251,17 @@ impl PerformanceMonitor {
                     ui.label("No GPU queries recorded");
                 } else {
                     let mut sorted_queries: Vec<_> = queries.iter().collect();
-                    sorted_queries.sort_by(|a, b| b.1.partial_cmp(a.1).expect("Test: operation should succeed"));
+                    sorted_queries.sort_by(|a, b| {
+                        b.1.partial_cmp(a.1).expect("Test: operation should succeed")
+                    });
 
                     let total_time: f32 = queries.values().sum();
-                    ui.label(format!("Total GPU Time: {:.2}ms", total_time));
+                    ui.label(format!("Total GPU Time: {total_time:.2}ms"));
                     ui.separator();
 
                     for (name, time) in sorted_queries {
                         let percentage = (time / total_time) * 100.0;
-                        ui.label(format!("{}: {:.2}ms ({:.1}%)", name, time, percentage));
+                        ui.label(format!("{name}: {time:.2}ms ({percentage:.1}%)"));
                     }
                 }
             });
@@ -345,17 +347,17 @@ impl PerformanceMonitor {
 
         // 显示当前值
         if let Some(&current_value) = data.back() {
-            ui.label(format!("{}: {:.2}", label, current_value));
+            ui.label(format!("{label}: {current_value:.2}"));
         }
 
         // 显示平均值
         let avg: f32 = data.iter().sum::<f32>() / data.len() as f32;
-        ui.label(format!("Average: {:.2}", avg));
+        ui.label(format!("Average: {avg:.2}"));
 
         // 显示最小/最大值
         let min = data.iter().fold(f32::INFINITY, |a, &b| a.min(b));
         let max = data.iter().fold(f32::NEG_INFINITY, |a, &b| a.max(b));
-        ui.label(format!("Min: {:.2}, Max: {:.2}", min, max));
+        ui.label(format!("Min: {min:.2}, Max: {max:.2}"));
     }
 
     /// 生成性能报告
@@ -385,9 +387,9 @@ impl PerformanceMonitor {
         // 保存报告到文件
         let report_path = "performance_report.txt";
         if let Err(e) = std::fs::write(report_path, &report) {
-            eprintln!("Failed to write performance report: {}", e);
+            eprintln!("Failed to write performance report: {e}");
         } else {
-            println!("Performance report saved to {}", report_path);
+            println!("Performance report saved to {report_path}");
         }
     }
 

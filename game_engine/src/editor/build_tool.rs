@@ -160,7 +160,7 @@ impl BuildTool {
                     let output_path = self.get_output_path(project_path);
                     self.build_log
                         .push(format!("Build succeeded in {:.2}s", duration.as_secs_f32()));
-                    self.build_log.push(format!("Output: {:?}", output_path));
+                    self.build_log.push(format!("Output: {output_path:?}"));
 
                     self.last_result = Some(BuildResult::Success {
                         output_path,
@@ -177,7 +177,7 @@ impl BuildTool {
                 }
             }
             Err(e) => {
-                let error = format!("Failed to execute cargo: {}", e);
+                let error = format!("Failed to execute cargo: {e}");
                 self.build_log.push(error.clone());
                 self.last_result = Some(BuildResult::Failed { error });
                 self.is_building = false;
@@ -283,7 +283,7 @@ impl BuildTool {
                 } => {
                     ui.colored_label(egui::Color32::GREEN, "✓ Build succeeded");
                     ui.label(format!("Duration: {:.2}s", duration.as_secs_f32()));
-                    ui.label(format!("Output: {:?}", output_path));
+                    ui.label(format!("Output: {output_path:?}"));
                 }
                 BuildResult::Failed { error } => {
                     ui.colored_label(egui::Color32::RED, "✗ Build failed");

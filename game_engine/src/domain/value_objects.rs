@@ -173,7 +173,7 @@ impl Default for Rotation {
 impl fmt::Display for Rotation {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let (x, y, z, w) = self.quaternion.into();
-        write!(f, "Rotation({}, {}, {}, {})", x, y, z, w)
+        write!(f, "Rotation({x}, {y}, {z}, {w})")
     }
 }
 
@@ -688,23 +688,24 @@ mod tests {
     use super::*;
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_position_creation() {
-        let pos = Position::new(1.0, 2.0, 3.0).expect("Test: Position::new with valid values should succeed");
+        let pos = Position::new(1.0, 2.0, 3.0)
+            .expect("Test: Position::new with valid values should succeed");
         assert_eq!(pos.x(), 1.0);
         assert_eq!(pos.y(), 2.0);
         assert_eq!(pos.z(), 3.0);
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_position_validation() {
         assert!(Position::new(f32::NAN, 0.0, 0.0).is_none());
         assert!(Position::new(0.0, f32::INFINITY, 0.0).is_none());
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_position_distance() {
         let pos1 = Position::new(0.0, 0.0, 0.0).expect("Test: operation should succeed");
         let pos2 = Position::new(3.0, 4.0, 0.0).expect("Test: operation should succeed");
@@ -712,14 +713,14 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_rotation_creation() {
         let rot = Rotation::identity();
         assert_eq!(rot.to_quat(), Quat::IDENTITY);
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_rotation_combine() {
         let rot1 = Rotation::identity();
         let rot2 = Rotation::from_euler(0.0, 0.0, 1.0);
@@ -728,7 +729,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_scale_creation() {
         let scale = Scale::new(2.0, 3.0, 4.0).expect("Test: operation should succeed");
         assert_eq!(scale.x(), 2.0);
@@ -737,7 +738,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_scale_validation() {
         assert!(Scale::new(-1.0, 1.0, 1.0).is_none());
         assert!(Scale::new(0.0, 1.0, 1.0).is_none());
@@ -745,7 +746,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_transform_creation() {
         let pos = Position::new(1.0, 2.0, 3.0).expect("Test: operation should succeed");
         let rot = Rotation::identity();
@@ -755,14 +756,14 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_volume_creation() {
         let volume = Volume::new(0.5).expect("Test: operation should succeed");
         assert_eq!(volume.value(), 0.5);
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_volume_validation() {
         assert!(Volume::new(-0.1).is_none());
         assert!(Volume::new(1.1).is_none());
@@ -770,14 +771,14 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_mass_creation() {
         let mass = Mass::new(10.0).expect("Test: operation should succeed");
         assert_eq!(mass.value(), 10.0);
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_mass_validation() {
         assert!(Mass::new(-1.0).is_none());
         assert!(Mass::new(0.0).is_none());
@@ -785,7 +786,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_velocity_creation() {
         let vel = Velocity::new(1.0, 2.0, 3.0).expect("Test: operation should succeed");
         assert_eq!(vel.x(), 1.0);
@@ -794,14 +795,14 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_velocity_magnitude() {
         let vel = Velocity::new(3.0, 4.0, 0.0).expect("Test: operation should succeed");
         assert_eq!(vel.magnitude(), 5.0);
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_duration_creation() {
         let duration = Duration::new(5.0).expect("Test: operation should succeed");
         assert_eq!(duration.seconds(), 5.0);
@@ -809,14 +810,14 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_duration_validation() {
         assert!(Duration::new(-1.0).is_none());
         assert!(Duration::new(f32::NAN).is_none());
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_position_offset() {
         let pos = Position::new(1.0, 2.0, 3.0).expect("Test: operation should succeed");
         let offset = pos.offset(Vec3::new(1.0, 1.0, 1.0));
@@ -828,7 +829,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_position_distance_squared() {
         let pos1 = Position::new(0.0, 0.0, 0.0).expect("Test: operation should succeed");
         let pos2 = Position::new(3.0, 4.0, 0.0).expect("Test: operation should succeed");
@@ -836,7 +837,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_position_from_vec3() {
         let vec = Vec3::new(1.0, 2.0, 3.0);
         let pos = Position::from_vec3(vec);
@@ -845,7 +846,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_rotation_inverse() {
         let rot = Rotation::from_euler(1.0, 0.0, 0.0);
         let inv = rot.inverse();
@@ -856,7 +857,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_rotation_slerp() {
         let rot1 = Rotation::identity();
         let rot2 = Rotation::from_euler(0.0, 1.0, 0.0);
@@ -866,7 +867,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_rotation_rotate_vec3() {
         let rot = Rotation::from_euler(0.0, std::f32::consts::PI / 2.0, 0.0); // 绕Y轴旋转90度
         let vec = Vec3::new(1.0, 0.0, 0.0);
@@ -878,7 +879,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_scale_combine() {
         let scale1 = Scale::new(2.0, 3.0, 4.0).expect("Test: operation should succeed");
         let scale2 = Scale::new(1.0, 2.0, 0.5).expect("Test: operation should succeed");
@@ -889,7 +890,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_scale_uniform() {
         let scale = Scale::uniform(2.0).expect("Test: operation should succeed");
         assert_eq!(scale.x(), 2.0);
@@ -898,16 +899,19 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_scale_from_vec3() {
         let vec = Vec3::new(2.0, 3.0, 4.0);
         let scale = Scale::from_vec3(vec);
         assert!(scale.is_some());
-        assert_eq!(scale.expect("Test: operation should succeed").to_vec3(), vec);
+        assert_eq!(
+            scale.expect("Test: operation should succeed").to_vec3(),
+            vec
+        );
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_transform_with_position() {
         let transform = Transform::identity();
         let pos = Position::new(1.0, 2.0, 3.0).expect("Test: operation should succeed");
@@ -916,7 +920,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_transform_with_rotation() {
         let transform = Transform::identity();
         let rot = Rotation::from_euler(1.0, 0.0, 0.0);
@@ -925,7 +929,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_transform_with_scale() {
         let transform = Transform::identity();
         let scale = Scale::new(2.0, 3.0, 4.0).expect("Test: operation should succeed");
@@ -934,7 +938,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_transform_combine() {
         let transform1 = Transform::identity();
         let pos = Position::new(1.0, 0.0, 0.0).expect("Test: operation should succeed");
@@ -946,7 +950,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_volume_muted() {
         let muted = Volume::muted();
         assert_eq!(muted.value(), 0.0);
@@ -954,7 +958,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_volume_max() {
         let max = Volume::max();
         assert_eq!(max.value(), 1.0);
@@ -962,7 +966,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_volume_lerp() {
         let vol1 = Volume::muted();
         let vol2 = Volume::max();
@@ -971,7 +975,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_mass_zero() {
         let zero = Mass::zero();
         assert_eq!(zero.value(), 0.0);
@@ -979,7 +983,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_mass_is_zero() {
         let mass = Mass::new(0.1).expect("Test: operation should succeed");
         assert!(!mass.is_zero());
@@ -989,14 +993,14 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_velocity_magnitude_squared() {
         let vel = Velocity::new(3.0, 4.0, 0.0).expect("Test: operation should succeed");
         assert_eq!(vel.magnitude_squared(), 25.0);
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_velocity_normalized() {
         let vel = Velocity::new(3.0, 4.0, 0.0).expect("Test: operation should succeed");
         let normalized = vel.normalized();
@@ -1006,7 +1010,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_velocity_zero() {
         let zero = Velocity::zero();
         assert_eq!(zero.x(), 0.0);
@@ -1016,7 +1020,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_velocity_from_vec3() {
         let vec = Vec3::new(1.0, 2.0, 3.0);
         let vel = Velocity::from_vec3(vec);
@@ -1025,7 +1029,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_duration_from_millis() {
         let duration = Duration::from_millis(5000.0).expect("Test: operation should succeed");
         assert_eq!(duration.millis(), 5000.0);
@@ -1033,7 +1037,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_duration_from_seconds() {
         let duration = Duration::from_seconds(5.0).expect("Test: operation should succeed");
         assert_eq!(duration.seconds(), 5.0);
@@ -1068,325 +1072,325 @@ mod property_tests {
 
     // Position属性测试
     proptest! {
-        #[test]
-#[ignore]  // TODO: Fix compilation errors
-        fn position_always_valid_when_finite(
-            x in finite_f32(),
-            y in finite_f32(),
-            z in finite_f32()
-        ) {
-            let pos = Position::new(x, y, z);
-            prop_assert!(pos.is_some());
-            let pos = pos.expect("Test: operation should succeed");
-            prop_assert_eq!(pos.x(), x);
-            prop_assert_eq!(pos.y(), y);
-            prop_assert_eq!(pos.z(), z);
-        }
-
-        #[test]
-#[ignore]  // TODO: Fix compilation errors
-        fn position_distance_symmetric(
-            x1 in finite_f32(),
-            y1 in finite_f32(),
-            z1 in finite_f32(),
-            x2 in finite_f32(),
-            y2 in finite_f32(),
-            z2 in finite_f32()
-        ) {
-            if let (Some(pos1), Some(pos2)) = (Position::new(x1, y1, z1), Position::new(x2, y2, z2)) {
-                let dist1 = pos1.distance_to(pos2);
-                let dist2 = pos2.distance_to(pos1);
-                prop_assert!((dist1 - dist2).abs() < 0.0001);
-            }
-        }
-
-        #[test]
-#[ignore]  // TODO: Fix compilation errors
-        fn position_distance_triangle_inequality(
-            x1 in finite_f32(),
-            y1 in finite_f32(),
-            z1 in finite_f32(),
-            x2 in finite_f32(),
-            y2 in finite_f32(),
-            z2 in finite_f32(),
-            x3 in finite_f32(),
-            y3 in finite_f32(),
-            z3 in finite_f32()
-        ) {
-            if let (Some(pos1), Some(pos2), Some(pos3)) = (
-                Position::new(x1, y1, z1),
-                Position::new(x2, y2, z2),
-                Position::new(x3, y3, z3)
+            #[test]
+    #[ignore]  // TODO: Fix compilation errors
+            fn position_always_valid_when_finite(
+                x in finite_f32(),
+                y in finite_f32(),
+                z in finite_f32()
             ) {
-                let dist12 = pos1.distance_to(pos2);
-                let dist23 = pos2.distance_to(pos3);
-                let dist13 = pos1.distance_to(pos3);
-                // 三角不等式：dist13 <= dist12 + dist23
-                prop_assert!(dist13 <= dist12 + dist23 + 0.0001);
+                let pos = Position::new(x, y, z);
+                prop_assert!(pos.is_some());
+                let pos = pos.expect("Test: operation should succeed");
+                prop_assert_eq!(pos.x(), x);
+                prop_assert_eq!(pos.y(), y);
+                prop_assert_eq!(pos.z(), z);
             }
-        }
 
-        #[test]
-#[ignore]  // TODO: Fix compilation errors
-        fn position_offset_preserves_validity(
-            x in finite_f32(),
-            y in finite_f32(),
-            z in finite_f32(),
-            dx in finite_f32(),
-            dy in finite_f32(),
-            dz in finite_f32()
-        ) {
-            if let Some(pos) = Position::new(x, y, z) {
-                let delta = Vec3::new(dx, dy, dz);
-                let offset = pos.offset(delta);
-                if (x + dx).is_finite() && (y + dy).is_finite() && (z + dz).is_finite() {
-                    prop_assert!(offset.is_some());
+            #[test]
+    #[ignore]  // TODO: Fix compilation errors
+            fn position_distance_symmetric(
+                x1 in finite_f32(),
+                y1 in finite_f32(),
+                z1 in finite_f32(),
+                x2 in finite_f32(),
+                y2 in finite_f32(),
+                z2 in finite_f32()
+            ) {
+                if let (Some(pos1), Some(pos2)) = (Position::new(x1, y1, z1), Position::new(x2, y2, z2)) {
+                    let dist1 = pos1.distance_to(pos2);
+                    let dist2 = pos2.distance_to(pos1);
+                    prop_assert!((dist1 - dist2).abs() < 0.0001);
                 }
             }
-        }
-    }
 
-    // Rotation属性测试
-    proptest! {
-        #[test]
-#[ignore]  // TODO: Fix compilation errors
-        fn rotation_combine_associative(
-            x1 in -3.14f32..3.14,
-            y1 in -3.14f32..3.14,
-            z1 in -3.14f32..3.14,
-            x2 in -3.14f32..3.14,
-            y2 in -3.14f32..3.14,
-            z2 in -3.14f32..3.14,
-            x3 in -3.14f32..3.14,
-            y3 in -3.14f32..3.14,
-            z3 in -3.14f32..3.14
-        ) {
-            let rot1 = Rotation::from_euler(x1, y1, z1);
-            let rot2 = Rotation::from_euler(x2, y2, z2);
-            let rot3 = Rotation::from_euler(x3, y3, z3);
-
-            // 测试结合律：(rot1 * rot2) * rot3 ≈ rot1 * (rot2 * rot3)
-            let left = rot1.combine(rot2).combine(rot3);
-            let right = rot1.combine(rot2.combine(rot3));
-
-            // 四元数乘法满足结合律（允许小的浮点误差）
-            let q1 = left.to_quat();
-            let q2 = right.to_quat();
-            let diff = (q1.x - q2.x).abs() + (q1.y - q2.y).abs() + (q1.z - q2.z).abs() + (q1.w - q2.w).abs();
-            prop_assert!(diff < 0.01);
-        }
-
-        #[test]
-#[ignore]  // TODO: Fix compilation errors
-        fn rotation_inverse_cancels(
-            x in -3.14f32..3.14,
-            y in -3.14f32..3.14,
-            z in -3.14f32..3.14
-        ) {
-            let rot = Rotation::from_euler(x, y, z);
-            let inv = rot.inverse();
-            let combined = rot.combine(inv);
-            let identity = Rotation::identity();
-
-            // rot * rot^-1 ≈ identity
-            let q1 = combined.to_quat();
-            let q2 = identity.to_quat();
-            let diff = (q1.x - q2.x).abs() + (q1.y - q2.y).abs() + (q1.z - q2.z).abs() + (q1.w - q2.w).abs();
-            prop_assert!(diff < 0.01);
-        }
-
-        #[test]
-#[ignore]  // TODO: Fix compilation errors
-        fn rotation_always_normalized(
-            x in -3.14f32..3.14,
-            y in -3.14f32..3.14,
-            z in -3.14f32..3.14
-        ) {
-            let rot = Rotation::from_euler(x, y, z);
-            let quat = rot.to_quat();
-            let length = (quat.x * quat.x + quat.y * quat.y + quat.z * quat.z + quat.w * quat.w).sqrt();
-            prop_assert!((length - 1.0).abs() < 0.0001);
-        }
-    }
-
-    // Scale属性测试
-    proptest! {
-        #[test]
-#[ignore]  // TODO: Fix compilation errors
-        fn scale_always_positive_when_valid(
-            x in positive_finite_f32(),
-            y in positive_finite_f32(),
-            z in positive_finite_f32()
-        ) {
-            let scale = Scale::new(x, y, z);
-            prop_assert!(scale.is_some());
-            let scale = scale.expect("Test: operation should succeed");
-            prop_assert!(scale.x() > 0.0);
-            prop_assert!(scale.y() > 0.0);
-            prop_assert!(scale.z() > 0.0);
-        }
-
-        #[test]
-#[ignore]  // TODO: Fix compilation errors
-        fn scale_combine_commutative(
-            x1 in positive_finite_f32(),
-            y1 in positive_finite_f32(),
-            z1 in positive_finite_f32(),
-            x2 in positive_finite_f32(),
-            y2 in positive_finite_f32(),
-            z2 in positive_finite_f32()
-        ) {
-            if let (Some(scale1), Some(scale2)) = (
-                Scale::new(x1, y1, z1),
-                Scale::new(x2, y2, z2)
+            #[test]
+    #[ignore]  // TODO: Fix compilation errors
+            fn position_distance_triangle_inequality(
+                x1 in finite_f32(),
+                y1 in finite_f32(),
+                z1 in finite_f32(),
+                x2 in finite_f32(),
+                y2 in finite_f32(),
+                z2 in finite_f32(),
+                x3 in finite_f32(),
+                y3 in finite_f32(),
+                z3 in finite_f32()
             ) {
-                // 缩放组合满足交换律：scale1 * scale2 = scale2 * scale1
-                let combined1 = scale1.combine(scale2);
-                let combined2 = scale2.combine(scale1);
-                prop_assert_eq!(combined1.x(), combined2.x());
-                prop_assert_eq!(combined1.y(), combined2.y());
-                prop_assert_eq!(combined1.z(), combined2.z());
+                if let (Some(pos1), Some(pos2), Some(pos3)) = (
+                    Position::new(x1, y1, z1),
+                    Position::new(x2, y2, z2),
+                    Position::new(x3, y3, z3)
+                ) {
+                    let dist12 = pos1.distance_to(pos2);
+                    let dist23 = pos2.distance_to(pos3);
+                    let dist13 = pos1.distance_to(pos3);
+                    // 三角不等式：dist13 <= dist12 + dist23
+                    prop_assert!(dist13 <= dist12 + dist23 + 0.0001);
+                }
             }
-        }
-    }
 
-    // Volume属性测试
-    proptest! {
-        #[test]
-#[ignore]  // TODO: Fix compilation errors
-        fn volume_always_in_range_when_valid(
-            value in volume_f32()
-        ) {
-            let volume = Volume::new(value);
-            prop_assert!(volume.is_some());
-            let volume = volume.expect("Test: operation should succeed");
-            prop_assert!(volume.value() >= 0.0);
-            prop_assert!(volume.value() <= 1.0);
-        }
-
-        #[test]
-#[ignore]  // TODO: Fix compilation errors
-        fn volume_lerp_bounded(
-            v1 in volume_f32(),
-            v2 in volume_f32(),
-            t in 0.0f32..=1.0
-        ) {
-            if let (Some(vol1), Some(vol2)) = (Volume::new(v1), Volume::new(v2)) {
-                let lerped = vol1.lerp(vol2, t);
-                prop_assert!(lerped.value() >= 0.0);
-                prop_assert!(lerped.value() <= 1.0);
-            }
-        }
-    }
-
-    // Mass属性测试
-    proptest! {
-        #[test]
-#[ignore]  // TODO: Fix compilation errors
-        fn mass_always_positive_when_valid(
-            value in positive_finite_f32()
-        ) {
-            let mass = Mass::new(value);
-            prop_assert!(mass.is_some());
-            let mass = mass.expect("Test: operation should succeed");
-            prop_assert!(mass.value() > 0.0);
-        }
-    }
-
-    // Velocity属性测试
-    proptest! {
-        #[test]
-#[ignore]  // TODO: Fix compilation errors
-        fn velocity_always_valid_when_finite(
-            x in finite_f32(),
-            y in finite_f32(),
-            z in finite_f32()
-        ) {
-            let vel = Velocity::new(x, y, z);
-            prop_assert!(vel.is_some());
-            let vel = vel.expect("Test: operation should succeed");
-            prop_assert_eq!(vel.x(), x);
-            prop_assert_eq!(vel.y(), y);
-            prop_assert_eq!(vel.z(), z);
-        }
-
-        #[test]
-#[ignore]  // TODO: Fix compilation errors
-        fn velocity_magnitude_non_negative(
-            x in finite_f32(),
-            y in finite_f32(),
-            z in finite_f32()
-        ) {
-            if let Some(vel) = Velocity::new(x, y, z) {
-                prop_assert!(vel.magnitude() >= 0.0);
-                prop_assert!(vel.magnitude_squared() >= 0.0);
-            }
-        }
-
-        #[test]
-#[ignore]  // TODO: Fix compilation errors
-        fn velocity_normalized_has_unit_length(
-            x in finite_f32(),
-            y in finite_f32(),
-            z in finite_f32()
-        ) {
-            if let Some(vel) = Velocity::new(x, y, z) {
-                if vel.magnitude() > 0.0001 {
-                    if let Some(normalized) = vel.normalized() {
-                        let mag = normalized.magnitude();
-                        prop_assert!((mag - 1.0).abs() < 0.0001);
+            #[test]
+    #[ignore]  // TODO: Fix compilation errors
+            fn position_offset_preserves_validity(
+                x in finite_f32(),
+                y in finite_f32(),
+                z in finite_f32(),
+                dx in finite_f32(),
+                dy in finite_f32(),
+                dz in finite_f32()
+            ) {
+                if let Some(pos) = Position::new(x, y, z) {
+                    let delta = Vec3::new(dx, dy, dz);
+                    let offset = pos.offset(delta);
+                    if (x + dx).is_finite() && (y + dy).is_finite() && (z + dz).is_finite() {
+                        prop_assert!(offset.is_some());
                     }
                 }
             }
         }
-    }
+
+    // Rotation属性测试
+    proptest! {
+            #[test]
+    #[ignore]  // TODO: Fix compilation errors
+            fn rotation_combine_associative(
+                x1 in -3.14f32..3.14,
+                y1 in -3.14f32..3.14,
+                z1 in -3.14f32..3.14,
+                x2 in -3.14f32..3.14,
+                y2 in -3.14f32..3.14,
+                z2 in -3.14f32..3.14,
+                x3 in -3.14f32..3.14,
+                y3 in -3.14f32..3.14,
+                z3 in -3.14f32..3.14
+            ) {
+                let rot1 = Rotation::from_euler(x1, y1, z1);
+                let rot2 = Rotation::from_euler(x2, y2, z2);
+                let rot3 = Rotation::from_euler(x3, y3, z3);
+
+                // 测试结合律：(rot1 * rot2) * rot3 ≈ rot1 * (rot2 * rot3)
+                let left = rot1.combine(rot2).combine(rot3);
+                let right = rot1.combine(rot2.combine(rot3));
+
+                // 四元数乘法满足结合律（允许小的浮点误差）
+                let q1 = left.to_quat();
+                let q2 = right.to_quat();
+                let diff = (q1.x - q2.x).abs() + (q1.y - q2.y).abs() + (q1.z - q2.z).abs() + (q1.w - q2.w).abs();
+                prop_assert!(diff < 0.01);
+            }
+
+            #[test]
+    #[ignore]  // TODO: Fix compilation errors
+            fn rotation_inverse_cancels(
+                x in -3.14f32..3.14,
+                y in -3.14f32..3.14,
+                z in -3.14f32..3.14
+            ) {
+                let rot = Rotation::from_euler(x, y, z);
+                let inv = rot.inverse();
+                let combined = rot.combine(inv);
+                let identity = Rotation::identity();
+
+                // rot * rot^-1 ≈ identity
+                let q1 = combined.to_quat();
+                let q2 = identity.to_quat();
+                let diff = (q1.x - q2.x).abs() + (q1.y - q2.y).abs() + (q1.z - q2.z).abs() + (q1.w - q2.w).abs();
+                prop_assert!(diff < 0.01);
+            }
+
+            #[test]
+    #[ignore]  // TODO: Fix compilation errors
+            fn rotation_always_normalized(
+                x in -3.14f32..3.14,
+                y in -3.14f32..3.14,
+                z in -3.14f32..3.14
+            ) {
+                let rot = Rotation::from_euler(x, y, z);
+                let quat = rot.to_quat();
+                let length = (quat.x * quat.x + quat.y * quat.y + quat.z * quat.z + quat.w * quat.w).sqrt();
+                prop_assert!((length - 1.0).abs() < 0.0001);
+            }
+        }
+
+    // Scale属性测试
+    proptest! {
+            #[test]
+    #[ignore]  // TODO: Fix compilation errors
+            fn scale_always_positive_when_valid(
+                x in positive_finite_f32(),
+                y in positive_finite_f32(),
+                z in positive_finite_f32()
+            ) {
+                let scale = Scale::new(x, y, z);
+                prop_assert!(scale.is_some());
+                let scale = scale.expect("Test: operation should succeed");
+                prop_assert!(scale.x() > 0.0);
+                prop_assert!(scale.y() > 0.0);
+                prop_assert!(scale.z() > 0.0);
+            }
+
+            #[test]
+    #[ignore]  // TODO: Fix compilation errors
+            fn scale_combine_commutative(
+                x1 in positive_finite_f32(),
+                y1 in positive_finite_f32(),
+                z1 in positive_finite_f32(),
+                x2 in positive_finite_f32(),
+                y2 in positive_finite_f32(),
+                z2 in positive_finite_f32()
+            ) {
+                if let (Some(scale1), Some(scale2)) = (
+                    Scale::new(x1, y1, z1),
+                    Scale::new(x2, y2, z2)
+                ) {
+                    // 缩放组合满足交换律：scale1 * scale2 = scale2 * scale1
+                    let combined1 = scale1.combine(scale2);
+                    let combined2 = scale2.combine(scale1);
+                    prop_assert_eq!(combined1.x(), combined2.x());
+                    prop_assert_eq!(combined1.y(), combined2.y());
+                    prop_assert_eq!(combined1.z(), combined2.z());
+                }
+            }
+        }
+
+    // Volume属性测试
+    proptest! {
+            #[test]
+    #[ignore]  // TODO: Fix compilation errors
+            fn volume_always_in_range_when_valid(
+                value in volume_f32()
+            ) {
+                let volume = Volume::new(value);
+                prop_assert!(volume.is_some());
+                let volume = volume.expect("Test: operation should succeed");
+                prop_assert!(volume.value() >= 0.0);
+                prop_assert!(volume.value() <= 1.0);
+            }
+
+            #[test]
+    #[ignore]  // TODO: Fix compilation errors
+            fn volume_lerp_bounded(
+                v1 in volume_f32(),
+                v2 in volume_f32(),
+                t in 0.0f32..=1.0
+            ) {
+                if let (Some(vol1), Some(vol2)) = (Volume::new(v1), Volume::new(v2)) {
+                    let lerped = vol1.lerp(vol2, t);
+                    prop_assert!(lerped.value() >= 0.0);
+                    prop_assert!(lerped.value() <= 1.0);
+                }
+            }
+        }
+
+    // Mass属性测试
+    proptest! {
+            #[test]
+    #[ignore]  // TODO: Fix compilation errors
+            fn mass_always_positive_when_valid(
+                value in positive_finite_f32()
+            ) {
+                let mass = Mass::new(value);
+                prop_assert!(mass.is_some());
+                let mass = mass.expect("Test: operation should succeed");
+                prop_assert!(mass.value() > 0.0);
+            }
+        }
+
+    // Velocity属性测试
+    proptest! {
+            #[test]
+    #[ignore]  // TODO: Fix compilation errors
+            fn velocity_always_valid_when_finite(
+                x in finite_f32(),
+                y in finite_f32(),
+                z in finite_f32()
+            ) {
+                let vel = Velocity::new(x, y, z);
+                prop_assert!(vel.is_some());
+                let vel = vel.expect("Test: operation should succeed");
+                prop_assert_eq!(vel.x(), x);
+                prop_assert_eq!(vel.y(), y);
+                prop_assert_eq!(vel.z(), z);
+            }
+
+            #[test]
+    #[ignore]  // TODO: Fix compilation errors
+            fn velocity_magnitude_non_negative(
+                x in finite_f32(),
+                y in finite_f32(),
+                z in finite_f32()
+            ) {
+                if let Some(vel) = Velocity::new(x, y, z) {
+                    prop_assert!(vel.magnitude() >= 0.0);
+                    prop_assert!(vel.magnitude_squared() >= 0.0);
+                }
+            }
+
+            #[test]
+    #[ignore]  // TODO: Fix compilation errors
+            fn velocity_normalized_has_unit_length(
+                x in finite_f32(),
+                y in finite_f32(),
+                z in finite_f32()
+            ) {
+                if let Some(vel) = Velocity::new(x, y, z) {
+                    if vel.magnitude() > 0.0001 {
+                        if let Some(normalized) = vel.normalized() {
+                            let mag = normalized.magnitude();
+                            prop_assert!((mag - 1.0).abs() < 0.0001);
+                        }
+                    }
+                }
+            }
+        }
 
     // Duration属性测试
     proptest! {
-        #[test]
-#[ignore]  // TODO: Fix compilation errors
-        fn duration_always_non_negative_when_valid(
-            seconds in duration_f32()
-        ) {
-            let duration = Duration::new(seconds);
-            prop_assert!(duration.is_some());
-            let duration = duration.expect("Test: operation should succeed");
-            prop_assert!(duration.seconds() >= 0.0);
-            prop_assert!(duration.millis() >= 0.0);
-        }
+            #[test]
+    #[ignore]  // TODO: Fix compilation errors
+            fn duration_always_non_negative_when_valid(
+                seconds in duration_f32()
+            ) {
+                let duration = Duration::new(seconds);
+                prop_assert!(duration.is_some());
+                let duration = duration.expect("Test: operation should succeed");
+                prop_assert!(duration.seconds() >= 0.0);
+                prop_assert!(duration.millis() >= 0.0);
+            }
 
-        #[test]
-#[ignore]  // TODO: Fix compilation errors
-        fn duration_conversion_consistent(
-            seconds in duration_f32()
-        ) {
-            if let Some(duration) = Duration::new(seconds) {
-                let millis = duration.millis();
-                let back_to_seconds = millis / 1000.0;
-                prop_assert!((back_to_seconds - seconds).abs() < 0.001);
+            #[test]
+    #[ignore]  // TODO: Fix compilation errors
+            fn duration_conversion_consistent(
+                seconds in duration_f32()
+            ) {
+                if let Some(duration) = Duration::new(seconds) {
+                    let millis = duration.millis();
+                    let back_to_seconds = millis / 1000.0;
+                    prop_assert!((back_to_seconds - seconds).abs() < 0.001);
+                }
             }
         }
-    }
 
     // Transform属性测试
     proptest! {
-        #[test]
-#[ignore]  // TODO: Fix compilation errors
-        fn transform_identity_preserves(
-            x in finite_f32(),
-            y in finite_f32(),
-            z in finite_f32()
-        ) {
-            if let Some(pos) = Position::new(x, y, z) {
-                let rot = Rotation::identity();
-                let scale = Scale::default();
-                let transform = Transform::new(pos, rot, scale);
+            #[test]
+    #[ignore]  // TODO: Fix compilation errors
+            fn transform_identity_preserves(
+                x in finite_f32(),
+                y in finite_f32(),
+                z in finite_f32()
+            ) {
+                if let Some(pos) = Position::new(x, y, z) {
+                    let rot = Rotation::identity();
+                    let scale = Scale::default();
+                    let transform = Transform::new(pos, rot, scale);
 
-                let transformed_pos = transform.position();
-                prop_assert!((transformed_pos.x() - pos.x()).abs() < 0.0001);
-                prop_assert!((transformed_pos.y() - pos.y()).abs() < 0.0001);
-                prop_assert!((transformed_pos.z() - pos.z()).abs() < 0.0001);
+                    let transformed_pos = transform.position();
+                    prop_assert!((transformed_pos.x() - pos.x()).abs() < 0.0001);
+                    prop_assert!((transformed_pos.y() - pos.y()).abs() < 0.0001);
+                    prop_assert!((transformed_pos.z() - pos.z()).abs() < 0.0001);
+                }
             }
         }
-    }
 }

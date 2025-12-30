@@ -12,16 +12,16 @@
 // 4. **变换属性**: 变换应该满足群论性质
 // 5. **插值平滑性**: 插值应该产生平滑过渡
 
+use glam::{Mat3, Mat4, Quat, Vec2, Vec3, Vec4};
 use proptest::prelude::*;
-use glam::{Vec2, Vec3, Vec4, Quat, Mat3, Mat4};
 
 // ============================================================================
 // Test helpers (copied from property_tests.rs)
 // ============================================================================
 
 pub mod strategies {
-    use proptest::prelude::*;
     use glam::Vec3;
+    use proptest::prelude::*;
 
     /// 坐标策略：生成合理的浮点数坐标
     pub fn coord() -> impl Strategy<Value = f32> {
@@ -45,9 +45,9 @@ pub mod strategies {
 
     /// 单位向量策略：生成归一化的3D向量
     pub fn vec3_normalized() -> impl Strategy<Value = Vec3> {
-        vec3().prop_filter("vector too close to zero", |v| {
-            v.length() > 0.001
-        }).prop_map(|v| v.normalize())
+        vec3()
+            .prop_filter("vector too close to zero", |v| v.length() > 0.001)
+            .prop_map(|v| v.normalize())
     }
 }
 
@@ -554,9 +554,12 @@ impl AABB {
     }
 
     fn contains(&self, point: Vec3) -> bool {
-        point.x >= self.min.x && point.x <= self.max.x
-            && point.y >= self.min.y && point.y <= self.max.y
-            && point.z >= self.min.z && point.z <= self.max.z
+        point.x >= self.min.x
+            && point.x <= self.max.x
+            && point.y >= self.min.y
+            && point.y <= self.max.y
+            && point.z >= self.min.z
+            && point.z <= self.max.z
     }
 
     fn center(&self) -> Vec3 {
@@ -623,7 +626,7 @@ proptest! {
 // ============================================================================
 
 #[test]
-#[ignore]  // TODO: Fix compilation errors
+#[ignore] // TODO: Fix compilation errors
 fn test_math_integration() {
     // 测试变换链：Translate -> Rotate -> Scale
     let vec = Vec3::new(1.0, 0.0, 0.0);

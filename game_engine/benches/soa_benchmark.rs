@@ -9,11 +9,11 @@
 // 3. Memory locality (cache hit rate)
 // 4. SIMD-friendly operation speed
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use bevy_ecs::prelude::Entity;
+use criterion::{BenchmarkId, Criterion, Throughput, black_box, criterion_group, criterion_main};
 use game_engine::domain::physics::{RigidBody, RigidBodyId, RigidBodyType};
 use game_engine::domain::soa_storage::RigidBodyStorage;
 use glam::{Quat, Vec3};
-use bevy_ecs::prelude::Entity;
 use std::time::Duration;
 
 // Number of bodies to benchmark
@@ -87,7 +87,14 @@ fn create_soa_storage(count: usize) -> RigidBodyStorage {
         let position = Vec3::new(i as f32, 0.0, 0.0);
         let velocity = Vec3::new(1.0, 0.0, 0.0);
 
-        storage.insert(entity, id, position, Quat::IDENTITY, 10.0, RigidBodyType::Dynamic);
+        storage.insert(
+            entity,
+            id,
+            position,
+            Quat::IDENTITY,
+            10.0,
+            RigidBodyType::Dynamic,
+        );
         storage.set_velocity(entity, velocity).unwrap();
     }
 
@@ -105,20 +112,21 @@ fn bench_sequential_position_query(c: &mut Criterion) {
         let indices: Vec<usize> = (0..count).collect();
 
         // AoS benchmark
-        group.bench_with_input(
-            BenchmarkId::new("AoS", count),
-            &aos_bodies,
-            |b, bodies| {
-                b.iter(|| black_box(benchmark_aos_sequential_query(black_box(bodies))));
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("AoS", count), &aos_bodies, |b, bodies| {
+            b.iter(|| black_box(benchmark_aos_sequential_query(black_box(bodies))));
+        });
 
         // SoA benchmark
         group.bench_with_input(
             BenchmarkId::new("SoA", count),
             (&soa_storage, indices),
             |b, (storage, indices)| {
-                b.iter(|| black_box(benchmark_soa_sequential_query(black_box(storage), black_box(indices))));
+                b.iter(|| {
+                    black_box(benchmark_soa_sequential_query(
+                        black_box(storage),
+                        black_box(indices),
+                    ))
+                });
             },
         );
     }
@@ -174,20 +182,21 @@ fn bench_mass_query(c: &mut Criterion) {
         let indices: Vec<usize> = (0..count).collect();
 
         // AoS benchmark
-        group.bench_with_input(
-            BenchmarkId::new("AoS", count),
-            &aos_bodies,
-            |b, bodies| {
-                b.iter(|| black_box(benchmark_aos_mass_query(black_box(bodies))));
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("AoS", count), &aos_bodies, |b, bodies| {
+            b.iter(|| black_box(benchmark_aos_mass_query(black_box(bodies))));
+        });
 
         // SoA benchmark
         group.bench_with_input(
             BenchmarkId::new("SoA", count),
             (&soa_storage, indices),
             |b, (storage, indices)| {
-                b.iter(|| black_box(benchmark_soa_mass_query(black_box(storage), black_box(indices))));
+                b.iter(|| {
+                    black_box(benchmark_soa_mass_query(
+                        black_box(storage),
+                        black_box(indices),
+                    ))
+                });
             },
         );
     }
@@ -207,19 +216,15 @@ fn bench_random_access(c: &mut Criterion) {
         let indices: Vec<usize> = (0..count).collect();
 
         // AoS benchmark - random access
-        group.bench_with_input(
-            BenchmarkId::new("AoS", count),
-            &aos_bodies,
-            |b, bodies| {
-                b.iter(|| {
-                    // Random access pattern
-                    for i in 0..count {
-                        let idx = (i * 7) % count; // Pseudo-random
-                        black_box(bodies[idx].position());
-                    }
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("AoS", count), &aos_bodies, |b, bodies| {
+            b.iter(|| {
+                // Random access pattern
+                for i in 0..count {
+                    let idx = (i * 7) % count; // Pseudo-random
+                    black_box(bodies[idx].position());
+                }
+            });
+        });
 
         // SoA benchmark - random access
         group.bench_with_input(
@@ -250,13 +255,7 @@ fn bench_memory_allocation(c: &mut Criterion) {
     group.bench_function("AoS_1000_bodies", |b| {
         b.iter(|| {
             let bodies: Vec<RigidBody> = (0..1000)
-                .map(|i| {
-                    RigidBody::new(
-                        RigidBodyId::new(i),
-                        RigidBodyType::Dynamic,
-                        Vec3::ZERO,
-                    )
-                })
+                .map(|i| RigidBody::new(RigidBodyId::new(i), RigidBodyType::Dynamic, Vec3::ZERO))
                 .collect();
             black_box(bodies)
         });
@@ -269,7 +268,14 @@ fn bench_memory_allocation(c: &mut Criterion) {
             for i in 0..1000 {
                 let entity = Entity::from_raw(i);
                 let id = RigidBodyId::new(i);
-                storage.insert(entity, id, Vec3::ZERO, Quat::IDENTITY, 10.0, RigidBodyType::Dynamic);
+                storage.insert(
+                    entity,
+                    id,
+                    Vec3::ZERO,
+                    Quat::IDENTITY,
+                    10.0,
+                    RigidBodyType::Dynamic,
+                );
             }
             black_box(storage)
         });

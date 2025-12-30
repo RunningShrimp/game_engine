@@ -235,7 +235,7 @@ fn script_value_to_string(value: &ScriptValue) -> String {
         ScriptValue::Int(i) => i.to_string(),
         ScriptValue::Float(f) => f.to_string(),
         ScriptValue::String(s) => s.clone(),
-        ScriptValue::Array(_) | ScriptValue::Object(_) => format!("{:?}", value),
+        ScriptValue::Array(_) | ScriptValue::Object(_) => format!("{value:?}"),
     }
 }
 

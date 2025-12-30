@@ -14,7 +14,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_physics_domain_service_new() {
         let mut service = PhysicsDomainService::new();
         // 服务应该成功创建
@@ -39,7 +39,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_physics_domain_service_create_dynamic_body() {
         let mut service = PhysicsDomainService::new();
         let body_id = RigidBodyId::new(1);
@@ -56,7 +56,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_physics_domain_service_create_kinematic_body() {
         let mut service = PhysicsDomainService::new();
         let body_id = RigidBodyId::new(1);
@@ -73,7 +73,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_physics_domain_service_get_body_position() {
         let mut service = PhysicsDomainService::new();
         let body_id = RigidBodyId::new(1);
@@ -91,7 +91,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_physics_domain_service_get_nonexistent_body() {
         let mut service = PhysicsDomainService::new();
         let invalid_id = RigidBodyId::new(999);
@@ -101,7 +101,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_physics_domain_service_remove_body() {
         let mut service = PhysicsDomainService::new();
         let body_id = RigidBodyId::new(1);
@@ -122,7 +122,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_physics_domain_service_remove_nonexistent_body() {
         let mut service = PhysicsDomainService::new();
         let invalid_id = RigidBodyId::new(999);
@@ -136,7 +136,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_rigid_body_with_all() {
         let body_id = RigidBodyId::new(1);
         let pos = Vec3::new(10.0, 20.0, 30.0);
@@ -187,7 +187,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_rigid_body_id_new() {
         let id1 = RigidBodyId::new(1);
         let id2 = RigidBodyId::new(2);
@@ -196,7 +196,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_rigid_body_id_equality() {
         let id1 = RigidBodyId::new(5);
         let id2 = RigidBodyId::new(5);
@@ -205,7 +205,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_rigid_body_id_copy() {
         let id1 = RigidBodyId::new(10);
         let id2 = id1;
@@ -218,7 +218,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_gravity_application() {
         let mut service = PhysicsDomainService::new();
         let body_id = RigidBodyId::new(1);
@@ -266,7 +266,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_kinematic_body_velocity() {
         let mut service = PhysicsDomainService::new();
         let body_id = RigidBodyId::new(1);
@@ -281,7 +281,9 @@ mod tests {
         service.create_body(body).expect("Test: operation should succeed");
 
         // 设置运动物体速度
-        service.set_body_velocity(body_id, Vec3::new(10.0, 0.0, 0.0)).expect("Test: operation should succeed");
+        service
+            .set_body_velocity(body_id, Vec3::new(10.0, 0.0, 0.0))
+            .expect("Test: operation should succeed");
 
         let dt = 1.0 / 60.0;
         service.update(dt);
@@ -296,7 +298,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_multiple_bodies() {
         let mut service = PhysicsDomainService::new();
 
@@ -316,7 +318,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_body_collision_detection() {
         let mut service = PhysicsDomainService::new();
 
@@ -355,7 +357,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_zero_mass_body() {
         let mut service = PhysicsDomainService::new();
         let body_id = RigidBodyId::new(1);
@@ -374,7 +376,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_negative_mass_body() {
         let mut service = PhysicsDomainService::new();
         let body_id = RigidBodyId::new(1);
@@ -392,7 +394,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_extreme_position() {
         let mut service = PhysicsDomainService::new();
         let body_id = RigidBodyId::new(1);
@@ -409,7 +411,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_nan_position() {
         let mut service = PhysicsDomainService::new();
         let body_id = RigidBodyId::new(1);
@@ -431,7 +433,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_physics_update_performance() {
         let mut service = PhysicsDomainService::new();
 
@@ -460,7 +462,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_many_bodies_creation_performance() {
         let start = std::time::Instant::now();
 
@@ -489,7 +491,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_fixed_timestep() {
         let mut service = PhysicsDomainService::new();
         let body_id = RigidBodyId::new(1);
@@ -504,7 +506,8 @@ mod tests {
         service.create_body(body).expect("Test: operation should succeed");
 
         let dt = 1.0 / 60.0; // 固定时间步长
-        let initial_pos = service.get_body_position(body_id).expect("Test: operation should succeed");
+        let initial_pos =
+            service.get_body_position(body_id).expect("Test: operation should succeed");
 
         service.update(dt);
         let pos1 = service.get_body_position(body_id).expect("Test: operation should succeed");
@@ -518,7 +521,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_variable_timestep() {
         let mut service = PhysicsDomainService::new();
         let body_id = RigidBodyId::new(1);
@@ -560,7 +563,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_body_rotation() {
         let mut service = PhysicsDomainService::new();
         let body_id = RigidBodyId::new(1);
@@ -575,7 +578,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_body_rotation_update() {
         let mut service = PhysicsDomainService::new();
         let body_id = RigidBodyId::new(1);
@@ -590,7 +593,9 @@ mod tests {
         service.create_body(body).expect("Test: operation should succeed");
 
         // 设置角速度
-        service.set_body_angular_velocity(body_id, Vec3::new(0.0, 1.0, 0.0)).expect("Test: operation should succeed");
+        service
+            .set_body_angular_velocity(body_id, Vec3::new(0.0, 1.0, 0.0))
+            .expect("Test: operation should succeed");
 
         service.update(1.0 / 60.0);
 
@@ -604,7 +609,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_apply_force() {
         let mut service = PhysicsDomainService::new();
         let body_id = RigidBodyId::new(1);
@@ -619,7 +624,9 @@ mod tests {
         service.create_body(body).expect("Test: operation should succeed");
 
         // 应用力
-        service.apply_force(body_id, Vec3::new(100.0, 0.0, 0.0)).expect("Test: operation should succeed");
+        service
+            .apply_force(body_id, Vec3::new(100.0, 0.0, 0.0))
+            .expect("Test: operation should succeed");
 
         service.update(1.0 / 60.0);
 
@@ -629,7 +636,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_apply_impulse() {
         let mut service = PhysicsDomainService::new();
         let body_id = RigidBodyId::new(1);
@@ -644,7 +651,9 @@ mod tests {
         service.create_body(body).expect("Test: operation should succeed");
 
         // 应用冲量
-        service.apply_impulse(body_id, Vec3::new(10.0, 0.0, 0.0)).expect("Test: operation should succeed");
+        service
+            .apply_impulse(body_id, Vec3::new(10.0, 0.0, 0.0))
+            .expect("Test: operation should succeed");
 
         // 冲量应该立即改变速度
         let velocity = service.get_body_velocity(body_id).expect("Test: operation should succeed");
@@ -656,7 +665,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_sleep_body() {
         let mut service = PhysicsDomainService::new();
         let body_id = RigidBodyId::new(1);
@@ -678,7 +687,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_wake_body() {
         let mut service = PhysicsDomainService::new();
         let body_id = RigidBodyId::new(1);
@@ -705,7 +714,7 @@ mod tests {
     // ========================================
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_velocity_constraint() {
         let mut service = PhysicsDomainService::new();
         let body_id = RigidBodyId::new(1);
@@ -722,7 +731,9 @@ mod tests {
         // 设置最大速度
         service.set_max_velocity(body_id, 10.0).expect("Test: operation should succeed");
 
-        service.apply_impulse(body_id, Vec3::new(1000.0, 0.0, 0.0)).expect("Test: operation should succeed");
+        service
+            .apply_impulse(body_id, Vec3::new(1000.0, 0.0, 0.0))
+            .expect("Test: operation should succeed");
 
         // 速度应该被限制
         let velocity = service.get_body_velocity(body_id).expect("Test: operation should succeed");

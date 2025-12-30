@@ -237,15 +237,15 @@ impl Default for SystemSchedulerOptimizer {
 ///
 /// 使用rayon实现并行系统执行，提升多核CPU利用率。
 pub struct ParallelSystemExecutor {
-    /// 调度优化器
-    optimizer: Arc<std::sync::Mutex<SystemSchedulerOptimizer>>,
+    /// 调度优化器（使用parking_lot::Mutex提升性能）
+    optimizer: Arc<parking_lot::Mutex<SystemSchedulerOptimizer>>,
 }
 
 impl ParallelSystemExecutor {
     /// 创建新的并行执行器
     pub fn new() -> Self {
         Self {
-            optimizer: Arc::new(std::sync::Mutex::new(SystemSchedulerOptimizer::new())),
+            optimizer: Arc::new(parking_lot::Mutex::new(SystemSchedulerOptimizer::new())),
         }
     }
 
@@ -288,9 +288,9 @@ impl ParallelSystemExecutor {
         let elapsed = start.elapsed();
         let elapsed_us = elapsed.as_micros() as f64;
 
-        if let Ok(mut optimizer) = self.optimizer.lock() {
-            optimizer.record_execution(systems.len() > 4, elapsed_us, systems.len());
-        }
+        // parking_lot::Mutex不会返回Result，直接lock
+        let mut optimizer = self.optimizer.lock();
+        optimizer.record_execution(systems.len() > 4, elapsed_us, systems.len());
     }
 
     /// 获取调度优化器
@@ -299,8 +299,8 @@ impl ParallelSystemExecutor {
     ///
     /// # 返回
     ///
-    /// 返回调度优化器的Arc<Mutex<>>包装，可以安全地在多线程间共享。
-    pub fn optimizer(&self) -> Arc<std::sync::Mutex<SystemSchedulerOptimizer>> {
+    /// 返回调度优化器的Arc<parking_lot::Mutex<>>包装，可以安全地在多线程间共享。
+    pub fn optimizer(&self) -> Arc<parking_lot::Mutex<SystemSchedulerOptimizer>> {
         self.optimizer.clone()
     }
 }
@@ -375,15 +375,14 @@ mod tests {
         let executor = ParallelSystemExecutor::new();
         let optimizer = executor.optimizer();
 
-        // 模拟执行
-        if let Ok(mut opt) = optimizer.lock() {
-            opt.record_execution(true, 1000.0, 10);
-            opt.record_execution(false, 500.0, 5);
+        // 模拟执行（parking_lot::Mutex直接返回Guard）
+        let mut opt = optimizer.lock();
+        opt.record_execution(true, 1000.0, 10);
+        opt.record_execution(false, 500.0, 5);
 
-            let stats = opt.stats();
-            assert_eq!(stats.execution_count, 2);
-            assert_eq!(stats.parallel_execution_count, 1);
-            assert_eq!(stats.serial_execution_count, 1);
-        }
+        let stats = opt.stats();
+        assert_eq!(stats.execution_count, 2);
+        assert_eq!(stats.parallel_execution_count, 1);
+        assert_eq!(stats.serial_execution_count, 1);
     }
 }

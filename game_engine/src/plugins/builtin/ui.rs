@@ -184,7 +184,7 @@ fn create_example_ui(world: &mut World) {
         Vec2::new(120.0, 40.0),
         Some(Box::new(move || {
             let count = click_count_clone.fetch_add(1, std::sync::atomic::Ordering::SeqCst) + 1;
-            println!("开始游戏按钮被点击了 {} 次", count);
+            println!("开始游戏按钮被点击了 {count} 次");
         })),
     );
 

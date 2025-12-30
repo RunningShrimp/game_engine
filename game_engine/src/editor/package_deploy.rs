@@ -82,14 +82,14 @@ impl PackageDeployManager {
     fn package_windows(&self, build_path: &Path, output_dir: &Path) -> Result<PathBuf, String> {
         let package_dir = output_dir.join(format!("{}-windows", self.config.app_name));
         fs::create_dir_all(&package_dir)
-            .map_err(|e| format!("Failed to create package directory: {}", e))?;
+            .map_err(|e| format!("Failed to create package directory: {e}"))?;
 
         // 复制可执行文件
         let exe_name = format!("{}.exe", self.config.app_name);
         let src_exe = build_path.join(&exe_name);
         let dst_exe = package_dir.join(&exe_name);
 
-        fs::copy(&src_exe, &dst_exe).map_err(|e| format!("Failed to copy executable: {}", e))?;
+        fs::copy(&src_exe, &dst_exe).map_err(|e| format!("Failed to copy executable: {e}"))?;
 
         // 复制资源文件
         if self.config.include_assets {
@@ -111,24 +111,24 @@ impl PackageDeployManager {
     fn package_linux(&self, build_path: &Path, output_dir: &Path) -> Result<PathBuf, String> {
         let package_dir = output_dir.join(format!("{}-linux", self.config.app_name));
         fs::create_dir_all(&package_dir)
-            .map_err(|e| format!("Failed to create package directory: {}", e))?;
+            .map_err(|e| format!("Failed to create package directory: {e}"))?;
 
         // 复制可执行文件
         let src_exe = build_path.join(&self.config.app_name);
         let dst_exe = package_dir.join(&self.config.app_name);
 
-        fs::copy(&src_exe, &dst_exe).map_err(|e| format!("Failed to copy executable: {}", e))?;
+        fs::copy(&src_exe, &dst_exe).map_err(|e| format!("Failed to copy executable: {e}"))?;
 
         // 设置可执行权限
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
             let mut perms = fs::metadata(&dst_exe)
-                .map_err(|e| format!("Failed to get file metadata: {}", e))?
+                .map_err(|e| format!("Failed to get file metadata: {e}"))?
                 .permissions();
             perms.set_mode(0o755);
             fs::set_permissions(&dst_exe, perms)
-                .map_err(|e| format!("Failed to set executable permissions: {}", e))?;
+                .map_err(|e| format!("Failed to set executable permissions: {e}"))?;
         }
 
         // 复制资源文件
@@ -155,15 +155,15 @@ impl PackageDeployManager {
         let resources_dir = contents_dir.join("Resources");
 
         fs::create_dir_all(&macos_dir)
-            .map_err(|e| format!("Failed to create MacOS directory: {}", e))?;
+            .map_err(|e| format!("Failed to create MacOS directory: {e}"))?;
         fs::create_dir_all(&resources_dir)
-            .map_err(|e| format!("Failed to create Resources directory: {}", e))?;
+            .map_err(|e| format!("Failed to create Resources directory: {e}"))?;
 
         // 复制可执行文件
         let src_exe = build_path.join(&self.config.app_name);
         let dst_exe = macos_dir.join(&self.config.app_name);
 
-        fs::copy(&src_exe, &dst_exe).map_err(|e| format!("Failed to copy executable: {}", e))?;
+        fs::copy(&src_exe, &dst_exe).map_err(|e| format!("Failed to copy executable: {e}"))?;
 
         // 创建Info.plist
         let plist_content = format!(
@@ -193,7 +193,7 @@ impl PackageDeployManager {
 
         let plist_path = contents_dir.join("Info.plist");
         fs::write(&plist_path, plist_content)
-            .map_err(|e| format!("Failed to write Info.plist: {}", e))?;
+            .map_err(|e| format!("Failed to write Info.plist: {e}"))?;
 
         // 复制资源文件
         if self.config.include_assets {
@@ -266,19 +266,18 @@ impl PackageDeployManager {
 
     /// 递归复制目录
     fn copy_dir_all(&self, src: &Path, dst: &Path) -> Result<(), String> {
-        fs::create_dir_all(dst).map_err(|e| format!("Failed to create directory: {}", e))?;
+        fs::create_dir_all(dst).map_err(|e| format!("Failed to create directory: {e}"))?;
 
-        for entry in fs::read_dir(src).map_err(|e| format!("Failed to read directory: {}", e))? {
-            let entry = entry.map_err(|e| format!("Failed to read entry: {}", e))?;
+        for entry in fs::read_dir(src).map_err(|e| format!("Failed to read directory: {e}"))? {
+            let entry = entry.map_err(|e| format!("Failed to read entry: {e}"))?;
             let path = entry.path();
-            let file_name = path.file_name()
-                .ok_or_else(|| format!("Invalid path: {:?}", path))?;
+            let file_name = path.file_name().ok_or_else(|| format!("Invalid path: {path:?}"))?;
             let dst_path = dst.join(file_name);
 
             if path.is_dir() {
                 self.copy_dir_all(&path, &dst_path)?;
             } else {
-                fs::copy(&path, &dst_path).map_err(|e| format!("Failed to copy file: {}", e))?;
+                fs::copy(&path, &dst_path).map_err(|e| format!("Failed to copy file: {e}"))?;
             }
         }
 
@@ -299,7 +298,7 @@ impl PackageDeployManager {
             Ok(output) if output.status.success() => Ok(()),
             Ok(output) => {
                 let error = String::from_utf8_lossy(&output.stderr);
-                Err(format!("Failed to create ZIP: {}", error))
+                Err(format!("Failed to create ZIP: {error}"))
             }
             Err(_) => {
                 // 如果zip命令不可用,返回提示信息
@@ -310,9 +309,11 @@ impl PackageDeployManager {
 
     /// 创建tar.gz压缩包
     fn create_tar_gz(&self, src_dir: &Path, tar_path: &Path) -> Result<(), String> {
-        let parent = src_dir.parent()
+        let parent = src_dir
+            .parent()
             .ok_or_else(|| "Invalid source directory: no parent".to_string())?;
-        let file_name = src_dir.file_name()
+        let file_name = src_dir
+            .file_name()
             .ok_or_else(|| "Invalid source directory: no file name".to_string())?;
 
         let output = Command::new("tar")
@@ -327,7 +328,7 @@ impl PackageDeployManager {
             Ok(output) if output.status.success() => Ok(()),
             Ok(output) => {
                 let error = String::from_utf8_lossy(&output.stderr);
-                Err(format!("Failed to create tar.gz: {}", error))
+                Err(format!("Failed to create tar.gz: {error}"))
             }
             Err(_) => Err("tar command not found. Package created but not compressed.".to_string()),
         }
@@ -353,9 +354,9 @@ impl PackageDeployManager {
                 Ok(output) if output.status.success() => Ok(()),
                 Ok(output) => {
                     let error = String::from_utf8_lossy(&output.stderr);
-                    Err(format!("Failed to create DMG: {}", error))
+                    Err(format!("Failed to create DMG: {error}"))
                 }
-                Err(e) => Err(format!("Failed to execute hdiutil: {}", e)),
+                Err(e) => Err(format!("Failed to execute hdiutil: {e}")),
             }
         }
 

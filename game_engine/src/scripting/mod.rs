@@ -23,8 +23,8 @@ pub mod rust_scripting;
 pub mod system;
 /// 线程安全模块
 pub mod thread_safe;
-/// WebAssembly支持模块 (temporarily disabled - wasmtime dependency removed)
-// pub mod wasm_support;
+/// WebAssembly支持模块 (优化版 - 使用trait抽象减少条件编译)
+pub mod wasm_support_optimized;
 
 #[cfg(test)]
 mod lua_tests;
@@ -195,11 +195,10 @@ fn execute_script(
                     ScriptResult::Error(e) => {
                         // 如果通用脚本系统也失败，返回错误
                         if scripting.config.enable_rust {
-                            return Err(format!("Rust script engine initialization failed: {}", e));
+                            return Err(format!("Rust script engine initialization failed: {e}"));
                         } else {
                             return Err(format!(
-                                "Rust script engine not enabled. Set enable_rust=true in ScriptingConfig. Error: {}",
-                                e
+                                "Rust script engine not enabled. Set enable_rust=true in ScriptingConfig. Error: {e}"
                             ));
                         }
                     }

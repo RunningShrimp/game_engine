@@ -732,7 +732,9 @@ mod tests {
         assert!(service.is_running());
 
         // 记录指标
-        service.record_metric("test_metric", 42.0).expect("Test: operation should succeed");
+        service
+            .record_metric("test_metric", 42.0)
+            .expect("Test: operation should succeed");
 
         // 获取实时指标
         let metrics = service.get_realtime_metrics().expect("Test: operation should succeed");

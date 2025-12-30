@@ -174,7 +174,7 @@ impl CommandBus {
         };
 
         let mut handlers = safe_write(&self.handlers, "command_handlers")
-            .map_err(|e| EventError::ApplyFailed(format!("Failed to acquire lock: {}", e)))?;
+            .map_err(|e| EventError::ApplyFailed(format!("Failed to acquire lock: {e}")))?;
         handlers.insert(type_id, Box::new(wrapper));
         Ok(())
     }
@@ -187,7 +187,7 @@ impl CommandBus {
     ) -> Result<CommandResult, EventError> {
         let type_id = TypeId::of::<C>();
         let handlers = safe_read(&self.handlers, "command_handlers")
-            .map_err(|e| EventError::ApplyFailed(format!("Failed to acquire lock: {}", e)))?;
+            .map_err(|e| EventError::ApplyFailed(format!("Failed to acquire lock: {e}")))?;
 
         let handler = handlers.get(&type_id).ok_or_else(|| {
             EventError::ApplyFailed(format!(
@@ -271,7 +271,7 @@ impl QueryBus {
         };
 
         let mut handlers = safe_write(&self.handlers, "query_handlers")
-            .map_err(|e| QueryError::ExecutionFailed(format!("Failed to acquire lock: {}", e)))?;
+            .map_err(|e| QueryError::ExecutionFailed(format!("Failed to acquire lock: {e}")))?;
         handlers.insert(type_id, Box::new(wrapper));
         Ok(())
     }
@@ -280,7 +280,7 @@ impl QueryBus {
     pub fn execute<Q: Query, R: 'static>(&self, query: Q, world: &World) -> QueryResult<R> {
         let type_id = TypeId::of::<Q>();
         let handlers = safe_read(&self.handlers, "query_handlers")
-            .map_err(|e| QueryError::ExecutionFailed(format!("Failed to acquire lock: {}", e)))?;
+            .map_err(|e| QueryError::ExecutionFailed(format!("Failed to acquire lock: {e}")))?;
 
         let handler = handlers.get(&type_id).ok_or_else(|| {
             QueryError::ExecutionFailed(format!(
@@ -458,25 +458,29 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_command_bus() {
         let bus = CommandBus::new();
         let handler = Arc::new(TestCommandHandler);
-        bus.register_handler::<TestCommand, _>(handler).expect("Test: handler registration should succeed");
+        bus.register_handler::<TestCommand, _>(handler)
+            .expect("Test: handler registration should succeed");
 
         let command = TestCommand { value: 42 };
         let mut world = World::new();
-        let result = bus.execute(command, &mut world).expect("Test: command execution should succeed");
+        let result = bus
+            .execute(command, &mut world)
+            .expect("Test: command execution should succeed");
 
         assert!(result.success);
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_query_bus() {
         let bus = QueryBus::new();
         let handler = Arc::new(TestQueryHandler);
-        bus.register_handler::<TestQuery, _>(handler).expect("Test: handler registration should succeed");
+        bus.register_handler::<TestQuery, _>(handler)
+            .expect("Test: handler registration should succeed");
 
         let query = TestQuery { value: 21 };
         let mut world = World::new();
@@ -486,26 +490,34 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_cqrs_manager() {
         let manager = CqrsManager::new();
 
         // 注册处理器
         let cmd_handler = Arc::new(TestCommandHandler);
-        manager.register_command_handler(cmd_handler).expect("Test: command handler registration should succeed");
+        manager
+            .register_command_handler(cmd_handler)
+            .expect("Test: command handler registration should succeed");
 
         let query_handler = Arc::new(TestQueryHandler);
-        manager.register_query_handler(query_handler).expect("Test: query handler registration should succeed");
+        manager
+            .register_query_handler(query_handler)
+            .expect("Test: query handler registration should succeed");
 
         // 执行命令
         let command = TestCommand { value: 42 };
         let mut world = World::new();
-        let result = manager.execute_command(command, &mut world).expect("Test: command execution should succeed");
+        let result = manager
+            .execute_command(command, &mut world)
+            .expect("Test: command execution should succeed");
         assert!(result.success);
 
         // 执行查询
         let query = TestQuery { value: 21 };
-        let result: u32 = manager.execute_query(query, &world).expect("Test: query execution should succeed");
+        let result: u32 = manager
+            .execute_query(query, &world)
+            .expect("Test: query execution should succeed");
         assert_eq!(result, 42);
     }
 }

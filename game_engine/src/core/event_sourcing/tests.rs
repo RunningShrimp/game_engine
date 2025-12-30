@@ -1,6 +1,7 @@
 //  事件溯源系统测试
 
 use super::*;
+use crate::serialization::compat::bincode_compat;
 
 #[cfg(test)]
 mod tests {
@@ -129,7 +130,9 @@ mod tests {
             entity_type: "TestEntity".to_string(),
         };
 
-        let event_id = manager.record_event(event, &world, Some(123)).expect("Test: operation should succeed");
+        let event_id = manager
+            .record_event(event, &world, Some(123))
+            .expect("Test: operation should succeed");
 
         let history = manager.get_event_history().expect("Failed to get event history");
         assert_eq!(history.len(), 1);
@@ -151,8 +154,12 @@ mod tests {
             entity_type: "TestEntity".to_string(),
         };
 
-        manager.record_event(event1, &world, Some(123)).expect("Test: operation should succeed");
-        manager.record_event(event2, &world, Some(456)).expect("Test: operation should succeed");
+        manager
+            .record_event(event1, &world, Some(123))
+            .expect("Test: operation should succeed");
+        manager
+            .record_event(event2, &world, Some(456))
+            .expect("Test: operation should succeed");
 
         let history = manager.get_aggregate_history(123).expect("Failed to get aggregate history");
         assert_eq!(history.len(), 1);
@@ -164,7 +171,9 @@ mod tests {
         let mut registry = super::registry::EventTypeRegistry::new();
 
         // 注册事件类型
-        registry.register_event_type::<EntityCreatedEvent>().expect("Test: operation should succeed");
+        registry
+            .register_event_type::<EntityCreatedEvent>()
+            .expect("Test: operation should succeed");
 
         // 测试创建事件
         let event = EntityCreatedEvent {
@@ -172,8 +181,12 @@ mod tests {
             entity_type: "TestEntity".to_string(),
         };
 
-        let serialized = bincode::serialize(&event).expect("Test: operation should succeed");
-        let created_event = registry.create_event("EntityCreated", &serialized).expect("Test: operation should succeed");
+        let serialized = bincode_compat::serialize(&event)
+            .map_err(|e| Box::new(e))
+            .expect("Test: operation should succeed");
+        let created_event = registry
+            .create_event("EntityCreated", &serialized)
+            .expect("Test: operation should succeed");
 
         assert_eq!(created_event.event_type(), "EntityCreated");
     }
@@ -189,7 +202,9 @@ mod tests {
             initial_data: vec![1, 2, 3],
         };
 
-        let event_id = handler.execute_command(command, &mut world, Some(123)).expect("Test: operation should succeed");
+        let event_id = handler
+            .execute_command(command, &mut world, Some(123))
+            .expect("Test: operation should succeed");
 
         let history = manager.get_event_history().expect("Failed to get event history");
         assert_eq!(history.len(), 1);
@@ -212,7 +227,9 @@ mod tests {
         };
 
         let mut world = World::new();
-        manager.record_event(event, &world, Some(123)).expect("Test: operation should succeed");
+        manager
+            .record_event(event, &world, Some(123))
+            .expect("Test: operation should succeed");
 
         // 验证快照已创建
         let snapshots = manager.get_aggregate_snapshots(123).expect("Failed to get snapshots");
@@ -230,10 +247,14 @@ mod tests {
             entity_type: "TestEntity".to_string(),
         };
 
-        let event_id = manager.record_event(event, &world, Some(123)).expect("Test: operation should succeed");
+        let event_id = manager
+            .record_event(event, &world, Some(123))
+            .expect("Test: operation should succeed");
 
         // 测试跳转到时间点
-        debugger.jump_to_time(&mut world, event_id).expect("Test: operation should succeed");
+        debugger
+            .jump_to_time(&mut world, event_id)
+            .expect("Test: operation should succeed");
         assert_eq!(debugger.current_time(), Some(event_id));
     }
 }

@@ -88,7 +88,7 @@ impl WorldInspector {
     /// 渲染实体列表
     fn render_entities(&mut self, ui: &mut egui::Ui, world: &World) {
         let entity_count = world.entities().len();
-        ui.label(format!("Total Entities: {}", entity_count));
+        ui.label(format!("Total Entities: {entity_count}"));
 
         let _filter = self.filter_text.to_lowercase();
 
@@ -102,7 +102,7 @@ impl WorldInspector {
 
     /// 渲染实体详情
     fn render_entity_details(&self, ui: &mut egui::Ui, world: &World, entity: Entity) {
-        ui.heading(format!("Entity: {:?}", entity));
+        ui.heading(format!("Entity: {entity:?}"));
         ui.separator();
 
         // Transform组件
@@ -155,16 +155,16 @@ impl WorldInspector {
                         far,
                     } => {
                         ui.label("Type: Perspective".to_string());
-                        ui.label(format!("FOV: {:.2}°", fov));
-                        ui.label(format!("Aspect: {:.2}", aspect));
-                        ui.label(format!("Near: {:.2}", near));
-                        ui.label(format!("Far: {:.2}", far));
+                        ui.label(format!("FOV: {fov:.2}°"));
+                        ui.label(format!("Aspect: {aspect:.2}"));
+                        ui.label(format!("Near: {near:.2}"));
+                        ui.label(format!("Far: {far:.2}"));
                     }
                     crate::ecs::Projection::Orthographic { scale, near, far } => {
                         ui.label("Type: Orthographic".to_string());
-                        ui.label(format!("Scale: {:.2}", scale));
-                        ui.label(format!("Near: {:.2}", near));
-                        ui.label(format!("Far: {:.2}", far));
+                        ui.label(format!("Scale: {scale:.2}"));
+                        ui.label(format!("Near: {near:.2}"));
+                        ui.label(format!("Far: {far:.2}"));
                     }
                 }
                 ui.label(format!("Active: {}", camera.is_active));
@@ -200,16 +200,16 @@ impl WorldInspector {
                 ui.label(format!("Total Objects: {}", stats.total_objects));
 
                 if let Some(upload_ms) = stats.upload_ms {
-                    ui.label(format!("Upload Time: {:.2} ms", upload_ms));
+                    ui.label(format!("Upload Time: {upload_ms:.2} ms"));
                 }
                 if let Some(main_ms) = stats.main_ms {
-                    ui.label(format!("Main Render Time: {:.2} ms", main_ms));
+                    ui.label(format!("Main Render Time: {main_ms:.2} ms"));
                 }
                 if let Some(ui_ms) = stats.ui_ms {
-                    ui.label(format!("UI Render Time: {:.2} ms", ui_ms));
+                    ui.label(format!("UI Render Time: {ui_ms:.2} ms"));
                 }
                 if let Some(gpu_ms) = stats.gpu_pass_ms {
-                    ui.label(format!("GPU Time: {:.2} ms", gpu_ms));
+                    ui.label(format!("GPU Time: {gpu_ms:.2} ms"));
                 }
 
                 // 批处理统计

@@ -576,7 +576,7 @@ impl ParticleEditor {
                 }
 
                 for (i, sub_emitter) in self.sub_emitters.iter_mut().enumerate() {
-                    ui.collapsing(format!("Sub Emitter {}", i), |ui| {
+                    ui.collapsing(format!("Sub Emitter {i}"), |ui| {
                         ui.checkbox(&mut sub_emitter.enabled, "Enabled");
                         ui.horizontal(|ui| {
                             ui.label("Emission Rate:");

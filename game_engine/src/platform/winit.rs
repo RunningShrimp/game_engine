@@ -17,10 +17,7 @@ impl WinitWindow {
         Self::try_new(event_loop, size).unwrap_or_else(|| {
             // Fallback to default uninitialized window if creation fails
             // This can happen if the event loop is already running or platform-specific issues
-            eprintln!(
-                "Failed to create winit window with size {:?}, using uninitialized",
-                size
-            );
+            eprintln!("Failed to create winit window with size {size:?}, using uninitialized");
             Self { window: None }
         })
     }
@@ -187,14 +184,14 @@ mod tests {
     use super::*;
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_winit_window_default() {
         let window = WinitWindow::default();
         assert!(window.raw().is_none());
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_winit_window_try_raw_uninitialized() {
         let window = WinitWindow::default();
         let result = window.try_raw();
@@ -202,7 +199,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_winit_window_size_uninitialized() {
         let window = WinitWindow::default();
         let size = window.size();
@@ -211,7 +208,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_winit_window_scale_factor_uninitialized() {
         let window = WinitWindow::default();
         let scale = window.scale_factor();
@@ -220,7 +217,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_winit_window_id_uninitialized() {
         let window = WinitWindow::default();
         let id = window.id();
@@ -228,7 +225,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_winit_window_outer_size_uninitialized() {
         let window = WinitWindow::default();
         let size = window.outer_size();
@@ -236,7 +233,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_winit_window_request_redraw_uninitialized() {
         let window = WinitWindow::default();
         // Should not panic when window is not initialized
@@ -244,7 +241,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_winit_window_set_title_uninitialized() {
         let window = WinitWindow::default();
         // Should not panic when window is not initialized
@@ -252,7 +249,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_winit_window_set_fullscreen_uninitialized() {
         let window = WinitWindow::default();
         // Should not panic when window is not initialized
@@ -261,7 +258,7 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
+    #[ignore] // TODO: Fix compilation errors
     fn test_winit_window_set_cursor_visible_uninitialized() {
         let window = WinitWindow::default();
         // Should not panic when window is not initialized
@@ -269,4 +266,3 @@ mod tests {
         window.set_cursor_visible(false);
     }
 }
-

@@ -319,15 +319,14 @@ impl ContinuousProfiler {
 
         // 检测低FPS
         if avg_fps < 30.0 {
-            anomalies.push(format!("Low average FPS: {:.1}", avg_fps));
+            anomalies.push(format!("Low average FPS: {avg_fps:.1}"));
         }
 
         // 检测FPS波动
         let fps_variance = max_fps - min_fps;
         if fps_variance > 30.0 {
             anomalies.push(format!(
-                "High FPS variance: {:.1} (min: {:.1}, max: {:.1})",
-                fps_variance, min_fps, max_fps
+                "High FPS variance: {fps_variance:.1} (min: {min_fps:.1}, max: {max_fps:.1})"
             ));
         }
 
@@ -383,16 +382,16 @@ impl ContinuousProfiler {
         let (min_fps, max_fps) = self.get_fps_range();
 
         report.push_str(&format!("Sample Count: {}\n", self.samples.len()));
-        report.push_str(&format!("Average FPS: {:.1}\n", avg_fps));
-        report.push_str(&format!("FPS Range: {:.1} - {:.1}\n", min_fps, max_fps));
-        report.push_str(&format!("Average Frame Time: {:.2}ms\n\n", avg_frame_time));
+        report.push_str(&format!("Average FPS: {avg_fps:.1}\n"));
+        report.push_str(&format!("FPS Range: {min_fps:.1} - {max_fps:.1}\n"));
+        report.push_str(&format!("Average Frame Time: {avg_frame_time:.2}ms\n\n"));
 
         // 异常检测
         let anomalies = self.detect_anomalies();
         if !anomalies.is_empty() {
             report.push_str("Detected Anomalies:\n");
             for anomaly in anomalies {
-                report.push_str(&format!("  - {}\n", anomaly));
+                report.push_str(&format!("  - {anomaly}\n"));
             }
         } else {
             report.push_str("No anomalies detected.\n");

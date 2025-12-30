@@ -72,7 +72,7 @@ impl ScriptApi {
         if let Some(func) = self.registered_functions.get(name) {
             func(args)
         } else {
-            ScriptResult::Error(format!("Function '{}' not found", name))
+            ScriptResult::Error(format!("Function '{name}' not found"))
         }
     }
 }

@@ -110,7 +110,7 @@ impl PlatformAdapter {
     /// Fallible initialization that provides default fallbacks on error
     pub fn new_with_fallbacks() -> Self {
         Self::new().unwrap_or_else(|err| {
-            eprintln!("Platform adapter initialization error: {}", err);
+            eprintln!("Platform adapter initialization error: {err}");
             // Provide a minimal working adapter
             #[cfg(target_arch = "wasm32")]
             {

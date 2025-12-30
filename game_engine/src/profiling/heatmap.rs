@@ -398,8 +398,7 @@ impl HeatmapVisualizer for HtmlHeatmapVisualizer {
                 metrics.self_time.as_secs_f64() * 1000.0
             ));
             html.push_str(&format!(
-                "<td><div class=\"hotspot-bar\" style=\"width: {}%\"></div> {}%</td>\n",
-                intensity_percent, intensity_percent
+                "<td><div class=\"hotspot-bar\" style=\"width: {intensity_percent}%\"></div> {intensity_percent}%</td>\n"
             ));
             html.push_str("</tr>\n");
         }

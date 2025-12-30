@@ -160,10 +160,10 @@ impl ProjectSettingsManager {
 
         let content = tokio::fs::read_to_string(&self.settings_path)
             .await
-            .map_err(|e| format!("Failed to read settings file: {}", e))?;
+            .map_err(|e| format!("Failed to read settings file: {e}"))?;
 
         self.settings = serde_json::from_str(&content)
-            .map_err(|e| format!("Failed to parse settings file: {}", e))?;
+            .map_err(|e| format!("Failed to parse settings file: {e}"))?;
 
         self.has_unsaved_changes = false;
 
@@ -173,18 +173,18 @@ impl ProjectSettingsManager {
     /// 保存设置（异步版本）
     pub async fn save_async(&mut self) -> Result<(), String> {
         let content = serde_json::to_string_pretty(&self.settings)
-            .map_err(|e| format!("Failed to serialize settings: {}", e))?;
+            .map_err(|e| format!("Failed to serialize settings: {e}"))?;
 
         // 确保目录存在
         if let Some(parent) = self.settings_path.parent() {
             tokio::fs::create_dir_all(parent)
                 .await
-                .map_err(|e| format!("Failed to create settings directory: {}", e))?;
+                .map_err(|e| format!("Failed to create settings directory: {e}"))?;
         }
 
         tokio::fs::write(&self.settings_path, content)
             .await
-            .map_err(|e| format!("Failed to write settings file: {}", e))?;
+            .map_err(|e| format!("Failed to write settings file: {e}"))?;
 
         self.has_unsaved_changes = false;
 
@@ -200,9 +200,9 @@ impl ProjectSettingsManager {
             }
             let content = tokio::fs::read_to_string(&settings_path)
                 .await
-                .map_err(|e| format!("Failed to read settings file: {}", e))?;
+                .map_err(|e| format!("Failed to read settings file: {e}"))?;
             let settings: ProjectSettings = serde_json::from_str(&content)
-                .map_err(|e| format!("Failed to parse settings file: {}", e))?;
+                .map_err(|e| format!("Failed to parse settings file: {e}"))?;
             Ok(Some(settings))
         });
 
@@ -223,10 +223,10 @@ impl ProjectSettingsManager {
         let settings_clone = self.settings.clone();
         run_sync(async move {
             let content = serde_json::to_string_pretty(&settings_clone)
-                .map_err(|e| format!("Failed to serialize settings: {}", e))?;
+                .map_err(|e| format!("Failed to serialize settings: {e}"))?;
             tokio::fs::write(&settings_path, content)
                 .await
-                .map_err(|e| format!("Failed to write settings file: {}", e))?;
+                .map_err(|e| format!("Failed to write settings file: {e}"))?;
             Ok(())
         })
     }
@@ -467,7 +467,7 @@ impl ProjectSettingsManager {
             if ui.button("Save Settings").clicked()
                 && let Err(e) = self.save()
             {
-                eprintln!("Failed to save settings: {}", e);
+                eprintln!("Failed to save settings: {e}");
             }
 
             if self.has_unsaved_changes {
@@ -493,7 +493,8 @@ mod tests {
     fn test_settings_serialization() {
         let settings = ProjectSettings::default();
         let json = serde_json::to_string(&settings).expect("Test: operation should succeed");
-        let deserialized: ProjectSettings = serde_json::from_str(&json).expect("Test: operation should succeed");
+        let deserialized: ProjectSettings =
+            serde_json::from_str(&json).expect("Test: operation should succeed");
         assert_eq!(deserialized.project_name, settings.project_name);
     }
 

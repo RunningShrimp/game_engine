@@ -212,7 +212,8 @@ mod tests {
         let config = EngineConfig::default();
         let toml_str = toml::to_string(&config);
         assert!(toml_str.is_ok());
-        let parsed = EngineConfig::from_toml_str(&toml_str.expect("Test: operation should succeed"));
+        let parsed =
+            EngineConfig::from_toml_str(&toml_str.expect("Test: operation should succeed"));
         assert!(parsed.is_ok());
     }
 
@@ -221,7 +222,8 @@ mod tests {
         let config = EngineConfig::default();
         let json_str = serde_json::to_string(&config);
         assert!(json_str.is_ok());
-        let parsed = EngineConfig::from_json_str(&json_str.expect("Test: operation should succeed"));
+        let parsed =
+            EngineConfig::from_json_str(&json_str.expect("Test: operation should succeed"));
         assert!(parsed.is_ok());
     }
 
@@ -411,8 +413,14 @@ mod tests {
     fn test_engine_config_equality() {
         let config1 = EngineConfig::default();
         let config2 = EngineConfig::default();
-        assert_eq!(config1.graphics.resolution.width, config2.graphics.resolution.width);
-        assert_eq!(config1.performance.target_fps, config2.performance.target_fps);
+        assert_eq!(
+            config1.graphics.resolution.width,
+            config2.graphics.resolution.width
+        );
+        assert_eq!(
+            config1.performance.target_fps,
+            config2.performance.target_fps
+        );
     }
 
     #[test]
@@ -420,7 +428,10 @@ mod tests {
         let mut config1 = EngineConfig::default();
         let mut config2 = EngineConfig::default();
         config2.graphics.resolution.width = 1920;
-        assert_ne!(config1.graphics.resolution.width, config2.graphics.resolution.width);
+        assert_ne!(
+            config1.graphics.resolution.width,
+            config2.graphics.resolution.width
+        );
     }
 
     #[test]
@@ -429,7 +440,10 @@ mod tests {
         let mut config2 = EngineConfig::default();
         config2.audio.master_volume = 0.7;
         assert_ne!(config1.audio.master_volume, config2.audio.master_volume);
-        assert_eq!(config1.graphics.resolution.width, config2.graphics.resolution.width);
+        assert_eq!(
+            config1.graphics.resolution.width,
+            config2.graphics.resolution.width
+        );
     }
 
     #[test]
@@ -443,10 +457,7 @@ mod tests {
 
     #[test]
     fn test_engine_with_multiple_configs() {
-        let configs = vec![
-            EngineConfig::default(),
-            EngineConfig::new(),
-        ];
+        let configs = vec![EngineConfig::default(), EngineConfig::new()];
         for config in configs {
             let engine = Engine::new(config);
             assert_eq!(engine.config.graphics.resolution.width, 800);
@@ -499,8 +510,14 @@ mod tests {
     fn test_engine_config_default_values_consistency() {
         let config1 = EngineConfig::default();
         let config2 = EngineConfig::new();
-        assert_eq!(config1.graphics.resolution.width, config2.graphics.resolution.width);
-        assert_eq!(config1.graphics.resolution.height, config2.graphics.resolution.height);
+        assert_eq!(
+            config1.graphics.resolution.width,
+            config2.graphics.resolution.width
+        );
+        assert_eq!(
+            config1.graphics.resolution.height,
+            config2.graphics.resolution.height
+        );
     }
 
     #[test]
@@ -595,9 +612,18 @@ mod tests {
         let clone2 = config.clone();
         let clone3 = config.clone();
 
-        assert_eq!(config.graphics.resolution.width, clone1.graphics.resolution.width);
-        assert_eq!(clone1.graphics.resolution.width, clone2.graphics.resolution.width);
-        assert_eq!(clone2.graphics.resolution.width, clone3.graphics.resolution.width);
+        assert_eq!(
+            config.graphics.resolution.width,
+            clone1.graphics.resolution.width
+        );
+        assert_eq!(
+            clone1.graphics.resolution.width,
+            clone2.graphics.resolution.width
+        );
+        assert_eq!(
+            clone2.graphics.resolution.width,
+            clone3.graphics.resolution.width
+        );
     }
 
     #[test]
@@ -622,8 +648,12 @@ mod tests {
     fn test_engine_config_serialization_roundtrip_consistency() {
         let config = EngineConfig::default();
         let json = serde_json::to_string(&config).expect("Test: operation should succeed");
-        let deserialized: EngineConfig = serde_json::from_str(&json).expect("Test: operation should succeed");
-        assert_eq!(config.graphics.resolution.width, deserialized.graphics.resolution.width);
+        let deserialized: EngineConfig =
+            serde_json::from_str(&json).expect("Test: operation should succeed");
+        assert_eq!(
+            config.graphics.resolution.width,
+            deserialized.graphics.resolution.width
+        );
     }
 
     #[test]

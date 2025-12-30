@@ -40,26 +40,11 @@ impl PerformanceMetrics {
     }
 
     pub fn print(&self) {
-        println!(
-            "=== {} ===",
-            self.operation_name
-        );
-        println!(
-            "  Iterations: {}",
-            self.iterations
-        );
-        println!(
-            "  Total time: {:?}",
-            self.total_time
-        );
-        println!(
-            "  Avg time/op: {:?}",
-            self.avg_time_per_operation
-        );
-        println!(
-            "  Ops/sec: {:.2}",
-            self.operations_per_second
-        );
+        println!("=== {} ===", self.operation_name);
+        println!("  Iterations: {}", self.iterations);
+        println!("  Total time: {:?}", self.total_time);
+        println!("  Avg time/op: {:?}", self.avg_time_per_operation);
+        println!("  Ops/sec: {:.2}", self.operations_per_second);
     }
 
     pub fn improvement_percent(&self, baseline: &PerformanceMetrics) -> f64 {
@@ -78,6 +63,12 @@ pub struct CqrsBenchmarkSuite {
     world: World,
     cqrs_manager: Arc<crate::domain::cqrs::CqrsManager>,
     query_model: Arc<RwLock<PhysicsQueryModel>>,
+}
+
+impl Default for CqrsBenchmarkSuite {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl CqrsBenchmarkSuite {
@@ -117,10 +108,7 @@ impl CqrsBenchmarkSuite {
     }
 
     /// Benchmark: Traditional direct access (baseline)
-    pub fn benchmark_traditional_get_position(
-        &self,
-        iterations: usize,
-    ) -> PerformanceMetrics {
+    pub fn benchmark_traditional_get_position(&self, iterations: usize) -> PerformanceMetrics {
         let query_model = self.query_model.read().expect("Test: operation should succeed");
         let start = Instant::now();
 
@@ -130,7 +118,11 @@ impl CqrsBenchmarkSuite {
         }
 
         let total_time = start.elapsed();
-        PerformanceMetrics::new("Traditional GetPosition".to_string(), iterations, total_time)
+        PerformanceMetrics::new(
+            "Traditional GetPosition".to_string(),
+            iterations,
+            total_time,
+        )
     }
 
     /// Benchmark: CQRS query get position
@@ -153,11 +145,14 @@ impl CqrsBenchmarkSuite {
     }
 
     /// Benchmark: Batch query (CQRS advantage)
-    pub fn benchmark_batch_get_positions(&self, batch_size: usize, iterations: usize) -> PerformanceMetrics {
+    pub fn benchmark_batch_get_positions(
+        &self,
+        batch_size: usize,
+        iterations: usize,
+    ) -> PerformanceMetrics {
         let query_model = self.query_model.read().expect("Test: operation should succeed");
 
-        let ids: Vec<RigidBodyId> =
-            (0..batch_size).map(|i| RigidBodyId::new(i as u64)).collect();
+        let ids: Vec<RigidBodyId> = (0..batch_size).map(|i| RigidBodyId::new(i as u64)).collect();
 
         let start = Instant::now();
 
@@ -167,7 +162,7 @@ impl CqrsBenchmarkSuite {
 
         let total_time = start.elapsed();
         PerformanceMetrics::new(
-            format!("Batch GetPositions (batch_size={})", batch_size),
+            format!("Batch GetPositions (batch_size={batch_size})"),
             iterations * batch_size,
             total_time,
         )
@@ -202,7 +197,7 @@ impl CqrsBenchmarkSuite {
 
     /// Run all benchmarks and generate report
     pub fn run_full_benchmark_suite(&mut self, body_count: usize) -> BenchmarkReport {
-        println!("Setting up benchmark scenario with {} bodies...", body_count);
+        println!("Setting up benchmark scenario with {body_count} bodies...");
         self.setup_scenario(body_count);
         println!("Setup complete.\n");
 
@@ -216,9 +211,14 @@ impl CqrsBenchmarkSuite {
 
         traditional.print();
         cqrs.print();
-        println!("  Improvement: {:.2}%\n", improvement);
+        println!("  Improvement: {improvement:.2}%\n");
 
-        report.add_metric("Single Position Lookup".to_string(), traditional, cqrs, improvement);
+        report.add_metric(
+            "Single Position Lookup".to_string(),
+            traditional,
+            cqrs,
+            improvement,
+        );
 
         // Benchmark 2: Batch position lookup
         println!("Benchmarking batch position lookups...");
@@ -234,7 +234,12 @@ impl CqrsBenchmarkSuite {
         radius.print();
         println!();
 
-        report.add_metric("Radius Query".to_string(), radius.clone(), radius.clone(), 0.0);
+        report.add_metric(
+            "Radius Query".to_string(),
+            radius.clone(),
+            radius.clone(),
+            0.0,
+        );
 
         // Benchmark 4: Dynamic bodies query
         println!("Benchmarking dynamic bodies queries...");
@@ -242,7 +247,12 @@ impl CqrsBenchmarkSuite {
         dynamic.print();
         println!();
 
-        report.add_metric("Dynamic Bodies Query".to_string(), dynamic.clone(), dynamic.clone(), 0.0);
+        report.add_metric(
+            "Dynamic Bodies Query".to_string(),
+            dynamic.clone(),
+            dynamic.clone(),
+            0.0,
+        );
 
         report
     }
@@ -310,23 +320,31 @@ impl BenchmarkReport {
         println!("┌────────────────────────────────────────────────────────────────┐");
         println!("│ {:<50} │", "Operation");
         println!("├────────────────────────────────────────────────────────────────┤");
-        println!("│ {:<20} │ {:>15} │ {:>15} │", "Type", "Time (ns)", "Ops/sec");
+        println!(
+            "│ {:<20} │ {:>15} │ {:>15} │",
+            "Type", "Time (ns)", "Ops/sec"
+        );
         println!("├────────────────────────────────────────────────────────────────┤");
 
         for metric in &self.metrics {
             println!("│ {:<50} │", metric.operation_name);
-            println!("│ {:<20} │ {:>15.0} │ {:>15.0} │",
+            println!(
+                "│ {:<20} │ {:>15.0} │ {:>15.0} │",
                 "Traditional",
                 metric.traditional.avg_time_per_operation.as_nanos(),
                 metric.traditional.operations_per_second
             );
-            println!("│ {:<20} │ {:>15.0} │ {:>15.0} │",
+            println!(
+                "│ {:<20} │ {:>15.0} │ {:>15.0} │",
                 "CQRS",
                 metric.cqrs.avg_time_per_operation.as_nanos(),
                 metric.cqrs.operations_per_second
             );
             if metric.improvement_percent != 0.0 {
-                println!("│ {:<20} │ {:>15.2}% │", "Improvement", metric.improvement_percent);
+                println!(
+                    "│ {:<20} │ {:>15.2}% │",
+                    "Improvement", metric.improvement_percent
+                );
             }
             println!("├────────────────────────────────────────────────────────────────┤");
         }
@@ -335,20 +353,24 @@ impl BenchmarkReport {
         println!();
 
         // Calculate average improvement
-        let improvements: Vec<f64> = self.metrics.iter()
+        let improvements: Vec<f64> = self
+            .metrics
+            .iter()
             .map(|m| m.improvement_percent)
             .filter(|&i| i > 0.0)
             .collect();
 
         if !improvements.is_empty() {
             let avg_improvement = improvements.iter().sum::<f64>() / improvements.len() as f64;
-            println!("Average Performance Improvement: {:.2}%", avg_improvement);
+            println!("Average Performance Improvement: {avg_improvement:.2}%");
             println!();
 
             if avg_improvement >= 20.0 {
                 println!("✓ TARGET MET: CQRS pattern achieved >= 20% performance improvement");
             } else {
-                println!("✗ TARGET NOT MET: Performance improvement {:.2}% is below 20% target", avg_improvement);
+                println!(
+                    "✗ TARGET NOT MET: Performance improvement {avg_improvement:.2}% is below 20% target"
+                );
             }
         }
     }
@@ -366,7 +388,9 @@ mod tests {
         report.print_summary();
 
         // Verify we achieved at least 20% improvement
-        let improvements: Vec<f64> = report.metrics.iter()
+        let improvements: Vec<f64> = report
+            .metrics
+            .iter()
             .map(|m| m.improvement_percent)
             .filter(|&i| i > 0.0)
             .collect();

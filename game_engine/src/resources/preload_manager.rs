@@ -199,7 +199,7 @@ impl PreloadManager {
         // 添加到请求队列
         {
             let mut queue = safe_write(&self.request_queue, "request_queue").map_err(|e| {
-                PreloadError::LockError(format!("Failed to acquire request_queue lock: {}", e))
+                PreloadError::LockError(format!("Failed to acquire request_queue lock: {e}"))
             })?;
             queue.push(request);
         }
@@ -207,7 +207,7 @@ impl PreloadManager {
         // 更新状态
         {
             let mut status_map = safe_write(&self.status_map, "status_map").map_err(|e| {
-                PreloadError::LockError(format!("Failed to acquire status_map lock: {}", e))
+                PreloadError::LockError(format!("Failed to acquire status_map lock: {e}"))
             })?;
             status_map.insert(
                 path.clone(),
@@ -224,7 +224,7 @@ impl PreloadManager {
         // 更新统计
         {
             let mut stats = safe_write(&self.stats, "stats").map_err(|e| {
-                PreloadError::LockError(format!("Failed to acquire stats lock: {}", e))
+                PreloadError::LockError(format!("Failed to acquire stats lock: {e}"))
             })?;
             stats.total_requests += 1;
         }
@@ -293,13 +293,13 @@ impl PreloadManager {
     /// * `loader` - 资源加载器
     pub fn update(&self, _loader: &mut CoroutineAssetLoader) -> Result<(), PreloadError> {
         let mut queue = safe_write(&self.request_queue, "request_queue").map_err(|e| {
-            PreloadError::LockError(format!("Failed to acquire request_queue lock: {}", e))
+            PreloadError::LockError(format!("Failed to acquire request_queue lock: {e}"))
         })?;
         let mut loading_set = safe_write(&self.loading_set, "loading_set").map_err(|e| {
-            PreloadError::LockError(format!("Failed to acquire loading_set lock: {}", e))
+            PreloadError::LockError(format!("Failed to acquire loading_set lock: {e}"))
         })?;
         let mut status_map = safe_write(&self.status_map, "status_map").map_err(|e| {
-            PreloadError::LockError(format!("Failed to acquire status_map lock: {}", e))
+            PreloadError::LockError(format!("Failed to acquire status_map lock: {e}"))
         })?;
 
         // 按优先级和策略排序
@@ -321,8 +321,7 @@ impl PreloadManager {
                     let graph =
                         safe_read(&self.dependency_graph, "dependency_graph").map_err(|e| {
                             PreloadError::LockError(format!(
-                                "Failed to acquire dependency_graph lock: {}",
-                                e
+                                "Failed to acquire dependency_graph lock: {e}"
                             ))
                         })?;
                     if !graph.can_load(&request.path) {
@@ -351,13 +350,13 @@ impl PreloadManager {
     /// 标记预加载完成
     pub fn mark_completed(&self, path: &PathBuf, success: bool) -> Result<(), PreloadError> {
         let mut loading_set = safe_write(&self.loading_set, "loading_set").map_err(|e| {
-            PreloadError::LockError(format!("Failed to acquire loading_set lock: {}", e))
+            PreloadError::LockError(format!("Failed to acquire loading_set lock: {e}"))
         })?;
         let mut status_map = safe_write(&self.status_map, "status_map").map_err(|e| {
-            PreloadError::LockError(format!("Failed to acquire status_map lock: {}", e))
+            PreloadError::LockError(format!("Failed to acquire status_map lock: {e}"))
         })?;
         let mut stats = safe_write(&self.stats, "stats")
-            .map_err(|e| PreloadError::LockError(format!("Failed to acquire stats lock: {}", e)))?;
+            .map_err(|e| PreloadError::LockError(format!("Failed to acquire stats lock: {e}")))?;
 
         loading_set.remove(path);
 
@@ -388,10 +387,7 @@ impl PreloadManager {
         {
             let mut graph =
                 safe_write(&self.dependency_graph, "dependency_graph").map_err(|e| {
-                    PreloadError::LockError(format!(
-                        "Failed to acquire dependency_graph lock: {}",
-                        e
-                    ))
+                    PreloadError::LockError(format!("Failed to acquire dependency_graph lock: {e}"))
                 })?;
             graph.set_load_state(
                 path,
@@ -408,13 +404,13 @@ impl PreloadManager {
     /// 取消预加载
     pub fn cancel_preload(&self, path: &PathBuf) -> Result<(), PreloadError> {
         let mut loading_set = safe_write(&self.loading_set, "loading_set").map_err(|e| {
-            PreloadError::LockError(format!("Failed to acquire loading_set lock: {}", e))
+            PreloadError::LockError(format!("Failed to acquire loading_set lock: {e}"))
         })?;
         let mut status_map = safe_write(&self.status_map, "status_map").map_err(|e| {
-            PreloadError::LockError(format!("Failed to acquire status_map lock: {}", e))
+            PreloadError::LockError(format!("Failed to acquire status_map lock: {e}"))
         })?;
         let mut stats = safe_write(&self.stats, "stats")
-            .map_err(|e| PreloadError::LockError(format!("Failed to acquire stats lock: {}", e)))?;
+            .map_err(|e| PreloadError::LockError(format!("Failed to acquire stats lock: {e}")))?;
 
         loading_set.remove(path);
 
@@ -428,7 +424,7 @@ impl PreloadManager {
     /// 获取预加载状态
     pub fn get_status(&self, path: &PathBuf) -> Result<Option<PreloadStatus>, PreloadError> {
         let status_map = safe_read(&self.status_map, "status_map").map_err(|e| {
-            PreloadError::LockError(format!("Failed to acquire status_map lock: {}", e))
+            PreloadError::LockError(format!("Failed to acquire status_map lock: {e}"))
         })?;
         Ok(status_map.get(path).cloned())
     }
@@ -436,7 +432,7 @@ impl PreloadManager {
     /// 获取统计信息
     pub fn stats(&self) -> Result<PreloadStats, PreloadError> {
         let stats = safe_read(&self.stats, "stats")
-            .map_err(|e| PreloadError::LockError(format!("Failed to acquire stats lock: {}", e)))?;
+            .map_err(|e| PreloadError::LockError(format!("Failed to acquire stats lock: {e}")))?;
         Ok(stats.clone())
     }
 
@@ -449,17 +445,17 @@ impl PreloadManager {
     pub fn clear(&self) -> Result<(), PreloadError> {
         safe_write(&self.request_queue, "request_queue")
             .map_err(|e| {
-                PreloadError::LockError(format!("Failed to acquire request_queue lock: {}", e))
+                PreloadError::LockError(format!("Failed to acquire request_queue lock: {e}"))
             })?
             .clear();
         safe_write(&self.status_map, "status_map")
             .map_err(|e| {
-                PreloadError::LockError(format!("Failed to acquire status_map lock: {}", e))
+                PreloadError::LockError(format!("Failed to acquire status_map lock: {e}"))
             })?
             .clear();
         safe_write(&self.loading_set, "loading_set")
             .map_err(|e| {
-                PreloadError::LockError(format!("Failed to acquire loading_set lock: {}", e))
+                PreloadError::LockError(format!("Failed to acquire loading_set lock: {e}"))
             })?
             .clear();
         Ok(())

@@ -1,5 +1,14 @@
-//  性能监测和报告系统
-//  统一收集、分析和报告性能数据
+// 性能监测和报告系统
+// 统一收集、分析和报告性能数据
+//
+// ⚠️  **已废弃**: 此文件已被标记为废弃，请使用 system_monitor 替代。
+// 此文件将在 v1.2 版本中移除。
+//
+// 迁移指南:
+// - PerformanceMonitor → 使用 system_monitor::PerformanceMonitor
+// - Metric → 使用 system_monitor::Metric
+// - PerformanceReport → 使用 system_monitor::PerformanceReport
+
 use std::collections::HashMap;
 use std::time::Instant;
 
@@ -106,6 +115,14 @@ impl MetricStats {
 }
 
 //  性能监测器
+/// 性能监控器
+///
+/// ⚠️  **已废弃**: 请使用 `crate::monitoring::system_monitor::PerformanceMonitor` 替代。
+/// 此类型将在 v1.2 版本中移除。
+#[deprecated(
+    since = "1.1.0",
+    note = "使用 system_monitor::PerformanceMonitor 替代。此文件将在v1.2版本移除。"
+)]
 pub struct PerformanceMonitor {
     metrics: HashMap<MetricType, Vec<f64>>,
     metric_history: Vec<Metric>,

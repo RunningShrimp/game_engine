@@ -66,7 +66,10 @@ pub struct RealtimeMetrics {
 impl Default for RealtimeMetrics {
     fn default() -> Self {
         Self {
-            timestamp: SystemTime::now().duration_since(UNIX_EPOCH).expect("Test: operation should succeed").as_millis() as u64,
+            timestamp: SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .expect("Test: operation should succeed")
+                .as_millis() as u64,
             fps: 0.0,
             frame_time: 0.0,
             cpu_usage: 0.0,
@@ -521,7 +524,7 @@ impl DashboardService {
         {
             use game_engine_simd::SimdBackend;
             let backend = SimdBackend::best_available();
-            let backend_name = format!("{:?}", backend);
+            let backend_name = format!("{backend:?}");
             let simd_width = match backend.width() {
                 game_engine_simd::SimdWidth::W128 => 128,
                 game_engine_simd::SimdWidth::W256 => 256,

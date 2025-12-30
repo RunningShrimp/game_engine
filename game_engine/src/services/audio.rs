@@ -121,13 +121,13 @@ impl AudioService {
     fn load_audio_file(path: &str) -> Result<Box<dyn Source + Send>, String> {
         // 在非异步函数中无法使用await，改为同步实现
         let file =
-            std::fs::File::open(path).map_err(|e| format!("Failed to open audio file: {}", e))?;
+            std::fs::File::open(path).map_err(|e| format!("Failed to open audio file: {e}"))?;
 
         let mut buffer = Vec::new();
         let mut reader = std::io::BufReader::new(file);
         reader
             .read_to_end(&mut buffer)
-            .map_err(|e| format!("Failed to read audio file: {}", e))?;
+            .map_err(|e| format!("Failed to read audio file: {e}"))?;
 
         // 简化处理，直接返回空Source
         Ok(Box::new(rodio::source::SineWave::new(440.0)) as Box<dyn Source + Send>)

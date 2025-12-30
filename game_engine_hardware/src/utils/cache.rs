@@ -43,11 +43,7 @@ impl HardwareCache {
                         // 检查缓存是否过期（24小时）
                         let now = SystemTime::now()
                             .duration_since(UNIX_EPOCH)
-                            .map_err(|_| {
-                                std::io::Error::other(
-                                    "System time is before UNIX_EPOCH",
-                                )
-                            })
+                            .map_err(|_| std::io::Error::other("System time is before UNIX_EPOCH"))
                             .ok()?
                             .as_secs();
 

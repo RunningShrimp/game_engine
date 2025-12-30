@@ -574,7 +574,7 @@ mod tests {
 
         println!("可用超分辨率技术:");
         for tech in manager.available_technologies() {
-            println!("  - {:?}", tech);
+            println!("  - {tech:?}");
         }
 
         println!("推荐技术: {:?}", manager.recommend_technology());
@@ -591,7 +591,7 @@ mod tests {
             UpscalingQuality::Quality,
             UpscalingQuality::UltraQuality,
         ] {
-            println!("{:?}:", quality);
+            println!("{quality:?}:");
             println!("  渲染缩放: {:.0}%", quality.render_scale() * 100.0);
             println!("  性能提升: {:.1}x", quality.performance_gain());
         }
