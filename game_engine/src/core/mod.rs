@@ -38,6 +38,7 @@ pub mod event_sourcing;
 pub mod microkernel;
 pub mod resources;
 pub mod scheduler;
+pub mod system_parallel_scheduler;
 pub mod system_scheduler;
 pub mod systems;
 pub mod utils;
@@ -74,6 +75,11 @@ pub use resources::{AssetMetrics, Benchmark, LogEvents, RenderStats};
 
 // 重新导出任务调度器
 pub use scheduler::{SchedulerState, SchedulerStats, TaskPriority, TaskScheduler};
+// 重新导出并行调度器
+pub use system_parallel_scheduler::{
+    ParallelSchedulerConfig, SmartParallelScheduler, SystemCharacteristics, SystemExecutionResult,
+    SystemHistory, WorkStealingExecutor, WorkStealingSchedulerResource,
+};
 // 系统模块重新导出以避免循环依赖
 pub use systems::ai_system;
 pub use systems::animation_system;

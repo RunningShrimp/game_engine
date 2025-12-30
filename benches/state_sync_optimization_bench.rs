@@ -4,11 +4,11 @@
 //
 // 运行: cargo bench --bench state_sync_optimization_bench
 
-use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
-use glam::{Quat, Vec3};
+use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 use game_engine::network::state_sync_optimized::{
     DirtyFlag, EntityPriority, EntityState, NetworkQuality, OptimizedStateSyncManager,
 };
+use glam::{Quat, Vec3};
 use std::collections::HashSet;
 
 /// 创建测试实体状态

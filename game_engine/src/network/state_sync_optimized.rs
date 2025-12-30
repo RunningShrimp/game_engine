@@ -37,10 +37,15 @@ pub enum DirtyFlag {
 impl DirtyFlag {
     /// 获取所有脏标记
     pub fn all() -> HashSet<DirtyFlag> {
-        [DirtyFlag::Position, DirtyFlag::Rotation, DirtyFlag::Scale, DirtyFlag::Velocity]
-            .iter()
-            .cloned()
-            .collect()
+        [
+            DirtyFlag::Position,
+            DirtyFlag::Rotation,
+            DirtyFlag::Scale,
+            DirtyFlag::Velocity,
+        ]
+        .iter()
+        .cloned()
+        .collect()
     }
 }
 
@@ -58,10 +63,10 @@ impl EntityPriority {
     /// 获取默认同步间隔（毫秒）
     pub fn sync_interval_ms(&self) -> u64 {
         match self {
-            EntityPriority::Critical => 16,   // 60 Hz
-            EntityPriority::High => 33,       // 30 Hz
-            EntityPriority::Medium => 50,     // 20 Hz
-            EntityPriority::Low => 100,       // 10 Hz
+            EntityPriority::Critical => 16,    // 60 Hz
+            EntityPriority::High => 33,        // 30 Hz
+            EntityPriority::Medium => 50,      // 20 Hz
+            EntityPriority::Low => 100,        // 10 Hz
             EntityPriority::Background => 200, // 5 Hz
         }
     }
@@ -421,9 +426,8 @@ impl OptimizedStateSyncManager {
         let mut synced_count = 0;
 
         // 根据网络质量调整同步间隔
-        let adjusted_interval = self
-            .network_quality
-            .adjust_sync_interval(self.min_sync_interval_ms);
+        let adjusted_interval =
+            self.network_quality.adjust_sync_interval(self.min_sync_interval_ms);
 
         // 按优先级顺序处理实体
         for priority_queue in &mut self.priority_queues {
@@ -542,16 +546,9 @@ impl OptimizedStateSyncManager {
             if let Some(state) = self.entity_states.get_mut(&delta.id) {
                 // 构建服务器状态
                 let server_state = EntityState {
-                    position: delta
-                        .position
-                        .map(|p| Vec3::new(p[0], p[1], p[2]))
-                        .unwrap_or_else(|| {
-                            state
-                                .client_state
-                                .as_ref()
-                                .map(|s| s.position)
-                                .unwrap_or(Vec3::ZERO)
-                        }),
+                    position: delta.position.map(|p| Vec3::new(p[0], p[1], p[2])).unwrap_or_else(
+                        || state.client_state.as_ref().map(|s| s.position).unwrap_or(Vec3::ZERO),
+                    ),
                     rotation: delta
                         .rotation
                         .map(|r| Quat::from_xyzw(r[0], r[1], r[2], r[3]))
@@ -562,32 +559,14 @@ impl OptimizedStateSyncManager {
                                 .map(|s| s.rotation)
                                 .unwrap_or(Quat::IDENTITY)
                         }),
-                    scale: delta
-                        .scale
-                        .map(|s| Vec3::new(s[0], s[1], s[2]))
-                        .unwrap_or_else(|| {
-                            state
-                                .client_state
-                                .as_ref()
-                                .map(|s| s.scale)
-                                .unwrap_or(Vec3::ONE)
-                        }),
-                    velocity: delta
-                        .velocity
-                        .map(|v| Vec3::new(v[0], v[1], v[2]))
-                        .unwrap_or_else(|| {
-                            state
-                                .client_state
-                                .as_ref()
-                                .map(|s| s.velocity)
-                                .unwrap_or(Vec3::ZERO)
-                        }),
+                    scale: delta.scale.map(|s| Vec3::new(s[0], s[1], s[2])).unwrap_or_else(|| {
+                        state.client_state.as_ref().map(|s| s.scale).unwrap_or(Vec3::ONE)
+                    }),
+                    velocity: delta.velocity.map(|v| Vec3::new(v[0], v[1], v[2])).unwrap_or_else(
+                        || state.client_state.as_ref().map(|s| s.velocity).unwrap_or(Vec3::ZERO),
+                    ),
                     timestamp: current_timestamp_ms(),
-                    version: state
-                        .server_state
-                        .as_ref()
-                        .map(|s| s.version + 1)
-                        .unwrap_or(0),
+                    version: state.server_state.as_ref().map(|s| s.version + 1).unwrap_or(0),
                 };
 
                 // 检测冲突（简化版，实际实现可以更复杂）
@@ -659,8 +638,14 @@ pub struct ConflictResolution {
 pub enum ResolutionAction {
     Accept,
     ReplaceWithServer,
-    SmoothCorrection { target: EntityState, duration_ms: u64 },
-    DelayedReplace { target: EntityState, delay_ms: u64 },
+    SmoothCorrection {
+        target: EntityState,
+        duration_ms: u64,
+    },
+    DelayedReplace {
+        target: EntityState,
+        delay_ms: u64,
+    },
 }
 
 #[cfg(test)]

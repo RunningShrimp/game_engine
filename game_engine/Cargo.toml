@@ -466,6 +466,11 @@ harness = false
 path = "../benches/state_sync_optimization_bench.rs"
 
 [[bench]]
+name = "system_parallel_scheduler_bench"
+harness = false
+path = "../benches/system_parallel_scheduler_bench.rs"
+
+[[bench]]
 name = "memory_benchmarks"
 harness = false
 
