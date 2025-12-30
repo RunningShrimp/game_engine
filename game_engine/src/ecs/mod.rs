@@ -79,6 +79,9 @@ pub use soa_layout::{SoALayoutManager, SoAStats, SoATransformStorage, SoAVelocit
 pub mod dirty_tracking;
 pub use dirty_tracking::{ComponentDirty, DirtyFlags, DirtyTrackingConfig, DirtyTrackingResource};
 
+pub mod query_cache;
+pub use query_cache::{QueryCache, QueryCacheConfig, QueryCacheStats};
+
 /// Transform component representing position, rotation, and scale
 ///
 /// This component is used to define the spatial transformation of entities in 3D space.

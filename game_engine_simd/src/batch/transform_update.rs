@@ -130,6 +130,7 @@ impl TransformBatchUpdater {
     }
 
     /// 标量回退的矩阵乘法
+    #[allow(clippy::needless_range_loop)]
     fn mat4_mul_fallback(a: &[[f32; 4]; 4], b: &[[f32; 4]; 4], result: &mut [[f32; 4]; 4]) {
         for i in 0..4 {
             for j in 0..4 {

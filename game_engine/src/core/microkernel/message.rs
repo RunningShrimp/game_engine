@@ -56,7 +56,9 @@ impl MessagePayload {
     }
 
     #[cfg(feature = "message-optimization")]
-    pub fn deserialize<T: for<'de> Deserialize<'de>>(&self) -> Result<T, Box<dyn std::error::Error>> {
+    pub fn deserialize<T: for<'de> Deserialize<'de>>(
+        &self,
+    ) -> Result<T, Box<dyn std::error::Error>> {
         Ok(bincode::deserialize(&self.data)?)
     }
 

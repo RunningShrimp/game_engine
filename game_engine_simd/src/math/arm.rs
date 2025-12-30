@@ -503,6 +503,7 @@ pub unsafe fn mat4_mul_neon(a: &[[f32; 4]; 4], b: &[[f32; 4]; 4], out: &mut [[f3
 /// ```
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
+#[allow(clippy::needless_range_loop)]
 pub unsafe fn mat4_transpose_neon(m: &[[f32; 4]; 4], out: &mut [[f32; 4]; 4]) {
     let r0 = unsafe { vld1q_f32(m[0].as_ptr()) };
     let r1 = unsafe { vld1q_f32(m[1].as_ptr()) };

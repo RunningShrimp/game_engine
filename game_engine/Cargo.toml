@@ -456,6 +456,11 @@ harness = false
 path = "../benches/simd_vector_bench.rs"
 
 [[bench]]
+name = "ecs_query_cache_bench"
+harness = false
+path = "../benches/ecs_query_cache_bench.rs"
+
+[[bench]]
 name = "memory_benchmarks"
 harness = false
 

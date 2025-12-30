@@ -6,9 +6,7 @@ use glam::{Mat4, Vec3};
 
 // 条件性导入SIMD支持
 #[cfg(feature = "simd")]
-use game_engine_simd::{
-    SimdBackend, batch::PhysicsIntegrator, batch::TransformBatchUpdater,
-};
+use game_engine_simd::{SimdBackend, batch::PhysicsIntegrator, batch::TransformBatchUpdater};
 
 // 导入velocity组件包装器
 use super::velocity_components::{GlobalTransform, InverseMass, Position, Velocity};
