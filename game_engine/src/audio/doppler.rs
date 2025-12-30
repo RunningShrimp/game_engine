@@ -67,10 +67,8 @@ impl DopplerEffect {
         //   c = 声速
         //   vr = 听者径向速度
         //   vs = 声源径向速度
-        let pitch_shift =
-            (self.speed_of_sound + v_listener_radial) / (self.speed_of_sound + v_source_radial);
 
-        pitch_shift
+        (self.speed_of_sound + v_listener_radial) / (self.speed_of_sound + v_source_radial)
     }
 
     /// 计算频率偏移（Hz）

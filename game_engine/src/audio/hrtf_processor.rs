@@ -69,14 +69,13 @@ impl HrtfProcessor {
         let attenuation = self.compute_distance_attenuation(distance);
 
         // 5. 卷积
-        let output = if self.convolver.is_some() {
+
+        if self.convolver.is_some() {
             // 简化版：不使用FFT卷积
             self.convolve_direct(input, &left_hrir, &right_hrir, attenuation)
         } else {
             self.convolve_direct(input, &left_hrir, &right_hrir, attenuation)
-        };
-
-        output
+        }
     }
 
     /// 计算相对位置
@@ -105,10 +104,10 @@ impl HrtfProcessor {
         let distance = (x * x + y * y + z * z).sqrt();
 
         // 方位角（水平方向，-180到180度）
-        let azimuth = (z.atan2(x) * 180.0 / PI).to_degrees() as f32;
+        let azimuth = (z.atan2(x) * 180.0 / PI).to_degrees();
 
         // 仰角（垂直方向，-90到90度）
-        let elevation = (y.atan2((x * x + z * z).sqrt()) * 180.0 / PI).to_degrees() as f32;
+        let elevation = (y.atan2((x * x + z * z).sqrt()) * 180.0 / PI).to_degrees();
 
         (azimuth, elevation, distance)
     }

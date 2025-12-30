@@ -196,7 +196,7 @@ impl KeyPair {
     ///
     /// 推荐用于生产环境，使用X25519 ECDH进行安全的密钥交换。
     pub fn generate() -> Self {
-        Self::generate_with_config(KeyExchangeConfig::default())
+        Self::generate_with_config(KeyExchangeConfig)
     }
 
     /// 使用指定配置生成密钥对
@@ -220,9 +220,7 @@ impl KeyPair {
 
     /// 获取或创建默认后端
     fn get_backend(&self) -> Arc<dyn KeyExchangeBackend> {
-        self.backend
-            .clone()
-            .unwrap_or_else(|| create_backend(&KeyExchangeConfig::default()))
+        self.backend.clone().unwrap_or_else(|| create_backend(&KeyExchangeConfig))
     }
 
     /// 检查密钥对是否有效
@@ -309,7 +307,7 @@ impl SharedSecret {
     ///
     /// 使用 HKDF (RFC 5869) 进行安全的密钥派生。
     pub fn derive(shared_secret: [u8; 32]) -> Self {
-        let backend = create_backend(&KeyExchangeConfig::default());
+        let backend = create_backend(&KeyExchangeConfig);
         Self::derive_with_backend(shared_secret, backend)
     }
 

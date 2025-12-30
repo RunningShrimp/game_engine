@@ -3,8 +3,8 @@
 //! 本文件展示了如何优化过度异步化代码，提升性能和可维护性。
 //! 使用策略模式实现，避免条件编译。
 
-pub mod lock_optimization_guide;
-pub mod dashmap_examples;
+// lock_optimization_guide 已移动到 docs/guides/
+// dashmap_examples 已移动到 examples_optimized/
 pub mod dashmap_real_world;
 pub mod benchmarks;
 
@@ -626,8 +626,8 @@ pub fn optimization_priority() -> Vec<&'static str> {
 ///
 /// ## 运行时策略选择
 /// 所有条件编译已通过策略模式转换为运行时选择：
-/// 1. **lock_optimization_guide.rs**: MutexStrategy枚举（StdMutex vs ParkingLotMutex）
-/// 2. **dashmap_examples.rs**: HashMapStrategy枚举（ArcMutexHashMap vs DashMapImpl）
+/// 1. **docs/guides/lock_optimization_guide.rs**: MutexStrategy枚举（StdMutex vs ParkingLotMutex）
+/// 2. **examples_optimized/dashmap_examples.rs**: HashMapStrategy枚举（ArcMutexHashMap vs DashMapImpl）
 /// 3. **mod.rs**: ConcurrencyStrategy枚举（Serial vs Parallel vs Adaptive）
 ///
 /// ## 架构改进

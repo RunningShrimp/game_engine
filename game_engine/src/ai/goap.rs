@@ -19,6 +19,12 @@ pub enum StateValue {
     Int(i32),
 }
 
+impl Default for WorldState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl WorldState {
     pub fn new() -> Self {
         Self {
@@ -82,6 +88,12 @@ pub trait Goal: Send + Sync {
 pub struct GoapPlanner {
     actions: Vec<Box<dyn Action>>,
     goals: Vec<Box<dyn Goal>>,
+}
+
+impl Default for GoapPlanner {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl GoapPlanner {

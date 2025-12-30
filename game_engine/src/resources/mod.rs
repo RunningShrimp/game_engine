@@ -124,6 +124,7 @@
 pub mod asset_loader_trait;
 pub mod async_upload;
 pub mod atlas;
+pub mod core;
 pub mod coroutine_loader;
 pub mod dependency_manager;
 pub mod events;
@@ -150,8 +151,7 @@ pub mod time;
 pub mod upload_queue;
 
 // 性能优化模块
-#[cfg(feature = "dashmap")]
-pub mod dashmap_optimizations;
+// dashmap_optimizations 已移动到 examples_optimized/
 pub mod optimized_manager;
 
 // 统一资源接口

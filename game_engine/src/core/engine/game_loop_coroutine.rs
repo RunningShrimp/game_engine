@@ -552,23 +552,11 @@ pub struct AsyncPhysicsUpdate {
 
 unsafe impl Send for AsyncPhysicsUpdate {}
 
-pub async fn async_physics_step(
-    dt: Duration,
-    physics_system: impl FnOnce(Duration),
-) -> Result<(), GameTaskError> {
-    physics_system(dt);
-    Ok(())
-}
-
-pub async fn async_ai_update(
-    entities: Vec<Entity>,
-    ai_callback: impl Fn(Entity) + Send + 'static,
-) -> Result<(), GameTaskError> {
-    for entity in entities {
-        ai_callback(entity);
-    }
-    Ok(())
-}
+// 以下async函数已删除 - 它们未被使用且是过度异步化的例子
+// - async_physics_step: 纯计算不需要异步
+// - async_ai_update: 纯计算不需要异步
+// 如果将来需要物理/AI异步处理，应使用tokio::task::spawn_blocking
+// 参见: P0-3-2_REFINED_PLAN.md
 
 #[cfg(test)]
 mod tests {

@@ -19,10 +19,7 @@ use std::path::Path;
 /// assert!(validate_extension(Path::new("texture.png"), &["gltf", "glb"]).is_err());
 /// assert!(validate_extension(Path::new("no_ext"), &["txt"]).is_err());
 /// ```
-pub fn validate_extension<'a, 'p>(
-    path: &'p Path,
-    allowed: &[&'a str],
-) -> ValidationResult<&'p Path> {
+pub fn validate_extension<'p>(path: &'p Path, allowed: &[&str]) -> ValidationResult<&'p Path> {
     let ext = path
         .extension()
         .and_then(|s| s.to_str())

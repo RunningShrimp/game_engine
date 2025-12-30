@@ -146,14 +146,14 @@ fn log_asset_event(event: &AssetEvent, world: &mut World) {
                 if type_name == "GltfScene" {
                     format!("GltfLoaded {ms:.1}ms")
                 } else {
-                    format!("CustomLoaded({}) {ms:.1}ms", type_name)
+                    format!("CustomLoaded({type_name}) {ms:.1}ms")
                 }
             }
             AssetEvent::CustomFailed { type_name, error } => {
                 if type_name == "GltfScene" {
                     format!("GltfFailed {error}")
                 } else {
-                    format!("CustomFailed({}) {error}", type_name)
+                    format!("CustomFailed({type_name}) {error}")
                 }
             }
         };

@@ -109,6 +109,8 @@
 
 use crate::impl_default;
 
+pub mod traits;
+
 pub mod batch_sync;
 pub mod collision_performance;
 pub mod cqrs;

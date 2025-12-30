@@ -121,8 +121,7 @@ pub fn validate_positive_f32(value: f32) -> ValidationResult<f32> {
 pub fn validate_even(value: i64) -> ValidationResult<i64> {
     if value % 2 != 0 {
         return Err(ValidationError::custom(format!(
-            "Value {} is not an even number",
-            value
+            "Value {value} is not an even number"
         )));
     }
     Ok(value)
@@ -132,8 +131,7 @@ pub fn validate_even(value: i64) -> ValidationResult<i64> {
 pub fn validate_odd(value: i64) -> ValidationResult<i64> {
     if value % 2 == 0 {
         return Err(ValidationError::custom(format!(
-            "Value {} is not an odd number",
-            value
+            "Value {value} is not an odd number"
         )));
     }
     Ok(value)

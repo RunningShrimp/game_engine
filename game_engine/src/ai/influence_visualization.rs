@@ -34,7 +34,7 @@ impl InfluenceVisualizer {
             for x in 0..grid.width() {
                 let value = grid.get(x, y);
                 let ch = Self::value_to_char(value);
-                write!(output, "{}", ch).unwrap();
+                write!(output, "{ch}").unwrap();
             }
             writeln!(output, "|").unwrap();
         }
@@ -79,7 +79,7 @@ impl InfluenceVisualizer {
             for x in 0..grid.width() {
                 let value = grid.get(x, y);
                 let color = Self::value_to_color(value);
-                write!(output, "{}  ", color).unwrap();
+                write!(output, "{color}  ").unwrap();
             }
             writeln!(output).unwrap();
         }
@@ -196,8 +196,7 @@ impl InfluenceVisualizer {
         writeln!(svg, r#"<?xml version="1.0" encoding="UTF-8"?>"#).unwrap();
         writeln!(
             svg,
-            r#"<svg xmlns="http://www.w3.org/2000/svg" width="{}" height="{}">"#,
-            svg_width, svg_height
+            r#"<svg xmlns="http://www.w3.org/2000/svg" width="{svg_width}" height="{svg_height}">"#
         )
         .unwrap();
         writeln!(svg, "<style>").unwrap();
@@ -209,7 +208,7 @@ impl InfluenceVisualizer {
         writeln!(svg, "</style>").unwrap();
 
         // 标题
-        writeln!(svg, r#"<text x="50%" y="20" text-anchor="middle" font-size="16" font-weight="bold">{}</text>"#, title).unwrap();
+        writeln!(svg, r#"<text x="50%" y="20" text-anchor="middle" font-size="16" font-weight="bold">{title}</text>"#).unwrap();
 
         // 绘制网格
         for y in 0..grid.height() {

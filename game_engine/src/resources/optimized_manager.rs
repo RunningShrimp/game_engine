@@ -76,6 +76,21 @@ pub enum OptimizedLoadState<T> {
     Failed(String),
 }
 
+impl<T> OptimizedLoadState<T> {
+    /// Check if the resource is loaded
+    pub fn is_loaded(&self) -> bool {
+        matches!(self, OptimizedLoadState::Loaded(_))
+    }
+
+    /// Get the loaded value reference
+    pub fn get_loaded(&self) -> Option<&T> {
+        match self {
+            OptimizedLoadState::Loaded(v) => Some(v),
+            _ => None,
+        }
+    }
+}
+
 /// 优化的资源容器 - 使用 parking_lot::RwLock
 ///
 /// # 性能优势
@@ -100,59 +115,48 @@ pub struct OptimizedHandle<T: 'static + Send + Sync> {
 }
 
 impl<T: 'static + Send + Sync> OptimizedHandle<T> {
+    /// Create a new handle in Loading state
     pub fn new_loading() -> Self {
         Self {
-            #[cfg(not(feature = "dashmap"))]
             container: Arc::new(OptimizedAssetContainer {
+                #[cfg(not(feature = "dashmap"))]
                 state: RwLock::new(OptimizedLoadState::Loading),
-            }),
-
-            #[cfg(feature = "dashmap")]
-            container: Arc::new(OptimizedAssetContainer {
+                #[cfg(feature = "dashmap")]
                 state: parking_lot::RwLock::new(OptimizedLoadState::Loading),
             }),
         }
     }
 
-    /// 获取资源（优化版本）
-    ///
-    /// # 性能
-    ///
-    /// parking_lot::RwLock::read() 比 std::sync::RwLock::read() 快 **2.5x-5x**
+    /// Check if the resource is loaded
+    pub fn is_loaded(&self) -> bool {
+        #[cfg(not(feature = "dashmap"))]
+        {
+            matches!(*self.container.state.read(), OptimizedLoadState::Loaded(_))
+        }
+        #[cfg(feature = "dashmap")]
+        {
+            matches!(*self.container.state.read(), OptimizedLoadState::Loaded(_))
+        }
+    }
+
+    /// Get the loaded value (if available)
     pub fn get(&self) -> Option<T>
     where
         T: Clone,
     {
-        self.container.state.read().get_loaded().cloned()
-    }
-
-    /// 检查资源是否已加载（非阻塞）
-    #[inline]
-    pub fn is_loaded(&self) -> bool {
-        self.container.state.read().is_loaded()
-    }
-
-    /// 非阻塞获取资源
-    #[inline]
-    pub fn get_non_blocking(&self) -> Option<T>
-    where
-        T: Clone,
-    {
-        self.get() // parking_lot 已经很快，不需要try_read
-    }
-}
-
-impl<T> OptimizedLoadState<T> {
-    #[inline]
-    pub fn is_loaded(&self) -> bool {
-        matches!(self, OptimizedLoadState::Loaded(_))
-    }
-
-    #[inline]
-    pub fn get_loaded(&self) -> Option<&T> {
-        match self {
-            OptimizedLoadState::Loaded(v) => Some(v),
-            _ => None,
+        #[cfg(not(feature = "dashmap"))]
+        {
+            match &*self.container.state.read() {
+                OptimizedLoadState::Loaded(v) => Some(v.clone()),
+                _ => None,
+            }
+        }
+        #[cfg(feature = "dashmap")]
+        {
+            match &*self.container.state.read() {
+                OptimizedLoadState::Loaded(v) => Some(v.clone()),
+                _ => None,
+            }
         }
     }
 }
@@ -582,7 +586,7 @@ impl OptimizedAssetManager {
                 }
                 self.load_shader(name)?;
             }
-            _ => return Err(format!("Unknown resource type: {}", type_)),
+            _ => return Err(format!("Unknown resource type: {type_}")),
         }
         Ok(())
     }

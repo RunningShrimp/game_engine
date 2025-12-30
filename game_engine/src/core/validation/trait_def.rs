@@ -78,10 +78,7 @@ where
 
     fn validate(&self) -> Result<(), Self::Error> {
         for (i, item) in self.iter().enumerate() {
-            item.validate().map_err(|e| {
-                // TODO: 将索引添加到错误上下文
-                e
-            })?;
+            item.validate()?;
         }
         Ok(())
     }

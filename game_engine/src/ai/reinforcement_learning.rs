@@ -75,12 +75,7 @@ impl QLearningAgent {
         num_actions: usize,
     ) {
         // 获取当前Q值
-        let current_q = *self
-            .q_table
-            .entry(state)
-            .or_insert_with(HashMap::new)
-            .entry(action)
-            .or_insert(0.0);
+        let current_q = *self.q_table.entry(state).or_default().entry(action).or_insert(0.0);
 
         // 计算最大未来Q值
         let max_next_q = self.get_max_q_value(next_state, num_actions);

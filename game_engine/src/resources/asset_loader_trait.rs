@@ -133,7 +133,7 @@ impl AssetLoader for GltfAssetLoaderWrapper {
     async fn load(&self, _path: &Path, bytes: Vec<u8>) -> Result<BoxedAssetResult, AssetLoadError> {
         let scene = super::gltf_assets::GltfAssetLoader::load_from_bytes(bytes)
             .await
-            .map_err(|e| AssetLoadError::Decode(e))?;
+            .map_err(AssetLoadError::Decode)?;
 
         Ok(BoxedAssetResult::Custom(Box::new(scene)))
     }

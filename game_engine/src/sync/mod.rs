@@ -199,11 +199,11 @@ where
     }
 
     fn is_empty(&self) -> bool {
-        self.inner.read().ok().map_or(true, |guard| guard.is_empty())
+        self.inner.read().ok().is_none_or(|guard| guard.is_empty())
     }
 
     fn contains_key(&self, key: &K) -> bool {
-        self.inner.read().ok().map_or(false, |guard| guard.contains_key(key))
+        self.inner.read().ok().is_some_and(|guard| guard.contains_key(key))
     }
 
     fn keys(&self) -> Vec<K> {
@@ -273,15 +273,15 @@ where
     T: std::hash::Hash + Eq + Clone,
 {
     fn insert(&self, value: T) -> bool {
-        self.inner.write().ok().map_or(false, |mut guard| guard.insert(value))
+        self.inner.write().ok().is_some_and(|mut guard| guard.insert(value))
     }
 
     fn remove(&self, value: &T) -> bool {
-        self.inner.write().ok().map_or(false, |mut guard| guard.remove(value))
+        self.inner.write().ok().is_some_and(|mut guard| guard.remove(value))
     }
 
     fn contains(&self, value: &T) -> bool {
-        self.inner.read().ok().map_or(false, |guard| guard.contains(value))
+        self.inner.read().ok().is_some_and(|guard| guard.contains(value))
     }
 
     fn len(&self) -> usize {
@@ -289,7 +289,7 @@ where
     }
 
     fn is_empty(&self) -> bool {
-        self.inner.read().ok().map_or(true, |guard| guard.is_empty())
+        self.inner.read().ok().is_none_or(|guard| guard.is_empty())
     }
 
     fn clear(&self) {
