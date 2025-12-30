@@ -173,11 +173,13 @@ impl QueryCache {
     }
 
     /// 使用默认配置创建
+    #[allow(clippy::should_implement_trait)]
     pub fn default() -> Self {
         Self::new(QueryCacheConfig::default())
     }
 
     /// 执行缓存查询 (简化版本)
+    #[allow(clippy::needless_lifetimes)]
     pub fn query_cached<'w, T: bevy_ecs::query::WorldQuery>(
         &mut self,
         world: &'w World,
