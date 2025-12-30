@@ -178,6 +178,8 @@ pub mod priority_sync;
 pub mod replay;
 pub mod security;
 pub mod server;
+/// 优化的状态同步模块（P1-3-1）
+pub mod state_sync_optimized;
 pub mod synchronization;
 /// WebRTC网络协议支持
 pub mod webrtc;
