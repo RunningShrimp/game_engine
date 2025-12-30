@@ -249,33 +249,6 @@ gltf = ["dep:gltf"]
 ## ```
 secure_key_exchange = ["x25519-dalek-ng", "hkdf"]
 
-## 启用不安全的密钥交换（仅用于测试和开发）
-##
-## ⚠️ 警告：不应用于生产环境！
-##
-## 依赖：无额外依赖
-##
-## 安全特性：
-## - 使用SHA256的简化实现
-## - 不提供前向安全性
-## - 仅适合本地测试和开发
-##
-## 使用场景：
-## - 单元测试
-## - 集成测试
-## - 开发调试（快速迭代）
-##
-## 安全警告：
-## - ❌ 不可用于生产环境
-## - ❌ 不可用于网络通信
-## - ❌ 不可用于加密真实数据
-##
-## 示例：
-## ```bash
-## cargo build --features insecure_key_exchange
-## ```
-insecure_key_exchange = []
-
 ### 性能分析
 ## 启用Tracy Profiler集成
 ##
@@ -377,12 +350,13 @@ wasm = []
 ## - `tracy`: 性能分析工具（开发调试必备）
 ## - `physics`: 物理引擎（游戏核心功能）
 ## - `parallel`: 并行处理（性能优化）
+## - `dashmap`: 并发HashMap（资源管理器性能优化）
 ##
 ## 为什么选择这些作为默认特性？
 ## 1. 适合大多数使用场景
 ## 2. 平衡了功能性和性能
 ## 3. 安全默认（使用secure_key_exchange）
-## 4. 开发友好（包含tracy和gltf）
+## 4. 开发友好（包含tracy、gltf和dashmap）
 ##
 ## 如何自定义特性？
 ## ```bash
@@ -393,10 +367,10 @@ wasm = []
 ## cargo build --no-default-features --features xr,wasm
 ##
 ## # 生产构建（禁用开发工具）
-## cargo build --no-default-features --features gltf,secure_key_exchange,physics,parallel
+## cargo build --no-default-features --features gltf,secure_key_exchange,physics,parallel,dashmap
 ## ```
 ##
-default = ["gltf", "secure_key_exchange", "physics", "parallel"]
+default = ["gltf", "secure_key_exchange", "physics", "parallel", "dashmap"]
 
 # ============================================================================
 # Feature 组合验证

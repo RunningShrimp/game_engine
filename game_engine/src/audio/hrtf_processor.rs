@@ -102,13 +102,13 @@ impl HrtfProcessor {
         let y = pos.1;
         let z = pos.2;
 
-        let distance = (x*x + y*y + z*z).sqrt();
+        let distance = (x * x + y * y + z * z).sqrt();
 
         // 方位角（水平方向，-180到180度）
         let azimuth = (z.atan2(x) * 180.0 / PI).to_degrees() as f32;
 
         // 仰角（垂直方向，-90到90度）
-        let elevation = (y.atan2((x*x + z*z).sqrt()) * 180.0 / PI).to_degrees() as f32;
+        let elevation = (y.atan2((x * x + z * z).sqrt()) * 180.0 / PI).to_degrees() as f32;
 
         (azimuth, elevation, distance)
     }
@@ -138,11 +138,7 @@ impl HrtfProcessor {
     /// 计算距离衰减
     fn compute_distance_attenuation(&self, distance: f32) -> f32 {
         // 简单的反比衰减
-        if distance < 1.0 {
-            1.0
-        } else {
-            1.0 / distance
-        }
+        if distance < 1.0 { 1.0 } else { 1.0 / distance }
     }
 
     /// 直接卷积（慢但简单）
@@ -324,21 +320,13 @@ mod tests {
 
         // 测试左侧声源
         let source_left = (-1.0, 0.0, 0.0);
-        let output_left = processor.process(
-            &input,
-            source_left,
-            (0.0, 0.0, 0.0),
-            (1.0, 0.0, 0.0, 0.0),
-        );
+        let output_left =
+            processor.process(&input, source_left, (0.0, 0.0, 0.0), (1.0, 0.0, 0.0, 0.0));
 
         // 测试右侧声源
         let source_right = (1.0, 0.0, 0.0);
-        let output_right = processor.process(
-            &input,
-            source_right,
-            (0.0, 0.0, 0.0),
-            (1.0, 0.0, 0.0, 0.0),
-        );
+        let output_right =
+            processor.process(&input, source_right, (0.0, 0.0, 0.0), (1.0, 0.0, 0.0, 0.0));
 
         // 左侧声源应该在左耳更响
         let left_left = output_left.iter().map(|s| s[0].abs()).sum::<f32>();

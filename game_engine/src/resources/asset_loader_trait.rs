@@ -21,10 +21,7 @@ pub enum AssetLoadError {
     LoaderNotFound(String),
 
     #[error("Type mismatch: expected {expected}, got {got}")]
-    TypeMismatch {
-        expected: String,
-        got: String,
-    },
+    TypeMismatch { expected: String, got: String },
 }
 
 /// 资源加载结果 - 类型擦除版本
@@ -41,11 +38,7 @@ pub trait AssetLoader: Send + Sync + 'static {
     fn extensions(&self) -> &[&str];
 
     /// 加载资源（异步）
-    async fn load(
-        &self,
-        path: &Path,
-        bytes: Vec<u8>,
-    ) -> Result<BoxedAssetResult, AssetLoadError>;
+    async fn load(&self, path: &Path, bytes: Vec<u8>) -> Result<BoxedAssetResult, AssetLoadError>;
 
     /// 获取加载器名称（用于调试）
     fn name(&self) -> &str {
@@ -77,11 +70,7 @@ impl AssetLoader for TextureAssetLoader {
         &["png", "jpg", "jpeg", "bmp", "tga", "gif", "webp"]
     }
 
-    async fn load(
-        &self,
-        _path: &Path,
-        bytes: Vec<u8>,
-    ) -> Result<BoxedAssetResult, AssetLoadError> {
+    async fn load(&self, _path: &Path, bytes: Vec<u8>) -> Result<BoxedAssetResult, AssetLoadError> {
         // 在阻塞任务中解码图像，避免阻塞异步运行时
         let image = tokio::task::spawn_blocking(move || {
             image::load_from_memory(&bytes)
@@ -109,11 +98,7 @@ impl AssetLoader for AtlasAssetLoader {
         &["atlas", "json"]
     }
 
-    async fn load(
-        &self,
-        _path: &Path,
-        bytes: Vec<u8>,
-    ) -> Result<BoxedAssetResult, AssetLoadError> {
+    async fn load(&self, _path: &Path, bytes: Vec<u8>) -> Result<BoxedAssetResult, AssetLoadError> {
         Ok(BoxedAssetResult::Bytes(bytes))
     }
 
@@ -145,11 +130,7 @@ impl AssetLoader for GltfAssetLoaderWrapper {
         &["gltf", "glb"]
     }
 
-    async fn load(
-        &self,
-        _path: &Path,
-        bytes: Vec<u8>,
-    ) -> Result<BoxedAssetResult, AssetLoadError> {
+    async fn load(&self, _path: &Path, bytes: Vec<u8>) -> Result<BoxedAssetResult, AssetLoadError> {
         let scene = super::gltf_assets::GltfAssetLoader::load_from_bytes(bytes)
             .await
             .map_err(|e| AssetLoadError::Decode(e))?;
@@ -164,10 +145,8 @@ impl AssetLoader for GltfAssetLoaderWrapper {
 
 /// 创建默认加载器集合
 pub fn create_default_loaders() -> Vec<Box<dyn AssetLoader>> {
-    let loaders: Vec<Box<dyn AssetLoader>> = vec![
-        Box::new(TextureAssetLoader),
-        Box::new(AtlasAssetLoader),
-    ];
+    let loaders: Vec<Box<dyn AssetLoader>> =
+        vec![Box::new(TextureAssetLoader), Box::new(AtlasAssetLoader)];
 
     // 条件编译：仅在feature启用时添加GLTF加载器
     #[cfg(feature = "gltf")]

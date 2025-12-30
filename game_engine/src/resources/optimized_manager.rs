@@ -819,7 +819,10 @@ mod tests {
         println!("DashMap concurrent load (1000 ops): {:?}", duration);
 
         // DashMap应该非常快（< 100ms for 1000 operations）
-        assert!(duration.as_millis() < 100, "DashMap should be very fast for concurrent ops");
+        assert!(
+            duration.as_millis() < 100,
+            "DashMap should be very fast for concurrent ops"
+        );
     }
 
     // 测试资源热重载

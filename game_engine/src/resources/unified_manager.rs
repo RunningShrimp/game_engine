@@ -110,9 +110,21 @@ pub struct UnifiedResourceManager {
     loaders: Arc<RwLock<ResourceLoaderRegistry>>,
     /// 待加载任务（DashMap or Mutex<HashMap>）
     #[cfg(feature = "dashmap")]
-    pending: Arc<DashMap<PathBuf, tokio::task::JoinHandle<Result<Arc<dyn Resource + Send + Sync>, ResourceError>>>>,
+    pending: Arc<
+        DashMap<
+            PathBuf,
+            tokio::task::JoinHandle<Result<Arc<dyn Resource + Send + Sync>, ResourceError>>,
+        >,
+    >,
     #[cfg(not(feature = "dashmap"))]
-    pending: Arc<Mutex<HashMap<PathBuf, tokio::task::JoinHandle<Result<Arc<dyn Resource + Send + Sync>, ResourceError>>>>>,
+    pending: Arc<
+        Mutex<
+            HashMap<
+                PathBuf,
+                tokio::task::JoinHandle<Result<Arc<dyn Resource + Send + Sync>, ResourceError>>,
+            >,
+        >,
+    >,
     /// 依赖图
     dependency_graph: Arc<RwLock<DependencyGraph>>,
 }
@@ -459,10 +471,9 @@ impl UnifiedResourceManager {
             #[cfg(not(feature = "dashmap"))]
             {
                 // RwLock: 读锁保护
-                let cache = self
-                    .cache
-                    .read()
-                    .map_err(|e| ResourceError::Other(format!("Failed to acquire cache lock: {e}")))?;
+                let cache = self.cache.read().map_err(|e| {
+                    ResourceError::Other(format!("Failed to acquire cache lock: {e}"))
+                })?;
 
                 for resource in cache.values() {
                     total_size += resource.size_bytes();

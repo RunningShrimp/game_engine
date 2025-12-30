@@ -41,7 +41,8 @@
 #![allow(unused_parens)] // Stylistic choices in tests - 测试中的样式选择
 #![allow(unused_attributes)] // Test markers - 测试标记
 #![allow(unused_comparisons)] // Assertion sanity checks - 断言完整性检查
-#![allow(unused_must_use)] // Ignored Result types in tests - 测试中忽略的 Result 类型
+#![allow(unused_must_use)]
+// Ignored Result types in tests - 测试中忽略的 Result 类型
 // Acceptable for resource API design - 资源 API 设计中可接受
 // Note: async_fn_in_trait warnings are Rust compiler warnings, not clippy
 // 注意：async_fn_in_trait 是 Rust 编译器警告，不是 clippy
@@ -141,6 +142,7 @@ pub mod scene;
 pub mod scripting;
 pub mod serialization;
 pub mod services;
+pub mod sync;
 pub mod traits;
 pub mod ui;
 pub mod world;
@@ -223,21 +225,3 @@ impl VersionInfo {
         }
     }
 }
-
-// ============================================================================
-// Feature Cross-Detection / Feature 交叉检测
-// ============================================================================
-
-// Compile-time error for conflicting features
-// 编译时检测冲突的 feature
-#[cfg(all(feature = "secure_key_exchange", feature = "insecure_key_exchange"))]
-compile_error!(
-    "error: Cannot enable both 'secure_key_exchange' and 'insecure_key_exchange' features. \
-    \nChoose one: \
-    \n  - 'secure_key_exchange' for production (ECDH + HKDF) \
-    \n  - 'insecure_key_exchange' for testing only \
-    \n\
-    \nExample: \
-    \n  cargo build --features secure_key_exchange \
-    \n  cargo build --features insecure_key_exchange"
-);

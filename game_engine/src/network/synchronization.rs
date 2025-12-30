@@ -481,16 +481,9 @@ impl StateSyncManager {
         {
             for delta in &packet.deltas {
                 // 先获取当前版本号，然后drop引用
-                let version = self
-                    .entity_states
-                    .get(&delta.id)
-                    .map(|sync_state| {
-                        sync_state
-                            .server_state
-                            .as_ref()
-                            .map(|s| s.version + 1)
-                            .unwrap_or(0)
-                    });
+                let version = self.entity_states.get(&delta.id).map(|sync_state| {
+                    sync_state.server_state.as_ref().map(|s| s.version + 1).unwrap_or(0)
+                });
 
                 if let Some(version) = version {
                     // 构建服务器状态
@@ -516,7 +509,9 @@ impl StateSyncManager {
                     };
 
                     // 更新服务器状态并检测冲突
-                    if let Ok(conflict) = self.update_server_state(delta.id, server_state, current_tick) {
+                    if let Ok(conflict) =
+                        self.update_server_state(delta.id, server_state, current_tick)
+                    {
                         if conflict.conflict_type != ConflictType::None {
                             conflicts.push(conflict);
                         }
@@ -556,7 +551,9 @@ impl StateSyncManager {
                     };
 
                     // 更新服务器状态并检测冲突
-                    if let Ok(conflict) = self.update_server_state(delta.id, server_state, current_tick) {
+                    if let Ok(conflict) =
+                        self.update_server_state(delta.id, server_state, current_tick)
+                    {
                         if conflict.conflict_type != ConflictType::None {
                             conflicts.push(conflict);
                         }

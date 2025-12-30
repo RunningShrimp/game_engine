@@ -94,7 +94,11 @@ fn update_asset_metrics(event: &AssetEvent, world: &mut World) {
                 am.atlases_loaded += 1;
                 tracing::debug!(target: "assets", "Atlas loaded in {:.1}ms, total: {}", ms, am.atlases_loaded);
             }
-            AssetEvent::CustomLoaded { type_name, time_ms: ms, .. } => {
+            AssetEvent::CustomLoaded {
+                type_name,
+                time_ms: ms,
+                ..
+            } => {
                 if type_name == "GltfScene" {
                     am.last_latency_ms = Some(*ms);
                     am.models_loaded += 1;
@@ -134,7 +138,11 @@ fn log_asset_event(event: &AssetEvent, world: &mut World) {
             AssetEvent::AtlasLoaded(_, ms) => format!("AtlasLoaded {ms:.1}ms"),
             AssetEvent::TextureFailed(_, e) => format!("TextureFailed {e}"),
             AssetEvent::AtlasFailed(_, e) => format!("AtlasFailed {e}"),
-            AssetEvent::CustomLoaded { type_name, time_ms: ms, .. } => {
+            AssetEvent::CustomLoaded {
+                type_name,
+                time_ms: ms,
+                ..
+            } => {
                 if type_name == "GltfScene" {
                     format!("GltfLoaded {ms:.1}ms")
                 } else {
@@ -169,7 +177,10 @@ fn log_asset_event(event: &AssetEvent, world: &mut World) {
 /// * `renderer` - wgpu渲染器
 #[cfg(feature = "gltf")]
 fn process_gltf_loaded_event(event: &AssetEvent, world: &mut World, renderer: &mut WgpuRenderer) {
-    if let AssetEvent::CustomLoaded { type_name, handle, .. } = &event {
+    if let AssetEvent::CustomLoaded {
+        type_name, handle, ..
+    } = &event
+    {
         if type_name == "GltfScene" {
             #[cfg(feature = "gltf")]
             {
@@ -273,7 +284,10 @@ pub async fn preload_resources(
             }
             #[cfg(not(feature = "gltf"))]
             {
-                tracing::warn!("GLTF file '{}' requested but 'gltf' feature is not enabled", path);
+                tracing::warn!(
+                    "GLTF file '{}' requested but 'gltf' feature is not enabled",
+                    path
+                );
             }
         }
     }

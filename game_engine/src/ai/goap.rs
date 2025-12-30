@@ -103,14 +103,10 @@ impl GoapPlanner {
     }
 
     /// 规划最佳动作序列
-    pub fn plan(
-        &self,
-        current_state: &WorldState,
-    ) -> Option<Vec<Box<dyn Action>>> {
+    pub fn plan(&self, current_state: &WorldState) -> Option<Vec<Box<dyn Action>>> {
         // 1. 找到最高优先级的未满足目标
-        let goal = self.goals.iter()
-            .filter(|g| !g.is_satisfied(current_state))
-            .max_by(|a, b| {
+        let goal =
+            self.goals.iter().filter(|g| !g.is_satisfied(current_state)).max_by(|a, b| {
                 a.priority(current_state)
                     .partial_cmp(&b.priority(current_state))
                     .unwrap_or(std::cmp::Ordering::Equal)
@@ -126,8 +122,8 @@ impl GoapPlanner {
         start_state: &WorldState,
         goal: &Box<dyn Goal>,
     ) -> Option<Vec<Box<dyn Action>>> {
-        use std::collections::BinaryHeap;
         use std::cmp::Reverse;
+        use std::collections::BinaryHeap;
 
         // TODO: 实现完整的A*搜索
         // 简化版：返回空序列
@@ -153,6 +149,12 @@ impl GoapPlanner {
 pub struct AttackAction {
     target_id: u64,
     damage: f32,
+}
+
+impl AttackAction {
+    pub fn new(target_id: u64, damage: f32) -> Self {
+        Self { target_id, damage }
+    }
 }
 
 impl Action for AttackAction {
@@ -214,14 +216,16 @@ pub struct EliminateTargetGoal;
 
 impl Goal for EliminateTargetGoal {
     fn is_satisfied(&self, state: &WorldState) -> bool {
-        state.get("target_alive")
+        state
+            .get("target_alive")
             .map(|v| matches!(v, StateValue::Bool(false)))
             .unwrap_or(false)
     }
 
     fn priority(&self, state: &WorldState) -> f32 {
         // 目标存活时优先级高
-        if state.get("target_alive")
+        if state
+            .get("target_alive")
             .map(|v| matches!(v, StateValue::Bool(true)))
             .unwrap_or(false)
         {
@@ -241,7 +245,8 @@ pub struct SurvivalGoal;
 
 impl Goal for SurvivalGoal {
     fn is_satisfied(&self, state: &WorldState) -> bool {
-        state.get("health")
+        state
+            .get("health")
             .map(|v| matches!(v, StateValue::Float(h) if *h > 50.0))
             .unwrap_or(false)
     }

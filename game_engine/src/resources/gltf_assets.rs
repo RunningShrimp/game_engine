@@ -4,9 +4,9 @@
 //! complexity in the main manager.rs file.
 
 #[cfg(feature = "gltf")]
-use std::sync::Arc;
-#[cfg(feature = "gltf")]
 use bevy_ecs::prelude::World;
+#[cfg(feature = "gltf")]
+use std::sync::Arc;
 
 #[cfg(feature = "gltf")]
 use gltf;

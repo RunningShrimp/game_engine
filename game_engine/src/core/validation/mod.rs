@@ -42,8 +42,8 @@
 
 pub mod error;
 pub mod numeric;
-pub mod string;
 pub mod path;
+pub mod string;
 pub mod trait_def;
 
 // 重新导出常用类型
@@ -53,6 +53,6 @@ pub use trait_def::Validate;
 // 内置验证器
 pub mod validators {
     pub use super::numeric::*;
-    pub use super::string::*;
     pub use super::path::*;
+    pub use super::string::*;
 }

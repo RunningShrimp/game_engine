@@ -121,8 +121,8 @@
 //! - [`crate::physics`][]: 物理资源使用
 //!
 
-pub mod async_upload;
 pub mod asset_loader_trait;
+pub mod async_upload;
 pub mod atlas;
 pub mod coroutine_loader;
 pub mod dependency_manager;

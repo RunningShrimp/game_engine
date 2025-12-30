@@ -32,8 +32,6 @@ pub struct FeatureSet {
     pub wasm_enabled: bool,
     /// 安全密钥交换（ECDH + HKDF）
     pub secure_key_exchange: bool,
-    /// 不安全密钥交换（仅用于测试）
-    pub insecure_key_exchange: bool,
     /// Python 脚本支持
     pub python_enabled: bool,
 }
@@ -57,7 +55,6 @@ impl FeatureSet {
             gltf_enabled: cfg!(feature = "gltf"),
             wasm_enabled: cfg!(feature = "wasm"),
             secure_key_exchange: cfg!(feature = "secure_key_exchange"),
-            insecure_key_exchange: cfg!(feature = "insecure_key_exchange"),
             python_enabled: cfg!(feature = "pyo3"),
         }
     }
@@ -86,7 +83,6 @@ impl FeatureSet {
             "gltf" => self.gltf_enabled,
             "wasm" => self.wasm_enabled,
             "secure_key_exchange" => self.secure_key_exchange,
-            "insecure_key_exchange" => self.insecure_key_exchange,
             "python" | "pyo3" => self.python_enabled,
             _ => false,
         }
@@ -118,9 +114,6 @@ impl FeatureSet {
         }
         if self.secure_key_exchange {
             features.push("secure_key_exchange");
-        }
-        if self.insecure_key_exchange {
-            features.push("insecure_key_exchange");
         }
         if self.python_enabled {
             features.push("python");
@@ -162,7 +155,7 @@ mod tests {
         let features = FeatureSet::current();
         let enabled = features.enabled_features();
         // 验证返回的是字符串切片列表
-        assert!(enabled.iter().all(|f| matches!(*f, "xr" | "gltf" | "wasm" | "secure_key_exchange" | "insecure_key_exchange" | "python")));
+        assert!(enabled.iter().all(|f| matches!(*f, "xr" | "gltf" | "wasm" | "secure_key_exchange" | "python")));
     }
 }
 

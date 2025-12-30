@@ -2,11 +2,11 @@
 //
 // 使用启发式搜索的高效GOAP规划
 
-use std::collections::{HashMap, HashSet, BinaryHeap};
 use std::cmp::Ordering;
+use std::collections::{BinaryHeap, HashMap, HashSet};
 use std::f32::MAX;
 
-use crate::ai::goap::{WorldState, Action, Goal, StateValue};
+use crate::ai::goap::{Action, Goal, StateValue, WorldState};
 
 /// A*搜索节点
 #[derive(Clone)]
@@ -244,10 +244,7 @@ mod tests {
         current_state.set("target_alive", StateValue::Bool(true));
 
         // 创建测试动作
-        let attack_action = Box::new(AttackAction {
-            target_id: 1,
-            damage: 25.0,
-        }) as Box<dyn Action>;
+        let attack_action = Box::new(AttackAction::new(1, 25.0)) as Box<dyn Action>;
 
         // 创建测试目标
         let goal = Box::new(EliminateTargetGoal) as Box<dyn Goal>;

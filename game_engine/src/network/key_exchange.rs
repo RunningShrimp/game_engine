@@ -1,7 +1,7 @@
 // 密钥交换协议模块
 //
 // 实现密钥交换协议，用于建立通信通道。
-// 支持安全的X25519 ECDH密钥交换和向后兼容的简化实现。
+// 使用安全的X25519 ECDH密钥交换。
 //
 // ## 功能
 //
@@ -10,54 +10,29 @@
 //  - 从共享密钥派生加密密钥
 //  - 密钥有效期管理
 //
-// ## 优化说明
-//
-// 本模块通过以下策略优化条件编译的使用：
-// 1. 使用trait对象和运行时分发替代编译期选择
-// 2. 创建统一的KeyExchangeConfig配置对象
-// 3. 通过工厂模式创建backend实例（集中条件编译点）
-// 4. 只在必要的位置使用条件编译（依赖、实现、工厂、测试）
-//
-// 条件编译分布（共14处，均已标记）：
-// - 依赖导入: 2处 (#1-2: secure/insecure依赖)
-// - Backend实现: 4处 (#3-6: 两个backend的结构体和impl块)
-// - 工厂函数: 5处 (#7-11: create_backend函数内的特性检查)
-// - 公共API: 1处 (#12: generate_insecure方法)
-// - 测试模块: 2处 (#13-14: test模块和不安全实现测试)
-//
-// 注意：条件编译主要用于依赖管理（避免未使用依赖的编译错误）和测试。
-// 核心业务逻辑通过trait对象实现运行时多态，无需条件编译。
-//
 // ## 安全说明
 //
-// 默认使用X25519椭圆曲线Diffie-Hellman进行密钥交换，提供前向安全性。
+// 使用X25519椭圆曲线Diffie-Hellman进行密钥交换，提供前向安全性。
 // 密钥派生使用HKDF (RFC 5869) 确保安全性。
-// 可通过feature flag切换到简化实现（仅用于测试）。
 //
 // ## 特性标志
 //
 //  - `secure_key_exchange` (默认): 使用X25519 ECDH和HKDF进行安全的密钥交换
-//  - `insecure_key_exchange`: 使用SHA256的简化实现（仅用于测试，不应用于生产环境）
 
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 // ============================================================================
-// 条件编译区域1-2: 依赖导入（共2处）
+// 依赖导入
 // ============================================================================
 
 // 安全实现依赖
-#[cfg(feature = "secure_key_exchange")]
 use {
     hkdf::Hkdf,
     sha2::Sha256 as HkdfSha256,
     x25519_dalek_ng::{PublicKey, StaticSecret},
 };
-
-// 不安全实现依赖
-#[cfg(feature = "insecure_key_exchange")]
-use sha2::{Digest, Sha256};
 
 // ============================================================================
 // Key Exchange Backend Trait Abstraction
@@ -84,14 +59,12 @@ trait KeyExchangeBackend: Send + Sync {
 }
 
 // ============================================================================
-// Backend Implementations（条件编译 #3-4）
+// Backend Implementation
 // ============================================================================
 
-// 安全实现（条件编译 #3-4: 结构体和impl块）
-#[cfg(feature = "secure_key_exchange")]
+// 安全实现
 struct SecureKeyExchangeBackend;
 
-#[cfg(feature = "secure_key_exchange")]
 impl KeyExchangeBackend for SecureKeyExchangeBackend {
     fn generate_keypair(&self) -> ([u8; 32], [u8; 32]) {
         use rand::RngCore;
@@ -136,138 +109,35 @@ impl KeyExchangeBackend for SecureKeyExchangeBackend {
     }
 }
 
-// 不安全实现（条件编译 #5-6: 结构体和impl块）
-#[cfg(feature = "insecure_key_exchange")]
-struct InsecureKeyExchangeBackend;
-
-#[cfg(feature = "insecure_key_exchange")]
-impl KeyExchangeBackend for InsecureKeyExchangeBackend {
-    fn generate_keypair(&self) -> ([u8; 32], [u8; 32]) {
-        use rand::RngCore;
-        #[allow(deprecated)]
-        let mut rng = rand::thread_rng();
-        let mut private_key = [0u8; 32];
-        rng.fill_bytes(&mut private_key);
-
-        private_key[0] &= 248;
-        private_key[31] &= 127;
-        private_key[31] |= 64;
-
-        let public_key = self.derive_public_key(&private_key);
-        (public_key, private_key)
-    }
-
-    fn derive_public_key(&self, private_key: &[u8; 32]) -> [u8; 32] {
-        let mut hasher = Sha256::new();
-        hasher.update(private_key);
-        let digest = hasher.finalize();
-
-        let mut public_key = [0u8; 32];
-        public_key.copy_from_slice(&digest[..32]);
-        public_key
-    }
-
-    fn compute_shared_secret(&self, private_key: &[u8; 32], public_key: &[u8; 32]) -> [u8; 32] {
-        let mut hasher = Sha256::new();
-        hasher.update(private_key);
-        hasher.update(public_key);
-        let digest = hasher.finalize();
-
-        let mut shared_secret = [0u8; 32];
-        shared_secret.copy_from_slice(&digest[..32]);
-        shared_secret
-    }
-
-    fn derive_keys(&self, shared_secret: [u8; 32]) -> ([u8; 32], [u8; 32]) {
-        let mut hasher = Sha256::new();
-        hasher.update(&shared_secret);
-        hasher.update(b"encryption");
-        let mut encryption_key = [0u8; 32];
-        encryption_key.copy_from_slice(&hasher.finalize()[..32]);
-
-        let mut hasher = Sha256::new();
-        hasher.update(&shared_secret);
-        hasher.update(b"authentication");
-        let mut authentication_key = [0u8; 32];
-        authentication_key.copy_from_slice(&hasher.finalize()[..32]);
-
-        (encryption_key, authentication_key)
-    }
-
-    fn backend_name(&self) -> &'static str {
-        "SHA256-SIMPLIFIED"
-    }
-}
-
 // ============================================================================
 // Factory Pattern for Backend Creation
 // ============================================================================
 
 /// 密钥交换配置
 ///
-/// 用于在运行时配置密钥交换行为，避免条件编译。
+/// 使用安全的 X25519 ECDH + HKDF 实现。
 #[derive(Debug, Clone)]
-pub struct KeyExchangeConfig {
-    /// 是否使用安全模式
-    pub secure: bool,
-}
+pub struct KeyExchangeConfig;
 
 impl Default for KeyExchangeConfig {
     fn default() -> Self {
-        // 默认使用安全模式
-        Self { secure: true }
+        Self
     }
 }
 
 impl KeyExchangeConfig {
-    /// 创建安全配置（推荐用于生产环境）
-    pub fn secure() -> Self {
-        Self { secure: true }
-    }
-
-    /// 创建不安全配置（仅用于测试）
-    pub fn insecure() -> Self {
-        Self { secure: false }
+    /// 创建安全配置（使用 X25519 ECDH + HKDF）
+    pub fn new() -> Self {
+        Self
     }
 }
 
-/// 创建后端实例（条件编译 #7-11: 工厂函数）
+/// 创建后端实例
 ///
-/// 根据配置和可用特性选择合适的后端实现。
-/// 通过统一的入口点减少运行时分发的条件编译。
-fn create_backend(config: &KeyExchangeConfig) -> Arc<dyn KeyExchangeBackend> {
-    // 优先根据配置选择后端
-    #[cfg(feature = "secure_key_exchange")]
-    {
-        if config.secure {
-            tracing::debug!("Using secure X25519 ECDH key exchange");
-            return Arc::new(SecureKeyExchangeBackend);
-        }
-    }
-
-    #[cfg(feature = "insecure_key_exchange")]
-    {
-        if !config.secure {
-            tracing::warn!("Using insecure simplified key exchange - only for testing!");
-            return Arc::new(InsecureKeyExchangeBackend);
-        }
-    }
-
-    // Fallback: 使用可用的后端
-    #[cfg(feature = "secure_key_exchange")]
-    {
-        tracing::warn!("Config mismatch, falling back to secure backend");
-        Arc::new(SecureKeyExchangeBackend)
-    }
-
-    #[cfg(all(not(feature = "secure_key_exchange"), feature = "insecure_key_exchange"))]
-    {
-        tracing::error!("Only insecure backend available");
-        Arc::new(InsecureKeyExchangeBackend)
-    }
-
-    #[cfg(not(any(feature = "secure_key_exchange", feature = "insecure_key_exchange")))]
-    compile_error!("At least one of 'secure_key_exchange' or 'insecure_key_exchange' features must be enabled");
+/// 返回安全的 X25519 ECDH + HKDF 实现。
+fn create_backend(_config: &KeyExchangeConfig) -> Arc<dyn KeyExchangeBackend> {
+    tracing::debug!("Using secure X25519 ECDH key exchange");
+    Arc::new(SecureKeyExchangeBackend)
 }
 
 // ============================================================================
@@ -336,15 +206,9 @@ impl KeyPair {
     pub fn generate_with_config(config: KeyExchangeConfig) -> Self {
         let backend = create_backend(&config);
         let (public_key, private_key) = backend.generate_keypair();
-        let created_at = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_secs();
+        let created_at = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_secs();
 
-        tracing::debug!(
-            "Generated keypair using {} backend",
-            backend.backend_name()
-        );
+        tracing::debug!("Generated keypair using {} backend", backend.backend_name());
 
         Self {
             public_key,
@@ -352,17 +216,6 @@ impl KeyPair {
             created_at,
             backend: Some(backend),
         }
-    }
-
-    /// 生成不安全的密钥对（仅用于测试）（条件编译 #12）
-    ///
-    /// 此方法使用不安全的实现。
-    /// **警告：仅用于测试目的，不应用于生产环境！**
-    /// 注意：此方法仅在启用insecure_key_exchange特性时可用。
-    #[cfg(feature = "insecure_key_exchange")]
-    pub fn generate_insecure() -> Self {
-        eprintln!("WARNING: Generating insecure keypair - only for testing!");
-        Self::generate_with_config(KeyExchangeConfig::insecure())
     }
 
     /// 获取或创建默认后端
@@ -380,16 +233,13 @@ impl KeyPair {
 
     /// 获取密钥年龄（秒）
     pub fn age_secs(&self) -> u64 {
-        let now = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_secs();
+        let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_secs();
         now.saturating_sub(self.created_at)
     }
 
     /// 计算共享密钥（从对方公钥和本地私钥）
     ///
-    /// 使用运行时分发，根据配置选择X25519 ECDH或SHA256简化实现。
+    /// 使用 X25519 ECDH 计算共享密钥。
     ///
     /// # 参数
     /// - `peer_public_key`: 对方的公钥（32字节）
@@ -455,11 +305,9 @@ pub struct SharedSecret {
 }
 
 impl SharedSecret {
-    /// 从共享密钥派生出加密密钥和认证密钥（使用默认配置）
+    /// 从共享密钥派生出加密密钥和认证密钥
     ///
-    /// 根据启用的feature选择密钥派生方法：
-    /// - `secure_key_exchange`: 使用HKDF (RFC 5869) 进行安全的密钥派生
-    /// - `insecure_key_exchange`: 使用SHA256进行简单派生（仅用于测试）
+    /// 使用 HKDF (RFC 5869) 进行安全的密钥派生。
     pub fn derive(shared_secret: [u8; 32]) -> Self {
         let backend = create_backend(&KeyExchangeConfig::default());
         Self::derive_with_backend(shared_secret, backend)
@@ -469,10 +317,7 @@ impl SharedSecret {
     fn derive_with_backend(shared_secret: [u8; 32], backend: Arc<dyn KeyExchangeBackend>) -> Self {
         let (encryption_key, authentication_key) = backend.derive_keys(shared_secret);
 
-        tracing::trace!(
-            "Derived keys using {} backend",
-            backend.backend_name()
-        );
+        tracing::trace!("Derived keys using {} backend", backend.backend_name());
 
         Self {
             shared_secret,
@@ -508,9 +353,7 @@ impl KeyExchange {
 
     /// 执行密钥交换（从对方公钥和本地私钥计算共享密钥）
     ///
-    /// 使用运行时分发，根据配置选择实现：
-    /// - `secure_key_exchange`: 使用X25519 ECDH进行安全的密钥交换
-    /// - `insecure_key_exchange`: 使用SHA256的简化实现（仅用于测试）
+    /// 使用 X25519 ECDH 进行安全的密钥交换。
     pub fn compute_shared_secret(&self, peer_public_key: [u8; 32]) -> SharedSecret {
         self.local_keypair.compute_shared_secret(peer_public_key)
     }
@@ -698,23 +541,23 @@ mod tests {
 
         let backend = client_keypair.get_backend();
 
-        // 如果使用安全后端，双方应该得到相同的共享密钥
-        if backend.backend_name() == "X25519-ECDH-HKDF" {
-            assert_eq!(
-                client_shared.shared_secret, server_shared.shared_secret,
-                "客户端和服务器的共享密钥应该相同"
-            );
+        // X25519 ECDH 保证双方生成相同的共享密钥
+        assert_eq!(
+            client_shared.shared_secret, server_shared.shared_secret,
+            "客户端和服务器的共享密钥应该相同"
+        );
 
-            assert_eq!(
-                client_shared.encryption_key, server_shared.encryption_key,
-                "客户端和服务器的加密密钥应该相同"
-            );
+        assert_eq!(
+            client_shared.encryption_key, server_shared.encryption_key,
+            "客户端和服务器的加密密钥应该相同"
+        );
 
-            assert_eq!(
-                client_shared.authentication_key, server_shared.authentication_key,
-                "客户端和服务器的认证密钥应该相同"
-            );
-        }
+        assert_eq!(
+            client_shared.authentication_key, server_shared.authentication_key,
+            "客户端和服务器的认证密钥应该相同"
+        );
+
+        assert_eq!(backend.backend_name(), "X25519-ECDH-HKDF");
     }
 
     #[test]
@@ -922,36 +765,20 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "insecure_key_exchange")] // 条件编译 #14: 不安全实现的专用测试
-    #[test]
-    #[ignore] // TODO: Fix compilation errors
-    fn test_insecure_implementation_warning() {
-        // 确保不安全实现有警告
-        let keypair = KeyPair::generate_insecure();
-
-        // 不安全实现仍然应该产生有效的密钥对
-        assert!(keypair.is_valid());
-        assert!(!keypair.public_key.iter().all(|&b| b == 0));
-        assert!(!keypair.private_key.iter().all(|&b| b == 0));
-    }
-
     #[test]
     #[ignore] // TODO: Fix compilation errors
     fn test_symmetric_key_exchange() {
-        // 测试对称性：A与B交换应该得到相同结果（使用运行时检查）
+        // 测试对称性：A与B交换应该得到相同结果
         let keypair_a = KeyPair::generate();
         let keypair_b = KeyPair::generate();
-        let backend = keypair_a.get_backend();
 
         let shared_ab = keypair_a.compute_shared_secret(keypair_b.public_key);
         let shared_ba = keypair_b.compute_shared_secret(keypair_a.public_key);
 
-        if backend.backend_name() == "X25519-ECDH-HKDF" {
-            assert_eq!(
-                shared_ab.shared_secret, shared_ba.shared_secret,
-                "密钥交换应该是对称的"
-            );
-        }
+        assert_eq!(
+            shared_ab.shared_secret, shared_ba.shared_secret,
+            "密钥交换应该是对称的"
+        );
     }
 
     #[test]

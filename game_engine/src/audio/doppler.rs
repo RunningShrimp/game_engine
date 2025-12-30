@@ -40,7 +40,8 @@ impl DopplerEffect {
 
         let distance = (relative_pos.0 * relative_pos.0
             + relative_pos.1 * relative_pos.1
-            + relative_pos.2 * relative_pos.2).sqrt();
+            + relative_pos.2 * relative_pos.2)
+            .sqrt();
 
         if distance < 0.001 {
             return 1.0; // 避免除零
@@ -54,9 +55,8 @@ impl DopplerEffect {
         );
 
         // 3. 计算径向速度分量
-        let v_source_radial = source_vel.0 * direction.0
-            + source_vel.1 * direction.1
-            + source_vel.2 * direction.2;
+        let v_source_radial =
+            source_vel.0 * direction.0 + source_vel.1 * direction.1 + source_vel.2 * direction.2;
 
         let v_listener_radial = listener_vel.0 * direction.0
             + listener_vel.1 * direction.1
@@ -67,8 +67,8 @@ impl DopplerEffect {
         //   c = 声速
         //   vr = 听者径向速度
         //   vs = 声源径向速度
-        let pitch_shift = (self.speed_of_sound + v_listener_radial)
-            / (self.speed_of_sound + v_source_radial);
+        let pitch_shift =
+            (self.speed_of_sound + v_listener_radial) / (self.speed_of_sound + v_source_radial);
 
         pitch_shift
     }
@@ -82,21 +82,14 @@ impl DopplerEffect {
         listener_pos: (f32, f32, f32),
         listener_vel: (f32, f32, f32),
     ) -> f32 {
-        let pitch_shift = self.compute_pitch_shift(
-            source_pos, source_vel,
-            listener_pos, listener_vel,
-        );
+        let pitch_shift =
+            self.compute_pitch_shift(source_pos, source_vel, listener_pos, listener_vel);
 
         base_frequency * pitch_shift
     }
 
     /// 应用多普勒效应到音频缓冲区
-    pub fn apply_to_buffer(
-        &self,
-        buffer: &mut [f32],
-        sample_rate: f32,
-        pitch_shift: f32,
-    ) {
+    pub fn apply_to_buffer(&self, buffer: &mut [f32], sample_rate: f32, pitch_shift: f32) {
         // 简化版：仅调整音调
         // 实际应用中应使用resampling算法
         if (pitch_shift - 1.0).abs() < 0.01 {
@@ -161,10 +154,10 @@ mod tests {
 
         // 声源向听者移动
         let shift = doppler.compute_pitch_shift(
-            (10.0, 0.0, 0.0),   // 声源在x=10
-            (-5.0, 0.0, 0.0),  // 声源向负x移动
-            (0.0, 0.0, 0.0),    // 听者在原点
-            (0.0, 0.0, 0.0),    // 听者静止
+            (10.0, 0.0, 0.0), // 声源在x=10
+            (-5.0, 0.0, 0.0), // 声源向负x移动
+            (0.0, 0.0, 0.0),  // 听者在原点
+            (0.0, 0.0, 0.0),  // 听者静止
         );
 
         // 声源靠近，频率应该升高
@@ -179,7 +172,7 @@ mod tests {
         let shifted = doppler.compute_frequency_shift(
             base_freq,
             (10.0, 0.0, 0.0),
-            (34.0, 0.0, 0.0),  // 声源以34m/s移动(约122km/h)
+            (34.0, 0.0, 0.0), // 声源以34m/s移动(约122km/h)
             (0.0, 0.0, 0.0),
             (0.0, 0.0, 0.0),
         );

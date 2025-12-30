@@ -8,7 +8,6 @@ use std::path::PathBuf;
 #[derive(Debug, thiserror::Error)]
 pub enum ValidationError {
     // ========== 数值错误 ==========
-
     /// 值超出范围
     #[error("Value {value} is out of range [{min}, {max}]")]
     OutOfRange {
@@ -34,7 +33,6 @@ pub enum ValidationError {
     Zero,
 
     // ========== 字符串错误 ==========
-
     /// 空字符串
     #[error("String cannot be empty")]
     EmptyString,
@@ -56,7 +54,6 @@ pub enum ValidationError {
     PatternMismatch { pattern: String },
 
     // ========== 路径错误 ==========
-
     /// 路径不存在
     #[error("Path does not exist: {0}")]
     PathNotFound(PathBuf),
@@ -78,7 +75,6 @@ pub enum ValidationError {
     MissingExtension(PathBuf),
 
     // ========== 集合错误 ==========
-
     /// 空集合
     #[error("Collection cannot be empty")]
     EmptyCollection,
@@ -96,7 +92,6 @@ pub enum ValidationError {
     DuplicateElements,
 
     // ========== 自定义错误 ==========
-
     /// 自定义验证错误
     #[error("Custom validation error: {0}")]
     Custom(String),
@@ -152,4 +147,3 @@ mod tests {
         }
     }
 }
-

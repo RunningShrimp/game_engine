@@ -194,9 +194,18 @@ impl InfluenceVisualizer {
         let svg_height = grid.height() * self.cell_size;
 
         writeln!(svg, r#"<?xml version="1.0" encoding="UTF-8"?>"#).unwrap();
-        writeln!(svg, r#"<svg xmlns="http://www.w3.org/2000/svg" width="{}" height="{}">"#, svg_width, svg_height).unwrap();
+        writeln!(
+            svg,
+            r#"<svg xmlns="http://www.w3.org/2000/svg" width="{}" height="{}">"#,
+            svg_width, svg_height
+        )
+        .unwrap();
         writeln!(svg, "<style>").unwrap();
-        writeln!(svg, "  text {{ font-family: Arial, sans-serif; font-size: 12px; }}").unwrap();
+        writeln!(
+            svg,
+            "  text {{ font-family: Arial, sans-serif; font-size: 12px; }}"
+        )
+        .unwrap();
         writeln!(svg, "</style>").unwrap();
 
         // 标题
@@ -221,17 +230,55 @@ impl InfluenceVisualizer {
 
         // 颜色图例
         writeln!(svg, r#"<defs>"#).unwrap();
-        writeln!(svg, r#"<linearGradient id="legend" x1="0%" y1="0%" x2="100%" y2="0%">"#).unwrap();
-        writeln!(svg, r#"<stop offset="0%" style="stop-color:rgb(255,0,0);stop-opacity:1" />"#).unwrap();
-        writeln!(svg, r#"<stop offset="50%" style="stop-color:rgb(255,255,255);stop-opacity:1" />"#).unwrap();
-        writeln!(svg, r#"<stop offset="100%" style="stop-color:rgb(0,255,0);stop-opacity:1" />"#).unwrap();
+        writeln!(
+            svg,
+            r#"<linearGradient id="legend" x1="0%" y1="0%" x2="100%" y2="0%">"#
+        )
+        .unwrap();
+        writeln!(
+            svg,
+            r#"<stop offset="0%" style="stop-color:rgb(255,0,0);stop-opacity:1" />"#
+        )
+        .unwrap();
+        writeln!(
+            svg,
+            r#"<stop offset="50%" style="stop-color:rgb(255,255,255);stop-opacity:1" />"#
+        )
+        .unwrap();
+        writeln!(
+            svg,
+            r#"<stop offset="100%" style="stop-color:rgb(0,255,0);stop-opacity:1" />"#
+        )
+        .unwrap();
         writeln!(svg, r#"</linearGradient>"#).unwrap();
         writeln!(svg, r#"</defs>"#).unwrap();
         // 颜色图例 - 确保不会溢出
-        let legend_x = if svg_width > 200 { svg_width / 2 - 100 } else { 0 };
-        writeln!(svg, r#"<rect x="{}" y="{}" width="200" height="20" fill="url(#legend)" />"#, legend_x, svg_height + 40).unwrap();
-        writeln!(svg, r#"<text x="{}" y="{}" text-anchor="middle">Negative</text>"#, legend_x, svg_height + 70).unwrap();
-        writeln!(svg, r#"<text x="{}" y="{}" text-anchor="middle">Positive</text>"#, legend_x + 200, svg_height + 70).unwrap();
+        let legend_x = if svg_width > 200 {
+            svg_width / 2 - 100
+        } else {
+            0
+        };
+        writeln!(
+            svg,
+            r#"<rect x="{}" y="{}" width="200" height="20" fill="url(#legend)" />"#,
+            legend_x,
+            svg_height + 40
+        )
+        .unwrap();
+        writeln!(
+            svg,
+            r#"<text x="{}" y="{}" text-anchor="middle">Negative</text>"#,
+            legend_x,
+            svg_height + 70
+        )
+        .unwrap();
+        writeln!(
+            svg,
+            r#"<text x="{}" y="{}" text-anchor="middle">Positive</text>"#,
+            legend_x + 200,
+            svg_height + 70
+        )
+        .unwrap();
 
         writeln!(svg, "</svg>").unwrap();
 

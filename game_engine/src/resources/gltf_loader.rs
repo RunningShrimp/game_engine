@@ -51,4 +51,3 @@ impl GltfLoader {
         Err(GltfLoadError::FeatureNotEnabled)
     }
 }
-

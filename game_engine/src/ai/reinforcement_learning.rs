@@ -22,11 +22,7 @@ pub struct QLearningAgent {
 
 impl QLearningAgent {
     /// 创建新的Q-Learning智能体
-    pub fn new(
-        learning_rate: f32,
-        discount_factor: f32,
-        exploration_rate: f32,
-    ) -> Self {
+    pub fn new(learning_rate: f32, discount_factor: f32, exploration_rate: f32) -> Self {
         Self {
             q_table: HashMap::new(),
             learning_rate,
@@ -95,14 +91,11 @@ impl QLearningAgent {
             + self.learning_rate * (reward + self.discount_factor * max_next_q - current_q);
 
         // 更新Q表
-        self.q_table
-            .get_mut(&state)
-            .unwrap()
-            .insert(action, new_q);
+        self.q_table.get_mut(&state).unwrap().insert(action, new_q);
 
         // 衰减探索率
-        self.exploration_rate = (self.exploration_rate * self.exploration_decay)
-            .max(self.min_exploration);
+        self.exploration_rate =
+            (self.exploration_rate * self.exploration_decay).max(self.min_exploration);
     }
 
     /// 获取状态的最大Q值

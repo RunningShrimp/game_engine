@@ -21,7 +21,7 @@ pub enum Wall {
 
 /// 房间混响
 pub struct RoomReverb {
-    dimensions: (f32, f32, f32),        // 房间尺寸 (宽, 高, 深)
+    dimensions: (f32, f32, f32),         // 房间尺寸 (宽, 高, 深)
     reflection_order: usize,             // 反射阶数
     wall_absorption: HashMap<Wall, f32>, // 墙壁吸音系数
 }

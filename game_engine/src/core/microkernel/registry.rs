@@ -124,9 +124,11 @@ impl ServiceRegistry {
         let mut resolved = Vec::new();
         for dep_id in dependencies {
             let dep_id_clone = dep_id.clone();
-            resolved.extend(
-                self.resolve_dependencies_recursive(&dep_id_clone, visited, visiting)?
-            );
+            resolved.extend(self.resolve_dependencies_recursive(
+                &dep_id_clone,
+                visited,
+                visiting,
+            )?);
         }
 
         visiting.pop();

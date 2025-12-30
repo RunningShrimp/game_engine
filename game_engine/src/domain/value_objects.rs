@@ -9,8 +9,8 @@
 //  - 值对象包含验证逻辑
 //  - 值对象封装领域概念
 
-use crate::core::validation::{Validate, ValidationError, ValidationResult};
 use crate::core::validation::validators;
+use crate::core::validation::{Validate, ValidationError, ValidationResult};
 use crate::impl_default;
 use glam::{Quat, Vec3};
 use serde::{Deserialize, Serialize};
@@ -813,7 +813,10 @@ mod tests {
     #[ignore] // TODO: Fix compilation errors
     fn test_scale_creation() {
         let scale = Scale::new(2.0, 3.0, 4.0);
-        assert!(scale.is_some(), "Scale::new with valid values should succeed");
+        assert!(
+            scale.is_some(),
+            "Scale::new with valid values should succeed"
+        );
         let scale = scale.unwrap();
         assert_eq!(scale.x(), 2.0);
         assert_eq!(scale.y(), 3.0);
@@ -834,7 +837,10 @@ mod tests {
         let pos = Position::new(1.0, 2.0, 3.0);
         let rot = Rotation::identity();
         let scale = Scale::uniform(2.0);
-        assert!(pos.is_some() && scale.is_some(), "Constructor should succeed");
+        assert!(
+            pos.is_some() && scale.is_some(),
+            "Constructor should succeed"
+        );
         let transform = Transform::new(pos.unwrap(), rot, scale.unwrap());
         assert_eq!(transform.position(), pos.unwrap());
     }
@@ -988,10 +994,7 @@ mod tests {
         let vec = Vec3::new(2.0, 3.0, 4.0);
         let scale = Scale::from_vec3(vec);
         assert!(scale.is_some());
-        assert_eq!(
-            scale.unwrap().to_vec3(),
-            vec
-        );
+        assert_eq!(scale.unwrap().to_vec3(), vec);
     }
 
     #[test]

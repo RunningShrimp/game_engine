@@ -2,13 +2,13 @@
 //
 // 运行: cargo bench --bench lock_performance
 
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, criterion_group, criterion_main};
 use game_engine::resources::{
     dashmap_optimizations::{ConcurrentEntityManager, ConcurrentResourceCache},
     optimized_manager::OptimizedAssetManager,
 };
-use std::sync::{Arc, Mutex, RwLock};
 use std::hint::black_box;
+use std::sync::{Arc, Mutex, RwLock};
 
 /// 基准测试：parking_lot::RwLock vs std::sync::RwLock
 fn bench_rwlock_read(c: &mut Criterion) {

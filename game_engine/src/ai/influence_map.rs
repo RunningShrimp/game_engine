@@ -141,10 +141,10 @@ impl InfluenceGrid {
 
                     // 向四个方向传播
                     let neighbors = [
-                        (x.wrapping_sub(1), y),     // 左
-                        (x + 1, y),                 // 右
-                        (x, y.wrapping_sub(1)),     // 上
-                        (x, y + 1),                 // 下
+                        (x.wrapping_sub(1), y), // 左
+                        (x + 1, y),             // 右
+                        (x, y.wrapping_sub(1)), // 上
+                        (x, y + 1),             // 下
                     ];
 
                     for (nx, ny) in neighbors {
@@ -179,8 +179,10 @@ impl InfluenceGrid {
                         let nx = x as isize + dx;
                         let ny = y as isize + dy;
 
-                        if nx >= 0 && nx < self.width as isize
-                            && ny >= 0 && ny < self.height as isize
+                        if nx >= 0
+                            && nx < self.width as isize
+                            && ny >= 0
+                            && ny < self.height as isize
                         {
                             let distance = ((dx * dx + dy * dy) as f32).sqrt();
                             let weight = (-distance * distance / (2.0 * sigma * sigma)).exp();
@@ -381,9 +383,7 @@ pub struct InfluenceMapSystem {
 impl InfluenceMapSystem {
     /// 创建新的影响力图系统
     pub fn new() -> Self {
-        Self {
-            maps: Vec::new(),
-        }
+        Self { maps: Vec::new() }
     }
 
     /// 添加新的影响力图

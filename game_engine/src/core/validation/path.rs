@@ -49,7 +49,7 @@ mod tests {
     fn test_validate_extension() {
         assert!(validate_extension(Path::new("model.gltf"), &["gltf", "glb"]).is_ok());
         assert!(validate_extension(Path::new("model.glb"), &["gltf", "glb"]).is_ok());
-        assert!(validate_extension(Path::new("MODEL.GLTf"), &["gltf"]).is_ok());  // 大小写不敏感
+        assert!(validate_extension(Path::new("MODEL.GLTf"), &["gltf"]).is_ok()); // 大小写不敏感
 
         assert!(validate_extension(Path::new("texture.png"), &["gltf", "glb"]).is_err());
         assert!(validate_extension(Path::new("no_ext"), &["txt"]).is_err());

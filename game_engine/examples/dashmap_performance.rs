@@ -204,13 +204,10 @@ fn main() {
                 let cache = dashmap_cache.clone();
                 std::thread::spawn(move || {
                     for i in 0..NUM_OPERATIONS {
-                        let path = PathBuf::from(format!(
-                            "thread_{}_resource_{}.dat",
-                            thread_id, i
-                        ));
-                        let resource = Arc::new(MockResource::new(
-                            (thread_id * NUM_OPERATIONS + i) as u32,
-                        ));
+                        let path =
+                            PathBuf::from(format!("thread_{}_resource_{}.dat", thread_id, i));
+                        let resource =
+                            Arc::new(MockResource::new((thread_id * NUM_OPERATIONS + i) as u32));
                         cache.insert(path, resource);
                     }
                 })
@@ -240,13 +237,10 @@ fn main() {
                 let cache = rwlock_cache.clone();
                 std::thread::spawn(move || {
                     for i in 0..NUM_OPERATIONS {
-                        let path = PathBuf::from(format!(
-                            "thread_{}_resource_{}.dat",
-                            thread_id, i
-                        ));
-                        let resource = Arc::new(MockResource::new(
-                            (thread_id * NUM_OPERATIONS + i) as u32,
-                        ));
+                        let path =
+                            PathBuf::from(format!("thread_{}_resource_{}.dat", thread_id, i));
+                        let resource =
+                            Arc::new(MockResource::new((thread_id * NUM_OPERATIONS + i) as u32));
                         cache.insert(path, resource);
                     }
                 })
@@ -297,17 +291,13 @@ fn main() {
                     for i in 0..NUM_OPERATIONS {
                         if i % 10 < 7 {
                             // 70% 读取
-                            let path = PathBuf::from(format!(
-                                "resource_{}.dat",
-                                i % (NUM_RESOURCES / 2)
-                            ));
+                            let path =
+                                PathBuf::from(format!("resource_{}.dat", i % (NUM_RESOURCES / 2)));
                             let _ = cache.get(&path);
                         } else {
                             // 30% 写入
-                            let path = PathBuf::from(format!(
-                                "thread_{}_resource_{}.dat",
-                                thread_id, i
-                            ));
+                            let path =
+                                PathBuf::from(format!("thread_{}_resource_{}.dat", thread_id, i));
                             let resource = Arc::new(MockResource::new(
                                 (thread_id * NUM_OPERATIONS + i) as u32,
                             ));
@@ -349,17 +339,13 @@ fn main() {
                     for i in 0..NUM_OPERATIONS {
                         if i % 10 < 7 {
                             // 70% 读取
-                            let path = PathBuf::from(format!(
-                                "resource_{}.dat",
-                                i % (NUM_RESOURCES / 2)
-                            ));
+                            let path =
+                                PathBuf::from(format!("resource_{}.dat", i % (NUM_RESOURCES / 2)));
                             let _ = cache.get(&path);
                         } else {
                             // 30% 写入
-                            let path = PathBuf::from(format!(
-                                "thread_{}_resource_{}.dat",
-                                thread_id, i
-                            ));
+                            let path =
+                                PathBuf::from(format!("thread_{}_resource_{}.dat", thread_id, i));
                             let resource = Arc::new(MockResource::new(
                                 (thread_id * NUM_OPERATIONS + i) as u32,
                             ));

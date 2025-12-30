@@ -78,11 +78,10 @@ where
 
     fn validate(&self) -> Result<(), Self::Error> {
         for (i, item) in self.iter().enumerate() {
-            item.validate()
-                .map_err(|e| {
-                    // TODO: 将索引添加到错误上下文
-                    e
-                })?;
+            item.validate().map_err(|e| {
+                // TODO: 将索引添加到错误上下文
+                e
+            })?;
         }
         Ok(())
     }
@@ -98,8 +97,7 @@ where
 
     fn validate(&self) -> Result<(), ValidationError> {
         if let Ok(value) = self {
-            value.validate()
-                .map_err(|e| ValidationError::custom(e.to_string()))?;
+            value.validate().map_err(|e| ValidationError::custom(e.to_string()))?;
         }
         Ok(())
     }

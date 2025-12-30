@@ -170,7 +170,9 @@ impl AudioOcclusion {
                 transmission_loss *= (1.0 - material.transmission_coefficient);
 
                 // 频率依赖的衰减
-                low_freq_loss += -20.0 * (1.0 - material.transmission_coefficient * material.frequency_dependency).log10();
+                low_freq_loss += -20.0
+                    * (1.0 - material.transmission_coefficient * material.frequency_dependency)
+                        .log10();
                 high_freq_loss += -20.0 * (1.0 - material.transmission_coefficient).log10();
             }
         }

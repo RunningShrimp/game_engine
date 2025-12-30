@@ -2,9 +2,9 @@
 //
 // 支持从JSON文件加载和保存行为树定义
 
+use super::behavior_tree::{Action, Node, Selector, Sequence, Status};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use super::behavior_tree::{Node, Sequence, Selector, Status, Action};
 
 /// 行为树JSON表示
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -83,11 +83,11 @@ impl BehaviorTreeDeserializer {
         }
 
         // 查找根节点（没有父节点的节点）
-        let all_children: std::collections::HashSet<String> = nodes.values()
-            .flat_map(|n| n.children.iter().cloned())
-            .collect();
+        let all_children: std::collections::HashSet<String> =
+            nodes.values().flat_map(|n| n.children.iter().cloned()).collect();
 
-        let root_id = nodes.keys()
+        let root_id = nodes
+            .keys()
             .find(|id| !all_children.contains(*id))
             .ok_or_else(|| SerializationError::InvalidNode("No root node found".to_string()))?;
 
@@ -100,7 +100,8 @@ impl BehaviorTreeDeserializer {
         node_id: &str,
         nodes: &HashMap<String, NodeDefinition>,
     ) -> Result<Box<dyn Node>, SerializationError> {
-        let node_def = nodes.get(node_id)
+        let node_def = nodes
+            .get(node_id)
             .ok_or_else(|| SerializationError::MissingChild(node_id.to_string()))?;
 
         match node_def.node_type {
@@ -124,9 +125,10 @@ impl BehaviorTreeDeserializer {
             }
             _ => {
                 // TODO: 实现其他节点类型
-                Err(SerializationError::InvalidType(
-                    format!("Node type {:?} not yet implemented", node_def.node_type)
-                ))
+                Err(SerializationError::InvalidType(format!(
+                    "Node type {:?} not yet implemented",
+                    node_def.node_type
+                )))
             }
         }
     }

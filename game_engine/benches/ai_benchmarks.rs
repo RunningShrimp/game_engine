@@ -2,8 +2,8 @@
 //
 // 测试行为树和覆盖图系统的性能表现
 
+use game_engine::ai::behavior_tree::{Action, Node, Selector, Sequence, Status};
 use game_engine::ai::influence_map::{InfluenceGrid, TacticalInfluenceMap};
-use game_engine::ai::behavior_tree::{Sequence, Selector, Status, Node, Action};
 
 #[cfg(test)]
 mod ai_benches {
@@ -183,9 +183,8 @@ mod ai_benches {
         let mut tactical = TacticalInfluenceMap::new(100, 100, 1.0);
 
         // 添加10个单位
-        let units: Vec<(usize, usize)> = (0..10)
-            .map(|i| ((i * 10) % 100, (i * 10) % 100))
-            .collect();
+        let units: Vec<(usize, usize)> =
+            (0..10).map(|i| ((i * 10) % 100, (i * 10) % 100)).collect();
 
         for &(x, y) in &units {
             tactical.territory.add_source(x, y, 50.0);

@@ -94,6 +94,11 @@ impl FftConvolver {
         }
     }
 
+    /// 获取FFT大小
+    pub fn fft_size(&self) -> usize {
+        self.fft_size
+    }
+
     /// 设置滤波器 (HRIR)
     pub fn set_filter(&mut self, filter: &[f32]) {
         // 准备FFT缓冲区

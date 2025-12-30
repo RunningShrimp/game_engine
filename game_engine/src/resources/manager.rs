@@ -8,8 +8,8 @@ use std::{
 use tokio::sync::mpsc;
 use tokio::sync::oneshot;
 
-use super::atlas::Atlas;
 use super::asset_loader_trait::{AssetLoader, AssetLoaderRegistry};
+use super::atlas::Atlas;
 use crate::render::wgpu_utils::WgpuRenderer;
 use std::collections::HashMap;
 
@@ -339,27 +339,24 @@ impl AssetServer {
         _registry: &Arc<RwLock<AssetLoaderRegistry>>,
     ) -> Result<AssetResult, String> {
         match task {
-            AssetTask::Texture { path, .. } => {
-                match tokio::fs::read(path).await {
-                    Ok(bytes) => {
-                        let decode_res = tokio::task::spawn_blocking(move || {
-                            image::load_from_memory(&bytes)
-                                .map(|img| AssetResult::Image(img.to_rgba8()))
-                                .map_err(|e| e.to_string())
-                        }).await;
+            AssetTask::Texture { path, .. } => match tokio::fs::read(path).await {
+                Ok(bytes) => {
+                    let decode_res = tokio::task::spawn_blocking(move || {
+                        image::load_from_memory(&bytes)
+                            .map(|img| AssetResult::Image(img.to_rgba8()))
+                            .map_err(|e| e.to_string())
+                    })
+                    .await;
 
-                        match decode_res {
-                            Ok(res) => res,
-                            Err(e) => Err(e.to_string()),
-                        }
-                    },
-                    Err(e) => Err(e.to_string()),
+                    match decode_res {
+                        Ok(res) => res,
+                        Err(e) => Err(e.to_string()),
+                    }
                 }
-            }
+                Err(e) => Err(e.to_string()),
+            },
             AssetTask::Atlas { path, .. } => {
-                tokio::fs::read(path).await
-                    .map(AssetResult::Bytes)
-                    .map_err(|e| e.to_string())
+                tokio::fs::read(path).await.map(AssetResult::Bytes).map_err(|e| e.to_string())
             }
             AssetTask::Generic { path, .. } => {
                 // For GLTF loading, use the specialized loader directly
@@ -372,13 +369,10 @@ impl AssetServer {
                         inner: super::gltf_assets::GltfAssetLoader,
                     };
 
-                    let bytes = tokio::fs::read(&path).await
-                        .map_err(|e| e.to_string())?;
+                    let bytes = tokio::fs::read(&path).await.map_err(|e| e.to_string())?;
 
                     match gltf_loader.load(&path, bytes).await {
-                        Ok(BoxedAssetResult::Custom(custom)) => {
-                            Ok(AssetResult::Custom(custom))
-                        }
+                        Ok(BoxedAssetResult::Custom(custom)) => Ok(AssetResult::Custom(custom)),
                         Err(e) => Err(e.to_string()),
                         _ => Err("Unexpected result type from GLTF loader".to_string()),
                     }

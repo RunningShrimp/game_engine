@@ -2,9 +2,9 @@
 //
 // 测试验证框架在各种场景下的性能表现
 
-use game_engine::core::validation::{Validate, ValidationError};
 use game_engine::core::validation::validators;
-use game_engine::domain::value_objects::{Position, Velocity, Mass, Scale, Volume, Duration};
+use game_engine::core::validation::{Validate, ValidationError};
+use game_engine::domain::value_objects::{Duration, Mass, Position, Scale, Velocity, Volume};
 
 #[cfg(test)]
 mod validation_benches {
@@ -44,9 +44,8 @@ mod validation_benches {
 
     #[bench]
     fn bench_batch_position_validation_100(b: &mut test::Bencher) {
-        let positions: Vec<Position> = (0..100)
-            .map(|i| Position::new(i as f32, i as f32, i as f32).unwrap())
-            .collect();
+        let positions: Vec<Position> =
+            (0..100).map(|i| Position::new(i as f32, i as f32, i as f32).unwrap()).collect();
 
         b.iter(|| {
             for pos in &positions {
@@ -57,9 +56,7 @@ mod validation_benches {
 
     #[bench]
     fn bench_batch_mass_validation_1000(b: &mut test::Bencher) {
-        let masses: Vec<Mass> = (0..1000)
-            .map(|i| Mass::new((i % 200) as f32).unwrap())
-            .collect();
+        let masses: Vec<Mass> = (0..1000).map(|i| Mass::new((i % 200) as f32).unwrap()).collect();
 
         b.iter(|| {
             for mass in &masses {
@@ -176,9 +173,8 @@ mod validation_benches {
     fn bench_vec_validation_10(b: &mut test::Bencher) {
         use game_engine::core::validation::trait_def::Validate;
 
-        let positions: Vec<Position> = (0..10)
-            .map(|i| Position::new(i as f32, i as f32, i as f32).unwrap())
-            .collect();
+        let positions: Vec<Position> =
+            (0..10).map(|i| Position::new(i as f32, i as f32, i as f32).unwrap()).collect();
 
         b.iter(|| {
             positions.validate().unwrap();
@@ -189,9 +185,8 @@ mod validation_benches {
     fn bench_vec_validation_100(b: &mut test::Bencher) {
         use game_engine::core::validation::trait_def::Validate;
 
-        let positions: Vec<Position> = (0..100)
-            .map(|i| Position::new(i as f32, i as f32, i as f32).unwrap())
-            .collect();
+        let positions: Vec<Position> =
+            (0..100).map(|i| Position::new(i as f32, i as f32, i as f32).unwrap()).collect();
 
         b.iter(|| {
             positions.validate().unwrap();

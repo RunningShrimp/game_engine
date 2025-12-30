@@ -2,8 +2,8 @@
 //!
 //! 测试行为树和覆盖图在实际AI决策场景中的集成效果。
 
+use game_engine::ai::behavior_tree::{Action, Node, Selector, Sequence, Status};
 use game_engine::ai::influence_map::{InfluenceGrid, TacticalInfluenceMap};
-use game_engine::ai::behavior_tree::{Sequence, Selector, Status, Node, Action};
 
 /// 模拟AI实体
 #[derive(Debug, Clone)]
@@ -154,7 +154,9 @@ mod integration_tests {
 
         let mut sequence = Sequence {
             children: vec![
-                Box::new(IsAliveCondition { entity: entity.clone() }) as Box<dyn Node>,
+                Box::new(IsAliveCondition {
+                    entity: entity.clone(),
+                }) as Box<dyn Node>,
                 Box::new(HasAmmoCondition { entity }) as Box<dyn Node>,
             ],
         };
@@ -273,7 +275,11 @@ mod integration_tests {
         // 添加多个离散的影响力源
         for i in 0..5 {
             for j in 0..5 {
-                grid.add_source(i * 10, j * 10, if (i + j) % 2 == 0 { 100.0 } else { -100.0 });
+                grid.add_source(
+                    i * 10,
+                    j * 10,
+                    if (i + j) % 2 == 0 { 100.0 } else { -100.0 },
+                );
             }
         }
 

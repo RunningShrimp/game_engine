@@ -68,7 +68,7 @@ impl EnvironmentalAudioGenerator {
     pub fn generate_rain(
         &self,
         duration: f32,
-        intensity: f32, // 0.0-1.0
+        intensity: f32,    // 0.0-1.0
         droplet_size: f32, // 0.0 (细雨) - 1.0 (大雨)
     ) -> Vec<f32> {
         let samples = (duration * self.sample_rate) as usize;
@@ -131,7 +131,7 @@ impl EnvironmentalAudioGenerator {
             let envelope = if t < 0.1 {
                 t / 0.1 // 快速上升
             } else {
-                (- (t - 0.1) * 2.0).exp() // 缓慢衰减
+                (-(t - 0.1) * 2.0).exp() // 缓慢衰减
             };
 
             let sample = (rumble + modulation) * envelope * intensity * distance_attenuation;
@@ -142,11 +142,7 @@ impl EnvironmentalAudioGenerator {
     }
 
     /// 生成雪地行走声
-    pub fn generate_snow_crunch(
-        &self,
-        duration: f32,
-        step_frequency: f32,
-    ) -> Vec<f32> {
+    pub fn generate_snow_crunch(&self, duration: f32, step_frequency: f32) -> Vec<f32> {
         let samples = (duration * self.sample_rate) as usize;
         let mut output = vec![0.0; samples];
 
@@ -210,11 +206,7 @@ impl EnvironmentalAudioGenerator {
     }
 
     /// 生成海浪声
-    pub fn generate_ocean(
-        &self,
-        duration: f32,
-        wave_height: f32,
-    ) -> Vec<f32> {
+    pub fn generate_ocean(&self, duration: f32, wave_height: f32) -> Vec<f32> {
         let samples = (duration * self.sample_rate) as usize;
         let mut output = Vec::with_capacity(samples);
 
@@ -265,13 +257,13 @@ impl EnvironmentalAudioGenerator {
                 for j in 0..bird_duration.min(samples - start) {
                     let t = j as f32 / self.sample_rate;
                     let freq = 2000.0 + rand_random() * 2000.0;
-                    let warble = (2.0 * PI * freq * t).sin()
-                        + (2.0 * PI * (freq * 1.5) * t).sin() * 0.5;
+                    let warble =
+                        (2.0 * PI * freq * t).sin() + (2.0 * PI * (freq * 1.5) * t).sin() * 0.5;
 
                     let envelope = if t < 0.1 {
                         t / 0.1
                     } else {
-                        (- (t - 0.1) * 3.0).exp()
+                        (-(t - 0.1) * 3.0).exp()
                     };
 
                     output[start + j] += warble * envelope * bird_activity * 0.1;

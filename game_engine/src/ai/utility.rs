@@ -43,9 +43,7 @@ impl UtilityCurve {
         let x = (input - self.midpoint) * self.slope;
 
         let y = match self.curve_type {
-            CurveType::Linear => {
-                x
-            }
+            CurveType::Linear => x,
             CurveType::Quadratic => {
                 if x >= 0.0 {
                     x.powf(self.exponent)
@@ -53,16 +51,12 @@ impl UtilityCurve {
                     -(-x).powf(self.exponent)
                 }
             }
-            CurveType::Logistic => {
-                1.0 / (1.0 + (-x).exp())
-            }
+            CurveType::Logistic => 1.0 / (1.0 + (-x).exp()),
             CurveType::Logit => {
                 let p = x.max(0.001).min(0.999);
                 (p / (1.0 - p)).ln()
             }
-            CurveType::Sinusoidal => {
-                (x * std::f32::consts::PI / 2.0).sin()
-            }
+            CurveType::Sinusoidal => (x * std::f32::consts::PI / 2.0).sin(),
         };
 
         (y + self.y_shift).max(0.0).min(1.0)

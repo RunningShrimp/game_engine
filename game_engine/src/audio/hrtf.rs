@@ -29,8 +29,8 @@
 //! let (left_samples, right_samples) = hrtf.process_mono(&mono_samples);
 //! ```
 
-use crate::core::validation::{Validate, ValidationError};
 use crate::core::validation::validators;
+use crate::core::validation::{Validate, ValidationError};
 use glam::Vec3;
 use std::f32::consts::PI;
 

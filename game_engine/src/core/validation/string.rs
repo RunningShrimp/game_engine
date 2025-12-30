@@ -80,8 +80,7 @@ pub fn validate_charset<'a>(s: &'a str, allowed: &str) -> ValidationResult<&'a s
 /// assert!(validate_utf8(b"\xff\xfe").is_err());  // 无效UTF-8
 /// ```
 pub fn validate_utf8(bytes: &[u8]) -> ValidationResult<&str> {
-    std::str::from_utf8(bytes)
-        .map_err(|_| ValidationError::custom("Invalid UTF-8 byte sequence"))
+    std::str::from_utf8(bytes).map_err(|_| ValidationError::custom("Invalid UTF-8 byte sequence"))
 }
 
 /// 验证字符串是有效的标识符（字母开头，只包含字母数字下划线）
@@ -154,15 +153,15 @@ mod tests {
         assert!(validate_utf8("你好".as_bytes()).is_ok());
 
         assert!(validate_utf8(b"\xff\xfe").is_err());
-        assert!(validate_utf8(b"\xc3\x28").is_err());  // 无效UTF-8
+        assert!(validate_utf8(b"\xc3\x28").is_err()); // 无效UTF-8
     }
 
     #[test]
     fn test_validate_identifier() {
         assert!(validate_identifier("test").is_ok());
         assert!(validate_identifier("test_123").is_ok());
-        assert!(validate_identifier("_test").is_err());  // 下划线开头
-        assert!(validate_identifier("123test").is_err());  // 数字开头
-        assert!(validate_identifier("test-123").is_err());  // 连字符
+        assert!(validate_identifier("_test").is_err()); // 下划线开头
+        assert!(validate_identifier("123test").is_err()); // 数字开头
+        assert!(validate_identifier("test-123").is_err()); // 连字符
     }
 }

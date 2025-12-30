@@ -31,27 +31,27 @@
 //! - **多普勒效应** - 移动物体的音调变化
 //! - **立体声定位** - 基于位置的左右声道平衡
 
-pub mod async_processing;
-/// 音频特效系统 - 提供多种音频处理特效（EQ、混响、延迟、压缩）
-pub mod effects;
-/// HRTF (头部相关传输函数) - 用于3D音频定位
-pub mod hrtf;
-/// HRTF音频处理器 - 实现双耳3D音频渲染
-pub mod hrtf_processor;
+/// 扩展声学材质库
+pub mod acoustic_materials;
 /// 高级混响系统 - 基于房间几何和FDN的混响算法
 pub mod advanced_reverb;
-/// 音频遮挡 - 基于物理的音频遮挡计算
-pub mod occlusion;
+pub mod async_processing;
 /// 多普勒效应 - 移动物体的音调变化
 pub mod doppler;
+/// 音频特效系统 - 提供多种音频处理特效（EQ、混响、延迟、压缩）
+pub mod effects;
+/// 环境音效系统 - 生成自然环境音效
+pub mod environmental;
 /// FFT卷积器 - 高效音频处理
 pub mod fft_convolver;
 /// HRIR插值 - 提高音频定位精度
 pub mod hrir_interpolation;
-/// 扩展声学材质库
-pub mod acoustic_materials;
-/// 环境音效系统 - 生成自然环境音效
-pub mod environmental;
+/// HRTF (头部相关传输函数) - 用于3D音频定位
+pub mod hrtf;
+/// HRTF音频处理器 - 实现双耳3D音频渲染
+pub mod hrtf_processor;
+/// 音频遮挡 - 基于物理的音频遮挡计算
+pub mod occlusion;
 /// 空间音频 - 提供3D空间音频和听者定位支持
 pub mod spatial;
 /// 音频流 - 提供流式音频加载和播放支持

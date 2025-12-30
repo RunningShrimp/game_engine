@@ -2,10 +2,10 @@
 //!
 //! 测试验证框架在实际使用场景中的集成效果。
 
-use game_engine::core::validation::{Validate, ValidationError};
-use game_engine::core::validation::validators;
-use game_engine::domain::value_objects::{Position, Scale, Volume, Mass, Velocity, Duration};
 use game_engine::audio::hrtf::HrtfConfig;
+use game_engine::core::validation::validators;
+use game_engine::core::validation::{Validate, ValidationError};
+use game_engine::domain::value_objects::{Duration, Mass, Position, Scale, Velocity, Volume};
 
 /// 验证多个值对象的辅助宏
 macro_rules! validate_all {
@@ -100,7 +100,10 @@ mod integration_tests {
         // 测试创建包含无效质量的配置会失败
         // Mass::new 会过滤负值，返回 None
         let invalid_mass = Mass::new(-10.0);
-        assert!(invalid_mass.is_none(), "Mass with negative value should be None");
+        assert!(
+            invalid_mass.is_none(),
+            "Mass with negative value should be None"
+        );
 
         // 创建有效的配置
         let config = EntityConfig {
@@ -247,7 +250,8 @@ mod integration_tests {
 
         // 使用Option的Validate实现
         use game_engine::core::validation::trait_def::Validate;
-        let entities_as_options: Vec<Option<EntityConfig>> = entities.into_iter().map(Some).collect();
+        let entities_as_options: Vec<Option<EntityConfig>> =
+            entities.into_iter().map(Some).collect();
         entities_as_options.validate().unwrap();
     }
 
@@ -256,7 +260,7 @@ mod integration_tests {
         // 测试HRTF配置的边界情况
         let valid_configs = vec![
             HrtfConfig {
-                sample_rate: 8000.0,   // 最小值
+                sample_rate: 8000.0, // 最小值
                 ..Default::default()
             },
             HrtfConfig {
@@ -264,11 +268,11 @@ mod integration_tests {
                 ..Default::default()
             },
             HrtfConfig {
-                head_radius: 0.01,     // 最小值
+                head_radius: 0.01, // 最小值
                 ..Default::default()
             },
             HrtfConfig {
-                head_radius: 0.15,     // 最大值
+                head_radius: 0.15, // 最大值
                 ..Default::default()
             },
         ];

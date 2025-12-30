@@ -113,7 +113,12 @@ impl HrirInterpolator {
     }
 
     /// 三线性插值 (包含距离维度)
-    fn trilinear(&self, azimuth: f32, elevation: f32, distance_factor: f32) -> (Vec<f32>, Vec<f32>) {
+    fn trilinear(
+        &self,
+        azimuth: f32,
+        elevation: f32,
+        distance_factor: f32,
+    ) -> (Vec<f32>, Vec<f32>) {
         // 首先进行双线性插值
         let (mut left_hrir, mut right_hrir) = self.bilinear(azimuth, elevation);
 

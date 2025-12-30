@@ -1,6 +1,10 @@
 // 序列化兼容性层
 //
 // 提供统一的序列化API，处理不同版本的bincode和ron
+//
+// 版本历史：
+// - v1.0: 初始版本
+// - v1.5: 文档更新，说明使用bincode 1.3
 
 use serde::{Deserialize, Serialize};
 
@@ -91,5 +95,42 @@ mod tests {
         let deserialized: TestData = ron_compat::from_str(&ron_str).unwrap();
 
         assert_eq!(data, deserialized);
+    }
+
+    #[test]
+    fn test_bincode_send_sync() {
+        let data = TestData {
+            name: "test".to_string(),
+            value: 42,
+        };
+
+        let serialized = bincode_compat::serialize_send(&data).unwrap();
+        let deserialized: TestData = bincode_compat::deserialize_send(&serialized).unwrap();
+
+        assert_eq!(data, deserialized);
+    }
+
+    #[test]
+    fn test_bincode_roundtrip_multiple_values() {
+        let values = vec![
+            TestData {
+                name: "first".to_string(),
+                value: 1,
+            },
+            TestData {
+                name: "second".to_string(),
+                value: 2,
+            },
+            TestData {
+                name: "third".to_string(),
+                value: 3,
+            },
+        ];
+
+        for data in values {
+            let serialized = bincode_compat::serialize(&data).unwrap();
+            let deserialized: TestData = bincode_compat::deserialize(&serialized).unwrap();
+            assert_eq!(data, deserialized);
+        }
     }
 }
