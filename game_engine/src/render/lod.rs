@@ -996,7 +996,6 @@ mod tests {
     use proptest::prelude::*;
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_lod_config_builder() {
         let config = LodConfig::builder()
             .add_level(0.0, 10.0, LodQuality::High)
@@ -1010,7 +1009,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_lod_level_distance() {
         let level = LodLevel::new(10.0, 30.0, LodQuality::Medium);
 
@@ -1021,7 +1019,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_lod_selector_instant() {
         let config = LodConfig::builder()
             .add_level(0.0, 10.0, LodQuality::High)
@@ -1043,7 +1040,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_lod_selector_hysteresis() {
         let config = LodConfig::builder()
             .add_level(0.0, 10.0, LodQuality::High)
@@ -1068,7 +1064,6 @@ mod tests {
 
     proptest! {
             #[test]
-    #[ignore]  // TODO: Fix compilation errors
             fn test_lod_selection_properties(
                 distance in 0.0f32..1000.0,
                 delta_time in 0.0f32..0.1,
@@ -1109,7 +1104,6 @@ mod tests {
             }
 
             #[test]
-    #[ignore]  // TODO: Fix compilation errors
             fn test_lod_level_contains_properties(
                 min_dist in 0.0f32..100.0,
                 max_dist in 0.0f32..100.0,
@@ -1136,7 +1130,6 @@ mod tests {
             }
 
             #[test]
-    #[ignore]  // TODO: Fix compilation errors
             fn test_lod_transition_properties(
                 distance in 0.0f32..100.0,
                 delta_time in 0.0f32..0.1,

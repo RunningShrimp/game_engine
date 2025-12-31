@@ -1934,7 +1934,6 @@ mod tests {
     use super::*;
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_server_config() {
         let config = ServerConfig::default();
         assert_eq!(config.port, 8080);
@@ -1942,7 +1941,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_server_config_custom() {
         let config = ServerConfig {
             port: 9000,
@@ -1961,7 +1959,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_server_creation() {
         let config = ServerConfig::default();
         let server = GameServer::new(config);
@@ -1969,7 +1966,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_server_address_parsing() {
         let addr_str = "127.0.0.1:8080";
         let addr: SocketAddr = addr_str.parse().unwrap_or_else(|e| {
@@ -1981,7 +1977,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_server_address_parsing_invalid() {
         let addr_str = "invalid_address";
         let addr_result: Result<SocketAddr, _> = addr_str.parse();
@@ -1990,7 +1985,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_message_serialization_server() {
         let msg = NetworkMessage::Heartbeat { timestamp: 54321 };
 
@@ -2027,7 +2021,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_sync_client_connection_heartbeat() {
         let addr: SocketAddr = "127.0.0.1:8080".parse().unwrap_or_else(|e| {
             panic!("Failed to parse address: {}", e);
@@ -2043,7 +2036,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_timeout_detection() {
         let current = current_timestamp_ms();
         let old_timestamp = current.saturating_sub(20000); // 20秒前
@@ -2056,7 +2048,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_client_id_generation() {
         let id1: u64 = rand::random();
         let id2: u64 = rand::random();

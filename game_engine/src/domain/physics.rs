@@ -1323,7 +1323,6 @@ mod tests {
     use super::*;
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_physics_world_send_sync() {
         // 测试PhysicsWorld是否实现了Send
         fn assert_send<T: Send>() {}
@@ -1335,7 +1334,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_rapier_types_send_sync() {
         // 测试各种Rapier3D类型是否实现了Send和Sync
 
@@ -1371,7 +1369,6 @@ mod tests {
     // ============================================================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_rigid_body_type_variants() {
         let fixed = RigidBodyType::Fixed;
         let dynamic = RigidBodyType::Dynamic;
@@ -1384,14 +1381,12 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_shape_type_sphere() {
         let sphere = ShapeType::Sphere { radius: 1.0 };
         assert!(matches!(sphere, ShapeType::Sphere { radius: 1.0 }));
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_rigid_body_state_creation() {
         let state = RigidBodyState {
             position: Vec3::ZERO,
@@ -1408,7 +1403,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_rigid_body_state_with_values() {
         let state = RigidBodyState {
             position: Vec3::new(1.0, 2.0, 3.0),
@@ -1423,7 +1417,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_rigid_body_id_uniqueness() {
         let id1 = RigidBodyId::new(1);
         let id2 = RigidBodyId::new(2);
@@ -1431,7 +1424,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_collider_id_uniqueness() {
         let id1 = ColliderId::new(1);
         let id2 = ColliderId::new(2);
@@ -1439,7 +1431,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_rigid_body_creation_with_new() {
         let id = RigidBodyId::new(1);
         let body = RigidBody::new(id, RigidBodyType::Dynamic, Vec3::ZERO);
@@ -1449,7 +1440,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_rigid_body_creation_dynamic() {
         let id = RigidBodyId::new(1);
         let body = RigidBody::dynamic(id, Vec3::ZERO);
@@ -1458,7 +1448,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_rigid_body_creation_with_all() {
         let id = RigidBodyId::new(1);
         let body = RigidBody::with_all(
@@ -1474,7 +1463,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_rigid_body_getters() {
         let id = RigidBodyId::new(1);
         let body = RigidBody::new(id, RigidBodyType::Dynamic, Vec3::new(1.0, 2.0, 3.0));
@@ -1487,7 +1475,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_rigid_body_set_mass() {
         let id = RigidBodyId::new(1);
         let mut body = RigidBody::new(id, RigidBodyType::Dynamic, Vec3::ZERO);
@@ -1497,7 +1484,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_fixed_body_type() {
         let id = RigidBodyId::new(1);
         let body = RigidBody::new(id, RigidBodyType::Fixed, Vec3::ZERO);
@@ -1505,7 +1491,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_kinematic_body_type() {
         let id = RigidBodyId::new(1);
         let body = RigidBody::new(id, RigidBodyType::Kinematic, Vec3::ZERO);
@@ -1513,7 +1498,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_fixed_body_mass() {
         let id = RigidBodyId::new(1);
         let body = RigidBody::new(id, RigidBodyType::Fixed, Vec3::ZERO);
@@ -1522,7 +1506,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_dynamic_body_has_positive_mass() {
         let id = RigidBodyId::new(1);
         let body = RigidBody::new(id, RigidBodyType::Dynamic, Vec3::ZERO);

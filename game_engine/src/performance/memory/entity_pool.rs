@@ -418,7 +418,6 @@ mod tests {
     use super::*;
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_entity_pool() {
         let mut pool = EntityPool::default_config();
 
@@ -443,7 +442,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_entity_pool_batch() {
         let mut pool = EntityPool::default_config();
 
@@ -457,7 +455,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_component_pool() {
         let mut pool: ComponentPool<u32> = ComponentPool::default_config();
 
@@ -472,7 +469,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_pool_stats() {
         let mut pool = EntityPool::default_config();
 
@@ -488,7 +484,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_entity_pool_capacity_limit() {
         let config = EntityPoolConfig {
             initial_capacity: 10,

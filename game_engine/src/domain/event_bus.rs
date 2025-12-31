@@ -300,14 +300,12 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_enhanced_event_bus_creation() {
         let bus = EnhancedEventBus::new();
         assert_eq!(bus.get_stats().total_published, 0);
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_event_data_creation() {
         let event = TestEvent { value: 42 };
         let event_data = EventData::new(&event, EventPriority::High);
@@ -316,7 +314,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_event_queue() {
         let mut queue = EventQueue::default();
         assert!(queue.is_empty());

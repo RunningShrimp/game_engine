@@ -1292,7 +1292,6 @@ mod tests {
     use super::*;
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_di_container() {
         let mut container = DIContainer::new();
 
@@ -1314,7 +1313,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_audio_domain_service() {
         let mut service = AudioDomainService::new();
 
@@ -1340,7 +1338,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_physics_domain_service() {
         let mut service = PhysicsDomainService::new();
 
@@ -1370,7 +1367,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_scene_domain_service() {
         let mut service = SceneDomainService::new();
 

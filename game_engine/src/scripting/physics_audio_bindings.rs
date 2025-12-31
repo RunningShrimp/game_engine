@@ -310,7 +310,6 @@ mod tests {
     use super::*;
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_physics_bindings() {
         let mut world = World::new();
         let world_arc = Arc::new(Mutex::new(world));
@@ -346,7 +345,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_audio_bindings() {
         let mut world = World::new();
         let world_arc = Arc::new(Mutex::new(world));

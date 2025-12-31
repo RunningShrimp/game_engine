@@ -231,7 +231,6 @@ mod tests {
     use super::*;
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_ecs_bindings() {
         let mut world = World::new();
         let world_arc = Arc::new(Mutex::new(world));

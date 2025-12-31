@@ -406,7 +406,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_event_registry() {
         let registry = EventRegistry::new();
 
@@ -430,7 +429,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_event_registry_validation() {
         let registry = EventRegistry::new();
 
@@ -454,7 +452,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_global_registry() {
         // 注册到全局注册表
         register_event_type::<TestEvent>("TestEvent", 1).expect("Test: operation should succeed");

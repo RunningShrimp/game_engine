@@ -14,7 +14,6 @@ mod tests {
     // ========================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_transform_identity() {
         let transform = Transform::default();
 
@@ -24,7 +23,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_transform_scale_modification() {
         let mut transform = Transform::default();
         transform.scale = Vec3::new(2.0, 3.0, 4.0);
@@ -35,7 +33,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_transform_complex_rotation() {
         let rot = Quat::from_euler(glam::EulerRot::XYZ, 0.1, 0.2, 0.3);
         let transform = Transform {
@@ -49,7 +46,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_transform_copy() {
         let t1 = Transform {
             pos: Vec3::new(1.0, 2.0, 3.0),
@@ -68,7 +64,6 @@ mod tests {
     // ========================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_velocity_with_values() {
         let velocity = Velocity {
             lin: Vec3::new(1.0, 2.0, 3.0),
@@ -80,7 +75,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_velocity_zero() {
         let velocity = Velocity::new();
         assert_eq!(velocity.lin, Vec3::ZERO);
@@ -88,7 +82,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_velocity_high_values() {
         let velocity = Velocity {
             lin: Vec3::new(1000.0, 2000.0, 3000.0),
@@ -104,7 +97,6 @@ mod tests {
     // ========================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_sprite_color_variations() {
         let sprite1 = Sprite {
             color: [1.0, 0.0, 0.0, 1.0], // Red
@@ -121,7 +113,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_sprite_uv_transforms() {
         let sprite = Sprite {
             uv_off: [0.5, 0.25],
@@ -134,7 +125,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_sprite_layer_ordering() {
         let sprite1 = Sprite {
             layer: 0.0,
@@ -150,7 +140,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_sprite_texture_indices() {
         let sprite = Sprite {
             tex_index: 5,
@@ -167,7 +156,6 @@ mod tests {
     // ========================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_material_metallic_spectrum() {
         let non_metal = Material {
             metallic: 0.0,
@@ -184,7 +172,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_material_roughness_spectrum() {
         let smooth = Material {
             roughness: 0.0,
@@ -201,7 +188,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_material_transparency() {
         let opaque = Material {
             color: [1.0, 1.0, 1.0, 1.0],
@@ -222,7 +208,6 @@ mod tests {
     // ========================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_pbr_material_all_properties() {
         let pbr = PbrMaterialComp {
             base_color: [0.8, 0.2, 0.1, 1.0],
@@ -242,7 +227,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_pbr_material_emissive() {
         let glowing = PbrMaterialComp {
             emissive: [1.0, 1.0, 1.0],
@@ -258,7 +242,6 @@ mod tests {
     // ========================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_camera_active_state() {
         let active = Camera {
             is_active: true,
@@ -275,7 +258,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_camera_orthographic_projection() {
         let camera = Camera {
             projection: Projection::Orthographic {
@@ -297,7 +279,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_camera_perspective_projection() {
         let camera = Camera {
             projection: Projection::Perspective {
@@ -330,7 +311,6 @@ mod tests {
     // ========================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_point_light_intensity() {
         let dim = PointLight {
             intensity: 0.5,
@@ -347,7 +327,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_point_light_colors() {
         let red_light = PointLight {
             color: [1.0, 0.0, 0.0],
@@ -364,7 +343,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_point_light_radius() {
         let small_light = PointLight {
             radius: 10.0,
@@ -381,7 +359,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_point_light_3d_variations() {
         let light1 = PointLight3D {
             color: [1.0, 0.5, 0.2],
@@ -394,7 +371,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_directional_light_directions() {
         let down = DirectionalLightComp {
             direction: [0.0, -1.0, 0.0],
@@ -415,7 +391,6 @@ mod tests {
     // ========================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_time_accumulation() {
         let mut time = Time::default();
 
@@ -426,7 +401,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_time_fixed_timestep_variations() {
         let time_30 = Time {
             fixed_time_step: 1.0 / 30.0,
@@ -443,7 +417,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_time_alpha_interpolation() {
         let time = Time {
             alpha: 0.5,
@@ -458,7 +431,6 @@ mod tests {
     // ========================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_viewport_resolutions() {
         let hd = Viewport {
             width: 1280,
@@ -475,7 +447,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_viewport_aspect_ratio() {
         let viewport = Viewport {
             width: 1920,
@@ -491,7 +462,6 @@ mod tests {
     // ========================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_tilemap_basic() {
         let tilemap = TileMap {
             width: 10,
@@ -510,7 +480,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_tilemap_dirty_flag() {
         let mut tilemap = TileMap {
             width: 0,
@@ -530,7 +499,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_tilemap_chunk_config() {
         let config = TileChunkConfig { size: [16, 16] };
 
@@ -543,7 +511,6 @@ mod tests {
     // ========================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_flipbook_empty() {
         let flipbook = Flipbook::new();
 
@@ -552,7 +519,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_flipbook_with_frames() {
         let mut flipbook = Flipbook::new();
 
@@ -572,7 +538,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_flipbook_looping() {
         let looping = Flipbook {
             looping: true,
@@ -593,7 +558,6 @@ mod tests {
     // ========================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_previous_transform_tracking() {
         let prev = PreviousTransform {
             pos: Vec3::new(1.0, 2.0, 3.0),
@@ -609,7 +573,6 @@ mod tests {
     // ========================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_tile_entity_pool_default() {
         let pool = TileEntityPool::new();
 
@@ -622,7 +585,6 @@ mod tests {
     // ========================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_world_query_filtering() {
         let mut world = World::new();
 
@@ -640,7 +602,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_resource_mutability() {
         let mut world = World::new();
 
@@ -665,7 +626,6 @@ mod tests {
     // ========================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_sprite_with_material() {
         let mut world = World::new();
 
@@ -677,7 +637,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_camera_with_transform() {
         let mut world = World::new();
 
@@ -692,7 +651,6 @@ mod tests {
     // ========================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_spawn_many_entities() {
         let mut world = World::new();
 
@@ -707,7 +665,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_query_performance() {
         let mut world = World::new();
 

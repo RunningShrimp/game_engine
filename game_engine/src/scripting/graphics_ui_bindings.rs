@@ -315,7 +315,6 @@ mod tests {
     use super::*;
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_graphics_bindings() {
         let mut world = World::new();
         let world_arc = Arc::new(Mutex::new(world));
@@ -348,7 +347,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_ui_bindings() {
         let mut world = World::new();
         let world_arc = Arc::new(Mutex::new(world));

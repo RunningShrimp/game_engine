@@ -14,14 +14,12 @@ mod tests {
     // ========================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_spatial_hash_new() {
         let hash = SpatialHash::new(10.0);
         assert_eq!(hash.cell_size(), 10.0);
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_spatial_hash_default() {
         let hash = SpatialHash::default();
         // 默认单元格大小应该合理
@@ -29,7 +27,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_spatial_hash_insert() {
         let mut hash = SpatialHash::new(10.0);
         let id = 1;
@@ -40,7 +37,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_spatial_hash_insert_multiple() {
         let mut hash = SpatialHash::new(10.0);
 
@@ -53,7 +49,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_spatial_hash_remove() {
         let mut hash = SpatialHash::new(10.0);
         let id = 1;
@@ -67,7 +62,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_spatial_hash_remove_nonexistent() {
         let mut hash = SpatialHash::new(10.0);
         // 移除不存在的物体不应该崩溃
@@ -76,7 +70,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_spatial_hash_query() {
         let mut hash = SpatialHash::new(10.0);
 
@@ -92,7 +85,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_spatial_hash_query_empty() {
         let hash = SpatialHash::new(10.0);
         let results = hash.query_nearby(Vec3::ZERO, 10.0);
@@ -100,7 +92,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_spatial_hash_update() {
         let mut hash = SpatialHash::new(10.0);
         let id = 1;
@@ -120,7 +111,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_spatial_hash_clear() {
         let mut hash = SpatialHash::new(10.0);
 
@@ -140,7 +130,6 @@ mod tests {
     // ========================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_uniform_grid_new() {
         let grid = UniformGrid::new(100.0, 100.0, 10.0);
         assert_eq!(grid.width(), 100.0);
@@ -149,7 +138,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_uniform_grid_insert() {
         let mut grid = UniformGrid::new(100.0, 100.0, 10.0);
         let id = 1;
@@ -160,7 +148,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_uniform_grid_out_of_bounds() {
         let mut grid = UniformGrid::new(100.0, 100.0, 10.0);
         let id = 1;
@@ -174,7 +161,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_uniform_grid_query() {
         let mut grid = UniformGrid::new(100.0, 100.0, 10.0);
 
@@ -196,7 +182,6 @@ mod tests {
     // ========================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_quad_tree_new() {
         let tree = QuadTree::new(100.0, 100.0, 4);
         assert_eq!(tree.max_objects(), 4);
@@ -204,7 +189,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_quad_tree_insert() {
         let mut tree = QuadTree::new(100.0, 100.0, 4);
         let id = 1;
@@ -215,7 +199,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_quad_tree_split() {
         let mut tree = QuadTree::new(100.0, 100.0, 2);
 
@@ -232,7 +215,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_quad_tree_query() {
         let mut tree = QuadTree::new(100.0, 100.0, 4);
 
@@ -248,7 +230,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_quad_tree_remove() {
         let mut tree = QuadTree::new(100.0, 100.0, 4);
         let id = 1;
@@ -262,7 +243,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_quad_tree_clear() {
         let mut tree = QuadTree::new(100.0, 100.0, 4);
 
@@ -280,7 +260,6 @@ mod tests {
     // ========================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_spatial_hash_performance() {
         let mut hash = SpatialHash::new(10.0);
         let count = 1000;
@@ -309,7 +288,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_quad_tree_performance() {
         let mut tree = QuadTree::new(1000.0, 1000.0, 10);
         let count = 500;
@@ -344,7 +322,6 @@ mod tests {
     // ========================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_spatial_hash_negative_coordinates() {
         let mut hash = SpatialHash::new(10.0);
         let id = 1;
@@ -358,7 +335,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_spatial_hash_large_radius() {
         let mut hash = SpatialHash::new(10.0);
 
@@ -373,7 +349,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_spatial_hash_zero_radius() {
         let mut hash = SpatialHash::new(10.0);
         let id = 1;
@@ -388,7 +363,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_spatial_hash_duplicate_insert() {
         let mut hash = SpatialHash::new(10.0);
         let id = 1;
@@ -407,7 +381,6 @@ mod tests {
     // ========================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_quad_tree_memory_efficiency() {
         let mut tree = QuadTree::new(1000.0, 1000.0, 10);
 
@@ -424,7 +397,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_spatial_hash_scatter_distribution() {
         let mut hash = SpatialHash::new(10.0);
 
@@ -446,7 +418,6 @@ mod tests {
     // ========================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_collision_detection_scenario() {
         let mut hash = SpatialHash::new(20.0);
 
@@ -477,7 +448,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_dynamic_objects_moving() {
         let mut hash = SpatialHash::new(10.0);
         let count = 10;

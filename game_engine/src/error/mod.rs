@@ -328,7 +328,6 @@ mod tests {
     use std::str::FromStr;
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_error_severity() {
         assert_eq!(ErrorSeverity::Info.as_str(), "INFO");
         assert_eq!(ErrorSeverity::Fatal.as_str(), "FATAL");
@@ -342,7 +341,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_error_category() {
         assert_eq!(ErrorCategory::Render.as_str(), "RENDER");
         assert_eq!(ErrorCategory::Physics.as_str(), "PHYSICS");

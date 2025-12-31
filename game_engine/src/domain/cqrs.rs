@@ -458,7 +458,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_command_bus() {
         let bus = CommandBus::new();
         let handler = Arc::new(TestCommandHandler);
@@ -475,7 +474,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_query_bus() {
         let bus = QueryBus::new();
         let handler = Arc::new(TestQueryHandler);
@@ -490,7 +488,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_cqrs_manager() {
         let manager = CqrsManager::new();
 

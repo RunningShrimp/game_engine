@@ -66,14 +66,12 @@ mod tests {
     use bevy_ecs::world::World;
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_schedule_creation() {
         let schedule = Schedule::default();
         assert_eq!(schedule.systems.len(), 0);
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_schedule_add_system() {
         let mut schedule = Schedule::default();
         schedule.add_system(|world: &mut World| {
@@ -83,7 +81,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_schedule_run() {
         let mut schedule = Schedule::default();
         let mut call_count = std::sync::Arc::new(std::sync::Mutex::new(0));
@@ -102,14 +99,12 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_create_fixed_schedule() {
         let schedule = create_fixed_schedule();
         assert!(schedule.systems.len() > 0);
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_fixed_schedule_runs() {
         let mut schedule = create_fixed_schedule();
         let mut world = World::new();

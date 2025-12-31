@@ -1258,7 +1258,6 @@ mod tests {
     use rapier3d::na::Point3 as NaPoint3;
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_bvh_build() {
         let mut collider_set = ColliderSet::new();
 
@@ -1278,7 +1277,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_bvh_query() {
         let mut collider_set = ColliderSet::new();
 
@@ -1305,7 +1303,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_spatial_hash_build() {
         let mut collider_set = ColliderSet::new();
 
@@ -1325,7 +1322,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_spatial_hash_query() {
         let mut collider_set = ColliderSet::new();
 

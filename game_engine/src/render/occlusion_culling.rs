@@ -1188,7 +1188,6 @@ mod tests {
     use super::*;
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_hi_z_creation() {
         // 测试Hi-Z创建（不需要WGPU设备）
         let width = 1024;
@@ -1201,7 +1200,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_hi_z_mip_levels() {
         // 测试Hi-Z层级数计算
         let width = 1920;
@@ -1218,7 +1216,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_aabb_projection() {
         // 测试AABB投影逻辑（单元测试）
         // 这里只测试基本的AABB计算，实际的投影在着色器中完成

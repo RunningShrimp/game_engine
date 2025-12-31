@@ -454,7 +454,6 @@ mod tests {
     use super::*;
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_entity_creation() {
         let entity = GameEntity::new(EntityId(1));
         assert_eq!(entity.id, EntityId(1));
@@ -462,7 +461,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_entity_with_components() {
         let transform = Transform {
             pos: glam::Vec3::new(1.0, 2.0, 3.0),
@@ -479,7 +477,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_entity_position_manipulation() {
         let mut entity = EntityFactory::create_basic(EntityId(1), glam::Vec3::ZERO);
 
@@ -497,7 +494,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_entity_state_management() {
         let mut entity = GameEntity::new(EntityId(1));
 
@@ -515,7 +511,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_entity_validate_sprite_and_camera_conflict() {
         // 测试业务规则：实体不能同时拥有Sprite和Camera组件
         let mut entity =
@@ -528,7 +523,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_entity_validate_positive_scale() {
         // 测试业务规则：Transform的缩放值必须为正数
         let mut entity = EntityFactory::create_basic(EntityId(1), glam::Vec3::ZERO);
@@ -551,7 +545,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_entity_activate_pending_deletion() {
         // 测试业务规则：待删除的实体不能激活
         let mut entity = GameEntity::new(EntityId(1));
@@ -562,7 +555,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_entity_properties() {
         let mut entity = GameEntity::new(EntityId(1));
 
@@ -584,7 +576,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_entity_rotation() {
         let mut entity = EntityFactory::create_basic(EntityId(1), glam::Vec3::ZERO);
 
@@ -598,7 +589,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_entity_operations_without_transform() {
         // 测试在没有Transform组件时操作应该失败
         let mut entity = GameEntity::new(EntityId(1));
@@ -610,7 +600,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_entity_id_creation() {
         let id = EntityId::new(42);
         assert_eq!(id.as_u64(), 42);
@@ -618,7 +607,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_entity_factory_create_basic() {
         let entity = EntityFactory::create_basic(EntityId(1), glam::Vec3::new(1.0, 2.0, 3.0));
 
@@ -628,7 +616,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_entity_factory_create_sprite() {
         let sprite = Sprite::default();
         let entity = EntityFactory::create_sprite(EntityId(1), glam::Vec3::ZERO, sprite);
@@ -638,7 +625,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_entity_factory_create_light() {
         let light = PointLight::default();
         let entity = EntityFactory::create_light(EntityId(1), glam::Vec3::ZERO, light);
@@ -648,7 +634,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_entity_factory_create_camera() {
         let camera = Camera::default();
         let entity = EntityFactory::create_camera(EntityId(1), glam::Vec3::ZERO, camera);
@@ -658,7 +643,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_entity_validate_valid_entity() {
         // 测试有效的实体应该通过验证
         let entity = EntityFactory::create_basic(EntityId(1), glam::Vec3::ZERO);
@@ -670,7 +654,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_entity_scale_without_transform() {
         // 测试在没有Transform组件时缩放应该失败
         let mut entity = GameEntity::new(EntityId(1));
@@ -678,7 +661,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_entity_rotate_without_transform() {
         // 测试在没有Transform组件时旋转应该失败
         let mut entity = GameEntity::new(EntityId(1));
@@ -686,14 +668,12 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_entity_with_name() {
         let entity = GameEntity::new(EntityId(1)).with_name("Test Entity");
         assert_eq!(entity.name, Some("Test Entity".to_string()));
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_entity_with_transform() {
         let transform = Transform {
             pos: glam::Vec3::new(1.0, 2.0, 3.0),
@@ -705,7 +685,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_entity_position_without_transform() {
         // 测试在没有Transform组件时获取位置应该返回None
         let entity = GameEntity::new(EntityId(1));
@@ -713,7 +692,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_entity_position_with_transform() {
         let entity = EntityFactory::create_basic(EntityId(1), glam::Vec3::new(1.0, 2.0, 3.0));
         assert_eq!(entity.position(), Some(glam::Vec3::new(1.0, 2.0, 3.0)));

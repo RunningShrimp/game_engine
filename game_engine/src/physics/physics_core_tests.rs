@@ -14,7 +14,6 @@ mod tests {
     // ========================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_physics_domain_service_new() {
         let mut service = PhysicsDomainService::new();
         // 服务应该成功创建
@@ -39,7 +38,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_physics_domain_service_create_dynamic_body() {
         let mut service = PhysicsDomainService::new();
         let body_id = RigidBodyId::new(1);
@@ -56,7 +54,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_physics_domain_service_create_kinematic_body() {
         let mut service = PhysicsDomainService::new();
         let body_id = RigidBodyId::new(1);
@@ -73,7 +70,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_physics_domain_service_get_body_position() {
         let mut service = PhysicsDomainService::new();
         let body_id = RigidBodyId::new(1);
@@ -91,7 +87,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_physics_domain_service_get_nonexistent_body() {
         let mut service = PhysicsDomainService::new();
         let invalid_id = RigidBodyId::new(999);
@@ -101,7 +96,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_physics_domain_service_remove_body() {
         let mut service = PhysicsDomainService::new();
         let body_id = RigidBodyId::new(1);
@@ -122,7 +116,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_physics_domain_service_remove_nonexistent_body() {
         let mut service = PhysicsDomainService::new();
         let invalid_id = RigidBodyId::new(999);
@@ -136,7 +129,6 @@ mod tests {
     // ========================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_rigid_body_with_all() {
         let body_id = RigidBodyId::new(1);
         let pos = Vec3::new(10.0, 20.0, 30.0);
@@ -187,7 +179,6 @@ mod tests {
     // ========================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_rigid_body_id_new() {
         let id1 = RigidBodyId::new(1);
         let id2 = RigidBodyId::new(2);
@@ -196,7 +187,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_rigid_body_id_equality() {
         let id1 = RigidBodyId::new(5);
         let id2 = RigidBodyId::new(5);
@@ -205,7 +195,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_rigid_body_id_copy() {
         let id1 = RigidBodyId::new(10);
         let id2 = id1;
@@ -218,7 +207,6 @@ mod tests {
     // ========================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_gravity_application() {
         let mut service = PhysicsDomainService::new();
         let body_id = RigidBodyId::new(1);
@@ -266,7 +254,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_kinematic_body_velocity() {
         let mut service = PhysicsDomainService::new();
         let body_id = RigidBodyId::new(1);
@@ -298,7 +285,6 @@ mod tests {
     // ========================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_multiple_bodies() {
         let mut service = PhysicsDomainService::new();
 
@@ -318,7 +304,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_body_collision_detection() {
         let mut service = PhysicsDomainService::new();
 
@@ -357,7 +342,6 @@ mod tests {
     // ========================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_zero_mass_body() {
         let mut service = PhysicsDomainService::new();
         let body_id = RigidBodyId::new(1);
@@ -376,7 +360,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_negative_mass_body() {
         let mut service = PhysicsDomainService::new();
         let body_id = RigidBodyId::new(1);
@@ -394,7 +377,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_extreme_position() {
         let mut service = PhysicsDomainService::new();
         let body_id = RigidBodyId::new(1);
@@ -411,7 +393,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_nan_position() {
         let mut service = PhysicsDomainService::new();
         let body_id = RigidBodyId::new(1);
@@ -433,7 +414,6 @@ mod tests {
     // ========================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_physics_update_performance() {
         let mut service = PhysicsDomainService::new();
 
@@ -462,7 +442,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_many_bodies_creation_performance() {
         let start = std::time::Instant::now();
 
@@ -491,7 +470,6 @@ mod tests {
     // ========================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_fixed_timestep() {
         let mut service = PhysicsDomainService::new();
         let body_id = RigidBodyId::new(1);
@@ -521,7 +499,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_variable_timestep() {
         let mut service = PhysicsDomainService::new();
         let body_id = RigidBodyId::new(1);
@@ -563,7 +540,6 @@ mod tests {
     // ========================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_body_rotation() {
         let mut service = PhysicsDomainService::new();
         let body_id = RigidBodyId::new(1);
@@ -578,7 +554,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_body_rotation_update() {
         let mut service = PhysicsDomainService::new();
         let body_id = RigidBodyId::new(1);
@@ -609,7 +584,6 @@ mod tests {
     // ========================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_apply_force() {
         let mut service = PhysicsDomainService::new();
         let body_id = RigidBodyId::new(1);
@@ -636,7 +610,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_apply_impulse() {
         let mut service = PhysicsDomainService::new();
         let body_id = RigidBodyId::new(1);
@@ -665,7 +638,6 @@ mod tests {
     // ========================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_sleep_body() {
         let mut service = PhysicsDomainService::new();
         let body_id = RigidBodyId::new(1);
@@ -687,7 +659,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_wake_body() {
         let mut service = PhysicsDomainService::new();
         let body_id = RigidBodyId::new(1);
@@ -714,7 +685,6 @@ mod tests {
     // ========================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_velocity_constraint() {
         let mut service = PhysicsDomainService::new();
         let body_id = RigidBodyId::new(1);

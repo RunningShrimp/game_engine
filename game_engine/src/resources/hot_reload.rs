@@ -412,7 +412,6 @@ mod tests {
     use tempfile::TempDir;
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_hot_reload_event_creation() {
         let path = PathBuf::from("/test/resource.txt");
 
@@ -444,7 +443,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_hot_reload_manager_watch_resource() {
         let temp_dir = TempDir::new().unwrap_or_else(|e| {
             panic!("Failed to create temp dir: {}", e);
@@ -468,7 +466,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_hot_reload_manager_set_debounce_delay() {
         let temp_dir = TempDir::new().unwrap_or_else(|e| {
             panic!("Failed to create temp dir: {}", e);
@@ -488,7 +485,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_hot_reload_service_creation() {
         let temp_dir = TempDir::new().unwrap_or_else(|e| {
             panic!("Failed to create temp dir: {}", e);
@@ -504,7 +500,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_get_reload_targets_empty() {
         let temp_dir = TempDir::new().unwrap_or_else(|e| {
             panic!("Failed to create temp dir: {}", e);
@@ -524,7 +519,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_needs_reload_nonexistent_file() {
         let temp_dir = TempDir::new().unwrap_or_else(|e| {
             panic!("Failed to create temp dir: {}", e);
@@ -542,7 +536,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_update_last_modified() {
         let temp_dir = TempDir::new().unwrap_or_else(|e| {
             panic!("Failed to create temp dir: {}", e);
@@ -582,7 +575,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_debounce_events() {
         let temp_dir = TempDir::new().unwrap_or_else(|e| {
             panic!("Failed to create temp dir: {}", e);
@@ -609,7 +601,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_dependency_graph_access() {
         let temp_dir = TempDir::new().unwrap_or_else(|e| {
             panic!("Failed to create temp dir: {}", e);

@@ -436,7 +436,6 @@ mod tests {
     use crate::serialization::compat::bincode_compat;
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_keypair_generation() {
         let keypair = KeyPair::generate();
         assert!(keypair.is_valid());
@@ -445,7 +444,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_keypair_age() {
         let keypair = KeyPair::generate();
         let age = keypair.age_secs();
@@ -453,7 +451,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_key_exchange_message() {
         let msg = KeyExchangeMessage::new(1, [1u8; 32]);
         assert_eq!(msg.client_id, 1);
@@ -462,7 +459,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_shared_secret_derivation() {
         let secret = [42u8; 32];
         let shared = SharedSecret::derive(secret);
@@ -476,7 +472,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_key_exchange_mutual() {
         let client_ke = KeyExchange::new();
         let server_ke = KeyExchange::new();
@@ -507,7 +502,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_key_exchange_deterministic() {
         let ke = KeyExchange::new();
         let peer_key = [99u8; 32];
@@ -522,7 +516,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_secure_key_exchange_properties() {
         // 测试安全密钥交换的基本属性（使用运行时检查）
         let keypair1 = KeyPair::generate();
@@ -542,7 +535,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_hkdf_derivation() {
         // 测试HKDF密钥派生的一致性（使用运行时检查）
         let keypair = KeyPair::generate();
@@ -568,7 +560,6 @@ mod tests {
     // ========================================================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_complete_key_exchange_flow() {
         // 完整的密钥交换流程测试
         let client_keypair = KeyPair::generate();
@@ -602,7 +593,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_keypair_serialization_roundtrip() {
         // 测试密钥对的序列化和反序列化
         let keypair1 = KeyPair::generate();
@@ -634,7 +624,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_key_exchange_message_roundtrip() {
         // 测试密钥交换消息的序列化
         let msg1 = KeyExchangeMessage {
@@ -659,7 +648,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_multiple_key_exchanges() {
         // 测试多次密钥交换产生不同的密钥
         let keypair = KeyPair::generate();
@@ -686,7 +674,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_keypair_age_tracking() {
         // 测试密钥年龄追踪
         let keypair = KeyPair::generate();
@@ -700,7 +687,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_invalid_keypair_detection() {
         // 测试无效密钥对的检测
         // 全零的公钥和私钥应该无效
@@ -715,7 +701,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_key_derivation_consistency() {
         // 测试密钥派生的一致性
         let shared_secret = [7u8; 32];
@@ -730,7 +715,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_encryption_and_authentication_keys_different() {
         // 测试加密密钥和认证密钥确实不同
         let shared_secret = [42u8; 32];
@@ -749,7 +733,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors - x25519_dalek_ng RNG compatibility
     fn test_x25519_key_agreement() {
         // 测试X25519密钥协商（使用运行时检查）
         let keypair = KeyPair::generate();
@@ -790,7 +773,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_secure_keypair_uniqueness() {
         // 测试安全密钥对的唯一性（使用运行时检查）
         let keypair = KeyPair::generate();
@@ -811,7 +793,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_symmetric_key_exchange() {
         // 测试对称性：A与B交换应该得到相同结果
         let keypair_a = KeyPair::generate();
@@ -827,7 +808,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_zero_key_handling() {
         // 测试全零密钥的处理
         let keypair = KeyPair::generate();

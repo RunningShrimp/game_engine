@@ -334,7 +334,6 @@ mod tests {
     // ========================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_engine_new() {
         let engine = GameEngine::new();
         // 引擎应该成功创建
@@ -342,14 +341,12 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_engine_default() {
         let engine = GameEngine::default();
         // 默认引擎应该可用
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_engine_state() {
         let engine = GameEngine::new();
         let state = engine.state();
@@ -359,7 +356,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_engine_version() {
         let engine = GameEngine::new();
         let version = engine.version();
@@ -375,28 +371,24 @@ mod tests {
     // ========================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_game_loop_new() {
         let game_loop = GameLoop::new(60);
         assert_eq!(game_loop.target_fps(), 60);
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_game_loop_target_fps() {
         let game_loop = GameLoop::new(120);
         assert_eq!(game_loop.target_fps(), 120);
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_game_loop_fixed_timestep() {
         let game_loop = GameLoop::with_fixed_timestep(1.0 / 60.0);
         assert_eq!(game_loop.fixed_timestep(), 1.0 / 60.0);
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_game_loop_max_frame_time() {
         let mut game_loop = GameLoop::new(60);
         game_loop.set_max_frame_time(Duration::from_millis(250));
@@ -404,7 +396,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_game_loop_tick() {
         let mut game_loop = GameLoop::new(60);
 
@@ -424,14 +415,12 @@ mod tests {
     // ========================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_event_store_new() {
         let event_store: EventStore<TestEvent> = EventStore::new();
         assert_eq!(event_store.event_count(), 0);
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_event_store_append() {
         let mut event_store: EventStore<TestEvent> = EventStore::new();
 
@@ -447,7 +436,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_event_store_get_events() {
         let mut event_store: EventStore<TestEvent> = EventStore::new();
 
@@ -471,7 +459,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_event_store_subscribe() {
         let mut event_store: EventStore<TestEvent> = EventStore::new();
 
@@ -490,7 +477,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_event_store_unsubscribe() {
         let mut event_store: EventStore<TestEvent> = EventStore::new();
 
@@ -501,7 +487,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_event_store_snapshot() {
         let mut event_store: EventStore<TestEvent> = EventStore::new();
 
@@ -521,7 +506,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_event_store_restore_from_snapshot() {
         let mut event_store: EventStore<TestEvent> = EventStore::new();
 
@@ -551,7 +535,6 @@ mod tests {
     // ========================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_command_execute() {
         let mut state = TestState::new();
         let command = CreateEntityCommand {
@@ -565,7 +548,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_command_undo() {
         let mut state = TestState::new();
         let command = CreateEntityCommand {
@@ -582,7 +564,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_command_redo() {
         let mut state = TestState::new();
         let command = CreateEntityCommand {
@@ -602,14 +583,12 @@ mod tests {
     // ========================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_scheduler_new() {
         let scheduler = Scheduler::new();
         assert_eq!(scheduler.system_count(), 0);
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_scheduler_add_system() {
         let mut scheduler = Scheduler::new();
 
@@ -618,7 +597,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_scheduler_add_multiple_systems() {
         let mut scheduler = Scheduler::new();
 
@@ -630,7 +608,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_scheduler_remove_system() {
         let mut scheduler = Scheduler::new();
 
@@ -641,7 +618,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_scheduler_run() {
         let mut scheduler = Scheduler::new();
         scheduler.add_system(Box::new(TestSystem::new()));
@@ -653,7 +629,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_scheduler_parallel_execution() {
         let mut scheduler = Scheduler::new();
         scheduler.set_parallel_enabled(true);
@@ -673,14 +648,12 @@ mod tests {
     // ========================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_resource_manager_new() {
         let manager = ResourceManager::new();
         assert_eq!(manager.resource_count(), 0);
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_resource_manager_load() {
         let mut manager = ResourceManager::new();
 
@@ -690,7 +663,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_resource_manager_get() {
         let mut manager = ResourceManager::new();
 
@@ -702,7 +674,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_resource_manager_unload() {
         let mut manager = ResourceManager::new();
 
@@ -714,7 +685,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_resource_manager_reload() {
         let mut manager = ResourceManager::new();
 
@@ -730,7 +700,6 @@ mod tests {
     // ========================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_engine_error_display() {
         let error = EngineError::InitializationFailed {
             reason: "Test failure".to_string(),
@@ -741,7 +710,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_engine_error_from_io() {
         let io_error = std::io::Error::new(std::io::ErrorKind::NotFound, "file not found");
         let engine_error = EngineError::from(io_error);
@@ -750,7 +718,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_command_error_display() {
         let error = CommandError::ExecutionFailed {
             command: "test_command".to_string(),
@@ -766,7 +733,6 @@ mod tests {
     // ========================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_scheduler_performance() {
         let mut scheduler = Scheduler::new();
 
@@ -789,7 +755,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_event_store_performance() {
         let mut event_store: EventStore<TestEvent> = EventStore::new();
 
@@ -811,7 +776,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_resource_manager_performance() {
         let mut manager = ResourceManager::new();
 
@@ -833,21 +797,18 @@ mod tests {
     // ========================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_game_loop_zero_fps() {
         let game_loop = GameLoop::new(0);
         // 零FPS应该被处理
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_game_loop_negative_fps() {
         let game_loop = GameLoop::new(-1);
         // 负FPS应该被处理或拒绝
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_event_store_empty() {
         let event_store: EventStore<TestEvent> = EventStore::new();
         let events = event_store.get_events(0..0);
@@ -855,7 +816,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_event_store_get_out_of_range() {
         let event_store: EventStore<TestEvent> = EventStore::new();
         let events = event_store.get_events(0..10);
@@ -863,7 +823,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_scheduler_empty() {
         let mut scheduler = Scheduler::new();
         let mut world = TestWorld::new();
@@ -872,7 +831,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_command_undo_without_execute() {
         let mut state = TestState::new();
         let command = CreateEntityCommand {
@@ -890,7 +848,6 @@ mod tests {
     // ========================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_concurrent_event_append() {
         let event_store =
             std::sync::Arc::new(std::sync::Mutex::new(EventStore::<TestEvent>::new()));
@@ -921,7 +878,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_concurrent_system_execution() {
         let scheduler = std::sync::Arc::new(std::sync::Mutex::new(Scheduler::new()));
 

@@ -395,7 +395,6 @@ mod tests {
     use crate::render::instance_batch::BatchKey;
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_material_sort_creation() {
         let sorter = MaterialSorter::default_config();
         assert!(sorter.config.sort_by_material);
@@ -403,7 +402,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_sort_batches() {
         let mut sorter = MaterialSorter::default_config();
         let mut batches = vec![
@@ -467,7 +465,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_hybrid_sort() {
         let mut sorter = HybridMaterialSorter::default();
         let mut batches = vec![
@@ -513,7 +510,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_count_state_switches() {
         let sorter = MaterialSorter::default_config();
         let batches = vec![

@@ -106,7 +106,6 @@ mod tests {
     use glam::{Quat, Vec3};
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_extract_lights_empty() {
         let mut world = World::new();
         let lights = extract_lights(&mut world);
@@ -114,7 +113,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_extract_lights_with_point_light() {
         let mut world = World::new();
 
@@ -141,7 +139,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_setup_camera_no_camera() {
         let mut world = World::new();
         // 没有相机时应该返回默认值
@@ -149,7 +146,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_setup_camera_with_camera() {
         let mut world = World::new();
 

@@ -687,7 +687,6 @@ mod tests {
     use tempfile::TempDir;
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_cache_key_generation() {
         let source1 = "fn main() {}";
         let source2 = "fn main() {}";
@@ -705,7 +704,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_cache_key_filename() {
         let key = ShaderCacheKey::from_source("test", "");
         let filename = key.cache_filename();
@@ -716,7 +714,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_shader_cache_basic() {
         let temp_dir = TempDir::new().unwrap_or_else(|e| {
             panic!("Failed to create temporary directory: {}", e);
@@ -763,7 +760,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_cache_invalidation() {
         let temp_dir = TempDir::new().unwrap_or_else(|e| {
             panic!("Failed to create temporary directory: {}", e);
@@ -800,7 +796,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_cache_stats() {
         let temp_dir = TempDir::new().unwrap_or_else(|e| {
             panic!("Failed to create temporary directory: {}", e);

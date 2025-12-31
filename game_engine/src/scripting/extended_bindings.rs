@@ -300,7 +300,6 @@ mod tests {
     use super::*;
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_sprite_bindings() {
         let mut world = World::new();
         let world_arc = Arc::new(Mutex::new(world));
@@ -336,7 +335,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_camera_bindings() {
         let mut world = World::new();
         let world_arc = Arc::new(Mutex::new(world));

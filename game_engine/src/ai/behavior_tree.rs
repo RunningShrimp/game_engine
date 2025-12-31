@@ -164,7 +164,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_status_equality() {
         assert_eq!(Status::Success, Status::Success);
         assert_eq!(Status::Failure, Status::Failure);
@@ -173,7 +172,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_sequence_all_success() {
         let mut sequence = Sequence {
             children: vec![Box::new(Action), Box::new(Action)],
@@ -183,7 +181,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_sequence_with_failure() {
         let call_count = std::sync::Arc::new(parking_lot::Mutex::new(0usize));
         let mut sequence = Sequence {
@@ -209,7 +206,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_sequence_with_running() {
         let mut sequence = Sequence {
             children: vec![Box::new(Action), Box::new(Action)],
@@ -221,7 +217,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_selector_with_success() {
         let call_count = std::sync::Arc::new(parking_lot::Mutex::new(0usize));
         let mut selector = Selector {
@@ -247,7 +242,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_selector_all_failure() {
         let mut selector = Selector {
             children: vec![
@@ -266,7 +260,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_inverter_success_to_failure() {
         let mut inverter = Inverter {
             child: Box::new(Action),
@@ -276,7 +269,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_inverter_failure_to_success() {
         let mut inverter = Inverter {
             child: Box::new(MockNode {
@@ -289,7 +281,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_inverter_running() {
         let mut inverter = Inverter {
             child: Box::new(MockNode {
@@ -302,7 +293,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_succeeder_always_success() {
         let mut succeeder = Succeeder {
             child: Box::new(MockNode {
@@ -315,7 +305,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_repeat() {
         let call_count = std::sync::Arc::new(parking_lot::Mutex::new(0usize));
         let mut repeat = Repeat {
@@ -331,21 +320,18 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_action_node() {
         let mut action = Action;
         assert_eq!(action.tick(), Status::Success);
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_condition_node() {
         let mut condition = Condition;
         assert_eq!(condition.tick(), Status::Success);
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_behavior_tree_creation() {
         let mut tree = BehaviorTree {
             root: Box::new(Action),
@@ -355,7 +341,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_behavior_tree_with_sequence() {
         let mut tree = BehaviorTree {
             root: Box::new(Sequence {
@@ -367,7 +352,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_behavior_tree_with_selector() {
         let mut tree = BehaviorTree {
             root: Box::new(Selector {
@@ -385,7 +369,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_complex_behavior_tree() {
         // Create a more complex tree: Sequence(Selector(A, B), Inverter(C))
         let mut tree = BehaviorTree {
@@ -414,14 +397,12 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_empty_sequence() {
         let mut sequence = Sequence { children: vec![] };
         assert_eq!(sequence.tick(), Status::Success);
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_empty_selector() {
         let mut selector = Selector { children: vec![] };
         assert_eq!(selector.tick(), Status::Failure);

@@ -17,7 +17,6 @@ mod tests {
     // ========================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_gpu_physics_new() {
         let gpu_physics = GpuPhysicsEngine::new();
         // GPU物理引擎应该成功创建
@@ -25,7 +24,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_gpu_physics_available() {
         let available = GpuPhysicsEngine::is_available();
         // 应该能检测GPU可用性
@@ -33,7 +31,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_gpu_physics_initialize() {
         let mut gpu_physics = GpuPhysicsEngine::new();
         let result = gpu_physics.initialize();
@@ -42,7 +39,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_gpu_physics_simulation() {
         let mut gpu_physics = GpuPhysicsEngine::new();
         if !gpu_physics.is_initialized() {
@@ -70,7 +66,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_gpu_physics_add_body() {
         let mut gpu_physics = GpuPhysicsEngine::new();
         if !gpu_physics.is_initialized() {
@@ -88,7 +83,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_gpu_physics_remove_body() {
         let mut gpu_physics = GpuPhysicsEngine::new();
         if !gpu_physics.is_initialized() {
@@ -111,14 +105,12 @@ mod tests {
     // ========================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_gpu_particle_system_new() {
         let particle_system = GpuParticleSystem::new(1000);
         assert_eq!(particle_system.particle_count(), 1000);
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_gpu_particle_system_spawn() {
         let mut particle_system = GpuParticleSystem::new(100);
 
@@ -132,7 +124,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_gpu_particle_system_update() {
         let mut particle_system = GpuParticleSystem::new(100);
         particle_system.spawn(Vec3::ZERO, Vec3::new(0.0, 10.0, 0.0));
@@ -149,7 +140,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_gpu_particle_system_gravity() {
         let mut particle_system = GpuParticleSystem::new(100);
         particle_system.set_gravity(Vec3::new(0.0, -9.81, 0.0));
@@ -171,7 +161,6 @@ mod tests {
     // ========================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_gpu_fluid_simulation_new() {
         let fluid = GpuFluidSimulation::new(512, 512);
         assert!(fluid.width() == 512);
@@ -179,7 +168,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_gpu_fluid_simulation_add_density() {
         let mut fluid = GpuFluidSimulation::new(256, 256);
         fluid.add_density(128, 128, 100.0);
@@ -190,7 +178,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_gpu_fluid_simulation_add_velocity() {
         let mut fluid = GpuFluidSimulation::new(256, 256);
         fluid.add_velocity(128, 128, Vec3::new(10.0, 0.0, 0.0));
@@ -201,7 +188,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_gpu_fluid_simulation_step() {
         let mut fluid = GpuFluidSimulation::new(256, 256);
         fluid.add_density(128, 128, 100.0);
@@ -221,14 +207,12 @@ mod tests {
     // ========================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_multithreaded_physics_new() {
         let mt_physics = MultithreadedPhysics::new(4);
         assert_eq!(mt_physics.thread_count(), 4);
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_multithreaded_physics_default() {
         let mt_physics = MultithreadedPhysics::default();
         // 默认线程数应该合理
@@ -236,7 +220,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_multithreaded_physics_add_body() {
         let mut mt_physics = MultithreadedPhysics::new(2);
         let body_id = 1;
@@ -247,7 +230,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_multithreaded_physics_remove_body() {
         let mut mt_physics = MultithreadedPhysics::new(2);
         let body_id = 1;
@@ -260,7 +242,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_multithreaded_physics_step() {
         let mut mt_physics = MultithreadedPhysics::new(2);
 
@@ -278,7 +259,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_multithreaded_physics_collision_detection() {
         let mut mt_physics = MultithreadedPhysics::new(2);
 
@@ -297,7 +277,6 @@ mod tests {
     // ========================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_parallel_for_each() {
         let mut data = vec![0; 100];
 
@@ -308,7 +287,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_parallel_map() {
         let input = vec![1, 2, 3, 4, 5];
         let output = parallel_map(&input, |x| x * 2);
@@ -317,7 +295,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_parallel_reduce() {
         let input = vec![1, 2, 3, 4, 5];
         let sum = parallel_reduce(&input, 0, |acc, x| acc + x);
@@ -326,7 +303,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_parallel_filter() {
         let input = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
         let evens = parallel_filter(&input, |x| x % 2 == 0);
@@ -339,14 +315,12 @@ mod tests {
     // ========================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_batch_sync_new() {
         let sync = BatchSync::new();
         assert_eq!(sync.pending_count(), 0);
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_batch_sync_add_pending() {
         let mut sync = BatchSync::new();
         sync.add_pending(1, Vec3::new(10.0, 20.0, 30.0));
@@ -355,7 +329,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_batch_sync_flush() {
         let mut sync = BatchSync::new();
         sync.add_pending(1, Vec3::new(10.0, 20.0, 30.0));
@@ -367,7 +340,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_batch_sync_flush_empty() {
         let mut sync = BatchSync::new();
         let updates = sync.flush();
@@ -380,7 +352,6 @@ mod tests {
     // ========================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_multithreaded_performance() {
         let mut mt_physics = MultithreadedPhysics::new(4);
 
@@ -404,7 +375,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_parallel_vs_sequential() {
         let count = 1000;
         let data: Vec<i32> = (0..count).map(|x| x * 2).collect();
@@ -435,7 +405,6 @@ mod tests {
     // ========================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_concurrent_body_addition() {
         let mt_physics = std::sync::Arc::new(std::sync::Mutex::new(MultithreadedPhysics::new(2)));
         let mut handles = vec![];
@@ -461,7 +430,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_concurrent_simulation() {
         let mt_physics = std::sync::Arc::new(std::sync::Mutex::new(MultithreadedPhysics::new(2)));
 
@@ -499,7 +467,6 @@ mod tests {
     // ========================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_zero_thread_count() {
         // 0线程应该使用默认值或返回错误
         let mt_physics = MultithreadedPhysics::new(0);
@@ -507,7 +474,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_excessive_thread_count() {
         // 过多的线程应该被限制
         let mt_physics = MultithreadedPhysics::new(10000);
@@ -515,7 +481,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_empty_simulation() {
         let mut mt_physics = MultithreadedPhysics::new(2);
         mt_physics.step(1.0 / 60.0);
@@ -523,7 +488,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_single_body_simulation() {
         let mut mt_physics = MultithreadedPhysics::new(2);
         mt_physics.add_body(0, Vec3::new(0.0, 100.0, 0.0), 1.0);
@@ -538,7 +502,6 @@ mod tests {
     // ========================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_gpu_physics_unavailable() {
         // 强制禁用GPU
         unsafe {
@@ -553,7 +516,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_gpu_physics_memory_limit() {
         let mut gpu_physics = GpuPhysicsEngine::new();
         if !gpu_physics.is_initialized() {
@@ -631,7 +593,6 @@ mod tests {
     // 综合场景测试
     // ========================================
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_gpu_multithreaded_hybrid() {
         // 测试GPU和多线程混合使用
         let mut gpu_physics = GpuPhysicsEngine::new();

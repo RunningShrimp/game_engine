@@ -770,7 +770,6 @@ mod tests {
     use super::*;
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_delta_computation() {
         let mut serializer = DeltaSerializer::new();
 
@@ -815,7 +814,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_delta_serialization() {
         let serializer = DeltaSerializer::new();
         let mut packet = DeltaPacket::new(1, 0);
@@ -841,7 +839,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_batch_delta() {
         let mut batch_serializer = BatchDeltaSerializer::new(10);
 
@@ -860,7 +857,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_quantization_config_default() {
         let config = QuantizationConfig::default();
         assert_eq!(config.position_precision, 0.01);
@@ -871,7 +867,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_quantizer_position() {
         let config = QuantizationConfig {
             position_precision: 0.1,
@@ -891,7 +886,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_quantizer_velocity() {
         let config = QuantizationConfig {
             velocity_precision: 0.5,
@@ -911,7 +905,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_quaternion_to_euler() {
         let quat = [0.0, 0.0, 0.0, 1.0]; // 单位四元数
         let (yaw, pitch, roll) = quaternion_to_euler(quat);
@@ -923,7 +916,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_euler_to_quaternion() {
         let quat = euler_to_quaternion(0.0, 0.0, 0.0);
 
@@ -935,7 +927,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_euler_quaternion_roundtrip() {
         let original_yaw = 45.0;
         let original_pitch = 30.0;
@@ -951,7 +942,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_quantizer_rotation() {
         let config = QuantizationConfig {
             rotation_precision: 1.0,
@@ -974,7 +964,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_entity_delta_default() {
         let delta = EntityDelta::default();
         assert_eq!(delta.id, 0);
@@ -985,7 +974,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_delta_packet_new() {
         let packet = DeltaPacket::new(5, 100);
         assert_eq!(packet.sequence, 5);
@@ -994,7 +982,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_delta_packet_add_delta() {
         let mut packet = DeltaPacket::new(1, 0);
         packet.add_delta(EntityDelta {
@@ -1008,7 +995,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_delta_serializer_baseline_management() {
         let mut serializer = DeltaSerializer::new();
 
@@ -1034,7 +1020,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_delta_serializer_multiple_entities() {
         let mut serializer = DeltaSerializer::new();
 
@@ -1063,7 +1048,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_batch_serializer_edge_case() {
         let mut batch_serializer = BatchDeltaSerializer::new(10);
 

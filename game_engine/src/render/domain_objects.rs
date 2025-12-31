@@ -2774,7 +2774,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_render_object_lod_selection_logic() {
         // 测试LOD选择逻辑（不依赖GpuMesh）
         let config = LodConfigBuilder::new()
@@ -2793,7 +2792,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_render_strategy_selection() {
         // 测试策略选择逻辑
         let strategy_static = RenderStrategy::StaticBatch;
@@ -2817,7 +2815,6 @@ mod tests {
     // ============================================================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_light_source_point_light_creation_valid() {
         // 测试创建有效的点光源
         let light = LightSource::new_point_light(Vec3::ZERO, Vec3::ONE, 1.0, 10.0)
@@ -2839,7 +2836,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_light_source_point_light_creation_invalid_intensity() {
         // 测试创建无效的点光源（强度<=0）
         assert!(LightSource::new_point_light(Vec3::ZERO, Vec3::ONE, 0.0, 10.0,).is_err());
@@ -2848,7 +2844,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_light_source_point_light_creation_invalid_radius() {
         // 测试创建无效的点光源（半径<=0）
         assert!(LightSource::new_point_light(Vec3::ZERO, Vec3::ONE, 1.0, 0.0,).is_err());
@@ -2857,7 +2852,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_light_source_directional_light_creation_valid() {
         // 测试创建有效的方向光
         let light = LightSource::new_directional_light(
@@ -2881,7 +2875,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_light_source_directional_light_creation_invalid_intensity() {
         // 测试创建无效的方向光（强度<=0）
         assert!(
@@ -2890,14 +2883,12 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_light_source_directional_light_creation_zero_direction() {
         // 测试创建无效的方向光（方向为零向量）
         assert!(LightSource::new_directional_light(Vec3::ZERO, Vec3::ONE, 1.0,).is_err());
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_light_source_spot_light_creation_valid() {
         // 测试创建有效的聚光灯
         let light = LightSource::new_spot_light(
@@ -2916,7 +2907,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_light_source_spot_light_creation_invalid_cutoff() {
         // 测试创建无效的聚光灯（内角>=外角）
         assert!(
@@ -2947,7 +2937,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_light_source_from_ecs_point_light_valid() {
         // 测试从ECS点光源组件创建有效光源
         let transform = Transform {
@@ -2966,7 +2955,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_light_source_from_ecs_point_light_invalid() {
         // 测试从ECS点光源组件创建无效光源（应该返回None）
         let transform = Transform::default();
@@ -2980,7 +2968,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_light_source_from_ecs_directional_light_valid() {
         // 测试从ECS方向光组件创建有效光源
         let light_comp = DirectionalLightComp {
@@ -2995,7 +2982,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_light_source_from_ecs_directional_light_invalid() {
         // 测试从ECS方向光组件创建无效光源（应该返回None）
         let invalid_light = DirectionalLightComp {
@@ -3011,7 +2997,6 @@ mod tests {
     // ============================================================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_pbr_scene_new() {
         // 测试创建新的PBR场景
         let scene = PbrScene::new();
@@ -3021,7 +3006,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_pbr_scene_add_point_light() {
         // 测试添加点光源
         let mut scene = PbrScene::new();
@@ -3036,7 +3020,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_pbr_scene_add_directional_light() {
         // 测试添加方向光
         let mut scene = PbrScene::new();
@@ -3051,7 +3034,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_pbr_scene_add_multiple_lights() {
         // 测试添加多个光源
         let mut scene = PbrScene::new();
@@ -3074,7 +3056,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_pbr_scene_add_invalid_light() {
         // 测试添加无效光源（应该被拒绝）
         let mut scene = PbrScene::new();
@@ -3093,7 +3074,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_pbr_scene_add_spot_light_not_supported() {
         // 测试添加聚光灯（暂不支持）
         let mut scene = PbrScene::new();
@@ -3113,7 +3093,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_pbr_scene_validate_empty() {
         // 测试验证空场景（应该有效）
         let scene = PbrScene::new();
@@ -3121,7 +3100,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_pbr_scene_from_ecs_world_empty() {
         // 测试从空的ECS世界构建场景
         let mut world = World::new();
@@ -3132,7 +3110,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_pbr_scene_from_ecs_world_with_valid_lights() {
         // 测试从ECS世界构建场景（包含有效光源）
         let mut world = World::new();
@@ -3181,7 +3158,6 @@ mod tests {
     // ============================================================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_render_command_new() {
         let command = RenderCommand::new(
             RenderStrategy::StaticBatch,
@@ -3194,7 +3170,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_render_command_empty() {
         let empty_command = RenderCommand::new(RenderStrategy::StaticBatch, vec![]);
         assert!(empty_command.is_empty());
@@ -3205,7 +3180,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_render_command_priority() {
         let static_command = RenderCommand::new(RenderStrategy::StaticBatch, vec![]);
         assert_eq!(static_command.priority(), 3);
@@ -3225,7 +3199,6 @@ mod tests {
     // ============================================================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_render_object_compensation_new() {
         let compensation = RenderObjectCompensation::new(RenderObjectId::new(1), true, None);
 
@@ -3233,7 +3206,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_render_object_compensation_id() {
         let id = RenderObjectId::new(42);
         let compensation = RenderObjectCompensation::new(id, false, None);
@@ -3245,7 +3217,6 @@ mod tests {
     // ============================================================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_render_strategy_select_for_instances() {
         // 测试实例化策略选择
         let strategy = RenderStrategy::select_for_instances(15, true);
@@ -3263,7 +3234,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_render_strategy_priority() {
         assert_eq!(RenderStrategy::StaticBatch.priority(), 3);
         assert_eq!(RenderStrategy::Instanced.priority(), 2);
@@ -3276,7 +3246,6 @@ mod tests {
     // ============================================================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_render_scene_set_lod_selector() {
         let mut scene = RenderScene::new();
         let config = LodConfig::default();
@@ -3287,7 +3256,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_render_scene_set_frustum() {
         let mut scene = RenderScene::new();
         let frustum = Frustum::from_view_projection(Mat4::IDENTITY);
@@ -3297,7 +3265,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_render_scene_clear() {
         let mut scene = RenderScene::new();
         // 由于需要GpuMesh来添加对象，这里只测试clear方法本身
@@ -3306,14 +3273,12 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_render_scene_validate_empty() {
         let scene = RenderScene::new();
         assert!(scene.validate().is_ok());
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_render_scene_build_render_commands_empty() {
         let scene = RenderScene::new();
         let commands = scene.build_render_commands();
@@ -3321,7 +3286,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_render_scene_group_by_strategy_empty() {
         let scene = RenderScene::new();
         let groups = scene.group_by_strategy();
@@ -3329,7 +3293,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_render_scene_visible_objects_empty() {
         let scene = RenderScene::new();
         let visible: Vec<_> = scene.visible_objects().collect();
@@ -3337,7 +3300,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_render_scene_renderable_objects_empty() {
         let scene = RenderScene::new();
         let renderable: Vec<_> = scene.renderable_objects().collect();
@@ -3349,7 +3311,6 @@ mod tests {
     // ============================================================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_render_object_id_creation() {
         let id = RenderObjectId::new(42);
         assert_eq!(id.as_u64(), 42);
@@ -3360,7 +3321,6 @@ mod tests {
     // ============================================================================
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_render_object_recover_from_error() {
         // NOTE: 需要GpuMesh来创建RenderObject，这里只测试错误恢复的逻辑
         // 实际测试应该在集成测试中进行
@@ -3368,7 +3328,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_render_object_compensation_apply() {
         // NOTE: 需要GpuMesh来创建RenderObject，这里只测试补偿操作的逻辑
         // 实际测试应该在集成测试中进行
@@ -3376,7 +3335,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_render_object_compensation_roundtrip() {
         // NOTE: 需要GpuMesh来创建RenderObject，这里只测试补偿操作的逻辑
         // 实际测试应该在集成测试中进行

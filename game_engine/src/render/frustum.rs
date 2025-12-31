@@ -360,7 +360,6 @@ mod tests {
     use proptest::prelude::*;
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_plane_creation() {
         let plane = Plane::new(Vec3::Z, 5.0);
         assert_eq!(plane.normal, Vec3::Z);
@@ -368,7 +367,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_point_in_plane() {
         let plane = Plane::new(Vec3::Z, 0.0);
         assert!(plane.point_in_front(Vec3::new(0.0, 0.0, 1.0)));
@@ -376,7 +374,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_frustum_sphere_intersection() {
         let view_proj = Mat4::perspective_rh(std::f32::consts::PI / 4.0, 1.0, 0.1, 100.0);
         let frustum = Frustum::from_view_projection(view_proj);
@@ -391,7 +388,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_culling_system() {
         let view_proj = Mat4::perspective_rh(std::f32::consts::PI / 4.0, 1.0, 0.1, 100.0);
         let culling = CullingSystem::new(view_proj);
@@ -407,7 +403,6 @@ mod tests {
 
     proptest! {
             #[test]
-    #[ignore]  // TODO: Fix compilation errors
             fn test_frustum_culling_properties(
                 center_x in -50.0f32..50.0,
                 center_y in -50.0f32..50.0,
@@ -449,7 +444,6 @@ mod tests {
             }
 
             #[test]
-    #[ignore]  // TODO: Fix compilation errors
             fn test_plane_distance_properties(
                 normal_x in -1.0f32..1.0,
                 normal_y in -1.0f32..1.0,
@@ -478,7 +472,6 @@ mod tests {
             }
 
             #[test]
-    #[ignore]  // TODO: Fix compilation errors
             fn test_aabb_culling_properties(
                 min_x in -10.0f32..10.0,
                 min_y in -10.0f32..10.0,

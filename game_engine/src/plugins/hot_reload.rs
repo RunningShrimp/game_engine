@@ -367,7 +367,6 @@ mod tests {
     use std::env;
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_new_creates_plugin_directory() {
         let temp = env::temp_dir().join("test_hot_reload_plugins");
         let _ = std::fs::remove_dir_all(&temp);
@@ -378,7 +377,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_scan_and_load_empty_returns_empty() {
         let temp = env::temp_dir().join("test_hot_reload_scan");
         let _ = std::fs::remove_dir_all(&temp);
