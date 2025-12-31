@@ -122,6 +122,7 @@
 //!
 
 pub mod asset_loader_trait;
+pub mod async_load_controller;
 pub mod async_upload;
 pub mod atlas;
 pub mod concurrent;
@@ -234,6 +235,12 @@ pub use hot_reload::{HotReloadEvent, HotReloadService, ResourceHotReloadManager}
 // Re-export Streaming Loader components
 pub use streaming_loader::{
     ProgressiveQualityLoader, ResourceChunk, StreamingConfig, StreamingHandle, StreamingLoader,
+};
+
+// Re-export Async Load Controller components
+pub use async_load_controller::{
+    AsyncLoadController, AsyncLoadControllerResource, LoadPriority, LoadProgress, LoadTask,
+    LoadTaskId, LoadTaskStatus, ResourceLoadEvent,
 };
 
 // Re-export Compressed Cache components
