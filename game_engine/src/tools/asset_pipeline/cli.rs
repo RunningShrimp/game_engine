@@ -2,9 +2,7 @@
 //!
 //! 本模块实现命令行界面。
 
-use super::pipeline::{
-    AssetPipeline, PipelineConfig, Platform, QualityPreset, OptimizationError,
-};
+use super::pipeline::{AssetPipeline, OptimizationError, PipelineConfig, Platform, QualityPreset};
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
@@ -144,7 +142,7 @@ async fn run_optimize(cmd: OptimizeCmd) -> Result<(), OptimizationError> {
             return Err(OptimizationError::Other(format!(
                 "Invalid platform: {}",
                 other
-            )))
+            )));
         }
         None => Platform::PC,
     };
@@ -177,9 +175,7 @@ async fn run_optimize(cmd: OptimizeCmd) -> Result<(), OptimizationError> {
     println!("  Concurrent Jobs: {}\n", config.concurrent_jobs);
 
     // 运行优化
-    let report = pipeline
-        .optimize_assets(&cmd.input, &cmd.output)
-        .await?;
+    let report = pipeline.optimize_assets(&cmd.input, &cmd.output).await?;
 
     // 打印报告
     report.print_summary();
@@ -246,7 +242,7 @@ async fn run_bundle(cmd: BundleCmd) -> Result<(), OptimizationError> {
             return Err(OptimizationError::Other(format!(
                 "Invalid bundle format: {}",
                 cmd.format
-            )))
+            )));
         }
     };
 

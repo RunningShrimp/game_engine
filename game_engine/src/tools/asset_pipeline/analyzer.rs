@@ -2,10 +2,10 @@
 //!
 //! 本模块实现资源质量分析和报告生成功能。
 
-use super::pipeline::{PipelineReport, OptimizationError, AssetType, AssetMetadata};
-use std::path::Path;
+use super::pipeline::{AssetMetadata, AssetType, OptimizationError, PipelineReport};
 use std::fs::File;
 use std::io::Write;
+use std::path::Path;
 
 /// 质量分析器
 pub struct QualityAnalyzer {
@@ -339,7 +339,8 @@ impl QualityAnalyzer {
 
         let total_reports = reports.len();
         let good_count = reports.iter().filter(|r| r.overall_status().is_good()).count();
-        let acceptable_count = reports.iter().filter(|r| r.overall_status().is_acceptable()).count();
+        let acceptable_count =
+            reports.iter().filter(|r| r.overall_status().is_acceptable()).count();
         let poor_count = reports.iter().filter(|r| r.overall_status().is_poor()).count();
         let critical_count = reports.iter().filter(|r| r.overall_status().is_critical()).count();
 
@@ -429,11 +430,7 @@ impl QualityAnalyzer {
                 <td>{:.2}</td>
             </tr>
             "#,
-            name,
-            status_class,
-            status_class,
-            value,
-            target
+            name, status_class, status_class, value, target
         )
     }
 

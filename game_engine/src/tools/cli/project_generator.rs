@@ -56,7 +56,8 @@ impl ProjectConfig {
         // Validate project name
         if !Self::is_valid_name(name) {
             return Err(GeneratorError::InvalidName(
-                "Project name must contain only alphanumeric characters, hyphens, and underscores".to_string(),
+                "Project name must contain only alphanumeric characters, hyphens, and underscores"
+                    .to_string(),
             ));
         }
 
@@ -78,8 +79,7 @@ impl ProjectConfig {
             return false;
         }
 
-        name.chars()
-            .all(|c| c.is_alphanumeric() || c == '-' || c == '_')
+        name.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_')
     }
 
     /// Converts a name to Title Case
@@ -89,9 +89,7 @@ impl ProjectConfig {
                 let mut chars = word.chars();
                 match chars.next() {
                     None => String::new(),
-                    Some(first) => {
-                        first.to_uppercase().collect::<String>() + chars.as_str()
-                    }
+                    Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
                 }
             })
             .collect::<Vec<_>>()
@@ -128,7 +126,8 @@ impl ProjectGenerator {
                  _r: &handlebars::Handlebars<'_>,
                  _: &handlebars::Context,
                  _rc: &mut handlebars::RenderContext<'_, '_>,
-                 out: &mut dyn handlebars::Output| -> handlebars::HelperResult {
+                 out: &mut dyn handlebars::Output|
+                 -> handlebars::HelperResult {
                     let param = h.param(0).unwrap();
                     let value = param.value().as_str().unwrap();
                     out.write(value.to_lowercase().as_ref())?;
@@ -201,7 +200,10 @@ impl ProjectGenerator {
         // Copy and process template files
         self.copy_template_files(&template_path, &project_path, &config)?;
 
-        println!("✅ Project created successfully at: {}", project_path.display());
+        println!(
+            "✅ Project created successfully at: {}",
+            project_path.display()
+        );
 
         Ok(project_path)
     }
@@ -219,10 +221,7 @@ impl ProjectGenerator {
         for entry in entries {
             let entry = entry?;
             let template_path = entry.path();
-            let file_name = template_path
-                .file_name()
-                .and_then(|n| n.to_str())
-                .unwrap();
+            let file_name = template_path.file_name().and_then(|n| n.to_str()).unwrap();
 
             // Skip hidden files and directories
             if file_name.starts_with('.') {
@@ -257,7 +256,8 @@ impl ProjectGenerator {
         let content = fs::read_to_string(template_path)?;
 
         // Process with handlebars if it's a template file
-        let processed_content = if template_path.extension().and_then(|s| s.to_str()) == Some("hbs") {
+        let processed_content = if template_path.extension().and_then(|s| s.to_str()) == Some("hbs")
+        {
             // It's a handlebars template
             match self.handlebars.render_template(&content, config) {
                 Ok(rendered) => rendered,
@@ -266,7 +266,7 @@ impl ProjectGenerator {
                         "Failed to render template {}: {}",
                         template_path.display(),
                         e
-                    )))
+                    )));
                 }
             }
         } else {
@@ -293,16 +293,19 @@ impl ProjectGenerator {
         project_name: &str,
         output_dir: &Path,
     ) -> GeneratorResult<PathBuf> {
-        use dialoguer::{theme::ColorfulTheme, Select};
+        use dialoguer::{Select, theme::ColorfulTheme};
 
         let templates = ProjectTemplate::all();
 
         // Let user select template
         let selection = Select::with_theme(&ColorfulTheme::default())
             .with_prompt("Select a template")
-            .items(&templates.iter().map(|t| {
-                format!("{} - {}", t.name(), t.description())
-            }).collect::<Vec<_>>())
+            .items(
+                &templates
+                    .iter()
+                    .map(|t| format!("{} - {}", t.name(), t.description()))
+                    .collect::<Vec<_>>(),
+            )
             .default(0)
             .interact()
             .map_err(|e| GeneratorError::Template(format!("Interactive error: {}", e)))?;

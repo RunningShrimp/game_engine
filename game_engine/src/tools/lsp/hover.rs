@@ -2,7 +2,9 @@
 //!
 //! Provides hover information for engine API.
 
-use crate::tools::lsp::registry::{ComponentDefinition, FieldDefinition, MethodDefinition, ResourceDefinition};
+use crate::tools::lsp::registry::{
+    ComponentDefinition, FieldDefinition, MethodDefinition, ResourceDefinition,
+};
 use tower_lsp::lsp_types::Hover;
 use tower_lsp::lsp_types::HoverContents;
 use tower_lsp::lsp_types::MarkupContent;
@@ -217,7 +219,11 @@ impl HoverProvider {
     }
 
     /// Convert method definition to hover (in resource)
-    fn method_to_hover_in_resource(&self, method: &MethodDefinition, resource: &ResourceDefinition) -> Hover {
+    fn method_to_hover_in_resource(
+        &self,
+        method: &MethodDefinition,
+        resource: &ResourceDefinition,
+    ) -> Hover {
         let mut markdown = format!(
             "**`{}{} -> {}`** (method of `{}`)\n\n{}\n\n",
             method.name,
@@ -246,10 +252,8 @@ impl HoverProvider {
             return String::new();
         }
 
-        let formatted: Vec<String> = params
-            .iter()
-            .map(|p| format!("{}: {}", p.name, p.type_name))
-            .collect();
+        let formatted: Vec<String> =
+            params.iter().map(|p| format!("{}: {}", p.name, p.type_name)).collect();
 
         format!("({})", formatted.join(", "))
     }

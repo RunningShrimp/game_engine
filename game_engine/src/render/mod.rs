@@ -26,6 +26,7 @@
 //! ### Advanced Techniques
 //! - [`ray_tracing`][]: Ray tracing
 //! - [`vxgi`][]: Voxel Global Illumination (VXGI)
+//! - [`gi`][]: Dynamic Diffuse Global Illumination (DDGI)
 //! - [`csm`][]: Cascaded Shadow Maps
 //! - [`volumetric`][]: Volumetric lighting
 //! - [`postprocess`][]: Post-processing effects
@@ -138,6 +139,7 @@ pub mod deferred;
 pub mod domain_objects;
 pub mod draw_call_merger;
 pub mod frustum;
+pub mod gi;
 pub mod gpu_driven;
 pub mod gpu_instancing;
 pub mod gpu_particles;
@@ -279,6 +281,12 @@ pub use light_baking::{
 
 // Re-export Volumetric Rendering components
 pub use volumetric::{Camera as VolumetricCamera, FogType, VolumetricConfig, VolumetricRenderer};
+
+// Re-export DDGI components
+pub use gi::{
+    DDGIConfig, DDGIError, DDGIProbe, DDGIQuality, DDGIVolume, GIDebugVisualizer,
+    IrradianceTexture, ProbeManager, ProbeVisualization,
+};
 
 // Re-export Deferred Rendering components
 pub use deferred::{

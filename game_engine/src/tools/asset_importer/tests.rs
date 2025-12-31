@@ -125,9 +125,7 @@ mod integration_tests {
         // 验证应该检测到缺少法线
         let validation = AssetValidator::validate(&obj_file);
         assert!(!validation.is_valid);
-        assert!(validation
-            .issues
-            .contains(&ValidationIssue::MissingNormals));
+        assert!(validation.issues.contains(&ValidationIssue::MissingNormals));
 
         // 修复应该添加法线
         let result = AssetFixer::auto_fix(&obj_file, &validation.issues);
@@ -178,8 +176,7 @@ mod integration_tests {
 
         // 创建PNG magic number文件
         let mut file = File::create(&test_file).unwrap();
-        file.write_all(&[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A])
-            .unwrap();
+        file.write_all(&[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]).unwrap();
         drop(file);
 
         let format = AssetDetector::detect_format(&test_file).unwrap();
@@ -220,7 +217,11 @@ mod integration_tests {
         };
 
         match model_preview {
-            PreviewData::Model { vertices, triangles, .. } => {
+            PreviewData::Model {
+                vertices,
+                triangles,
+                ..
+            } => {
                 assert_eq!(vertices, 1000);
                 assert_eq!(triangles, 500);
             }
@@ -271,11 +272,7 @@ mod integration_tests {
             File::create(&file_path).unwrap();
 
             let detected = AssetDetector::detect_format(&file_path).unwrap();
-            assert_eq!(
-                detected, expected_format,
-                "Failed for {}",
-                filename
-            );
+            assert_eq!(detected, expected_format, "Failed for {}", filename);
         }
     }
 }

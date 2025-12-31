@@ -2,7 +2,9 @@
 //!
 //! Provides code completion suggestions for engine API.
 
-use crate::tools::lsp::registry::{ComponentDefinition, MethodDefinition, ResourceDefinition, SystemDefinition};
+use crate::tools::lsp::registry::{
+    ComponentDefinition, MethodDefinition, ResourceDefinition, SystemDefinition,
+};
 use tower_lsp::lsp_types::CompletionItem;
 use tower_lsp::lsp_types::CompletionItemKind;
 
@@ -178,12 +180,14 @@ impl CompletionProvider {
                             label: field.name.clone(),
                             kind: Some(CompletionItemKind::FIELD),
                             detail: Some(field.type_name.clone()),
-                            documentation: Some(tower_lsp::lsp_types::Documentation::MarkupContent(
-                                tower_lsp::lsp_types::MarkupContent {
-                                    kind: tower_lsp::lsp_types::MarkupKind::Markdown,
-                                    value: field.description.clone(),
-                                },
-                            )),
+                            documentation: Some(
+                                tower_lsp::lsp_types::Documentation::MarkupContent(
+                                    tower_lsp::lsp_types::MarkupContent {
+                                        kind: tower_lsp::lsp_types::MarkupKind::Markdown,
+                                        value: field.description.clone(),
+                                    },
+                                ),
+                            ),
                             ..Default::default()
                         });
                     }

@@ -16,8 +16,8 @@
 //! ```
 
 use super::service::{
-    Action, AIError, AIService, ContentPrompt, ContentType, GeneratedContent, Message,
-    NPCContext, Situation,
+    AIError, AIService, Action, ContentPrompt, ContentType, GeneratedContent, Message, NPCContext,
+    Situation,
 };
 use async_trait::async_trait;
 use reqwest::Client;
@@ -111,10 +111,7 @@ impl ClaudeAdapter {
         Self {
             api_key: api_key.into(),
             model: model.into(),
-            client: Client::builder()
-                .timeout(Duration::from_secs(30))
-                .build()
-                .unwrap_or_default(),
+            client: Client::builder().timeout(Duration::from_secs(30)).build().unwrap_or_default(),
             base_url: "https://api.anthropic.com/v1/messages".to_string(),
             max_tokens: 150,
             temperature: 0.7,
@@ -378,7 +375,10 @@ impl AIService for ClaudeAdapter {
             confidence: 0.85,
             metadata: {
                 let mut meta = serde_json::Map::new();
-                meta.insert("model".to_string(), serde_json::Value::String(self.model.clone()));
+                meta.insert(
+                    "model".to_string(),
+                    serde_json::Value::String(self.model.clone()),
+                );
                 serde_json::Map::into_iter(meta).collect()
             },
         })
@@ -412,26 +412,25 @@ mod tests {
 
     #[test]
     fn test_with_max_tokens() {
-        let adapter = ClaudeAdapter::new("test-key", "claude-3-opus-20240229")
-            .with_max_tokens(500);
+        let adapter = ClaudeAdapter::new("test-key", "claude-3-opus-20240229").with_max_tokens(500);
         assert_eq!(adapter.max_tokens, 500);
     }
 
     #[test]
     fn test_with_temperature() {
-        let adapter = ClaudeAdapter::new("test-key", "claude-3-opus-20240229")
-            .with_temperature(0.8);
+        let adapter =
+            ClaudeAdapter::new("test-key", "claude-3-opus-20240229").with_temperature(0.8);
         assert_eq!(adapter.temperature, 0.8);
     }
 
     #[test]
     fn test_temperature_clamping() {
-        let adapter1 = ClaudeAdapter::new("test-key", "claude-3-opus-20240229")
-            .with_temperature(1.5);
+        let adapter1 =
+            ClaudeAdapter::new("test-key", "claude-3-opus-20240229").with_temperature(1.5);
         assert_eq!(adapter1.temperature, 1.0);
 
-        let adapter2 = ClaudeAdapter::new("test-key", "claude-3-opus-20240229")
-            .with_temperature(-0.5);
+        let adapter2 =
+            ClaudeAdapter::new("test-key", "claude-3-opus-20240229").with_temperature(-0.5);
         assert_eq!(adapter2.temperature, 0.0);
     }
 }

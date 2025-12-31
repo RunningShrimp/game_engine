@@ -2,10 +2,10 @@
 //!
 //! 本模块实现纹理压缩和优化功能。
 
-use super::pipeline::{OptimizationError};
-use std::path::{Path, PathBuf};
+use super::pipeline::OptimizationError;
 use image::{DynamicImage, ImageBuffer, Rgba, RgbaImage};
 use std::fs;
+use std::path::{Path, PathBuf};
 
 /// 纹理压缩格式
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -173,10 +173,8 @@ impl TextureOptimizer {
         };
 
         // 5. 压缩每个MIP级别
-        let compressed_mipmaps: Result<Vec<_>, OptimizationError> = mipmaps
-            .iter()
-            .map(|mip| self.compress_mipmap(mip))
-            .collect();
+        let compressed_mipmaps: Result<Vec<_>, OptimizationError> =
+            mipmaps.iter().map(|mip| self.compress_mipmap(mip)).collect();
 
         let compressed_mipmaps = compressed_mipmaps?;
 
@@ -225,8 +223,8 @@ impl TextureOptimizer {
         if let Some((max_w, max_h)) = self.options.max_resolution {
             if img.width() > max_w || img.height() > max_h {
                 // 计算缩放比例
-                let scale = (max_w as f32 / img.width() as f32)
-                    .min(max_h as f32 / img.height() as f32);
+                let scale =
+                    (max_w as f32 / img.width() as f32).min(max_h as f32 / img.height() as f32);
 
                 let new_width = (img.width() as f32 * scale).round() as u32;
                 let new_height = (img.height() as f32 * scale).round() as u32;
@@ -322,7 +320,12 @@ impl TextureOptimizer {
     }
 
     /// BC1压缩（简化实现）
-    fn compress_bc1(&self, _data: &[u8], width: u32, height: u32) -> Result<Vec<u8>, OptimizationError> {
+    fn compress_bc1(
+        &self,
+        _data: &[u8],
+        width: u32,
+        height: u32,
+    ) -> Result<Vec<u8>, OptimizationError> {
         // 简化实现：计算压缩后的大小并返回零数据
         let (block_w, block_h) = self.options.compression_format.block_dimensions();
         let blocks_x = (width + block_w - 1) / block_w;
@@ -335,7 +338,12 @@ impl TextureOptimizer {
     }
 
     /// BC3压缩（简化实现）
-    fn compress_bc3(&self, data: &[u8], width: u32, height: u32) -> Result<Vec<u8>, OptimizationError> {
+    fn compress_bc3(
+        &self,
+        data: &[u8],
+        width: u32,
+        height: u32,
+    ) -> Result<Vec<u8>, OptimizationError> {
         // BC3 = BC1 (颜色) + BC4 (Alpha)
         let color_data = self.compress_bc1(data, width, height)?;
 
@@ -353,7 +361,12 @@ impl TextureOptimizer {
     }
 
     /// BC7压缩（简化实现）
-    fn compress_bc7(&self, _data: &[u8], width: u32, height: u32) -> Result<Vec<u8>, OptimizationError> {
+    fn compress_bc7(
+        &self,
+        _data: &[u8],
+        width: u32,
+        height: u32,
+    ) -> Result<Vec<u8>, OptimizationError> {
         let (block_w, block_h) = self.options.compression_format.block_dimensions();
         let blocks_x = (width + block_w - 1) / block_w;
         let blocks_y = (height + block_h - 1) / block_h;
@@ -377,8 +390,9 @@ impl TextureOptimizer {
     ) -> Result<(), OptimizationError> {
         // 创建输出目录
         if let Some(parent) = output_path.parent() {
-            fs::create_dir_all(parent)
-                .map_err(|e| OptimizationError::IoError(format!("Failed to create directory: {}", e)))?;
+            fs::create_dir_all(parent).map_err(|e| {
+                OptimizationError::IoError(format!("Failed to create directory: {}", e))
+            })?;
         }
 
         // 简化实现：保存为PNG（实际项目应保存为专用的压缩纹理格式）

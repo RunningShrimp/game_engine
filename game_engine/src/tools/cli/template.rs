@@ -114,7 +114,11 @@ impl TemplateMetadata {
             ProjectTemplate::Basic => (
                 vec!["rendering".to_string(), "ecs".to_string()],
                 vec!["starter".to_string(), "minimal".to_string()],
-                vec!["basic".to_string(), "simple".to_string(), "starter".to_string()],
+                vec![
+                    "basic".to_string(),
+                    "simple".to_string(),
+                    "starter".to_string(),
+                ],
             ),
             ProjectTemplate::Platformer2D => (
                 vec![

@@ -2,10 +2,10 @@
 //
 //  测试脚本热重载系统的性能，对比Mutex vs DashMap实现
 
-use criterion::{black_box, BenchmarkId, Criterion, criterion_group, criterion_main};
+use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
 use game_engine::services::script_hot_reload::{
-    ScriptHotReloadManager, ScriptType, HotReloadConfig,
-    ReloadRecovery, FunctionChange, FunctionChangeType,
+    FunctionChange, FunctionChangeType, HotReloadConfig, ReloadRecovery, ScriptHotReloadManager,
+    ScriptType,
 };
 use std::path::PathBuf;
 use std::time::Duration;
@@ -40,9 +40,7 @@ fn bench_hot_reload_manager_creation(c: &mut Criterion) {
     let mut group = c.benchmark_group("hot_reload_manager_creation");
 
     group.bench_function("create_manager_default", |b| {
-        b.iter(|| {
-            black_box(ScriptHotReloadManager::new(Default::default()))
-        });
+        b.iter(|| black_box(ScriptHotReloadManager::new(Default::default())));
     });
 
     group.bench_function("create_manager_with_config", |b| {
@@ -55,9 +53,7 @@ fn bench_hot_reload_manager_creation(c: &mut Criterion) {
             enable_incremental_reload: true,
             max_backups: 10,
         };
-        b.iter(|| {
-            black_box(ScriptHotReloadManager::new(config.clone()))
-        });
+        b.iter(|| black_box(ScriptHotReloadManager::new(config.clone())));
     });
 
     group.finish();
@@ -78,7 +74,9 @@ fn bench_watch_script(c: &mut Criterion) {
                 let manager = ScriptHotReloadManager::new(Default::default());
 
                 b.iter(|| {
-                    black_box(manager.watch_script(file_path.clone(), ScriptType::JavaScript).unwrap())
+                    black_box(
+                        manager.watch_script(file_path.clone(), ScriptType::JavaScript).unwrap(),
+                    )
                 });
             },
         );
@@ -115,9 +113,7 @@ fn bench_check_and_reload(c: &mut Criterion) {
             BenchmarkId::from_parameter(format!("scripts_{}", script_count)),
             script_count,
             |b, _| {
-                b.iter(|| {
-                    black_box(manager.check_and_reload())
-                });
+                b.iter(|| black_box(manager.check_and_reload()));
             },
         );
 
@@ -240,9 +236,7 @@ fn bench_backup_and_recovery(c: &mut Criterion) {
 
     group.bench_function("backup_script", |b| {
         let recovery = ReloadRecovery::new(10);
-        b.iter(|| {
-            black_box(recovery.backup_script(&file_path, &content))
-        });
+        b.iter(|| black_box(recovery.backup_script(&file_path, &content)));
     });
 
     group.bench_function("rollback", |b| {
@@ -251,9 +245,8 @@ fn bench_backup_and_recovery(c: &mut Criterion) {
 
         let rt = tokio::runtime::Runtime::new().unwrap();
 
-        b.to_async(&rt).iter(|| async {
-            black_box(recovery.rollback_on_failure(&file_path).await)
-        });
+        b.to_async(&rt)
+            .iter(|| async { black_box(recovery.rollback_on_failure(&file_path).await) });
     });
 
     std::fs::remove_file(&file_path).ok();
@@ -274,9 +267,7 @@ fn bench_function_analysis(c: &mut Criterion) {
             BenchmarkId::from_parameter(format!("functions_{}", function_count)),
             &content,
             |b, content| {
-                b.iter(|| {
-                    black_box(manager.extract_functions(content, &file_path).unwrap())
-                });
+                b.iter(|| black_box(manager.extract_functions(content, &file_path).unwrap()));
             },
         );
 
@@ -304,9 +295,7 @@ fn bench_get_watched_scripts(c: &mut Criterion) {
             BenchmarkId::from_parameter(format!("scripts_{}", script_count)),
             script_count,
             |b, _| {
-                b.iter(|| {
-                    black_box(manager.get_watched_scripts())
-                });
+                b.iter(|| black_box(manager.get_watched_scripts()));
             },
         );
     }
@@ -392,9 +381,7 @@ fn bench_mutex_vs_dashmap(c: &mut Criterion) {
     let mut group = c.benchmark_group("mutex_vs_dashmap_comparison");
 
     let content = create_test_script_content(50);
-    let file_paths: Vec<_> = (0..10)
-        .map(|_| create_temp_script(&content))
-        .collect();
+    let file_paths: Vec<_> = (0..10).map(|_| create_temp_script(&content)).collect();
 
     let manager = ScriptHotReloadManager::new(Default::default());
 
@@ -404,9 +391,7 @@ fn bench_mutex_vs_dashmap(c: &mut Criterion) {
     }
 
     group.bench_function("dashmap_version", |b| {
-        b.iter(|| {
-            black_box(manager.get_watched_scripts())
-        });
+        b.iter(|| black_box(manager.get_watched_scripts()));
     });
 
     // 清理

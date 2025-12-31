@@ -1,0 +1,346 @@
+-- xmake.lua
+-- {{project_name}} - Cross-platform Build Configuration
+--
+-- This is the main xmake configuration file for {{project_name}}.
+-- It provides cross-platform build support for Windows, Linux, macOS, Android, and WebAssembly.
+--
+-- Quick Start:
+--   xmake                    # Build the project
+--   xmake run                # Run the game
+--   xmake f -p android       # Configure for Android
+--   xmake f -p wasm          # Configure for WebAssembly
+--   xmake -vD                # Build with debug info
+--   xmake clean              # Clean build artifacts
+--
+-- For more information, see docs/xmake_build_guide.md
+
+set_project("{{project_name}}")
+set_version("{{version}}")
+
+-- ============================================================================
+-- Configuration Options
+-- ============================================================================
+
+-- Enable Rust support
+set_languages("c++20", "rust")
+
+-- Add configuration modes
+add_rules("mode.debug", "mode.release")
+add_rules("mode.asan", "mode.tsan", "mode.lsan", "mode.ubsan")
+
+-- ============================================================================
+-- Common Settings
+-- ============================================================================
+
+-- Set default optimization flags
+if is_mode("release") then
+    set_optimize("fastest")
+    set_symbols("hidden")
+    set_strip("all")
+elseif is_mode("debug") then
+    set_symbols("debug")
+    set_optimize("none")
+    add_defines("DEBUG", "_DEBUG")
+end
+
+-- ============================================================================
+-- Platform Detection
+-- ============================================================================
+
+local platform_vars = {}
+if is_plat("windows") then
+    platform_vars = {
+        defines = "WINDOWS",
+        ldflags = "/SUBSYSTEM:WINDOWS"
+    }
+elseif is_plat("linux") then
+    platform_vars = {
+        defines = "LINUX",
+        ldflags = "-pthread"
+    }
+elseif is_plat("macosx") then
+    platform_vars = {
+        defines = "MACOS",
+        ldflags = "-framework Cocoa -framework Metal"
+    }
+elseif is_plat("android") then
+    platform_vars = {
+        defines = "ANDROID",
+        ldflags = "-landroid -llog"
+    }
+elseif is_plat("wasm") then
+    platform_vars = {
+        defines = "WASM",
+        ldflags = "-s USE_SDL=2 -s WASM=1"
+    }
+end
+
+-- ============================================================================
+-- Game Engine Library Target
+-- ============================================================================
+
+target("{{project_name}}-core")
+    -- Static library for core engine
+    set_kind("static")
+    add_files("src/lib.rs", {rootdir = "{{project_slug}}"})
+
+    {{#if features}}
+    -- Enabled features
+    {{#each features}}
+    add_defines("{{this}}=1")
+    {{/each}}
+    {{/if}}
+
+    -- Add Rust source files
+    add_files("src/**/*.rs", {rootdir = "{{project_slug}}"})
+
+    -- Platform-specific defines
+    add_defines(platform_vars.defines)
+
+    -- Rust features
+    add_defines("RUST_PREFIX=\"{{project_slug}}\"")
+
+    -- Include directories
+    add_includedirs("include", {public = true})
+
+    -- Dependencies (will be linked via Cargo.toml)
+    -- Note: xmake delegates Rust dependencies to Cargo
+
+    -- Link syslibraries
+    if is_plat("linux") then
+        add_syslinks("pthread", "dl", "m")
+    elseif is_plat("windows") then
+        add_syslinks("ws2_32", "userenv", "msvcrt")
+    elseif is_plat("macosx") then
+        add_frameworks("Cocoa", "Metal", "CoreVideo")
+    end
+
+    -- Installation
+    on_install(function (target)
+        os.cp("$(targetdir)/$(filename).a", "$(installir)/lib/")
+    end)
+
+target_end()
+
+-- ============================================================================
+-- Game Executable Target
+-- ============================================================================
+
+target("{{binary_name}}")
+    -- Binary executable
+    set_kind("binary")
+    add_files("src/main.rs", {rootdir = "{{project_slug}}"})
+
+    -- Link against engine core
+    add_deps("{{project_name}}-core")
+
+    -- Platform-specific configuration
+    if is_plat("windows") then
+        add_ldflags("/SUBSYSTEM:CONSOLE", {force = true})
+    elseif is_plat("macosx") then
+        add_ldflags("-framework Cocoa -framework Metal")
+    elseif is_plat("linux") then
+        add_ldflags("-pthread -ldl -lm")
+    elseif is_plat("android") then
+        add_ldflags("-landroid -llog")
+    end
+
+    -- Post-build: Copy assets
+    after_build(function (target)
+        local assets_dir = path.absolute("assets")
+        local target_dir = path.absolute(target:targetdir())
+
+        -- Check if assets directory exists
+        if os.isdir(assets_dir) then
+            local target_assets = path.join(target_dir, "assets")
+            os.cp(assets_dir, target_assets)
+
+            -- Verbose output
+            if is_mode("debug") then
+                print("Assets copied to: " .. target_assets)
+            end
+        end
+    end)
+
+    -- Installation
+    on_install(function (target)
+        -- Install binary
+        os.cp("$(targetdir)/{{binary_name}}", "$(installir)/bin/")
+
+        -- Install assets if they exist
+        if os.isdir("$(targetdir)/assets") then
+            os.cp("$(targetdir)/assets", "$(installir)/share/")
+        end
+    end)
+
+target_end()
+
+-- ============================================================================
+-- Asset Processing Target
+-- ============================================================================
+
+target("{{project_name}}-resources")
+    -- Phony target for resource processing
+    set_kind("phony")
+
+    -- Resource processing script
+    on_build(function (target)
+        local assets_dir = "assets"
+        local build_dir = "$(buildir)/assets"
+
+        -- Create build directory
+        os.mkdir(build_dir)
+
+        -- Copy assets if directory exists
+        if os.isdir(assets_dir) then
+            print("Processing assets...")
+
+            -- Copy all assets
+            os.cp(assets_dir .. "/**", build_dir)
+
+            -- Optionally compress assets
+            if is_mode("release") then
+                print("Compressing assets...")
+                local asset_zip = "$(buildir)/assets.zip"
+                os.exec("zip -r %s %s", asset_zip, build_dir)
+            end
+
+            print("Assets processed successfully!")
+        else
+            print("Warning: assets/ directory not found, skipping resource processing")
+        end
+    end)
+
+target_end()
+
+-- ============================================================================
+-- Toolchains for Cross-Compilation
+-- ============================================================================
+
+{{#if enable_android}}
+-- Android ARM64 toolchain
+toolchain("android-arm64")
+    set_kind("standalone")
+    set_sdkdir(os.getenv("ANDROID_NDK_HOME") or "~/Android/Sdk/ndk")
+    set_arch("arm64-v8a")
+
+    -- Set cross compiler
+    set_toolset("cc", "aarch64-linux-android-clang")
+    set_toolset("cxx", "aarch64-linux-android-clang++")
+    set_toolset("ld", "aarch64-linux-android-ld")
+    set_toolset("ar", "aarch64-linux-android-ar")
+
+    -- Add flags
+    add_cxxflags("-fPIC", "-fdata-sections", "-ffunction-sections")
+    add_ldflags("-fPIC", "-Wl,--gc-sections")
+
+toolchain_end()
+
+-- Android ARMv7 toolchain
+toolchain("android-armv7-a")
+    set_kind("standalone")
+    set_sdkdir(os.getenv("ANDROID_NDK_HOME") or "~/Android/Sdk/ndk")
+    set_arch("armeabi-v7a")
+
+    -- Set cross compiler
+    set_toolset("cc", "arm-linux-androideabi-clang")
+    set_toolset("cxx", "arm-linux-androideabi-clang++")
+    set_toolset("ld", "arm-linux-androideabi-ld")
+    set_toolset("ar", "arm-linux-androideabi-ar")
+
+    -- Add flags
+    add_cxxflags("-fPIC", "-march=armv7-a", "-mfpu=neon")
+    add_ldflags("-fPIC", "-Wl,--fix-cortex-a8")
+
+toolchain_end()
+{{/if}}
+
+{{#if enable_wasm}}
+-- WebAssembly toolchain
+toolchain("wasm")
+    set_kind("standalone")
+    set_sdkdir(os.getenv("EMSCRIPTEN_ROOT") or os.getenv("EMSDK"))
+
+    -- Emscripten toolset
+    set_toolset("cc", "emcc")
+    set_toolset("cxx", "em++")
+    set_toolset("ld", "emcc")
+    set_toolset("ar", "emar")
+
+    -- WASM flags
+    add_cxxflags("-fPIC")
+    add_ldflags("-s WASM=1", "-s USE_SDL=2", "-s ALLOW_MEMORY_GROWTH=1")
+
+toolchain_end()
+{{/if}}
+
+-- ============================================================================
+-- Custom Tasks
+-- ============================================================================
+
+-- Task: Clean everything
+task("clean-all")
+    on_run(function ()
+        -- Clean build artifacts
+        os.exec("xmake clean")
+
+        -- Clean profiling data
+        if os.isdir("profiling_data") then
+            os.rm("profiling_data/*.dat.gz")
+        end
+
+        -- Clean build directory
+        if os.isdir("build") then
+            os.rm("build/**")
+        end
+
+        print("Clean completed!")
+    end)
+task_end()
+
+-- Task: Format code
+task("format")
+    on_run(function ()
+        print("Formatting Rust code...")
+        os.exec("cargo fmt")
+
+        print("Formatting completed!")
+    end)
+task_end()
+
+-- Task: Run linter
+task("lint")
+    on_run(function ()
+        print("Running Rust linter...")
+        os.exec("cargo clippy -- -D warnings")
+
+        print("Linting completed!")
+    end)
+task_end()
+
+-- Task: Run tests
+task("test")
+    on_run(function ()
+        print("Running tests...")
+        os.exec("cargo test --all")
+
+        print("Tests completed!")
+    end)
+task_end()
+
+-- Task: Generate documentation
+task("docs")
+    on_run(function ()
+        print("Generating documentation...")
+        os.exec("cargo doc --no-deps --open")
+
+        print("Documentation generated!")
+    end)
+task_end()
+
+-- ============================================================================
+-- Default Target
+-- ============================================================================
+
+-- Set default target to build
+set_default("{{binary_name}}")

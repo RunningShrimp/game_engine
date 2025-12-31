@@ -105,70 +105,75 @@ impl ConsolePanel {
             return;
         }
 
-        egui::Window::new("Console")
-            .default_size([600.0, 400.0])
-            .show(ctx, |ui| {
-                // 工具栏
-                ui.horizontal(|ui| {
-                    ui.label("Filter:");
-                    let response = ui.text_edit_singleline(&mut self.filter_text);
+        egui::Window::new("Console").default_size([600.0, 400.0]).show(ctx, |ui| {
+            // 工具栏
+            ui.horizontal(|ui| {
+                ui.label("Filter:");
+                let response = ui.text_edit_singleline(&mut self.filter_text);
 
-                    // 显示日志级别过滤
-                    ui.separator();
-                    if ui.checkbox(
-                        &mut (self.log_level_filter.is_none()),
-                        "All",
-                    ).clicked() {
-                        if self.log_level_filter.is_some() {
-                            self.log_level_filter = None;
-                        }
+                // 显示日志级别过滤
+                ui.separator();
+                if ui.checkbox(&mut (self.log_level_filter.is_none()), "All").clicked() {
+                    if self.log_level_filter.is_some() {
+                        self.log_level_filter = None;
                     }
+                }
 
-                    if ui.checkbox(
+                if ui
+                    .checkbox(
                         &mut (self.log_level_filter == Some(LogLevel::Error)),
                         "Errors",
-                    ).clicked() {
-                        self.log_level_filter = Some(LogLevel::Error);
-                    }
+                    )
+                    .clicked()
+                {
+                    self.log_level_filter = Some(LogLevel::Error);
+                }
 
-                    if ui.checkbox(
+                if ui
+                    .checkbox(
                         &mut (self.log_level_filter == Some(LogLevel::Warning)),
                         "Warnings",
-                    ).clicked() {
-                        self.log_level_filter = Some(LogLevel::Warning);
-                    }
-
-                    ui.separator();
-
-                    // 自动滚动
-                    ui.checkbox(&mut self.auto_scroll, "Auto-scroll");
-
-                    // 清空按钮
-                    if ui.button("Clear").clicked() {
-                        self.clear();
-                    }
-                });
+                    )
+                    .clicked()
+                {
+                    self.log_level_filter = Some(LogLevel::Warning);
+                }
 
                 ui.separator();
 
-                // 显示日志计数
-                let filtered_count = self.filtered_logs().len();
-                ui.label(format!("Messages: {} / {}", filtered_count, self.logs.len()));
+                // 自动滚动
+                ui.checkbox(&mut self.auto_scroll, "Auto-scroll");
 
-                ui.separator();
-
-                // 日志内容区域
-                egui::ScrollArea::vertical()
-                    .auto_shrink([false; 2])
-                    .stick_to_bottom(self.auto_scroll)
-                    .show(ui, |ui| {
-                        ui.with_layout(egui::Layout::top_down(egui::Align::LEFT), |ui| {
-                            for log in self.filtered_logs() {
-                                self.show_log_message(ui, log);
-                            }
-                        });
-                    });
+                // 清空按钮
+                if ui.button("Clear").clicked() {
+                    self.clear();
+                }
             });
+
+            ui.separator();
+
+            // 显示日志计数
+            let filtered_count = self.filtered_logs().len();
+            ui.label(format!(
+                "Messages: {} / {}",
+                filtered_count,
+                self.logs.len()
+            ));
+
+            ui.separator();
+
+            // 日志内容区域
+            egui::ScrollArea::vertical()
+                .auto_shrink([false; 2])
+                .stick_to_bottom(self.auto_scroll)
+                .show(ui, |ui| {
+                    ui.with_layout(egui::Layout::top_down(egui::Align::LEFT), |ui| {
+                        for log in self.filtered_logs() {
+                            self.show_log_message(ui, log);
+                        }
+                    });
+                });
+        });
     }
 
     /// 显示单条日志消息
@@ -253,18 +258,12 @@ impl ConsolePanel {
 
     /// 获取错误数量
     pub fn error_count(&self) -> usize {
-        self.logs
-            .iter()
-            .filter(|log| log.level == LogLevel::Error)
-            .count()
+        self.logs.iter().filter(|log| log.level == LogLevel::Error).count()
     }
 
     /// 获取警告数量
     pub fn warning_count(&self) -> usize {
-        self.logs
-            .iter()
-            .filter(|log| log.level == LogLevel::Warning)
-            .count()
+        self.logs.iter().filter(|log| log.level == LogLevel::Warning).count()
     }
 }
 

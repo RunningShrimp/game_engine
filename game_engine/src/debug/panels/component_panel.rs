@@ -3,8 +3,8 @@
 //! 显示实体的组件详细信息。
 
 use super::Panel;
-use bevy_ecs::prelude::*;
 use bevy_ecs::component::ComponentId;
+use bevy_ecs::prelude::*;
 
 /// 组件面板
 ///
@@ -85,13 +85,11 @@ impl ComponentPanel {
                     // 显示组件列表
                     ui.label(format!("Total Components: {}", self.component_cache.len()));
 
-                    egui::ScrollArea::vertical()
-                        .auto_shrink([false; 2])
-                        .show(ui, |ui| {
-                            for component in &self.component_cache {
-                                self.show_component(ui, component);
-                            }
-                        });
+                    egui::ScrollArea::vertical().auto_shrink([false; 2]).show(ui, |ui| {
+                        for component in &self.component_cache {
+                            self.show_component(ui, component);
+                        }
+                    });
 
                     // 刷新按钮
                     if ui.button("Refresh").clicked() {
@@ -106,24 +104,20 @@ impl ComponentPanel {
 
     /// 显示单个组件
     fn show_component(&mut self, ui: &mut egui::Ui, component: &ComponentDetails) {
-        egui::CollapsingHeader::new(&component.name)
-            .default_open(false)
-            .show(ui, |ui| {
-                ui.horizontal(|ui| {
-                    ui.label("Type:");
-                    ui.monospace(&component.type_id);
-                });
-
-                ui.separator();
-
-                // 显示组件值
-                ui.label("Value:");
-                egui::ScrollArea::vertical()
-                    .max_height(200.0)
-                    .show(ui, |ui| {
-                        ui.monospace(&component.value);
-                    });
+        egui::CollapsingHeader::new(&component.name).default_open(false).show(ui, |ui| {
+            ui.horizontal(|ui| {
+                ui.label("Type:");
+                ui.monospace(&component.type_id);
             });
+
+            ui.separator();
+
+            // 显示组件值
+            ui.label("Value:");
+            egui::ScrollArea::vertical().max_height(200.0).show(ui, |ui| {
+                ui.monospace(&component.value);
+            });
+        });
     }
 
     /// 刷新组件列表

@@ -82,10 +82,7 @@ impl PerformanceVisualizer {
                 })
                 .collect();
 
-            ui.painter().line_segment(
-                points.as_slice(),
-                (2.0, color),
-            );
+            ui.painter().line_segment(points.as_slice(), (2.0, color));
         }
 
         // 绘制边框
@@ -206,14 +203,7 @@ impl MemoryVisualizer {
 
         // 绘制GPU内存（红色）
         if self.gpu_memory.len() > 1 {
-            self.draw_line(
-                ui,
-                rect,
-                &self.gpu_memory,
-                egui::Color32::RED,
-                0.0,
-                1000.0,
-            );
+            self.draw_line(ui, rect, &self.gpu_memory, egui::Color32::RED, 0.0, 1000.0);
         }
 
         // 绘制边框
@@ -256,8 +246,7 @@ impl MemoryVisualizer {
             .collect();
 
         for window in points.windows(2) {
-            ui.painter()
-                .line_segment([window[0], window[1]], (2.0, color));
+            ui.painter().line_segment([window[0], window[1]], (2.0, color));
         }
     }
 }
@@ -337,8 +326,7 @@ impl FPSVisualizer {
                 .collect();
 
             for window in points.windows(2) {
-                ui.painter()
-                    .line_segment([window[0], window[1]], (2.0, egui::Color32::GREEN));
+                ui.painter().line_segment([window[0], window[1]], (2.0, egui::Color32::GREEN));
             }
         }
 

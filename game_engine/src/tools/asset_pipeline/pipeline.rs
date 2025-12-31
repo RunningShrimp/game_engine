@@ -9,9 +9,9 @@ use crate::tools::asset_pipeline::{
     shader_optimizer::ShaderOptimizer,
     texture_optimizer::{TextureOptimizer, TextureOptimizerOptions},
 };
+use futures::future::join_all;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
-use futures::future::join_all;
 use tokio::fs;
 use walkdir::WalkDir;
 
@@ -201,7 +201,10 @@ impl PipelineReport {
     pub fn print_summary(&self) {
         println!("\n=== Asset Optimization Report ===");
         println!("Total Assets: {}", self.total_assets);
-        println!("Successful: {} / Failed: {}", self.successful_assets, self.failed_assets);
+        println!(
+            "Successful: {} / Failed: {}",
+            self.successful_assets, self.failed_assets
+        );
         println!("\nOptimization Results:");
         println!("  LODs Generated: {}", self.lods_generated);
         println!("  Textures Compressed: {}", self.textures_compressed);
@@ -300,11 +303,8 @@ impl AssetPipeline {
 
         for asset in assets {
             let asset_path = asset.path.clone();
-            let output_path = output_dir.join(
-                asset_path
-                    .strip_prefix(assets_dir)
-                    .unwrap_or(&asset_path),
-            );
+            let output_path =
+                output_dir.join(asset_path.strip_prefix(assets_dir).unwrap_or(&asset_path));
 
             // 创建输出目录
             if let Some(parent) = output_path.parent() {
@@ -394,13 +394,13 @@ impl AssetPipeline {
     }
 
     /// 扫描资源目录
-    async fn scan_assets(&self, assets_dir: &Path) -> Result<Vec<AssetMetadata>, OptimizationError> {
+    async fn scan_assets(
+        &self,
+        assets_dir: &Path,
+    ) -> Result<Vec<AssetMetadata>, OptimizationError> {
         let mut assets = Vec::new();
 
-        for entry in WalkDir::new(assets_dir)
-            .follow_links(true)
-            .into_iter()
-            .filter_map(|e| e.ok())
+        for entry in WalkDir::new(assets_dir).follow_links(true).into_iter().filter_map(|e| e.ok())
         {
             let path = entry.path();
 
@@ -474,10 +474,7 @@ impl AssetPipeline {
         let start = Instant::now();
 
         // 使用纹理优化器压缩纹理
-        let compressed = self
-            .texture_optimizer
-            .compress_texture(&asset.path, &output_path)
-            .await?;
+        let compressed = self.texture_optimizer.compress_texture(&asset.path, &output_path).await?;
 
         let optimized_size = fs::metadata(&output_path).await?.len();
         let elapsed = start.elapsed();
@@ -488,7 +485,7 @@ impl AssetPipeline {
             original_size: asset.size,
             optimized_size,
             lods_generated: 0,
-            compressed: compressed,
+            compressed,
             optimized: false,
             processing_time: elapsed.as_secs_f64(),
         })
@@ -540,9 +537,9 @@ impl AssetPipeline {
         asset: AssetMetadata,
         output_path: PathBuf,
     ) -> Result<OptimizationResult, OptimizationError> {
-        fs::copy(&asset.path, &output_path).await.map_err(|e| {
-            OptimizationError::IoError(format!("Failed to copy asset: {}", e))
-        })?;
+        fs::copy(&asset.path, &output_path)
+            .await
+            .map_err(|e| OptimizationError::IoError(format!("Failed to copy asset: {}", e)))?;
 
         Ok(OptimizationResult {
             asset_path: asset.path.clone(),
@@ -565,8 +562,8 @@ impl AssetPipeline {
         F: std::future::Future<Output = Result<T, OptimizationError>> + Send + 'static,
         T: Send + 'static,
     {
-        use tokio::sync::Semaphore;
         use std::sync::Arc;
+        use tokio::sync::Semaphore;
 
         let semaphore = Arc::new(Semaphore::new(self.config.concurrent_jobs));
         let mut handles = Vec::new();
@@ -584,12 +581,10 @@ impl AssetPipeline {
         for handle in handles {
             match handle.await {
                 Ok(result) => results.push(result),
-                Err(e) => {
-                    results.push(Err(OptimizationError::Other(format!(
-                        "Task panicked: {}",
-                        e
-                    ))))
-                }
+                Err(e) => results.push(Err(OptimizationError::Other(format!(
+                    "Task panicked: {}",
+                    e
+                )))),
             }
         }
 

@@ -117,11 +117,11 @@ pub mod npc;
 #[cfg(test)]
 mod flocking_tests;
 #[cfg(test)]
+mod llm_tests;
+#[cfg(test)]
 mod navmesh_tests;
 #[cfg(test)]
 mod pathfinding_tests;
-#[cfg(test)]
-mod llm_tests;
 
 pub use navmesh::{
     ColliderGeometry, NavMesh, NavMeshConfig, NavMeshError, NavMeshGenerator, NavPolygon,
@@ -140,9 +140,8 @@ pub use pathfinding::{
 
 // 重新导出LLM集成相关类型
 pub use service::{
-    AIService, AIError, Action, ActionType, ContentPrompt, ContentType, GeneratedContent,
-    Message, MoodState, NPCContext, NPCStatus, Personality, PlayerState, Situation, Threat,
-    ThreatType,
+    AIError, AIService, Action, ActionType, ContentPrompt, ContentType, GeneratedContent, Message,
+    MoodState, NPCContext, NPCStatus, Personality, PlayerState, Situation, Threat, ThreatType,
 };
 
 // 重新导出NPC系统集成类型
@@ -156,7 +155,7 @@ pub use openai::OpenAIAdapter;
 pub use claude::ClaudeAdapter;
 
 #[cfg(feature = "ai-local")]
-pub use local::{LocalLLMAdapter, LocalLLMConfig, LLMRuntime};
+pub use local::{LLMRuntime, LocalLLMAdapter, LocalLLMConfig};
 
 use bevy_ecs::prelude::*;
 use glam::Vec3;

@@ -43,12 +43,12 @@ pub mod wizard;
 mod tests;
 
 // 重新导出主要类型
-pub use wizard::{AssetImportWizard, ImportSettings, WizardStep, WizardResult};
+pub use batch::{BatchImportSettings, BatchImporter, BatchProgress, BatchReport};
 pub use detector::{AssetDetector, AssetFormat, DetectorError, FileAnalysis};
-pub use validator::{AssetValidator, ValidationIssue, ValidationResult, FixSuggestion};
 pub use fixer::{AssetFixer, FixerError};
-pub use importer::{AssetImporter, ImportResult, ImportOptions};
-pub use batch::{BatchImporter, BatchImportSettings, BatchProgress, BatchReport};
+pub use importer::{AssetImporter, ImportOptions, ImportResult};
+pub use validator::{AssetValidator, FixSuggestion, ValidationIssue, ValidationResult};
+pub use wizard::{AssetImportWizard, ImportSettings, WizardResult, WizardStep};
 
 /// 资源导入错误类型
 #[derive(thiserror::Error, Debug)]

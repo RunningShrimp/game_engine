@@ -32,13 +32,8 @@ fn test_analyze_command_parsing() {
 fn test_bundle_command_parsing() {
     use game_engine::tools::cli::GameEngineCli;
 
-    let cli = GameEngineCli::try_parse_from([
-        "game-engine",
-        "bundle",
-        "./assets",
-        "-o",
-        "game.pak",
-    ]);
+    let cli =
+        GameEngineCli::try_parse_from(["game-engine", "bundle", "./assets", "-o", "game.pak"]);
 
     assert!(cli.is_ok());
 }

@@ -2,8 +2,8 @@
 //!
 //! 本模块包含LLM集成接口的单元测试。
 
+use super::npc::{HybridMode, IntelligentNPC, NPCConfig, NPCManager};
 use super::service::*;
-use super::npc::{IntelligentNPC, HybridMode, NPCManager, NPCConfig};
 use bevy_ecs::entity::Entity;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -92,7 +92,9 @@ mod llm_integration_tests {
             current_goal: Some("Patrol".to_string()),
             available_actions: vec![
                 Action {
-                    action_type: ActionType::Move { target: [10.0, 0.0, 10.0] },
+                    action_type: ActionType::Move {
+                        target: [10.0, 0.0, 10.0],
+                    },
                     parameters: HashMap::new(),
                     priority: 0.8,
                     estimated_duration: Some(Duration::from_secs(5)),
@@ -168,8 +170,8 @@ mod llm_integration_tests {
 
     #[tokio::test]
     async fn test_intelligent_npc_traditional_only() {
-        let mut npc = IntelligentNPC::new(Entity::from_raw(1))
-            .with_hybrid_mode(HybridMode::TraditionalOnly);
+        let mut npc =
+            IntelligentNPC::new(Entity::from_raw(1)).with_hybrid_mode(HybridMode::TraditionalOnly);
 
         let situation = create_test_situation();
         npc.update_situation(situation);
@@ -217,8 +219,7 @@ mod llm_integration_tests {
     #[tokio::test]
     async fn test_intelligent_npc_generate_dialogue() {
         let service = Arc::new(MockAIService { should_fail: false });
-        let npc = IntelligentNPC::new(Entity::from_raw(1))
-            .with_llm_service(service);
+        let npc = IntelligentNPC::new(Entity::from_raw(1)).with_llm_service(service);
 
         let context = create_test_context();
         let result = npc.generate_dialogue(&context).await;
@@ -233,10 +234,9 @@ mod llm_integration_tests {
         let mut manager = NPCManager::new();
         manager.set_default_llm_service(service);
 
-        let npc1 = IntelligentNPC::new(Entity::from_raw(1))
-            .with_hybrid_mode(HybridMode::TraditionalOnly);
-        let npc2 = IntelligentNPC::new(Entity::from_raw(2))
-            .with_hybrid_mode(HybridMode::LLMOnly);
+        let npc1 =
+            IntelligentNPC::new(Entity::from_raw(1)).with_hybrid_mode(HybridMode::TraditionalOnly);
+        let npc2 = IntelligentNPC::new(Entity::from_raw(2)).with_hybrid_mode(HybridMode::LLMOnly);
 
         manager.add_npc(npc1);
         manager.add_npc(npc2);
@@ -257,7 +257,9 @@ mod llm_integration_tests {
     #[test]
     fn test_action_type_serialization() {
         let action = Action {
-            action_type: ActionType::Move { target: [1.0, 2.0, 3.0] },
+            action_type: ActionType::Move {
+                target: [1.0, 2.0, 3.0],
+            },
             parameters: HashMap::new(),
             priority: 0.8,
             estimated_duration: Some(Duration::from_secs(5)),
@@ -337,7 +339,10 @@ mod llm_integration_tests {
             confidence: 0.95,
             metadata: {
                 let mut meta = HashMap::new();
-                meta.insert("model".to_string(), serde_json::Value::String("gpt-4".to_string()));
+                meta.insert(
+                    "model".to_string(),
+                    serde_json::Value::String("gpt-4".to_string()),
+                );
                 meta
             },
         };

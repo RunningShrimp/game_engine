@@ -2,12 +2,12 @@
 //!
 //! 演示如何在完整的游戏引擎中集成和使用DebugUI。
 
+use bevy_ecs::prelude::*;
 use game_engine::{
     core::engine::Engine,
     debug::DebugUI,
     ecs::{Transform, Velocity},
 };
-use bevy_ecs::prelude::*;
 use std::time::{Duration, Instant};
 
 /// 调试UI集成示例
@@ -152,9 +152,10 @@ async fn run_full_engine_example() -> Result<(), Box<dyn std::error::Error>> {
 
         // 模拟Draw Calls
         if frame_count % 10 == 0 {
-            debug_ui
-                .performance_panel()
-                .update_draw_calls(30 + (frame_count % 15) as usize, 5000 + frame_count as usize * 50);
+            debug_ui.performance_panel().update_draw_calls(
+                30 + (frame_count % 15) as usize,
+                5000 + frame_count as usize * 50,
+            );
         }
 
         // 定期输出日志
@@ -168,7 +169,9 @@ async fn run_full_engine_example() -> Result<(), Box<dyn std::error::Error>> {
         }
 
         if frame_count == 100 {
-            debug_ui.console_panel().add_warning("Performance degradation detected".to_string());
+            debug_ui
+                .console_panel()
+                .add_warning("Performance degradation detected".to_string());
         }
 
         frame_count += 1;
@@ -184,13 +187,20 @@ async fn run_full_engine_example() -> Result<(), Box<dyn std::error::Error>> {
     let elapsed = start_time.elapsed();
     let avg_fps = frame_count as f32 / elapsed.as_secs_f32();
 
-    println!("   ✓ Ran {} frames in {:.2}s", frame_count, elapsed.as_secs_f32());
+    println!(
+        "   ✓ Ran {} frames in {:.2}s",
+        frame_count,
+        elapsed.as_secs_f32()
+    );
     println!("   ✓ Average FPS: {:.1}", avg_fps);
     println!("   ✓ Total logs: {}", debug_ui.console_panel().log_count());
     println!("   ✓ Errors: {}", debug_ui.console_panel().error_count());
 
     debug_ui.log("Game loop completed".to_string());
-    debug_ui.log(format!("Final stats: {} frames, {:.1} FPS", frame_count, avg_fps));
+    debug_ui.log(format!(
+        "Final stats: {} frames, {:.1} FPS",
+        frame_count, avg_fps
+    ));
 
     // 更新资源统计
     update_resource_stats(&mut debug_ui);
@@ -256,13 +266,9 @@ fn update_resource_stats(debug_ui: &mut DebugUI) {
         loading_count: 0,
     };
 
-    debug_ui
-        .resource_panel()
-        .update_stats("Texture".to_string(), texture_stats);
+    debug_ui.resource_panel().update_stats("Texture".to_string(), texture_stats);
 
-    debug_ui
-        .resource_panel()
-        .update_stats("Mesh".to_string(), mesh_stats);
+    debug_ui.resource_panel().update_stats("Mesh".to_string(), mesh_stats);
 }
 
 // 修复console_panel获取问题

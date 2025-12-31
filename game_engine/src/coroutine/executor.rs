@@ -178,9 +178,8 @@ impl CoroutineExecutor {
 
         // 创建Waker工厂
         let executor_ref = self.clone_ref();
-        let waker_factory = Arc::new(move || {
-            create_coroutine_waker(id, executor_ref.clone())
-        }) as Arc<dyn Fn() -> Waker + Send + Sync>;
+        let waker_factory = Arc::new(move || create_coroutine_waker(id, executor_ref.clone()))
+            as Arc<dyn Fn() -> Waker + Send + Sync>;
 
         let info = CoroutineInfo {
             coroutine,
@@ -650,22 +649,14 @@ fn create_coroutine_waker(id: CoroutineId, executor_ref: ExecutorRef) -> Waker {
     });
 
     // 实现RawWaker的虚函数表
-    const VTABLE: RawWakerVTable = RawWakerVTable::new(
-        clone_waker,
-        wake,
-        wake_by_ref,
-        drop_waker,
-    );
+    const VTABLE: RawWakerVTable = RawWakerVTable::new(clone_waker, wake, wake_by_ref, drop_waker);
 
     unsafe fn clone_waker(data: *const ()) -> RawWaker {
         let arc = Arc::from_raw(data as *const WakerData);
         let data_copy = arc.clone();
         std::mem::forget(arc); // 不减少原Arc的引用计数
 
-        RawWaker::new(
-            Arc::into_raw(data_copy) as *const (),
-            &VTABLE,
-        )
+        RawWaker::new(Arc::into_raw(data_copy) as *const (), &VTABLE)
     }
 
     unsafe fn wake(data: *const ()) {
@@ -694,10 +685,7 @@ fn create_coroutine_waker(id: CoroutineId, executor_ref: ExecutorRef) -> Waker {
         let _ = Arc::from_raw(data as *const WakerData);
     }
 
-    let raw_waker = RawWaker::new(
-        Arc::into_raw(data) as *const (),
-        &VTABLE,
-    );
+    let raw_waker = RawWaker::new(Arc::into_raw(data) as *const (), &VTABLE);
 
     unsafe { Waker::from_raw(raw_waker) }
 }

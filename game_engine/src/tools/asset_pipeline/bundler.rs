@@ -2,16 +2,16 @@
 //!
 //! 本模块实现资源打包功能，将多个资源打包成单一文件或虚拟文件系统。
 
-use super::pipeline::{OptimizationError, OptimizationResult, AssetType};
+use super::pipeline::{AssetType, OptimizationError, OptimizationResult};
+use flate2::Compression;
+use flate2::read::GzDecoder;
+use flate2::write::GzEncoder;
+use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Read, Write};
 use std::path::{Path, PathBuf};
-use serde::{Deserialize, Serialize};
-use flate2::write::GzEncoder;
-use flate2::Compression;
-use flate2::read::GzDecoder;
-use sha2::{Sha256, Digest};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 /// 打包格式
@@ -166,11 +166,13 @@ impl AssetBundler {
         for result in results {
             // 读取资源数据
             let mut data = Vec::new();
-            let mut file = File::open(&result.asset_path)
-                .map_err(|e| OptimizationError::BundleError(format!("Failed to open asset: {}", e)))?;
+            let mut file = File::open(&result.asset_path).map_err(|e| {
+                OptimizationError::BundleError(format!("Failed to open asset: {}", e))
+            })?;
 
-            file.read_to_end(&mut data)
-                .map_err(|e| OptimizationError::BundleError(format!("Failed to read asset: {}", e)))?;
+            file.read_to_end(&mut data).map_err(|e| {
+                OptimizationError::BundleError(format!("Failed to read asset: {}", e))
+            })?;
 
             // 压缩数据
             let compressed_data = if let Some(compression) = self.compression {
@@ -194,7 +196,10 @@ impl AssetBundler {
                 compression: self.compression.unwrap_or(CompressionAlgorithm::None),
                 metadata: {
                     let mut meta = HashMap::new();
-                    meta.insert("processing_time".to_string(), format!("{}", result.processing_time));
+                    meta.insert(
+                        "processing_time".to_string(),
+                        format!("{}", result.processing_time),
+                    );
                     if result.compressed {
                         meta.insert("compressed".to_string(), "true".to_string());
                     }
@@ -218,17 +223,10 @@ impl AssetBundler {
         // 创建资源包
         let bundle = Bundle {
             version: 1,
-            created_at: SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_secs(),
+            created_at: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(),
             entries,
             metadata: BundleMetadata {
-                name: output_path
-                    .file_stem()
-                    .unwrap_or_default()
-                    .to_string_lossy()
-                    .to_string(),
+                name: output_path.file_stem().unwrap_or_default().to_string_lossy().to_string(),
                 bundle_version: "1.0".to_string(),
                 platform: "unknown".to_string(),
                 engine_version: env!("CARGO_PKG_VERSION").to_string(),
@@ -249,8 +247,9 @@ impl AssetBundler {
         bundle_data: &[u8],
         output_path: &Path,
     ) -> Result<(), OptimizationError> {
-        let file = File::create(output_path)
-            .map_err(|e| OptimizationError::BundleError(format!("Failed to create bundle: {}", e)))?;
+        let file = File::create(output_path).map_err(|e| {
+            OptimizationError::BundleError(format!("Failed to create bundle: {}", e))
+        })?;
 
         let mut writer = BufWriter::new(file);
 
@@ -265,8 +264,9 @@ impl AssetBundler {
         };
 
         // 序列化元数据
-        let metadata_json = serde_json::to_string_pretty(bundle)
-            .map_err(|e| OptimizationError::BundleError(format!("Failed to serialize metadata: {}", e)))?;
+        let metadata_json = serde_json::to_string_pretty(bundle).map_err(|e| {
+            OptimizationError::BundleError(format!("Failed to serialize metadata: {}", e))
+        })?;
         let metadata_bytes = metadata_json.as_bytes();
 
         // 计算偏移量
@@ -287,18 +287,18 @@ impl AssetBundler {
                 &header as *const PakHeader as *const u8,
                 std::mem::size_of::<PakHeader>(),
             );
-            writer
-                .write_all(header_slice)
-                .map_err(|e| OptimizationError::BundleError(format!("Failed to write header: {}", e)))?;
+            writer.write_all(header_slice).map_err(|e| {
+                OptimizationError::BundleError(format!("Failed to write header: {}", e))
+            })?;
         }
 
         writer
             .write_all(bundle_data)
             .map_err(|e| OptimizationError::BundleError(format!("Failed to write data: {}", e)))?;
 
-        writer
-            .write_all(metadata_bytes)
-            .map_err(|e| OptimizationError::BundleError(format!("Failed to write metadata: {}", e)))?;
+        writer.write_all(metadata_bytes).map_err(|e| {
+            OptimizationError::BundleError(format!("Failed to write metadata: {}", e))
+        })?;
 
         writer
             .flush()
@@ -321,13 +321,15 @@ impl AssetBundler {
         for result in results {
             if let Some(parent) = result.asset_path.parent() {
                 let dest_dir = output_dir.join(parent);
-                std::fs::create_dir_all(&dest_dir)
-                    .map_err(|e| OptimizationError::BundleError(format!("Failed to create directory: {}", e)))?;
+                std::fs::create_dir_all(&dest_dir).map_err(|e| {
+                    OptimizationError::BundleError(format!("Failed to create directory: {}", e))
+                })?;
             }
 
             let dest_path = output_dir.join(&result.asset_path);
-            std::fs::copy(&result.asset_path, &dest_path)
-                .map_err(|e| OptimizationError::BundleError(format!("Failed to copy file: {}", e)))?;
+            std::fs::copy(&result.asset_path, &dest_path).map_err(|e| {
+                OptimizationError::BundleError(format!("Failed to copy file: {}", e))
+            })?;
 
             println!("  Copied: {}", result.asset_path.display());
         }
@@ -335,10 +337,7 @@ impl AssetBundler {
         // 创建元数据文件
         let bundle = Bundle {
             version: 1,
-            created_at: SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_secs(),
+            created_at: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(),
             entries: results
                 .iter()
                 .map(|r| BundleEntry {
@@ -363,11 +362,13 @@ impl AssetBundler {
         };
 
         let metadata_path = output_dir.join("bundle_metadata.json");
-        let metadata_json = serde_json::to_string_pretty(&bundle)
-            .map_err(|e| OptimizationError::BundleError(format!("Failed to serialize metadata: {}", e)))?;
+        let metadata_json = serde_json::to_string_pretty(&bundle).map_err(|e| {
+            OptimizationError::BundleError(format!("Failed to serialize metadata: {}", e))
+        })?;
 
-        std::fs::write(&metadata_path, metadata_json)
-            .map_err(|e| OptimizationError::BundleError(format!("Failed to write metadata: {}", e)))?;
+        std::fs::write(&metadata_path, metadata_json).map_err(|e| {
+            OptimizationError::BundleError(format!("Failed to write metadata: {}", e))
+        })?;
 
         Ok(bundle)
     }
@@ -383,18 +384,21 @@ impl AssetBundler {
 
         for result in results {
             let mut data = Vec::new();
-            let mut file = File::open(&result.asset_path)
-                .map_err(|e| OptimizationError::BundleError(format!("Failed to open asset: {}", e)))?;
+            let mut file = File::open(&result.asset_path).map_err(|e| {
+                OptimizationError::BundleError(format!("Failed to open asset: {}", e))
+            })?;
 
-            file.read_to_end(&mut data)
-                .map_err(|e| OptimizationError::BundleError(format!("Failed to read asset: {}", e)))?;
+            file.read_to_end(&mut data).map_err(|e| {
+                OptimizationError::BundleError(format!("Failed to read asset: {}", e))
+            })?;
 
             vfs.add_file(&result.asset_path, data);
         }
 
         // 序列化VFS
-        let vfs_data = bincode::serialize(&vfs)
-            .map_err(|e| OptimizationError::BundleError(format!("Failed to serialize VFS: {}", e)))?;
+        let vfs_data = bincode::serialize(&vfs).map_err(|e| {
+            OptimizationError::BundleError(format!("Failed to serialize VFS: {}", e))
+        })?;
 
         std::fs::write(output_path, vfs_data)
             .map_err(|e| OptimizationError::BundleError(format!("Failed to write VFS: {}", e)))?;
@@ -403,10 +407,7 @@ impl AssetBundler {
 
         Ok(Bundle {
             version: 1,
-            created_at: SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_secs(),
+            created_at: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(),
             entries: Vec::new(),
             metadata: BundleMetadata {
                 name: "virtual_bundle".to_string(),
@@ -428,22 +429,22 @@ impl AssetBundler {
             CompressionAlgorithm::None => Ok(data.to_vec()),
             CompressionAlgorithm::Gzip => {
                 let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
-                encoder
-                    .write_all(data)
-                    .map_err(|e| OptimizationError::BundleError(format!("Compression failed: {}", e)))?;
-                encoder
-                    .finish()
-                    .map_err(|e| OptimizationError::BundleError(format!("Compression failed: {}", e)))
+                encoder.write_all(data).map_err(|e| {
+                    OptimizationError::BundleError(format!("Compression failed: {}", e))
+                })?;
+                encoder.finish().map_err(|e| {
+                    OptimizationError::BundleError(format!("Compression failed: {}", e))
+                })
             }
             CompressionAlgorithm::Zlib => {
                 // 简化实现：使用Gzip代替
                 let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
-                encoder
-                    .write_all(data)
-                    .map_err(|e| OptimizationError::BundleError(format!("Compression failed: {}", e)))?;
-                encoder
-                    .finish()
-                    .map_err(|e| OptimizationError::BundleError(format!("Compression failed: {}", e)))
+                encoder.write_all(data).map_err(|e| {
+                    OptimizationError::BundleError(format!("Compression failed: {}", e))
+                })?;
+                encoder.finish().map_err(|e| {
+                    OptimizationError::BundleError(format!("Compression failed: {}", e))
+                })
             }
             CompressionAlgorithm::LZ4 => {
                 // TODO: 实现LZ4压缩
@@ -504,8 +505,7 @@ impl VirtualFileSystem {
     }
 
     fn add_file(&mut self, path: &Path, data: Vec<u8>) {
-        self.files
-            .insert(path.to_string_lossy().to_string(), data);
+        self.files.insert(path.to_string_lossy().to_string(), data);
     }
 
     fn get_file(&self, path: &str) -> Option<&[u8]> {

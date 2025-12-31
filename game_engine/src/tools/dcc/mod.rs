@@ -7,38 +7,33 @@
 //! - UV编辑器
 //! - 脚本生成器（Lua/Python/Rust）
 
-pub mod mesh_editor;
-pub mod material_editor;
 pub mod animation_editor;
-pub mod uv_editor;
 pub mod integrator;
+pub mod material_editor;
+pub mod mesh_editor;
+pub mod uv_editor;
 
 #[cfg(test)]
 mod tests;
 
 // 重新导出主要类型
 pub use mesh_editor::{
-    MeshEditor, EditMode, TransformTool, VertexID, EdgeID, FaceID,
-    MeshOperation, SelectionMode,
+    EdgeID, EditMode, FaceID, MeshEditor, MeshOperation, SelectionMode, TransformTool, VertexID,
 };
 
 pub use material_editor::{
-    DCCMaterialEditor, PBRMaterialParams, TextureSlot, PreviewRenderer,
-    MaterialID, TextureType,
+    DCCMaterialEditor, MaterialID, PBRMaterialParams, PreviewRenderer, TextureSlot, TextureType,
 };
 
 pub use animation_editor::{
-    DCCAnimationEditor, Timeline, PlaybackState, KeyframeID, AnimationID,
-    KeyframeEditor, AnimationCurve,
+    AnimationCurve, AnimationID, DCCAnimationEditor, KeyframeEditor, KeyframeID, PlaybackState,
+    Timeline,
 };
 
-pub use uv_editor::{
-    UVEditor, UVID, UVIsland, UVTransform, SnapSettings,
-};
+pub use uv_editor::{SnapSettings, UVEditor, UVID, UVIsland, UVTransform};
 
 pub use integrator::{
-    ScriptGenerator, EditorOperation, ScriptLanguage,
-    ExportOptions, GeneratedScript,
+    EditorOperation, ExportOptions, GeneratedScript, ScriptGenerator, ScriptLanguage,
 };
 
 /// DCC工具套件
@@ -66,7 +61,7 @@ impl DCCToolkit {
     }
 
     /// 显示DCC工具UI
-    
+
     pub fn show_ui(&mut self, ctx: &egui::Context) {
         self.mesh_editor.show_ui(ctx);
         self.material_editor.show_ui(ctx);

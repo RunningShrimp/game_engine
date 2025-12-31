@@ -4,7 +4,7 @@
 
 use super::{
     CoroutineError, CoroutineExecutor, CoroutineId, CoroutinePriority, CoroutineType,
-    CoroutineWaiter, WaitForSeconds, WaitForFrames,
+    CoroutineWaiter, WaitForFrames, WaitForSeconds,
 };
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
@@ -41,7 +41,11 @@ async fn test_coroutine_waiter_wait_for() {
 #[tokio::test]
 async fn test_coroutine_waiter_wait_all() {
     let waiter = CoroutineWaiter::new();
-    let targets = vec![CoroutineId::new(1), CoroutineId::new(2), CoroutineId::new(3)];
+    let targets = vec![
+        CoroutineId::new(1),
+        CoroutineId::new(2),
+        CoroutineId::new(3),
+    ];
 
     // 批量通知
     let waiter_clone = waiter.clone();
@@ -387,9 +391,7 @@ async fn test_priority_scheduling() {
 async fn test_coroutine_error() {
     let executor = CoroutineExecutor::with_default_config();
 
-    let future = Box::pin(async {
-        Err(CoroutineError::Other("Test error".to_string()))
-    });
+    let future = Box::pin(async { Err(CoroutineError::Other("Test error".to_string())) });
 
     let id = executor
         .add_coroutine(
@@ -405,10 +407,7 @@ async fn test_coroutine_error() {
 
     let coroutine = executor.get_coroutine(id).await;
     assert!(coroutine.is_some());
-    assert_eq!(
-        coroutine.unwrap().status,
-        super::CoroutineStatus::Failed
-    );
+    assert_eq!(coroutine.unwrap().status, super::CoroutineStatus::Failed);
 }
 
 #[tokio::test]

@@ -2,12 +2,12 @@
 //!
 //! 演示如何使用DebugUI进行游戏引擎调试。
 
+use bevy_ecs::prelude::*;
 use game_engine::{
     core::engine::Engine,
     debug::DebugUI,
     ecs::{Transform, Velocity},
 };
-use bevy_ecs::prelude::*;
 
 /// 主示例函数
 pub async fn run_debug_ui_example() -> Result<(), Box<dyn std::error::Error>> {

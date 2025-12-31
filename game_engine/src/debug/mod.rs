@@ -29,9 +29,7 @@ pub mod visualizer;
 pub use ui::DebugUI;
 
 // 导出各个面板
-pub use panels::{
-    ComponentPanel, ConsolePanel, EntityPanel, PerformancePanel, ResourcePanel,
-};
+pub use panels::{ComponentPanel, ConsolePanel, EntityPanel, PerformancePanel, ResourcePanel};
 
 /// 调试UI配置
 #[derive(Clone, Debug)]

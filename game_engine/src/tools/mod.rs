@@ -38,26 +38,24 @@ pub use lsp::{EngineAPIRegistry, GameEngineLSP};
 // 重新导出资源导入工具（条件编译）
 #[cfg(feature = "asset-importer")]
 pub use asset_importer::{
-    AssetImporter, AssetImportWizard, AssetFormat, AssetValidator,
-    BatchImporter, BatchImportSettings, BatchProgress, BatchReport,
-    CompressionFormat, DetectorError, FileAnalysis, ImportOptions, ImportResult,
-    ImportSettings, PreviewData, ValidationIssue, ValidationResult, WizardResult, WizardStep,
+    AssetFormat, AssetImportWizard, AssetImporter, AssetValidator, BatchImportSettings,
+    BatchImporter, BatchProgress, BatchReport, CompressionFormat, DetectorError, FileAnalysis,
+    ImportOptions, ImportResult, ImportSettings, PreviewData, ValidationIssue, ValidationResult,
+    WizardResult, WizardStep,
 };
 
 // 重新导出DCC工具（条件编译）
 #[cfg(feature = "dcc-tools")]
 pub use dcc::{
-    DCCToolkit, MeshEditor, DCCMaterialEditor, DCCAnimationEditor, UVEditor, ScriptGenerator,
-    EditMode, TransformTool, VertexID, EdgeID, FaceID,
-    MaterialID, TextureType, AnimationID, KeyframeID, UVID,
-    ScriptLanguage, EditorOperation, GeneratedScript,
+    AnimationID, DCCAnimationEditor, DCCMaterialEditor, DCCToolkit, EdgeID, EditMode,
+    EditorOperation, FaceID, GeneratedScript, KeyframeID, MaterialID, MeshEditor, ScriptGenerator,
+    ScriptLanguage, TextureType, TransformTool, UVEditor, UVID, VertexID,
 };
 
 // 重新导出Asset Pipeline（条件编译）
 #[cfg(feature = "asset-pipeline")]
 pub use asset_pipeline::{
-    AssetPipeline, AssetMetadata, AssetProcessor, AssetType, OptimizationError,
-    OptimizationResult, PipelineConfig, PipelineReport, Platform, QualityPreset,
-    QualityAnalyzer, QualityReport, MetricStatus, AssetBundler, Bundle, LODGenerator,
-    TextureOptimizer, ShaderOptimizer,
+    AssetBundler, AssetMetadata, AssetPipeline, AssetProcessor, AssetType, Bundle, LODGenerator,
+    MetricStatus, OptimizationError, OptimizationResult, PipelineConfig, PipelineReport, Platform,
+    QualityAnalyzer, QualityPreset, QualityReport, ShaderOptimizer, TextureOptimizer,
 };

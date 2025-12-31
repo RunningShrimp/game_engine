@@ -331,7 +331,8 @@ impl ReloadRecovery {
                 _ => {
                     suggestions.push(format!(
                         "未知错误在 {}: {}",
-                        error.path.display(), error.message
+                        error.path.display(),
+                        error.message
                     ));
                 }
             }
@@ -486,7 +487,11 @@ impl ScriptHotReloadManager {
     }
 
     /// 检查并重载单个脚本
-    fn check_and_reload_single(&self, path: &PathBuf, file_info: &ScriptFileInfo) -> Option<ReloadResult> {
+    fn check_and_reload_single(
+        &self,
+        path: &PathBuf,
+        file_info: &ScriptFileInfo,
+    ) -> Option<ReloadResult> {
         // 检查文件是否存在
         if !path.exists() {
             return Some(ReloadResult::Failed {
@@ -623,9 +628,7 @@ impl ScriptHotReloadManager {
         let old_content = {
             #[cfg(feature = "hot-reload-optim")]
             {
-                self.watched_scripts
-                    .get(file_path)
-                    .map(|entry| entry.value().content.clone())
+                self.watched_scripts.get(file_path).map(|entry| entry.value().content.clone())
             }
 
             #[cfg(not(feature = "hot-reload-optim"))]
@@ -654,7 +657,10 @@ impl ScriptHotReloadManager {
                 Err(e) => {
                     // 回滚
                     let _ = self.recovery.rollback_on_failure(file_path).await;
-                    return Err(format!("Failed to update function {}: {}", func_change.name, e));
+                    return Err(format!(
+                        "Failed to update function {}: {}",
+                        func_change.name, e
+                    ));
                 }
             }
         }
@@ -720,7 +726,11 @@ impl ScriptHotReloadManager {
     }
 
     /// 提取函数定义（简化实现）
-    fn extract_functions(&self, content: &str, path: &Path) -> Result<HashMap<String, String>, String> {
+    fn extract_functions(
+        &self,
+        content: &str,
+        path: &Path,
+    ) -> Result<HashMap<String, String>, String> {
         let mut functions = HashMap::new();
 
         // 简化的JavaScript/Python函数提取
@@ -995,11 +1005,9 @@ mod tests {
         std::fs::write(&temp_file, "broken syntax {{").unwrap();
 
         // 回滚
-        tokio::runtime::Runtime::new()
-            .unwrap()
-            .block_on(async {
-                recovery.rollback_on_failure(&temp_file).await.unwrap();
-            });
+        tokio::runtime::Runtime::new().unwrap().block_on(async {
+            recovery.rollback_on_failure(&temp_file).await.unwrap();
+        });
 
         // 验证回滚成功
         let content = std::fs::read_to_string(&temp_file).unwrap();

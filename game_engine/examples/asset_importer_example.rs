@@ -10,13 +10,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 1. 格式检测示例
     println!("1. 格式检测示例");
-    let test_files = vec![
-        "test.gltf",
-        "test.fbx",
-        "test.obj",
-        "test.png",
-        "test.wav",
-    ];
+    let test_files = vec!["test.gltf", "test.fbx", "test.obj", "test.png", "test.wav"];
 
     for file in test_files {
         let path = PathBuf::from(file);
@@ -64,7 +58,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if !validation.suggestions.is_empty() {
         println!("  Suggestions:");
         for suggestion in &validation.suggestions {
-            println!("    - {} (auto: {})", suggestion.action, suggestion.automatic);
+            println!(
+                "    - {} (auto: {})",
+                suggestion.action, suggestion.automatic
+            );
         }
     }
 
@@ -110,13 +107,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let runtime = tokio::runtime::Runtime::new()?;
     runtime.block_on(async {
-        let mut batch = BatchImporter::new(files.clone(), output_dir.clone())
-            .with_settings(BatchImportSettings {
+        let mut batch = BatchImporter::new(files.clone(), output_dir.clone()).with_settings(
+            BatchImportSettings {
                 continue_on_error: true,
                 parallel: false,
                 max_parallel: 4,
                 output_directory: output_dir.clone(),
-            });
+            },
+        );
 
         match batch.import_all().await {
             Ok(report) => {

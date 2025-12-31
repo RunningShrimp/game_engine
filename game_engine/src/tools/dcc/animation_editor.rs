@@ -252,7 +252,7 @@ impl DCCAnimationEditor {
     }
 
     /// 显示UI
-    
+
     pub fn show_ui(&mut self, ctx: &egui::Context) {
         egui::Window::new("Animation Editor")
             .default_size([800.0, 600.0])
@@ -262,7 +262,7 @@ impl DCCAnimationEditor {
     }
 
     /// 显示编辑器UI
-    
+
     fn show_editor_ui(&mut self, ui: &mut egui::Ui) {
         // 播放控制
         ui.horizontal(|ui| {
@@ -288,10 +288,7 @@ impl DCCAnimationEditor {
             ui.separator();
 
             // 循环按钮
-            if ui
-                .selectable_label(self.timeline.loop_playback, "🔄")
-                .clicked()
-            {
+            if ui.selectable_label(self.timeline.loop_playback, "🔄").clicked() {
                 self.timeline.loop_playback = !self.timeline.loop_playback;
             }
 
@@ -322,7 +319,7 @@ impl DCCAnimationEditor {
     }
 
     /// 显示时间轴
-    
+
     fn show_timeline(&mut self, ui: &mut egui::Ui) {
         let available_width = ui.available_width();
         let height = 120.0;
@@ -357,8 +354,7 @@ impl DCCAnimationEditor {
         // 绘制刻度
         let frame_width = 10.0 * self.timeline.zoom;
         let start_frame = (self.timeline.scroll / frame_width).floor() as i32;
-        let end_frame =
-            start_frame + (rect.width() / frame_width).ceil() as i32 + 1;
+        let end_frame = start_frame + (rect.width() / frame_width).ceil() as i32 + 1;
 
         for frame in start_frame..=end_frame {
             let x = rect.left() + (frame as f32 * frame_width) - self.timeline.scroll;
@@ -385,8 +381,8 @@ impl DCCAnimationEditor {
         }
 
         // 绘制播放头
-        let playhead_x = rect.left()
-            + (self.timeline.current_frame * frame_width) - self.timeline.scroll;
+        let playhead_x =
+            rect.left() + (self.timeline.current_frame * frame_width) - self.timeline.scroll;
         if playhead_x >= rect.left() && playhead_x <= rect.right() {
             painter.line_segment(
                 [
@@ -419,8 +415,8 @@ impl DCCAnimationEditor {
                 for (curve_name, curve) in &animation.curves {
                     if self.keyframe_editor.visible_curves.contains(curve_name) {
                         for keyframe in &curve.keyframes {
-                            let x = rect.left()
-                                + (keyframe.time * frame_width) - self.timeline.scroll;
+                            let x =
+                                rect.left() + (keyframe.time * frame_width) - self.timeline.scroll;
                             if x >= rect.left() && x <= rect.right() {
                                 let color = self
                                     .keyframe_editor
@@ -429,11 +425,7 @@ impl DCCAnimationEditor {
                                     .copied()
                                     .unwrap_or(egui::Color32::YELLOW);
 
-                                painter.circle_filled(
-                                    egui::pos2(x, rect.center().y),
-                                    5.0,
-                                    color,
-                                );
+                                painter.circle_filled(egui::pos2(x, rect.center().y), 5.0, color);
                             }
                         }
                     }
@@ -458,7 +450,7 @@ impl DCCAnimationEditor {
     }
 
     /// 显示关键帧编辑器
-    
+
     fn show_keyframe_editor(&mut self, ui: &mut egui::Ui, animation: &AnimationData) {
         ui.label("Keyframe Editor:");
 
@@ -508,7 +500,10 @@ impl DCCAnimationEditor {
 
         // 关键帧列表
         ui.separator();
-        ui.label(format!("Selected Keys: {}", self.keyframe_editor.selected_keys.len()));
+        ui.label(format!(
+            "Selected Keys: {}",
+            self.keyframe_editor.selected_keys.len()
+        ));
 
         if ui.button("Delete Selected").clicked() {
             self.delete_selected_keyframes();
@@ -516,7 +511,7 @@ impl DCCAnimationEditor {
     }
 
     /// 显示动画列表
-    
+
     fn show_animation_list(&mut self, ui: &mut egui::Ui) {
         ui.label("Animations:");
 
@@ -558,10 +553,8 @@ impl DCCAnimationEditor {
         value: AnimatedValue,
     ) -> Option<KeyframeID> {
         if let Some(animation) = self.animations.get_mut(animation_id) {
-            let curve = animation
-                .curves
-                .entry(curve_name.clone())
-                .or_insert_with(|| AnimationCurve {
+            let curve =
+                animation.curves.entry(curve_name.clone()).or_insert_with(|| AnimationCurve {
                     keyframes: Vec::new(),
                     curve_type: CurveType::Linear,
                     name: curve_name.clone(),
@@ -589,9 +582,7 @@ impl DCCAnimationEditor {
         if let Some(anim_id) = self.selected_animation {
             if let Some(animation) = self.animations.get_mut(anim_id) {
                 for (_, curve) in animation.curves.iter_mut() {
-                    curve
-                        .keyframes
-                        .retain(|k| !self.keyframe_editor.selected_keys.contains(&k.id));
+                    curve.keyframes.retain(|k| !self.keyframe_editor.selected_keys.contains(&k.id));
                 }
 
                 self.keyframe_editor.selected_keys.clear();
@@ -602,7 +593,8 @@ impl DCCAnimationEditor {
     /// 更新播放
     pub fn update(&mut self, delta_time: f32) {
         if self.timeline.playback_state == PlaybackState::Playing {
-            self.timeline.current_frame += delta_time * self.timeline.frame_rate * self.playback_speed;
+            self.timeline.current_frame +=
+                delta_time * self.timeline.frame_rate * self.playback_speed;
 
             // 检查是否到达结束时间
             let duration_frames = self.timeline.end_time * self.timeline.frame_rate;
@@ -647,10 +639,7 @@ mod tests {
     fn test_animation_editor_creation() {
         let editor = DCCAnimationEditor::new();
         assert!(editor.animations.is_empty());
-        assert_eq!(
-            editor.timeline.playback_state,
-            PlaybackState::Stopped
-        );
+        assert_eq!(editor.timeline.playback_state, PlaybackState::Stopped);
     }
 
     #[test]

@@ -88,9 +88,7 @@ impl GameEngineLSP {
     async fn publish_diagnostics(&self, uri: Url, version: i32, text: &str) {
         let diagnostics = self.diagnostic_provider.analyze(text, uri.as_str()).await;
 
-        self.client
-            .publish_diagnostics(uri, diagnostics, Some(version))
-            .await;
+        self.client.publish_diagnostics(uri, diagnostics, Some(version)).await;
     }
 }
 
@@ -104,7 +102,10 @@ impl LanguageServer for GameEngineLSP {
         // Log client capabilities
         if let Some(capabilities) = params.capabilities.text_document {
             self.client
-                .log_message(MessageType::INFO, format!("Text document capabilities: {:?}", capabilities))
+                .log_message(
+                    MessageType::INFO,
+                    format!("Text document capabilities: {:?}", capabilities),
+                )
                 .await;
         }
 
@@ -167,7 +168,10 @@ impl LanguageServer for GameEngineLSP {
 
     async fn did_open(&self, params: DidOpenTextDocumentParams) {
         self.client
-            .log_message(MessageType::INFO, format!("File opened: {}", params.text_document.uri))
+            .log_message(
+                MessageType::INFO,
+                format!("File opened: {}", params.text_document.uri),
+            )
             .await;
 
         let uri = params.text_document.uri;
@@ -196,7 +200,10 @@ impl LanguageServer for GameEngineLSP {
 
     async fn did_close(&self, params: DidCloseTextDocumentParams) {
         self.client
-            .log_message(MessageType::INFO, format!("File closed: {}", params.text_document.uri))
+            .log_message(
+                MessageType::INFO,
+                format!("File closed: {}", params.text_document.uri),
+            )
             .await;
 
         // Clear diagnostics
@@ -269,7 +276,6 @@ impl LanguageServer for GameEngineLSP {
 
     // Note: diagnostics method removed due to conflict with LanguageServer trait
     // Use publish_diagnostics in did_open/did_change instead
-
 }
 
 impl GameEngineLSP {

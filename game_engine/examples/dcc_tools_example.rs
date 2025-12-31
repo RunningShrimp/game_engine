@@ -2,8 +2,8 @@
 //!
 //! 演示如何使用DCC工具进行网格编辑、材质调整、动画和UV编辑
 
-use game_engine::tools::dcc::*;
 use game_engine::render::mesh::Vertex3D;
+use game_engine::tools::dcc::*;
 use glam::*;
 
 fn main() {
@@ -64,7 +64,8 @@ fn mesh_editing_example() {
     let indices = vec![0, 1, 2];
 
     editor.load_mesh(vertices, indices);
-    println!("  - 已加载网格: {} 顶点, {} 三角形",
+    println!(
+        "  - 已加载网格: {} 顶点, {} 三角形",
         editor.current_mesh.as_ref().unwrap().vertices.len(),
         editor.current_mesh.as_ref().unwrap().indices.len() / 3
     );
@@ -109,7 +110,8 @@ fn material_editing_example() {
 
     // 显示材质信息
     let metal = editor.get_material(metal_id).unwrap();
-    println!("  - Chrome材质: metallic={}, roughness={}",
+    println!(
+        "  - Chrome材质: metallic={}, roughness={}",
         metal.metallic, metal.roughness
     );
 }
@@ -164,7 +166,8 @@ fn uv_editing_example() {
     let triangles = vec![[0, 1, 3], [1, 2, 3]];
 
     editor.load_uvs(uvs, triangles);
-    println!("  - 加载UV数据: {} 个UV, {} 个三角形",
+    println!(
+        "  - 加载UV数据: {} 个UV, {} 个三角形",
         editor.uv_islands[0].uvs.len(),
         editor.uv_islands[0].triangles.len()
     );
@@ -211,7 +214,10 @@ fn script_generation_example() {
     // 生成Lua脚本
     let lua_script = generator.generate_script(ScriptLanguage::Lua);
     println!("  - Lua脚本长度: {} 字节", lua_script.code.len());
-    println!("  - 前100字符:\n{}", &lua_script.code[..lua_script.code.len().min(100)]);
+    println!(
+        "  - 前100字符:\n{}",
+        &lua_script.code[..lua_script.code.len().min(100)]
+    );
 
     // 生成Python脚本
     let python_script = generator.generate_script(ScriptLanguage::Python);

@@ -3,9 +3,9 @@
 //! 负责实际的资源导入和转换工作。
 
 use crate::tools::asset_importer::{
+    CompressionFormat, PreviewData,
     detector::{AssetDetector, AssetFormat},
     validator::{AssetValidator, ValidationResult},
-    CompressionFormat, PreviewData,
 };
 use std::path::{Path, PathBuf};
 
@@ -82,8 +82,7 @@ impl AssetImporter {
 
         // 创建输出目录
         if let Some(parent) = output.parent() {
-            fs::create_dir_all(parent)
-                .map_err(|e| ImportError::IoError(e.to_string()))?;
+            fs::create_dir_all(parent).map_err(|e| ImportError::IoError(e.to_string()))?;
         }
 
         // 复制GLTF文件
@@ -103,8 +102,7 @@ impl AssetImporter {
 
         // 创建输出目录
         if let Some(parent) = output.parent() {
-            fs::create_dir_all(parent)
-                .map_err(|e| ImportError::IoError(e.to_string()))?;
+            fs::create_dir_all(parent).map_err(|e| ImportError::IoError(e.to_string()))?;
         }
 
         // 复制FBX文件
@@ -119,8 +117,7 @@ impl AssetImporter {
 
         // 创建输出目录
         if let Some(parent) = output.parent() {
-            fs::create_dir_all(parent)
-                .map_err(|e| ImportError::IoError(e.to_string()))?;
+            fs::create_dir_all(parent).map_err(|e| ImportError::IoError(e.to_string()))?;
         }
 
         // 复制OBJ文件
@@ -130,8 +127,7 @@ impl AssetImporter {
         let mtl_source = source.with_extension("mtl");
         if mtl_source.exists() {
             let mtl_output = output.with_extension("mtl");
-            fs::copy(&mtl_source, &mtl_output)
-                .map_err(|e| ImportError::IoError(e.to_string()))?;
+            fs::copy(&mtl_source, &mtl_output).map_err(|e| ImportError::IoError(e.to_string()))?;
         }
 
         Ok(())
@@ -143,8 +139,7 @@ impl AssetImporter {
 
         // 创建输出目录
         if let Some(parent) = output.parent() {
-            fs::create_dir_all(parent)
-                .map_err(|e| ImportError::IoError(e.to_string()))?;
+            fs::create_dir_all(parent).map_err(|e| ImportError::IoError(e.to_string()))?;
         }
 
         // 加载纹理
@@ -178,8 +173,7 @@ impl AssetImporter {
 
         // 创建输出目录
         if let Some(parent) = output.parent() {
-            fs::create_dir_all(parent)
-                .map_err(|e| ImportError::IoError(e.to_string()))?;
+            fs::create_dir_all(parent).map_err(|e| ImportError::IoError(e.to_string()))?;
         }
 
         // 复制音频文件
@@ -194,8 +188,7 @@ impl AssetImporter {
 
         // 创建输出目录
         if let Some(parent) = output.parent() {
-            fs::create_dir_all(parent)
-                .map_err(|e| ImportError::IoError(e.to_string()))?;
+            fs::create_dir_all(parent).map_err(|e| ImportError::IoError(e.to_string()))?;
         }
 
         // 复制字体文件
@@ -210,8 +203,7 @@ impl AssetImporter {
 
         // 创建输出目录
         if let Some(parent) = output.parent() {
-            fs::create_dir_all(parent)
-                .map_err(|e| ImportError::IoError(e.to_string()))?;
+            fs::create_dir_all(parent).map_err(|e| ImportError::IoError(e.to_string()))?;
         }
 
         // 复制着色器文件
@@ -221,13 +213,15 @@ impl AssetImporter {
     }
 
     /// 复制关联的资源文件
-    fn copy_associated_assets(&self, source_dir: &Path, output_dir: &Path) -> Result<(), ImportError> {
+    fn copy_associated_assets(
+        &self,
+        source_dir: &Path,
+        output_dir: &Path,
+    ) -> Result<(), ImportError> {
         use std::fs;
 
         // 查找并复制纹理和其他资源
-        for entry in fs::read_dir(source_dir)
-            .map_err(|e| ImportError::IoError(e.to_string()))?
-        {
+        for entry in fs::read_dir(source_dir).map_err(|e| ImportError::IoError(e.to_string()))? {
             let entry = entry.map_err(|e| ImportError::IoError(e.to_string()))?;
             let path = entry.path();
 
@@ -251,7 +245,11 @@ impl AssetImporter {
     }
 
     /// 生成预览数据
-    fn generate_preview(&self, path: &Path, format: AssetFormat) -> Result<PreviewData, ImportError> {
+    fn generate_preview(
+        &self,
+        path: &Path,
+        format: AssetFormat,
+    ) -> Result<PreviewData, ImportError> {
         match format {
             AssetFormat::Texture => self.generate_texture_preview(path),
             AssetFormat::GLTF | AssetFormat::FBX | AssetFormat::OBJ => {
@@ -259,8 +257,8 @@ impl AssetImporter {
             }
             AssetFormat::Audio => self.generate_audio_preview(path),
             _ => {
-                let metadata = std::fs::metadata(path)
-                    .map_err(|e| ImportError::IoError(e.to_string()))?;
+                let metadata =
+                    std::fs::metadata(path).map_err(|e| ImportError::IoError(e.to_string()))?;
                 Ok(PreviewData::Unknown {
                     size: metadata.len() as usize,
                     format: format!("{:?}", format),
@@ -273,9 +271,8 @@ impl AssetImporter {
     fn generate_texture_preview(&self, path: &Path) -> Result<PreviewData, ImportError> {
         let reader =
             image::ImageReader::open(path).map_err(|e| ImportError::IoError(e.to_string()))?;
-        let dimensions = reader
-            .into_dimensions()
-            .map_err(|e| ImportError::IoError(e.to_string()))?;
+        let dimensions =
+            reader.into_dimensions().map_err(|e| ImportError::IoError(e.to_string()))?;
 
         Ok(PreviewData::Texture {
             width: dimensions.0,
@@ -315,23 +312,14 @@ impl AssetImporter {
 
         if let Ok(value) = serde_json::from_str::<serde_json::Value>(&content) {
             if let Some(obj) = value.as_object() {
-                let meshes = obj
-                    .get("meshes")
-                    .and_then(|v| v.as_array())
-                    .map(|a| a.len())
-                    .unwrap_or(0);
+                let meshes =
+                    obj.get("meshes").and_then(|v| v.as_array()).map(|a| a.len()).unwrap_or(0);
 
-                let materials = obj
-                    .get("materials")
-                    .and_then(|v| v.as_array())
-                    .map(|a| a.len())
-                    .unwrap_or(0);
+                let materials =
+                    obj.get("materials").and_then(|v| v.as_array()).map(|a| a.len()).unwrap_or(0);
 
-                let animations = obj
-                    .get("animations")
-                    .and_then(|v| v.as_array())
-                    .map(|a| a.len())
-                    .unwrap_or(0);
+                let animations =
+                    obj.get("animations").and_then(|v| v.as_array()).map(|a| a.len()).unwrap_or(0);
 
                 return Ok(PreviewData::Model {
                     vertices: 0,
@@ -392,7 +380,11 @@ impl AssetImporter {
     }
 
     /// 生成输出路径
-    fn generate_output_path(&self, source: &Path, format: &AssetFormat) -> Result<PathBuf, ImportError> {
+    fn generate_output_path(
+        &self,
+        source: &Path,
+        format: &AssetFormat,
+    ) -> Result<PathBuf, ImportError> {
         let filename = source
             .file_name()
             .ok_or_else(|| ImportError::InvalidPath("No filename".to_string()))?;

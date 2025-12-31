@@ -1,0 +1,348 @@
+name: Build with XMake
+
+# Trigger the workflow on push or pull request
+on:
+  push:
+    branches: [ master, main, develop ]
+  pull_request:
+    branches: [ master, main, develop ]
+
+# Environment variables
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  # ============================================================================
+  # Build and Test Job
+  # ============================================================================
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        mode: [debug, release]
+        include:
+          # Linux specific configuration
+          - os: ubuntu-latest
+            cc: gcc
+            cxx: g++
+          # Windows specific configuration
+          - os: windows-latest
+            cc: cl
+            cxx: cl
+          # macOS specific configuration
+          - os: macos-latest
+            cc: clang
+            cxx: clang++
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+          components: rustfmt, clippy
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Install XMake
+        run: |
+          if [ "${{ runner.os }}" == "Windows" ]; then
+            # PowerShell install for Windows
+            powershell -c "Invoke-Expression (Invoke-Webfile 'https://xmake.io/psget.txt') -Command xmake"
+          else
+            # Bash install for Unix-like systems
+            curl -fsSL https://xmake.io/sh | sh
+          fi
+        shell: bash
+
+      - name: Verify XMake installation
+        run: xmake --version
+
+      - name: Configure XMake (${{ matrix.mode }})
+        run: xmake config -m ${{ matrix.mode }}
+
+      - name: Build with XMake
+        run: xmake -vD
+
+      - name: Run tests
+        run: xmake test
+
+      - name: Run linter
+        run: xmake lint
+
+      - name: Check formatting
+        run: |
+          cargo fmt --all -- --check
+        continue-on-error: true
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.os }}-${{ matrix.mode }}-binary
+          path: |
+            build/${{ matrix.mode }}/game
+            build/${{ matrix.mode }}/game.exe
+          retention-days: 7
+
+  # ============================================================================
+  # Android Build Job
+  # ============================================================================
+  build-android:
+    name: Build for Android
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [arm64-v8a, armeabi-v7a]
+        mode: [release]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+          target: aarch64-linux-android,armv7-linux-androideabi
+
+      - name: Install Android NDK
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r25c
+
+      - name: Install XMake
+        run: curl -fsSL https://xmake.io/sh | sh
+
+      - name: Configure for Android (${{ matrix.arch }})
+        run: |
+          export ANDROID_NDK_HOME=$ANDROID_NDK
+          if [ "${{ matrix.arch }}" == "arm64-v8a" ]; then
+            xmake config -p android -a arm64-v8a -m ${{ matrix.mode }} -c
+          else
+            xmake config -p android -a armeabi-v7a -m ${{ matrix.mode }} -c
+          fi
+
+      - name: Build for Android
+        run: xmake -vD
+
+      - name: Upload Android APK
+        uses: actions/upload-artifact@v3
+        with:
+          name: android-${{ matrix.arch }}-${{ matrix.mode }}
+          path: |
+            build/android/${{ matrix.arch }}/release/*.apk
+          retention-days: 7
+
+  # ============================================================================
+  # WebAssembly Build Job
+  # ============================================================================
+  build-wasm:
+    name: Build for WebAssembly
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+          target: wasm32-wasi
+
+      - name: Install Emscripten
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: '3.1.36'
+          actions-cache-folder: 'emsdk-cache'
+
+      - name: Install XMake
+        run: curl -fsSL https://xmake.io/sh | sh
+
+      - name: Configure for WebAssembly
+        run: |
+          export EMSCRIPTEN_ROOT=$EMSDK/upstream/emscripten
+          xmake config -p wasm -m release -c
+
+      - name: Build for WebAssembly
+        run: xmake -vD
+
+      - name: Upload WASM artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: wasm-release
+          path: |
+            build/wasm/release/*.wasm
+            build/wasm/release/*.js
+            build/wasm/release/*.html
+          retention-days: 7
+
+  # ============================================================================
+  # Cross-Compilation Job
+  # ============================================================================
+  cross-compile:
+    name: Cross-compile for ${{ matrix.target }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - target: aarch64-unknown-linux-gnu
+            arch: arm64
+          - target: x86_64-unknown-linux-musl
+            arch: x86_64-musl
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+          target: ${{ matrix.target }}
+
+      - name: Install cross-compilation tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            gcc-aarch64-linux-gnu \
+            g++-aarch64-linux-gnu \
+            musl-tools \
+            musl-dev
+
+      - name: Install XMake
+        run: curl -fsSL https://xmake.io/sh | sh
+
+      - name: Configure for cross-compilation
+        run: |
+          xmake config -p linux -a ${{ matrix.arch }} -m release
+
+      - name: Build cross-compiled binary
+        run: xmake -vD
+
+      - name: Upload cross-compiled artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: linux-${{ matrix.target }}-release
+          path: |
+            build/linux/${{ matrix.arch }}/release/game
+          retention-days: 7
+
+  # ============================================================================
+  # Security Audit Job
+  # ============================================================================
+  security:
+    name: Security Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+
+      - name: Install cargo-audit
+        run: cargo install cargo-audit
+
+      - name: Run security audit
+        run: cargo audit
+        continue-on-error: true
+
+      - name: Check for outdated dependencies
+        run: cargo outdated
+        continue-on-error: true
+
+  # ============================================================================
+  # Documentation Job
+  # ============================================================================
+  docs:
+    name: Build Documentation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+
+      - name: Generate documentation
+        run: |
+          cargo doc --no-deps --all-features
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./target/doc
+
+  # ============================================================================
+  # Performance Benchmark Job
+  # ============================================================================
+  benchmark:
+    name: Performance Benchmarks
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+
+      - name: Install XMake
+        run: curl -fsSL https://xmake.io/sh | sh
+
+      - name: Run benchmarks
+        run: |
+          xmake config -m release
+          cargo bench --all -- -output-format bencher | tee benchmark_results.txt
+
+      - name: Store benchmark result
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          tool: 'cargo'
+          output-file-path: benchmark_results.txt
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          auto-push: true
+          alert-threshold: '120%'
+          comment-on-alert: true
+          fail-on-alert: true

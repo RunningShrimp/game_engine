@@ -16,8 +16,8 @@
 //! ```
 
 use super::service::{
-    Action, AIError, AIService, ContentPrompt, ContentType, GeneratedContent, Message,
-    NPCContext, Situation,
+    AIError, AIService, Action, ContentPrompt, ContentType, GeneratedContent, Message, NPCContext,
+    Situation,
 };
 use async_trait::async_trait;
 use reqwest::Client;
@@ -108,10 +108,7 @@ impl OpenAIAdapter {
         Self {
             api_key: api_key.into(),
             model: model.into(),
-            client: Client::builder()
-                .timeout(Duration::from_secs(30))
-                .build()
-                .unwrap_or_default(),
+            client: Client::builder().timeout(Duration::from_secs(30)).build().unwrap_or_default(),
             base_url: "https://api.openai.com/v1/chat/completions".to_string(),
             max_tokens: 150,
             temperature: 0.7,
@@ -358,7 +355,10 @@ impl AIService for OpenAIAdapter {
             confidence: 0.8,
             metadata: {
                 let mut meta = serde_json::Map::new();
-                meta.insert("model".to_string(), serde_json::Value::String(self.model.clone()));
+                meta.insert(
+                    "model".to_string(),
+                    serde_json::Value::String(self.model.clone()),
+                );
                 serde_json::Map::into_iter(meta).collect()
             },
         })

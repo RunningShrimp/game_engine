@@ -21,10 +21,12 @@ impl AssetFixer {
                 ValidationIssue::MissingMaterials => Self::add_default_material(path)?,
                 ValidationIssue::NonPowerOfTwo => Self::resize_texture(path)?,
                 ValidationIssue::EmptyFile => {
-                    return Err(FixerError::CannotFix("Empty file cannot be fixed".to_string()))
+                    return Err(FixerError::CannotFix(
+                        "Empty file cannot be fixed".to_string(),
+                    ));
                 }
                 ValidationIssue::FileNotFound => {
-                    return Err(FixerError::CannotFix("File not found".to_string()))
+                    return Err(FixerError::CannotFix("File not found".to_string()));
                 }
                 _ => {
                     // 其他问题可能需要手动修复
@@ -37,12 +39,10 @@ impl AssetFixer {
 
     /// 修复法线
     fn fix_normals(path: &Path) -> Result<(), FixerError> {
-        let format = AssetDetector::detect_format(path)
-            .map_err(|e| FixerError::IoError(e.to_string()))?;
+        let format =
+            AssetDetector::detect_format(path).map_err(|e| FixerError::IoError(e.to_string()))?;
         match format {
-            crate::tools::asset_importer::detector::AssetFormat::OBJ => {
-                Self::fix_obj_normals(path)
-            }
+            crate::tools::asset_importer::detector::AssetFormat::OBJ => Self::fix_obj_normals(path),
             _ => Ok(()), // 其他格式的法线修复需要专门的库
         }
     }
@@ -68,10 +68,7 @@ impl AssetFixer {
                 // 解析顶点
                 let parts: Vec<&str> = line.split_whitespace().collect();
                 if parts.len() >= 4 {
-                    let v: Vec<f32> = parts[1..4]
-                        .iter()
-                        .filter_map(|s| s.parse().ok())
-                        .collect();
+                    let v: Vec<f32> = parts[1..4].iter().filter_map(|s| s.parse().ok()).collect();
                     if v.len() == 3 {
                         vertices.push([v[0], v[1], v[2]]);
                     }
@@ -81,11 +78,7 @@ impl AssetFixer {
                 let parts: Vec<&str> = line.split_whitespace().collect();
                 let face_indices: Vec<usize> = parts[1..]
                     .iter()
-                    .filter_map(|s| {
-                        s.split('/')
-                            .next()
-                            .and_then(|idx| idx.parse::<usize>().ok())
-                    })
+                    .filter_map(|s| s.split('/').next().and_then(|idx| idx.parse::<usize>().ok()))
                     .collect();
                 if !face_indices.is_empty() {
                     faces.push(face_indices);
@@ -104,16 +97,8 @@ impl AssetFixer {
                     let v1 = &vertices[face[(i + 1) % face.len()] - 1];
                     let v2 = &vertices[face[(i + 2) % face.len()] - 1];
 
-                    let edge1 = [
-                        v1[0] - v0[0],
-                        v1[1] - v0[1],
-                        v1[2] - v0[2],
-                    ];
-                    let edge2 = [
-                        v2[0] - v0[0],
-                        v2[1] - v0[1],
-                        v2[2] - v0[2],
-                    ];
+                    let edge1 = [v1[0] - v0[0], v1[1] - v0[1], v1[2] - v0[2]];
+                    let edge2 = [v2[0] - v0[0], v2[1] - v0[1], v2[2] - v0[2]];
 
                     // 叉积计算法线
                     let normal = [
@@ -123,14 +108,11 @@ impl AssetFixer {
                     ];
 
                     // 归一化
-                    let len = (normal[0] * normal[0] + normal[1] * normal[1] + normal[2] * normal[2])
-                        .sqrt();
+                    let len =
+                        (normal[0] * normal[0] + normal[1] * normal[1] + normal[2] * normal[2])
+                            .sqrt();
                     if len > 0.0 {
-                        let normalized = [
-                            normal[0] / len,
-                            normal[1] / len,
-                            normal[2] / len,
-                        ];
+                        let normalized = [normal[0] / len, normal[1] / len, normal[2] / len];
                         normals[face[i] - 1][0] += normalized[0];
                         normals[face[i] - 1][1] += normalized[1];
                         normals[face[i] - 1][2] += normalized[2];
@@ -141,7 +123,8 @@ impl AssetFixer {
 
         // 归一化顶点法线
         for normal in &mut normals {
-            let len = (normal[0] * normal[0] + normal[1] * normal[1] + normal[2] * normal[2]).sqrt();
+            let len =
+                (normal[0] * normal[0] + normal[1] * normal[1] + normal[2] * normal[2]).sqrt();
             if len > 0.0 {
                 normal[0] /= len;
                 normal[1] /= len;
@@ -188,8 +171,8 @@ impl AssetFixer {
 
     /// 添加默认材质
     fn add_default_material(path: &Path) -> Result<(), FixerError> {
-        let format = AssetDetector::detect_format(path)
-            .map_err(|e| FixerError::IoError(e.to_string()))?;
+        let format =
+            AssetDetector::detect_format(path).map_err(|e| FixerError::IoError(e.to_string()))?;
         match format {
             crate::tools::asset_importer::detector::AssetFormat::GLTF => {
                 Self::add_default_gltf_material(path)
@@ -224,14 +207,16 @@ impl AssetFixer {
                 });
 
                 if obj.get("materials").is_none() {
-                    obj.insert("materials".to_string(), serde_json::json!([default_material]));
+                    obj.insert(
+                        "materials".to_string(),
+                        serde_json::json!([default_material]),
+                    );
                 }
 
                 // 更新文件
                 let updated = serde_json::to_string_pretty(&value)
                     .map_err(|e| FixerError::IoError(e.to_string()))?;
-                fs::write(path, updated)
-                    .map_err(|e| FixerError::IoError(e.to_string()))?;
+                fs::write(path, updated).map_err(|e| FixerError::IoError(e.to_string()))?;
             }
         }
 
@@ -251,8 +236,7 @@ Ns 10.0
 d 1.0
 "#;
 
-        fs::write(&mtl_path, mtl_content)
-            .map_err(|e| FixerError::IoError(e.to_string()))?;
+        fs::write(&mtl_path, mtl_content).map_err(|e| FixerError::IoError(e.to_string()))?;
 
         // 在OBJ文件中添加材质库引用
         use std::fs::File;
@@ -311,10 +295,11 @@ d 1.0
                         image::imageops::FilterType::Lanczos3,
                     );
 
-                    let new_path = path.with_extension(format!("resized.{}", path.extension().unwrap().to_str().unwrap()));
-                    resized
-                        .save(&new_path)
-                        .map_err(|e| FixerError::IoError(e.to_string()))?;
+                    let new_path = path.with_extension(format!(
+                        "resized.{}",
+                        path.extension().unwrap().to_str().unwrap()
+                    ));
+                    resized.save(&new_path).map_err(|e| FixerError::IoError(e.to_string()))?;
 
                     log::info!("Resized texture saved to: {:?}", new_path);
                 }

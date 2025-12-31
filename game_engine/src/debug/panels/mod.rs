@@ -2,16 +2,16 @@
 //!
 //! 提供各种调试面板的实现。
 
-mod entity_panel;
 mod component_panel;
-mod performance_panel;
 mod console_panel;
+mod entity_panel;
+mod performance_panel;
 mod resource_panel;
 
-pub use entity_panel::EntityPanel;
 pub use component_panel::ComponentPanel;
-pub use performance_panel::PerformancePanel;
 pub use console_panel::ConsolePanel;
+pub use entity_panel::EntityPanel;
+pub use performance_panel::PerformancePanel;
 pub use resource_panel::ResourcePanel;
 
 use bevy_ecs::prelude::*;

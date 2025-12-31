@@ -3,8 +3,8 @@
 //! 提供调试UI的主要接口和状态管理。
 
 use crate::debug::{
-    panels::{ComponentPanel, ConsolePanel, EntityPanel, PerformancePanel, ResourcePanel},
     DebugConfig,
+    panels::{ComponentPanel, ConsolePanel, EntityPanel, PerformancePanel, ResourcePanel},
 };
 use crate::tools::asset_importer::AssetImportWizard;
 use bevy_ecs::prelude::*;
@@ -71,7 +71,8 @@ impl DebugUI {
     ///
     /// * `config` - 调试UI配置
     pub fn with_config(config: DebugConfig) -> Self {
-        let performance_panel = PerformancePanel::with_history_size(config.performance_history_size);
+        let performance_panel =
+            PerformancePanel::with_history_size(config.performance_history_size);
         let console_panel = ConsolePanel::with_max_lines(config.console_max_lines);
 
         Self {
@@ -218,10 +219,8 @@ impl DebugUI {
         self.ui_state.last_update = now;
 
         // 更新性能面板
-        self.performance_panel.update_metrics(
-            self.ui_state.frame_time,
-            self.ui_state.frame_count,
-        );
+        self.performance_panel
+            .update_metrics(self.ui_state.frame_time, self.ui_state.frame_count);
     }
 
     /// 渲染菜单栏

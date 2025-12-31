@@ -97,6 +97,32 @@ pub enum Commands {
         force: bool,
     },
 
+    /// Generate build system configuration files
+    ///
+    /// Generates build system files (xmake.lua, CMakeLists.txt, etc.) for the project.
+    ///
+    /// # Examples
+    ///
+    /// ```bash
+    /// game-engine build-system --system xmake
+    /// game-engine build-system --system cmake
+    /// game-engine build-system --system xmake --output ./my-project
+    /// ```
+    BuildSystem {
+        /// Build system type (xmake, cmake)
+        #[arg(short, long, default_value = "xmake")]
+        system: String,
+
+        /// Output directory for configuration files
+        #[arg(short, long)]
+        #[arg(default_value = ".")]
+        output: PathBuf,
+
+        /// Force overwrite existing configuration
+        #[arg(long, default_value = "false")]
+        force: bool,
+    },
+
     /// Show engine information
     ///
     /// Displays version and configuration information.
@@ -244,6 +270,13 @@ impl GameEngineCli {
             Commands::Init { force } => {
                 self.cmd_init(*force)?;
             }
+            Commands::BuildSystem {
+                system,
+                output,
+                force,
+            } => {
+                self.cmd_build_system(system, output, *force)?;
+            }
             Commands::Info {} => {
                 self.cmd_info()?;
             }
@@ -257,7 +290,16 @@ impl GameEngineCli {
                 no_shader_opt,
                 jobs,
             } => {
-                self.cmd_optimize(input, output, quality, platform, *no_lod, *no_compress, *no_shader_opt, *jobs)?;
+                self.cmd_optimize(
+                    input,
+                    output,
+                    quality,
+                    platform,
+                    *no_lod,
+                    *no_compress,
+                    *no_shader_opt,
+                    *jobs,
+                )?;
             }
             Commands::Analyze { input, output } => {
                 self.cmd_analyze(input, output)?;
@@ -357,9 +399,8 @@ impl GameEngineCli {
                 }
             }
             TemplateCommands::Info { name } => {
-                let metadata = registry
-                    .get(name)
-                    .ok_or_else(|| CliError::TemplateNotFound(name.clone()))?;
+                let metadata =
+                    registry.get(name).ok_or_else(|| CliError::TemplateNotFound(name.clone()))?;
 
                 println!("📦 Template: {}", metadata.name);
                 println!();
@@ -470,7 +511,10 @@ dist/"#;
         println!("Version: {}", env!("CARGO_PKG_VERSION"));
         println!("Edition: 2021");
         println!();
-        println!("Templates available: {}", TemplateRegistry::new().list_all().len());
+        println!(
+            "Templates available: {}",
+            TemplateRegistry::new().list_all().len()
+        );
         println!();
         println!("Project templates:");
         println!("  - basic: Basic game template");
@@ -498,7 +542,9 @@ dist/"#;
         no_shader_opt: bool,
         jobs: usize,
     ) -> Result<(), CliError> {
-        use crate::tools::asset_pipeline::{PipelineConfig, Platform, QualityPreset, AssetPipeline};
+        use crate::tools::asset_pipeline::{
+            AssetPipeline, PipelineConfig, Platform, QualityPreset,
+        };
         use tokio::runtime::Runtime;
 
         println!("🎯 Optimizing assets...");
@@ -518,7 +564,10 @@ dist/"#;
             Some("Web") => Platform::Web,
             Some("Console") => Platform::Console,
             Some(other) => {
-                return Err(CliError::InvalidTemplate(format!("Invalid platform: {}", other)))
+                return Err(CliError::InvalidTemplate(format!(
+                    "Invalid platform: {}",
+                    other
+                )));
             }
             None => Platform::PC,
         };
@@ -537,10 +586,13 @@ dist/"#;
         };
 
         // 创建runtime并运行优化
-        let rt = Runtime::new().map_err(|e| CliError::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
+        let rt = Runtime::new()
+            .map_err(|e| CliError::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
         rt.block_on(async {
             let pipeline = AssetPipeline::new(config);
-            let report = pipeline.optimize_assets(input, output).await
+            let report = pipeline
+                .optimize_assets(input, output)
+                .await
                 .map_err(|e| CliError::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
 
             report.print_summary();
@@ -555,6 +607,7 @@ dist/"#;
     }
 
     /// Executes the 'analyze' command
+    #[cfg(feature = "asset-pipeline")]
     fn cmd_analyze(&self, input: &PathBuf, output: &Option<PathBuf>) -> Result<(), CliError> {
         use crate::tools::asset_pipeline::QualityAnalyzer;
 
@@ -577,13 +630,29 @@ dist/"#;
         Ok(())
     }
 
+    /// Executes the 'analyze' command (no asset-pipeline feature)
+    #[cfg(not(feature = "asset-pipeline"))]
+    fn cmd_analyze(&self, input: &PathBuf, output: &Option<PathBuf>) -> Result<(), CliError> {
+        println!("🔍 Analyzing assets...");
+        println!();
+
+        // 简化实现：显示基本信息
+        println!("Scanning: {}", input.display());
+        println!();
+        println!("Note: Asset pipeline feature is not enabled.");
+        println!("Enable it with: --features asset-pipeline");
+
+        if let Some(output_path) = output {
+            println!();
+            println!("Report will be saved to: {}", output_path.display());
+        }
+
+        Ok(())
+    }
+
     /// Executes the 'bundle' command
-    fn cmd_bundle(
-        &self,
-        input: &PathBuf,
-        output: &PathBuf,
-        format: &str,
-    ) -> Result<(), CliError> {
+    #[cfg(feature = "asset-pipeline")]
+    fn cmd_bundle(&self, input: &PathBuf, output: &PathBuf, format: &str) -> Result<(), CliError> {
         use crate::tools::asset_pipeline::{AssetBundler, BundleFormat};
 
         println!("📦 Bundling assets...");
@@ -594,7 +663,12 @@ dist/"#;
             "pak" => BundleFormat::Pak,
             "loose" => BundleFormat::Loose,
             "virtual" => BundleFormat::Virtual,
-            _ => return Err(CliError::InvalidTemplate(format!("Invalid bundle format: {}", format))),
+            _ => {
+                return Err(CliError::InvalidTemplate(format!(
+                    "Invalid bundle format: {}",
+                    format
+                )));
+            }
         };
 
         println!("Input: {}", input.display());
@@ -605,6 +679,373 @@ dist/"#;
         println!("For now, this is a placeholder for the bundling feature.");
 
         Ok(())
+    }
+
+    /// Executes the 'bundle' command (no asset-pipeline feature)
+    #[cfg(not(feature = "asset-pipeline"))]
+    fn cmd_bundle(&self, input: &PathBuf, output: &PathBuf, format: &str) -> Result<(), CliError> {
+        println!("📦 Bundling assets...");
+        println!();
+
+        println!("Input: {}", input.display());
+        println!("Output: {}", output.display());
+        println!("Format: {}", format);
+        println!();
+        println!("Note: Asset pipeline feature is not enabled.");
+        println!("Enable it with: --features asset-pipeline");
+
+        Ok(())
+    }
+
+    /// Executes the 'build-system' command
+    fn cmd_build_system(
+        &self,
+        system: &str,
+        output: &PathBuf,
+        force: bool,
+    ) -> Result<(), CliError> {
+        println!("🔧 Generating build system configuration...");
+        println!();
+
+        // Validate build system type
+        match system.to_lowercase().as_str() {
+            "xmake" => {
+                self.generate_xmake_config(output, force)?;
+            }
+            "cmake" => {
+                return Err(CliError::InvalidTemplate(
+                    "CMake support is not yet implemented. Please use 'xmake'.".to_string(),
+                ));
+            }
+            _ => {
+                return Err(CliError::InvalidTemplate(format!(
+                    "Unsupported build system: {}. Supported: xmake",
+                    system
+                )));
+            }
+        }
+
+        println!();
+        println!("✅ Build system configuration generated successfully!");
+        println!();
+        println!("📁 Location: {}", output.display());
+        println!();
+        println!("🚀 Next steps:");
+        println!("   cd {}", output.display());
+        if system == "xmake" {
+            println!("   xmake                    # Build the project");
+            println!("   xmake run                # Run the game");
+            println!("   xmake f -p android       # Configure for Android");
+            println!("   xmake -vD                # Build with debug info");
+        }
+        println!();
+
+        Ok(())
+    }
+
+    /// Generate xmake.lua configuration file
+    fn generate_xmake_config(&self, output: &PathBuf, force: bool) -> Result<(), CliError> {
+        let xmake_path = output.join("xmake.lua");
+
+        // Check if file already exists
+        if xmake_path.exists() && !force {
+            return Err(CliError::Io(std::io::Error::new(
+                std::io::ErrorKind::AlreadyExists,
+                format!("xmake.lua already exists. Use --force to overwrite."),
+            )));
+        }
+
+        // Generate xmake.lua content
+        let config = self.get_xmake_template();
+
+        // Write to file
+        std::fs::write(&xmake_path, config)?;
+
+        Ok(())
+    }
+
+    /// Get xmake.lua template content
+    fn get_xmake_template(&self) -> String {
+        r#"-- xmake.lua
+-- Game Engine - Cross-platform Build Configuration
+--
+-- This is the main xmake configuration file for the game engine project.
+-- It provides cross-platform build support for Windows, Linux, macOS, Android, and WebAssembly.
+--
+-- Quick Start:
+--   xmake                    # Build the project
+--   xmake run                # Run the game
+--   xmake f -p android       # Configure for Android
+--   xmake f -p wasm          # Configure for WebAssembly
+--   xmake -vD                # Build with debug info
+--   xmake clean              # Clean build artifacts
+--
+-- For more information, see docs/xmake_build_guide.md
+
+set_project("game-engine")
+set_version("0.1.0")
+
+-- ============================================================================
+-- Configuration Options
+-- ============================================================================
+
+-- Enable Rust support
+set_languages("c++20", "rust")
+
+-- Add configuration modes
+add_rules("mode.debug", "mode.release")
+add_rules("mode.asan", "mode.tsan", "mode.lsan", "mode.ubsan")
+
+-- ============================================================================
+-- Common Settings
+-- ============================================================================
+
+-- Set default optimization flags
+if is_mode("release") then
+    set_optimize("fastest")
+    set_symbols("hidden")
+    set_strip("all")
+elseif is_mode("debug") then
+    set_symbols("debug")
+    set_optimize("none")
+    add_defines("DEBUG", "_DEBUG")
+end
+
+-- ============================================================================
+-- Platform Detection
+-- ============================================================================
+
+local platform_vars = {}
+if is_plat("windows") then
+    platform_vars = {
+        defines = "WINDOWS",
+        ldflags = "/SUBSYSTEM:WINDOWS"
+    }
+elseif is_plat("linux") then
+    platform_vars = {
+        defines = "LINUX",
+        ldflags = "-pthread"
+    }
+elseif is_plat("macosx") then
+    platform_vars = {
+        defines = "MACOS",
+        ldflags = "-framework Cocoa -framework Metal"
+    }
+elseif is_plat("android") then
+    platform_vars = {
+        defines = "ANDROID",
+        ldflags = "-landroid -llog"
+    }
+elseif is_plat("wasm") then
+    platform_vars = {
+        defines = "WASM",
+        ldflags = "-s USE_SDL=2 -s WASM=1"
+    }
+end
+
+-- ============================================================================
+-- Game Engine Library Target
+-- ============================================================================
+
+target("game-engine-core")
+    -- Static library for core engine
+    set_kind("static")
+    add_files("src/lib.rs", {rootdir = "game_engine"})
+
+    -- Add Rust source files
+    add_files("src/**/*.rs", {rootdir = "game_engine"})
+
+    -- Platform-specific defines
+    add_defines(platform_vars.defines)
+
+    -- Rust features
+    add_defines("RUST_PREFIX=\"game_engine\"")
+
+    -- Include directories
+    add_includedirs("include", {public = true})
+
+    -- Dependencies (will be linked via Cargo.toml)
+    -- Note: xmake delegates Rust dependencies to Cargo
+
+    -- Link syslibraries
+    if is_plat("linux") then
+        add_syslinks("pthread", "dl", "m")
+    elseif is_plat("windows") then
+        add_syslinks("ws2_32", "userenv", "msvcrt")
+    elseif is_plat("macosx") then
+        add_frameworks("Cocoa", "Metal", "CoreVideo")
+    end
+
+    -- Installation
+    on_install(function (target)
+        os.cp("$(targetdir)/$(filename).a", "$(installir)/lib/")
+    end)
+
+target_end()
+
+-- ============================================================================
+-- Game Executable Target
+-- ============================================================================
+
+target("game")
+    -- Binary executable
+    set_kind("binary")
+    add_files("src/main.rs", {rootdir = "game_engine"})
+
+    -- Link against engine core
+    add_deps("game-engine-core")
+
+    -- Platform-specific configuration
+    if is_plat("windows") then
+        add_ldflags("/SUBSYSTEM:CONSOLE", {force = true})
+    elseif is_plat("macosx") then
+        add_ldflags("-framework Cocoa -framework Metal")
+    elseif is_plat("linux") then
+        add_ldflags("-pthread -ldl -lm")
+    elseif is_plat("android") then
+        add_ldflags("-landroid -llog")
+    end
+
+    -- Post-build: Copy assets
+    after_build(function (target)
+        local assets_dir = path.absolute("assets")
+        local target_dir = path.absolute(target:targetdir())
+
+        -- Check if assets directory exists
+        if os.isdir(assets_dir) then
+            local target_assets = path.join(target_dir, "assets")
+            os.cp(assets_dir, target_assets)
+
+            -- Verbose output
+            if is_mode("debug") then
+                print("Assets copied to: " .. target_assets)
+            end
+        end
+    end)
+
+    -- Installation
+    on_install(function (target)
+        -- Install binary
+        os.cp("$(targetdir)/game", "$(installir)/bin/")
+
+        -- Install assets if they exist
+        if os.isdir("$(targetdir)/assets") then
+            os.cp("$(targetdir)/assets", "$(installir)/share/")
+        end
+    end)
+
+target_end()
+
+-- ============================================================================
+-- Asset Processing Target
+-- ============================================================================
+
+target("game-resources")
+    -- Phony target for resource processing
+    set_kind("phony")
+
+    -- Resource processing script
+    on_build(function (target)
+        local assets_dir = "assets"
+        local build_dir = "$(buildir)/assets"
+
+        -- Create build directory
+        os.mkdir(build_dir)
+
+        -- Copy assets if directory exists
+        if os.isdir(assets_dir) then
+            print("Processing assets...")
+
+            -- Copy all assets
+            os.cp(assets_dir .. "/**", build_dir)
+
+            -- Optionally compress assets
+            if is_mode("release") then
+                print("Compressing assets...")
+                local asset_zip = "$(buildir)/assets.zip"
+                os.exec("zip -r %s %s", asset_zip, build_dir)
+            end
+
+            print("Assets processed successfully!")
+        else
+            print("Warning: assets/ directory not found, skipping resource processing")
+        end
+    end)
+
+target_end()
+
+-- ============================================================================
+-- Custom Tasks
+-- ============================================================================
+
+-- Task: Clean everything
+task("clean-all")
+    on_run(function ()
+        -- Clean build artifacts
+        os.exec("xmake clean")
+
+        -- Clean profiling data
+        if os.isdir("profiling_data") then
+            os.rm("profiling_data/*.dat.gz")
+        end
+
+        -- Clean build directory
+        if os.isdir("build") then
+            os.rm("build/**")
+        end
+
+        print("Clean completed!")
+    end)
+task_end()
+
+-- Task: Format code
+task("format")
+    on_run(function ()
+        print("Formatting Rust code...")
+        os.exec("cargo fmt")
+
+        print("Formatting completed!")
+    end)
+task_end()
+
+-- Task: Run linter
+task("lint")
+    on_run(function ()
+        print("Running Rust linter...")
+        os.exec("cargo clippy -- -D warnings")
+
+        print("Linting completed!")
+    end)
+task_end()
+
+-- Task: Run tests
+task("test")
+    on_run(function ())
+        print("Running tests...")
+        os.exec("cargo test --all")
+
+        print("Tests completed!")
+    end)
+task_end()
+
+-- Task: Generate documentation
+task("docs")
+    on_run(function ()
+        print("Generating documentation...")
+        os.exec("cargo doc --no-deps --open")
+
+        print("Documentation generated!")
+    end)
+task_end()
+
+-- ============================================================================
+-- Default Target
+-- ============================================================================
+
+-- Set default target to build
+set_default("game")
+"#
+        .to_string()
     }
 }
 
@@ -639,13 +1080,8 @@ mod tests {
 
     #[test]
     fn test_new_command_with_template() {
-        let cli = GameEngineCli::try_parse_from([
-            "game-engine",
-            "new",
-            "my-game",
-            "--template",
-            "basic",
-        ]);
+        let cli =
+            GameEngineCli::try_parse_from(["game-engine", "new", "my-game", "--template", "basic"]);
         assert!(cli.is_ok());
     }
 

@@ -332,7 +332,10 @@ pub enum ActionType {
     /// 逃跑
     Flee,
     /// 自定义动作
-    Custom { name: String, data: serde_json::Value },
+    Custom {
+        name: String,
+        data: serde_json::Value,
+    },
 }
 
 /// 内容生成提示

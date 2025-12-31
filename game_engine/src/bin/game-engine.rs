@@ -52,10 +52,7 @@ fn init_logging(verbose: u8) -> Result<(), Box<dyn std::error::Error>> {
         _ => Level::TRACE,
     };
 
-    let subscriber = FmtSubscriber::builder()
-        .with_max_level(level)
-        .with_target(false)
-        .finish();
+    let subscriber = FmtSubscriber::builder().with_max_level(level).with_target(false).finish();
 
     tracing::subscriber::set_global_default(subscriber)?;
 

@@ -3,8 +3,8 @@
 //! 显示和管理所有ECS实体及其组件。
 
 use super::{ComponentPanel, Panel};
-use bevy_ecs::prelude::*;
 use bevy_ecs::component::ComponentId;
+use bevy_ecs::prelude::*;
 use std::any::TypeId;
 
 /// 实体面板
@@ -36,42 +36,43 @@ impl EntityPanel {
     }
 
     /// 显示面板并处理与组件面板的交互
-    pub fn show(&mut self, ctx: &egui::Context, world: &World, component_panel: &mut ComponentPanel) {
+    pub fn show(
+        &mut self,
+        ctx: &egui::Context,
+        world: &World,
+        component_panel: &mut ComponentPanel,
+    ) {
         if !self.visible {
             return;
         }
 
-        egui::Window::new("Entities")
-            .default_size([300.0, 400.0])
-            .show(ctx, |ui| {
-                // 搜索框
-                ui.horizontal(|ui| {
-                    ui.label("Filter:");
-                    let response = ui.text_edit_singleline(&mut self.filter_text);
-                    if response.changed() {
-                        self.needs_refresh = true;
-                    }
-                });
-
-                ui.separator();
-
-                // 获取实体列表
-                if self.needs_refresh {
-                    self.refresh_entity_list(world);
+        egui::Window::new("Entities").default_size([300.0, 400.0]).show(ctx, |ui| {
+            // 搜索框
+            ui.horizontal(|ui| {
+                ui.label("Filter:");
+                let response = ui.text_edit_singleline(&mut self.filter_text);
+                if response.changed() {
+                    self.needs_refresh = true;
                 }
-
-                // 显示实体计数
-                ui.label(format!("Total entities: {}", self.cached_entities.len()));
-
-                // 实体列表
-                egui::ScrollArea::vertical()
-                    .auto_shrink([false; 2])
-                    .show(ui, |ui| {
-                        for entity in &self.cached_entities {
-                            self.show_entity(ui, world, *entity, component_panel);
-                        }
-                    });
             });
+
+            ui.separator();
+
+            // 获取实体列表
+            if self.needs_refresh {
+                self.refresh_entity_list(world);
+            }
+
+            // 显示实体计数
+            ui.label(format!("Total entities: {}", self.cached_entities.len()));
+
+            // 实体列表
+            egui::ScrollArea::vertical().auto_shrink([false; 2]).show(ui, |ui| {
+                for entity in &self.cached_entities {
+                    self.show_entity(ui, world, *entity, component_panel);
+                }
+            });
+        });
     }
 
     /// 显示单个实体
@@ -157,7 +158,11 @@ impl EntityPanel {
     }
 
     /// 获取组件类型名称
-    fn get_component_type_name(&self, _world: &World, _component_id: ComponentId) -> Option<String> {
+    fn get_component_type_name(
+        &self,
+        _world: &World,
+        _component_id: ComponentId,
+    ) -> Option<String> {
         // 注意：bevy_ecs的ComponentId无法直接获取类型名称
         // 这是一个简化的实现
         Some("Component".to_string())

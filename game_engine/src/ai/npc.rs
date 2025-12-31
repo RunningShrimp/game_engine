@@ -14,8 +14,8 @@
 //! let action = npc.decide().await?;
 //! ```
 
-use super::service::{Action, ActionType, AIService, NPCContext, Situation, NPCStatus};
 use super::BehaviorTree;
+use super::service::{AIService, Action, ActionType, NPCContext, NPCStatus, Situation};
 use bevy_ecs::entity::Entity;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -288,15 +288,20 @@ impl IntelligentNPC {
         // 更新平均延迟
         let total_calls = self.performance_stats.llm_calls as f32;
         self.performance_stats.avg_llm_latency =
-            (self.performance_stats.avg_llm_latency * (total_calls - 1.0) + latency_ms) / total_calls;
+            (self.performance_stats.avg_llm_latency * (total_calls - 1.0) + latency_ms)
+                / total_calls;
 
         // 更新平均置信度
         self.performance_stats.avg_confidence =
-            (self.performance_stats.avg_confidence * (total_calls - 1.0) + confidence) / total_calls;
+            (self.performance_stats.avg_confidence * (total_calls - 1.0) + confidence)
+                / total_calls;
     }
 
     /// 生成NPC对话
-    pub async fn generate_dialogue(&self, context: &NPCContext) -> Result<String, super::service::AIError> {
+    pub async fn generate_dialogue(
+        &self,
+        context: &NPCContext,
+    ) -> Result<String, super::service::AIError> {
         if let Some(service) = &self.llm_service {
             service.generate_dialogue(context).await
         } else {
@@ -383,10 +388,7 @@ impl NPCManager {
 
     /// 获取所有NPC的性能统计
     pub fn get_all_stats(&self) -> HashMap<Entity, &PerformanceStats> {
-        self.npcs
-            .iter()
-            .map(|(id, npc)| (*id, npc.get_performance_stats()))
-            .collect()
+        self.npcs.iter().map(|(id, npc)| (*id, npc.get_performance_stats())).collect()
     }
 }
 
@@ -399,7 +401,7 @@ impl Default for NPCManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ai::service::{ActionType, NPCContext, PlayerState, EnvironmentState};
+    use crate::ai::service::{ActionType, EnvironmentState, NPCContext, PlayerState};
     use std::collections::HashMap;
 
     fn create_test_situation() -> Situation {
@@ -430,8 +432,7 @@ mod tests {
 
     #[test]
     fn test_with_hybrid_mode() {
-        let npc = IntelligentNPC::new(Entity::from_raw(1))
-            .with_hybrid_mode(HybridMode::LLMOnly);
+        let npc = IntelligentNPC::new(Entity::from_raw(1)).with_hybrid_mode(HybridMode::LLMOnly);
 
         assert_eq!(npc.hybrid_mode, HybridMode::LLMOnly);
     }

@@ -2,11 +2,11 @@
 //!
 //! 本模块实现自动LOD（Level of Detail）生成功能。
 
-use super::pipeline::{OptimizationError, AssetMetadata};
-use std::path::{Path, PathBuf};
-use std::fs;
+use super::pipeline::{AssetMetadata, OptimizationError};
 use gltf::{Gltf, Node};
 use serde::{Deserialize, Serialize};
+use std::fs;
+use std::path::{Path, PathBuf};
 
 /// LOD生成器
 pub struct LODGenerator {
@@ -20,7 +20,10 @@ impl LODGenerator {
     }
 
     /// 为模型生成多级LOD
-    pub async fn generate_lods(&self, model_path: &Path) -> Result<Vec<LODModel>, OptimizationError> {
+    pub async fn generate_lods(
+        &self,
+        model_path: &Path,
+    ) -> Result<Vec<LODModel>, OptimizationError> {
         // 读取原始模型
         let original = self.load_model(model_path).await?;
 
@@ -34,7 +37,10 @@ impl LODGenerator {
             }
 
             let lod_level = i + 1;
-            println!("  Generating LOD{} (threshold: {:.2})...", lod_level, threshold);
+            println!(
+                "  Generating LOD{} (threshold: {:.2})...",
+                lod_level, threshold
+            );
 
             let lod = self.generate_lod_level(&original, *threshold, lod_level).await?;
             let reduction = (1.0 - threshold) * 100.0;
@@ -240,10 +246,7 @@ impl LODGenerator {
             indices.push(idx);
         }
 
-        let mesh_positions = vertex_data
-            .iter()
-            .map(|(v_idx, _, _)| positions[*v_idx])
-            .collect();
+        let mesh_positions = vertex_data.iter().map(|(v_idx, _, _)| positions[*v_idx]).collect();
 
         let mesh_normals = if !normals.is_empty() {
             Some(
@@ -398,8 +401,9 @@ impl LODModel {
     pub async fn save(&self, output_path: &Path) -> Result<(), OptimizationError> {
         // 创建输出目录
         if let Some(parent) = output_path.parent() {
-            fs::create_dir_all(parent)
-                .map_err(|e| OptimizationError::IoError(format!("Failed to create directory: {}", e)))?;
+            fs::create_dir_all(parent).map_err(|e| {
+                OptimizationError::IoError(format!("Failed to create directory: {}", e))
+            })?;
         }
 
         // 简单实现：保存为GLTF JSON格式

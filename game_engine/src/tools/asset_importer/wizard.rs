@@ -3,10 +3,10 @@
 //! 基于egui的图形化资源导入向导。
 
 use crate::tools::asset_importer::{
+    AssetFormat, CompressionFormat, PreviewData,
     detector::{AssetDetector, FileAnalysis},
     importer::{AssetImporter, ImportOptions},
     validator::{AssetValidator, ValidationIssue, ValidationResult},
-    AssetFormat, CompressionFormat, PreviewData,
 };
 use egui::*;
 use std::path::PathBuf;
@@ -136,24 +136,42 @@ impl AssetImportWizard {
             ];
 
             for (i, step) in steps.iter().enumerate() {
-                let is_current = std::mem::discriminant(&self.current_step)
-                    == std::mem::discriminant(step);
+                let is_current =
+                    std::mem::discriminant(&self.current_step) == std::mem::discriminant(step);
                 let is_past = matches!(
                     (&self.current_step, step),
                     (WizardStep::FormatDetection, WizardStep::FileSelection)
-                        | (WizardStep::ImportSettings, WizardStep::FileSelection | WizardStep::FormatDetection)
-                        | (WizardStep::Preview, WizardStep::FileSelection | WizardStep::FormatDetection | WizardStep::ImportSettings)
-                        | (WizardStep::Progress, WizardStep::FileSelection | WizardStep::FormatDetection | WizardStep::ImportSettings | WizardStep::Preview)
+                        | (
+                            WizardStep::ImportSettings,
+                            WizardStep::FileSelection | WizardStep::FormatDetection
+                        )
+                        | (
+                            WizardStep::Preview,
+                            WizardStep::FileSelection
+                                | WizardStep::FormatDetection
+                                | WizardStep::ImportSettings
+                        )
+                        | (
+                            WizardStep::Progress,
+                            WizardStep::FileSelection
+                                | WizardStep::FormatDetection
+                                | WizardStep::ImportSettings
+                                | WizardStep::Preview
+                        )
                         | (WizardStep::Complete, _)
                 );
 
                 if is_current {
-                    ui.colored_label(egui::Color32::LIGHT_BLUE, format!("{} {}", i + 1, self.step_name(step)));
+                    ui.colored_label(
+                        egui::Color32::LIGHT_BLUE,
+                        format!("{} {}", i + 1, self.step_name(step)),
+                    );
                 } else if is_past {
                     ui.label(format!("{} {}", i + 1, self.step_name(step)));
                 } else {
-                    ui.label(egui::RichText::new(format!("{} {}", i + 1, self.step_name(step)))
-                        .weak());
+                    ui.label(
+                        egui::RichText::new(format!("{} {}", i + 1, self.step_name(step))).weak(),
+                    );
                 }
 
                 if i < steps.len() - 1 {
@@ -223,7 +241,8 @@ impl AssetImportWizard {
             if drop_response.clicked() {
                 // 这里需要使用文件对话框
                 // 由于egui不内置文件对话框，这里仅作示意
-                self.error_message = Some("File browser not implemented. Please use drag and drop.".to_string());
+                self.error_message =
+                    Some("File browser not implemented. Please use drag and drop.".to_string());
             }
 
             // 显示已选择的文件列表
@@ -231,18 +250,16 @@ impl AssetImportWizard {
                 ui.add_space(10.0);
                 ui.group(|ui| {
                     ui.heading("Selected Files:");
-                    egui::ScrollArea::vertical()
-                        .max_height(200.0)
-                        .show(ui, |ui| {
-                            for file in &self.dragged_files {
-                                ui.horizontal(|ui| {
-                                    ui.label(format!("📄 {}", file.display()));
-                                    if ui.button("×").clicked() {
-                                        // TODO: Remove file
-                                    }
-                                });
-                            }
-                        });
+                    egui::ScrollArea::vertical().max_height(200.0).show(ui, |ui| {
+                        for file in &self.dragged_files {
+                            ui.horizontal(|ui| {
+                                ui.label(format!("📄 {}", file.display()));
+                                if ui.button("×").clicked() {
+                                    // TODO: Remove file
+                                }
+                            });
+                        }
+                    });
                 });
 
                 // 确认按钮
@@ -271,35 +288,39 @@ impl AssetImportWizard {
                 return false;
             }
 
-            egui::ScrollArea::vertical()
-                .max_height(400.0)
-                .show(ui, |ui| {
-                    for (path, analysis) in &self.file_analyses {
-                        ui.group(|ui| {
-                            ui.horizontal(|ui| {
-                                ui.label(format!("📁 {}", path.file_name().unwrap().to_str().unwrap()));
-                                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+            egui::ScrollArea::vertical().max_height(400.0).show(ui, |ui| {
+                for (path, analysis) in &self.file_analyses {
+                    ui.group(|ui| {
+                        ui.horizontal(|ui| {
+                            ui.label(format!(
+                                "📁 {}",
+                                path.file_name().unwrap().to_str().unwrap()
+                            ));
+                            ui.with_layout(
+                                egui::Layout::right_to_left(egui::Align::Center),
+                                |ui| {
                                     if analysis.is_valid {
                                         ui.colored_label(egui::Color32::GREEN, "✓ Valid");
                                     } else {
                                         ui.colored_label(egui::Color32::RED, "✗ Invalid");
                                     }
-                                });
-                            });
-
-                            ui.label(format!("Format: {:?}", analysis.format));
-                            ui.label(format!("Size: {} bytes", analysis.size));
-
-                            if !analysis.issues.is_empty() {
-                                ui.label("Issues:");
-                                for issue in &analysis.issues {
-                                    ui.colored_label(egui::Color32::YELLOW, format!("• {}", issue));
-                                }
-                            }
+                                },
+                            );
                         });
-                        ui.add_space(5.0);
-                    }
-                });
+
+                        ui.label(format!("Format: {:?}", analysis.format));
+                        ui.label(format!("Size: {} bytes", analysis.size));
+
+                        if !analysis.issues.is_empty() {
+                            ui.label("Issues:");
+                            for issue in &analysis.issues {
+                                ui.colored_label(egui::Color32::YELLOW, format!("• {}", issue));
+                            }
+                        }
+                    });
+                    ui.add_space(5.0);
+                }
+            });
 
             ui.add_space(10.0);
             ui.horizontal(|ui| {
@@ -359,7 +380,10 @@ impl AssetImportWizard {
             // 质量设置
             ui.horizontal(|ui| {
                 ui.label("Quality:");
-                ui.add(egui::Slider::new(&mut self.import_settings.quality, 0.0..=1.0));
+                ui.add(egui::Slider::new(
+                    &mut self.import_settings.quality,
+                    0.0..=1.0,
+                ));
                 ui.label(format!("{:.0}", self.import_settings.quality * 100.0));
             });
 
@@ -406,17 +430,18 @@ impl AssetImportWizard {
                 return false;
             }
 
-            egui::ScrollArea::vertical()
-                .max_height(400.0)
-                .show(ui, |ui| {
-                    for (path, preview) in &self.preview_data {
-                        ui.group(|ui| {
-                            ui.label(format!("📄 {}", path.file_name().unwrap().to_str().unwrap()));
-                            self.show_preview_content(ui, preview);
-                        });
-                        ui.add_space(5.0);
-                    }
-                });
+            egui::ScrollArea::vertical().max_height(400.0).show(ui, |ui| {
+                for (path, preview) in &self.preview_data {
+                    ui.group(|ui| {
+                        ui.label(format!(
+                            "📄 {}",
+                            path.file_name().unwrap().to_str().unwrap()
+                        ));
+                        self.show_preview_content(ui, preview);
+                    });
+                    ui.add_space(5.0);
+                }
+            });
 
             ui.add_space(10.0);
             ui.horizontal(|ui| {
@@ -579,11 +604,7 @@ impl AssetImportWizard {
         for (path, analysis) in &self.file_analyses {
             let preview = match analysis.format {
                 AssetFormat::Texture => PreviewData::Texture {
-                    width: analysis
-                        .metadata
-                        .get("width")
-                        .and_then(|s| s.parse().ok())
-                        .unwrap_or(0),
+                    width: analysis.metadata.get("width").and_then(|s| s.parse().ok()).unwrap_or(0),
                     height: analysis
                         .metadata
                         .get("height")
@@ -596,30 +617,28 @@ impl AssetImportWizard {
                         .unwrap_or_else(|| "Unknown".to_string()),
                     size: analysis.size as usize,
                 },
-                AssetFormat::GLTF | AssetFormat::FBX | AssetFormat::OBJ => {
-                    PreviewData::Model {
-                        vertices: analysis
-                            .metadata
-                            .get("vertices")
-                            .and_then(|s| s.parse().ok())
-                            .unwrap_or(0),
-                        triangles: analysis
-                            .metadata
-                            .get("faces")
-                            .and_then(|s| s.parse().ok())
-                            .unwrap_or(0),
-                        materials: analysis
-                            .metadata
-                            .get("materials")
-                            .and_then(|s| s.parse().ok())
-                            .unwrap_or(0),
-                        animations: analysis
-                            .metadata
-                            .get("animations")
-                            .and_then(|s| s.parse().ok())
-                            .unwrap_or(0),
-                    }
-                }
+                AssetFormat::GLTF | AssetFormat::FBX | AssetFormat::OBJ => PreviewData::Model {
+                    vertices: analysis
+                        .metadata
+                        .get("vertices")
+                        .and_then(|s| s.parse().ok())
+                        .unwrap_or(0),
+                    triangles: analysis
+                        .metadata
+                        .get("faces")
+                        .and_then(|s| s.parse().ok())
+                        .unwrap_or(0),
+                    materials: analysis
+                        .metadata
+                        .get("materials")
+                        .and_then(|s| s.parse().ok())
+                        .unwrap_or(0),
+                    animations: analysis
+                        .metadata
+                        .get("animations")
+                        .and_then(|s| s.parse().ok())
+                        .unwrap_or(0),
+                },
                 _ => PreviewData::Unknown {
                     size: analysis.size as usize,
                     format: format!("{:?}", analysis.format),
@@ -632,8 +651,8 @@ impl AssetImportWizard {
 
     /// 执行导入
     fn perform_import(&mut self) {
-        let importer = AssetImporter::new(self.output_directory.clone())
-            .with_options(ImportOptions {
+        let importer =
+            AssetImporter::new(self.output_directory.clone()).with_options(ImportOptions {
                 skip_validation: false,
                 generate_mipmaps: self.import_settings.generate_mipmaps,
                 normalize_normals: self.import_settings.normalize_normals,
@@ -657,10 +676,7 @@ impl AssetImportWizard {
         if failed == 0 {
             self.success_message = Some(format!("Successfully imported {} files.", imported));
         } else {
-            self.error_message = Some(format!(
-                "Imported {} files, {} failed.",
-                imported, failed
-            ));
+            self.error_message = Some(format!("Imported {} files, {} failed.", imported, failed));
         }
     }
 }

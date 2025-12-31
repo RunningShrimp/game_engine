@@ -29,12 +29,12 @@
 //! - Hover capabilities
 //! - Definition capabilities
 
-pub mod server;
 pub mod completion;
 pub mod diagnostics;
 pub mod hover;
 pub mod registry;
+pub mod server;
 
 // Re-exports
-pub use server::GameEngineLSP;
 pub use registry::EngineAPIRegistry;
+pub use server::GameEngineLSP;

@@ -1,0 +1,24 @@
+[package]
+name = "game-engine-editor"
+version = "0.1.0"
+description = "A cross-platform game engine editor built with Tauri"
+authors = ["Game Engine Team"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/username/game_engine"
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "1.5.0", features = [] }
+
+[dependencies]
+tauri = { version = "1.5.4", features = ["dialog-open", "dialog-save", "fs-read-file", "fs-write-file", "fs-read-dir", "shell-open"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.0", features = ["full"] }
+uuid = { version = "1.0", features = ["v4", "serde"] }
+log = "0.4"
+env_logger = "0.10"
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]

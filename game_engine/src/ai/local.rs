@@ -16,8 +16,7 @@
 //! ```
 
 use super::service::{
-    Action, AIError, AIService, ContentPrompt, ContentType, GeneratedContent, NPCContext,
-    Situation,
+    AIError, AIService, Action, ContentPrompt, ContentType, GeneratedContent, NPCContext, Situation,
 };
 use async_trait::async_trait;
 use std::path::PathBuf;
@@ -220,7 +219,11 @@ impl LocalLLMAdapter {
             context.mood.trust,
             context.player_state.level,
             context.environment.location,
-            if context.environment.in_combat { "combat" } else { "peace" },
+            if context.environment.in_combat {
+                "combat"
+            } else {
+                "peace"
+            },
             context.environment.game_time,
             context.environment.weather,
             context.environment.in_combat
@@ -304,9 +307,7 @@ impl AIService for LocalLLMAdapter {
                 let mut meta = serde_json::Map::new();
                 meta.insert(
                     "model".to_string(),
-                    serde_json::Value::String(
-                        self.config.model_path.to_string_lossy().to_string(),
-                    ),
+                    serde_json::Value::String(self.config.model_path.to_string_lossy().to_string()),
                 );
                 meta.insert(
                     "runtime".to_string(),
@@ -367,22 +368,20 @@ mod tests {
 
     #[test]
     fn test_with_context_size() {
-        let adapter = LocalLLMAdapter::new("model.gguf", LLMRuntime::LlamaCpp)
-            .with_context_size(4096);
+        let adapter =
+            LocalLLMAdapter::new("model.gguf", LLMRuntime::LlamaCpp).with_context_size(4096);
         assert_eq!(adapter.config.context_size, 4096);
     }
 
     #[test]
     fn test_with_threads() {
-        let adapter = LocalLLMAdapter::new("model.gguf", LLMRuntime::LlamaCpp)
-            .with_threads(8);
+        let adapter = LocalLLMAdapter::new("model.gguf", LLMRuntime::LlamaCpp).with_threads(8);
         assert_eq!(adapter.config.threads, 8);
     }
 
     #[test]
     fn test_with_gpu_layers() {
-        let adapter = LocalLLMAdapter::new("model.gguf", LLMRuntime::LlamaCpp)
-            .with_gpu_layers(32);
+        let adapter = LocalLLMAdapter::new("model.gguf", LLMRuntime::LlamaCpp).with_gpu_layers(32);
         assert_eq!(adapter.config.gpu_layers, 32);
     }
 
@@ -396,8 +395,8 @@ mod tests {
 
     #[test]
     fn test_clone_adapter() {
-        let adapter1 = LocalLLMAdapter::new("model.gguf", LLMRuntime::LlamaCpp)
-            .with_max_tokens(200);
+        let adapter1 =
+            LocalLLMAdapter::new("model.gguf", LLMRuntime::LlamaCpp).with_max_tokens(200);
         let adapter2 = adapter1.clone();
 
         assert_eq!(adapter1.config.max_tokens, adapter2.config.max_tokens);

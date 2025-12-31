@@ -180,33 +180,31 @@ impl PerformancePanel {
             return;
         }
 
-        egui::Window::new("Performance")
-            .default_size([500.0, 600.0])
-            .show(ctx, |ui| {
-                // 当前指标
-                self.show_current_metrics(ui);
+        egui::Window::new("Performance").default_size([500.0, 600.0]).show(ctx, |ui| {
+            // 当前指标
+            self.show_current_metrics(ui);
 
-                ui.separator();
+            ui.separator();
 
-                // 图表控制
-                ui.horizontal(|ui| {
-                    ui.label("Charts:");
-                    if ui.checkbox(&mut self.show_charts, "Show").clicked() {}
-                    ui.label("Zoom:");
-                    ui.add(egui::Slider::new(&mut self.chart_zoom, 0.1..=5.0).logarithmic(true));
-                });
-
-                ui.separator();
-
-                // 显示图表
-                if self.show_charts {
-                    self.show_charts_ui(ctx);
-                }
-
-                // 历史统计
-                ui.separator();
-                self.show_statistics(ui);
+            // 图表控制
+            ui.horizontal(|ui| {
+                ui.label("Charts:");
+                if ui.checkbox(&mut self.show_charts, "Show").clicked() {}
+                ui.label("Zoom:");
+                ui.add(egui::Slider::new(&mut self.chart_zoom, 0.1..=5.0).logarithmic(true));
             });
+
+            ui.separator();
+
+            // 显示图表
+            if self.show_charts {
+                self.show_charts_ui(ctx);
+            }
+
+            // 历史统计
+            ui.separator();
+            self.show_statistics(ui);
+        });
     }
 
     /// 显示当前指标
@@ -265,11 +263,9 @@ impl PerformancePanel {
     fn show_charts_ui(&mut self, ctx: &egui::Context) {
         // FPS图表
         if !self.fps_history.is_empty() {
-            egui::Window::new("FPS History")
-                .fixed_size([400.0, 150.0])
-                .show(ctx, |ui| {
-                    self.plot_fps(ui);
-                });
+            egui::Window::new("FPS History").fixed_size([400.0, 150.0]).show(ctx, |ui| {
+                self.plot_fps(ui);
+            });
         }
 
         // 帧时间图表
@@ -283,11 +279,9 @@ impl PerformancePanel {
 
         // 内存图表
         if !self.memory_history.is_empty() {
-            egui::Window::new("Memory History")
-                .fixed_size([400.0, 150.0])
-                .show(ctx, |ui| {
-                    self.plot_memory(ui);
-                });
+            egui::Window::new("Memory History").fixed_size([400.0, 150.0]).show(ctx, |ui| {
+                self.plot_memory(ui);
+            });
         }
     }
 
@@ -309,9 +303,10 @@ impl PerformancePanel {
 
                 // 简单的条形图
                 let height = (**fps / 120.0).min(1.0);
-                ui.add_sized([4.0, 40.0], egui::Label::new(
-                    egui::RichText::new("█").color(color)
-                ));
+                ui.add_sized(
+                    [4.0, 40.0],
+                    egui::Label::new(egui::RichText::new("█").color(color)),
+                );
             }
         });
 
@@ -328,10 +323,7 @@ impl PerformancePanel {
 
         ui.label(format!(
             "Current: {:.1} FPS | Min: {:.1} | Max: {:.1} | Avg: {:.1}",
-            current_fps,
-            min_fps,
-            max_fps,
-            avg_fps
+            current_fps, min_fps, max_fps, avg_fps
         ));
     }
 
@@ -352,9 +344,10 @@ impl PerformancePanel {
                 };
 
                 let height = (*frame_time / 50.0).min(1.0);
-                ui.add_sized([4.0, 40.0], egui::Label::new(
-                    egui::RichText::new("█").color(color)
-                ));
+                ui.add_sized(
+                    [4.0, 40.0],
+                    egui::Label::new(egui::RichText::new("█").color(color)),
+                );
             }
         });
 
@@ -371,9 +364,10 @@ impl PerformancePanel {
             // 显示最近60个内存数据点
             let recent_mem: Vec<_> = self.memory_history.iter().rev().take(60).collect();
             for mem in recent_mem {
-                ui.add_sized([4.0, 40.0], egui::Label::new(
-                    egui::RichText::new("█").color(egui::Color32::BLUE)
-                ));
+                ui.add_sized(
+                    [4.0, 40.0],
+                    egui::Label::new(egui::RichText::new("█").color(egui::Color32::BLUE)),
+                );
             }
         });
 

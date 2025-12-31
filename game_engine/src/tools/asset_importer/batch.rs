@@ -2,7 +2,7 @@
 //!
 //! 支持批量导入多个资源文件，带进度跟踪。
 
-use crate::tools::asset_importer::importer::{AssetImporter, ImportResult, ImportError};
+use crate::tools::asset_importer::importer::{AssetImporter, ImportError, ImportResult};
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::Mutex;

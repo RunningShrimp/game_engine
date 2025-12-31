@@ -61,7 +61,11 @@ async fn bench_coroutine_creation() {
     );
 
     // 断言合理的性能
-    assert!(duration < Duration::from_secs(5), "Creation too slow: {:?}", duration);
+    assert!(
+        duration < Duration::from_secs(5),
+        "Creation too slow: {:?}",
+        duration
+    );
 }
 
 #[tokio::test]

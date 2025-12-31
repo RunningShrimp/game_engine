@@ -8,8 +8,8 @@
 
 use crate::render::mesh::Vertex3D;
 use egui::*;
-use glam::{Mat4, Vec3, Vec2};
-use std::collections::{HashSet, HashMap};
+use glam::{Mat4, Vec2, Vec3};
+use std::collections::{HashMap, HashSet};
 
 /// 顶点ID类型
 pub type VertexID = u32;
@@ -82,13 +82,9 @@ pub enum MeshOperation {
         threshold: f32,
     },
     /// 删除
-    Delete {
-        elements: Vec<FaceID>,
-    },
+    Delete { elements: Vec<FaceID> },
     /// 桥接
-    Bridge {
-        edges: Vec<EdgeID>,
-    },
+    Bridge { edges: Vec<EdgeID> },
 }
 
 /// 可编辑的网格数据结构
@@ -237,11 +233,9 @@ impl MeshEditor {
 
     /// 显示UI
     pub fn show_ui(&mut self, ctx: &egui::Context) {
-        egui::Window::new("Mesh Editor")
-            .default_size([300.0, 500.0])
-            .show(ctx, |ui| {
-                self.show_editor_ui(ui);
-            });
+        egui::Window::new("Mesh Editor").default_size([300.0, 500.0]).show(ctx, |ui| {
+            self.show_editor_ui(ui);
+        });
     }
 
     /// 显示编辑器UI
@@ -326,7 +320,10 @@ impl MeshEditor {
         if let Some(mesh) = &self.current_mesh {
             ui.label(format!("Vertices: {}", mesh.vertices.len()));
             ui.label(format!("Triangles: {}", mesh.indices.len() / 3));
-            ui.label(format!("Selected: {} vertices", self.selected_vertices.len()));
+            ui.label(format!(
+                "Selected: {} vertices",
+                self.selected_vertices.len()
+            ));
         }
     }
 

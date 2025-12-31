@@ -645,6 +645,7 @@ pub fn flipbook_system(mut query: Query<(&mut Sprite, &mut Flipbook)>, time: Res
     }
 }
 
+#[cfg(feature = "ai-integration")]
 #[derive(Component)]
 pub struct AiComponent {
     pub behavior_tree:

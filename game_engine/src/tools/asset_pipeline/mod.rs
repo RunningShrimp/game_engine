@@ -69,20 +69,24 @@ pub mod texture_optimizer;
 
 // 重新导出主要类型
 pub use pipeline::{
-    AssetPipeline, AssetMetadata, AssetProcessor, AssetType, OptimizationError,
-    OptimizationResult, PipelineConfig, PipelineReport, Platform, QualityPreset,
+    AssetMetadata, AssetPipeline, AssetProcessor, AssetType, OptimizationError, OptimizationResult,
+    PipelineConfig, PipelineReport, Platform, QualityPreset,
 };
 
-pub use analyzer::{QualityAnalyzer, QualityReport, MetricStatus, QualityTargets};
+pub use analyzer::{MetricStatus, QualityAnalyzer, QualityReport, QualityTargets};
 
-pub use bundler::{AssetBundler, Bundle, BundleEntry, BundleFormat, BundleMetadata, CompressionAlgorithm};
+pub use bundler::{
+    AssetBundler, Bundle, BundleEntry, BundleFormat, BundleMetadata, CompressionAlgorithm,
+};
 
 pub use lod_generator::LODGenerator;
 
-pub use texture_optimizer::{TextureOptimizer, TextureOptimizerOptions, CompressionFormat, CompressedTexture};
+pub use texture_optimizer::{
+    CompressedTexture, CompressionFormat, TextureOptimizer, TextureOptimizerOptions,
+};
 
-pub use shader_optimizer::{ShaderOptimizer, OptimizationLevel, ShaderOptimizationReport};
+pub use shader_optimizer::{OptimizationLevel, ShaderOptimizationReport, ShaderOptimizer};
 
 // 重新导出CLI功能
 #[cfg(feature = "cli")]
-pub use cli::{run_asset_pipeline_cli, print_help};
+pub use cli::{print_help, run_asset_pipeline_cli};

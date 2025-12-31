@@ -18,7 +18,7 @@ impl AssetDetector {
                     "fbx" => return Ok(AssetFormat::FBX),
                     "obj" => return Ok(AssetFormat::OBJ),
                     "png" | "jpg" | "jpeg" | "tga" | "bmp" | "gif" => {
-                        return Ok(AssetFormat::Texture)
+                        return Ok(AssetFormat::Texture);
                     }
                     "wav" | "mp3" | "ogg" | "flac" => return Ok(AssetFormat::Audio),
                     "ttf" | "otf" => return Ok(AssetFormat::Font),
@@ -40,9 +40,7 @@ impl AssetDetector {
         let mut file = File::open(path).map_err(|e| DetectorError::IoError(e.to_string()))?;
 
         let mut buffer = [0u8; 16];
-        let n = file
-            .read(&mut buffer)
-            .map_err(|e| DetectorError::IoError(e.to_string()))?;
+        let n = file.read(&mut buffer).map_err(|e| DetectorError::IoError(e.to_string()))?;
 
         if n == 0 {
             return Err(DetectorError::EmptyFile);
@@ -125,7 +123,8 @@ impl AssetDetector {
                 if let Some(asset) = obj.get("asset") {
                     if let Some(asset_obj) = asset.as_object() {
                         if let Some(version) = asset_obj.get("version") {
-                            analysis.version = Some(version.as_str().unwrap_or("unknown").to_string());
+                            analysis.version =
+                                Some(version.as_str().unwrap_or("unknown").to_string());
                         }
                     }
                 }
@@ -166,9 +165,7 @@ impl AssetDetector {
     /// 分析FBX文件
     fn analyze_fbx(_path: &Path, analysis: &mut FileAnalysis) -> Result<(), DetectorError> {
         // FBX是二进制格式，这里只做基本检查
-        analysis
-            .metadata
-            .insert("format".to_string(), "FBX Binary".to_string());
+        analysis.metadata.insert("format".to_string(), "FBX Binary".to_string());
         Ok(())
     }
 
@@ -200,24 +197,14 @@ impl AssetDetector {
             }
         }
 
-        analysis
-            .metadata
-            .insert("vertices".to_string(), vertices.to_string());
-        analysis
-            .metadata
-            .insert("faces".to_string(), faces.to_string());
-        analysis
-            .metadata
-            .insert("normals".to_string(), normals.to_string());
-        analysis
-            .metadata
-            .insert("tex_coords".to_string(), tex_coords.to_string());
+        analysis.metadata.insert("vertices".to_string(), vertices.to_string());
+        analysis.metadata.insert("faces".to_string(), faces.to_string());
+        analysis.metadata.insert("normals".to_string(), normals.to_string());
+        analysis.metadata.insert("tex_coords".to_string(), tex_coords.to_string());
 
         // 检查是否缺少法线
         if normals == 0 && vertices > 0 {
-            analysis
-                .issues
-                .push("Missing vertex normals".to_string());
+            analysis.issues.push("Missing vertex normals".to_string());
         }
 
         Ok(())
@@ -234,12 +221,8 @@ impl AssetDetector {
             }
 
             if let Ok(dimensions) = reader.into_dimensions() {
-                analysis
-                    .metadata
-                    .insert("width".to_string(), dimensions.0.to_string());
-                analysis
-                    .metadata
-                    .insert("height".to_string(), dimensions.1.to_string());
+                analysis.metadata.insert("width".to_string(), dimensions.0.to_string());
+                analysis.metadata.insert("height".to_string(), dimensions.1.to_string());
             }
         }
 
@@ -249,9 +232,7 @@ impl AssetDetector {
     /// 分析音频文件
     fn analyze_audio(_path: &Path, analysis: &mut FileAnalysis) -> Result<(), DetectorError> {
         // 基本分析，更详细的音频分析需要专门的库
-        analysis
-            .metadata
-            .insert("type".to_string(), "Audio".to_string());
+        analysis.metadata.insert("type".to_string(), "Audio".to_string());
         Ok(())
     }
 }
@@ -321,8 +302,7 @@ mod tests {
         let test_file = "/tmp/test.png";
         let mut file = fs::File::create(test_file).unwrap();
         // PNG magic number
-        file.write_all(&[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A])
-            .unwrap();
+        file.write_all(&[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]).unwrap();
         drop(file);
 
         let format = AssetDetector::detect_format(Path::new(test_file)).unwrap();

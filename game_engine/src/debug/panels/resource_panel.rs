@@ -59,52 +59,46 @@ impl ResourcePanel {
             return;
         }
 
-        egui::Window::new("Resources")
-            .default_size([500.0, 400.0])
-            .show(ctx, |ui| {
-                // 搜索框
-                ui.horizontal(|ui| {
-                    ui.label("Filter:");
-                    ui.text_edit_singleline(&mut self.filter_text);
-                });
-
-                ui.separator();
-
-                // 资源类型选择
-                if !self.resource_stats.is_empty() {
-                    ui.horizontal(|ui| {
-                        ui.label("Resource Type:");
-                        for resource_type in self.resource_stats.keys() {
-                            if self
-                                .selected_type
-                                .as_ref()
-                                .map_or(false, |t| t == resource_type)
-                            {
-                                ui.selectable_label(true, resource_type);
-                            } else if ui.button(resource_type).clicked() {
-                                self.selected_type = Some(resource_type.clone());
-                            }
-                        }
-                    });
-                }
-
-                ui.separator();
-
-                // 显示资源统计
-                if let Some(selected_type) = &self.selected_type {
-                    if let Some(stats) = self.resource_stats.get(selected_type).cloned() {
-                        self.show_resource_stats(ui, &stats);
-                    }
-                } else {
-                    // 显示所有资源的汇总
-                    self.show_all_resources(ui);
-                }
-
-                ui.separator();
-
-                // 总体统计
-                self.show_overall_stats(ui);
+        egui::Window::new("Resources").default_size([500.0, 400.0]).show(ctx, |ui| {
+            // 搜索框
+            ui.horizontal(|ui| {
+                ui.label("Filter:");
+                ui.text_edit_singleline(&mut self.filter_text);
             });
+
+            ui.separator();
+
+            // 资源类型选择
+            if !self.resource_stats.is_empty() {
+                ui.horizontal(|ui| {
+                    ui.label("Resource Type:");
+                    for resource_type in self.resource_stats.keys() {
+                        if self.selected_type.as_ref().map_or(false, |t| t == resource_type) {
+                            ui.selectable_label(true, resource_type);
+                        } else if ui.button(resource_type).clicked() {
+                            self.selected_type = Some(resource_type.clone());
+                        }
+                    }
+                });
+            }
+
+            ui.separator();
+
+            // 显示资源统计
+            if let Some(selected_type) = &self.selected_type {
+                if let Some(stats) = self.resource_stats.get(selected_type).cloned() {
+                    self.show_resource_stats(ui, &stats);
+                }
+            } else {
+                // 显示所有资源的汇总
+                self.show_all_resources(ui);
+            }
+
+            ui.separator();
+
+            // 总体统计
+            self.show_overall_stats(ui);
+        });
     }
 
     /// 显示单个资源类型的统计
@@ -154,26 +148,21 @@ impl ResourcePanel {
     fn show_all_resources(&mut self, ui: &mut egui::Ui) {
         ui.heading("All Resources");
 
-        egui::ScrollArea::vertical()
-            .auto_shrink([false; 2])
-            .show(ui, |ui| {
-                // 先收集需要显示的资源（避免借用冲突）
-                let resources_to_show: Vec<_> = self.resource_stats
-                    .iter()
-                    .filter(|(rt, _)| {
-                        self.filter_text.is_empty() || rt.contains(&self.filter_text)
-                    })
-                    .map(|(rt, stats)| (rt.clone(), stats.clone()))
-                    .collect();
+        egui::ScrollArea::vertical().auto_shrink([false; 2]).show(ui, |ui| {
+            // 先收集需要显示的资源（避免借用冲突）
+            let resources_to_show: Vec<_> = self
+                .resource_stats
+                .iter()
+                .filter(|(rt, _)| self.filter_text.is_empty() || rt.contains(&self.filter_text))
+                .map(|(rt, stats)| (rt.clone(), stats.clone()))
+                .collect();
 
-                for (resource_type, stats) in resources_to_show {
-                    egui::CollapsingHeader::new(resource_type)
-                        .default_open(false)
-                        .show(ui, |ui| {
-                            self.show_resource_stats(ui, &stats);
-                        });
-                }
-            });
+            for (resource_type, stats) in resources_to_show {
+                egui::CollapsingHeader::new(resource_type).default_open(false).show(ui, |ui| {
+                    self.show_resource_stats(ui, &stats);
+                });
+            }
+        });
     }
 
     /// 显示总体统计

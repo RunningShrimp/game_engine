@@ -1,0 +1,66 @@
+{
+  "name": "xmake",
+  "display_name": "XMake Build System",
+  "description": "XMake configuration for cross-platform game development",
+  "version": "0.1.0",
+  "author": "Game Engine Team",
+  "categories": ["build-system", "cross-platform"],
+  "tags": ["xmake", "build", "cross-platform", "rust"],
+  "required_features": ["cli"],
+  "variables": {
+    "project_name": {
+      "type": "string",
+      "description": "Name of the project",
+      "default": "game-engine",
+      "required": true
+    },
+    "project_slug": {
+      "type": "string",
+      "description": "Slugified project name (used in paths)",
+      "default": "game_engine",
+      "required": true
+    },
+    "version": {
+      "type": "string",
+      "description": "Project version",
+      "default": "0.1.0"
+    },
+    "binary_name": {
+      "type": "string",
+      "description": "Name of the executable binary",
+      "default": "game"
+    },
+    "features": {
+      "type": "array",
+      "description": "List of enabled features",
+      "default": ["physics", "parallel", "simd"],
+      "items": {
+        "type": "string"
+      }
+    },
+    "enable_android": {
+      "type": "boolean",
+      "description": "Enable Android toolchain configurations",
+      "default": false
+    },
+    "enable_wasm": {
+      "type": "boolean",
+      "description": "Enable WebAssembly toolchain configurations",
+      "default": false
+    }
+  },
+  "files": [
+    {
+      "source": "xmake.lua.hbs",
+      "destination": "xmake.lua",
+      "type": "template"
+    }
+  ],
+  "post_generate": [
+    {
+      "command": "chmod",
+      "args": ["+x", "xmake.lua"],
+      "description": "Make xmake.lua executable"
+    }
+  ]
+}

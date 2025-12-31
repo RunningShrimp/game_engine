@@ -9,14 +9,14 @@ max_width = 100
 # 使用Unix风格的换行符
 newline_style = "Unix"
 
-# 格式化文档注释
-format_code_in_doc_comments = true
-
 # 链式调用换行
 chain_width = 80
 
-# 注释宽度
-comment_width = 80
+# 注释宽度 (仅在nightly可用，已禁用)
+# comment_width = 80
+
+# 格式化文档注释 (仅在nightly可用，已禁用)
+# format_code_in_doc_comments = true
 
 # 使用尾随逗号
 use_try_shorthand = true

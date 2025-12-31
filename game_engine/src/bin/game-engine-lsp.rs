@@ -72,7 +72,10 @@ fn print_usage() {
 }
 
 fn print_version() {
-    println!("Game Engine LSP Server version {}", env!("CARGO_PKG_VERSION"));
+    println!(
+        "Game Engine LSP Server version {}",
+        env!("CARGO_PKG_VERSION")
+    );
     println!("Part of the Game Engine project");
 }
 

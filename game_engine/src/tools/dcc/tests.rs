@@ -12,7 +12,10 @@ mod integration_tests {
         let toolkit = crate::tools::dcc::DCCToolkit::new();
 
         // 测试网格编辑器
-        assert_eq!(toolkit.mesh_editor.edit_mode, crate::tools::dcc::EditMode::Vertex);
+        assert_eq!(
+            toolkit.mesh_editor.edit_mode,
+            crate::tools::dcc::EditMode::Vertex
+        );
 
         // 测试材质编辑器
         let mat_id = toolkit.material_editor.add_material("TestMaterial".to_string());
@@ -33,8 +36,8 @@ mod integration_tests {
 
     #[test]
     fn test_mesh_editor_operations() {
-        use crate::tools::dcc::MeshEditor;
         use crate::render::mesh::Vertex3D;
+        use crate::tools::dcc::MeshEditor;
         use glam::Mat4;
 
         let mut editor = MeshEditor::new();
@@ -113,7 +116,7 @@ mod integration_tests {
 
     #[test]
     fn test_animation_editor_workflow() {
-        use crate::tools::dcc::{DCCAnimationEditor, AnimatedValue};
+        use crate::tools::dcc::{AnimatedValue, DCCAnimationEditor};
 
         let mut editor = DCCAnimationEditor::new();
 
@@ -171,7 +174,7 @@ mod integration_tests {
 
     #[test]
     fn test_script_generation() {
-        use crate::tools::dcc::{ScriptGenerator, ScriptLanguage, EditorOperation};
+        use crate::tools::dcc::{EditorOperation, ScriptGenerator, ScriptLanguage};
         use glam::Mat4;
 
         let mut generator = ScriptGenerator::new();

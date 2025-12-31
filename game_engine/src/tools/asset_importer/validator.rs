@@ -190,7 +190,8 @@ impl AssetValidator {
             .map(|issue| match issue {
                 ValidationIssue::MissingTexture => FixSuggestion {
                     action: "Add default texture".to_string(),
-                    description: "Add a default white texture to missing material slots".to_string(),
+                    description: "Add a default white texture to missing material slots"
+                        .to_string(),
                     automatic: true,
                 },
                 ValidationIssue::MissingNormals => FixSuggestion {
@@ -205,17 +206,21 @@ impl AssetValidator {
                 },
                 ValidationIssue::NonPowerOfTwo => FixSuggestion {
                     action: "Resize texture".to_string(),
-                    description: "Resize texture to power of two dimensions for better GPU compatibility".to_string(),
+                    description:
+                        "Resize texture to power of two dimensions for better GPU compatibility"
+                            .to_string(),
                     automatic: true,
                 },
                 ValidationIssue::MissingMaterials => FixSuggestion {
                     action: "Create default material".to_string(),
-                    description: "Create a default white material for meshes without materials".to_string(),
+                    description: "Create a default white material for meshes without materials"
+                        .to_string(),
                     automatic: true,
                 },
                 ValidationIssue::InvalidNormals => FixSuggestion {
                     action: "Recalculate normals".to_string(),
-                    description: "Recalculate face and vertex normals with proper smoothing".to_string(),
+                    description: "Recalculate face and vertex normals with proper smoothing"
+                        .to_string(),
                     automatic: true,
                 },
                 _ => FixSuggestion {

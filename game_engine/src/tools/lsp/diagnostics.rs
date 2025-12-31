@@ -4,9 +4,9 @@
 
 use tower_lsp::lsp_types::Diagnostic;
 use tower_lsp::lsp_types::DiagnosticSeverity;
+use tower_lsp::lsp_types::NumberOrString;
 use tower_lsp::lsp_types::Position;
 use tower_lsp::lsp_types::Range;
-use tower_lsp::lsp_types::NumberOrString;
 
 /// Diagnostic provider
 pub struct DiagnosticProvider {
@@ -33,7 +33,13 @@ impl DiagnosticProvider {
     }
 
     /// Analyze a single line
-    async fn analyze_line(&self, line: &str, line_idx: usize, _uri: &str, diagnostics: &mut Vec<Diagnostic>) {
+    async fn analyze_line(
+        &self,
+        line: &str,
+        line_idx: usize,
+        _uri: &str,
+        diagnostics: &mut Vec<Diagnostic>,
+    ) {
         // Check for unknown components in queries
         if let Some(query_start) = line.find("Query<") {
             let query_content = &line[query_start..];
@@ -47,7 +53,10 @@ impl DiagnosticProvider {
                         diagnostics.push(Diagnostic {
                             range: Range {
                                 start: Position::new(line_idx as u32, query_start as u32),
-                                end: Position::new(line_idx as u32, (query_start + query_end) as u32),
+                                end: Position::new(
+                                    line_idx as u32,
+                                    (query_start + query_end) as u32,
+                                ),
                             },
                             severity: Some(DiagnosticSeverity::ERROR),
                             code: Some(NumberOrString::String("unknown-component".to_string())),
@@ -125,7 +134,9 @@ impl DiagnosticProvider {
                     end: Position::new(line_idx as u32, line.len() as u32),
                 },
                 severity: Some(DiagnosticSeverity::WARNING),
-                code: Some(NumberOrString::String("mutable-resource-warning".to_string())),
+                code: Some(NumberOrString::String(
+                    "mutable-resource-warning".to_string(),
+                )),
                 source: Some("game-engine-lsp".to_string()),
                 message: "Using ResMut - ensure this resource is meant to be mutated".to_string(),
                 related_information: None,
@@ -176,10 +187,13 @@ mod tests {
         let diagnostics = provider.analyze(code, "test.rs").await;
 
         // Should not have errors for valid component
-        assert!(diagnostics
-            .iter()
-            .filter(|d| d.severity == Some(DiagnosticSeverity::ERROR))
-            .count() == 0);
+        assert!(
+            diagnostics
+                .iter()
+                .filter(|d| d.severity == Some(DiagnosticSeverity::ERROR))
+                .count()
+                == 0
+        );
     }
 
     #[tokio::test]

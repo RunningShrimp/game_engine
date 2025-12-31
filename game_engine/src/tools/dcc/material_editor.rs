@@ -93,11 +93,26 @@ impl Default for PBRMaterialParams {
         let mut textures = HashMap::new();
         textures.insert(TextureType::Albedo, TextureSlot::new(TextureType::Albedo));
         textures.insert(TextureType::Normal, TextureSlot::new(TextureType::Normal));
-        textures.insert(TextureType::Roughness, TextureSlot::new(TextureType::Roughness));
-        textures.insert(TextureType::Metallic, TextureSlot::new(TextureType::Metallic));
-        textures.insert(TextureType::AmbientOcclusion, TextureSlot::new(TextureType::AmbientOcclusion));
-        textures.insert(TextureType::Emissive, TextureSlot::new(TextureType::Emissive));
-        textures.insert(TextureType::Clearcoat, TextureSlot::new(TextureType::Clearcoat));
+        textures.insert(
+            TextureType::Roughness,
+            TextureSlot::new(TextureType::Roughness),
+        );
+        textures.insert(
+            TextureType::Metallic,
+            TextureSlot::new(TextureType::Metallic),
+        );
+        textures.insert(
+            TextureType::AmbientOcclusion,
+            TextureSlot::new(TextureType::AmbientOcclusion),
+        );
+        textures.insert(
+            TextureType::Emissive,
+            TextureSlot::new(TextureType::Emissive),
+        );
+        textures.insert(
+            TextureType::Clearcoat,
+            TextureSlot::new(TextureType::Clearcoat),
+        );
 
         Self {
             albedo: Vec4::new(0.8, 0.8, 0.8, 1.0),
@@ -247,7 +262,7 @@ impl DCCMaterialEditor {
     }
 
     /// 显示UI
-    
+
     pub fn show_ui(&mut self, ctx: &egui::Context) {
         egui::Window::new("Material Editor")
             .default_size([400.0, 600.0])
@@ -257,7 +272,7 @@ impl DCCMaterialEditor {
     }
 
     /// 显示编辑器UI
-    
+
     fn show_editor_ui(&mut self, ui: &mut egui::Ui) {
         // 材质列表
         ui.horizontal(|ui| {
@@ -272,10 +287,7 @@ impl DCCMaterialEditor {
         let mut selected_to_remove = None;
         for (i, name) in self.material_names.iter().enumerate() {
             ui.horizontal(|ui| {
-                if ui
-                    .selectable_label(self.selected_material == Some(i), name)
-                    .clicked()
-                {
+                if ui.selectable_label(self.selected_material == Some(i), name).clicked() {
                     self.selected_material = Some(i);
                 }
 
@@ -314,7 +326,7 @@ impl DCCMaterialEditor {
     }
 
     /// 显示PBR参数
-    
+
     fn show_pbr_params(&mut self, ui: &mut egui::Ui, material: &mut PBRMaterialParams) {
         ui.label("PBR Parameters:");
 
@@ -336,9 +348,7 @@ impl DCCMaterialEditor {
         ui.add(egui::Slider::new(&mut material.metallic, 0.0..=1.0).text("Metallic"));
 
         // 粗糙度
-        ui.add(
-            egui::Slider::new(&mut material.roughness, 0.0..=1.0).text("Roughness"),
-        );
+        ui.add(egui::Slider::new(&mut material.roughness, 0.0..=1.0).text("Roughness"));
 
         // 环境光遮蔽
         ui.add(egui::Slider::new(&mut material.ao, 0.0..=1.0).text("AO"));
@@ -346,22 +356,21 @@ impl DCCMaterialEditor {
         // 发光颜色
         ui.horizontal(|ui| {
             ui.label("Emissive:");
-            let mut color = [material.emissive.x, material.emissive.y, material.emissive.z];
+            let mut color = [
+                material.emissive.x,
+                material.emissive.y,
+                material.emissive.z,
+            ];
             if ui.color_edit_button_rgb(&mut color).changed() {
                 material.emissive = Vec3::new(color[0], color[1], color[2]);
             }
         });
 
         // 法线强度
-        ui.add(
-            egui::Slider::new(&mut material.normal_strength, 0.0..=2.0)
-                .text("Normal Strength"),
-        );
+        ui.add(egui::Slider::new(&mut material.normal_strength, 0.0..=2.0).text("Normal Strength"));
 
         // 清漆
-        ui.add(
-            egui::Slider::new(&mut material.clearcoat, 0.0..=1.0).text("Clearcoat"),
-        );
+        ui.add(egui::Slider::new(&mut material.clearcoat, 0.0..=1.0).text("Clearcoat"));
 
         // 清漆粗糙度
         ui.add(
@@ -371,7 +380,7 @@ impl DCCMaterialEditor {
     }
 
     /// 显示纹理槽
-    
+
     fn show_texture_slots(&mut self, ui: &mut egui::Ui, material: &mut PBRMaterialParams) {
         ui.label("Textures:");
 
@@ -406,9 +415,7 @@ impl DCCMaterialEditor {
                         ui.separator();
                         ui.add(egui::Slider::new(&mut slot.scale, 0.1..=10.0).text("Scale"));
                         ui.separator();
-                        ui.add(
-                            egui::Slider::new(&mut slot.rotation, 0.0..=360.0).text("Rotation"),
-                        );
+                        ui.add(egui::Slider::new(&mut slot.rotation, 0.0..=360.0).text("Rotation"));
                     }
                 });
             }
@@ -416,7 +423,7 @@ impl DCCMaterialEditor {
     }
 
     /// 显示预览设置
-    
+
     fn show_preview_settings(&mut self, ui: &mut egui::Ui) {
         ui.label("Preview Settings:");
 
@@ -475,7 +482,7 @@ impl DCCMaterialEditor {
     }
 
     /// 显示预览窗口
-    
+
     fn show_preview_window(&mut self, ui: &mut egui::Ui) {
         let desired_size = ui.available_size();
         let response = ui.allocate_response(desired_size, egui::Sense::click_and_drag());
