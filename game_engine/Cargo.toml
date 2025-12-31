@@ -76,6 +76,9 @@ uuid.workspace = true
 # GLTF
 gltf = { version = "1.4.1", optional = true }
 
+# FBX
+fbxcel = { version = "0.9", optional = true, features = ["tree"] }
+
 # XR
 openxr = "0.20.0"
 
@@ -196,7 +199,7 @@ gltf = ["dep:gltf"]
 ## ```bash
 ## cargo build --features fbx
 ## ```
-fbx = []
+fbx = ["fbxcel"]
 
 ## 启用OBJ模型加载支持
 ##
