@@ -682,7 +682,9 @@ fn create_coroutine_waker(id: CoroutineId, executor_ref: ExecutorRef) -> Waker {
     }
 
     unsafe fn drop_waker(data: *const ()) {
-        let _ = Arc::from_raw(data as *const WakerData);
+        unsafe {
+            let _ = Arc::from_raw(data as *const WakerData);
+        }
     }
 
     let raw_waker = RawWaker::new(Arc::into_raw(data) as *const (), &VTABLE);

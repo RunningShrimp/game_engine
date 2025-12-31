@@ -74,6 +74,9 @@ pub mod regression_detector;
 // 性能报告生成器
 pub mod report_generator;
 
+// 统一剖析接口
+pub mod unified_profiler;
+
 // 重新导出公共API
 pub use alerting::*;
 pub use collector::{HighPrecisionTimer, MetricCollector, *};
@@ -120,6 +123,9 @@ pub use report_generator::{
     ChartType, DataPoint, MetricDetails, PerformanceReport, PerformanceReportGenerator,
     Recommendation, ReportSummary, ReportTemplate, Visualization,
 };
+
+// 重新导出统一剖析接口
+pub use unified_profiler::*;
 
 /// 性能监控版本
 pub const PROFILING_VERSION: &str = "1.0.0";

@@ -389,6 +389,8 @@ cargo run --features tracy
 
 - **Issues**: [GitHub Issues](../../issues)
 - **Discussions**: [GitHub Discussions](../../discussions)
+- **Discord**: [加入我们的Discord社区](https://discord.gg/gameengine)
+- **Stack Overflow**: 使用标签 `rust-gameengine`
 
 ---
 
@@ -398,4 +400,47 @@ cargo run --features tracy
 
 ---
 
+## 🌟 社区资源
+
+### 获取帮助
+
+1. **Discord社区** - 实时讨论和帮助
+2. **GitHub Discussions** - 技术讨论和问答
+3. **Stack Overflow** - 标签: `rust-gameengine`
+4. **文档** - [docs.gameengine.dev](https://docs.gameengine.dev)
+
+### 贡献者认可
+
+我们会在以下地方认可贡献者:
+- README.md 贡献者列表
+- Release Notes 中特别感谢
+- Discord @contributor 角色
+- 年度贡献者报告
+
+---
+
+## 🎯 专项贡献计划
+
+### 性能优化专项
+
+- **目标**: 提升引擎性能
+- **奖励**: @performance-badge 角色
+- **资源**: `#performance` 频道
+
+### 文档改进专项
+
+- **目标**: 完善文档和教程
+- **奖励**: @documenter 角色
+- **资源**: `#docs` 频道
+
+### 示例代码专项
+
+- **目标**: 创建高质量示例
+- **奖励**: @example-creator 角色
+- **资源**: `#examples` 频道
+
+---
+
 **感谢您的贡献！** 🙏
+
+我们重视每一个贡献,无论是代码、文档、Bug报告还是仅仅是提出建议。一起让这个游戏引擎变得更好！

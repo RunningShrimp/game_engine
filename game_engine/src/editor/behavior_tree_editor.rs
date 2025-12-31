@@ -18,16 +18,101 @@
 //! editor.render(&mut ui);
 //! ```
 
-#[cfg(feature = "ai-integration")]
-use crate::ai::decision_tree_editor::{
-    DecisionNodeData, DecisionNodeType, DecisionTreeEditor, DecisionTreeNode, NodeUpdates,
-};
 use glam::Vec2;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-/// 行为树节点类型（与决策树节点类型对应）
-pub type BehaviorNodeType = DecisionNodeType;
+/// 行为树节点类型
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum BehaviorNodeType {
+    /// 序列节点
+    Sequence,
+    /// 选择节点
+    Selector,
+    /// 并行节点
+    Parallel,
+    /// 条件节点
+    Condition,
+    /// 动作节点
+    Action,
+    /// 装饰器节点
+    Decorator,
+}
+
+/// 节点数据
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NodeData {
+    /// 节点参数
+    pub parameters: HashMap<String, String>,
+    /// 节点条件
+    pub condition: Option<String>,
+    /// 节点动作
+    pub action: Option<String>,
+}
+
+impl Default for NodeData {
+    fn default() -> Self {
+        Self {
+            parameters: HashMap::new(),
+            condition: None,
+            action: None,
+        }
+    }
+}
+
+/// 决策树节点（简化版）
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DecisionTreeNode {
+    pub id: u64,
+    pub node_type: BehaviorNodeType,
+    pub name: String,
+    pub position: (f32, f32),
+    pub children: Vec<u64>,
+    pub data: NodeData,
+}
+
+/// 决策树编辑器（简化版）
+#[derive(Debug, Default)]
+pub struct DecisionTreeEditor {
+    nodes: HashMap<u64, DecisionTreeNode>,
+    next_id: u64,
+}
+
+impl DecisionTreeEditor {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn add_node(&mut self, node: DecisionTreeNode) {
+        self.nodes.insert(node.id, node);
+    }
+
+    pub fn get_node(&self, id: u64) -> Option<&DecisionTreeNode> {
+        self.nodes.get(&id)
+    }
+
+    pub fn update_node(&mut self, id: u64, updates: NodeUpdates) {
+        if let Some(node) = self.nodes.get_mut(&id) {
+            if let Some(name) = updates.name {
+                node.name = name;
+            }
+            if let Some(position) = updates.position {
+                node.position = position;
+            }
+            if let Some(data) = updates.data {
+                node.data = data;
+            }
+        }
+    }
+}
+
+/// 节点更新
+#[derive(Debug, Default)]
+pub struct NodeUpdates {
+    pub name: Option<String>,
+    pub position: Option<(f32, f32)>,
+    pub data: Option<NodeData>,
+}
 
 /// 节点执行状态（用于可视化）
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -62,7 +147,7 @@ pub struct VisualBehaviorNode {
     /// 是否选中
     pub selected: bool,
     /// 节点数据
-    pub data: DecisionNodeData,
+    pub data: NodeData,
 }
 
 impl VisualBehaviorNode {
@@ -99,6 +184,7 @@ impl VisualBehaviorNode {
                 BehaviorNodeType::Selector | BehaviorNodeType::Sequence => {
                     egui::Color32::from_rgb(100, 150, 255)
                 }
+                BehaviorNodeType::Parallel => egui::Color32::from_rgb(150, 100, 200),
                 BehaviorNodeType::Decorator => egui::Color32::from_rgb(150, 100, 255),
                 BehaviorNodeType::Condition => egui::Color32::from_rgb(255, 150, 100),
                 BehaviorNodeType::Action => egui::Color32::from_rgb(100, 255, 150),
@@ -111,6 +197,7 @@ impl VisualBehaviorNode {
         match self.node_type {
             BehaviorNodeType::Selector => "?",
             BehaviorNodeType::Sequence => "→",
+            BehaviorNodeType::Parallel => "∥",
             BehaviorNodeType::Decorator => "◇",
             BehaviorNodeType::Condition => "?",
             BehaviorNodeType::Action => "▶",
