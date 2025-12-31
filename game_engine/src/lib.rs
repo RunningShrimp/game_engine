@@ -131,6 +131,7 @@ pub mod engine;
 pub mod error;
 pub mod examples;
 pub mod network;
+pub mod particles;
 pub mod performance;
 pub mod physics;
 pub mod platform;

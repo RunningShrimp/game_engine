@@ -36,9 +36,9 @@
 //!
 //! ## 模块结构
 //!
-//! - [`error`]: 验证错误类型
-//! - [`validators`]: 内置验证器
-//! - [`trait`]: `Validate` trait定义
+//! - [`error`][]: 验证错误类型
+//! - [`validators`][]: 内置验证器
+//! - [`trait`][]: `Validate` trait定义
 
 pub mod error;
 pub mod numeric;

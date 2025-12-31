@@ -233,15 +233,23 @@ pub struct NetworkQuality {
     pub jitter_ms: u64,
 }
 
-impl NetworkQuality {
-    /// 创建默认网络质量
-    pub fn default() -> Self {
+impl Default for NetworkQuality {
+    fn default() -> Self {
         Self {
             latency_ms: 50,
             packet_loss: 0.01,
             bandwidth_bps: 1_000_000, // 1 Mbps
             jitter_ms: 10,
         }
+    }
+}
+
+impl NetworkQuality {
+    /// 创建默认网络质量
+    #[allow(clippy::should_implement_trait)]
+    #[deprecated(since = "0.6.4", note = "请使用Default trait代替")]
+    pub fn default() -> Self {
+        <Self as Default>::default()
     }
 
     /// 获取网络质量评分 (0.0-1.0，越高越好)

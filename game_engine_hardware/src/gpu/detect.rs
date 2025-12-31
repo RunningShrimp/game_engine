@@ -108,7 +108,8 @@ fn detect_gpu_wgpu() -> Option<GpuInfo> {
 
     let mut info = None;
 
-    for adapter in instance.enumerate_adapters(wgpu::Backends::all()) {
+    let adapters = instance.enumerate_adapters(wgpu::Backends::all());
+    if let Some(adapter) = adapters.first() {
         let adapter_info = adapter.get_info();
 
         // `AdapterInfo.vendor` is a numeric vendor ID; use the adapter name string for text matching
@@ -150,8 +151,6 @@ fn detect_gpu_wgpu() -> Option<GpuInfo> {
             supports_variable_rate_shading: true,
             compute_units: compute_units_count(&adapter.limits()),
         });
-
-        break;
     }
 
     info

@@ -134,6 +134,12 @@ pub struct AssetContainer<T> {
     pub state: LockType<LoadState<T>>,
 }
 
+impl<T> Default for AssetContainer<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<T> AssetContainer<T> {
     /// 创建新的资源容器（初始状态为Loading）
     #[inline]

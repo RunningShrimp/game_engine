@@ -76,6 +76,8 @@ pub mod parallel;
 pub mod player;
 /// 动画服务 - 管理所有动画资源的服务
 pub mod service;
+/// SIMD蒙皮 - SIMD加速的骨骼蒙皮批量处理
+pub mod simd_skinning;
 /// 骨骼系统 - 用于骨骼动画的骨骼和骨骼变换
 pub mod skeleton;
 /// 皮肤网格 - 支持骨骼蒙皮的网格系统
@@ -89,6 +91,11 @@ pub use player::{
 pub use service::AnimationService;
 pub use skeleton::{Bone, BoneTransform, Skeleton, SkeletonPose};
 pub use skinned_mesh::{SkinnedMesh, SkinnedMeshPipeline, SkinnedVertex3D};
+
+// SIMD蒙皮导出
+pub use simd_skinning::{BoneTransforms, SimdSkinningProcessor};
+#[cfg(feature = "simd")]
+pub use simd_skinning::{SimdBoneInfluence, SimdSkinnedVertex, simd_linear_blend_skinning_system};
 
 // GLTF 骨骼加载（需要启用 gltf feature）
 #[cfg(feature = "gltf")]

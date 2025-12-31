@@ -370,7 +370,7 @@ wasm = []
 ## cargo build --no-default-features --features gltf,secure_key_exchange,physics,parallel,dashmap
 ## ```
 ##
-default = ["gltf", "secure_key_exchange", "physics", "parallel", "dashmap", "message-optimization"]
+default = ["gltf", "secure_key_exchange", "physics", "parallel", "dashmap", "message-optimization", "simd"]
 
 # ============================================================================
 # 性能优化特性 (Performance Optimization Features)

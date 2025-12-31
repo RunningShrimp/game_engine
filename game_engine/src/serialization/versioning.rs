@@ -208,22 +208,14 @@ impl SemanticVersion {
     /// 从字符串解析
     ///
     /// 格式: "major.minor.patch"
+    ///
+    /// # Deprecated
+    ///
+    /// 请使用 `parse()` 方法或 `FromStr` trait 代替。
+    #[allow(clippy::should_implement_trait)]
+    #[deprecated(since = "0.6.4", note = "请使用 `parse()` 方法代替")]
     pub fn from_str(s: &str) -> Result<Self, String> {
-        let parts: Vec<&str> = s.split('.').collect();
-        if parts.len() != 3 {
-            return Err(format!("Invalid semantic version: {s}"));
-        }
-
-        let major = parts[0].parse().map_err(|_| format!("Invalid major version: {}", parts[0]))?;
-        let minor = parts[1].parse().map_err(|_| format!("Invalid minor version: {}", parts[1]))?;
-        let patch = parts[2].parse().map_err(|_| format!("Invalid patch version: {}", parts[2]))?;
-
-        Ok(Self::new(major, minor, patch))
-    }
-
-    /// 转换为字符串
-    pub fn to_string(&self) -> String {
-        format!("{}.{}.{}", self.major, self.minor, self.patch)
+        s.parse().map_err(|e: <Self as std::str::FromStr>::Err| e.to_string())
     }
 
     /// 检查兼容性（major版本必须相同）
@@ -244,6 +236,23 @@ impl SemanticVersion {
     /// 增加补丁版本号
     pub fn bump_patch(&self) -> Self {
         Self::new(self.major, self.minor, self.patch + 1)
+    }
+}
+
+impl std::str::FromStr for SemanticVersion {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let parts: Vec<&str> = s.split('.').collect();
+        if parts.len() != 3 {
+            return Err(format!("Invalid semantic version: {s}"));
+        }
+
+        let major = parts[0].parse().map_err(|_| format!("Invalid major version: {}", parts[0]))?;
+        let minor = parts[1].parse().map_err(|_| format!("Invalid minor version: {}", parts[1]))?;
+        let patch = parts[2].parse().map_err(|_| format!("Invalid patch version: {}", parts[2]))?;
+
+        Ok(Self::new(major, minor, patch))
     }
 }
 

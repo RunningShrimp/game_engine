@@ -8,6 +8,9 @@ use std::{
 use tokio::sync::mpsc;
 use tokio::sync::oneshot;
 
+// 重新导出核心类型（向后兼容）
+pub use crate::resources::core::{AssetContainer, Handle, LoadState};
+
 use super::asset_loader_trait::{AssetLoader, AssetLoaderRegistry};
 use super::atlas::Atlas;
 use crate::render::wgpu_utils::WgpuRenderer;
@@ -22,98 +25,10 @@ pub use super::gltf_assets::{GltfAssetLoader, import_gltf_to_world};
 pub use super::gltf_loader::GltfScene;
 
 // --- Handle System ---
-
-#[derive(Clone, Debug)]
-pub enum LoadState<T> {
-    Loading,
-    Loaded(T),
-    Failed(String),
-}
-
-#[derive(Debug)]
-pub struct AssetContainer<T> {
-    pub state: RwLock<LoadState<T>>,
-}
-
-#[derive(Clone, Component, Debug)]
-pub struct Handle<T: 'static + Send + Sync> {
-    pub container: Arc<AssetContainer<T>>,
-}
+// LoadState, AssetContainer, Handle 现在从 core.rs 导入
+// 下面是 Handle 的扩展方法实现
 
 impl<T: 'static + Send + Sync> Handle<T> {
-    pub fn new_loading() -> Self {
-        Self {
-            container: Arc::new(AssetContainer {
-                state: RwLock::new(LoadState::Loading),
-            }),
-        }
-    }
-
-    /// Create a Handle from an Arc<AssetContainer> (for internal use)
-    fn from_container(container: Arc<AssetContainer<T>>) -> Self {
-        Self { container }
-    }
-
-    /// 获取资源（优化版本：如果T是Arc<_>，避免额外克隆）
-    ///
-    /// 优化：当T = Arc<U>时，直接克隆Arc指针而不是克隆内部数据
-    /// 这对于Handle<Arc<GpuMesh>>等常见用法可以显著减少开销
-    pub fn get(&self) -> Option<T>
-    where
-        T: Clone,
-    {
-        self.container
-            .state
-            .read()
-            .ok() // ✅ 处理锁中毒情况
-            .and_then(|state| match &*state {
-                LoadState::Loaded(v) => {
-                    // 如果T已经是Arc<_>，克隆Arc只是增加引用计数，非常快
-                    // 这比克隆内部数据（如GpuMesh）要快得多
-                    Some(v.clone())
-                }
-                _ => None,
-            })
-    }
-
-    pub fn is_loaded(&self) -> bool {
-        self.container
-            .state
-            .read()
-            .ok() // ✅ 处理锁中毒情况
-            .map(|state| matches!(*state, LoadState::Loaded(_)))
-            .unwrap_or(false) // ✅ 锁中毒时返回false
-    }
-
-    // Removed get_ref method as it couldn't be implemented safely due to lifetime issues
-
-    /// 非阻塞方式获取资源，立即返回结果
-    pub fn get_non_blocking(&self) -> Option<T>
-    where
-        T: Clone,
-    {
-        self.container
-            .state
-            .try_read()
-            .ok() // ✅ 处理锁中毒情况
-            .and_then(|state| match &*state {
-                LoadState::Loaded(v) => Some(v.clone()),
-                _ => None,
-            })
-    }
-
-    /// 非阻塞方式获取加载状态
-    pub fn get_state_non_blocking(&self) -> Option<LoadState<T>>
-    where
-        T: Clone,
-    {
-        self.container.state.try_read().ok().map(|state| match &*state {
-            LoadState::Loaded(v) => LoadState::Loaded(v.clone()),
-            LoadState::Failed(e) => LoadState::Failed(e.clone()),
-            LoadState::Loading => LoadState::Loading,
-        })
-    }
-
     /// 带超时的资源获取，在指定时间内尝试获取资源
     pub fn get_with_timeout(&self, timeout: Duration) -> Option<T>
     where
@@ -151,33 +66,15 @@ impl<T: 'static + Send + Sync> Handle<T> {
         T: Clone,
     {
         loop {
-            match self.container.state.read() {
-                Ok(state) => match &*state {
-                    LoadState::Loaded(v) => return Some(v.clone()),
-                    LoadState::Failed(_) => return None,
-                    LoadState::Loading => {} // 继续等待
-                },
-                Err(_) => {
-                    // 锁中毒，返回None但不panic
-                    return None;
-                }
+            let state = self.container.state.read();
+            match &*state {
+                LoadState::Loaded(v) => return Some(v.clone()),
+                LoadState::Failed(_) => return None,
+                LoadState::Loading => {} // 继续等待
             }
             // 短暂休眠避免CPU占用过高
             std::thread::sleep(Duration::from_millis(1));
         }
-    }
-
-    /// 获取资源状态信息（安全的元数据获取）
-    pub fn get_status(&self) -> Result<String, &'static str> {
-        self.container
-            .state
-            .read()
-            .map_err(|_| "Lock poisoned")
-            .map(|state| match &*state {
-                LoadState::Loading => "loading".to_string(),
-                LoadState::Loaded(_) => "loaded".to_string(),
-                LoadState::Failed(err) => format!("failed: {err}"),
-            })
     }
 }
 
@@ -588,30 +485,34 @@ impl AssetServer {
                 ) => {
                     let ms = std::time::Instant::now().duration_since(start).as_secs_f64() * 1000.0;
                     if let Some(tex_id) = renderer.load_texture_from_image(img.clone(), is_linear) {
-                        let mut state = handle.state.write().unwrap();
-                        *state = LoadState::Loaded(tex_id);
+                        {let mut state = handle.state.write() {
+                            *state = LoadState::Loaded(tex_id);
+                        }
 
                         self.texture_count.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-                        let mut stats = self.stats.write().unwrap();
-                        stats.loaded_textures += 1;
-                        stats.total_memory_bytes += img.len() * 4;
-                        let total_loads = stats.loaded_textures + stats.failed_textures;
-                        if total_loads > 0 {
-                            stats.average_load_time_ms =
-                                (stats.average_load_time_ms * (total_loads - 1) as f64 + ms)
-                                    / total_loads as f64;
-                        } else {
-                            stats.average_load_time_ms = ms;
+                        if let Ok(mut stats) = self.stats.write() {
+                            stats.loaded_textures += 1;
+                            stats.total_memory_bytes += img.len() * 4;
+                            let total_loads = stats.loaded_textures + stats.failed_textures;
+                            if total_loads > 0 {
+                                stats.average_load_time_ms =
+                                    (stats.average_load_time_ms * (total_loads - 1) as f64 + ms)
+                                        / total_loads as f64;
+                            } else {
+                                stats.average_load_time_ms = ms;
+                            }
                         }
 
                         let handle = Handle::from_container(handle.clone());
                         events.push(AssetEvent::TextureLoaded(handle, ms as f32));
                     } else {
-                        let mut state = handle.state.write().unwrap();
-                        *state = LoadState::Failed("Failed to create texture".to_string());
+                        {let mut state = handle.state.write() {
+                            *state = LoadState::Failed("Failed to create texture".to_string());
+                        }
 
-                        let mut stats = self.stats.write().unwrap();
-                        stats.failed_textures += 1;
+                        if let Ok(mut stats) = self.stats.write() {
+                            stats.failed_textures += 1;
+                        }
 
                         let handle = Handle::from_container(handle.clone());
                         events.push(AssetEvent::TextureFailed(
@@ -625,21 +526,25 @@ impl AssetServer {
                     let ms = std::time::Instant::now().duration_since(start).as_secs_f64() * 1000.0;
                     if let Ok(json_str) = String::from_utf8(bytes) {
                         if let Some(atlas) = Atlas::from_json(&json_str) {
-                            let mut state = handle.state.write().unwrap();
-                            *state = LoadState::Loaded(atlas);
+                            {let mut state = handle.state.write() {
+                                *state = LoadState::Loaded(atlas);
+                            }
 
-                            let mut stats = self.stats.write().unwrap();
-                            stats.loaded_atlases += 1;
-                            stats.total_memory_bytes += bytes_len;
+                            if let Ok(mut stats) = self.stats.write() {
+                                stats.loaded_atlases += 1;
+                                stats.total_memory_bytes += bytes_len;
+                            }
 
                             let handle = Handle::from_container(handle.clone());
                             events.push(AssetEvent::AtlasLoaded(handle, ms as f32));
                         } else {
-                            let mut state = handle.state.write().unwrap();
-                            *state = LoadState::Failed("Invalid Atlas JSON".to_string());
+                            {let mut state = handle.state.write() {
+                                *state = LoadState::Failed("Invalid Atlas JSON".to_string());
+                            }
 
-                            let mut stats = self.stats.write().unwrap();
-                            stats.failed_atlases += 1;
+                            if let Ok(mut stats) = self.stats.write() {
+                                stats.failed_atlases += 1;
+                            }
 
                             let handle = Handle::from_container(handle.clone());
                             events.push(AssetEvent::AtlasFailed(
@@ -648,22 +553,22 @@ impl AssetServer {
                             ));
                         }
                     } else {
-                        let mut state = handle.state.write().unwrap();
-                        *state = LoadState::Failed("Invalid UTF-8".to_string());
-
+                        {let mut state = handle.state.write() {
+                            *state = LoadState::Failed("Invalid UTF-8".to_string());
+                        }
                         let handle = Handle::from_container(handle.clone());
                         events.push(AssetEvent::AtlasFailed(handle, "Invalid UTF-8".to_string()));
                     }
                 }
                 (AssetTask::Generic { handle, start, .. }, Ok(AssetResult::Custom(data))) => {
                     let ms = std::time::Instant::now().duration_since(start).as_secs_f64() * 1000.0;
-                    {
-                        let mut state = handle.state.write().unwrap();
+                    {let mut state = handle.state.write() {
                         *state = LoadState::Loaded(data);
                     }
 
-                    let mut stats = self.stats.write().unwrap();
-                    stats.loaded_custom += 1;
+                    if let Ok(mut stats) = self.stats.write() {
+                        stats.loaded_custom += 1;
+                    }
 
                     events.push(AssetEvent::CustomLoaded {
                         type_name: "Custom".to_string(),
@@ -672,28 +577,33 @@ impl AssetServer {
                     });
                 }
                 (AssetTask::Texture { handle, .. }, Err(e)) => {
-                    let mut state = handle.state.write().unwrap();
-                    *state = LoadState::Failed(e.clone());
+                    {let mut state = handle.state.write() {
+                        *state = LoadState::Failed(e.clone());
+                    }
 
-                    let mut stats = self.stats.write().unwrap();
-                    stats.failed_textures += 1;
+                    if let Ok(mut stats) = self.stats.write() {
+                        stats.failed_textures += 1;
+                    }
 
                     let handle = Handle::from_container(handle.clone());
                     events.push(AssetEvent::TextureFailed(handle, e));
                 }
                 (AssetTask::Atlas { handle, .. }, Err(e)) => {
-                    let mut state = handle.state.write().unwrap();
-                    *state = LoadState::Failed(e.clone());
+                    {let mut state = handle.state.write() {
+                        *state = LoadState::Failed(e.clone());
+                    }
 
-                    let mut stats = self.stats.write().unwrap();
-                    stats.failed_atlases += 1;
+                    if let Ok(mut stats) = self.stats.write() {
+                        stats.failed_atlases += 1;
+                    }
 
                     let handle = Handle::from_container(handle.clone());
                     events.push(AssetEvent::AtlasFailed(handle, e));
                 }
                 (AssetTask::Generic { .. }, Err(e)) => {
-                    let mut stats = self.stats.write().unwrap();
-                    stats.failed_custom += 1;
+                    if let Ok(mut stats) = self.stats.write() {
+                        stats.failed_custom += 1;
+                    }
 
                     events.push(AssetEvent::CustomFailed {
                         type_name: "Custom".to_string(),
@@ -750,7 +660,7 @@ impl AssetServer {
     ///
     /// 资源统计信息的副本
     pub fn get_stats(&self) -> AssetStats {
-        self.stats.read().unwrap().clone()
+        self.stats.read().map(|s| s.clone()).unwrap_or_default()
     }
 
     /// 重置统计信息
@@ -758,14 +668,16 @@ impl AssetServer {
     /// 将所有统计计数器重置为0。
     pub fn reset_stats(&self) {
         self.texture_count.store(0, std::sync::atomic::Ordering::Relaxed);
-        let mut stats = self.stats.write().unwrap();
-        *stats = AssetStats::default();
+        if let Ok(mut stats) = self.stats.write() {
+            *stats = AssetStats::default();
+        }
     }
 
     /// Register custom loader (extensibility)
     pub fn register_loader(&self, loader: Box<dyn AssetLoader>) {
-        let mut registry = self.loader_registry.write().unwrap();
-        registry.register(loader);
+        if let Ok(mut registry) = self.loader_registry.write() {
+            registry.register(loader);
+        }
     }
 }
 

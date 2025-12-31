@@ -36,6 +36,27 @@ pub fn create_fixed_schedule() -> Schedule {
         }
     });
 
+    // 添加SIMD优化的物理积分系统（使用wrapper适配Bevy ECS系统）
+    #[cfg(feature = "simd")]
+    {
+        schedule.add_system(|world| {
+            // 使用Bevy ECS的系统调用方式
+            use crate::physics::simd_integration::{
+                SimdPhysicsState, simd_physics_integrate_system,
+            };
+            use bevy_ecs::prelude::*;
+
+            // 检查是否有必需的资源
+            let has_resource = world.contains_resource::<SimdPhysicsState>();
+
+            if has_resource {
+                // 创建系统并运行（Bevy ECS会自动注入参数）
+                let mut system = IntoSystem::into_system(simd_physics_integrate_system);
+                system.run((), world);
+            }
+        });
+    }
+
     schedule
 }
 

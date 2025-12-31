@@ -150,6 +150,12 @@ pub struct SmartParallelScheduler {
     stats: SchedulerStats,
 }
 
+impl Default for SmartParallelScheduler {
+    fn default() -> Self {
+        Self::new(ParallelSchedulerConfig::default())
+    }
+}
+
 /// 调度器统计信息
 #[derive(Debug, Default, Clone)]
 pub struct SchedulerStats {
@@ -190,8 +196,10 @@ impl SmartParallelScheduler {
     }
 
     /// 使用默认配置创建
+    #[allow(clippy::should_implement_trait)]
+    #[deprecated(since = "0.6.4", note = "请使用Default trait代替")]
     pub fn default() -> Self {
-        Self::new(ParallelSchedulerConfig::default())
+        <Self as Default>::default()
     }
 
     /// 注册系统
@@ -445,7 +453,7 @@ impl SmartParallelScheduler {
 
         // 变异系数（越小表示负载越均衡）
         let cv = std_dev / mean;
-        (1.0 / (1.0 + cv)).max(0.0).min(1.0)
+        (1.0 / (1.0 + cv)).clamp(0.0, 1.0)
     }
 }
 
@@ -457,6 +465,12 @@ pub struct WorkStealingExecutor {
     scheduler: Arc<parking_lot::Mutex<SmartParallelScheduler>>,
 }
 
+impl Default for WorkStealingExecutor {
+    fn default() -> Self {
+        Self::new(ParallelSchedulerConfig::default())
+    }
+}
+
 impl WorkStealingExecutor {
     /// 创建新的Work-stealing执行器
     pub fn new(config: ParallelSchedulerConfig) -> Self {
@@ -466,8 +480,10 @@ impl WorkStealingExecutor {
     }
 
     /// 使用默认配置创建
+    #[allow(clippy::should_implement_trait)]
+    #[deprecated(since = "0.6.4", note = "请使用Default trait代替")]
     pub fn default() -> Self {
-        Self::new(ParallelSchedulerConfig::default())
+        <Self as Default>::default()
     }
 
     /// 执行系统（使用Work-stealing）

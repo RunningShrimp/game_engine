@@ -1,11 +1,11 @@
 //  批量数据处理SIMD优化模块
-mod particle;
-mod physics;
-mod skinning;
+pub mod particle;
+pub mod physics;
+pub mod skinning;
 ///
 /// 用于渲染管线中的大批量数据处理
-mod transform;
-mod transform_update;
+pub mod transform;
+pub mod transform_update;
 
 pub use particle::*;
 pub use physics::*;

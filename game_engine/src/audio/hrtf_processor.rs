@@ -194,8 +194,10 @@ impl HrtfProcessor {
     }
 
     /// 检查是否启用
+    ///
+    /// 注意: 简化版总是启用，不考虑convolver状态
     pub fn is_enabled(&self) -> bool {
-        self.convolver.is_some() || true // 简化版总是启用
+        true // 简化版总是启用
     }
 }
 

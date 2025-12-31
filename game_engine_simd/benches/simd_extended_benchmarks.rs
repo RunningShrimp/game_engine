@@ -3,7 +3,8 @@
 // 验证SIMD优化带来的15-25%性能提升
 use criterion::{BenchmarkId, Criterion, Throughput, black_box, criterion_group, criterion_main};
 use game_engine_simd::{
-    Mat4Simd, PhysicsIntegrator, TransformBatchUpdater, Vec3Simd, Vec4Simd, VectorOps,
+    Vec4Simd, VectorOps,
+    batch::{PhysicsIntegrator, TransformBatchUpdater},
 };
 
 // ============================================================================

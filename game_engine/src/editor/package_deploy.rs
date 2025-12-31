@@ -265,6 +265,7 @@ impl PackageDeployManager {
     }
 
     /// 递归复制目录
+    #[allow(clippy::only_used_in_recursion)]
     fn copy_dir_all(&self, src: &Path, dst: &Path) -> Result<(), String> {
         fs::create_dir_all(dst).map_err(|e| format!("Failed to create directory: {e}"))?;
 
