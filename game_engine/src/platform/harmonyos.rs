@@ -241,10 +241,7 @@ pub enum GraphicsBackend {
 #[cfg(feature = "harmonyos")]
 impl HarmonyOSGraphicsContext {
     /// 创建图形上下文
-    pub fn new(
-        window: &HarmonyOSWindow,
-        backend: GraphicsBackend,
-    ) -> Result<Self, String> {
+    pub fn new(window: &HarmonyOSWindow, backend: GraphicsBackend) -> Result<Self, String> {
         Ok(Self {
             window_handle: window.native_handle(),
             backend,
@@ -369,9 +366,7 @@ impl PermissionManager {
     }
 
     /// 请求权限
-    pub async fn request_permission(
-        permission: HarmonyOSPermission,
-    ) -> Result<bool, String> {
+    pub async fn request_permission(permission: HarmonyOSPermission) -> Result<bool, String> {
         // 注: 调用鸿蒙API请求权限
         // UIAbility::RequestPermissionsFromUser()
         Ok(true)

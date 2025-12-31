@@ -20,7 +20,7 @@ pub mod crdt;
 pub mod network;
 pub mod sync;
 
-pub use crdt::{CrdtDocument, CrdtOperation, LwwRegister, GCounter};
+pub use crdt::{CrdtDocument, CrdtOperation, GCounter, LwwRegister};
 pub use network::{CollaborationNetwork, NetworkMessage, WebSocketClient};
 pub use sync::{DocumentSync, SyncStatus};
 
@@ -207,9 +207,13 @@ impl CollaborationManager {
     }
 
     /// 加入会话
-    pub fn join_session(&mut self, session_id: SessionId, role: ParticipantRole) -> Result<(), CollaborationError> {
-        let session = self.sessions.get_mut(&session_id)
-            .ok_or(CollaborationError::SessionNotFound)?;
+    pub fn join_session(
+        &mut self,
+        session_id: SessionId,
+        role: ParticipantRole,
+    ) -> Result<(), CollaborationError> {
+        let session =
+            self.sessions.get_mut(&session_id).ok_or(CollaborationError::SessionNotFound)?;
 
         session.add_participant(self.current_user.clone(), role);
         Ok(())
@@ -217,17 +221,21 @@ impl CollaborationManager {
 
     /// 离开会话
     pub fn leave_session(&mut self, session_id: SessionId) -> Result<(), CollaborationError> {
-        let session = self.sessions.get_mut(&session_id)
-            .ok_or(CollaborationError::SessionNotFound)?;
+        let session =
+            self.sessions.get_mut(&session_id).ok_or(CollaborationError::SessionNotFound)?;
 
         session.remove_participant(&self.current_user);
         Ok(())
     }
 
     /// 应用操作
-    pub fn apply_operation(&mut self, session_id: SessionId, operation: CrdtOperation) -> Result<(), CollaborationError> {
-        let session = self.sessions.get_mut(&session_id)
-            .ok_or(CollaborationError::SessionNotFound)?;
+    pub fn apply_operation(
+        &mut self,
+        session_id: SessionId,
+        operation: CrdtOperation,
+    ) -> Result<(), CollaborationError> {
+        let session =
+            self.sessions.get_mut(&session_id).ok_or(CollaborationError::SessionNotFound)?;
 
         session.document.apply(operation);
         Ok(())
@@ -244,7 +252,11 @@ impl CollaborationManager {
     }
 
     /// 广播操作
-    pub async fn broadcast_operation(&self, session_id: SessionId, operation: CrdtOperation) -> Result<(), CollaborationError> {
+    pub async fn broadcast_operation(
+        &self,
+        session_id: SessionId,
+        operation: CrdtOperation,
+    ) -> Result<(), CollaborationError> {
         let message = NetworkMessage::Operation {
             session_id,
             user_id: self.current_user.clone(),
@@ -314,10 +326,7 @@ pub enum CollaborationEvent {
         cursor: CursorInfo,
     },
     /// 会话创建
-    SessionCreated {
-        session_id: SessionId,
-        name: String,
-    },
+    SessionCreated { session_id: SessionId, name: String },
     /// 同步状态变化
     SyncStatusChanged {
         session_id: SessionId,
@@ -379,11 +388,8 @@ mod tests {
     #[test]
     fn test_session_creation() {
         let user = UserId::new("user1".to_string(), "Alice".to_string());
-        let session = CollaborationSession::new(
-            SessionId::new(1),
-            "Test Session".to_string(),
-            user.clone(),
-        );
+        let session =
+            CollaborationSession::new(SessionId::new(1), "Test Session".to_string(), user.clone());
 
         assert_eq!(session.participants.len(), 1);
         assert_eq!(session.online_count(), 1);
@@ -394,11 +400,8 @@ mod tests {
         let user1 = UserId::new("user1".to_string(), "Alice".to_string());
         let user2 = UserId::new("user2".to_string(), "Bob".to_string());
 
-        let mut session = CollaborationSession::new(
-            SessionId::new(1),
-            "Test Session".to_string(),
-            user1,
-        );
+        let mut session =
+            CollaborationSession::new(SessionId::new(1), "Test Session".to_string(), user1);
 
         session.add_participant(user2.clone(), ParticipantRole::Editor);
         assert_eq!(session.participants.len(), 2);

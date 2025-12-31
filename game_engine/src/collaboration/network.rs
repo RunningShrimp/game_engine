@@ -2,7 +2,7 @@
 //!
 //! WebSocket通信和消息序列化。
 
-use super::{SessionId, UserId, CrdtOperation, CollaborationError};
+use super::{CollaborationError, CrdtOperation, SessionId, UserId};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -38,9 +38,7 @@ pub enum NetworkMessage {
         column: usize,
     },
     /// 心跳
-    Heartbeat {
-        user_id: UserId,
-    },
+    Heartbeat { user_id: UserId },
     /// 会话状态同步
     SessionSync {
         session_id: SessionId,
@@ -95,7 +93,9 @@ impl WebSocketClient {
     pub async fn send(&self, message: NetworkMessage) -> Result<(), CollaborationError> {
         let connected = self.connected.lock().await;
         if !*connected {
-            return Err(CollaborationError::NetworkError("Not connected".to_string()));
+            return Err(CollaborationError::NetworkError(
+                "Not connected".to_string(),
+            ));
         }
 
         // TODO: 实际发送WebSocket消息
@@ -170,7 +170,9 @@ impl CollaborationNetwork {
         if let Some(client) = &self.client {
             client.send(message).await?;
         } else {
-            return Err(CollaborationError::NetworkError("Not connected".to_string()));
+            return Err(CollaborationError::NetworkError(
+                "Not connected".to_string(),
+            ));
         }
         Ok(())
     }
@@ -180,7 +182,9 @@ impl CollaborationNetwork {
         if let Some(client) = &self.client {
             client.receive().await
         } else {
-            Err(CollaborationError::NetworkError("Not connected".to_string()))
+            Err(CollaborationError::NetworkError(
+                "Not connected".to_string(),
+            ))
         }
     }
 

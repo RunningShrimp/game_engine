@@ -160,9 +160,11 @@ impl OverdrawDetector {
             return Trend::Stable;
         }
 
-        let recent: f32 = self.history.iter().rev().take(5).sum::<f32>() / self.history.len().min(5) as f32;
-        let older: f32 = self.history.iter().take(self.history.len().saturating_sub(5))
-            .sum::<f32>() / self.history.len().saturating_sub(5).max(1) as f32;
+        let recent: f32 =
+            self.history.iter().rev().take(5).sum::<f32>() / self.history.len().min(5) as f32;
+        let older: f32 =
+            self.history.iter().take(self.history.len().saturating_sub(5)).sum::<f32>()
+                / self.history.len().saturating_sub(5).max(1) as f32;
 
         if recent > older * 1.1 {
             Trend::Worsening
@@ -264,7 +266,8 @@ impl BandwidthAnalyzer {
             };
         }
 
-        let avg_total = self.history.iter().map(|s| s.total_bytes).sum::<u64>() / self.history.len() as u64;
+        let avg_total =
+            self.history.iter().map(|s| s.total_bytes).sum::<u64>() / self.history.len() as u64;
         let peak_total = self.history.iter().map(|s| s.total_bytes).max().unwrap_or(0);
 
         let mut breakdown = BandwidthBreakdown {
@@ -298,7 +301,10 @@ impl BandwidthAnalyzer {
                 ("vertices", breakdown.vertices),
                 ("indices", breakdown.indices),
                 ("render_targets", breakdown.render_targets),
-            ].iter().max_by_key(|(_, bytes)| *bytes).map(|(name, _)| *name);
+            ]
+            .iter()
+            .max_by_key(|(_, bytes)| *bytes)
+            .map(|(name, _)| *name);
 
             bottleneck_type = Some(max_category.unwrap().to_string());
 
@@ -545,9 +551,10 @@ impl PipelineProfiler {
             ("depth", depth_changes),
             ("cull", cull_changes),
             ("topology", topo_changes),
-        ].iter()
-            .max_by_key(|(_, count)| *count)
-            .map(|(name, _)| *name);
+        ]
+        .iter()
+        .max_by_key(|(_, count)| *count)
+        .map(|(name, _)| *name);
 
         let mut recommendations = Vec::new();
 
@@ -613,7 +620,8 @@ impl RenderAnalyzer {
         let pipeline_analysis = self.pipeline_profiler.analyze(frame_count);
 
         // 综合分析
-        let bottlenecks = self.detect_render_bottlenecks(stats, &overdraw_analysis, &bandwidth_analysis);
+        let bottlenecks =
+            self.detect_render_bottlenecks(stats, &overdraw_analysis, &bandwidth_analysis);
 
         // 生成建议
         let mut recommendations = Vec::new();
@@ -654,8 +662,11 @@ impl RenderAnalyzer {
             bottlenecks.push(RenderBottleneck {
                 bottleneck_type: RenderBottleneckType::Bandwidth,
                 severity: self.bandwidth_to_severity(bandwidth.severity),
-                description: format!("{} bandwidth bottleneck: {:.2} MB/frame",
-                                    category, bandwidth.average_total as f64 / 1_000_000.0),
+                description: format!(
+                    "{} bandwidth bottleneck: {:.2} MB/frame",
+                    category,
+                    bandwidth.average_total as f64 / 1_000_000.0
+                ),
                 impact: "Memory bandwidth is limiting performance".to_string(),
             });
         }
@@ -712,9 +723,7 @@ impl RenderAnalyzer {
 
     fn deduplicate_recommendations(&self, recommendations: Vec<String>) -> Vec<String> {
         let mut seen = std::collections::HashSet::new();
-        recommendations.into_iter()
-            .filter(|r| seen.insert(r.clone()))
-            .collect()
+        recommendations.into_iter().filter(|r| seen.insert(r.clone())).collect()
     }
 
     /// 记录overdraw

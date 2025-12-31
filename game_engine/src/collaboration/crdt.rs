@@ -112,17 +112,33 @@ impl CrdtDocument {
     /// 应用操作
     pub fn apply(&mut self, operation: CrdtOperation) {
         match operation {
-            CrdtOperation::InsertText { position, text, site_id } => {
+            CrdtOperation::InsertText {
+                position,
+                text,
+                site_id,
+            } => {
                 self.insert_text(position, text, site_id);
             }
-            CrdtOperation::DeleteText { position, length, site_id } => {
+            CrdtOperation::DeleteText {
+                position,
+                length,
+                site_id,
+            } => {
                 self.delete_text(position, length, site_id);
             }
-            CrdtOperation::Update { key, value, site_id } => {
+            CrdtOperation::Update {
+                key,
+                value,
+                site_id,
+            } => {
                 let register = self.registers.entry(key).or_insert_with(LwwRegister::new);
                 register.set(value, site_id);
             }
-            CrdtOperation::Increment { key, amount, site_id } => {
+            CrdtOperation::Increment {
+                key,
+                amount,
+                site_id,
+            } => {
                 let counter = self.counters.entry(key).or_insert_with(GCounter::new);
                 counter.increment(site_id, amount);
             }
@@ -132,11 +148,14 @@ impl CrdtDocument {
     /// 获取下一个逻辑时钟
     fn get_next_clock(&self, site_id: &str) -> u64 {
         // 简化实现，实际应该追踪每个站点的时钟
-        self.text.chars.iter()
+        self.text
+            .chars
+            .iter()
             .filter(|c| c.site_id == site_id)
             .map(|c| c.clock)
             .max()
-            .unwrap_or(0) + 1
+            .unwrap_or(0)
+            + 1
     }
 }
 

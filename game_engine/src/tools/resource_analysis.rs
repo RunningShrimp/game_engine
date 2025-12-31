@@ -64,8 +64,8 @@ impl ResourceType {
 #[derive(Clone, Debug)]
 pub struct ResourceDependencyGraph {
     nodes: HashSet<ResourceNode>,
-    edges: HashMap<ResourceNode, Vec<ResourceNode>>,  // 资源 -> 它依赖的资源
-    reverse_edges: HashMap<ResourceNode, Vec<ResourceNode>>,  // 资源 -> 依赖它的资源
+    edges: HashMap<ResourceNode, Vec<ResourceNode>>, // 资源 -> 它依赖的资源
+    reverse_edges: HashMap<ResourceNode, Vec<ResourceNode>>, // 资源 -> 依赖它的资源
 }
 
 impl ResourceDependencyGraph {
@@ -110,7 +110,8 @@ impl ResourceDependencyGraph {
 
         for node in &self.nodes {
             if !visited.contains(node) {
-                if let Some(cycle) = self.detect_cycle_from_node(node, &mut visited, &mut visiting) {
+                if let Some(cycle) = self.detect_cycle_from_node(node, &mut visited, &mut visiting)
+                {
                     cycles.push(cycle);
                 }
             }
@@ -163,9 +164,7 @@ impl ResourceDependencyGraph {
     pub fn get_root_nodes(&self) -> Vec<ResourceNode> {
         self.nodes
             .iter()
-            .filter(|node| {
-                self.reverse_edges.get(*node).map(|v| v.is_empty()).unwrap_or(true)
-            })
+            .filter(|node| self.reverse_edges.get(*node).map(|v| v.is_empty()).unwrap_or(true))
             .cloned()
             .collect()
     }
@@ -174,9 +173,7 @@ impl ResourceDependencyGraph {
     pub fn get_leaf_nodes(&self) -> Vec<ResourceNode> {
         self.nodes
             .iter()
-            .filter(|node| {
-                self.edges.get(*node).map(|v| v.is_empty()).unwrap_or(true)
-            })
+            .filter(|node| self.edges.get(*node).map(|v| v.is_empty()).unwrap_or(true))
             .cloned()
             .collect()
     }
@@ -204,8 +201,8 @@ impl ResourceScanner {
         let mut resources = Vec::new();
 
         fn scan_dir(dir: &Path, resources: &mut Vec<ResourceNode>) -> Result<(), String> {
-            let entries = std::fs::read_dir(dir)
-                .map_err(|e| format!("Failed to read directory: {}", e))?;
+            let entries =
+                std::fs::read_dir(dir).map_err(|e| format!("Failed to read directory: {}", e))?;
 
             for entry in entries {
                 let entry = entry.map_err(|e| format!("Failed to read entry: {}", e))?;
@@ -458,26 +455,21 @@ impl RedundantAssetCleaner {
         }
 
         // 返回有重复的组
-        Ok(hash_map
-            .into_values()
-            .filter(|v| v.len() > 1)
-            .collect())
+        Ok(hash_map.into_values().filter(|v| v.len() > 1).collect())
     }
 
     /// 计算文件哈希
     fn compute_file_hash(&self, path: &Path) -> Result<u64, String> {
         use std::io::Read;
 
-        let file = std::fs::File::open(path)
-            .map_err(|e| format!("Failed to open file: {}", e))?;
+        let file = std::fs::File::open(path).map_err(|e| format!("Failed to open file: {}", e))?;
 
         let mut hasher = std::collections::hash_map::DefaultHasher::new();
         let mut reader = std::io::BufReader::new(file);
 
         let mut buffer = [0u8; 8192];
         loop {
-            let n = reader.read(&mut buffer)
-                .map_err(|e| format!("Failed to read file: {}", e))?;
+            let n = reader.read(&mut buffer).map_err(|e| format!("Failed to read file: {}", e))?;
             if n == 0 {
                 break;
             }
@@ -520,10 +512,7 @@ impl DependencyReportGenerator {
         // 按类型分组
         let mut by_type: HashMap<ResourceType, Vec<&ResourceNode>> = HashMap::new();
         for resource in &resources {
-            by_type
-                .entry(resource.resource_type)
-                .or_insert_with(Vec::new)
-                .push(resource);
+            by_type.entry(resource.resource_type).or_insert_with(Vec::new).push(resource);
         }
 
         report.push_str("## 资源类型分布\n\n");

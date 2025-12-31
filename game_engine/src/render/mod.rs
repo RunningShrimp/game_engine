@@ -104,20 +104,20 @@
 // - 提供GPU驱动的渲染优化
 // - 集成PBR材质系统和全局光照
 
+pub mod integrated_gpu;
+pub mod lod_generator;
 pub mod mesh;
 pub mod mesh_simplifier;
-pub mod lod_generator;
 pub mod quality_assessor;
-pub mod uv_atlas;
-pub mod integrated_gpu;
-pub mod tile_based;
 pub mod shader_async;
 pub mod shader_cache;
 pub mod shader_cache_helper;
 pub mod test_helpers;
 pub mod text;
 pub mod texture_compression;
+pub mod tile_based;
 pub mod tilemap;
+pub mod uv_atlas;
 #[cfg(target_arch = "wasm32")]
 pub mod webgl_adapter;
 pub mod wgpu_modules;
@@ -139,6 +139,7 @@ pub mod draw_call_merger;
 pub mod frustum;
 pub mod gpu_driven;
 pub mod gpu_instancing;
+pub mod gpu_particles;
 pub mod gpu_unified_manager;
 pub mod graph;
 pub mod instance_batch;
@@ -149,7 +150,6 @@ pub mod material_sort;
 pub mod occlusion_culling;
 pub mod offscreen;
 pub mod particles;
-pub mod gpu_particles;
 pub mod pbr;
 pub mod pbr_renderer;
 pub mod postprocess;
@@ -207,10 +207,21 @@ pub use integrated_gpu::{
 
 // Re-export Tile-based Rendering Optimization components
 pub use tile_based::{
-    BandwidthOptimizationHints, ClearOperation, ObjectBounds, OverdrawVisualizer,
-    RenderObject as TileRenderObject,  // 避免与domain_objects.RenderObject冲突
-    RenderObjectType, RenderOrder, RenderPassOptimization, TileBasedConfig, TileBasedOptimizer,
-    TileBasedPassOptimizer, TileOverdrawStats, TileSize, TextureFormat, is_tile_based_gpu,
+    BandwidthOptimizationHints,
+    ClearOperation,
+    ObjectBounds,
+    OverdrawVisualizer,
+    RenderObject as TileRenderObject, // 避免与domain_objects.RenderObject冲突
+    RenderObjectType,
+    RenderOrder,
+    RenderPassOptimization,
+    TextureFormat,
+    TileBasedConfig,
+    TileBasedOptimizer,
+    TileBasedPassOptimizer,
+    TileOverdrawStats,
+    TileSize,
+    is_tile_based_gpu,
     recommended_tile_size,
 };
 

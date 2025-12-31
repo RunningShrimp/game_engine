@@ -187,8 +187,11 @@ impl PrefabGenerator {
 
         for entity in &scene.entities {
             let field_name = self.sanitize_name(&entity.name);
-            code.push_str(&format!("            {}: {}::default(),\n",
-                                    field_name, self.get_entity_type(entity)));
+            code.push_str(&format!(
+                "            {}: {}::default(),\n",
+                field_name,
+                self.get_entity_type(entity)
+            ));
         }
 
         code.push_str("        }\n");
@@ -207,7 +210,10 @@ impl PrefabGenerator {
             code.push_str("/// Creates the prefab in the given world\n");
         }
 
-        code.push_str(&format!("pub fn create_{}_prefab(world: &mut World) -> Result<Entity, CreateError> {{\n", name.to_lowercase()));
+        code.push_str(&format!(
+            "pub fn create_{}_prefab(world: &mut World) -> Result<Entity, CreateError> {{\n",
+            name.to_lowercase()
+        ));
 
         // 创建根实体
         code.push_str("    let root = world.spawn_empty().id();\n\n");
@@ -229,12 +235,18 @@ impl PrefabGenerator {
         let entity_name = self.sanitize_name(&entity.name);
 
         // 创建实体
-        code.push_str(&format!("    let {} = world.spawn_empty().id();\n", entity_name));
+        code.push_str(&format!(
+            "    let {} = world.spawn_empty().id();\n",
+            entity_name
+        ));
 
         // 添加组件
         for component in &entity.components {
             code.push_str(&format!("    world.entity_mut({})\n", entity_name));
-            code.push_str(&format!("        .insert({});\n", self.generate_component_init(component)));
+            code.push_str(&format!(
+                "        .insert({});\n",
+                self.generate_component_init(component)
+            ));
         }
 
         // 设置父子关系
@@ -289,23 +301,28 @@ impl CodeGenerator<Scene> for PrefabGenerator {
             code.push_str("\n// Tests will be generated here\n");
         }
 
-        let file_name = format!("{}_prefab.rs", self.sanitize_name(&scene.name).to_lowercase());
+        let file_name = format!(
+            "{}_prefab.rs",
+            self.sanitize_name(&scene.name).to_lowercase()
+        );
 
         Ok(GeneratedCode {
             code,
             file_path: PathBuf::from(file_name),
-            dependencies: vec![
-                "bevy_ecs".to_string(),
-            ],
+            dependencies: vec!["bevy_ecs".to_string()],
         })
     }
 
     fn validate(&self, scene: &Scene) -> Result<(), CodeGenError> {
         if scene.name.is_empty() {
-            return Err(CodeGenError::InvalidInput("Scene name is empty".to_string()));
+            return Err(CodeGenError::InvalidInput(
+                "Scene name is empty".to_string(),
+            ));
         }
         if scene.entities.is_empty() {
-            return Err(CodeGenError::InvalidInput("Scene has no entities".to_string()));
+            return Err(CodeGenError::InvalidInput(
+                "Scene has no entities".to_string(),
+            ));
         }
         Ok(())
     }
@@ -387,7 +404,9 @@ impl ShaderGenerator {
         code.push_str("@fragment\n");
         code.push_str("fn fs_main(input: FragmentInput) -> FragmentOutput {\n");
         code.push_str("    var output: FragmentOutput;\n");
-        code.push_str("    let color = textureSample(base_color_texture, texture_sampler, input.uv);\n");
+        code.push_str(
+            "    let color = textureSample(base_color_texture, texture_sampler, input.uv);\n",
+        );
         code.push_str("    output.color = color;\n");
         code.push_str("    return output;\n");
         code.push_str("}\n");
@@ -403,11 +422,15 @@ impl CodeGenerator<Material> for ShaderGenerator {
         let vs_code = self.generate_vertex_shader(material);
         let fs_code = self.generate_fragment_shader(material);
 
-        let full_code = format!("// Vertex Shader\n{}\n\n// Fragment Shader\n{}",
-                                vs_code, fs_code);
+        let full_code = format!(
+            "// Vertex Shader\n{}\n\n// Fragment Shader\n{}",
+            vs_code, fs_code
+        );
 
-        let file_name = format!("{}_shader.wgsl",
-                               self.sanitize_name(&material.name).to_lowercase());
+        let file_name = format!(
+            "{}_shader.wgsl",
+            self.sanitize_name(&material.name).to_lowercase()
+        );
 
         Ok(GeneratedCode {
             code: full_code,
@@ -418,7 +441,9 @@ impl CodeGenerator<Material> for ShaderGenerator {
 
     fn validate(&self, material: &Material) -> Result<(), CodeGenError> {
         if material.name.is_empty() {
-            return Err(CodeGenError::InvalidInput("Material name is empty".to_string()));
+            return Err(CodeGenError::InvalidInput(
+                "Material name is empty".to_string(),
+            ));
         }
         Ok(())
     }
@@ -461,9 +486,18 @@ impl ParticleGenerator {
         }
 
         code.push_str(&format!("pub struct {}Config {{\n", name));
-        code.push_str(&format!("    pub max_particles: usize, // {}\n", system.max_particles));
-        code.push_str(&format!("    pub emission_rate: f32, // {} per second\n", system.emission_rate));
-        code.push_str(&format!("    pub lifetime: std::time::Duration, // {:?}\n", system.lifetime));
+        code.push_str(&format!(
+            "    pub max_particles: usize, // {}\n",
+            system.max_particles
+        ));
+        code.push_str(&format!(
+            "    pub emission_rate: f32, // {} per second\n",
+            system.emission_rate
+        ));
+        code.push_str(&format!(
+            "    pub lifetime: std::time::Duration, // {:?}\n",
+            system.lifetime
+        ));
         code.push_str("    pub color: Color,\n");
         code.push_str("    pub size: Vec2,\n");
         code.push_str("}\n\n");
@@ -472,10 +506,18 @@ impl ParticleGenerator {
         code.push_str(&format!("impl Default for {}Config {{\n", name));
         code.push_str("    fn default() -> Self {\n");
         code.push_str("        Self {\n");
-        code.push_str(&format!("            max_particles: {},\n", system.max_particles));
-        code.push_str(&format!("            emission_rate: {},\n", system.emission_rate));
-        code.push_str(&format!("            lifetime: std::time::Duration::from_secs_f32({}),\n",
-                               system.lifetime.as_secs_f32()));
+        code.push_str(&format!(
+            "            max_particles: {},\n",
+            system.max_particles
+        ));
+        code.push_str(&format!(
+            "            emission_rate: {},\n",
+            system.emission_rate
+        ));
+        code.push_str(&format!(
+            "            lifetime: std::time::Duration::from_secs_f32({}),\n",
+            system.lifetime.as_secs_f32()
+        ));
         code.push_str("            color: Color::WHITE,\n");
         code.push_str("            size: Vec2::splat(1.0),\n");
         code.push_str("        }\n");
@@ -498,24 +540,28 @@ impl CodeGenerator<ParticleSystem> for ParticleGenerator {
 
         code.push_str(&self.generate_config(system));
 
-        let file_name = format!("{}_particles.rs",
-                               self.sanitize_name(&system.name).to_lowercase());
+        let file_name = format!(
+            "{}_particles.rs",
+            self.sanitize_name(&system.name).to_lowercase()
+        );
 
         Ok(GeneratedCode {
             code,
             file_path: PathBuf::from(file_name),
-            dependencies: vec![
-                "bevy_math".to_string(),
-            ],
+            dependencies: vec!["bevy_math".to_string()],
         })
     }
 
     fn validate(&self, system: &ParticleSystem) -> Result<(), CodeGenError> {
         if system.name.is_empty() {
-            return Err(CodeGenError::InvalidInput("ParticleSystem name is empty".to_string()));
+            return Err(CodeGenError::InvalidInput(
+                "ParticleSystem name is empty".to_string(),
+            ));
         }
         if system.max_particles == 0 {
-            return Err(CodeGenError::InvalidInput("Max particles is zero".to_string()));
+            return Err(CodeGenError::InvalidInput(
+                "Max particles is zero".to_string(),
+            ));
         }
         Ok(())
     }
@@ -585,21 +631,23 @@ impl CodeGenerator<BehaviorTree> for BehaviorTreeGenerator {
 
         code.push_str(&self.generate_tree_def(tree));
 
-        let file_name = format!("{}_behavior.rs",
-                               self.sanitize_name(&tree.name).to_lowercase());
+        let file_name = format!(
+            "{}_behavior.rs",
+            self.sanitize_name(&tree.name).to_lowercase()
+        );
 
         Ok(GeneratedCode {
             code,
             file_path: PathBuf::from(file_name),
-            dependencies: vec![
-                "game_engine::ai".to_string(),
-            ],
+            dependencies: vec!["game_engine::ai".to_string()],
         })
     }
 
     fn validate(&self, tree: &BehaviorTree) -> Result<(), CodeGenError> {
         if tree.name.is_empty() {
-            return Err(CodeGenError::InvalidInput("BehaviorTree name is empty".to_string()));
+            return Err(CodeGenError::InvalidInput(
+                "BehaviorTree name is empty".to_string(),
+            ));
         }
         Ok(())
     }

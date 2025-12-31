@@ -255,8 +255,8 @@ impl Default for MemoryAdvisorConfig {
             snapshot_interval: Duration::from_secs(5),
             max_snapshots: 100,
             leak_detection_threshold: Duration::from_secs(300), // 5分钟
-            memory_warning_threshold: 0.7,  // 70%
-            memory_critical_threshold: 0.9, // 90%
+            memory_warning_threshold: 0.7,                      // 70%
+            memory_critical_threshold: 0.9,                     // 90%
         }
     }
 }
@@ -412,12 +412,7 @@ impl MemoryAdvisor {
 
     /// 获取当前内存使用
     pub async fn get_current_usage(&self) -> usize {
-        self.allocations
-            .read()
-            .await
-            .values()
-            .map(|info| info.bytes)
-            .sum()
+        self.allocations.read().await.values().map(|info| info.bytes).sum()
     }
 
     /// 获取内存压力
@@ -567,10 +562,7 @@ impl MemoryAdvisor {
                     suggestion_type: SuggestionType::MeshSimplification,
                     priority: SuggestionPriority::Medium,
                     title: "网格数量过多".to_string(),
-                    description: format!(
-                        "加载了 {} 个网格，考虑使用LOD或简化",
-                        mesh_usage.count
-                    ),
+                    description: format!("加载了 {} 个网格，考虑使用LOD或简化", mesh_usage.count),
                     estimated_savings: mesh_usage.bytes / 3,
                     implementation_steps: vec![
                         "为远距离物体使用LOD".to_string(),
@@ -651,13 +643,9 @@ pub struct AllocationStats {
 #[derive(Debug, Clone)]
 pub enum MemoryEvent {
     /// 内存快照创建
-    SnapshotCreated {
-        snapshot: MemorySnapshot,
-    },
+    SnapshotCreated { snapshot: MemorySnapshot },
     /// 内存泄漏检测
-    LeakDetected {
-        report: LeakReport,
-    },
+    LeakDetected { report: LeakReport },
     /// 优化建议生成
     SuggestionGenerated {
         suggestions: Vec<OptimizationSuggestion>,

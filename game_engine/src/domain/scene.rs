@@ -185,7 +185,7 @@ impl Clone for Scene {
             metadata: self.metadata.clone(),
             last_modified: self.last_modified,
             recovery_strategy: self.recovery_strategy.clone(),
-            event_queue: AggregateEventQueue::new(),  // 创建新的事件队列而不是克隆
+            event_queue: AggregateEventQueue::new(), // 创建新的事件队列而不是克隆
         }
     }
 }

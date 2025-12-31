@@ -23,7 +23,7 @@
 //! - **图像处理**: 实时滤镜和效果
 //! - **音频合成**: 多轨音频混合
 
-#![allow(unsafe_op_in_unsafe_fn)]  // 允许在unsafe函数中使用unsafe操作
+#![allow(unsafe_op_in_unsafe_fn)] // 允许在unsafe函数中使用unsafe操作
 
 #[cfg(target_arch = "aarch64")]
 use std::arch::aarch64::*;
@@ -51,14 +51,14 @@ impl NeonOptimizer {
 
     #[cfg(target_arch = "aarch64")]
     fn detect_neon_runtime() -> bool {
-        true  // ARMv8 总是支持NEON
+        true // ARMv8 总是支持NEON
     }
 
     #[cfg(target_arch = "arm")]
     fn detect_neon_runtime() -> bool {
         // 运行时检测NEON支持
         // 注：实际实现需要读取CPU特性寄存器
-        true  // 假设支持
+        true // 假设支持
     }
 
     #[cfg(not(any(target_arch = "aarch64", target_arch = "arm")))]
@@ -88,12 +88,7 @@ impl NeonVecOps {
     #[cfg(not(target_arch = "aarch64"))]
     #[inline(always)]
     pub unsafe fn add_f32x4(a: &[f32; 4], b: &[f32; 4]) -> [f32; 4] {
-        [
-            a[0] + b[0],
-            a[1] + b[1],
-            a[2] + b[2],
-            a[3] + b[3],
-        ]
+        [a[0] + b[0], a[1] + b[1], a[2] + b[2], a[3] + b[3]]
     }
 
     /// 向量乘法 (4x float32)
@@ -112,12 +107,7 @@ impl NeonVecOps {
     #[cfg(not(target_arch = "aarch64"))]
     #[inline(always)]
     pub unsafe fn mul_f32x4(a: &[f32; 4], b: &[f32; 4]) -> [f32; 4] {
-        [
-            a[0] * b[0],
-            a[1] * b[1],
-            a[2] * b[2],
-            a[3] * b[3],
-        ]
+        [a[0] * b[0], a[1] * b[1], a[2] * b[2], a[3] * b[3]]
     }
 
     /// 向量点积 (4x float32)
@@ -155,12 +145,7 @@ impl NeonVecOps {
     #[cfg(not(target_arch = "aarch64"))]
     #[inline(always)]
     pub unsafe fn sqrt_f32x4(a: &[f32; 4]) -> [f32; 4] {
-        [
-            a[0].sqrt(),
-            a[1].sqrt(),
-            a[2].sqrt(),
-            a[3].sqrt(),
-        ]
+        [a[0].sqrt(), a[1].sqrt(), a[2].sqrt(), a[3].sqrt()]
     }
 
     /// 向量倒数 (4x float32)
@@ -179,12 +164,7 @@ impl NeonVecOps {
     #[cfg(not(target_arch = "aarch64"))]
     #[inline(always)]
     pub unsafe fn reciprocal_f32x4(a: &[f32; 4]) -> [f32; 4] {
-        [
-            1.0 / a[0],
-            1.0 / a[1],
-            1.0 / a[2],
-            1.0 / a[3],
-        ]
+        [1.0 / a[0], 1.0 / a[1], 1.0 / a[2], 1.0 / a[3]]
     }
 
     /// 向量最小值 (4x float32)
@@ -247,16 +227,16 @@ impl NeonArrayOps {
         assert_eq!(a.len(), output.len());
 
         let len = a.len();
-        let simd_len = len & !3;  // 对齐到4的倍数
+        let simd_len = len & !3; // 对齐到4的倍数
 
         unsafe {
             // SIMD处理
             let i = 0;
             while i < simd_len {
-                let va = [a[i], a[i+1], a[i+2], a[i+3]];
-                let vb = [b[i], b[i+1], b[i+2], b[i+3]];
+                let va = [a[i], a[i + 1], a[i + 2], a[i + 3]];
+                let vb = [b[i], b[i + 1], b[i + 2], b[i + 3]];
                 let result = NeonVecOps::add_f32x4(&va, &vb);
-                output[i..i+4].copy_from_slice(&result);
+                output[i..i + 4].copy_from_slice(&result);
             }
 
             // 标量处理剩余元素
@@ -279,10 +259,10 @@ impl NeonArrayOps {
             // SIMD处理
             let i = 0;
             while i < simd_len {
-                let va = [a[i], a[i+1], a[i+2], a[i+3]];
-                let vb = [b[i], b[i+1], b[i+2], b[i+3]];
+                let va = [a[i], a[i + 1], a[i + 2], a[i + 3]];
+                let vb = [b[i], b[i + 1], b[i + 2], b[i + 3]];
                 let result = NeonVecOps::mul_f32x4(&va, &vb);
-                output[i..i+4].copy_from_slice(&result);
+                output[i..i + 4].copy_from_slice(&result);
             }
 
             // 标量处理剩余元素
@@ -306,9 +286,9 @@ impl NeonArrayOps {
             // SIMD处理
             let i = 0;
             while i < simd_len {
-                let va = [a[i], a[i+1], a[i+2], a[i+3]];
+                let va = [a[i], a[i + 1], a[i + 2], a[i + 3]];
                 let result = NeonVecOps::mul_f32x4(&va, &scalar_vec);
-                output[i..i+4].copy_from_slice(&result);
+                output[i..i + 4].copy_from_slice(&result);
             }
 
             // 标量处理剩余元素
@@ -330,9 +310,9 @@ impl NeonArrayOps {
             // SIMD处理
             let i = 0;
             while i < simd_len {
-                let va = [a[i], a[i+1], a[i+2], a[i+3]];
+                let va = [a[i], a[i + 1], a[i + 2], a[i + 3]];
                 let result = NeonVecOps::sqrt_f32x4(&va);
-                output[i..i+4].copy_from_slice(&result);
+                output[i..i + 4].copy_from_slice(&result);
             }
 
             // 标量处理剩余元素
@@ -379,11 +359,20 @@ impl NeonMatrixOps {
                 NeonVecOps::dot_f32x4(&a[8..12].try_into().unwrap(), &b[0..4].try_into().unwrap()),
                 NeonVecOps::dot_f32x4(&a[8..12].try_into().unwrap(), &b[4..8].try_into().unwrap()),
                 NeonVecOps::dot_f32x4(&a[8..12].try_into().unwrap(), &b[8..12].try_into().unwrap()),
-                NeonVecOps::dot_f32x4(&a[8..12].try_into().unwrap(), &b[12..16].try_into().unwrap()),
+                NeonVecOps::dot_f32x4(
+                    &a[8..12].try_into().unwrap(),
+                    &b[12..16].try_into().unwrap(),
+                ),
                 NeonVecOps::dot_f32x4(&a[12..16].try_into().unwrap(), &b[0..4].try_into().unwrap()),
                 NeonVecOps::dot_f32x4(&a[12..16].try_into().unwrap(), &b[4..8].try_into().unwrap()),
-                NeonVecOps::dot_f32x4(&a[12..16].try_into().unwrap(), &b[8..12].try_into().unwrap()),
-                NeonVecOps::dot_f32x4(&a[12..16].try_into().unwrap(), &b[12..16].try_into().unwrap()),
+                NeonVecOps::dot_f32x4(
+                    &a[12..16].try_into().unwrap(),
+                    &b[8..12].try_into().unwrap(),
+                ),
+                NeonVecOps::dot_f32x4(
+                    &a[12..16].try_into().unwrap(),
+                    &b[12..16].try_into().unwrap(),
+                ),
             ]
         }
     }
@@ -482,7 +471,7 @@ mod tests {
     fn test_vector_dot() {
         let a = [1.0f32, 2.0, 3.0, 4.0];
         let b = [2.0f32, 3.0, 4.0, 5.0];
-        let expected = 1.0*2.0 + 2.0*3.0 + 3.0*4.0 + 4.0*5.0;  // 40.0
+        let expected = 1.0 * 2.0 + 2.0 * 3.0 + 3.0 * 4.0 + 4.0 * 5.0; // 40.0
 
         let result = unsafe { NeonVecOps::dot_f32x4(&a, &b) };
         assert_eq!(result, expected);
@@ -516,17 +505,11 @@ mod tests {
     fn test_matrix_mul() {
         // 单位矩阵
         let identity = [
-            1.0, 0.0, 0.0, 0.0,
-            0.0, 1.0, 0.0, 0.0,
-            0.0, 0.0, 1.0, 0.0,
-            0.0, 0.0, 0.0, 1.0,
+            1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
         ];
 
         let mat = [
-            1.0, 2.0, 3.0, 4.0,
-            5.0, 6.0, 7.0, 8.0,
-            9.0, 10.0, 11.0, 12.0,
-            13.0, 14.0, 15.0, 16.0,
+            1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0,
         ];
 
         let result = NeonMatrixOps::mul_mat4x4(&mat, &identity);

@@ -12,7 +12,7 @@ use std::sync::Arc;
 
 // Re-export ObjScene when feature is enabled
 #[cfg(feature = "obj")]
-pub use super::obj_loader::{ObjScene, ObjDocument, ObjObject, ObjMesh, ObjMaterial};
+pub use super::obj_loader::{ObjDocument, ObjMaterial, ObjMesh, ObjObject, ObjScene};
 
 // Import Handle, generate_tangents, and MaterialRegistry from manager module
 #[cfg(feature = "obj")]
@@ -30,9 +30,9 @@ impl ObjAssetLoader {
         let base_path = base_path.to_string();
 
         let parse_res = tokio::task::spawn_blocking(move || {
-            super::obj_loader::ObjLoader::from_str(&content, &base_path)
-                .map_err(|e| e.to_string())
-        }).await;
+            super::obj_loader::ObjLoader::from_str(&content, &base_path).map_err(|e| e.to_string())
+        })
+        .await;
 
         match parse_res {
             Ok(Ok(scene)) => Ok(scene),
@@ -83,9 +83,7 @@ pub fn import_obj_to_world(
             };
 
             // Convert ObjIndex to plain u32 indices
-            let indices: Vec<u32> = obj.mesh.indices.iter()
-                .map(|idx| idx.vertex)
-                .collect();
+            let indices: Vec<u32> = obj.mesh.indices.iter().map(|idx| idx.vertex).collect();
 
             // Generate or use existing tangents
             let tangents = generate_tangents(&obj.mesh.positions, &normals, &uvs, &indices);
@@ -116,26 +114,23 @@ pub fn import_obj_to_world(
             let pbr_material = convert_obj_material_to_pbr(material);
 
             // Get PBR renderer
-            let pbr = renderer.pbr_renderer.as_ref()
-                .expect("PBR renderer must be initialized");
+            let pbr = renderer.pbr_renderer.as_ref().expect("PBR renderer must be initialized");
 
             // Create texture set
             let device = renderer.device();
             let queue = renderer.queue();
 
             // Create default 1x1 white texture
-            let default_img = image::RgbaImage::from_raw(
-                1, 1,
-                vec![255, 255, 255, 255]
-            ).expect("Failed to create default texture");
+            let default_img = image::RgbaImage::from_raw(1, 1, vec![255, 255, 255, 255])
+                .expect("Failed to create default texture");
 
             // Load textures from OBJ material
-            let base_color_img = load_texture_from_path(&material.diffuse_map)
-                .unwrap_or(default_img.clone());
-            let normal_img = load_texture_from_path(&material.normal_map)
-                .unwrap_or(default_img.clone());
-            let specular_img = load_texture_from_path(&material.specular_map)
-                .unwrap_or(default_img.clone());
+            let base_color_img =
+                load_texture_from_path(&material.diffuse_map).unwrap_or(default_img.clone());
+            let normal_img =
+                load_texture_from_path(&material.normal_map).unwrap_or(default_img.clone());
+            let specular_img =
+                load_texture_from_path(&material.specular_map).unwrap_or(default_img.clone());
 
             // OBJ uses specular map instead of metallic/roughness
             // Use specular for roughness approximation
@@ -144,7 +139,13 @@ pub fn import_obj_to_world(
             let tex_set = pbr.create_texture_set_from_images(
                 device,
                 queue,
-                [base_color_img, metallic_roughness_img, normal_img, default_img.clone(), default_img],
+                [
+                    base_color_img,
+                    metallic_roughness_img,
+                    normal_img,
+                    default_img.clone(),
+                    default_img,
+                ],
                 [true, false, false, false, true],
             );
             let tex_bg = Arc::new(tex_set.bind_group);
@@ -154,9 +155,13 @@ pub fn import_obj_to_world(
                 pbr.create_material_bind_group(device, queue, &pbr_material);
 
             // Register material
-            let mut registry = world.get_resource_or_insert_with::<MaterialRegistry>(Default::default);
+            let mut registry =
+                world.get_resource_or_insert_with::<MaterialRegistry>(Default::default);
             let mat_id = obj_idx as u64;
-            registry.materials.insert(mat_id, (material_bg.clone(), material_buf.clone(), tex_bg.clone()));
+            registry.materials.insert(
+                mat_id,
+                (material_bg.clone(), material_buf.clone(), tex_bg.clone()),
+            );
 
             // Spawn entity with mesh renderer
             let comp = crate::render::instance_batch::Mesh3DRenderer {
@@ -191,7 +196,8 @@ fn convert_obj_material_to_pbr(obj_mat: &ObjMaterial) -> crate::render::pbr::Pbr
 
     // OBJ uses specular and shininess
     // Approximate metallic from specular intensity
-    let specular_intensity = (obj_mat.specular[0] + obj_mat.specular[1] + obj_mat.specular[2]) / 3.0;
+    let specular_intensity =
+        (obj_mat.specular[0] + obj_mat.specular[1] + obj_mat.specular[2]) / 3.0;
     mat.metallic = specular_intensity;
 
     // Roughness from shininess (inverse relationship)
@@ -227,7 +233,10 @@ fn load_texture_from_path(path: &Option<String>) -> Option<image::RgbaImage> {
 
 /// Generate smooth normals from positions and indices
 #[cfg(feature = "obj")]
-fn generate_normals_from_positions(positions: &[[f32; 3]], obj_indices: &[super::obj_loader::ObjIndex]) -> Vec<[f32; 3]> {
+fn generate_normals_from_positions(
+    positions: &[[f32; 3]],
+    obj_indices: &[super::obj_loader::ObjIndex],
+) -> Vec<[f32; 3]> {
     let indices: Vec<u32> = obj_indices.iter().map(|idx| idx.vertex).collect();
     let mut normals = vec![[0.0, 0.0, 0.0]; positions.len()];
 
@@ -289,15 +298,23 @@ mod tests {
     #[test]
     #[cfg(feature = "obj")]
     fn test_generate_normals() {
-        let positions = vec![
-            [0.0, 0.0, 0.0],
-            [1.0, 0.0, 0.0],
-            [0.0, 1.0, 0.0],
-        ];
+        let positions = vec![[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]];
         let indices = vec![
-            super::obj_loader::ObjIndex { vertex: 0, tex_coord: None, normal: None },
-            super::obj_loader::ObjIndex { vertex: 1, tex_coord: None, normal: None },
-            super::obj_loader::ObjIndex { vertex: 2, tex_coord: None, normal: None },
+            super::obj_loader::ObjIndex {
+                vertex: 0,
+                tex_coord: None,
+                normal: None,
+            },
+            super::obj_loader::ObjIndex {
+                vertex: 1,
+                tex_coord: None,
+                normal: None,
+            },
+            super::obj_loader::ObjIndex {
+                vertex: 2,
+                tex_coord: None,
+                normal: None,
+            },
         ];
 
         let normals = generate_normals_from_positions(&positions, &indices);

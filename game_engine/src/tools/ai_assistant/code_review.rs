@@ -22,18 +22,10 @@ impl AICodeReviewer {
         let prompt = self.build_review_prompt(code, language);
 
         match self.config.provider {
-            AIProvider::OpenAI => {
-                self.call_openai(&prompt).await
-            }
-            AIProvider::Anthropic => {
-                self.call_anthropic(&prompt).await
-            }
-            AIProvider::Local => {
-                self.call_local(&prompt).await
-            }
-            AIProvider::Other => {
-                Err(AIError::Other("Unsupported provider".to_string()))
-            }
+            AIProvider::OpenAI => self.call_openai(&prompt).await,
+            AIProvider::Anthropic => self.call_anthropic(&prompt).await,
+            AIProvider::Local => self.call_local(&prompt).await,
+            AIProvider::Other => Err(AIError::Other("Unsupported provider".to_string())),
         }
     }
 
@@ -56,15 +48,13 @@ impl AICodeReviewer {
         // TODO: 实际API调用
         // 模拟响应
         Ok(CodeReviewReport {
-            issues: vec![
-                CodeReviewIssue {
-                    severity: IssueSeverity::Info,
-                    category: IssueCategory::Style,
-                    message: "Consider using more descriptive variable names".to_string(),
-                    line: 10,
-                    suggestion: Some("Use meaningful names".to_string()),
-                },
-            ],
+            issues: vec![CodeReviewIssue {
+                severity: IssueSeverity::Info,
+                category: IssueCategory::Style,
+                message: "Consider using more descriptive variable names".to_string(),
+                line: 10,
+                suggestion: Some("Use meaningful names".to_string()),
+            }],
             score: 85,
         })
     }

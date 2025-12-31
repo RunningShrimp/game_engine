@@ -5,6 +5,5 @@
 pub mod arm_neon;
 
 pub use arm_neon::{
-    is_aarch64, is_arm_arch, NeonArrayOps, NeonBenchmark, NeonMatrixOps, NeonOptimizer,
-    NeonVecOps,
+    NeonArrayOps, NeonBenchmark, NeonMatrixOps, NeonOptimizer, NeonVecOps, is_aarch64, is_arm_arch,
 };

@@ -23,8 +23,8 @@
 //! println!("Bottlenecks: {:?}", report.bottlenecks);
 //! ```
 
-use std::time::{Duration, Instant};
 use std::collections::HashMap;
+use std::time::{Duration, Instant};
 use thiserror::Error;
 
 /// 性能分析错误
@@ -257,9 +257,7 @@ impl MetricsCollector {
             return self.current.fps;
         }
 
-        let sum: f32 = self.history.iter()
-            .map(|m| m.fps)
-            .sum();
+        let sum: f32 = self.history.iter().map(|m| m.fps).sum();
 
         sum / self.history.len() as f32
     }
@@ -270,9 +268,7 @@ impl MetricsCollector {
             return self.current.frame_time;
         }
 
-        let sum_ms: f64 = self.history.iter()
-            .map(|m| m.frame_time.as_secs_f64() * 1000.0)
-            .sum();
+        let sum_ms: f64 = self.history.iter().map(|m| m.frame_time.as_secs_f64() * 1000.0).sum();
 
         Duration::from_secs_f64((sum_ms / self.history.len() as f64) / 1000.0)
     }
@@ -322,8 +318,8 @@ pub struct ThresholdConfig {
 impl Default for ThresholdConfig {
     fn default() -> Self {
         Self {
-            target_frame_time_ms: 16.67,  // 60 FPS
-            max_frame_time_ms: 33.33,      // 30 FPS
+            target_frame_time_ms: 16.67, // 60 FPS
+            max_frame_time_ms: 33.33,    // 30 FPS
             max_draw_calls: 1000,
             max_triangles: 1_000_000,
             max_textures: 512,
@@ -564,7 +560,7 @@ impl PerformanceProfiler {
     /// 创建新的性能分析器
     pub fn new() -> Self {
         Self {
-            collector: MetricsCollector::new(1000),  // 保存1000帧数据
+            collector: MetricsCollector::new(1000), // 保存1000帧数据
             detector: BottleneckDetector::new(ThresholdConfig::default()),
             is_recording: false,
             session_start: None,
@@ -591,9 +587,7 @@ impl PerformanceProfiler {
     /// 结束分析会话
     pub fn end_session(&mut self) -> Duration {
         self.is_recording = false;
-        self.session_start
-            .map(|start| start.elapsed())
-            .unwrap_or(Duration::ZERO)
+        self.session_start.map(|start| start.elapsed()).unwrap_or(Duration::ZERO)
     }
 
     /// 开始新帧
@@ -706,8 +700,8 @@ mod tests {
         let detector = BottleneckDetector::new(ThresholdConfig::default());
 
         let metrics = PerformanceMetrics {
-            frame_time: Duration::from_millis(50),  // 太高
-            draw_calls: 2000,                         // 太多
+            frame_time: Duration::from_millis(50), // 太高
+            draw_calls: 2000,                      // 太多
             ..Default::default()
         };
 

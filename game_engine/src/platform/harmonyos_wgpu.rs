@@ -15,7 +15,7 @@
 //! - 计算着色器加速
 //! - 跨平台图形抽象
 
-use super::harmonyos::{HarmonyOSGraphicsContext, GraphicsBackend};
+use super::harmonyos::{GraphicsBackend, HarmonyOSGraphicsContext};
 
 /// 鸿蒙WebGPU Surface创建器
 pub struct HarmonyOSWgpuSurfaceCreator {
@@ -32,7 +32,7 @@ impl HarmonyOSWgpuSurfaceCreator {
     pub fn new(graphics_context: &HarmonyOSGraphicsContext) -> Self {
         Self {
             window_handle: graphics_context.native_window_handle(),
-            width: 1920,  // 从graphics_context获取
+            width: 1920, // 从graphics_context获取
             height: 1080,
         }
     }
@@ -94,21 +94,17 @@ impl HarmonyOSWgpuInstance {
             }
 
             unsafe impl HasDisplayHandle for HarmonyOSDisplay {
-                fn display_handle(
-                    &self,
-                ) -> Result<DisplayHandle, raw_window_handle::HandleError> {
+                fn display_handle(&self) -> Result<DisplayHandle, raw_window_handle::HandleError> {
                     unsafe {
                         Ok(DisplayHandle::borrow_raw_raw(
-                            std::ptr::null_mut() as *mut std::ffi::c_void,
+                            std::ptr::null_mut() as *mut std::ffi::c_void
                         ))
                     }
                 }
             }
 
             unsafe impl HasWindowHandle for HarmonyOSWindow {
-                fn window_handle(
-                    &self,
-                ) -> Result<WindowHandle, raw_window_handle::HandleError> {
+                fn window_handle(&self) -> Result<WindowHandle, raw_window_handle::HandleError> {
                     unsafe {
                         Ok(WindowHandle::borrow_raw_raw(
                             self.ptr as *mut std::ffi::c_void,
@@ -120,7 +116,10 @@ impl HarmonyOSWgpuInstance {
             // 注: 这里需要实际的鸿蒙窗口句柄类型
             // 暂时返回错误，需要完整的raw-window-handle实现
 
-            Err("HarmonyOS surface creation requires complete raw-window-handle implementation".to_string())
+            Err(
+                "HarmonyOS surface creation requires complete raw-window-handle implementation"
+                    .to_string(),
+            )
         }
     }
 
@@ -167,9 +166,7 @@ pub struct HarmonyOSWgpuDevice {
 
 impl HarmonyOSWgpuDevice {
     /// 创建设备和队列
-    pub async fn new(
-        adapter: wgpu::Adapter,
-    ) -> Result<Self, String> {
+    pub async fn new(adapter: wgpu::Adapter) -> Result<Self, String> {
         let (device, queue) = adapter
             .request_device(
                 &wgpu::DeviceDescriptor {
@@ -223,7 +220,7 @@ impl Default for HarmonyOSWgpuConfig {
     fn default() -> Self {
         Self {
             adapter_preference: AdapterPreference::HighPerformance,
-            present_mode: wgpu::PresentMode::Fifo,  // VSync
+            present_mode: wgpu::PresentMode::Fifo, // VSync
             surface_format: wgpu::TextureFormat::Bgra8UnormSrgb,
         }
     }
@@ -354,11 +351,8 @@ pub fn set_performance_hint(hint: PerformanceHint) {
 // =============================================================================
 
 /// 鸿蒙Vulkan扩展列表
-pub const HARMONYOS_VULKAN_EXTENSIONS: &[&str] = &[
-    "VK_KHR_surface",
-    "VK_KHR_swapchain",
-    "VK_EXT_hdr_metadata",
-];
+pub const HARMONYOS_VULKAN_EXTENSIONS: &[&str] =
+    &["VK_KHR_surface", "VK_KHR_swapchain", "VK_EXT_hdr_metadata"];
 
 /// 鸿蒙OpenGL ES扩展列表
 pub const HARMONYOS_GLES_EXTENSIONS: &[&str] = &[

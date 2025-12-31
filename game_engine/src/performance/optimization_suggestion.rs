@@ -9,10 +9,10 @@
 //! 3. **PriorityCalculator** - 优先级计算器
 //! 4. **ImpactEstimator** - 影响评估器
 
-use std::collections::HashMap;
-use crate::performance::profiler::{Bottleneck, PerformanceCategory, Severity};
-use super::render_analyzer::RenderBottleneckReport;
 use super::memory_analyzer::MemoryBottleneckReport;
+use super::render_analyzer::RenderBottleneckReport;
+use crate::performance::profiler::{Bottleneck, PerformanceCategory, Severity};
+use std::collections::HashMap;
 
 /// 优化建议类别
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -221,12 +221,14 @@ impl SuggestionGenerator {
                 Severity::Medium => 10,
                 Severity::Low => 4,
             },
-            affected_components: vec!["游戏循环".to_string(), "物理系统".to_string(), "AI系统".to_string()],
+            affected_components: vec![
+                "游戏循环".to_string(),
+                "物理系统".to_string(),
+                "AI系统".to_string(),
+            ],
             dependencies: vec![],
             risk_level: RiskLevel::Medium,
-            references: vec![
-                "https://developer.nvidia.com/vulkan-shader-optimization".to_string(),
-            ],
+            references: vec!["https://developer.nvidia.com/vulkan-shader-optimization".to_string()],
         }
     }
 
@@ -254,9 +256,7 @@ impl SuggestionGenerator {
             affected_components: vec!["渲染管线".to_string(), "材质系统".to_string()],
             dependencies: vec![],
             risk_level: RiskLevel::Low,
-            references: vec![
-                "https://docs.unity3d.com/Manual/DrawCallBatching.html".to_string(),
-            ],
+            references: vec!["https://docs.unity3d.com/Manual/DrawCallBatching.html".to_string()],
         }
     }
 
@@ -287,9 +287,7 @@ impl SuggestionGenerator {
             ],
             dependencies: vec!["opt-lod-001".to_string()],
             risk_level: RiskLevel::Low,
-            references: vec![
-                "https://docs.unity3d.com/Manual/LevelOfDetail.html".to_string(),
-            ],
+            references: vec!["https://docs.unity3d.com/Manual/LevelOfDetail.html".to_string()],
         }
     }
 
@@ -321,9 +319,7 @@ impl SuggestionGenerator {
             ],
             dependencies: vec![],
             risk_level: RiskLevel::Medium,
-            references: vec![
-                "https://doc.rust-lang.org/nomicon/vec.html".to_string(),
-            ],
+            references: vec!["https://doc.rust-lang.org/nomicon/vec.html".to_string()],
         }
     }
 
@@ -389,14 +385,15 @@ impl SuggestionGenerator {
             ],
             dependencies: vec![],
             risk_level: RiskLevel::Low,
-            references: vec![
-                "https://doc.rust-lang.org/std/alloc/index.html".to_string(),
-            ],
+            references: vec!["https://doc.rust-lang.org/std/alloc/index.html".to_string()],
         }
     }
 
     /// 去重和优先级排序
-    fn deduplicate_and_prioritize(&self, mut suggestions: Vec<OptimizationSuggestion>) -> Vec<OptimizationSuggestion> {
+    fn deduplicate_and_prioritize(
+        &self,
+        mut suggestions: Vec<OptimizationSuggestion>,
+    ) -> Vec<OptimizationSuggestion> {
         // 去重（基于ID）
         let mut seen = std::collections::HashSet::new();
         suggestions.retain(|s| seen.insert(s.id.clone()));
@@ -405,10 +402,10 @@ impl SuggestionGenerator {
         suggestions.sort_by(|a, b| {
             // 首先按严重程度降序
             match (a.severity, b.severity) {
-                (Severity::Critical, Severity::Critical) |
-                (Severity::High, Severity::High) |
-                (Severity::Medium, Severity::Medium) |
-                (Severity::Low, Severity::Low) => {}
+                (Severity::Critical, Severity::Critical)
+                | (Severity::High, Severity::High)
+                | (Severity::Medium, Severity::Medium)
+                | (Severity::Low, Severity::Low) => {}
                 (Severity::Critical, _) => return std::cmp::Ordering::Less,
                 (_, Severity::Critical) => return std::cmp::Ordering::Greater,
                 (Severity::High, Severity::Medium) | (Severity::High, Severity::Low) => {
@@ -429,16 +426,19 @@ impl SuggestionGenerator {
     }
 
     /// 计算总体评估
-    fn calculate_overall_assessment(&self, suggestions: &[OptimizationSuggestion], bottlenecks: &[Bottleneck]) -> OverallAssessment {
+    fn calculate_overall_assessment(
+        &self,
+        suggestions: &[OptimizationSuggestion],
+        bottlenecks: &[Bottleneck],
+    ) -> OverallAssessment {
         // 计算健康得分
-        let critical_count = bottlenecks.iter().filter(|b| b.severity == Severity::Critical).count();
+        let critical_count =
+            bottlenecks.iter().filter(|b| b.severity == Severity::Critical).count();
         let high_count = bottlenecks.iter().filter(|b| b.severity == Severity::High).count();
         let medium_count = bottlenecks.iter().filter(|b| b.severity == Severity::Medium).count();
 
         let health_score = 100u32.saturating_sub(
-            (critical_count * 25) as u32 +
-            (high_count * 10) as u32 +
-            (medium_count * 3) as u32
+            (critical_count * 25) as u32 + (high_count * 10) as u32 + (medium_count * 3) as u32,
         );
 
         // 识别关键问题
@@ -480,7 +480,10 @@ impl SuggestionGenerator {
     }
 
     /// 分类建议
-    fn categorize_suggestions(&self, suggestions: &[OptimizationSuggestion]) -> (Vec<String>, Vec<String>) {
+    fn categorize_suggestions(
+        &self,
+        suggestions: &[OptimizationSuggestion],
+    ) -> (Vec<String>, Vec<String>) {
         let quick_wins: Vec<String> = suggestions
             .iter()
             .filter(|s| s.estimated_effort_hours <= 8 && s.risk_level == RiskLevel::Low)
@@ -489,7 +492,9 @@ impl SuggestionGenerator {
 
         let strategic_improvements: Vec<String> = suggestions
             .iter()
-            .filter(|s| s.estimated_effort_hours > 24 || s.category == SuggestionCategory::Architecture)
+            .filter(|s| {
+                s.estimated_effort_hours > 24 || s.category == SuggestionCategory::Architecture
+            })
             .map(|s| s.id.clone())
             .collect();
 
@@ -559,8 +564,11 @@ impl RenderingKnowledgeBase {
 
         // Bandwidth优化
         use super::render_analyzer::RenderBottleneckType;
-        if let Some(bandwidth_bottleneck) = report.bottlenecks.iter()
-            .find(|b| b.bottleneck_type == RenderBottleneckType::Bandwidth) {
+        if let Some(bandwidth_bottleneck) = report
+            .bottlenecks
+            .iter()
+            .find(|b| b.bottleneck_type == RenderBottleneckType::Bandwidth)
+        {
             suggestions.push(OptimizationSuggestion {
                 id: "opt-render-bandwidth-001".to_string(),
                 category: SuggestionCategory::Rendering,
@@ -662,7 +670,9 @@ impl MemoryKnowledgeBase {
         }
 
         // 碎片化优化
-        if report.fragmentation_report.severity != super::memory_analyzer::FragmentationSeverity::None {
+        if report.fragmentation_report.severity
+            != super::memory_analyzer::FragmentationSeverity::None
+        {
             suggestions.push(OptimizationSuggestion {
                 id: "opt-mem-frag-001".to_string(),
                 category: SuggestionCategory::Memory,
@@ -708,17 +718,15 @@ mod tests {
     #[test]
     fn test_suggestion_generation() {
         let generator = SuggestionGenerator::new();
-        let bottlenecks = vec![
-            Bottleneck {
-                category: PerformanceCategory::FrameTime,
-                severity: Severity::High,
-                description: "High frame time".to_string(),
-                current_value: 33.3,
-                target_value: 16.6,
-                impact: "Game stuttering".to_string(),
-                timestamp: Instant::now(),
-            }
-        ];
+        let bottlenecks = vec![Bottleneck {
+            category: PerformanceCategory::FrameTime,
+            severity: Severity::High,
+            description: "High frame time".to_string(),
+            current_value: 33.3,
+            target_value: 16.6,
+            impact: "Game stuttering".to_string(),
+            timestamp: Instant::now(),
+        }];
 
         let report = generator.generate_suggestions(&bottlenecks, None, None);
 

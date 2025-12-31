@@ -7,6 +7,6 @@ pub mod memory_advisor;
 pub use memory_advisor::{
     AllocationId, AllocationInfo, AllocationStats, CategoryUsage, LeakInfo, LeakReport,
     LeakSeverity, MemoryAdvisor, MemoryAdvisorConfig, MemoryAdvisorResource, MemoryCategory,
-    MemoryEvent, MemoryPressure, MemorySnapshot, MemoryStats, OptimizationSuggestion,
-    RiskLevel, SuggestionId, SuggestionPriority, SuggestionType,
+    MemoryEvent, MemoryPressure, MemorySnapshot, MemoryStats, OptimizationSuggestion, RiskLevel,
+    SuggestionId, SuggestionPriority, SuggestionType,
 };

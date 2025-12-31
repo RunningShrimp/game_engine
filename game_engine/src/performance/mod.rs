@@ -64,20 +64,20 @@
 //! ```
 
 // 引擎核心依赖的模块
+pub mod auto_fix;
 pub mod benchmarking;
 pub mod gpu;
 pub mod memory;
+pub mod memory_analyzer;
 pub mod monitoring;
 pub mod optimization;
-pub mod rendering;
-pub mod sync;
-pub mod tracing_metrics;
+pub mod optimization_suggestion;
 pub mod profiler;
 pub mod render_analyzer;
-pub mod memory_analyzer;
-pub mod optimization_suggestion;
-pub mod auto_fix;
+pub mod rendering;
 pub mod report_generator;
+pub mod sync;
+pub mod tracing_metrics;
 
 // 注意：profiling模块已在根级别声明，这里不重复声明以避免宏重复定义
 // 使用 crate::profiling 路径访问

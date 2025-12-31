@@ -113,7 +113,9 @@ pub use entity::{EntityFactory, EntityId, GameEntity};
 // 不在这里重新导出，避免与lib.rs中的pub use error::*冲突
 pub use errors::{DomainError, SceneError};
 pub use physics::{Collider, ColliderId, RigidBody, RigidBodyId, RigidBodyType};
-pub use repository::{EntityRepository, Repository, RepositoryError, RigidBodyRepository, SceneRepositoryImpl};
+pub use repository::{
+    EntityRepository, Repository, RepositoryError, RigidBodyRepository, SceneRepositoryImpl,
+};
 pub use scene::{Scene, SceneId, SceneRepository};
 pub use services::{
     AudioDomainService, DIContainer, DomainServiceFactory, PhysicsDomainService, SceneDomainService,

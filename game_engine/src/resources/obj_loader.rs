@@ -185,8 +185,7 @@ impl ObjLoader {
     /// 加载的 `ObjScene` 或错误信息
     pub async fn load_from_path(path: &Path) -> Result<ObjScene, String> {
         // 验证文件扩展名
-        Self::validate_extension(path)
-            .map_err(|e| e.to_string())?;
+        Self::validate_extension(path).map_err(|e| e.to_string())?;
 
         // 读取文件
         let content = tokio::fs::read_to_string(path)
@@ -281,17 +280,20 @@ impl ObjLoader {
                 "o" | "g" => {
                     // 对象或组: o name / g name
                     if !current_object.mesh.indices.is_empty() {
-                        objects.push(std::mem::replace(&mut current_object, ObjObject {
-                            name: String::new(),
-                            mesh: ObjMesh {
-                                positions: Vec::new(),
-                                normals: Vec::new(),
-                                uvs: Vec::new(),
-                                indices: Vec::new(),
-                                smoothing_groups: Vec::new(),
+                        objects.push(std::mem::replace(
+                            &mut current_object,
+                            ObjObject {
+                                name: String::new(),
+                                mesh: ObjMesh {
+                                    positions: Vec::new(),
+                                    normals: Vec::new(),
+                                    uvs: Vec::new(),
+                                    indices: Vec::new(),
+                                    smoothing_groups: Vec::new(),
+                                },
+                                material_index: None,
                             },
-                            material_index: None,
-                        }));
+                        ));
                     }
                     let name = parts.next().unwrap_or("unnamed").to_string();
                     current_object.name = name;
@@ -310,7 +312,8 @@ impl ObjLoader {
                     // 使用材质: usemtl material_name
                     if let Some(mat_name) = parts.next() {
                         // 查找材质索引
-                        let mat_index = materials.iter().position(|m: &ObjMaterial| m.name == mat_name);
+                        let mat_index =
+                            materials.iter().position(|m: &ObjMaterial| m.name == mat_name);
                         if mat_index.is_none() {
                             tracing::warn!(target: "obj_loader", "Material '{}' not found", mat_name);
                         }
@@ -390,14 +393,20 @@ impl ObjLoader {
 
 /// 解析顶点位置
 #[cfg(feature = "obj")]
-fn parse_vertex(mut parts: std::str::SplitWhitespace, context: &str) -> Result<[f32; 3], ObjLoadError> {
-    let x: f32 = parts.next()
+fn parse_vertex(
+    mut parts: std::str::SplitWhitespace,
+    context: &str,
+) -> Result<[f32; 3], ObjLoadError> {
+    let x: f32 = parts
+        .next()
         .and_then(|s| s.parse().ok())
         .ok_or_else(|| ObjLoadError::Parse(format!("Missing vertex x at {context}")))?;
-    let y: f32 = parts.next()
+    let y: f32 = parts
+        .next()
         .and_then(|s| s.parse().ok())
         .ok_or_else(|| ObjLoadError::Parse(format!("Missing vertex y at {context}")))?;
-    let z: f32 = parts.next()
+    let z: f32 = parts
+        .next()
         .and_then(|s| s.parse().ok())
         .ok_or_else(|| ObjLoadError::Parse(format!("Missing vertex z at {context}")))?;
     // w 是可选的，忽略
@@ -406,14 +415,20 @@ fn parse_vertex(mut parts: std::str::SplitWhitespace, context: &str) -> Result<[
 
 /// 解析法线
 #[cfg(feature = "obj")]
-fn parse_normal(mut parts: std::str::SplitWhitespace, context: &str) -> Result<[f32; 3], ObjLoadError> {
-    let x: f32 = parts.next()
+fn parse_normal(
+    mut parts: std::str::SplitWhitespace,
+    context: &str,
+) -> Result<[f32; 3], ObjLoadError> {
+    let x: f32 = parts
+        .next()
         .and_then(|s| s.parse().ok())
         .ok_or_else(|| ObjLoadError::Parse(format!("Missing normal x at {context}")))?;
-    let y: f32 = parts.next()
+    let y: f32 = parts
+        .next()
         .and_then(|s| s.parse().ok())
         .ok_or_else(|| ObjLoadError::Parse(format!("Missing normal y at {context}")))?;
-    let z: f32 = parts.next()
+    let z: f32 = parts
+        .next()
         .and_then(|s| s.parse().ok())
         .ok_or_else(|| ObjLoadError::Parse(format!("Missing normal z at {context}")))?;
     Ok([x, y, z])
@@ -422,18 +437,20 @@ fn parse_normal(mut parts: std::str::SplitWhitespace, context: &str) -> Result<[
 /// 解析UV坐标
 #[cfg(feature = "obj")]
 fn parse_uv(mut parts: std::str::SplitWhitespace, context: &str) -> Result<[f32; 2], ObjLoadError> {
-    let u: f32 = parts.next()
+    let u: f32 = parts
+        .next()
         .and_then(|s| s.parse().ok())
         .ok_or_else(|| ObjLoadError::Parse(format!("Missing UV u at {context}")))?;
-    let v: f32 = parts.next()
-        .and_then(|s| s.parse().ok())
-        .unwrap_or(0.0); // v 是可选的
+    let v: f32 = parts.next().and_then(|s| s.parse().ok()).unwrap_or(0.0); // v 是可选的
     Ok([u, v])
 }
 
 /// 解析面索引
 #[cfg(feature = "obj")]
-fn parse_face(mut parts: std::str::SplitWhitespace, context: &str) -> Result<Vec<ObjIndex>, ObjLoadError> {
+fn parse_face(
+    mut parts: std::str::SplitWhitespace,
+    context: &str,
+) -> Result<Vec<ObjIndex>, ObjLoadError> {
     let mut indices = Vec::new();
     for part in parts {
         let index = parse_vertex_index(part, context)?;
@@ -454,28 +471,29 @@ fn parse_vertex_index(part: &str, context: &str) -> Result<ObjIndex, ObjLoadErro
     let components: Vec<&str> = part.split('/').collect();
 
     // OBJ 索引从1开始，需要转换为从0开始
-    let vertex = components.get(0)
+    let vertex = components
+        .get(0)
         .and_then(|s| if s.is_empty() { None } else { s.parse().ok() })
         .map(|i: u32| i.saturating_sub(1))
         .ok_or_else(|| ObjLoadError::Parse(format!("Invalid vertex index at {context}")))?;
 
     let tex_coord = if components.len() > 1 && !components[1].is_empty() {
-        Some(components[1].parse::<u32>()
-            .map(|i| i.saturating_sub(1))
-            .unwrap_or(0))
+        Some(components[1].parse::<u32>().map(|i| i.saturating_sub(1)).unwrap_or(0))
     } else {
         None
     };
 
     let normal = if components.len() > 2 && !components[2].is_empty() {
-        Some(components[2].parse::<u32>()
-            .map(|i| i.saturating_sub(1))
-            .unwrap_or(0))
+        Some(components[2].parse::<u32>().map(|i| i.saturating_sub(1)).unwrap_or(0))
     } else {
         None
     };
 
-    Ok(ObjIndex { vertex, tex_coord, normal })
+    Ok(ObjIndex {
+        vertex,
+        tex_coord,
+        normal,
+    })
 }
 
 /// 三角化多边形（简单扇形三角化）
@@ -526,15 +544,13 @@ fn build_mesh_from_indices(
             // 添加新顶点
             let new_idx = vertices.len() as u32;
 
-            let pos = positions.get(index.vertex as usize)
-                .copied()
-                .unwrap_or([0.0, 0.0, 0.0]);
-            let normal = index.normal
+            let pos = positions.get(index.vertex as usize).copied().unwrap_or([0.0, 0.0, 0.0]);
+            let normal = index
+                .normal
                 .and_then(|i| normals.get(i as usize).copied())
                 .unwrap_or([0.0, 1.0, 0.0]);
-            let uv = index.tex_coord
-                .and_then(|i| uvs.get(i as usize).copied())
-                .unwrap_or([0.0, 0.0]);
+            let uv =
+                index.tex_coord.and_then(|i| uvs.get(i as usize).copied()).unwrap_or([0.0, 0.0]);
 
             vertices.push((pos, normal, uv));
             final_indices.push(new_idx);
@@ -546,8 +562,13 @@ fn build_mesh_from_indices(
     obj.mesh.positions = vertices.iter().map(|(p, _, _)| *p).collect();
     obj.mesh.normals = vertices.iter().map(|(_, n, _)| *n).collect();
     obj.mesh.uvs = vertices.iter().map(|(_, _, uv)| *uv).collect();
-    obj.mesh.indices = final_indices.into_iter()
-        .map(|i| ObjIndex { vertex: i, tex_coord: None, normal: None })
+    obj.mesh.indices = final_indices
+        .into_iter()
+        .map(|i| ObjIndex {
+            vertex: i,
+            tex_coord: None,
+            normal: None,
+        })
         .collect();
 }
 

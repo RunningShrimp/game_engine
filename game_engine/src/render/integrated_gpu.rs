@@ -61,10 +61,10 @@ impl Default for IntegratedGpuConfig {
     fn default() -> Self {
         Self {
             tier: IntegratedGpuTier::Medium,
-            shared_memory_mb: 512,  // 默认512MB共享显存
+            shared_memory_mb: 512, // 默认512MB共享显存
             enable_bandwidth_optimization: true,
             enable_shader_simplification: true,
-            render_scale: 0.75,  // 默认75%分辨率渲染
+            render_scale: 0.75, // 默认75%分辨率渲染
             texture_quality: 0.75,
             shadow_quality: 0.5,
             max_dynamic_lights: 4,
@@ -126,7 +126,10 @@ impl IntegratedGpuConfig {
         // Intel HD
         if gpu_lower.contains("hd graphics") {
             // HD 4000-6000: 中端
-            if gpu_lower.contains("hd 4") || gpu_lower.contains("hd 5") || gpu_lower.contains("hd 6") {
+            if gpu_lower.contains("hd 4")
+                || gpu_lower.contains("hd 5")
+                || gpu_lower.contains("hd 6")
+            {
                 return Self::mid_range();
             }
             // HD 2000-3000: 低端
@@ -174,8 +177,8 @@ pub enum ShaderSimplification {
 /// 集成显卡优化管理器
 pub struct IntegratedGpuOptimizer {
     config: IntegratedGpuConfig,
-    current_bandwidth_usage: AtomicUsize,  // 字节
-    peak_bandwidth_usage: AtomicUsize,      // 字节
+    current_bandwidth_usage: AtomicUsize, // 字节
+    peak_bandwidth_usage: AtomicUsize,    // 字节
 }
 
 impl IntegratedGpuOptimizer {
@@ -311,10 +314,7 @@ impl IntegratedGpuOptimizer {
         let scaled_height = (display_height as f32 * self.config.render_scale) as u32;
 
         // 确保至少是320x240
-        (
-            scaled_width.max(320),
-            scaled_height.max(240)
-        )
+        (scaled_width.max(320), scaled_height.max(240))
     }
 }
 
@@ -345,13 +345,11 @@ impl TextureCompressionFormat {
     /// 获取压缩比
     pub fn compression_ratio(&self) -> f32 {
         match self {
-            TextureCompressionFormat::Bc1 |
-            TextureCompressionFormat::Bc2 |
-            TextureCompressionFormat::Bc3 => 4.0,
-            TextureCompressionFormat::Bc4 |
-            TextureCompressionFormat::Bc5 => 2.0,
-            TextureCompressionFormat::Bc6h |
-            TextureCompressionFormat::Bc7 => 3.0,
+            TextureCompressionFormat::Bc1
+            | TextureCompressionFormat::Bc2
+            | TextureCompressionFormat::Bc3 => 4.0,
+            TextureCompressionFormat::Bc4 | TextureCompressionFormat::Bc5 => 2.0,
+            TextureCompressionFormat::Bc6h | TextureCompressionFormat::Bc7 => 3.0,
             TextureCompressionFormat::Astc4x4 => 4.0,
             TextureCompressionFormat::Etc2 => 4.0,
         }
@@ -361,11 +359,11 @@ impl TextureCompressionFormat {
     pub fn has_alpha(&self) -> bool {
         matches!(
             self,
-            TextureCompressionFormat::Bc2 |
-            TextureCompressionFormat::Bc3 |
-            TextureCompressionFormat::Bc5 |
-            TextureCompressionFormat::Bc7 |
-            TextureCompressionFormat::Astc4x4
+            TextureCompressionFormat::Bc2
+                | TextureCompressionFormat::Bc3
+                | TextureCompressionFormat::Bc5
+                | TextureCompressionFormat::Bc7
+                | TextureCompressionFormat::Astc4x4
         )
     }
 }
@@ -410,10 +408,10 @@ impl BandwidthMonitor {
 
     /// 获取总带宽
     pub fn total_bandwidth(&self) -> usize {
-        self.texture_bandwidth.load(Ordering::Relaxed) +
-        self.vertex_bandwidth.load(Ordering::Relaxed) +
-        self.index_bandwidth.load(Ordering::Relaxed) +
-        self.uniform_bandwidth.load(Ordering::Relaxed)
+        self.texture_bandwidth.load(Ordering::Relaxed)
+            + self.vertex_bandwidth.load(Ordering::Relaxed)
+            + self.index_bandwidth.load(Ordering::Relaxed)
+            + self.uniform_bandwidth.load(Ordering::Relaxed)
     }
 
     /// 重置计数器
@@ -437,10 +435,14 @@ impl BandwidthMonitor {
         }
 
         BandwidthDistribution {
-            texture_percent: (self.texture_bandwidth.load(Ordering::Relaxed) as f32 / total as f32) * 100.0,
-            vertex_percent: (self.vertex_bandwidth.load(Ordering::Relaxed) as f32 / total as f32) * 100.0,
-            index_percent: (self.index_bandwidth.load(Ordering::Relaxed) as f32 / total as f32) * 100.0,
-            uniform_percent: (self.uniform_bandwidth.load(Ordering::Relaxed) as f32 / total as f32) * 100.0,
+            texture_percent: (self.texture_bandwidth.load(Ordering::Relaxed) as f32 / total as f32)
+                * 100.0,
+            vertex_percent: (self.vertex_bandwidth.load(Ordering::Relaxed) as f32 / total as f32)
+                * 100.0,
+            index_percent: (self.index_bandwidth.load(Ordering::Relaxed) as f32 / total as f32)
+                * 100.0,
+            uniform_percent: (self.uniform_bandwidth.load(Ordering::Relaxed) as f32 / total as f32)
+                * 100.0,
         }
     }
 }
@@ -518,9 +520,8 @@ pub fn is_integrated_gpu(gpu_name: &str) -> bool {
     let gpu_lower = gpu_name.to_lowercase();
 
     // Intel集成显卡
-    if gpu_lower.contains("hd graphics") ||
-       gpu_lower.contains("uhd") ||
-       gpu_lower.contains("iris") {
+    if gpu_lower.contains("hd graphics") || gpu_lower.contains("uhd") || gpu_lower.contains("iris")
+    {
         return true;
     }
 
@@ -530,9 +531,7 @@ pub fn is_integrated_gpu(gpu_name: &str) -> bool {
     }
 
     // Apple Silicon
-    if gpu_lower.contains("m1") ||
-       gpu_lower.contains("m2") ||
-       gpu_lower.contains("m3") {
+    if gpu_lower.contains("m1") || gpu_lower.contains("m2") || gpu_lower.contains("m3") {
         return true;
     }
 

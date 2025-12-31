@@ -9,12 +9,12 @@
 //! 3. **PdfReportBuilder** - PDF报告构建器
 //! 4. **ReportData** - 报告数据模型
 
-use std::time::{SystemTime, UNIX_EPOCH};
-use crate::performance::profiler::PerformanceMetrics;
-use super::render_analyzer::RenderBottleneckReport;
+use super::auto_fix::AutoFixResult;
 use super::memory_analyzer::MemoryBottleneckReport;
 use super::optimization_suggestion::{OptimizationReport, OptimizationSuggestion};
-use super::auto_fix::AutoFixResult;
+use super::render_analyzer::RenderBottleneckReport;
+use crate::performance::profiler::PerformanceMetrics;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 /// 报告格式
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -171,7 +171,11 @@ impl HtmlReportBuilder {
     }
 
     /// 构建HTML报告
-    fn build(&self, data: &PerformanceReportData, config: &ReportConfig) -> Result<GeneratedReport, ReportError> {
+    fn build(
+        &self,
+        data: &PerformanceReportData,
+        config: &ReportConfig,
+    ) -> Result<GeneratedReport, ReportError> {
         let mut html = String::new();
 
         // HTML头部
@@ -179,7 +183,9 @@ impl HtmlReportBuilder {
         html.push_str("<html lang=\"zh-CN\">\n");
         html.push_str("<head>\n");
         html.push_str("    <meta charset=\"UTF-8\">\n");
-        html.push_str("    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n");
+        html.push_str(
+            "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n",
+        );
         html.push_str(&format!("    <title>{}</title>\n", data.title));
         html.push_str("    <style>\n");
         html.push_str(&self.styles);
@@ -288,12 +294,7 @@ impl HtmlReportBuilder {
              </div>\n\
              </div>\n\
              </div>\n",
-            fps,
-            frame_time_ms,
-            metrics.draw_calls,
-            metrics.triangle_count,
-            cpu_percent,
-            memory_mb
+            fps, frame_time_ms, metrics.draw_calls, metrics.triangle_count, cpu_percent, memory_mb
         )
     }
 
@@ -321,11 +322,21 @@ impl HtmlReportBuilder {
             html.push_str("<ul class=\"bottleneck-list\">\n");
             for bottleneck in &report.bottlenecks {
                 let severity = match bottleneck.severity {
-                    super::render_analyzer::Severity::None => crate::performance::profiler::Severity::Low,
-                    super::render_analyzer::Severity::Low => crate::performance::profiler::Severity::Low,
-                    super::render_analyzer::Severity::Medium => crate::performance::profiler::Severity::Medium,
-                    super::render_analyzer::Severity::High => crate::performance::profiler::Severity::High,
-                    super::render_analyzer::Severity::Critical => crate::performance::profiler::Severity::Critical,
+                    super::render_analyzer::Severity::None => {
+                        crate::performance::profiler::Severity::Low
+                    }
+                    super::render_analyzer::Severity::Low => {
+                        crate::performance::profiler::Severity::Low
+                    }
+                    super::render_analyzer::Severity::Medium => {
+                        crate::performance::profiler::Severity::Medium
+                    }
+                    super::render_analyzer::Severity::High => {
+                        crate::performance::profiler::Severity::High
+                    }
+                    super::render_analyzer::Severity::Critical => {
+                        crate::performance::profiler::Severity::Critical
+                    }
                 };
                 html.push_str(&format!(
                     "<li class=\"bottleneck {}\">{:?}: {}</li>\n",
@@ -344,9 +355,15 @@ impl HtmlReportBuilder {
     /// 构建Overdraw表格
     fn build_overdraw_table(&self, analysis: &super::render_analyzer::OverdrawAnalysis) -> String {
         let severity = match analysis.severity {
-            super::render_analyzer::OverdrawSeverity::None => crate::performance::profiler::Severity::Low,
-            super::render_analyzer::OverdrawSeverity::Moderate => crate::performance::profiler::Severity::Medium,
-            super::render_analyzer::OverdrawSeverity::Severe => crate::performance::profiler::Severity::Critical,
+            super::render_analyzer::OverdrawSeverity::None => {
+                crate::performance::profiler::Severity::Low
+            }
+            super::render_analyzer::OverdrawSeverity::Moderate => {
+                crate::performance::profiler::Severity::Medium
+            }
+            super::render_analyzer::OverdrawSeverity::Severe => {
+                crate::performance::profiler::Severity::Critical
+            }
         };
 
         format!(
@@ -364,7 +381,10 @@ impl HtmlReportBuilder {
     }
 
     /// 构建带宽表格
-    fn build_bandwidth_table(&self, analysis: &super::render_analyzer::BandwidthAnalysis) -> String {
+    fn build_bandwidth_table(
+        &self,
+        analysis: &super::render_analyzer::BandwidthAnalysis,
+    ) -> String {
         format!(
             "<table class=\"data-table\">\n\
              <tr><th>指标</th><th>值</th></tr>\n\
@@ -391,9 +411,7 @@ impl HtmlReportBuilder {
              <tr><td>每帧变化</td><td>{:.2}</td></tr>\n\
              <tr><td>最频繁变化</td><td>{}</td></tr>\n\
              </table>\n",
-            analysis.total_changes,
-            analysis.changes_per_frame,
-            most_frequent
+            analysis.total_changes, analysis.changes_per_frame, most_frequent
         )
     }
 
@@ -494,7 +512,11 @@ impl HtmlReportBuilder {
             suggestion.expected_improvement,
             suggestion.estimated_effort_hours,
             suggestion.risk_level,
-            if suggestion.can_auto_fix { "是" } else { "否" }
+            if suggestion.can_auto_fix {
+                "是"
+            } else {
+                "否"
+            }
         )
     }
 
@@ -507,7 +529,11 @@ impl HtmlReportBuilder {
 
         for result in results {
             match result {
-                AutoFixResult::Success { optimization_id, improvement_description, .. } => {
+                AutoFixResult::Success {
+                    optimization_id,
+                    improvement_description,
+                    ..
+                } => {
                     html.push_str(&format!(
                         "<li class=\"autofix success\">✓ {}: {}</li>\n",
                         optimization_id, improvement_description
@@ -539,7 +565,10 @@ impl HtmlReportBuilder {
          <h2>详细日志</h2>\n\
          <pre class=\"logs\">\n\
          性能分析已完成\n\
-         会话时长: ".to_string() + &data.session_duration_seconds.to_string() + " 秒\n\
+         会话时长: "
+            .to_string()
+            + &data.session_duration_seconds.to_string()
+            + " 秒\n\
          </pre>\n\
          </div>\n"
     }
@@ -572,7 +601,11 @@ impl PdfReportBuilder {
     }
 
     /// 构建PDF报告
-    fn build(&self, _data: &PerformanceReportData, _config: &ReportConfig) -> Result<GeneratedReport, ReportError> {
+    fn build(
+        &self,
+        _data: &PerformanceReportData,
+        _config: &ReportConfig,
+    ) -> Result<GeneratedReport, ReportError> {
         // 简化版：返回占位符
         // 实际实现需要使用 printpdf 或 lopdf 等库
         Err(ReportError::UnsupportedFormat)

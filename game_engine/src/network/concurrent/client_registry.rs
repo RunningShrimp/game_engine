@@ -274,9 +274,10 @@ where
     }
 
     fn all_client_ids(&self) -> Vec<K> {
-        self.inner.try_lock().ok().map_or(Vec::new(), |clients| {
-            clients.keys().copied().collect()
-        })
+        self.inner
+            .try_lock()
+            .ok()
+            .map_or(Vec::new(), |clients| clients.keys().copied().collect())
     }
 
     fn broadcast<F>(&self, f: F) -> Result<(), String>

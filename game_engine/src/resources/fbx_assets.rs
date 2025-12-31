@@ -12,7 +12,9 @@ use std::sync::Arc;
 
 // Re-export FbxScene when feature is enabled
 #[cfg(feature = "fbx")]
-pub use super::fbx_loader::{FbxScene, FbxDocument, FbxMesh, FbxMaterial, FbxTexture, FbxGlobalSettings};
+pub use super::fbx_loader::{
+    FbxDocument, FbxGlobalSettings, FbxMaterial, FbxMesh, FbxScene, FbxTexture,
+};
 
 // Import Handle, generate_tangents, and MaterialRegistry from manager module
 #[cfg(feature = "fbx")]
@@ -28,9 +30,9 @@ impl FbxAssetLoader {
     pub async fn load_from_bytes(bytes: Vec<u8>) -> Result<FbxScene, String> {
         let bytes_for_parse = bytes.clone();
         let parse_res = tokio::task::spawn_blocking(move || {
-            super::fbx_loader::FbxLoader::from_bytes(&bytes_for_parse)
-                .map_err(|e| e.to_string())
-        }).await;
+            super::fbx_loader::FbxLoader::from_bytes(&bytes_for_parse).map_err(|e| e.to_string())
+        })
+        .await;
 
         match parse_res {
             Ok(Ok(scene)) => Ok(scene),
@@ -101,31 +103,28 @@ pub fn import_fbx_to_world(
             // Get or create material
             // TODO: Get material index from mesh attribute
             let default_mat = FbxMaterial::default();
-            let material = doc.materials.get(0)
-                .unwrap_or(&default_mat);
+            let material = doc.materials.get(0).unwrap_or(&default_mat);
 
             // Convert FBX material to PBR material
             let pbr_material = convert_fbx_material_to_pbr(material);
 
             // Get PBR renderer
-            let pbr = renderer.pbr_renderer.as_ref()
-                .expect("PBR renderer must be initialized");
+            let pbr = renderer.pbr_renderer.as_ref().expect("PBR renderer must be initialized");
 
             // Create texture set
             let device = renderer.device();
             let queue = renderer.queue();
 
             // Create default 1x1 white texture
-            let default_img = image::RgbaImage::from_raw(
-                1, 1,
-                vec![255, 255, 255, 255]
-            ).expect("Failed to create default texture");
+            let default_img = image::RgbaImage::from_raw(1, 1, vec![255, 255, 255, 255])
+                .expect("Failed to create default texture");
 
             // Load textures from FBX material
             let base_color_img = load_fbx_texture(&doc.textures, &material.textures.base_color)
                 .unwrap_or(default_img.clone());
-            let metallic_roughness_img = load_fbx_texture(&doc.textures, &material.textures.metallic_roughness)
-                .unwrap_or(default_img.clone());
+            let metallic_roughness_img =
+                load_fbx_texture(&doc.textures, &material.textures.metallic_roughness)
+                    .unwrap_or(default_img.clone());
             let normal_img = load_fbx_texture(&doc.textures, &material.textures.normal)
                 .unwrap_or(default_img.clone());
             let occlusion_img = load_fbx_texture(&doc.textures, &material.textures.occlusion)
@@ -136,7 +135,13 @@ pub fn import_fbx_to_world(
             let tex_set = pbr.create_texture_set_from_images(
                 device,
                 queue,
-                [base_color_img, metallic_roughness_img, normal_img, occlusion_img, emissive_img],
+                [
+                    base_color_img,
+                    metallic_roughness_img,
+                    normal_img,
+                    occlusion_img,
+                    emissive_img,
+                ],
                 [true, false, false, false, true],
             );
             let tex_bg = Arc::new(tex_set.bind_group);
@@ -146,9 +151,13 @@ pub fn import_fbx_to_world(
                 pbr.create_material_bind_group(device, queue, &pbr_material);
 
             // Register material
-            let mut registry = world.get_resource_or_insert_with::<MaterialRegistry>(Default::default);
+            let mut registry =
+                world.get_resource_or_insert_with::<MaterialRegistry>(Default::default);
             let mat_id = mesh_idx as u64;
-            registry.materials.insert(mat_id, (material_bg.clone(), material_buf.clone(), tex_bg.clone()));
+            registry.materials.insert(
+                mat_id,
+                (material_bg.clone(), material_buf.clone(), tex_bg.clone()),
+            );
 
             // Spawn entity with mesh renderer
             let comp = crate::render::instance_batch::Mesh3DRenderer {
@@ -303,11 +312,7 @@ mod tests {
     #[test]
     #[cfg(feature = "fbx")]
     fn test_generate_normals() {
-        let positions = vec![
-            [0.0, 0.0, 0.0],
-            [1.0, 0.0, 0.0],
-            [0.0, 1.0, 0.0],
-        ];
+        let positions = vec![[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]];
         let indices = vec![0, 1, 2];
 
         let normals = generate_normals(&positions, &indices);

@@ -144,19 +144,9 @@ pub trait LightingModel {
         let light_color = light.color();
         let light_intensity = light.intensity() * attenuation;
 
-        let diffuse = self.compute_diffuse(
-            surface,
-            light_dir,
-            light_color,
-            light_intensity,
-        );
+        let diffuse = self.compute_diffuse(surface, light_dir, light_color, light_intensity);
 
-        let specular = self.compute_specular(
-            surface,
-            light_dir,
-            light_color,
-            light_intensity,
-        );
+        let specular = self.compute_specular(surface, light_dir, light_color, light_intensity);
 
         let total = diffuse + specular;
 
@@ -234,11 +224,7 @@ impl LightingModel for BlinnPhong {
         let spec_factor = n_dot_h.powf(shininess);
 
         // 镜面反射强度基于金属度
-        let specular_strength = if surface.metallic > 0.5 {
-            1.0
-        } else {
-            0.5
-        };
+        let specular_strength = if surface.metallic > 0.5 { 1.0 } else { 0.5 };
 
         light_color * light_intensity * spec_factor * specular_strength
     }
@@ -353,11 +339,7 @@ pub trait LightCalculator {
     }
 
     /// 计算全局光照贡献
-    fn compute_global_illumination(
-        &self,
-        surface: &SurfaceProperties,
-        gi_intensity: f32,
-    ) -> Vec3 {
+    fn compute_global_illumination(&self, surface: &SurfaceProperties, gi_intensity: f32) -> Vec3 {
         let base_rgb = surface.base_color.truncate();
         // 简化的GI计算
         base_rgb * gi_intensity * surface.ambient_occlusion
@@ -368,7 +350,7 @@ pub trait LightCalculator {
 #[derive(Clone, Debug, Default)]
 pub struct DefaultLightCalculator;
 
-impl LightCalculator for DefaultLightCalculator { }
+impl LightCalculator for DefaultLightCalculator {}
 
 #[cfg(test)]
 mod tests {
@@ -414,8 +396,8 @@ mod tests {
         let surface = SurfaceProperties {
             normal: Vec3::Y,
             view_dir: Vec3::Z,
-            roughness: 0.1,  // 光滑表面 = 强镜面反射
-            metallic: 1.0,   // 金属表面
+            roughness: 0.1, // 光滑表面 = 强镜面反射
+            metallic: 1.0,  // 金属表面
             ..Default::default()
         };
 

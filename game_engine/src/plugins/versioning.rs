@@ -38,7 +38,11 @@ pub struct SemVer {
 impl SemVer {
     /// 创建新版本
     pub fn new(major: u32, minor: u32, patch: u32) -> Self {
-        Self { major, minor, patch }
+        Self {
+            major,
+            minor,
+            patch,
+        }
     }
 
     /// 从字符串解析
@@ -76,7 +80,11 @@ impl SemVer {
             value: parts[2].to_string(),
         })?;
 
-        Ok(Self { major, minor, patch })
+        Ok(Self {
+            major,
+            minor,
+            patch,
+        })
     }
 
     /// 转换为字符串
@@ -227,8 +235,12 @@ impl VersionRequirement {
                 }
             }
             VersionRequirement::Any => true,
-            VersionRequirement::Or(left, right) => left.satisfies(version) || right.satisfies(version),
-            VersionRequirement::And(left, right) => left.satisfies(version) && right.satisfies(version),
+            VersionRequirement::Or(left, right) => {
+                left.satisfies(version) || right.satisfies(version)
+            }
+            VersionRequirement::And(left, right) => {
+                left.satisfies(version) && right.satisfies(version)
+            }
         }
     }
 }
@@ -366,7 +378,7 @@ pub struct WasiSandboxConfig {
 impl Default for WasiSandboxConfig {
     fn default() -> Self {
         Self {
-            allowed_dirs: vec![".".to_string()],  // 只允许当前目录
+            allowed_dirs: vec![".".to_string()], // 只允许当前目录
             allowed_env: vec![],
             allow_network: false,
             max_memory_mb: Some(512),
@@ -428,7 +440,8 @@ impl WasiSandbox {
                 config.max_wasm_memory(max_memory_mb * 1024 * 1024);
             }
 
-            let engine = Engine::new(&config).map_err(|e| SandboxError::Initialization(e.to_string()))?;
+            let engine =
+                Engine::new(&config).map_err(|e| SandboxError::Initialization(e.to_string()))?;
 
             // 配置 WASI
             let mut linker = Linker::new(&engine);
@@ -440,11 +453,13 @@ impl WasiSandbox {
 
             // 创建实例
             let mut store = Store::new(&engine, WasiState::new());
-            let instance = linker.instantiate(&mut store, &module)
+            let instance = linker
+                .instantiate(&mut store, &module)
                 .map_err(|e| SandboxError::Instantiation(e.to_string()))?;
 
             // 调用函数
-            let func = instance.get_typed_func::<(i32, i32), i32>(&store, _function)
+            let func = instance
+                .get_typed_func::<(i32, i32), i32>(&store, _function)
                 .map_err(|e| SandboxError::FunctionNotFound(e.to_string()))?;
 
             // 执行（这里简化，实际需要处理参数）
@@ -456,7 +471,9 @@ impl WasiSandbox {
 
         #[cfg(not(feature = "wasmtime"))]
         {
-            Err(SandboxError::NotSupported("WASM execution requires 'wasmtime' feature".to_string()))
+            Err(SandboxError::NotSupported(
+                "WASM execution requires 'wasmtime' feature".to_string(),
+            ))
         }
     }
 
@@ -472,9 +489,7 @@ impl WasiSandbox {
         use std::sync::Mutex;
 
         static RT: once_cell::sync::Lazy<Mutex<tokio::runtime::Runtime>> =
-            once_cell::sync::Lazy::new(|| {
-                Mutex::new(tokio::runtime::Runtime::new().unwrap())
-            });
+            once_cell::sync::Lazy::new(|| Mutex::new(tokio::runtime::Runtime::new().unwrap()));
 
         let rt = RT.lock().unwrap();
         rt.block_on(self.execute_wasm(wasm_bytes, function, args))
@@ -510,13 +525,18 @@ impl WasiSandbox {
         }
 
         if &wasm_bytes[0..4] != b"\0asm" {
-            return Err(SandboxError::InvalidWasm("Invalid WASM magic number".to_string()));
+            return Err(SandboxError::InvalidWasm(
+                "Invalid WASM magic number".to_string(),
+            ));
         }
 
         // 检查版本
         let version = &wasm_bytes[4..8];
         if version != b"\x01\x00\x00\x00" {
-            return Err(SandboxError::InvalidWasm(format!("Unsupported WASM version: {:?}", version)));
+            return Err(SandboxError::InvalidWasm(format!(
+                "Unsupported WASM version: {:?}",
+                version
+            )));
         }
 
         Ok(ValidationResult {
@@ -584,11 +604,7 @@ impl PluginSandboxManager {
     }
 
     /// 为插件创建沙箱
-    pub fn create_sandbox(
-        &mut self,
-        plugin_name: impl Into<String>,
-        config: WasiSandboxConfig,
-    ) {
+    pub fn create_sandbox(&mut self, plugin_name: impl Into<String>, config: WasiSandboxConfig) {
         let sandbox = WasiSandbox::new(config);
         self.sandboxes.insert(plugin_name.into(), sandbox);
     }

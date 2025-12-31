@@ -18,11 +18,11 @@
 //! - [`EntityRepository`] - 实体仓储
 //! - [`InMemoryRepository`] - 内存实现
 
+use crate::domain::entity::{EntityId, GameEntity};
 use crate::domain::errors::{DomainError, PhysicsError, SceneError};
 use crate::domain::events::{AggregateRoot, DomainEvent};
 use crate::domain::physics::{Collider, RigidBody, RigidBodyId};
 use crate::domain::scene::{Scene, SceneId};
-use crate::domain::entity::{EntityId, GameEntity};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt;
@@ -37,21 +37,21 @@ pub trait HasId<ID> {
 /// 为Scene实现HasId（使用显式方法调用避免字段/方法歧义）
 impl HasId<SceneId> for Scene {
     fn id(&self) -> SceneId {
-        Scene::id(self)  // 显式调用Scene的id()方法
+        Scene::id(self) // 显式调用Scene的id()方法
     }
 }
 
 /// 为RigidBody实现HasId（使用显式方法调用避免字段/方法歧义）
 impl HasId<RigidBodyId> for RigidBody {
     fn id(&self) -> RigidBodyId {
-        RigidBody::id(self)  // 显式调用RigidBody的id()方法
+        RigidBody::id(self) // 显式调用RigidBody的id()方法
     }
 }
 
 /// 为GameEntity实现HasId（使用显式方法调用避免字段/方法歧义）
 impl HasId<EntityId> for GameEntity {
     fn id(&self) -> EntityId {
-        GameEntity::id(self)  // 显式调用GameEntity的id()方法
+        GameEntity::id(self) // 显式调用GameEntity的id()方法
     }
 }
 
@@ -155,7 +155,8 @@ where
     T: AggregateRoot + HasId<ID> + Clone + Send + Sync,
 {
     /// 获取未提交的事件
-    fn get_uncommitted_events(&self, id: &ID) -> Result<Vec<Box<dyn DomainEvent>>, RepositoryError>;
+    fn get_uncommitted_events(&self, id: &ID)
+    -> Result<Vec<Box<dyn DomainEvent>>, RepositoryError>;
 
     /// 标记事件为已提交
     fn mark_events_committed(&mut self, id: &ID) -> Result<(), RepositoryError>;
@@ -269,19 +270,12 @@ impl SceneRepositoryImpl {
 
     /// 查询场景名称
     pub fn find_by_name(&self, name: &str) -> Result<Option<Scene>, RepositoryError> {
-        Ok(self
-            .scenes
-            .values()
-            .find(|s| s.name() == name)
-            .cloned())
+        Ok(self.scenes.values().find(|s| s.name() == name).cloned())
     }
 
     /// 获取事件存储
     pub fn get_events(&self, aggregate_id: &str) -> Vec<&StoredEvent> {
-        self.event_store
-            .iter()
-            .filter(|e| e.aggregate_id == aggregate_id)
-            .collect()
+        self.event_store.iter().filter(|e| e.aggregate_id == aggregate_id).collect()
     }
 }
 
@@ -323,10 +317,7 @@ impl Repository<SceneId, Scene> for SceneRepositoryImpl {
     fn update(&mut self, aggregate: &Scene) -> Result<(), RepositoryError> {
         let id = aggregate.id();
         if !self.scenes.contains_key(&id) {
-            return Err(RepositoryError::NotFound(format!(
-                "Scene {}",
-                id.as_u64()
-            )));
+            return Err(RepositoryError::NotFound(format!("Scene {}", id.as_u64())));
         }
 
         // Scene是AggregateRoot，提取未提交事件
@@ -378,7 +369,10 @@ impl Repository<SceneId, Scene> for SceneRepositoryImpl {
 
 // Scene实现AggregateRoot，所以实现AggregateRepository
 impl AggregateRepository<SceneId, Scene> for SceneRepositoryImpl {
-    fn get_uncommitted_events(&self, id: &SceneId) -> Result<Vec<Box<dyn DomainEvent>>, RepositoryError> {
+    fn get_uncommitted_events(
+        &self,
+        id: &SceneId,
+    ) -> Result<Vec<Box<dyn DomainEvent>>, RepositoryError> {
         if let Some(scene) = self.scenes.get(id) {
             Ok(scene.clone().take_uncommitted_events())
         } else {
@@ -420,10 +414,7 @@ impl RigidBodyRepository {
 
     /// 添加碰撞体到刚体
     pub fn add_collider(&mut self, body_id: RigidBodyId, collider: Collider) {
-        self.colliders
-            .entry(body_id)
-            .or_insert_with(Vec::new)
-            .push(collider);
+        self.colliders.entry(body_id).or_insert_with(Vec::new).push(collider);
     }
 
     /// 获取刚体的所有碰撞体
@@ -433,11 +424,7 @@ impl RigidBodyRepository {
 
     /// 查询特定类型的刚体
     pub fn find_by_type(&self, body_type: crate::domain::physics::RigidBodyType) -> Vec<RigidBody> {
-        self.bodies
-            .values()
-            .filter(|b| b.body_type() == body_type)
-            .cloned()
-            .collect()
+        self.bodies.values().filter(|b| b.body_type() == body_type).cloned().collect()
     }
 }
 
@@ -546,18 +533,12 @@ impl Repository<EntityId, GameEntity> for EntityRepository {
     fn add(&mut self, aggregate: GameEntity) -> Result<(), RepositoryError> {
         let id = aggregate.id();
         if self.entities.contains_key(&id) {
-            return Err(RepositoryError::AlreadyExists(format!(
-                "Entity {:?}",
-                id
-            )));
+            return Err(RepositoryError::AlreadyExists(format!("Entity {:?}", id)));
         }
 
         // 索引实体名称（如果有）
         if let Some(name) = aggregate.name() {
-            self.by_name
-                .entry(name.to_string())
-                .or_insert_with(Vec::new)
-                .push(id);
+            self.by_name.entry(name.to_string()).or_insert_with(Vec::new).push(id);
         }
 
         self.entities.insert(id, aggregate);
@@ -580,10 +561,7 @@ impl Repository<EntityId, GameEntity> for EntityRepository {
         }
 
         if let Some(name) = aggregate.name() {
-            self.by_name
-                .entry(name.to_string())
-                .or_insert_with(Vec::new)
-                .push(id);
+            self.by_name.entry(name.to_string()).or_insert_with(Vec::new).push(id);
         }
 
         self.entities.insert(id, aggregate.clone());

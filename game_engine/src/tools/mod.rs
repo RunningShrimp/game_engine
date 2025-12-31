@@ -4,20 +4,12 @@
 
 pub mod resource_analysis;
 
-pub mod migration;
 pub mod ai_assistant;
+pub mod migration;
 
 // 重新导出主要类型
 pub use resource_analysis::{
-    ResourceDependencyGraph,
-    ResourceNode,
-    ResourceReferenceAnalyzer,
-    ResourceScanner,
-    ResourceType,
-    UnusedResourceDetector,
-    RedundantAssetCleaner,
-    DependencyReportGenerator,
-    analyze_project_resources,
-    AnalysisResult,
-    UsageStats,
+    AnalysisResult, DependencyReportGenerator, RedundantAssetCleaner, ResourceDependencyGraph,
+    ResourceNode, ResourceReferenceAnalyzer, ResourceScanner, ResourceType, UnusedResourceDetector,
+    UsageStats, analyze_project_resources,
 };

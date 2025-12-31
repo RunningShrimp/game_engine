@@ -255,12 +255,7 @@ impl CoroutineBuilder {
         future: impl Future<Output = CoroutineFutureOutput> + Send + 'static,
     ) -> (CoroutineId, CoroutineFuture) {
         let id = CoroutineId::new(rand::random());
-        let coroutine = Coroutine::new(
-            id,
-            self.name,
-            self.priority,
-            CoroutineType::Native,
-        );
+        let coroutine = Coroutine::new(id, self.name, self.priority, CoroutineType::Native);
 
         // 包装超时逻辑 - 统一boxed类型
         let future: CoroutineFuture = if let Some(timeout) = self.timeout {
@@ -385,8 +380,7 @@ pub struct CoroutineWait {
 #[macro_export]
 macro_rules! coroutine {
     ($future:expr) => {
-        CoroutineBuilder::new()
-            .build_rust(async move { Ok(()) })
+        CoroutineBuilder::new().build_rust(async move { Ok(()) })
     };
 }
 
@@ -445,12 +439,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_simple_coroutine() {
-        let (id, future) = CoroutineBuilder::new()
-            .name("simple")
-            .build_rust(async {
-                println!("Coroutine started");
-                Ok(())
-            });
+        let (id, future) = CoroutineBuilder::new().name("simple").build_rust(async {
+            println!("Coroutine started");
+            Ok(())
+        });
 
         let result = future.await;
         assert!(result.is_ok());

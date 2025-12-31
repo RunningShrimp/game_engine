@@ -160,7 +160,9 @@ struct PlaceholderKeyExchangeBackend;
 impl KeyExchangeBackend for PlaceholderKeyExchangeBackend {
     fn generate_keypair(&self) -> ([u8; 32], [u8; 32]) {
         // 警告：这不是安全的密钥交换实现！
-        tracing::warn!("Using insecure placeholder key exchange. Please enable the 'secure_key_exchange' feature.");
+        tracing::warn!(
+            "Using insecure placeholder key exchange. Please enable the 'secure_key_exchange' feature."
+        );
         ([0u8; 32], [0u8; 32])
     }
 
@@ -762,29 +764,29 @@ mod tests {
             {
                 // Manually create random secrets using bytes
                 let mut rng = rand::rng();
-            let mut secret1_bytes = [0u8; 32];
-            let mut secret2_bytes = [0u8; 32];
-            rng.fill_bytes(&mut secret1_bytes);
-            rng.fill_bytes(&mut secret2_bytes);
+                let mut secret1_bytes = [0u8; 32];
+                let mut secret2_bytes = [0u8; 32];
+                rng.fill_bytes(&mut secret1_bytes);
+                rng.fill_bytes(&mut secret2_bytes);
 
-            let secret1 = StaticSecret::from(secret1_bytes);
-            let public1 = PublicKey::from(&secret1);
+                let secret1 = StaticSecret::from(secret1_bytes);
+                let public1 = PublicKey::from(&secret1);
 
-            let secret2 = StaticSecret::from(secret2_bytes);
-            let public2 = PublicKey::from(&secret2);
+                let secret2 = StaticSecret::from(secret2_bytes);
+                let public2 = PublicKey::from(&secret2);
 
-            // 双方计算共享密钥
-            let shared1 = secret1.diffie_hellman(&public2);
-            let shared2 = secret2.diffie_hellman(&public1);
+                // 双方计算共享密钥
+                let shared1 = secret1.diffie_hellman(&public2);
+                let shared2 = secret2.diffie_hellman(&public1);
 
-            // 共享密钥应该相同
-            assert_eq!(
-                shared1.to_bytes(),
-                shared2.to_bytes(),
-                "X25519密钥协商应该是对称的"
-            );
-            }  // end of #[cfg(feature = "secure_key_exchange")]
-        }  // end of if backend.backend_name()
+                // 共享密钥应该相同
+                assert_eq!(
+                    shared1.to_bytes(),
+                    shared2.to_bytes(),
+                    "X25519密钥协商应该是对称的"
+                );
+            } // end of #[cfg(feature = "secure_key_exchange")]
+        } // end of if backend.backend_name()
     }
 
     #[test]

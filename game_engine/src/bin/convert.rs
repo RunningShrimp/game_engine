@@ -2,8 +2,8 @@
 
 mod model_converter;
 
-use std::path::PathBuf;
 use model_converter::ModelFormat;
+use std::path::PathBuf;
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
@@ -29,7 +29,10 @@ fn main() {
     let input_format = match input_format {
         Some(fmt) => fmt,
         None => {
-            eprintln!("Error: Could not detect input format from: {}", input.display());
+            eprintln!(
+                "Error: Could not detect input format from: {}",
+                input.display()
+            );
             std::process::exit(1);
         }
     };
@@ -49,7 +52,7 @@ fn main() {
     println!();
     println!("Converting: {:?} -> {:?}", input_format, output_format);
     println!("Input:  {}", input.display());
-    
+
     if let Some(ref out) = output {
         println!("Output: {}", out.display());
     } else {
@@ -57,7 +60,7 @@ fn main() {
         auto_output.set_extension(output_format.extension());
         println!("Output: {} (auto)", auto_output.display());
     }
-    
+
     println!();
     println!("Status: Conversion framework ready");
     println!("        Loaders implemented: FBX (P2-1.1), OBJ (P2-1.2)");

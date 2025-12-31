@@ -105,7 +105,13 @@ impl LeakDetector {
     }
 
     /// 记录分配
-    pub fn record_allocation(&mut self, address: usize, size: usize, allocation_type: String, stack_trace: Vec<String>) {
+    pub fn record_allocation(
+        &mut self,
+        address: usize,
+        size: usize,
+        allocation_type: String,
+        stack_trace: Vec<String>,
+    ) {
         let record = AllocationRecord {
             address,
             size,
@@ -148,7 +154,8 @@ impl LeakDetector {
         // 按类型分组
         let mut type_groups: HashMap<String, Vec<&AllocationRecord>> = HashMap::new();
         for record in self.allocations.values() {
-            type_groups.entry(record.allocation_type.clone())
+            type_groups
+                .entry(record.allocation_type.clone())
                 .or_insert_with(Vec::new)
                 .push(record);
         }
@@ -156,7 +163,8 @@ impl LeakDetector {
         // 分析每个类型
         for (alloc_type, records) in type_groups {
             // 检查长时间未释放的分配
-            let long_lived: Vec<_> = records.iter()
+            let long_lived: Vec<_> = records
+                .iter()
                 .filter(|r| now.duration_since(r.timestamp) > self.time_window)
                 .collect();
 
@@ -176,7 +184,8 @@ impl LeakDetector {
                     } else {
                         LeakSeverity::Moderate
                     },
-                    sample_stack_traces: long_lived.iter()
+                    sample_stack_traces: long_lived
+                        .iter()
                         .take(5)
                         .map(|r| r.stack_trace.clone())
                         .collect(),
@@ -258,18 +267,21 @@ impl FragmentationAnalyzer {
         }
 
         let latest = self.snapshots.last().unwrap();
-        let avg_fragmentation = self.snapshots.iter()
-            .map(|s| s.fragmentation_ratio)
-            .sum::<f32>() / self.snapshots.len() as f32;
+        let avg_fragmentation = self.snapshots.iter().map(|s| s.fragmentation_ratio).sum::<f32>()
+            / self.snapshots.len() as f32;
 
         // 判断趋势
-        let recent_avg: f32 = self.snapshots.iter().rev().take(5)
-            .map(|s| s.fragmentation_ratio)
-            .sum::<f32>() / self.snapshots.len().min(5) as f32;
+        let recent_avg: f32 =
+            self.snapshots.iter().rev().take(5).map(|s| s.fragmentation_ratio).sum::<f32>()
+                / self.snapshots.len().min(5) as f32;
 
-        let older_avg: f32 = self.snapshots.iter().take(self.snapshots.len().saturating_sub(5))
+        let older_avg: f32 = self
+            .snapshots
+            .iter()
+            .take(self.snapshots.len().saturating_sub(5))
             .map(|s| s.fragmentation_ratio)
-            .sum::<f32>() / self.snapshots.len().saturating_sub(5).max(1) as f32;
+            .sum::<f32>()
+            / self.snapshots.len().saturating_sub(5).max(1) as f32;
 
         let trend = if recent_avg > older_avg * 1.1 {
             FragmentationTrend::Worsening
@@ -375,7 +387,12 @@ impl AllocationProfiler {
     }
 
     /// 记录分配
-    pub fn record_allocation(&mut self, allocation_type: String, size: usize, stack_location: String) {
+    pub fn record_allocation(
+        &mut self,
+        allocation_type: String,
+        size: usize,
+        stack_location: String,
+    ) {
         // 更新类型统计
         let stats = self.allocation_stats.entry(allocation_type.clone()).or_insert_with(|| {
             AllocationStats {
@@ -403,7 +420,8 @@ impl AllocationProfiler {
 
         stack_stats.allocation_count += 1;
         stack_stats.total_size += size as u64;
-        stack_stats.average_size = stack_stats.total_size as f32 / stack_stats.allocation_count as f32;
+        stack_stats.average_size =
+            stack_stats.total_size as f32 / stack_stats.allocation_count as f32;
     }
 
     /// 分析热点
@@ -412,7 +430,9 @@ impl AllocationProfiler {
         let mut type_vec: Vec<_> = self.allocation_stats.iter().collect();
         type_vec.sort_by(|a, b| b.1.allocation_count.cmp(&a.1.allocation_count));
 
-        let top_types: Vec<(String, AllocationStats)> = type_vec.into_iter().take(top_n)
+        let top_types: Vec<(String, AllocationStats)> = type_vec
+            .into_iter()
+            .take(top_n)
             .map(|(name, stats)| ((*name).clone(), (*stats).clone()))
             .collect();
 
@@ -420,7 +440,9 @@ impl AllocationProfiler {
         let mut stack_vec: Vec<_> = self.stack_stats.iter().collect();
         stack_vec.sort_by(|a, b| b.1.allocation_count.cmp(&a.1.allocation_count));
 
-        let top_stacks: Vec<(String, StackAllocationStats)> = stack_vec.into_iter().take(top_n)
+        let top_stacks: Vec<(String, StackAllocationStats)> = stack_vec
+            .into_iter()
+            .take(top_n)
             .map(|(name, stats)| ((*name).clone(), (*stats).clone()))
             .collect();
 
@@ -469,7 +491,8 @@ impl MemoryAnalyzer {
         let hotspot_report = self.allocation_profiler.analyze_hotspots(10);
 
         // 综合瓶颈
-        let bottlenecks = self.detect_memory_bottlenecks(stats, &leaks, &fragmentation_report, &hotspot_report);
+        let bottlenecks =
+            self.detect_memory_bottlenecks(stats, &leaks, &fragmentation_report, &hotspot_report);
 
         // 生成建议
         let mut recommendations = Vec::new();
@@ -483,8 +506,10 @@ impl MemoryAnalyzer {
 
         if !hotspot_report.top_allocation_types.is_empty() {
             let top_type = &hotspot_report.top_allocation_types[0];
-            recommendations.push(format!("Hot allocation type: {} ({} allocations)",
-                                        top_type.0, top_type.1.allocation_count));
+            recommendations.push(format!(
+                "Hot allocation type: {} ({} allocations)",
+                top_type.0, top_type.1.allocation_count
+            ));
         }
 
         MemoryBottleneckReport {
@@ -514,9 +539,12 @@ impl MemoryAnalyzer {
                     LeakSeverity::High => Severity::High,
                     LeakSeverity::Critical => Severity::Critical,
                 },
-                description: format!("Memory leak in {}: {} objects, {:.2} MB",
-                                    leak.leak_type, leak.leak_count,
-                                    leak.total_size as f64 / 1_000_000.0),
+                description: format!(
+                    "Memory leak in {}: {} objects, {:.2} MB",
+                    leak.leak_type,
+                    leak.leak_count,
+                    leak.total_size as f64 / 1_000_000.0
+                ),
                 impact: "Memory usage keeps growing".to_string(),
             });
         }
@@ -530,7 +558,10 @@ impl MemoryAnalyzer {
                     FragmentationSeverity::Severe => Severity::High,
                     FragmentationSeverity::None => Severity::Low,
                 },
-                description: format!("Memory fragmentation: {:.1}%", fragmentation.current_fragmentation * 100.0),
+                description: format!(
+                    "Memory fragmentation: {:.1}%",
+                    fragmentation.current_fragmentation * 100.0
+                ),
                 impact: "Reduces effective memory bandwidth".to_string(),
             });
         }
@@ -542,9 +573,12 @@ impl MemoryAnalyzer {
                 bottlenecks.push(MemoryBottleneck {
                     bottleneck_type: MemoryBottleneckType::AllocationHotspot,
                     severity: Severity::Low,
-                    description: format!("Frequent allocations: {} ({} times, {:.2} MB)",
-                                        top.0, top.1.allocation_count,
-                                        top.1.total_size as f64 / 1_000_000.0),
+                    description: format!(
+                        "Frequent allocations: {} ({} times, {:.2} MB)",
+                        top.0,
+                        top.1.allocation_count,
+                        top.1.total_size as f64 / 1_000_000.0
+                    ),
                     impact: "Consider using object pools".to_string(),
                 });
             }
@@ -554,8 +588,15 @@ impl MemoryAnalyzer {
     }
 
     /// 记录分配
-    pub fn record_allocation(&mut self, address: usize, size: usize, alloc_type: String, stack: Vec<String>) {
-        self.leak_detector.record_allocation(address, size, alloc_type.clone(), stack.clone());
+    pub fn record_allocation(
+        &mut self,
+        address: usize,
+        size: usize,
+        alloc_type: String,
+        stack: Vec<String>,
+    ) {
+        self.leak_detector
+            .record_allocation(address, size, alloc_type.clone(), stack.clone());
         self.allocation_profiler.record_allocation(alloc_type, size, stack.join(":"));
     }
 

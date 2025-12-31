@@ -321,9 +321,7 @@ impl GpuParticleSystem {
         // 这里使用简化实现
 
         // 计算粒子数量
-        let total_particles: u32 = self.emitters.values()
-            .map(|e| e.active_count)
-            .sum();
+        let total_particles: u32 = self.emitters.values().map(|e| e.active_count).sum();
 
         // 如果没有GPU缓冲区，创建一个
         if self.particle_buffer.is_none() && total_particles > 0 {
@@ -337,9 +335,7 @@ impl GpuParticleSystem {
 
     /// 获取总粒子数
     pub fn total_particles(&self) -> u32 {
-        self.emitters.values()
-            .map(|e| e.active_count)
-            .sum()
+        self.emitters.values().map(|e| e.active_count).sum()
     }
 
     /// 获取发射器数量
@@ -367,18 +363,11 @@ pub enum ParticleEvent {
         name: String,
     },
     /// 发射器销毁
-    EmitterDestroyed {
-        emitter_id: ParticleId,
-    },
+    EmitterDestroyed { emitter_id: ParticleId },
     /// 粒子发射
-    ParticlesEmitted {
-        emitter_id: ParticleId,
-        count: u32,
-    },
+    ParticlesEmitted { emitter_id: ParticleId, count: u32 },
     /// 力场添加
-    ForceFieldAdded {
-        field_type: ForceFieldType,
-    },
+    ForceFieldAdded { field_type: ForceFieldType },
 }
 
 impl DomainEvent for ParticleEvent {
@@ -430,10 +419,7 @@ mod tests {
 
     #[test]
     fn test_emitter_creation() {
-        let emitter = ParticleEmitter::new(
-            ParticleId::new(1),
-            "test_emitter".to_string(),
-        );
+        let emitter = ParticleEmitter::new(ParticleId::new(1), "test_emitter".to_string());
 
         assert_eq!(emitter.active_count, 0);
         assert!(emitter.enabled);
@@ -441,10 +427,7 @@ mod tests {
 
     #[test]
     fn test_emission_calculation() {
-        let mut emitter = ParticleEmitter::new(
-            ParticleId::new(1),
-            "test_emitter".to_string(),
-        );
+        let mut emitter = ParticleEmitter::new(ParticleId::new(1), "test_emitter".to_string());
 
         emitter.emission_rate = 100.0;
 
@@ -472,10 +455,7 @@ mod tests {
     #[test]
     fn test_add_emitter() {
         let mut system = GpuParticleSystem::new();
-        let emitter = ParticleEmitter::new(
-            ParticleId::new(1),
-            "test".to_string(),
-        );
+        let emitter = ParticleEmitter::new(ParticleId::new(1), "test".to_string());
 
         system.add_emitter(emitter);
         assert_eq!(system.emitter_count(), 1);

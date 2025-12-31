@@ -17,7 +17,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, VecDeque};
 use std::path::PathBuf;
 use std::sync::Arc;
-use tokio::sync::{Semaphore, Mutex};
+use tokio::sync::{Mutex, Semaphore};
 
 // =============================================================================
 // 加载优先级
@@ -97,11 +97,7 @@ pub enum LoadTaskStatus {
 
 impl LoadTask {
     /// 创建新的加载任务
-    pub fn new(
-        path: PathBuf,
-        resource_type: ResourceType,
-        priority: LoadPriority,
-    ) -> Self {
+    pub fn new(path: PathBuf, resource_type: ResourceType, priority: LoadPriority) -> Self {
         Self {
             id: LoadTaskId::new(rand::random()),
             path,
@@ -284,14 +280,13 @@ impl AsyncLoadController {
     ///
     /// (总任务数, 已完成数, 正在加载数, 总进度)
     pub fn get_progress(&self) -> (usize, usize, usize, f32) {
-        let total = self.pending_queue.len() + self.loading_tasks.len() + self.completed_tasks.len();
+        let total =
+            self.pending_queue.len() + self.loading_tasks.len() + self.completed_tasks.len();
         let completed = self.completed_tasks.len();
         let loading = self.loading_tasks.len();
 
-        let total_progress: f32 = self.completed_tasks.iter()
-            .map(|t| t.progress)
-            .sum::<f32>()
-            / total.max(1) as f32;
+        let total_progress: f32 =
+            self.completed_tasks.iter().map(|t| t.progress).sum::<f32>() / total.max(1) as f32;
 
         (total, completed, loading, total_progress)
     }
@@ -339,7 +334,7 @@ impl AsyncLoadController {
 
 impl Default for AsyncLoadController {
     fn default() -> Self {
-        Self::new(4)  // 默认4个并发
+        Self::new(4) // 默认4个并发
     }
 }
 
@@ -351,20 +346,11 @@ impl Default for AsyncLoadController {
 #[derive(Debug, Clone)]
 pub enum ResourceLoadEvent {
     /// 任务开始
-    TaskStarted {
-        task_id: LoadTaskId,
-        path: PathBuf,
-    },
+    TaskStarted { task_id: LoadTaskId, path: PathBuf },
     /// 任务进度更新
-    TaskProgress {
-        task_id: LoadTaskId,
-        progress: f32,
-    },
+    TaskProgress { task_id: LoadTaskId, progress: f32 },
     /// 任务完成
-    TaskCompleted {
-        task_id: LoadTaskId,
-        path: PathBuf,
-    },
+    TaskCompleted { task_id: LoadTaskId, path: PathBuf },
     /// 任务失败
     TaskFailed {
         task_id: LoadTaskId,
@@ -372,10 +358,7 @@ pub enum ResourceLoadEvent {
         error: String,
     },
     /// 任务取消
-    TaskCancelled {
-        task_id: LoadTaskId,
-        path: PathBuf,
-    },
+    TaskCancelled { task_id: LoadTaskId, path: PathBuf },
     /// 批量加载完成
     BatchCompleted {
         total: usize,
@@ -461,7 +444,7 @@ mod tests {
         assert_eq!(task.progress, 0.5);
 
         task.update_progress(1.5);
-        assert_eq!(task.progress, 1.0);  // 限制到1.0
+        assert_eq!(task.progress, 1.0); // 限制到1.0
     }
 
     #[test]

@@ -92,11 +92,11 @@ impl MeshComplexity {
     /// Get recommended number of LOD levels
     pub fn recommended_lod_levels(&self) -> usize {
         match self {
-            Self::VeryLow => 1,      // Only LOD0 needed
-            Self::Low => 2,          // LOD0, LOD1
-            Self::Medium => 3,       // LOD0, LOD1, LOD2
-            Self::High => 4,         // LOD0, LOD1, LOD2, LOD3
-            Self::VeryHigh => 5,     // LOD0-LOD4
+            Self::VeryLow => 1,  // Only LOD0 needed
+            Self::Low => 2,      // LOD0, LOD1
+            Self::Medium => 3,   // LOD0, LOD1, LOD2
+            Self::High => 4,     // LOD0, LOD1, LOD2, LOD3
+            Self::VeryHigh => 5, // LOD0-LOD4
         }
     }
 
@@ -159,11 +159,11 @@ impl TargetQuality {
     /// Get max error tolerance for this quality level
     pub fn max_error_tolerance(&self) -> f64 {
         match self {
-            Self::Ultra => 0.01,      // Very low error tolerance
-            Self::High => 0.05,       // Low error tolerance
-            Self::Medium => 0.1,      // Medium error tolerance
-            Self::Low => 0.25,        // High error tolerance
-            Self::Minimum => 0.5,      // Very high error tolerance
+            Self::Ultra => 0.01,  // Very low error tolerance
+            Self::High => 0.05,   // Low error tolerance
+            Self::Medium => 0.1,  // Medium error tolerance
+            Self::Low => 0.25,    // High error tolerance
+            Self::Minimum => 0.5, // Very high error tolerance
         }
     }
 }
@@ -198,10 +198,10 @@ impl PlatformConstraints {
     /// Get recommended LOD bias (prefer lower/higher detail)
     pub fn lod_bias(&self) -> f32 {
         match self {
-            Self::Desktop => 0.0,   // No bias
-            Self::Mobile => -0.5,   // Prefer lower detail
-            Self::Web => -1.0,      // Strongly prefer lower detail
-            Self::Console => 0.0,   // No bias
+            Self::Desktop => 0.0, // No bias
+            Self::Mobile => -0.5, // Prefer lower detail
+            Self::Web => -1.0,    // Strongly prefer lower detail
+            Self::Console => 0.0, // No bias
         }
     }
 }
@@ -223,9 +223,9 @@ impl PerformanceRequirements {
     /// Get triangle budget multiplier
     pub fn triangle_multiplier(&self) -> f32 {
         match self {
-            Self::High => 0.7,    // Reduce triangles by 30%
-            Self::Medium => 1.0,  // Keep all triangles
-            Self::Low => 1.5,     // Allow 50% more triangles
+            Self::High => 0.7,   // Reduce triangles by 30%
+            Self::Medium => 1.0, // Keep all triangles
+            Self::Low => 1.5,    // Allow 50% more triangles
         }
     }
 }
@@ -456,8 +456,8 @@ pub fn analyze_complexity(triangle_count: usize) -> ComplexityMetrics {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::render::mesh_simplifier::Mesh;
     use crate::render::lod_generator::generate_lods;
+    use crate::render::mesh_simplifier::Mesh;
 
     fn create_test_mesh() -> Mesh {
         let vertices = vec![

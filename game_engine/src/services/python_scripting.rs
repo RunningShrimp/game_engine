@@ -11,9 +11,9 @@
 
 use pyo3::prelude::*;
 use pyo3::types::PyModule;
-use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
 
 /// Python脚本服务
 pub struct PythonScriptingService {
@@ -165,7 +165,10 @@ impl Entity {
     }
 
     fn get_position(&self) -> String {
-        format!("({}, {}, {})", self.position.0, self.position.1, self.position.2)
+        format!(
+            "({}, {}, {})",
+            self.position.0, self.position.1, self.position.2
+        )
     }
 
     fn rotate(&mut self, axis_x: f32, axis_y: f32, axis_z: f32, angle: f32) -> PyResult<()> {
@@ -668,9 +671,10 @@ impl PythonModuleManager {
         if let Some(code) = self.module_cache.get(name) {
             self.service.execute(code)
         } else {
-            Err(PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(
-                format!("Module {} not found", name)
-            ))
+            Err(PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(
+                "Module {} not found",
+                name
+            )))
         }
     }
 }
@@ -695,7 +699,8 @@ mod tests {
     #[test]
     fn test_entity_api() {
         let service = PythonScriptingService::new(Default::default()).unwrap();
-        let result = service.execute("import game_engine as ge; ge.Entity.create('TestEntity', 0.0, 0.0, 0.0)");
+        let result = service
+            .execute("import game_engine as ge; ge.Entity.create('TestEntity', 0.0, 0.0, 0.0)");
         // 注意：这需要game_engine模块正确注册
         // assert!(result.is_ok());
     }

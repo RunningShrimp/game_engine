@@ -10,10 +10,10 @@
 //! 4. **EventSystem** - 事件系统
 //! 5. **Debugger** - 调试支持
 
-use rquickjs::{Context, Function, Runtime, Value, Ctx, IntoJs};
+use rquickjs::{Context, Ctx, Function, IntoJs, Runtime, Value};
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
 use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
 
 /// 脚本服务配置
 #[derive(Clone, Debug)]
@@ -157,9 +157,7 @@ impl ScriptingService {
             global.set("engine_reload", reload_fn).unwrap();
 
             // Engine.getVersion()
-            let version_fn = Function::new(ctx.clone(), || -> String {
-                "0.6.4".to_string()
-            });
+            let version_fn = Function::new(ctx.clone(), || -> String { "0.6.4".to_string() });
             global.set("engine_getVersion", version_fn).unwrap();
         });
     }
@@ -596,9 +594,7 @@ impl ScriptingService {
             global.set("math_vector3_normalize", vec3_norm_fn).unwrap();
 
             // Math.vector3.dot()
-            let vec3_dot_fn = Function::new(ctx.clone(), |a: String, b: String| -> f32 {
-                0.0
-            });
+            let vec3_dot_fn = Function::new(ctx.clone(), |a: String, b: String| -> f32 { 0.0 });
             global.set("math_vector3_dot", vec3_dot_fn).unwrap();
 
             // Math.clamp()
@@ -634,9 +630,10 @@ impl ScriptingService {
             global.set("event_emit", event_emit_fn).unwrap();
 
             // Event.off()
-            let event_off_fn = Function::new(ctx.clone(), |event_name: String, callback: String| {
-                tracing::info!(target: "scripting", "Event.off({}, {})", event_name, callback);
-            });
+            let event_off_fn =
+                Function::new(ctx.clone(), |event_name: String, callback: String| {
+                    tracing::info!(target: "scripting", "Event.off({}, {})", event_name, callback);
+                });
             global.set("event_off", event_off_fn).unwrap();
         });
     }
@@ -653,25 +650,21 @@ impl ScriptingService {
             global.set("time_deltaTime", delta_fn).unwrap();
 
             // Time.timeScale
-            let scale_fn = Function::new(ctx.clone(), || -> f32 {
-                1.0
-            });
+            let scale_fn = Function::new(ctx.clone(), || -> f32 { 1.0 });
             global.set("time_timeScale", scale_fn).unwrap();
         });
     }
 
     /// 执行JavaScript代码
     pub fn execute(&self, code: &str) -> Result<(), ScriptError> {
-        self.context.with(|ctx| {
-            ctx.eval::<(), _>(code)
-                .map_err(|e| ScriptError::Execution(e.to_string()))
-        })
+        self.context
+            .with(|ctx| ctx.eval::<(), _>(code).map_err(|e| ScriptError::Execution(e.to_string())))
     }
 
     /// 执行脚本文件
     pub fn execute_file(&self, path: &PathBuf) -> Result<(), ScriptError> {
-        let code = std::fs::read_to_string(path)
-            .map_err(|e| ScriptError::IoError(e.to_string()))?;
+        let code =
+            std::fs::read_to_string(path).map_err(|e| ScriptError::IoError(e.to_string()))?;
 
         self.execute(&code)
     }
@@ -769,8 +762,8 @@ impl ScriptModuleManager {
 
     /// 加载模块
     pub fn load_module(&mut self, name: &str, path: &PathBuf) -> Result<(), ScriptError> {
-        let code = std::fs::read_to_string(path)
-            .map_err(|e| ScriptError::IoError(e.to_string()))?;
+        let code =
+            std::fs::read_to_string(path).map_err(|e| ScriptError::IoError(e.to_string()))?;
 
         self.service.load_module(name, &code)?;
         self.module_cache.insert(name.to_string(), code);

@@ -183,8 +183,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_wait_condition() {
-        use std::sync::atomic::{AtomicBool, Ordering};
         use std::sync::Arc;
+        use std::sync::atomic::{AtomicBool, Ordering};
 
         let flag = Arc::new(AtomicBool::new(false));
         let flag_clone = flag.clone();

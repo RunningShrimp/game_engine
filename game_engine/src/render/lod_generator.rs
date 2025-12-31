@@ -29,7 +29,7 @@
 //! - **LOD2**: Quarter detail (25% triangles)
 //! - **LOD3**: Minimum detail (12.5% triangles)
 
-use crate::render::mesh_simplifier::{Mesh, MeshSimplifier, SimplifyOptions, SimplificationError};
+use crate::render::mesh_simplifier::{Mesh, MeshSimplifier, SimplificationError, SimplifyOptions};
 use std::fmt;
 
 /// Errors that can occur during LOD generation
@@ -355,9 +355,7 @@ impl LODGenerator {
 
         // Generate levels using exponential decay
         // LOD0: 1.0, LOD1: 0.5, LOD2: 0.25, LOD3: 0.125, etc.
-        (0..num_levels)
-            .map(|i| 1.0 / (2_f32).powi(i as i32))
-            .collect()
+        (0..num_levels).map(|i| 1.0 / (2_f32).powi(i as i32)).collect()
     }
 
     /// Calculate triangle budget for each LOD level
@@ -388,7 +386,10 @@ pub fn generate_lods(mesh: &Mesh) -> Result<LODGroup, LODGeneratorError> {
 }
 
 /// Quick LOD generation with custom levels
-pub fn generate_lods_with_levels(mesh: &Mesh, levels: Vec<f32>) -> Result<LODGroup, LODGeneratorError> {
+pub fn generate_lods_with_levels(
+    mesh: &Mesh,
+    levels: Vec<f32>,
+) -> Result<LODGroup, LODGeneratorError> {
     let config = LODConfig::with_levels(levels);
     let generator = LODGenerator::with_config(config)?;
     generator.generate_from_mesh(mesh)
@@ -412,16 +413,11 @@ mod tests {
 
         let indices = vec![
             // Front face
-            0, 1, 2, 1, 3, 2,
-            // Back face
-            4, 5, 6, 5, 7, 6,
-            // Top face
-            2, 3, 6, 3, 7, 6,
-            // Bottom face
-            0, 1, 4, 1, 5, 4,
-            // Right face
-            1, 5, 3, 5, 7, 3,
-            // Left face
+            0, 1, 2, 1, 3, 2, // Back face
+            4, 5, 6, 5, 7, 6, // Top face
+            2, 3, 6, 3, 7, 6, // Bottom face
+            0, 1, 4, 1, 5, 4, // Right face
+            1, 5, 3, 5, 7, 3, // Left face
             0, 4, 2, 4, 6, 2,
         ];
 

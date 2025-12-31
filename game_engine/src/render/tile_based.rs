@@ -57,7 +57,7 @@ impl Default for TileBasedConfig {
             enable_framebuffer_fetch: true,
             enable_geometry_sorting: true,
             enable_transparency_optimization: true,
-            max_overdraw: 3.0,  // 允许最多3x overdraw
+            max_overdraw: 3.0, // 允许最多3x overdraw
         }
     }
 }
@@ -132,7 +132,7 @@ impl ObjectBounds {
 pub struct TileBasedOptimizer {
     config: TileBasedConfig,
     render_objects: Vec<RenderObject>,
-    tile_overdraw: HashMap<(u32, u32), f32>,  // (tile_x, tile_y) -> overdraw
+    tile_overdraw: HashMap<(u32, u32), f32>, // (tile_x, tile_y) -> overdraw
 }
 
 impl TileBasedOptimizer {
@@ -167,7 +167,11 @@ impl TileBasedOptimizer {
     }
 
     /// 优化渲染顺序
-    pub fn optimize_render_order(&mut self, screen_width: u32, screen_height: u32) -> Vec<RenderObject> {
+    pub fn optimize_render_order(
+        &mut self,
+        screen_width: u32,
+        screen_height: u32,
+    ) -> Vec<RenderObject> {
         if !self.config.enable_geometry_sorting {
             return self.render_objects.clone();
         }
@@ -186,14 +190,12 @@ impl TileBasedOptimizer {
         }
 
         // 不透明对象：front-to-back排序（减少overdraw）
-        opaque_objects.sort_by(|a, b| {
-            b.depth.partial_cmp(&a.depth).unwrap_or(std::cmp::Ordering::Equal)
-        });
+        opaque_objects
+            .sort_by(|a, b| b.depth.partial_cmp(&a.depth).unwrap_or(std::cmp::Ordering::Equal));
 
         // 透明对象：back-to-front排序（正确混合）
-        transparent_objects.sort_by(|a, b| {
-            a.depth.partial_cmp(&b.depth).unwrap_or(std::cmp::Ordering::Equal)
-        });
+        transparent_objects
+            .sort_by(|a, b| a.depth.partial_cmp(&b.depth).unwrap_or(std::cmp::Ordering::Equal));
 
         // 合并结果
         let mut optimized = Vec::new();
@@ -210,7 +212,8 @@ impl TileBasedOptimizer {
         screen_width: u32,
         screen_height: u32,
     ) -> HashMap<(u32, u32), f32> {
-        let (tiles_x, tiles_y) = self.config.tile_size.calculate_tile_count(screen_width, screen_height);
+        let (tiles_x, tiles_y) =
+            self.config.tile_size.calculate_tile_count(screen_width, screen_height);
         let tile_size = self.config.tile_size.size();
 
         // 初始化tile覆盖计数
@@ -255,10 +258,8 @@ impl TileBasedOptimizer {
         let min = overdraws.iter().fold(f32::INFINITY, |a, &b| a.min(b));
 
         // 高overdraw tiles占比（超过max_overdraw）
-        let high_overdraw_count = overdraws
-            .iter()
-            .filter(|&&o| o > self.config.max_overdraw)
-            .count();
+        let high_overdraw_count =
+            overdraws.iter().filter(|&&o| o > self.config.max_overdraw).count();
 
         TileOverdrawStats {
             average_overdraw: avg,
@@ -360,16 +361,13 @@ impl TileBasedPassOptimizer {
 
     /// 推荐清除操作
     fn recommend_clear_operations(&self) -> Vec<ClearOperation> {
-        vec![
-            ClearOperation::Color,
-            ClearOperation::DepthStencil,
-        ]
+        vec![ClearOperation::Color, ClearOperation::DepthStencil]
     }
 
     /// 推荐渲染顺序
     fn recommend_render_order(&self, has_transparency: bool) -> RenderOrder {
         if has_transparency {
-            RenderOrder::Custom  // opaque + transparent
+            RenderOrder::Custom // opaque + transparent
         } else {
             RenderOrder::FrontToBack
         }
@@ -434,10 +432,7 @@ pub struct OverdrawVisualizer {
 impl OverdrawVisualizer {
     /// 创建可视化器
     pub fn new(tile_overdraw: HashMap<(u32, u32), f32>) -> Self {
-        let max = tile_overdraw
-            .values()
-            .cloned()
-            .fold(0.0f32, |a, b| a.max(b));
+        let max = tile_overdraw.values().cloned().fold(0.0f32, |a, b| a.max(b));
 
         Self {
             tile_overdraw,
@@ -452,9 +447,9 @@ impl OverdrawVisualizer {
 
         // 绿色 = 低overdraw，红色 = 高overdraw
         [
-            ratio,           // R
-            1.0 - ratio,     // G
-            0.0,             // B
+            ratio,       // R
+            1.0 - ratio, // G
+            0.0,         // B
         ]
     }
 
@@ -488,8 +483,9 @@ pub fn is_tile_based_gpu(gpu_name: &str) -> bool {
     }
 
     // Intel集成（部分使用Tile-based）
-    if gpu_lower.contains("intel") &&
-       (gpu_lower.contains("hd graphics") || gpu_lower.contains("uhd")) {
+    if gpu_lower.contains("intel")
+        && (gpu_lower.contains("hd graphics") || gpu_lower.contains("uhd"))
+    {
         return true;
     }
 
@@ -501,7 +497,10 @@ pub fn recommended_tile_size(gpu_name: &str) -> TileSize {
     let gpu_lower = gpu_name.to_lowercase();
 
     // 高端GPU使用更小的tiles
-    if gpu_lower.contains("mali-g") || gpu_lower.contains("adreno 6") || gpu_lower.contains("apple m") {
+    if gpu_lower.contains("mali-g")
+        || gpu_lower.contains("adreno 6")
+        || gpu_lower.contains("apple m")
+    {
         TileSize::Tile16x16
     } else {
         TileSize::Tile32x32
@@ -531,8 +530,8 @@ mod tests {
         assert_eq!(tile_size.size(), 16);
 
         let (tiles_x, tiles_y) = tile_size.calculate_tile_count(1920, 1080);
-        assert_eq!(tiles_x, 120);  // 1920 / 16
-        assert_eq!(tiles_y, 68);   // 1080 / 16, 向上取整
+        assert_eq!(tiles_x, 120); // 1920 / 16
+        assert_eq!(tiles_y, 68); // 1080 / 16, 向上取整
     }
 
     #[test]
@@ -556,7 +555,12 @@ mod tests {
             id: 1,
             object_type: RenderObjectType::Opaque,
             depth: 10.0,
-            bounds: ObjectBounds { min_x: 0.0, min_y: 0.0, max_x: 100.0, max_y: 100.0 },
+            bounds: ObjectBounds {
+                min_x: 0.0,
+                min_y: 0.0,
+                max_x: 100.0,
+                max_y: 100.0,
+            },
             vertex_count: 100,
             triangle_count: 50,
         });
@@ -564,8 +568,13 @@ mod tests {
         optimizer.add_render_object(RenderObject {
             id: 2,
             object_type: RenderObjectType::Opaque,
-            depth: 5.0,  // 更近
-            bounds: ObjectBounds { min_x: 0.0, min_y: 0.0, max_x: 100.0, max_y: 100.0 },
+            depth: 5.0, // 更近
+            bounds: ObjectBounds {
+                min_x: 0.0,
+                min_y: 0.0,
+                max_x: 100.0,
+                max_y: 100.0,
+            },
             vertex_count: 100,
             triangle_count: 50,
         });
@@ -573,8 +582,8 @@ mod tests {
         let optimized = optimizer.optimize_render_order(1920, 1080);
 
         // 验证front-to-back排序（depth 10在depth 5之前）
-        assert_eq!(optimized[0].id, 1);  // depth 10
-        assert_eq!(optimized[1].id, 2);  // depth 5
+        assert_eq!(optimized[0].id, 1); // depth 10
+        assert_eq!(optimized[1].id, 2); // depth 5
     }
 
     #[test]
@@ -589,8 +598,8 @@ mod tests {
 
         // 高overdraw tile应该是红色
         let color = visualizer.get_tile_color((1, 0));
-        assert!(color[0] > 0.9);  // R接近1.0
-        assert!(color[1] < 0.1);  // G接近0.0
+        assert!(color[0] > 0.9); // R接近1.0
+        assert!(color[1] < 0.1); // G接近0.0
     }
 
     #[test]

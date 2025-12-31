@@ -15,8 +15,8 @@
 //! - **光照烘焙**: 合并多个lightmap
 //! - **纹理集**: 字体图集、精灵图集
 
-use std::collections::HashMap;
 use glam::Vec2;
+use std::collections::HashMap;
 
 /// UV岛 - 单个网格的UV边界框
 #[derive(Clone, Debug)]
@@ -72,10 +72,7 @@ impl UvIsland {
         let size = max - min;
         let padding_vec = Vec2::new(self.padding, self.padding);
 
-        self.bounds = (
-            min - padding_vec,
-            max + padding_vec
-        );
+        self.bounds = (min - padding_vec, max + padding_vec);
     }
 }
 
@@ -181,7 +178,8 @@ impl UvAtlasGenerator {
             let position = Vec2::new(shelf_x, shelf_y);
 
             // 转换UV坐标到atlas空间
-            let atlas_uvs = transform_uvs_to_atlas_space(&island_uvs, bounds_min, island_size, position);
+            let atlas_uvs =
+                transform_uvs_to_atlas_space(&island_uvs, bounds_min, island_size, position);
 
             placed_islands.push(PlacedIsland {
                 mesh_index,
@@ -199,7 +197,8 @@ impl UvAtlasGenerator {
         }
 
         // 计算atlas利用率
-        let total_area = packing_rects.iter()
+        let total_area = packing_rects
+            .iter()
             .map(|(min, max)| (max.x - min.x) * (max.y - min.y))
             .sum::<f32>();
         let utilization = total_area * 100.0;
@@ -240,13 +239,14 @@ pub struct UvAtlas {
 impl UvAtlas {
     /// 获取指定网格的atlas UV坐标
     pub fn get_mesh_uvs(&self, mesh_index: usize) -> Option<&[Vec2]> {
-        self.islands.iter()
+        self.islands
+            .iter()
             .find(|island| island.mesh_index == mesh_index)
             .map(|island| &island.uvs[..])
     }
 
     /// 保存atlas可视化图像
-    #[cfg(feature = "gltf")]  // 使用已存在的feature，image依赖总是可用
+    #[cfg(feature = "gltf")] // 使用已存在的feature，image依赖总是可用
     pub fn save_visualization(&self, path: &std::path::Path) -> Result<(), String> {
         use image::{Rgb, RgbImage};
 
@@ -303,13 +303,15 @@ fn transform_uvs_to_atlas_space(
     island_size: Vec2,
     atlas_position: Vec2,
 ) -> Vec<Vec2> {
-    uvs.iter().map(|&uv| {
-        // 归一化到边界框
-        let normalized = (uv - bounds_min) / island_size;
+    uvs.iter()
+        .map(|&uv| {
+            // 归一化到边界框
+            let normalized = (uv - bounds_min) / island_size;
 
-        // 转换到atlas位置
-        atlas_position + normalized * island_size
-    }).collect()
+            // 转换到atlas位置
+            atlas_position + normalized * island_size
+        })
+        .collect()
 }
 
 /// 计算UV边界框
@@ -375,17 +377,23 @@ mod tests {
         let mut generator = UvAtlasGenerator::new(AtlasOptions::default());
 
         // 添加3个网格
-        generator.add_mesh(0, vec![
-            Vec2::new(0.0, 0.0),
-            Vec2::new(0.5, 0.0),
-            Vec2::new(0.25, 0.5),
-        ]);
+        generator.add_mesh(
+            0,
+            vec![
+                Vec2::new(0.0, 0.0),
+                Vec2::new(0.5, 0.0),
+                Vec2::new(0.25, 0.5),
+            ],
+        );
 
-        generator.add_mesh(1, vec![
-            Vec2::new(0.0, 0.0),
-            Vec2::new(0.3, 0.0),
-            Vec2::new(0.15, 0.3),
-        ]);
+        generator.add_mesh(
+            1,
+            vec![
+                Vec2::new(0.0, 0.0),
+                Vec2::new(0.3, 0.0),
+                Vec2::new(0.15, 0.3),
+            ],
+        );
 
         let atlas = generator.generate().unwrap();
 

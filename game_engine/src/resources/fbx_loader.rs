@@ -326,8 +326,7 @@ impl FbxLoader {
     /// 加载的 `FbxScene` 或错误信息
     pub async fn load_from_path(path: &Path) -> Result<FbxScene, String> {
         // 验证文件扩展名
-        Self::validate_extension(path)
-            .map_err(|e| e.to_string())?;
+        Self::validate_extension(path).map_err(|e| e.to_string())?;
 
         // 读取文件
         let bytes = tokio::fs::read(path)
@@ -335,11 +334,10 @@ impl FbxLoader {
             .map_err(|e| format!("Failed to read FBX file: {e}"))?;
 
         // 在阻塞任务中解析（FBX解析可能是CPU密集型）
-        let parsed = tokio::task::spawn_blocking(move || {
-            Self::parse_fbx(&bytes).map_err(|e| e.to_string())
-        })
-        .await
-        .map_err(|e| format!("FBX parsing task failed: {e}"))??;
+        let parsed =
+            tokio::task::spawn_blocking(move || Self::parse_fbx(&bytes).map_err(|e| e.to_string()))
+                .await
+                .map_err(|e| format!("FBX parsing task failed: {e}"))??;
 
         Ok(parsed)
     }
@@ -365,7 +363,9 @@ impl FbxLoader {
     fn parse_fbx(bytes: &[u8]) -> Result<FbxScene, FbxLoadError> {
         // 检查FBX文件头
         if bytes.len() < 23 {
-            return Err(FbxLoadError::Parse("File too small to be valid FBX".to_string()));
+            return Err(FbxLoadError::Parse(
+                "File too small to be valid FBX".to_string(),
+            ));
         }
 
         // FBX文件通常以 "Kaydara FBX Binary" 开头

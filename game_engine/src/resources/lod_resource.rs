@@ -54,12 +54,7 @@ pub struct LODResource {
 
 impl LODResource {
     /// Create a new LOD resource
-    pub fn new(
-        id: String,
-        source_path: PathBuf,
-        lods: LODGroup,
-        quality_score: f32,
-    ) -> Self {
+    pub fn new(id: String, source_path: PathBuf, lods: LODGroup, quality_score: f32) -> Self {
         Self {
             id,
             source_path,
@@ -359,9 +354,7 @@ mod tests {
         let cache = LODResourceCache::new(1024 * 1024); // 1MB cache
 
         let mesh = create_test_mesh();
-        let lods = LODGenerator::new()
-            .generate_from_mesh(&mesh)
-            .unwrap();
+        let lods = LODGenerator::new().generate_from_mesh(&mesh).unwrap();
 
         let resource = LODResource::new(
             "test_mesh".to_string(),

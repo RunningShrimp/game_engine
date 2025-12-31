@@ -99,7 +99,11 @@ impl AIAssistant {
     }
 
     /// 审查代码
-    pub async fn review_code(&self, code: &str, language: &str) -> Result<CodeReviewReport, AIError> {
+    pub async fn review_code(
+        &self,
+        code: &str,
+        language: &str,
+    ) -> Result<CodeReviewReport, AIError> {
         self.code_reviewer.review(code, language).await
     }
 
@@ -154,10 +158,7 @@ impl std::error::Error for AIError {}
 #[derive(Debug, Clone)]
 pub enum AIEvent {
     /// 代码生成完成
-    CodeGenerated {
-        request_id: String,
-        code: String,
-    },
+    CodeGenerated { request_id: String, code: String },
     /// 代码审查完成
     CodeReviewed {
         file_path: PathBuf,
@@ -169,9 +170,7 @@ pub enum AIEvent {
         result: TestGenerationResult,
     },
     /// AI请求失败
-    RequestFailed {
-        error: AIError,
-    },
+    RequestFailed { error: AIError },
 }
 
 impl DomainEvent for AIEvent {

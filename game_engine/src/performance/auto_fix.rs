@@ -9,10 +9,10 @@
 //! 3. **FixValidator** - 修复验证器
 //! 4. **RollbackManager** - 回滚管理器
 
+use super::optimization_suggestion::{OptimizationSuggestion, RiskLevel, SuggestionCategory};
+use crate::performance::profiler::Bottleneck;
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
-use crate::performance::profiler::Bottleneck;
-use super::optimization_suggestion::{OptimizationSuggestion, SuggestionCategory, RiskLevel};
 
 /// 自动优化结果
 #[derive(Clone, Debug)]
@@ -253,7 +253,11 @@ impl AutoFixEngine {
     }
 
     /// 应用单个优化
-    fn apply_optimization(&self, context: &AutoFixContext, optimization: &SafeOptimization) -> AutoFixResult {
+    fn apply_optimization(
+        &self,
+        context: &AutoFixContext,
+        optimization: &SafeOptimization,
+    ) -> AutoFixResult {
         // 1. 创建备份
         if let Err(e) = self.rollback_manager.create_backup(context) {
             return AutoFixResult::Failed {
@@ -432,7 +436,10 @@ fn auto_fix_shadow_quality(context: &AutoFixContext) -> Result<FixOutcome, Strin
 }
 
 /// 验证阴影质量修复
-fn validate_shadow_quality_fix(_context: &AutoFixContext, outcome: &FixOutcome) -> Result<(), String> {
+fn validate_shadow_quality_fix(
+    _context: &AutoFixContext,
+    outcome: &FixOutcome,
+) -> Result<(), String> {
     if outcome.modified_files.is_empty() {
         return Err("没有修改任何文件".to_string());
     }
@@ -496,7 +503,10 @@ fn auto_fix_texture_quality(context: &AutoFixContext) -> Result<FixOutcome, Stri
 }
 
 /// 验证纹理质量修复
-fn validate_texture_quality_fix(_context: &AutoFixContext, outcome: &FixOutcome) -> Result<(), String> {
+fn validate_texture_quality_fix(
+    _context: &AutoFixContext,
+    outcome: &FixOutcome,
+) -> Result<(), String> {
     if outcome.modified_files.is_empty() {
         return Err("没有修改任何文件".to_string());
     }
@@ -504,7 +514,10 @@ fn validate_texture_quality_fix(_context: &AutoFixContext, outcome: &FixOutcome)
 }
 
 /// 回滚纹理质量修复
-fn rollback_texture_quality(_context: &AutoFixContext, _outcome: &FixOutcome) -> Result<(), String> {
+fn rollback_texture_quality(
+    _context: &AutoFixContext,
+    _outcome: &FixOutcome,
+) -> Result<(), String> {
     Ok(())
 }
 
@@ -593,7 +606,10 @@ fn auto_fix_resource_unloading(context: &AutoFixContext) -> Result<FixOutcome, S
 }
 
 /// 验证资源卸载修复
-fn validate_resource_unload_fix(_context: &AutoFixContext, outcome: &FixOutcome) -> Result<(), String> {
+fn validate_resource_unload_fix(
+    _context: &AutoFixContext,
+    outcome: &FixOutcome,
+) -> Result<(), String> {
     if outcome.modified_files.is_empty() {
         return Err("没有修改任何文件".to_string());
     }
@@ -601,7 +617,10 @@ fn validate_resource_unload_fix(_context: &AutoFixContext, outcome: &FixOutcome)
 }
 
 /// 回滚资源卸载修复
-fn rollback_resource_unloading(_context: &AutoFixContext, _outcome: &FixOutcome) -> Result<(), String> {
+fn rollback_resource_unloading(
+    _context: &AutoFixContext,
+    _outcome: &FixOutcome,
+) -> Result<(), String> {
     Ok(())
 }
 
@@ -626,23 +645,21 @@ mod tests {
             bottlenecks: vec![],
         };
 
-        let suggestions = vec![
-            OptimizationSuggestion {
-                id: "autofix-shadow-quality-001".to_string(),
-                category: SuggestionCategory::Rendering,
-                severity: crate::performance::profiler::Severity::Medium,
-                title: "Test".to_string(),
-                description: "Test".to_string(),
-                expected_improvement: "Test".to_string(),
-                implementation_steps: vec![],
-                can_auto_fix: true,
-                estimated_effort_hours: 0,
-                affected_components: vec![],
-                dependencies: vec![],
-                risk_level: RiskLevel::Low,
-                references: vec![],
-            }
-        ];
+        let suggestions = vec![OptimizationSuggestion {
+            id: "autofix-shadow-quality-001".to_string(),
+            category: SuggestionCategory::Rendering,
+            severity: crate::performance::profiler::Severity::Medium,
+            title: "Test".to_string(),
+            description: "Test".to_string(),
+            expected_improvement: "Test".to_string(),
+            implementation_steps: vec![],
+            can_auto_fix: true,
+            estimated_effort_hours: 0,
+            affected_components: vec![],
+            dependencies: vec![],
+            risk_level: RiskLevel::Low,
+            references: vec![],
+        }];
 
         let results = engine.apply_safe_optimizations(&context, &suggestions);
         assert!(!results.is_empty());

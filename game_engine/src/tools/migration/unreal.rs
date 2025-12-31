@@ -1,6 +1,6 @@
 //! Unreal Engine 5项目导入器
 
-use super::{ProjectAnalysis, MigrationError};
+use super::{MigrationError, ProjectAnalysis};
 use std::path::PathBuf;
 
 /// Unreal项目导入器
@@ -33,7 +33,10 @@ impl UnrealProjectImporter {
     }
 
     /// 导入蓝图
-    pub async fn import_blueprint(&self, blueprint_path: &PathBuf) -> Result<UnrealBlueprint, MigrationError> {
+    pub async fn import_blueprint(
+        &self,
+        blueprint_path: &PathBuf,
+    ) -> Result<UnrealBlueprint, MigrationError> {
         // TODO: 实现.uasset蓝图文件解析
         Ok(UnrealBlueprint {
             name: "TestBlueprint".to_string(),

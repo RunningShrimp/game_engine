@@ -2,7 +2,10 @@
 //!
 //! 负责调度和执行协程。
 
-use super::{Coroutine, CoroutineError, CoroutineFuture, CoroutineFutureOutput, CoroutineId, CoroutinePriority, CoroutineStatus, CoroutineType};
+use super::{
+    Coroutine, CoroutineError, CoroutineFuture, CoroutineFutureOutput, CoroutineId,
+    CoroutinePriority, CoroutineStatus, CoroutineType,
+};
 use crate::domain::events::DomainEvent;
 use bevy_ecs::prelude::*;
 use std::collections::{HashMap, VecDeque};
@@ -298,11 +301,7 @@ impl CoroutineExecutor {
 
     /// 获取协程信息
     pub async fn get_coroutine(&self, id: CoroutineId) -> Option<Coroutine> {
-        self.coroutines
-            .read()
-            .await
-            .get(&id)
-            .map(|info| info.coroutine.clone())
+        self.coroutines.read().await.get(&id).map(|info| info.coroutine.clone())
     }
 
     /// 获取所有协程

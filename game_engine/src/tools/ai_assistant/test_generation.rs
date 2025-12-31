@@ -22,18 +22,10 @@ impl AITestGenerator {
         let prompt = self.build_test_prompt(source_code);
 
         match self.config.provider {
-            AIProvider::OpenAI => {
-                self.call_openai(&prompt).await
-            }
-            AIProvider::Anthropic => {
-                self.call_anthropic(&prompt).await
-            }
-            AIProvider::Local => {
-                self.call_local(&prompt).await
-            }
-            AIProvider::Other => {
-                Err(AIError::Other("Unsupported provider".to_string()))
-            }
+            AIProvider::OpenAI => self.call_openai(&prompt).await,
+            AIProvider::Anthropic => self.call_anthropic(&prompt).await,
+            AIProvider::Local => self.call_local(&prompt).await,
+            AIProvider::Other => Err(AIError::Other("Unsupported provider".to_string())),
         }
     }
 
@@ -66,7 +58,8 @@ mod tests {
         assert_eq!(1 + 1, 2);
     }
 }
-"#.to_string(),
+"#
+            .to_string(),
             test_count: 1,
         })
     }

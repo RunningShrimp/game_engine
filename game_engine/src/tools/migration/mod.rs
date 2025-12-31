@@ -19,7 +19,7 @@ pub mod unity;
 pub mod unreal;
 
 pub use unity::{UnityProjectImporter, UnityScene};
-pub use unreal::{UnrealProjectImporter, UnrealBlueprint};
+pub use unreal::{UnrealBlueprint, UnrealProjectImporter};
 
 // =============================================================================
 // 迁移配置
@@ -203,9 +203,7 @@ impl MigrationManager {
                 let importer = UnrealProjectImporter::new();
                 importer.analyze(&self.config.project_path).await
             }
-            EngineType::Other => {
-                Err(MigrationError::UnsupportedEngine)
-            }
+            EngineType::Other => Err(MigrationError::UnsupportedEngine),
         }
     }
 
@@ -314,22 +312,16 @@ pub enum MigrationEvent {
         project_path: PathBuf,
     },
     /// 阶段完成
-    PhaseCompleted {
-        phase: MigrationPhase,
-    },
+    PhaseCompleted { phase: MigrationPhase },
     /// 资产转换
     AssetConverted {
         asset_path: PathBuf,
         asset_type: String,
     },
     /// 迁移完成
-    Completed {
-        result: MigrationResult,
-    },
+    Completed { result: MigrationResult },
     /// 迁移失败
-    Failed {
-        error: MigrationError,
-    },
+    Failed { error: MigrationError },
 }
 
 impl DomainEvent for MigrationEvent {

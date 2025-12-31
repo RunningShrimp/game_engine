@@ -129,14 +129,15 @@ impl ScriptHotReloadManager {
             return Err(format!("File does not exist: {}", path.display()));
         }
 
-        let metadata = std::fs::metadata(&path)
-            .map_err(|e| format!("Failed to get metadata: {}", e))?;
+        let metadata =
+            std::fs::metadata(&path).map_err(|e| format!("Failed to get metadata: {}", e))?;
 
-        let last_modified = metadata.modified()
+        let last_modified = metadata
+            .modified()
             .map_err(|e| format!("Failed to get modification time: {}", e))?;
 
-        let content = std::fs::read_to_string(&path)
-            .map_err(|e| format!("Failed to read file: {}", e))?;
+        let content =
+            std::fs::read_to_string(&path).map_err(|e| format!("Failed to read file: {}", e))?;
 
         let content_hash = Self::calculate_hash(&content);
 

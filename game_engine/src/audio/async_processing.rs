@@ -666,12 +666,13 @@ impl AsyncAudioProcessingService {
                     Ok(audio_samples)
                 })
                 .collect()
-        }).await;
+        })
+        .await;
 
         match processing_result {
             Ok(results) => results,
             Err(_) => vec![Err(AudioProcessingError::Other(
-                "Parallel processing join error".to_string()
+                "Parallel processing join error".to_string(),
             ))],
         }
     }
@@ -796,12 +797,9 @@ mod tests {
         ];
 
         // 测试并行批量处理（无效果）
-        let results = service.process_samples_batch_parallel(
-            samples_list.clone(),
-            None,
-            44100,
-            2
-        ).await;
+        let results = service
+            .process_samples_batch_parallel(samples_list.clone(), None, 44100, 2)
+            .await;
 
         assert_eq!(results.len(), 5);
         for result in results {
@@ -813,12 +811,9 @@ mod tests {
             effects: vec![EffectType::Reverb(ReverbConfig::default())],
         };
 
-        let results_with_effects = service.process_samples_batch_parallel(
-            samples_list,
-            Some(effect_config),
-            44100,
-            2
-        ).await;
+        let results_with_effects = service
+            .process_samples_batch_parallel(samples_list, Some(effect_config), 44100, 2)
+            .await;
 
         assert_eq!(results_with_effects.len(), 5);
         for result in results_with_effects {

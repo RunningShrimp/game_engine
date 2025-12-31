@@ -378,7 +378,6 @@ mod tests {
     use super::*;
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_safe_unwrap_option_ok() {
         let value = Some(42);
         assert_eq!(
@@ -388,7 +387,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_safe_unwrap_option_err() {
         let value: Option<i32> = None;
         let result = safe_unwrap_option(value, "test context", "error message");
@@ -399,7 +397,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_vec_get_or_err_ok() {
         let vec = vec![1, 2, 3];
         assert_eq!(
@@ -409,7 +406,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_vec_get_or_err_err() {
         let vec = vec![1, 2, 3];
         let result = vec_get_or_err(&vec, 5, "test");
@@ -420,7 +416,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_map_get_or_err_ok() {
         let mut map = std::collections::HashMap::new();
         map.insert("key1", 100);
@@ -431,7 +426,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_map_get_or_err_err() {
         let mut map = std::collections::HashMap::new();
         map.insert("key1", 100);
@@ -441,13 +435,11 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_check_range_or_err_ok() {
         assert!(check_range_or_err(50, 0..100, "test").is_ok());
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_check_range_or_err_err() {
         let result = check_range_or_err(150, 0..100, "test");
         assert!(result.is_err());
@@ -455,13 +447,11 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_check_non_empty_or_err_ok() {
         assert!(check_non_empty_or_err("hello", "test").is_ok());
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_check_non_empty_or_err_err() {
         let result = check_non_empty_or_err("", "test");
         assert!(result.is_err());
@@ -469,14 +459,12 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_parse_to_number_or_err_ok() {
         let result: Result<i32, String> = parse_to_number_or_err("42", "test");
         assert_eq!(result.expect("Test: operation should succeed"), 42);
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_parse_to_number_or_err_err() {
         let result: Result<i32, String> = parse_to_number_or_err("invalid", "test");
         assert!(result.is_err());
@@ -484,7 +472,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_validator_ok() {
         let result = Validator::new()
             .validate(|| 5 > 0, "Value must be positive")
@@ -494,7 +481,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_validator_err() {
         let result = Validator::new()
             .validate(|| -1 > 0, "Value must be positive")
@@ -505,21 +491,18 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_unwrap_or_default() {
         assert_eq!(unwrap_or_default(Some(42), 0), 42);
         assert_eq!(unwrap_or_default(None::<i32>, 0), 0);
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_unwrap_or_else_default() {
         assert_eq!(unwrap_or_else_default(Some(42), || 0), 42);
         assert_eq!(unwrap_or_else_default(None::<i32>, || 100), 100);
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_option_to_result() {
         assert_eq!(
             option_to_result(Some(42), "error").expect("Test: operation should succeed"),
@@ -529,7 +512,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix compilation errors
     fn test_ok_or_else_err() {
         assert!(ok_or_else_err(true, "error").is_ok());
         assert!(ok_or_else_err(false, "error").is_err());

@@ -102,10 +102,7 @@ impl Mesh {
             ));
         }
 
-        let vertices = vertices
-            .into_iter()
-            .map(|v| Vector3::new(v[0], v[1], v[2]))
-            .collect();
+        let vertices = vertices.into_iter().map(|v| Vector3::new(v[0], v[1], v[2])).collect();
 
         Ok(Self {
             vertices,
@@ -165,8 +162,22 @@ impl QuadricError {
         let d = distance;
 
         let matrix = Matrix4::new(
-            a * a, a * b, a * c, a * d, a * b, b * b, b * c, b * d, a * c, b * c, c * c, c * d, a * d,
-            b * d, c * d, d * d,
+            a * a,
+            a * b,
+            a * c,
+            a * d,
+            a * b,
+            b * b,
+            b * c,
+            b * d,
+            a * c,
+            b * c,
+            c * c,
+            c * d,
+            a * d,
+            b * d,
+            c * d,
+            d * d,
         );
 
         Self { matrix }
@@ -477,8 +488,7 @@ impl MeshSimplifier {
                 }
 
                 if options.preserve_boundaries
-                    && (self.adjacency[adj_vtx].is_boundary
-                        || self.adjacency[vtx_idx].is_boundary)
+                    && (self.adjacency[adj_vtx].is_boundary || self.adjacency[vtx_idx].is_boundary)
                 {
                     continue;
                 }
@@ -546,10 +556,8 @@ impl MeshSimplifier {
             }
 
             // Update v1's neighbors to point to v0
-            if let Some(pos) = self.adjacency[adj_vtx]
-                .adjacent_vertices
-                .iter()
-                .position(|&v| v == v1)
+            if let Some(pos) =
+                self.adjacency[adj_vtx].adjacent_vertices.iter().position(|&v| v == v1)
             {
                 self.adjacency[adj_vtx].adjacent_vertices[pos] = v0;
             }
@@ -702,11 +710,7 @@ mod tests {
 
     #[test]
     fn test_mesh_creation() {
-        let vertices = vec![
-            [0.0, 0.0, 0.0],
-            [1.0, 0.0, 0.0],
-            [0.0, 1.0, 0.0],
-        ];
+        let vertices = vec![[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]];
         let indices = vec![0, 1, 2];
 
         let mesh = Mesh::from_vertices_and_indices(vertices, indices).unwrap();

@@ -88,9 +88,8 @@ pub use registry::PluginRegistry;
 // 版本管理和沙箱
 pub mod versioning;
 pub use versioning::{
-    SemVer, SemVerError, VersionRequirement, VersionConflictError,
-    PluginVersionManager, WasiSandboxConfig, WasiSandbox, SandboxError,
-    PluginSandboxManager,
+    PluginSandboxManager, PluginVersionManager, SandboxError, SemVer, SemVerError,
+    VersionConflictError, VersionRequirement, WasiSandbox, WasiSandboxConfig,
 };
 
 // 热加载支持

@@ -1,6 +1,6 @@
 //! Unity项目导入器
 
-use super::{ProjectAnalysis, MigrationError};
+use super::{MigrationError, ProjectAnalysis};
 use std::path::PathBuf;
 
 /// Unity项目导入器
