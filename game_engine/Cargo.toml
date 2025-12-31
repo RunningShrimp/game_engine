@@ -120,6 +120,14 @@ axum-server = "0.8.0"
 chrono = "0.4.42"
 pyo3 = "0.27.2"
 
+# CLI tools dependencies
+clap = { version = "4.0", features = ["derive"], optional = true }
+dialoguer = { version = "0.11", optional = true }
+handlebars = { version = "5.0", optional = true }
+
+# LSP server support
+tower-lsp = { version = "0.20", optional = true }
+
 [lib]
 crate-type = ["cdylib", "rlib"]
 
@@ -455,7 +463,7 @@ wasm = []
 ## cargo build --no-default-features --features gltf,secure_key_exchange,physics,parallel,dashmap
 ## ```
 ##
-default = ["gltf", "secure_key_exchange", "physics", "parallel", "dashmap", "message-optimization", "simd"]
+default = ["gltf", "secure_key_exchange", "physics", "parallel", "dashmap", "message-optimization", "simd", "cli"]
 
 # ============================================================================
 # 性能优化特性 (Performance Optimization Features)
@@ -463,6 +471,54 @@ default = ["gltf", "secure_key_exchange", "physics", "parallel", "dashmap", "mes
 
 ## 消息序列化优化 (Message Serialization Optimization)
 message-optimization = []
+
+## 启用CLI工具
+##
+## 增加的依赖：
+## - clap = "4.0" (命令行参数解析)
+## - dialoguer = "0.11" (交互式命令行界面)
+## - handlebars = "5.0" (模板引擎)
+##
+## 支持的功能：
+## - 项目脚手架生成
+## - 模板管理
+## - 项目初始化
+##
+## 使用场景：
+## - 快速创建新游戏项目
+## - 从模板生成项目结构
+## - 标准化项目布局
+##
+## 示例：
+## ```bash
+## cargo build --features cli
+## cargo run --bin game-engine -- new my-game --template basic
+## ```
+cli = ["clap", "dialoguer", "handlebars"]
+
+## 启用LSP服务器支持
+##
+## 增加的依赖：
+## - tower-lsp = "0.20" (约500KB)
+##
+## 支持的功能：
+## - Language Server Protocol实现
+## - 代码补全（组件、系统、资源）
+## - 悬停提示和文档
+## - 实时错误诊断
+## - 跳转到定义
+##
+## 使用场景：
+## - VS Code等IDE支持
+## - 代码编辑器集成
+## - 开发时智能提示
+##
+## 示例：
+## ```bash
+## cargo build --features lsp
+## cargo run --bin game-engine-lsp
+## ```
+lsp = ["tower-lsp"]
 
 # ============================================================================
 # Feature 组合验证
@@ -563,6 +619,16 @@ harness = false
 [[bin]]
 name = "convert"
 path = "src/bin/convert.rs"
+
+[[bin]]
+name = "game-engine"
+path = "src/bin/game-engine.rs"
+required-features = ["cli"]
+
+[[bin]]
+name = "game-engine-lsp"
+path = "src/bin/game-engine-lsp.rs"
+required-features = ["lsp"]
 
 # Examples have been temporarily removed during P0 phase cleanup
 # They will be restored in P1 phase after reorganization

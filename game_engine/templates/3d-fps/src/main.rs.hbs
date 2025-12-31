@@ -1,0 +1,79 @@
+//! {{name_title}} - 3D First-Person Shooter
+//!
+//! A 3D FPS game with lighting, weapons, and AI.
+
+use game_engine::prelude::*;
+use game_engine::physics::PhysicsWorld;
+use game_engine::ai::navigation::NavigationMesh;
+use log::info;
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Initialize logging
+    tracing_subscriber::fmt()
+        .with_max_level(tracing::Level::INFO)
+        .init();
+
+    info!("Starting {{name}} 3D FPS...");
+
+    // Create engine with 3D renderer
+    let mut engine = Engine::new();
+
+    // Configure for 3D FPS
+    let config = EngineConfig {
+        window_title: "{{name_title}}".to_string(),
+        window_width: 1920,
+        window_height: 1080,
+        vsync: true,
+        msaa: 4,
+        ..Default::default()
+    };
+
+    engine.configure(config);
+    engine.initialize()?;
+
+    // Create 3D physics world
+    let mut physics = PhysicsWorld::new_3d();
+
+    // Setup navigation mesh for AI
+    let nav_mesh = NavigationMesh::new();
+
+    // TODO: Setup game systems
+    setup_game(&mut engine, &mut physics, nav_mesh)?;
+
+    // Main game loop
+    let mut previous_time = std::time::Instant::now();
+
+    while !engine.should_exit() {
+        let current_time = std::time::Instant::now();
+        let dt = current_time.duration_since(previous_time).as_secs_f32();
+        previous_time = current_time;
+
+        // Update physics
+        physics.step(dt);
+
+        // Update game logic
+        engine.update()?;
+
+        // Render
+        engine.render()?;
+    }
+
+    engine.shutdown()?;
+
+    Ok(())
+}
+
+fn setup_game(
+    engine: &mut Engine,
+    physics: &mut PhysicsWorld,
+    nav_mesh: NavigationMesh,
+) -> Result<(), Box<dyn std::error::Error>> {
+    // TODO: Initialize game systems
+    // - Load map
+    // - Create player with FPS controller
+    // - Setup weapons
+    // - Spawn enemies
+    // - Configure lighting
+    info!("Game setup complete");
+    Ok(())
+}

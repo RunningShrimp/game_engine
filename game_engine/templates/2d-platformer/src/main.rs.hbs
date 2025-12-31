@@ -1,0 +1,62 @@
+//! {{name_title}} - 2D Platformer
+//!
+//! A 2D platformer game with physics, tiles, and sprites.
+
+use game_engine::prelude::*;
+use game_engine::physics::PhysicsWorld;
+use log::info;
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Initialize logging
+    tracing_subscriber::fmt()
+        .with_max_level(tracing::Level::INFO)
+        .init();
+
+    info!("Starting {{name}} 2D Platformer...");
+
+    // Create engine with 2D renderer
+    let mut engine = Engine::new();
+
+    // Configure for 2D
+    let config = EngineConfig {
+        window_title: "{{name_title}}".to_string(),
+        window_width: 1280,
+        window_height: 720,
+        ..Default::default()
+    };
+
+    engine.configure(config);
+    engine.initialize()?;
+
+    // Create 2D physics world
+    let mut physics = PhysicsWorld::new_2d();
+
+    // TODO: Setup game systems
+    setup_game(&mut engine, &mut physics)?;
+
+    // Main game loop
+    while !engine.should_exit() {
+        // Update physics
+        physics.step(1.0 / 60.0);
+
+        // Update game logic
+        engine.update()?;
+
+        // Render
+        engine.render()?;
+    }
+
+    engine.shutdown()?;
+
+    Ok(())
+}
+
+fn setup_game(engine: &mut Engine, physics: &mut PhysicsWorld) -> Result<(), Box<dyn std::error::Error>> {
+    // TODO: Initialize game systems
+    // - Load level
+    // - Create player entity
+    // - Setup camera
+    // - Load sprites
+    info!("Game setup complete");
+    Ok(())
+}

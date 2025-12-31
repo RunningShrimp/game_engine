@@ -126,6 +126,8 @@ pub mod common_errors;
 pub mod config;
 pub mod core;
 pub mod coroutine;
+#[cfg(feature = "debug-ui")]
+pub mod debug;
 pub mod domain;
 pub mod ecs;
 pub mod editor;

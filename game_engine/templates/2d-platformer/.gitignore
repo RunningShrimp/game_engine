@@ -1,0 +1,20 @@
+/target
+**/*.rs.bk
+*.dat
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Assets
+assets/temp/
+assets/cache/
+
+# Logs
+*.log

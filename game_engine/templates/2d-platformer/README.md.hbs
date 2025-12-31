@@ -1,0 +1,57 @@
+# {{name_title}}
+
+A 2D platformer game built with the Game Engine.
+
+## Features
+
+- 2D platforming physics
+- Tile-based level system
+- Sprite animation
+- Player controller
+- Collision detection
+- Enemy AI
+
+## Getting Started
+
+### Building
+
+```bash
+cargo build
+cargo run
+```
+
+## Game Controls
+
+- Arrow Keys / WASD: Move
+- Space: Jump
+- Shift: Run
+
+## Level Design
+
+Levels are defined in JSON format in the `assets/levels/` directory.
+
+Example level structure:
+
+```json
+{
+  "name": "Level 1",
+  "width": 32,
+  "height": 18,
+  "tiles": [
+    { "type": "ground", "x": 0, "y": 16, "width": 32, "height": 2 },
+    { "type": "platform", "x": 5, "y": 12, "width": 6, "height": 1 }
+  ],
+  "entities": [
+    { "type": "player", "x": 2, "y": 14 },
+    { "type": "enemy", "x": 10, "y": 14 }
+  ]
+}
+```
+
+## Assets
+
+Place your sprites and textures in `assets/sprites/` and `assets/textures/`.
+
+## License
+
+MIT OR Apache-2.0

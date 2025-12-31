@@ -24,7 +24,7 @@ pub mod executor;
 pub mod wait;
 
 pub use executor::{CoroutineExecutor, CoroutineExecutorResource};
-pub use wait::{WaitCondition, WaitForFrames, WaitForSeconds};
+pub use wait::{CoroutineWaiter, WaitCondition, WaitForCoroutine, WaitForFrames, WaitForSeconds};
 
 // =============================================================================
 // 协程ID
@@ -389,7 +389,7 @@ macro_rules! coroutine {
 // =============================================================================
 
 #[cfg(test)]
-mod tests {
+mod basic_tests {
     use super::*;
 
     #[test]
@@ -462,3 +462,6 @@ mod tests {
         assert!(matches!(result, Err(CoroutineError::Timeout)));
     }
 }
+
+// 导入综合测试
+mod tests;

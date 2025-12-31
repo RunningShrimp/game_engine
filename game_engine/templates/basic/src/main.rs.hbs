@@ -1,0 +1,42 @@
+//! {{name_title}}
+//!
+//! Main entry point for the game.
+
+use game_engine::prelude::*;
+use log::info;
+use tracing::Level;
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Initialize logging
+    tracing_subscriber::fmt()
+        .with_max_level(Level::INFO)
+        .init();
+
+    info!("Starting {{name}}...");
+
+    // Create engine
+    let mut engine = Engine::new();
+
+    // Configure engine
+    let config = EngineConfig::default();
+    engine.configure(config);
+
+    // Initialize engine systems
+    engine.initialize()?;
+
+    // Main game loop
+    while !engine.should_exit() {
+        // Update game logic
+        engine.update()?;
+
+        // Render frame
+        engine.render()?;
+    }
+
+    // Shutdown
+    engine.shutdown()?;
+
+    info!("{{name}} exited successfully");
+
+    Ok(())
+}
