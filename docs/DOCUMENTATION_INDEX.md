@@ -1,121 +1,105 @@
-# 文档索引
+# 游戏引擎文档索引
 
-本索引帮助您快速查找项目中的各类文档。
+本文档提供引擎文档的完整索引。
 
----
+## 📚 核心文档
 
-## 📁 根目录文档（核心）
+### 入门文档
+- [README.md](README.md) - 项目概述
+- [quickstart.md](quickstart.md) - 快速开始
+- [installation.md](installation.md) - 安装指南
+- [contributing.md](contributing.md) - 贡献指南
 
-### 主要文档
-- **[README.md](../README.md)** - 项目介绍和快速开始
-- **[QUICKSTART.md](../QUICKSTART.md)** - 快速入门指南
-- **[CHANGELOG.md](../CHANGELOG.md)** - 版本更新日志
-- **[RELEASE_NOTES.md](../RELEASE_NOTES.md)** - 发布说明
-- **[CONTRIBUTING.md](../CONTRIBUTING.md)** - 贡献指南
-- **[DOCS.md](../DOCS.md)** - 文档导航
-- **[PROJECT_FINAL_STATUS.md](../PROJECT_FINAL_STATUS.md)** - 项目最终状态报告
+### 架构文档
+- [architecture.md](architecture.md) - 系统架构
+- [domain_overview.md](domain_overview.md) - 领域模型
+- [INDEX.md](INDEX.md) - 文档主索引
 
----
+### API文档
+- [api_reference.md](api_reference.md) - API参考
+- [API_STABILITY.md](API_STABILITY.md) - API稳定性
+- [ASYNC_USAGE_GUIDE.md](ASYNC_USAGE_GUIDE.md) - 异步编程指南
 
-## 📊 docs/reports/optimization/ - 优化报告
+### 技术文档
+- [rendering_pipeline.md](rendering_pipeline.md) - 渲染管线
+- [physics_system.md](physics_system.md) - 物理系统
+- [audio_system.md](audio_system.md) - 音频系统
+- [networking_system.md](networking_system.md) - 网络系统
+- [global_illumination.md](global_illumination.md) - 全局光照
+- [ray_tracing_integration.md](ray_tracing_integration.md) - 光线追踪
+- [gpu_physics_extension.md](gpu_physics_extension.md) - GPU物理
+- [hot_reloading.md](hot_reloading.md) - 热重载
 
-### 性能优化报告
-- **[OPTIMIZATION_FINAL_SUMMARY.md](optimization/OPTIMIZATION_FINAL_SUMMARY.md)** - 优化工作总结
-- **[PERFORMANCE_ANALYSIS_REPORT.md](optimization/PERFORMANCE_ANALYSIS_REPORT.md)** - 性能分析详细报告
-- **[FEATURE_TEST_REPORT.md](optimization/FEATURE_TEST_REPORT.md)** - Feature测试报告
+### 最佳实践
+- [best_practices.md](best_practices.md) - 最佳实践
+- [PERFORMANCE_BEST_PRACTICES.md](PERFORMANCE_BEST_PRACTICES.md) - 性能优化
+- [memory_management.md](memory_management.md) - 内存管理
+- [multithreading.md](multithreading.md) - 多线程
 
-### 编译修复报告
-- **[ALL_COMPILATION_FIXES_COMPLETE.md](optimization/ALL_COMPILATION_FIXES_COMPLETE.md)** - 完整编译修复报告
-- **[COMPILATION_FIXES_SUMMARY.md](optimization/COMPILATION_FIXES_SUMMARY.md)** - 编译修复总结
+### 示例和教程
+- [examples.md](examples.md) - 示例代码
+- [first_game.md](first_game.md) - 第一个游戏
+- [testing_guide.md](testing_guide.md) - 测试指南
 
-### 执行阶段报告
-- **[PERFORMANCE_BASELINE_PHASE1.md](optimization/PERFORMANCE_BASELINE_PHASE1.md)** - Phase 1性能基线
-- **[PHASE1_COMPLETION_REPORT.md](optimization/PHASE1_COMPLETION_REPORT.md)** - Phase 1完成报告
-- **[P1_EXECUTION_PRIORITY.md](optimization/P1_EXECUTION_PRIORITY.md)** - P1执行优先级
-- **[PARALLEL_EXECUTION_STATUS.md](optimization/PARALLEL_EXECUTION_STATUS.md)** - 并行执行状态
-- **[TASK_BREAKDOWN_EXECUTION.md](optimization/TASK_BREAKDOWN_EXECUTION.md)** - 任务执行分解
-
----
-
-## 📝 docs/reports/sessions/ - 会话报告
-
-### 开发会话记录
-- **[SESSION_COMPLETION_REPORT_20251230.md](sessions/SESSION_COMPLETION_REPORT_20251230.md)** - 2025-12-30 会话报告
-- **[SESSION_COMPLETION_REPORT_20251230_V2.md](sessions/SESSION_COMPLETION_REPORT_20251230_V2.md)** - V2版本
-- **[SESSION_COMPLETION_REPORT_20251230_V3.md](sessions/SESSION_COMPLETION_REPORT_20251230_V3.md)** - V3版本
-- **[SESSION_COMPLETION_REPORT_20251230_V4.md](sessions/SESSION_COMPLETION_REPORT_20251230_V4.md)** - V4版本
-
----
-
-## 📈 docs/reports/benchmarks/ - 基准测试报告
-
-### 性能基准报告
-- **[BENCHMARKS.md](benchmarks/BENCHMARKS.md)** - 基准测试总览
-- **[DashMap_Performance_Report.md](benchmarks/DashMap_Performance_Report.md)** - DashMap性能报告
-- **[RAYON_BENCHMARK_RESULTS.md](benchmarks/RAYON_BENCHMARK_RESULTS.md)** - Rayon基准测试结果
-
-### 并行化指南
-- **[RAYON_PARALLELIZATION_GUIDE.md](benchmarks/RAYON_PARALLELIZATION_GUIDE.md)** - Rayon并行化指南
-- **[RAYON_PARALLELIZATION_GUIDE_UPDATED.md](benchmarks/RAYON_PARALLELIZATION_GUIDE_UPDATED.md)** - 更新版并行化指南
+### 参考文档
+- [faq.md](faq.md) - 常见问题
+- [troubleshooting.md](troubleshooting.md) - 故障排查
+- [glossary.md](glossary.md) - 术语表
 
 ---
 
-## 🗄️ docs/reports/legacy/ - 历史归档
+## 📦 阶段总结文档 (P0-P3)
 
-### 评估报告
-- **[DEPENDENCY_UPGRADE_EVALUATION.md](legacy/DEPENDENCY_UPGRADE_EVALUATION.md)** - 依赖升级评估
-- **[WGPU_UPGRADE_EVALUATION.md](legacy/WGPU_UPGRADE_EVALUATION.md)** - wGPU升级评估
+### P2阶段
+- [P2-1: 3D格式支持](P2-1_3D_FORMAT_SUPPORT_SUMMARY.md)
+- [P2-2: 跨平台支持](P2-2_CROSS_PLATFORM_SUMMARY.md)
+- [P2-3: 资源依赖分析](P2-3_RESOURCE_DEPENDENCY_ANALYSIS_SUMMARY.md)
+- [P2-4: DDD架构](P2-4_DDD_ARCHITECTURE_SUMMARY.md)
+- [P2-5: 插件系统](P2-5_PLUGIN_ENHANCEMENT_SUMMARY.md)
 
-### 其他历史报告
-- 各种已归档的旧版报告和技术文档
+### P3阶段
+- [P3-5: 协程支持](P3-5_COROUTINE_SUMMARY.md)
+- [P3-6: 异步加载](P3-6_ASYNC_LOAD_CONTROLLER_SUMMARY.md)
+- [P3-7: 内存管理](P3-7_MEMORY_ADVISOR_SUMMARY.md)
 
----
-
-## 📂 docs/guides/ - 最佳实践指南
-
-### 开发指南
-- **[CONDITIONAL_COMPILATION_BEST_PRACTICES.md](../guides/CONDITIONAL_COMPILATION_BEST_PRACTICES.md)** - 条件编译最佳实践
-- **[PERFORMANCE_BEST_PRACTICES.md](../guides/PERFORMANCE_BEST_PRACTICES.md)** - 性能优化最佳实践
-- **[ASYNC_USAGE_GUIDE.md](../guides/ASYNC_USAGE_GUIDE.md)** - Async/await使用指南
-
----
-
-## 🔍 快速查找
-
-### 按主题查找
-
-**性能相关**:
-- [性能分析报告](optimization/PERFORMANCE_ANALYSIS_REPORT.md)
-- [基准测试结果](benchmarks/BENCHMARKS.md)
-- [Rayon并行化](benchmarks/RAYON_PARALLELIZATION_GUIDE.md)
-
-**编译相关**:
-- [编译修复完成报告](optimization/ALL_COMPILATION_FIXES_COMPLETE.md)
-- [编译修复总结](optimization/COMPILATION_FIXES_SUMMARY.md)
-
-**项目状态**:
-- [项目最终状态](../PROJECT_FINAL_STATUS.md)
-- [优化工作总结](optimization/OPTIMIZATION_FINAL_SUMMARY.md)
-
-**最佳实践**:
-- [条件编译最佳实践](../guides/CONDITIONAL_COMPILATION_BEST_PRACTICES.md)
-- [性能最佳实践](../guides/PERFORMANCE_BEST_PRACTICES.md)
-- [Async使用指南](../guides/ASYNC_USAGE_GUIDE.md)
+### 最终报告
+- [FINAL_COMPLETION_REPORT_2025-12-31.md](FINAL_COMPLETION_REPORT_2025-12-31.md) - **项目完成总报告**
 
 ---
 
-## 📅 时间顺序
+## 🔧 子目录
 
-### 2025-12-31
-- 项目优化完成
-- 所有编译错误修复
-- 性能优化达成
+### /adr - 架构决策记录
+架构设计决策记录
 
-### 2025-12-30
-- 多个开发会话完成
-- 各阶段优化实施
+### /api - API文档
+RESTful API文档
+
+### /architecture - 架构文档
+详细架构设计文档
+
+### /benchmarks - 基准测试
+性能基准测试结果
+
+### /documentation - 文档系统
+文档生成和索引
+
+### /progress - 进度追踪
+项目进度报告
+
+### /reports - 综合报告
+各类技术报告
 
 ---
 
-**更新日期**: 2025-12-31
+## 📊 文档统计
+
+- **核心文档**: 30+ 份
+- **阶段总结**: 12 份
+- **技术文档**: 20+ 份
+- **架构文档**: 15 份
+
+---
+
 **版本**: v1.0.0
+**更新日期**: 2025-12-31
