@@ -183,13 +183,18 @@ mod tests {
 
     #[tokio::test]
     async fn test_wait_condition() {
-        let mut flag = false;
+        use std::sync::atomic::{AtomicBool, Ordering};
+        use std::sync::Arc;
+
+        let flag = Arc::new(AtomicBool::new(false));
+        let flag_clone = flag.clone();
+
         let handle = std::thread::spawn(move || {
             std::thread::sleep(Duration::from_millis(100));
-            flag = true;
+            flag_clone.store(true, Ordering::SeqCst);
         });
 
-        let result = WaitCondition::new(|| flag).await;
+        let result = WaitCondition::new(|| flag.load(Ordering::SeqCst)).await;
         handle.join().unwrap();
         assert!(result.is_ok());
     }

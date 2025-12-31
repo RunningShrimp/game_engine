@@ -781,6 +781,7 @@ mod tests {
             crate::domain::physics::ColliderId::new(1),
             body_id,
             crate::domain::physics::ShapeType::Sphere { radius: 1.0 },
+            1.0, // density
         );
         repo.add_collider(body_id, collider);
 

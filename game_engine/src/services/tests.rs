@@ -1709,20 +1709,20 @@ mod scripting_service_tests {
 
     #[test]
     fn test_scripting_service_new() {
-        let service = ScriptingService::new();
+        let service = ScriptingService::default();
         // 验证创建成功（没有panic）
     }
 
     #[test]
     fn test_scripting_service_bind_core_api() {
-        let service = ScriptingService::new();
+        let service = ScriptingService::default();
         service.bind_core_api();
         // 验证绑定成功（没有panic）
     }
 
     #[test]
     fn test_scripting_service_execute() {
-        let service = ScriptingService::new();
+        let service = ScriptingService::default();
         service.bind_core_api();
 
         // 执行简单脚本
@@ -1732,7 +1732,7 @@ mod scripting_service_tests {
 
     #[test]
     fn test_scripting_service_execute_error() {
-        let service = ScriptingService::new();
+        let service = ScriptingService::default();
         service.bind_core_api();
 
         // 执行有错误的脚本（应该记录错误但不panic）

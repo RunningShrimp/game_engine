@@ -436,8 +436,8 @@ pub struct LoadProgress {
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_load_task_creation() {
+    #[tokio::test]
+    async fn test_load_task_creation() {
         let task = LoadTask::new(
             PathBuf::from("test.png"),
             ResourceType::Texture,
@@ -446,7 +446,7 @@ mod tests {
 
         assert_eq!(task.progress, 0.0);
         assert_eq!(task.status, LoadTaskStatus::Pending);
-        assert!(!task.is_cancelled());
+        assert!(!task.is_cancelled().await);
     }
 
     #[test]

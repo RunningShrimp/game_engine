@@ -703,6 +703,11 @@ impl ScriptingService {
         self.bind_all_apis();
     }
 
+    /// 绑定核心API（公共接口，供外部调用）
+    pub fn bind_core_api(&self) {
+        self.bind_all_apis();
+    }
+
     /// 获取运行时引用
     pub fn runtime(&self) -> &Runtime {
         &self.runtime

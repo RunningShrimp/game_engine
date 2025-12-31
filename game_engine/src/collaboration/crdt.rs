@@ -39,7 +39,7 @@ pub enum CrdtOperation {
 }
 
 /// CRDT值
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum CrdtValue {
     String(String),
     Integer(i64),

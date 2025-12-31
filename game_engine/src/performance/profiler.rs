@@ -102,6 +102,8 @@ pub enum PerformanceCategory {
     Physics,
     /// 音频
     Audio,
+    /// 帧时间
+    FrameTime,
 }
 
 /// 瓶颈严重程度

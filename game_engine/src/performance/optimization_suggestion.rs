@@ -703,6 +703,7 @@ enum MemoryPattern {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::time::Instant;
 
     #[test]
     fn test_suggestion_generation() {
@@ -715,6 +716,7 @@ mod tests {
                 current_value: 33.3,
                 target_value: 16.6,
                 impact: "Game stuttering".to_string(),
+                timestamp: Instant::now(),
             }
         ];
 

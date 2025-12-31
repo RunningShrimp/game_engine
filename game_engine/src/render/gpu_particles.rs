@@ -24,6 +24,13 @@ use std::sync::Arc;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct ParticleId(pub u64);
 
+impl ParticleId {
+    /// 创建新的粒子ID
+    pub fn new(id: u64) -> Self {
+        Self(id)
+    }
+}
+
 /// 粒子数据（GPU对齐）
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct ParticleData {
