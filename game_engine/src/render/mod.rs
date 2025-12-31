@@ -149,6 +149,7 @@ pub mod material_sort;
 pub mod occlusion_culling;
 pub mod offscreen;
 pub mod particles;
+pub mod gpu_particles;
 pub mod pbr;
 pub mod pbr_renderer;
 pub mod postprocess;

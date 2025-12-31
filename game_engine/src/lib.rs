@@ -121,6 +121,7 @@ pub mod ai;
 pub mod animation;
 pub mod audio;
 pub mod build;
+pub mod collaboration;
 pub mod common_errors;
 pub mod config;
 pub mod coroutine;
