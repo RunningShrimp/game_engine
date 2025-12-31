@@ -174,7 +174,15 @@ impl<T: Clone> AssetContainer<T> {
     /// 如果资源已加载，返回 `Some(T)`；否则返回 `None`
     #[inline]
     pub fn try_get_clone(&self) -> Option<T> {
-        self.state.read().get_loaded().cloned()
+        #[cfg(feature = "dashmap")]
+        {
+            self.state.read().get_loaded().cloned()
+        }
+
+        #[cfg(not(feature = "dashmap"))]
+        {
+            self.state.read().ok()?.get_loaded().cloned()
+        }
     }
 }
 
@@ -240,7 +248,15 @@ impl<T: 'static + Send + Sync> Handle<T> {
     where
         T: Clone,
     {
-        self.container.state.read().get_loaded().cloned()
+        #[cfg(feature = "dashmap")]
+        {
+            self.container.state.read().get_loaded().cloned()
+        }
+
+        #[cfg(not(feature = "dashmap"))]
+        {
+            self.container.state.read().ok()?.get_loaded().cloned()
+        }
     }
 
     /// 检查资源是否已加载
@@ -250,7 +266,15 @@ impl<T: 'static + Send + Sync> Handle<T> {
     /// 如果资源已加载，返回 `true`；否则返回 `false`
     #[inline]
     pub fn is_loaded(&self) -> bool {
-        self.container.state.read().is_loaded()
+        #[cfg(feature = "dashmap")]
+        {
+            self.container.state.read().is_loaded()
+        }
+
+        #[cfg(not(feature = "dashmap"))]
+        {
+            self.container.state.read().map(|g| g.is_loaded()).unwrap_or(false)
+        }
     }
 
     /// 非阻塞方式获取资源
@@ -366,12 +390,28 @@ impl<T: Clone + Send + Sync> ResourceState<T> for Handle<T> {
 impl<T: Clone + Send + Sync> ResourceState<T> for Arc<AssetContainer<T>> {
     #[inline]
     fn is_loaded(&self) -> bool {
-        self.state.read().is_loaded()
+        #[cfg(feature = "dashmap")]
+        {
+            self.state.read().is_loaded()
+        }
+
+        #[cfg(not(feature = "dashmap"))]
+        {
+            self.state.read().map(|g| g.is_loaded()).unwrap_or(false)
+        }
     }
 
     #[inline]
     fn get_loaded(&self) -> Option<T> {
-        self.state.read().get_loaded().cloned()
+        #[cfg(feature = "dashmap")]
+        {
+            self.state.read().get_loaded().cloned()
+        }
+
+        #[cfg(not(feature = "dashmap"))]
+        {
+            self.state.read().ok()?.get_loaded().cloned()
+        }
     }
 }
 
@@ -440,10 +480,16 @@ mod tests {
     #[test]
     fn test_asset_container() {
         let container = AssetContainer::<String>::new();
+        #[cfg(feature = "dashmap")]
         assert!(!container.state.read().is_loaded());
+        #[cfg(not(feature = "dashmap"))]
+        assert!(!container.state.read().unwrap().is_loaded());
 
         let container_with_data = AssetContainer::with_loaded("test".to_string());
+        #[cfg(feature = "dashmap")]
         assert!(container_with_data.state.read().is_loaded());
+        #[cfg(not(feature = "dashmap"))]
+        assert!(container_with_data.state.read().unwrap().is_loaded());
     }
 
     #[test]

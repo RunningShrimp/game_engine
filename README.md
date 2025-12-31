@@ -69,10 +69,32 @@ Mutex<HashMap>:        1,000ns
 
 ## 文档
 
+### 🚀 18个月实施计划（2025-2026）
+
+**当前状态**: P0阶段完成 ✅ | 整体进度 5%
+
+#### 📋 规划文档
+- [📘 文档主索引](DOCUMENTATION_MASTER_INDEX.md) - **所有文档导航**（推荐先读）
+- [📊 实施总计划](IMPLEMENTATION_PLAN.md) - 18个月完整路线图（P0-P3）
+- [📈 进度追踪](PROGRESS_INDEX.md) - 当前状态和详细进度
+- [📝 全阶段总结](FULL_IMPLEMENTATION_SUMMARY.md) - 执行摘要
+
+#### ✅ P0阶段：已完成（2025年12月）
+- [P0完成报告](P0_COMPLETION_REPORT.md) - LOD系统（减少95%手动工作）
+
+#### 📋 P1-P3阶段：框架完成
+- [P1框架](P1_FRAMEWORK.md) - 编辑器与工具（6-12个月）
+- [P2框架](P2_FRAMEWORK.md) - 生态扩展（12-18个月）
+- [P3框架](P3_FRAMEWORK.md) - 长期创新（18+个月）
+
 ### 核心文档
 - [快速开始](QUICKSTART.md)
 - [贡献指南](CONTRIBUTING.md)
 - [变更日志](CHANGELOG.md)
+
+### 研究和教程
+- [📄 网格简化算法研究](docs/research/MESH_SIMPLIFICATION_RESEARCH.md) - QEM算法论文
+- [📖 LOD生成教程](docs/tutorials/lod_generation.md) - 使用指南
 
 ### 优化文档
 - [优化指南](docs/OPTIMIZATION_GUIDE.md) - 综合优化策略和最佳实践

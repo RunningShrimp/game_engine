@@ -34,6 +34,7 @@
 use crate::core::utils::current_timestamp_ms;
 use crate::impl_default;
 use crate::network::compression;
+use crate::network::concurrent::{ClientRegistry, DefaultClientRegistry};
 use crate::network::delay_compensation;
 use crate::network::delta_serialization;
 use crate::network::synchronization;
@@ -47,12 +48,12 @@ use std::time::Duration;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 // use futures::TryFutureExt; // Temporarily disabled - not currently used
 use tokio::net::{TcpListener, TcpStream};
-use tokio::sync::Mutex;
-use tokio::task;
 
-// DashMap for high-performance concurrent HashMap
+// DashMap条件编译导入（用于server.rs中的直接使用）
 #[cfg(feature = "dashmap")]
 use dashmap::DashMap;
+use tokio::sync::Mutex;
+use tokio::task;
 
 /// 客户端连接信息
 pub struct ClientConnection {

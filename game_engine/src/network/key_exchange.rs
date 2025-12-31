@@ -27,7 +27,8 @@ use std::time::{SystemTime, UNIX_EPOCH};
 // 依赖导入
 // ============================================================================
 
-// 安全实现依赖
+// 安全实现依赖（仅在secure_key_exchange feature启用时）
+#[cfg(feature = "secure_key_exchange")]
 use {
     hkdf::Hkdf,
     sha2::Sha256 as HkdfSha256,
@@ -62,8 +63,11 @@ trait KeyExchangeBackend: Send + Sync {
 // Backend Implementation
 // ============================================================================
 
-// 安全实现
+// 安全实现（仅在secure_key_exchange feature启用时）
+#[cfg(feature = "secure_key_exchange")]
 struct SecureKeyExchangeBackend;
+
+#[cfg(feature = "secure_key_exchange")]
 
 impl KeyExchangeBackend for SecureKeyExchangeBackend {
     fn generate_keypair(&self) -> ([u8; 32], [u8; 32]) {
@@ -135,9 +139,46 @@ impl KeyExchangeConfig {
 /// 创建后端实例
 ///
 /// 返回安全的 X25519 ECDH + HKDF 实现。
+#[cfg(feature = "secure_key_exchange")]
 fn create_backend(_config: &KeyExchangeConfig) -> Arc<dyn KeyExchangeBackend> {
     tracing::debug!("Using secure X25519 ECDH key exchange");
     Arc::new(SecureKeyExchangeBackend)
+}
+
+/// 创建后端实例（无secure_key_exchange feature时的占位实现）
+#[cfg(not(feature = "secure_key_exchange"))]
+fn create_backend(_config: &KeyExchangeConfig) -> Arc<dyn KeyExchangeBackend> {
+    // 创建一个简单的占位符后端（不提供真正的安全性）
+    Arc::new(PlaceholderKeyExchangeBackend)
+}
+
+/// 占位符密钥交换后端（当secure_key_exchange feature未启用时）
+#[cfg(not(feature = "secure_key_exchange"))]
+struct PlaceholderKeyExchangeBackend;
+
+#[cfg(not(feature = "secure_key_exchange"))]
+impl KeyExchangeBackend for PlaceholderKeyExchangeBackend {
+    fn generate_keypair(&self) -> ([u8; 32], [u8; 32]) {
+        // 警告：这不是安全的密钥交换实现！
+        tracing::warn!("Using insecure placeholder key exchange. Please enable the 'secure_key_exchange' feature.");
+        ([0u8; 32], [0u8; 32])
+    }
+
+    fn derive_public_key(&self, private_key: &[u8; 32]) -> [u8; 32] {
+        *private_key
+    }
+
+    fn compute_shared_secret(&self, _private_key: &[u8; 32], _public_key: &[u8; 32]) -> [u8; 32] {
+        [0u8; 32]
+    }
+
+    fn derive_keys(&self, _shared_secret: [u8; 32]) -> ([u8; 32], [u8; 32]) {
+        ([0u8; 32], [0u8; 32])
+    }
+
+    fn backend_name(&self) -> &'static str {
+        "PLACEHOLDER-INSECURE"
+    }
 }
 
 // ============================================================================
@@ -714,10 +755,13 @@ mod tests {
 
         if backend.backend_name() == "X25519-ECDH-HKDF" {
             use rand::RngCore;
+            #[cfg(feature = "secure_key_exchange")]
             use x25519_dalek_ng::{PublicKey, StaticSecret};
 
-            // Manually create random secrets using bytes
-            let mut rng = rand::rng();
+            #[cfg(feature = "secure_key_exchange")]
+            {
+                // Manually create random secrets using bytes
+                let mut rng = rand::rng();
             let mut secret1_bytes = [0u8; 32];
             let mut secret2_bytes = [0u8; 32];
             rng.fill_bytes(&mut secret1_bytes);
@@ -739,7 +783,8 @@ mod tests {
                 shared2.to_bytes(),
                 "X25519密钥协商应该是对称的"
             );
-        }
+            }  // end of #[cfg(feature = "secure_key_exchange")]
+        }  // end of if backend.backend_name()
     }
 
     #[test]

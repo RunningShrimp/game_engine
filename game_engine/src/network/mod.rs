@@ -163,6 +163,8 @@
 //!
 
 pub mod client;
+/// 并发容器抽象层（trait抽象替代条件编译）
+pub mod concurrent;
 pub mod compression;
 pub mod delay_compensation;
 pub mod delta_serialization;

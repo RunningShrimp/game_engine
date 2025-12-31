@@ -10,6 +10,14 @@ use thiserror::Error;
 // Platform-specific modules
 #[cfg(any(target_os = "android", target_os = "ios"))]
 pub mod mobile;
+
+// 鸿蒙系统支持 (P2-2.1) - 使用feature flag
+#[cfg(feature = "harmonyos")]
+pub mod harmonyos;
+#[cfg(feature = "harmonyos")]
+pub mod harmonyos_wgpu;
+
+// Web平台支持
 #[cfg(target_arch = "wasm32")]
 pub mod wasm_performance;
 #[cfg(target_arch = "wasm32")]
@@ -522,6 +530,19 @@ pub use web_input::WebInput;
 pub use mobile::{
     GyroscopeData, MobileAdaptivePerformance, MobileConfig, MobileInputHandler,
     MobilePerformanceMonitor, PerformanceIssue, TouchPoint, get_mobile_config, is_mobile_platform,
+};
+
+// 鸿蒙系统支持 (P2-2.1)
+#[cfg(feature = "harmonyos")]
+pub use harmonyos::{
+    HarmonyOSGraphicsContext, HarmonyOSInputManager, HarmonyOSPermission, HarmonyOSPlatformInfo,
+    HarmonyOSVersion, HarmonyOSWindow, HarmonyOSWindowConfig, is_harmonyos, platform_info,
+};
+#[cfg(feature = "harmonyos")]
+pub use harmonyos_wgpu::{
+    AdapterPreference, HarmonyOSGpuInfo, HarmonyOSWgpuConfig, HarmonyOSWgpuContext,
+    HarmonyOSWgpuDevice, HarmonyOSWgpuInstance, HarmonyOSWgpuSurfaceCreator, PerformanceHint,
+    is_opengles_supported, is_vulkan_supported,
 };
 
 // 控制台平台支持

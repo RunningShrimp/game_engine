@@ -105,6 +105,12 @@
 // - 集成PBR材质系统和全局光照
 
 pub mod mesh;
+pub mod mesh_simplifier;
+pub mod lod_generator;
+pub mod quality_assessor;
+pub mod uv_atlas;
+pub mod integrated_gpu;
+pub mod tile_based;
 pub mod shader_async;
 pub mod shader_cache;
 pub mod shader_cache_helper;
@@ -137,6 +143,7 @@ pub mod gpu_unified_manager;
 pub mod graph;
 pub mod instance_batch;
 pub mod light_baking;
+pub mod lighting_trait;
 pub mod lod;
 pub mod material_sort;
 pub mod occlusion_culling;
@@ -185,6 +192,25 @@ pub use particles::{
 pub use lod::{
     LodConfig, LodConfigBuilder, LodGroup, LodLevel, LodQuality, LodSelection, LodSelector,
     LodStats, LodTransition,
+};
+
+// Re-export UV Atlas components
+pub use uv_atlas::{AtlasOptions, PlacedIsland, UvAtlas, UvAtlasGenerator, UvIsland};
+
+// Re-export Integrated GPU Optimization components
+pub use integrated_gpu::{
+    BandwidthDistribution, BandwidthMonitor, BandwidthOptimization, IntegratedGpuConfig,
+    IntegratedGpuOptimizer, IntegratedGpuTier, ResolutionScaler, ShaderSimplification,
+    TextureCompressionFormat, get_integrated_gpu_tier, is_integrated_gpu,
+};
+
+// Re-export Tile-based Rendering Optimization components
+pub use tile_based::{
+    BandwidthOptimizationHints, ClearOperation, ObjectBounds, OverdrawVisualizer,
+    RenderObject as TileRenderObject,  // 避免与domain_objects.RenderObject冲突
+    RenderObjectType, RenderOrder, RenderPassOptimization, TileBasedConfig, TileBasedOptimizer,
+    TileBasedPassOptimizer, TileOverdrawStats, TileSize, TextureFormat, is_tile_based_gpu,
+    recommended_tile_size,
 };
 
 // Re-export CSM components

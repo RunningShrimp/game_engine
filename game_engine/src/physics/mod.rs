@@ -142,8 +142,11 @@ pub use dirty_tracker::{
 };
 pub use multithreaded::{
     MultithreadedPhysicsConfig, MultithreadedPhysicsWorld, PhysicsPerformanceStats,
-    multithreaded_physics_step_system, sync_multithreaded_physics_to_transform_system,
+    multithreaded_physics_step_system,
 };
+
+#[cfg(feature = "physics")]
+pub use multithreaded::sync_multithreaded_physics_to_transform_system;
 pub use simd_integration::{
     ParentTransform, PhysicsIntegrateBatch, SimdBackendType, SimdPerformanceMonitor,
     SimdPerformanceStats, SimdPhysicsState, TransformUpdateBatch, simd_performance_monitor_system,

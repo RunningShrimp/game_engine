@@ -132,9 +132,6 @@ pub enum SceneState {
 ///
 /// **注意**：虽然字段是`pub`的（用于序列化），但应该通过聚合根方法访问和修改，
 /// 以确保业务规则在边界内执行。直接修改字段可能违反业务规则。
-///
-/// **注意**：Scene不实现Clone，因为事件队列包含trait object，不能完全克隆。
-/// 如果需要克隆场景，应该通过序列化/反序列化或创建新场景并复制数据。
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Scene {
     /// 场景ID（不可变）
@@ -174,6 +171,22 @@ impl SceneMetadata {
     /// 创建默认场景元数据
     pub fn new() -> Self {
         Self::default()
+    }
+}
+
+/// 手动实现Clone for Scene，因为event_queue包含trait object
+impl Clone for Scene {
+    fn clone(&self) -> Self {
+        Self {
+            id: self.id,
+            name: self.name.clone(),
+            state: self.state,
+            entities: self.entities.clone(),
+            metadata: self.metadata.clone(),
+            last_modified: self.last_modified,
+            recovery_strategy: self.recovery_strategy.clone(),
+            event_queue: AggregateEventQueue::new(),  // 创建新的事件队列而不是克隆
+        }
     }
 }
 

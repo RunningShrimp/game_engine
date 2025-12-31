@@ -28,10 +28,10 @@
 /// SIMD粒子批量处理集成
 pub mod simd_integration;
 
-pub use simd_integration::{
-    SimdParticle, SimdParticleProcessor, simd_particle_force_field_system,
-    simd_particle_update_system,
-};
+pub use simd_integration::{SimdParticle, SimdParticleProcessor};
+
+#[cfg(feature = "simd")]
+pub use simd_integration::{simd_particle_force_field_system, simd_particle_update_system};
 
 #[cfg(test)]
 mod tests {

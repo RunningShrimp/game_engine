@@ -85,6 +85,14 @@ pub trait EnginePlugin: Send + Sync {
 pub mod registry;
 pub use registry::PluginRegistry;
 
+// 版本管理和沙箱
+pub mod versioning;
+pub use versioning::{
+    SemVer, SemVerError, VersionRequirement, VersionConflictError,
+    PluginVersionManager, WasiSandboxConfig, WasiSandbox, SandboxError,
+    PluginSandboxManager,
+};
+
 // 热加载支持
 pub mod hot_reload;
 pub use hot_reload::{HotReloadError, PluginHotReloadManager};

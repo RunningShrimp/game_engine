@@ -41,6 +41,7 @@ impl Default for SimdParticle {
     }
 }
 
+#[cfg(feature = "simd")]
 impl From<Particle> for SimdParticle {
     fn from(p: Particle) -> Self {
         Self {
@@ -55,6 +56,7 @@ impl From<Particle> for SimdParticle {
     }
 }
 
+#[cfg(feature = "simd")]
 impl From<SimdParticle> for Particle {
     fn from(p: SimdParticle) -> Self {
         Self {
@@ -102,6 +104,7 @@ impl Default for SimdParticleProcessor {
 /// SIMD粒子批量更新系统
 ///
 /// 使用SIMD加速批量更新粒子状态
+#[cfg(feature = "simd")]
 pub fn simd_particle_update_system(
     mut query: Query<&mut SimdParticle>,
     mut processor: ResMut<SimdParticleProcessor>,
@@ -164,6 +167,7 @@ pub fn simd_particle_update_system(
 /// SIMD粒子力场应用系统
 ///
 /// 使用SIMD加速批量应用力场效果
+#[cfg(feature = "simd")]
 pub fn simd_particle_force_field_system(
     mut query: Query<&mut SimdParticle>,
     mut processor: ResMut<SimdParticleProcessor>,
@@ -229,12 +233,9 @@ mod tests {
 
     #[test]
     fn test_simd_particle_conversion() {
-        let particle = Particle::default();
-        let simd_particle = SimdParticle::from(particle.clone());
-        let converted_back = Particle::from(simd_particle);
-
-        assert_eq!(particle.position, converted_back.position);
-        assert_eq!(particle.life, converted_back.life);
+        let simd_particle = SimdParticle::default();
+        assert_eq!(simd_particle.position, [0.0; 3]);
+        assert_eq!(simd_particle.life, 1.0);
     }
 
     #[test]
@@ -242,5 +243,16 @@ mod tests {
         let processor = SimdParticleProcessor::default();
         // 配置应该有默认值
         assert!(processor.config.batch_size > 0);
+    }
+
+    #[cfg(feature = "simd")]
+    #[test]
+    fn test_particle_conversion_with_simd() {
+        let particle = Particle::default();
+        let simd_particle = SimdParticle::from(particle.clone());
+        let converted_back = Particle::from(simd_particle);
+
+        assert_eq!(particle.position, converted_back.position);
+        assert_eq!(particle.life, converted_back.life);
     }
 }

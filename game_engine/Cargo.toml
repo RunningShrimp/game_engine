@@ -43,6 +43,7 @@ dashmap = { workspace = true, optional = true }
 # Core Architecture
 bevy_ecs.workspace = true
 glam.workspace = true
+nalgebra = "0.32"
 tokio.workspace = true
 tokio-util = "0.7.17"
 async-trait = "0.1.89"
@@ -113,6 +114,8 @@ tokio-tungstenite = "0.28"
 tracy-client = { version = "0.18", optional = true }
 # hyper = { version = "1.8", features = ["full"] }  # Removed: transitive dependency via axum
 axum-server = "0.8.0"
+chrono = "0.4.42"
+pyo3 = "0.27.2"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -169,6 +172,85 @@ xr = []
 ## cargo build --features gltf
 ## ```
 gltf = ["dep:gltf"]
+
+## 启用FBX模型加载支持
+##
+## 增加的依赖：
+## - 无额外依赖（使用开源FBX解析）
+##
+## 支持的功能：
+## - FBX格式加载（二进制和ASCII）
+## - 网格、材质、纹理解析
+## - 骨骼和动画支持
+##
+## 使用场景：
+## - 加载Autodesk FBX模型
+## - 与3D建模软件互操作
+## - 游戏美术资源管理
+##
+## 注意：
+## - 使用开源解析方案，不依赖官方FBX SDK
+## - 支持FBX 7.0+格式
+##
+## 示例：
+## ```bash
+## cargo build --features fbx
+## ```
+fbx = []
+
+## 启用OBJ模型加载支持
+##
+## 增加的依赖：
+## - 无额外依赖
+##
+## 支持的功能：
+## - OBJ格式加载（文本格式）
+## - 网格、材质、纹理解析
+## - 多对象支持
+## - 平滑组支持
+##
+## 使用场景：
+## - 加载Wavefront OBJ模型
+## - 与Blender/Maya等软件互操作
+## - 快速原型开发
+##
+## 注意：
+## - 纯文本格式，解析速度快
+## - 广泛支持，几乎所有3D软件都可导出
+## - 支持MTL材质库
+##
+## 示例：
+## ```bash
+## cargo build --features obj
+## ```
+obj = []
+
+## 启用鸿蒙系统支持
+##
+## 增加的依赖：
+## - 无额外依赖（使用鸿蒙NDK）
+##
+## 支持的功能：
+## - 鸿蒙原生窗口创建
+## - 触摸输入处理
+## - Vulkan/OpenGL ES图形支持
+## - 权限管理
+## - 资源访问
+##
+## 使用场景：
+## - 鸿蒙手机/平板应用
+## - IoT设备开发
+## - 车载系统
+##
+## 注意：
+## - 需要鸿蒙NDK和Native API
+## - 当前为框架实现，需要完整API绑定
+##
+## 示例：
+## ```bash
+## cargo build --features harmonyos
+## ```
+harmonyos = []
 
 ### 脚本和运行时
 ## 启用WebAssembly运行时支持
@@ -473,6 +555,11 @@ path = "../benches/system_parallel_scheduler_bench.rs"
 [[bench]]
 name = "memory_benchmarks"
 harness = false
+
+# Binaries
+[[bin]]
+name = "convert"
+path = "src/bin/convert.rs"
 
 # Examples have been temporarily removed during P0 phase cleanup
 # They will be restored in P1 phase after reorganization

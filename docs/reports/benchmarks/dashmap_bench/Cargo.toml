@@ -1,0 +1,21 @@
+[workspace]
+[package]
+name = "dashmap_bench"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+criterion = "0.5"
+
+[[bench]]
+name = "dashmap_comparison"
+harness = false
+
+[features]
+default = ["dashmap"]
+dashmap = ["dep:dashmap"]
+
+[dependencies.dashmap]
+version = "6.1"
+optional = true

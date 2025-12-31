@@ -1,15 +1,23 @@
-//! 优化的资源管理器 - 使用DashMap提升并发性能
+//! 优化的资源管理器 - 使用并发容器抽象层提升并发性能
 //!
 //! # 性能优化
 //!
-//! ## 1. DashMap 并发优化（主要优化）
+//! ## 1. 并发容器抽象层（Trait抽象）
+//!
+//! 使用 `ConcurrentMap` trait 抽象替代条件编译，提供统一接口：
+//! - **DashMapAdapter**: 无锁并发，5x-10x 性能提升（dashmap feature）
+//! - **RwLockAdapter**: parking_lot::RwLock，2.5x-8x 性能提升（默认）
+//! - 通过类型别名 `DefaultConcurrentMap` 自动选择实现
+//! - 消除条件编译导致的代码重复
+//!
+//! ## 2. DashMap 并发优化（主要优化）
 //!
 //! 使用 `DashMap` 替代 `RwLock<HashMap>`，获得 **5x-10x** 并发性能提升：
 //! - 无锁并发读取
 //! - 分片存储设计（减少锁竞争）
 //! - 更好的多核扩展性
 //!
-//! ## 2. parking_lot::RwLock 优化（备用方案）
+//! ## 3. parking_lot::RwLock 优化（备用方案）
 //!
 //! 当DashMap不可用时，使用 `parking_lot::RwLock` 替代 `std::sync::RwLock`，获得 **2.5x-8x** 性能提升：
 //! - 更快的锁操作
@@ -53,20 +61,14 @@
 //!   ```
 
 use bevy_ecs::prelude::*;
-
-#[cfg(feature = "dashmap")]
-use dashmap::DashMap;
-
-#[cfg(not(feature = "dashmap"))]
 use parking_lot::RwLock;
-
-#[cfg(not(feature = "dashmap"))]
-use std::collections::HashMap;
-
 use std::{
     path::{Path, PathBuf},
     sync::Arc,
 };
+
+// 使用并发容器抽象层替代条件编译
+use crate::resources::concurrent::{ConcurrentMap, DefaultConcurrentMap};
 
 /// 资源加载状态（优化版本）
 #[derive(Clone, Debug)]
@@ -202,19 +204,10 @@ pub struct OptimizedAssetManager {
     // 使用DashMap或RwLock<HashMap>的资源缓存
     // DashMap版本：无锁并发，5x-10x性能提升
     // parking_lot版本：2.5x-8x性能提升
-    #[cfg(feature = "dashmap")]
-    textures: DashMap<String, OptimizedHandle<String>>,
-    #[cfg(feature = "dashmap")]
-    meshes: DashMap<String, OptimizedHandle<String>>,
-    #[cfg(feature = "dashmap")]
-    shaders: DashMap<String, OptimizedHandle<String>>,
-
-    #[cfg(not(feature = "dashmap"))]
-    textures: RwLock<HashMap<String, OptimizedHandle<String>>>,
-    #[cfg(not(feature = "dashmap"))]
-    meshes: RwLock<HashMap<String, OptimizedHandle<String>>>,
-    #[cfg(not(feature = "dashmap"))]
-    shaders: RwLock<HashMap<String, OptimizedHandle<String>>>,
+    // 使用并发容器抽象层 - 根据feature自动选择实现
+    textures: DefaultConcurrentMap<String, OptimizedHandle<String>>,
+    meshes: DefaultConcurrentMap<String, OptimizedHandle<String>>,
+    shaders: DefaultConcurrentMap<String, OptimizedHandle<String>>,
 
     // 资源路径
     asset_base: PathBuf,
@@ -223,40 +216,18 @@ pub struct OptimizedAssetManager {
 impl OptimizedAssetManager {
     pub fn new() -> Self {
         Self {
-            #[cfg(feature = "dashmap")]
-            textures: DashMap::new(),
-            #[cfg(feature = "dashmap")]
-            meshes: DashMap::new(),
-            #[cfg(feature = "dashmap")]
-            shaders: DashMap::new(),
-
-            #[cfg(not(feature = "dashmap"))]
-            textures: RwLock::new(HashMap::new()),
-            #[cfg(not(feature = "dashmap"))]
-            meshes: RwLock::new(HashMap::new()),
-            #[cfg(not(feature = "dashmap"))]
-            shaders: RwLock::new(HashMap::new()),
-
+            textures: DefaultConcurrentMap::new(),
+            meshes: DefaultConcurrentMap::new(),
+            shaders: DefaultConcurrentMap::new(),
             asset_base: PathBuf::from("assets"),
         }
     }
 
     pub fn with_base<P: AsRef<Path>>(path: P) -> Self {
         Self {
-            #[cfg(feature = "dashmap")]
-            textures: DashMap::new(),
-            #[cfg(feature = "dashmap")]
-            meshes: DashMap::new(),
-            #[cfg(feature = "dashmap")]
-            shaders: DashMap::new(),
-
-            #[cfg(not(feature = "dashmap"))]
-            textures: RwLock::new(HashMap::new()),
-            #[cfg(not(feature = "dashmap"))]
-            meshes: RwLock::new(HashMap::new()),
-            #[cfg(not(feature = "dashmap"))]
-            shaders: RwLock::new(HashMap::new()),
-
+            textures: DefaultConcurrentMap::new(),
+            meshes: DefaultConcurrentMap::new(),
+            shaders: DefaultConcurrentMap::new(),
             asset_base: path.as_ref().to_path_buf(),
         }
     }
@@ -273,53 +244,23 @@ impl OptimizedAssetManager {
     /// - 使用 parking_lot::RwLock::write() 比 std::sync::RwLock::write() 快 **4x-8x**
     /// - 写操作结束后自动释放锁，无需手动管理
     pub fn load_texture(&self, name: &str) -> Result<OptimizedHandle<String>, String> {
-        // DashMap版本：无锁并发读取
-        #[cfg(feature = "dashmap")]
-        {
-            // 快速路径：先检查是否已存在
-            if let Some(handle) = self.textures.get(name) {
-                if handle.is_loaded() {
-                    return Ok(handle.clone());
-                }
+        // 快速路径：先检查是否已存在
+        let key = name.to_string();
+        if let Some(handle) = self.textures.get(&key) {
+            if handle.is_loaded() {
+                return Ok(handle);
             }
-
-            // 慢路径：需要加载
-            let _path = self.asset_base.join("textures").join(name);
-            // 实际加载逻辑...
-            let handle = OptimizedHandle::new_loading();
-
-            // 插入到DashMap（无锁或轻量级锁）
-            self.textures.insert(name.to_string(), handle.clone());
-
-            Ok(handle)
         }
 
-        // parking_lot版本：使用RwLock
-        #[cfg(not(feature = "dashmap"))]
-        {
-            // 快速路径：先读锁检查（parking_lot读锁很快）
-            {
-                let textures = self.textures.read();
-                if let Some(handle) = textures.get(name) {
-                    if handle.is_loaded() {
-                        return Ok(handle.clone());
-                    }
-                }
-            }
+        // 慢路径：需要加载
+        let _path = self.asset_base.join("textures").join(name);
+        // 实际加载逻辑...
+        let handle = OptimizedHandle::new_loading();
 
-            // 慢路径：需要加载
-            let _path = self.asset_base.join("textures").join(name);
-            // 实际加载逻辑...
-            let handle = OptimizedHandle::new_loading();
+        // 插入到缓存（使用trait接口）
+        self.textures.insert(key.clone(), handle.clone());
 
-            // 写入缓存（parking_lot写锁很快）
-            {
-                let mut textures = self.textures.write();
-                textures.insert(name.to_string(), handle.clone());
-            }
-
-            Ok(handle)
-        }
+        Ok(handle)
     }
 
     /// 批量加载纹理（优化版本）
@@ -354,15 +295,9 @@ impl OptimizedAssetManager {
     /// - 比 std::sync::RwLock 快 **2.5x-5x**
     #[inline]
     pub fn get_texture(&self, name: &str) -> Option<OptimizedHandle<String>> {
-        #[cfg(feature = "dashmap")]
-        {
-            self.textures.get(name).map(|v| v.clone())
-        }
-
-        #[cfg(not(feature = "dashmap"))]
-        {
-            self.textures.read().get(name).cloned()
-        }
+        // Convert &str to owned String for trait call
+        let key = name.to_string();
+        self.textures.get(&key)
     }
 
     /// 预加载资源（优化版本）
@@ -398,22 +333,10 @@ impl OptimizedAssetManager {
     /// ## parking_lot版本
     /// - parking_lot读锁非常快，统计操作几乎无开销
     pub fn get_stats(&self) -> AssetManagerStats {
-        #[cfg(feature = "dashmap")]
-        {
-            AssetManagerStats {
-                textures_loaded: self.textures.len(),
-                meshes_loaded: self.meshes.len(),
-                shaders_loaded: self.shaders.len(),
-            }
-        }
-
-        #[cfg(not(feature = "dashmap"))]
-        {
-            AssetManagerStats {
-                textures_loaded: self.textures.read().len(),
-                meshes_loaded: self.meshes.read().len(),
-                shaders_loaded: self.shaders.read().len(),
-            }
+        AssetManagerStats {
+            textures_loaded: self.textures.len(),
+            meshes_loaded: self.meshes.len(),
+            shaders_loaded: self.shaders.len(),
         }
     }
 
@@ -427,56 +350,25 @@ impl OptimizedAssetManager {
     /// ## parking_lot版本
     /// - parking_lot::RwLock::write() 比 std::sync::RwLock::write() 快 **4x-8x**
     pub fn load_mesh(&self, name: &str) -> Result<OptimizedHandle<String>, String> {
-        #[cfg(feature = "dashmap")]
-        {
-            if let Some(handle) = self.meshes.get(name) {
-                if handle.is_loaded() {
-                    return Ok(handle.clone());
-                }
+        let key = name.to_string();
+        if let Some(handle) = self.meshes.get(&key) {
+            if handle.is_loaded() {
+                return Ok(handle);
             }
-
-            let _path = self.asset_base.join("meshes").join(name);
-            let handle = OptimizedHandle::new_loading();
-            self.meshes.insert(name.to_string(), handle.clone());
-
-            Ok(handle)
         }
 
-        #[cfg(not(feature = "dashmap"))]
-        {
-            {
-                let meshes = self.meshes.read();
-                if let Some(handle) = meshes.get(name) {
-                    if handle.is_loaded() {
-                        return Ok(handle.clone());
-                    }
-                }
-            }
+        let _path = self.asset_base.join("meshes").join(name);
+        let handle = OptimizedHandle::new_loading();
+        self.meshes.insert(key.clone(), handle.clone());
 
-            let _path = self.asset_base.join("meshes").join(name);
-            let handle = OptimizedHandle::new_loading();
-
-            {
-                let mut meshes = self.meshes.write();
-                meshes.insert(name.to_string(), handle.clone());
-            }
-
-            Ok(handle)
-        }
+        Ok(handle)
     }
 
     /// 获取网格（优化版本）
     #[inline]
     pub fn get_mesh(&self, name: &str) -> Option<OptimizedHandle<String>> {
-        #[cfg(feature = "dashmap")]
-        {
-            self.meshes.get(name).map(|v| v.clone())
-        }
-
-        #[cfg(not(feature = "dashmap"))]
-        {
-            self.meshes.read().get(name).cloned()
-        }
+        let key = name.to_string();
+        self.meshes.get(&key)
     }
 
     /// 加载着色器（优化版本）
@@ -489,56 +381,25 @@ impl OptimizedAssetManager {
     /// ## parking_lot版本
     /// - parking_lot::RwLock::write() 比 std::sync::RwLock::write() 快 **4x-8x**
     pub fn load_shader(&self, name: &str) -> Result<OptimizedHandle<String>, String> {
-        #[cfg(feature = "dashmap")]
-        {
-            if let Some(handle) = self.shaders.get(name) {
-                if handle.is_loaded() {
-                    return Ok(handle.clone());
-                }
+        let key = name.to_string();
+        if let Some(handle) = self.shaders.get(&key) {
+            if handle.is_loaded() {
+                return Ok(handle);
             }
-
-            let _path = self.asset_base.join("shaders").join(name);
-            let handle = OptimizedHandle::new_loading();
-            self.shaders.insert(name.to_string(), handle.clone());
-
-            Ok(handle)
         }
 
-        #[cfg(not(feature = "dashmap"))]
-        {
-            {
-                let shaders = self.shaders.read();
-                if let Some(handle) = shaders.get(name) {
-                    if handle.is_loaded() {
-                        return Ok(handle.clone());
-                    }
-                }
-            }
+        let _path = self.asset_base.join("shaders").join(name);
+        let handle = OptimizedHandle::new_loading();
+        self.shaders.insert(key.clone(), handle.clone());
 
-            let _path = self.asset_base.join("shaders").join(name);
-            let handle = OptimizedHandle::new_loading();
-
-            {
-                let mut shaders = self.shaders.write();
-                shaders.insert(name.to_string(), handle.clone());
-            }
-
-            Ok(handle)
-        }
+        Ok(handle)
     }
 
     /// 获取着色器（优化版本）
     #[inline]
     pub fn get_shader(&self, name: &str) -> Option<OptimizedHandle<String>> {
-        #[cfg(feature = "dashmap")]
-        {
-            self.shaders.get(name).map(|v| v.clone())
-        }
-
-        #[cfg(not(feature = "dashmap"))]
-        {
-            self.shaders.read().get(name).cloned()
-        }
+        let key = name.to_string();
+        self.shaders.get(&key)
     }
 
     /// 热重载资源（支持运行时资源更新）
@@ -554,36 +415,15 @@ impl OptimizedAssetManager {
     pub fn reload_resource(&self, type_: &str, name: &str) -> Result<(), String> {
         match type_ {
             "texture" => {
-                #[cfg(feature = "dashmap")]
-                {
-                    self.textures.remove(name);
-                }
-                #[cfg(not(feature = "dashmap"))]
-                {
-                    self.textures.write().remove(name);
-                }
+                self.textures.remove(&name.to_string());
                 self.load_texture(name)?;
             }
             "mesh" => {
-                #[cfg(feature = "dashmap")]
-                {
-                    self.meshes.remove(name);
-                }
-                #[cfg(not(feature = "dashmap"))]
-                {
-                    self.meshes.write().remove(name);
-                }
+                self.meshes.remove(&name.to_string());
                 self.load_mesh(name)?;
             }
             "shader" => {
-                #[cfg(feature = "dashmap")]
-                {
-                    self.shaders.remove(name);
-                }
-                #[cfg(not(feature = "dashmap"))]
-                {
-                    self.shaders.write().remove(name);
-                }
+                self.shaders.remove(&name.to_string());
                 self.load_shader(name)?;
             }
             _ => return Err(format!("Unknown resource type: {type_}")),
@@ -623,12 +463,6 @@ mod tests {
 
     #[test]
     fn test_optimized_handle_loaded() {
-        #[cfg(feature = "dashmap")]
-        let container = Arc::new(OptimizedAssetContainer {
-            state: parking_lot::RwLock::new(OptimizedLoadState::Loaded("test".to_string())),
-        });
-
-        #[cfg(not(feature = "dashmap"))]
         let container = Arc::new(OptimizedAssetContainer {
             state: RwLock::new(OptimizedLoadState::Loaded("test".to_string())),
         });
@@ -684,17 +518,7 @@ mod tests {
 
         // 模拟资源加载完成 - 使用字符串作为占位符
         let container = handle.container.clone();
-
-        // 根据feature设置加载状态
-        #[cfg(feature = "dashmap")]
-        {
-            *container.state.write() = OptimizedLoadState::Loaded("loaded".to_string());
-        }
-
-        #[cfg(not(feature = "dashmap"))]
-        {
-            *container.state.write() = OptimizedLoadState::Loaded("loaded".to_string());
-        }
+        *container.state.write() = OptimizedLoadState::Loaded("loaded".to_string());
 
         // 并发读取测试（10个线程，每个读取1000次）
         let start = Instant::now();
@@ -729,10 +553,6 @@ mod tests {
     fn test_rwlock_no_poison() {
         use std::sync::Arc;
 
-        #[cfg(feature = "dashmap")]
-        let lock = Arc::new(parking_lot::RwLock::new(42));
-
-        #[cfg(not(feature = "dashmap"))]
         let lock = Arc::new(RwLock::new(42));
 
         // 正常读取
@@ -778,12 +598,7 @@ mod tests {
         // parking_lot 的锁更小
         use std::mem::size_of;
 
-        #[cfg(feature = "dashmap")]
-        let parking_lock = parking_lot::RwLock::<u32>::new(42);
-
-        #[cfg(not(feature = "dashmap"))]
         let parking_lock = RwLock::<u32>::new(42);
-
         let std_lock = std::sync::RwLock::<u32>::new(42);
 
         println!("parking_lot::RwLock size: {}", size_of_val(&parking_lock));

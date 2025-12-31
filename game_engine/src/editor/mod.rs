@@ -79,6 +79,7 @@ pub mod animation_editor;
 pub mod asset_browser;
 pub mod behavior_tree_editor;
 pub mod build_tool;
+pub mod code_generator;
 pub mod config;
 pub mod console;
 pub mod curve_editor;

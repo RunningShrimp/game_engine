@@ -124,6 +124,7 @@
 pub mod asset_loader_trait;
 pub mod async_upload;
 pub mod atlas;
+pub mod concurrent;
 pub mod core;
 pub mod coroutine_loader;
 pub mod dependency_manager;
@@ -131,6 +132,14 @@ pub mod events;
 pub mod font;
 pub mod gltf_assets;
 pub mod gltf_loader;
+#[cfg(feature = "fbx")]
+pub mod fbx_assets;
+#[cfg(feature = "fbx")]
+pub mod fbx_loader;
+#[cfg(feature = "obj")]
+pub mod obj_assets;
+#[cfg(feature = "obj")]
+pub mod obj_loader;
 pub mod hot_reload;
 pub mod manager;
 pub mod memory_allocator;
@@ -140,6 +149,7 @@ pub mod preallocation_manager;
 pub mod preload_manager;
 pub mod ring_buffer_pool;
 pub mod ring_buffer_staging_pool;
+pub mod lod_resource;
 pub mod runtime;
 pub mod shader_cache;
 pub mod staging_buffer;
