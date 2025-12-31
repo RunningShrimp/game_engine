@@ -104,6 +104,7 @@
 // - 提供GPU驱动的渲染优化
 // - 集成PBR材质系统和全局光照
 
+pub mod comprehensive_tests;
 pub mod integrated_gpu;
 pub mod lod_generator;
 pub mod mesh;
