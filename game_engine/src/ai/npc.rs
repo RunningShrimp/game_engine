@@ -14,6 +14,8 @@
 //! let action = npc.decide().await?;
 //! ```
 
+pub mod presets;
+
 use super::BehaviorTree;
 use super::service::{AIService, Action, ActionType, NPCContext, NPCStatus, Situation};
 use bevy_ecs::entity::Entity;

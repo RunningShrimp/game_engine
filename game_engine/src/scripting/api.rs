@@ -35,24 +35,24 @@ impl ScriptApi {
 
         // 数学函数
         self.register_function("sqrt", |args| {
-            if let Some(ScriptValue::Float(x)) = args.first() {
-                ScriptResult::Success(x.sqrt().to_string())
+            if let Some(ScriptValue::Number(x)) = args.first() {
+                ScriptResult::Success(ScriptValue::Number(x.sqrt()))
             } else {
                 ScriptResult::Error("sqrt() requires a number argument".to_string())
             }
         });
 
         self.register_function("sin", |args| {
-            if let Some(ScriptValue::Float(x)) = args.first() {
-                ScriptResult::Success(x.sin().to_string())
+            if let Some(ScriptValue::Number(x)) = args.first() {
+                ScriptResult::Success(ScriptValue::Number(x.sin()))
             } else {
                 ScriptResult::Error("sin() requires a number argument".to_string())
             }
         });
 
         self.register_function("cos", |args| {
-            if let Some(ScriptValue::Float(x)) = args.first() {
-                ScriptResult::Success(x.cos().to_string())
+            if let Some(ScriptValue::Number(x)) = args.first() {
+                ScriptResult::Success(ScriptValue::Number(x.cos()))
             } else {
                 ScriptResult::Error("cos() requires a number argument".to_string())
             }
@@ -90,11 +90,11 @@ pub enum ExtendedScriptValue {
     /// 空值
     Null,
     /// 布尔值
-    Bool(bool),
+    Boolean(bool),
     /// 整数值
-    Int(i64),
+    Integer(i64),
     /// 浮点数值
-    Float(f64),
+    Number(f64),
     /// 字符串值
     String(String),
     /// 数组值
@@ -118,9 +118,9 @@ impl ExtendedScriptValue {
     pub fn to_script_value(&self) -> ScriptValue {
         match self {
             ExtendedScriptValue::Null => ScriptValue::Null,
-            ExtendedScriptValue::Bool(b) => ScriptValue::Bool(*b),
-            ExtendedScriptValue::Int(i) => ScriptValue::Int(*i),
-            ExtendedScriptValue::Float(f) => ScriptValue::Float(*f),
+            ExtendedScriptValue::Boolean(b) => ScriptValue::Boolean(*b),
+            ExtendedScriptValue::Integer(i) => ScriptValue::Integer(*i),
+            ExtendedScriptValue::Number(f) => ScriptValue::Number(*f),
             ExtendedScriptValue::String(s) => ScriptValue::String(s.clone()),
             ExtendedScriptValue::Array(arr) => {
                 ScriptValue::Array(arr.iter().map(|v| v.to_script_value()).collect())
@@ -130,26 +130,26 @@ impl ExtendedScriptValue {
             ),
             ExtendedScriptValue::Vec2(v) => {
                 let mut obj = HashMap::new();
-                obj.insert("x".to_string(), ScriptValue::Float(v.x as f64));
-                obj.insert("y".to_string(), ScriptValue::Float(v.y as f64));
+                obj.insert("x".to_string(), ScriptValue::Number(v.x as f64));
+                obj.insert("y".to_string(), ScriptValue::Number(v.y as f64));
                 ScriptValue::Object(obj)
             }
             ExtendedScriptValue::Vec3(v) => {
                 let mut obj = HashMap::new();
-                obj.insert("x".to_string(), ScriptValue::Float(v.x as f64));
-                obj.insert("y".to_string(), ScriptValue::Float(v.y as f64));
-                obj.insert("z".to_string(), ScriptValue::Float(v.z as f64));
+                obj.insert("x".to_string(), ScriptValue::Number(v.x as f64));
+                obj.insert("y".to_string(), ScriptValue::Number(v.y as f64));
+                obj.insert("z".to_string(), ScriptValue::Number(v.z as f64));
                 ScriptValue::Object(obj)
             }
             ExtendedScriptValue::Quat(q) => {
                 let mut obj = HashMap::new();
-                obj.insert("x".to_string(), ScriptValue::Float(q.x as f64));
-                obj.insert("y".to_string(), ScriptValue::Float(q.y as f64));
-                obj.insert("z".to_string(), ScriptValue::Float(q.z as f64));
-                obj.insert("w".to_string(), ScriptValue::Float(q.w as f64));
+                obj.insert("x".to_string(), ScriptValue::Number(q.x as f64));
+                obj.insert("y".to_string(), ScriptValue::Number(q.y as f64));
+                obj.insert("z".to_string(), ScriptValue::Number(q.z as f64));
+                obj.insert("w".to_string(), ScriptValue::Number(q.w as f64));
                 ScriptValue::Object(obj)
             }
-            ExtendedScriptValue::Entity(id) => ScriptValue::Int(*id as i64),
+            ExtendedScriptValue::Entity(id) => ScriptValue::Integer(*id as i64),
         }
     }
 
@@ -157,9 +157,9 @@ impl ExtendedScriptValue {
     pub fn from_script_value(value: &ScriptValue) -> Self {
         match value {
             ScriptValue::Null => ExtendedScriptValue::Null,
-            ScriptValue::Bool(b) => ExtendedScriptValue::Bool(*b),
-            ScriptValue::Int(i) => ExtendedScriptValue::Int(*i),
-            ScriptValue::Float(f) => ExtendedScriptValue::Float(*f),
+            ScriptValue::Boolean(b) => ExtendedScriptValue::Boolean(*b),
+            ScriptValue::Integer(i) => ExtendedScriptValue::Integer(*i),
+            ScriptValue::Number(f) => ExtendedScriptValue::Number(*f),
             ScriptValue::String(s) => ExtendedScriptValue::String(s.clone()),
             ScriptValue::Array(arr) => {
                 ExtendedScriptValue::Array(arr.iter().map(Self::from_script_value).collect())
@@ -187,7 +187,7 @@ mod tests {
         assert!(matches!(result, ScriptResult::Void));
 
         // 测试数学函数
-        let result = api.call("sqrt", &[ScriptValue::Float(16.0)]);
+        let result = api.call("sqrt", &[ScriptValue::Number(16.0)]);
         assert!(matches!(result, ScriptResult::Success(_)));
     }
 
@@ -197,9 +197,9 @@ mod tests {
         let script_value = vec3.to_script_value();
 
         if let ScriptValue::Object(obj) = script_value {
-            assert_eq!(obj.get("x"), Some(&ScriptValue::Float(1.0)));
-            assert_eq!(obj.get("y"), Some(&ScriptValue::Float(2.0)));
-            assert_eq!(obj.get("z"), Some(&ScriptValue::Float(3.0)));
+            assert_eq!(obj.get("x"), Some(&ScriptValue::Number(1.0)));
+            assert_eq!(obj.get("y"), Some(&ScriptValue::Number(2.0)));
+            assert_eq!(obj.get("z"), Some(&ScriptValue::Number(3.0)));
         } else {
             panic!("Expected Object");
         }

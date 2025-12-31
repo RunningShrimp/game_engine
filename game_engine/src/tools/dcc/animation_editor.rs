@@ -307,8 +307,10 @@ impl DCCAnimationEditor {
 
         // 关键帧编辑器
         if let Some(anim_idx) = self.selected_animation {
-            if let Some(animation) = self.animations.get(anim_idx) {
-                self.show_keyframe_editor(ui, animation);
+            // 需要先克隆动画数据以避免借用冲突
+            let animation_clone = self.animations.get(anim_idx).cloned();
+            if let Some(animation) = animation_clone {
+                self.show_keyframe_editor(ui, &animation);
             }
         }
 
@@ -335,7 +337,7 @@ impl DCCAnimationEditor {
         // 背景
         painter.rect_filled(
             rect,
-            egui::Rounding::same(4.0),
+            egui::Rounding::same(4),
             egui::Color32::from_rgb(40, 40, 40),
         );
 
@@ -347,7 +349,7 @@ impl DCCAnimationEditor {
         );
         painter.rect_filled(
             ruler_rect,
-            egui::Rounding::none(),
+            egui::Rounding::ZERO,
             egui::Color32::from_rgb(60, 60, 60),
         );
 
@@ -361,8 +363,10 @@ impl DCCAnimationEditor {
 
             if x >= rect.left() && x <= rect.right() {
                 painter.line(
-                    egui::pos2(x, ruler_rect.top()),
-                    egui::pos2(x, ruler_rect.bottom()),
+                    vec![
+                        egui::pos2(x, ruler_rect.top()),
+                        egui::pos2(x, ruler_rect.bottom()),
+                    ],
                     (1.0, egui::Color32::DARK_GRAY),
                 );
 
@@ -393,14 +397,14 @@ impl DCCAnimationEditor {
             );
 
             // 播放头三角形
-            let mut triangle = vec![
+            let triangle = vec![
                 egui::pos2(playhead_x - 6.0, ruler_rect.top()),
                 egui::pos2(playhead_x + 6.0, ruler_rect.top()),
                 egui::pos2(playhead_x, ruler_rect.top() + 8.0),
             ];
             painter.add(egui::epaint::PathShape::line(
-                triangle,
-                egui::epaint::PathStroke::new(egui::Stroke::new(2.0, egui::Color32::RED)),
+                triangle.clone(),
+                egui::Stroke::new(2.0, egui::Color32::RED),
             ));
             painter.add(egui::epaint::PathShape::convex_polygon(
                 triangle,
@@ -482,7 +486,7 @@ impl DCCAnimationEditor {
         ui.label("Curves:");
 
         for (curve_name, curve) in &animation.curves {
-            let is_visible = self.keyframe_editor.visible_curves.contains(curve_name);
+            let mut is_visible = self.keyframe_editor.visible_curves.contains(curve_name);
 
             ui.horizontal(|ui| {
                 if ui.checkbox(&mut is_visible, "").changed() {

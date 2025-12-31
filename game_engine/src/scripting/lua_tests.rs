@@ -122,7 +122,7 @@ mod tests {
                     ScriptValue::Null => {
                         // 当前实现返回Nil（模拟实现）
                     }
-                    ScriptValue::Int(_) | ScriptValue::Float(_) => {
+                    ScriptValue::Integer(_) | ScriptValue::Number(_) => {
                         // 时间值应该是数字类型（实际实现）
                     }
                     _ => panic!("Expected numeric or null time value"),

@@ -359,12 +359,7 @@ impl SimdVecOps {
 
     #[cfg(target_arch = "x86_64")]
     #[target_feature(enable = "avx2")]
-    unsafe fn add_vec3_batch_avx2(
-        &self,
-        a: &[[f32; 3]],
-        b: &[[f32; 3]],
-        dest: &mut [[f32; 3]],
-    ) {
+    unsafe fn add_vec3_batch_avx2(&self, a: &[[f32; 3]], b: &[[f32; 3]], dest: &mut [[f32; 3]]) {
         for i in 0..a.len() {
             let a_vec = _mm256_set_ps(0.0, 0.0, a[i][2], a[i][1], a[i][0], 0.0, 0.0, 0.0);
             let b_vec = _mm256_set_ps(0.0, 0.0, b[i][2], b[i][1], b[i][0], 0.0, 0.0, 0.0);

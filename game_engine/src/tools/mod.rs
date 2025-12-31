@@ -8,8 +8,8 @@ pub mod ai_assistant;
 pub mod migration;
 
 // DCC工具集成（条件编译）
-#[cfg(feature = "dcc-tools")]
 pub mod dcc;
+pub mod wasm_deploy;
 
 // 资源导入工具（条件编译）
 #[cfg(feature = "asset-importer")]
@@ -50,6 +50,12 @@ pub use dcc::{
     AnimationID, DCCAnimationEditor, DCCMaterialEditor, DCCToolkit, EdgeID, EditMode,
     EditorOperation, FaceID, GeneratedScript, KeyframeID, MaterialID, MeshEditor, ScriptGenerator,
     ScriptLanguage, TextureType, TransformTool, UVEditor, UVID, VertexID,
+};
+
+// WASM部署工具
+pub use wasm_deploy::{
+    BuildPhase, BuildStatus, DeploymentResult, DeploymentTarget, WasmBundle, WasmDeployConfig,
+    WasmDeployError, WasmDeployTool, WasmOptLevel,
 };
 
 // 重新导出Asset Pipeline（条件编译）

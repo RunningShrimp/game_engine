@@ -647,10 +647,10 @@ pub fn flipbook_system(mut query: Query<(&mut Sprite, &mut Flipbook)>, time: Res
 
 #[derive(Component)]
 pub struct AiComponent {
-    #[cfg(feature = "ai-integration")]
+    #[cfg(feature = "ai")]
     pub behavior_tree:
         Option<std::sync::Arc<std::sync::Mutex<crate::ai::behavior_tree::BehaviorTree>>>,
-    #[cfg(feature = "ai-integration")]
+    #[cfg(feature = "ai")]
     pub state_machine:
         Option<std::sync::Arc<std::sync::Mutex<crate::ai::state_machine::StateMachine>>>,
 }

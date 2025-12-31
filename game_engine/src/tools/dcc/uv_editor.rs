@@ -207,7 +207,7 @@ impl UVEditor {
             ui.add(
                 egui::Slider::new(&mut self.snap_settings.grid_size, 0.01..=0.5)
                     .text("Grid Size")
-                    .logarithmic(),
+                    .logarithmic(true),
             );
         }
 
@@ -254,7 +254,7 @@ impl UVEditor {
         if self.show_checkerboard {
             self.draw_checkerboard(painter, rect);
         } else {
-            painter.rect_filled(rect, egui::Rounding::none(), self.background_color);
+            painter.rect_filled(rect, egui::Rounding::ZERO, self.background_color);
         }
 
         // 绘制网格
@@ -305,7 +305,7 @@ impl UVEditor {
 
                 painter.rect_filled(
                     egui::Rect::from_min_max(egui::pos2(x0, y0), egui::pos2(x1, y1)),
-                    egui::Rounding::none(),
+                    egui::Rounding::ZERO,
                     color,
                 );
 
@@ -326,8 +326,7 @@ impl UVEditor {
         for i in 0..=grid_steps {
             let x = rect.left() + (i as f32 * step_x);
             painter.line(
-                egui::pos2(x, rect.top()),
-                egui::pos2(x, rect.bottom()),
+                vec![egui::pos2(x, rect.top()), egui::pos2(x, rect.bottom())],
                 (1.0, self.grid_color),
             );
         }
@@ -336,8 +335,7 @@ impl UVEditor {
         for i in 0..=grid_steps {
             let y = rect.top() + (i as f32 * step_y);
             painter.line(
-                egui::pos2(rect.left(), y),
-                egui::pos2(rect.right(), y),
+                vec![egui::pos2(rect.left(), y), egui::pos2(rect.right(), y)],
                 (1.0, self.grid_color),
             );
         }
@@ -347,14 +345,18 @@ impl UVEditor {
         let center_y = rect.top() + rect.height() / 2.0;
 
         painter.line(
-            egui::pos2(center_x, rect.top()),
-            egui::pos2(center_x, rect.bottom()),
+            vec![
+                egui::pos2(center_x, rect.top()),
+                egui::pos2(center_x, rect.bottom()),
+            ],
             (2.0, egui::Color32::from_rgb(120, 120, 120)),
         );
 
         painter.line(
-            egui::pos2(rect.left(), center_y),
-            egui::pos2(rect.right(), center_y),
+            vec![
+                egui::pos2(rect.left(), center_y),
+                egui::pos2(rect.right(), center_y),
+            ],
             (2.0, egui::Color32::from_rgb(120, 120, 120)),
         );
     }
@@ -394,8 +396,9 @@ impl UVEditor {
 
         painter.rect_stroke(
             egui::Rect::from_min_max(min_screen, max_screen),
-            egui::Rounding::none(),
+            egui::Rounding::ZERO,
             egui::Stroke::new(1.0, egui::Color32::GREEN),
+            egui::StrokeKind::Middle,
         );
     }
 
@@ -410,8 +413,9 @@ impl UVEditor {
 
         painter.rect_stroke(
             bounds,
-            egui::Rounding::none(),
+            egui::Rounding::ZERO,
             egui::Stroke::new(2.0, egui::Color32::RED),
+            egui::StrokeKind::Middle,
         );
     }
 

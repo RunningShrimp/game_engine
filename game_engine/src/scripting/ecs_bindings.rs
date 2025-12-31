@@ -31,14 +31,14 @@ impl EcsScriptBindings {
                 }
             };
             let entity = world.spawn_empty().id();
-            ScriptResult::Success(entity.to_bits().to_string())
+            ScriptResult::Success(ScriptValue::Integer(entity.to_bits() as i64))
         });
 
         let world = self.world.clone();
 
         // 销毁实体
         api.register_function("destroy_entity", move |args| {
-            if let Some(ScriptValue::Int(entity_id)) = args.first() {
+            if let Some(ScriptValue::Integer(entity_id)) = args.first() {
                 let mut world = match safe_lock(&world, "EcsScriptBindings.world") {
                     Ok(w) => w,
                     Err(e) => {
@@ -48,7 +48,7 @@ impl EcsScriptBindings {
                 };
                 let entity = Entity::from_bits(*entity_id as u64);
                 if world.despawn(entity) {
-                    ScriptResult::Success("Entity destroyed".to_string())
+                    ScriptResult::Success(ScriptValue::String("Entity destroyed".to_string()))
                 } else {
                     ScriptResult::Error("Entity not found".to_string())
                 }
@@ -61,7 +61,7 @@ impl EcsScriptBindings {
 
         // 获取Transform组件
         api.register_function("get_transform", move |args| {
-            if let Some(ScriptValue::Int(entity_id)) = args.first() {
+            if let Some(ScriptValue::Integer(entity_id)) = args.first() {
                 let world = match safe_lock(&world, "EcsScriptBindings.world") {
                     Ok(w) => w,
                     Err(e) => {
@@ -90,7 +90,7 @@ impl EcsScriptBindings {
                         .into_iter()
                         .collect(),
                     );
-                    ScriptResult::Success(format!("{value:?}"))
+                    ScriptResult::Success(ScriptValue::String(format!("{value:?}")))
                 } else {
                     ScriptResult::Error("Transform component not found".to_string())
                 }
@@ -104,10 +104,10 @@ impl EcsScriptBindings {
         // 设置Transform位置
         api.register_function("set_position", move |args| {
             if let (
-                Some(ScriptValue::Int(entity_id)),
-                Some(ScriptValue::Float(x)),
-                Some(ScriptValue::Float(y)),
-                Some(ScriptValue::Float(z)),
+                Some(ScriptValue::Integer(entity_id)),
+                Some(ScriptValue::Number(x)),
+                Some(ScriptValue::Number(y)),
+                Some(ScriptValue::Number(z)),
             ) = (args.first(), args.get(1), args.get(2), args.get(3))
             {
                 let mut world = match safe_lock(&world, "EcsScriptBindings.world") {
@@ -121,7 +121,7 @@ impl EcsScriptBindings {
 
                 if let Some(mut transform) = world.get_mut::<Transform>(entity) {
                     transform.pos = Vec3::new(*x as f32, *y as f32, *z as f32);
-                    ScriptResult::Success("Position updated".to_string())
+                    ScriptResult::Success(ScriptValue::String("Position updated".to_string()))
                 } else {
                     ScriptResult::Error("Transform component not found".to_string())
                 }
@@ -135,10 +135,10 @@ impl EcsScriptBindings {
         // 设置Transform旋转 (欧拉角,度)
         api.register_function("set_rotation", move |args| {
             if let (
-                Some(ScriptValue::Int(entity_id)),
-                Some(ScriptValue::Float(x)),
-                Some(ScriptValue::Float(y)),
-                Some(ScriptValue::Float(z)),
+                Some(ScriptValue::Integer(entity_id)),
+                Some(ScriptValue::Number(x)),
+                Some(ScriptValue::Number(y)),
+                Some(ScriptValue::Number(z)),
             ) = (args.first(), args.get(1), args.get(2), args.get(3))
             {
                 let mut world = match safe_lock(&world, "EcsScriptBindings.world") {
@@ -157,7 +157,7 @@ impl EcsScriptBindings {
                         (*y as f32).to_radians(),
                         (*z as f32).to_radians(),
                     );
-                    ScriptResult::Success("Rotation updated".to_string())
+                    ScriptResult::Success(ScriptValue::String("Rotation updated".to_string()))
                 } else {
                     ScriptResult::Error("Transform component not found".to_string())
                 }
@@ -173,10 +173,10 @@ impl EcsScriptBindings {
         // 设置Transform缩放
         api.register_function("set_scale", move |args| {
             if let (
-                Some(ScriptValue::Int(entity_id)),
-                Some(ScriptValue::Float(x)),
-                Some(ScriptValue::Float(y)),
-                Some(ScriptValue::Float(z)),
+                Some(ScriptValue::Integer(entity_id)),
+                Some(ScriptValue::Number(x)),
+                Some(ScriptValue::Number(y)),
+                Some(ScriptValue::Number(z)),
             ) = (args.first(), args.get(1), args.get(2), args.get(3))
             {
                 let mut world = match safe_lock(&world, "EcsScriptBindings.world") {
@@ -190,7 +190,7 @@ impl EcsScriptBindings {
 
                 if let Some(mut transform) = world.get_mut::<Transform>(entity) {
                     transform.scale = Vec3::new(*x as f32, *y as f32, *z as f32);
-                    ScriptResult::Success("Scale updated".to_string())
+                    ScriptResult::Success(ScriptValue::String("Scale updated".to_string()))
                 } else {
                     ScriptResult::Error("Transform component not found".to_string())
                 }
@@ -203,7 +203,7 @@ impl EcsScriptBindings {
 
         // 添加Transform组件
         api.register_function("add_transform", move |args| {
-            if let Some(ScriptValue::Int(entity_id)) = args.first() {
+            if let Some(ScriptValue::Integer(entity_id)) = args.first() {
                 let mut world = match safe_lock(&world, "EcsScriptBindings.world") {
                     Ok(w) => w,
                     Err(e) => {
@@ -215,7 +215,7 @@ impl EcsScriptBindings {
 
                 if let Ok(mut entity_mut) = world.get_entity_mut(entity) {
                     entity_mut.insert(Transform::default());
-                    ScriptResult::Success("Transform component added".to_string())
+                    ScriptResult::Success(ScriptValue::String("Transform component added".to_string()))
                 } else {
                     ScriptResult::Error("Entity not found".to_string())
                 }
@@ -249,17 +249,17 @@ mod tests {
                 Ok(id) => id,
                 Err(_) => panic!("Failed to parse entity ID"),
             };
-            let result = api.call("add_transform", &[ScriptValue::Int(entity_id)]);
+            let result = api.call("add_transform", &[ScriptValue::Integer(entity_id)]);
             assert!(matches!(result, ScriptResult::Success(_)));
 
             // 测试设置位置
             let result = api.call(
                 "set_position",
                 &[
-                    ScriptValue::Int(entity_id),
-                    ScriptValue::Float(1.0),
-                    ScriptValue::Float(2.0),
-                    ScriptValue::Float(3.0),
+                    ScriptValue::Integer(entity_id),
+                    ScriptValue::Number(1.0),
+                    ScriptValue::Number(2.0),
+                    ScriptValue::Number(3.0),
                 ],
             );
             assert!(matches!(result, ScriptResult::Success(_)));

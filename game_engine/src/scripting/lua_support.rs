@@ -1,4 +1,4 @@
-use super::system::{ScriptContext, ScriptResult, ScriptValue};
+use super::system::{ScriptContext, ScriptLanguage, ScriptResult, ScriptValue};
 use std::collections::HashMap;
 
 /// Lua脚本上下文 (简化版)
@@ -154,21 +154,24 @@ impl Default for LuaEngine {
 // ============================================================================
 
 impl ScriptContext for LuaContext {
-    fn execute(&mut self, code: &str) -> ScriptResult {
-        match self.execute("script", code) {
-            Ok(value) => {
-                ScriptResult::Success(script_value_to_string(&lua_value_to_script_value(&value)))
-            }
+    fn execute(&mut self, script: &str, _source_code: Option<&str>) -> ScriptResult {
+        match self.execute("script", script) {
+            Ok(value) => ScriptResult::Success(lua_value_to_script_value(&value)),
             Err(e) => ScriptResult::Error(e),
         }
     }
 
-    fn call_function(&mut self, name: &str, args: &[ScriptValue]) -> ScriptResult {
+    fn call(&mut self, function: &str, args: &[ScriptValue]) -> ScriptResult {
         let lua_args: Vec<LuaValue> = args.iter().map(script_value_to_lua_value).collect();
-        match LuaContext::call_function(self, name, lua_args) {
-            Ok(value) => {
-                ScriptResult::Success(script_value_to_string(&lua_value_to_script_value(&value)))
-            }
+        match LuaContext::call_function(self, function, lua_args) {
+            Ok(value) => ScriptResult::Success(lua_value_to_script_value(&value)),
+            Err(e) => ScriptResult::Error(e),
+        }
+    }
+
+    fn eval(&mut self, expression: &str) -> ScriptResult {
+        match self.execute("eval", expression) {
+            Ok(value) => ScriptResult::Success(lua_value_to_script_value(&value)),
             Err(e) => ScriptResult::Error(e),
         }
     }
@@ -178,13 +181,27 @@ impl ScriptContext for LuaContext {
         ScriptResult::Void
     }
 
-    fn get_global(&self, name: &str) -> Option<ScriptValue> {
-        LuaContext::get_global(self, name).map(lua_value_to_script_value)
+    fn get_global(&mut self, name: &str) -> ScriptResult {
+        match LuaContext::get_global(self, name) {
+            Some(value) => ScriptResult::Success(lua_value_to_script_value(&value)),
+            None => ScriptResult::Error(format!("Global '{}' not found", name)),
+        }
     }
 
     fn reset(&mut self) {
         self.scripts.clear();
         self.variables.clear();
+    }
+
+    fn language(&self) -> ScriptLanguage {
+        ScriptLanguage::Lua
+    }
+
+    fn has_function(&mut self, name: &str) -> bool {
+        match self.eval(&format!("type({}) == 'function'", name)) {
+            ScriptResult::Success(ScriptValue::Boolean(true)) => true,
+            _ => false,
+        }
     }
 }
 
@@ -192,8 +209,15 @@ impl ScriptContext for LuaContext {
 pub fn lua_value_to_script_value(value: &LuaValue) -> ScriptValue {
     match value {
         LuaValue::Nil => ScriptValue::Null,
-        LuaValue::Boolean(b) => ScriptValue::Bool(*b),
-        LuaValue::Number(n) => ScriptValue::Float(*n),
+        LuaValue::Boolean(b) => ScriptValue::Boolean(*b),
+        LuaValue::Number(n) => {
+            // 判断是整数还是浮点数
+            if n.fract() == 0.0 && *n >= (i64::MIN as f64) && *n <= (i64::MAX as f64) {
+                ScriptValue::Integer(*n as i64)
+            } else {
+                ScriptValue::Number(*n)
+            }
+        }
         LuaValue::String(s) => ScriptValue::String(s.clone()),
         LuaValue::Table(t) => {
             let obj: HashMap<String, ScriptValue> =
@@ -207,9 +231,9 @@ pub fn lua_value_to_script_value(value: &LuaValue) -> ScriptValue {
 fn script_value_to_lua_value(value: &ScriptValue) -> LuaValue {
     match value {
         ScriptValue::Null => LuaValue::Nil,
-        ScriptValue::Bool(b) => LuaValue::Boolean(*b),
-        ScriptValue::Int(i) => LuaValue::Number(*i as f64),
-        ScriptValue::Float(f) => LuaValue::Number(*f),
+        ScriptValue::Boolean(b) => LuaValue::Boolean(*b),
+        ScriptValue::Integer(i) => LuaValue::Number(*i as f64),
+        ScriptValue::Number(f) => LuaValue::Number(*f),
         ScriptValue::String(s) => LuaValue::String(s.clone()),
         ScriptValue::Array(arr) => {
             let table: HashMap<String, LuaValue> = arr
@@ -231,9 +255,9 @@ fn script_value_to_lua_value(value: &ScriptValue) -> LuaValue {
 fn script_value_to_string(value: &ScriptValue) -> String {
     match value {
         ScriptValue::Null => "null".to_string(),
-        ScriptValue::Bool(b) => b.to_string(),
-        ScriptValue::Int(i) => i.to_string(),
-        ScriptValue::Float(f) => f.to_string(),
+        ScriptValue::Boolean(b) => b.to_string(),
+        ScriptValue::Integer(i) => i.to_string(),
+        ScriptValue::Number(f) => f.to_string(),
         ScriptValue::String(s) => s.clone(),
         ScriptValue::Array(_) | ScriptValue::Object(_) => format!("{value:?}"),
     }

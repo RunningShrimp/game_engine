@@ -9,6 +9,9 @@
 //! - **性能面板** - FPS、Draw Calls、内存使用
 //! - **控制台** - 脚本日志和错误
 //! - **资源面板** - 资源加载状态
+//! - **DAP服务器** - Debug Adapter Protocol服务器
+//! - **断点管理** - 断点添加、删除、启用/禁用
+//! - **变量监视** - 变量查看、监视和修改
 //!
 //! ## 使用示例
 //!
@@ -22,14 +25,31 @@
 //! debug_ui.render(&egui_ctx, &world);
 //! ```
 
+pub mod breakpoints;
+pub mod dap;
+pub mod lua_debugger;
 pub mod panels;
 pub mod ui;
+pub mod variables;
 pub mod visualizer;
 
 pub use ui::DebugUI;
 
 // 导出各个面板
-pub use panels::{ComponentPanel, ConsolePanel, EntityPanel, PerformancePanel, ResourcePanel};
+pub use panels::{
+    ComponentPanel, ConsolePanel, EntityPanel, OptimizationPanel, PerformancePanel, ResourcePanel,
+};
+
+// 导出DAP和断点相关
+pub use breakpoints::{BreakpointInfo, BreakpointManager, BreakpointStats, BreakpointValidator};
+pub use dap::server::{Breakpoint as DapBreakpoint, DapConfig, DapServer, DapSessionState, Source};
+pub use lua_debugger::{LuaDapAdapter, LuaDebugSession, LuaDebugger};
+pub use variables::{
+    Scope, ScopeKind, Variable, VariableMonitor, VariableReference, VariableStats, VariableType,
+};
+
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
 /// 调试UI配置
 #[derive(Clone, Debug)]

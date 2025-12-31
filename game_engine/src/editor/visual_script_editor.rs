@@ -865,10 +865,10 @@ impl VisualScriptEditor {
             } else {
                 egui::Color32::from_rgb(40, 50, 60)
             };
-            painter.rect_filled(screen_rect, egui::CornerRadius::same(4), bg_color);
+            painter.rect_filled(screen_rect, egui::Rounding::same(4), bg_color);
             painter.rect_stroke(
                 screen_rect,
-                egui::CornerRadius::same(4),
+                egui::Rounding::same(4),
                 egui::Stroke::new(2.0, egui::Color32::WHITE),
                 egui::StrokeKind::Inside,
             );

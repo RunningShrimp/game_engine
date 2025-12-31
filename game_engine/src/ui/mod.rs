@@ -20,6 +20,11 @@ pub mod widgets;
 #[cfg(test)]
 mod tests;
 
+use bevy_ecs::component::ComponentId as BevyComponentId;
+
+/// UI组件ID类型别名
+pub type ComponentId = BevyComponentId;
+
 use crate::impl_default;
 use bevy_ecs::prelude::*;
 use glam::Vec2;

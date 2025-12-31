@@ -62,6 +62,12 @@ impl AnimationClip {
         self.scale_tracks.get(&entity_id).and_then(|track| track.sample_vec3(time))
     }
 
+    /// 评估指定时间的位置（用于混合树）
+    pub fn evaluate_position(&self, time: f32) -> Option<Vec3> {
+        // 获取第一个骨骼的位置作为示例
+        self.position_tracks.values().next().and_then(|track| track.sample_vec3(time))
+    }
+
     /// 采样指定骨骼的变换（位置/旋转/缩放）
     pub fn sample_bone_transform(
         &self,

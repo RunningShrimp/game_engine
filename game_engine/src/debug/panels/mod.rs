@@ -4,13 +4,19 @@
 
 mod component_panel;
 mod console_panel;
+mod debugger_panel;
 mod entity_panel;
+mod npc_editor_panel;
+mod optimization_panel;
 mod performance_panel;
 mod resource_panel;
 
 pub use component_panel::ComponentPanel;
 pub use console_panel::ConsolePanel;
+pub use debugger_panel::DebuggerPanel;
 pub use entity_panel::EntityPanel;
+pub use npc_editor_panel::{CostTrackingPanel, NPCEditorPanel};
+pub use optimization_panel::OptimizationPanel;
 pub use performance_panel::PerformancePanel;
 pub use resource_panel::ResourcePanel;
 

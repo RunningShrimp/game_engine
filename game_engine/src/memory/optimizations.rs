@@ -654,9 +654,7 @@ impl<T> VecBufferPool<T> {
 
     /// 获取缓冲区
     pub fn acquire(&mut self) -> Vec<T> {
-        self.buffers
-            .pop()
-            .unwrap_or_else(|| Vec::new())
+        self.buffers.pop().unwrap_or_else(|| Vec::new())
     }
 
     /// 返回缓冲区

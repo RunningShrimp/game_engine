@@ -1,0 +1,72 @@
+{
+  "type": "BehaviorTree",
+  "root": {
+    "type": "Selector",
+    "name": "Guard Root",
+    "children": [
+      {
+        "type": "Sequence",
+        "name": "Combat Sequence",
+        "children": [
+          {
+            "type": "Condition",
+            "name": "Is Threatened",
+            "check": "has_hostile_target"
+          },
+          {
+            "type": "Action",
+            "name": "Draw Weapon",
+            "execute": "equip_weapon"
+          },
+          {
+            "type": "Action",
+            "name": "Attack",
+            "execute": "attack_target"
+          }
+        ]
+      },
+      {
+        "type": "Sequence",
+        "name": "Patrol Sequence",
+        "children": [
+          {
+            "type": "Condition",
+            "name": "Should Patrol",
+            "check": "is_patrol_time"
+          },
+          {
+            "type": "Action",
+            "name": "Follow Route",
+            "execute": "follow_patrol_route"
+          }
+        ]
+      },
+      {
+        "type": "Sequence",
+        "name": "Interrogate Sequence",
+        "children": [
+          {
+            "type": "Condition",
+            "name": "Stranger Approaching",
+            "check": "stranger_in_range"
+          },
+          {
+            "type": "Action",
+            "name": "Halt",
+            "execute": "command_halt"
+          },
+          {
+            "type": "Action",
+            "name": "Question",
+            "execute": "question_stranger"
+          }
+        ]
+      },
+      {
+        "type": "Action",
+        "name": "Stand Guard",
+        "execute": "stand_watch"
+      }
+    ]
+  }
+}

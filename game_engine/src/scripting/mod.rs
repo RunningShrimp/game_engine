@@ -1,6 +1,6 @@
 //  脚本系统完整实现
 //
-//  提供Lua和Rust脚本集成，支持运行时脚本执行、热重载和跨语言互操作。
+//  提供Lua、TypeScript、Python和Rust脚本集成，支持运行时脚本执行、热重载和跨语言互操作。
 
 use crate::impl_default;
 /// 脚本API模块
@@ -15,14 +15,22 @@ pub mod extended_bindings;
 pub mod graphics_ui_bindings;
 /// Lua支持模块
 pub mod lua_support;
+/// 网络API绑定模块
+pub mod network_api;
 /// 物理音频绑定模块
 pub mod physics_audio_bindings;
+/// Python支持模块
+#[cfg(feature = "pyo3")]
+pub mod python;
 /// Rust脚本模块
 pub mod rust_scripting;
 /// 脚本系统模块
 pub mod system;
 /// 线程安全模块
 pub mod thread_safe;
+/// TypeScript支持模块
+#[cfg(feature = "typescript")]
+pub mod typescript;
 
 #[cfg(test)]
 mod lua_tests;
@@ -32,9 +40,16 @@ mod compatibility_tests;
 
 pub use engine::*;
 pub use lua_support::{LuaContext, LuaEngine, LuaValue};
+pub use network_api::{NetworkApi, NetworkScriptContext};
 pub use rust_scripting::{RustScriptContext, RustScriptContextAdapter, RustScriptEngine};
 pub use system::{JavaScriptContext, PythonContext};
 pub use system::{ScriptContext, ScriptLanguage, ScriptResult, ScriptSystem, ScriptValue};
+
+#[cfg(feature = "typescript")]
+pub use typescript::{TypeScriptContext, TypeScriptRuntime};
+
+#[cfg(feature = "pyo3")]
+pub use python::{PythonContextImpl, PythonRuntime};
 
 use bevy_ecs::prelude::*;
 
@@ -47,6 +62,8 @@ pub struct ScriptingConfig {
     pub enable_rust: bool,
     /// 是否启用JavaScript脚本
     pub enable_javascript: bool,
+    /// 是否启用TypeScript脚本
+    pub enable_typescript: bool,
     /// 是否启用Python脚本
     pub enable_python: bool,
     /// 脚本热重载
@@ -59,6 +76,7 @@ impl_default!(ScriptingConfig {
     enable_lua: true,
     enable_rust: false,
     enable_javascript: false,
+    enable_typescript: false,
     enable_python: false,
     hot_reload: true,
     execution_timeout_ms: 5000,
@@ -206,7 +224,7 @@ fn execute_script(
                 }
             }
         }
-        ScriptLanguage::JavaScript | ScriptLanguage::Python => {
+        ScriptLanguage::JavaScript | ScriptLanguage::TypeScript | ScriptLanguage::Python => {
             // 使用通用脚本系统
             let _result = scripting.system.execute_script(
                 &script.script_name,
@@ -267,7 +285,22 @@ pub fn setup_scripting(world: &mut World, config: ScriptingConfig) {
         );
     }
 
+    // 注册TypeScript上下文
+    #[cfg(feature = "typescript")]
+    if config.enable_typescript {
+        resource.system.register_context(
+            ScriptLanguage::TypeScript,
+            Box::new(TypeScriptContext::new()),
+        );
+    }
+
     if config.enable_python {
+        #[cfg(feature = "pyo3")]
+        resource
+            .system
+            .register_context(ScriptLanguage::Python, Box::new(PythonContextImpl::new()));
+
+        #[cfg(not(feature = "pyo3"))]
         resource
             .system
             .register_context(ScriptLanguage::Python, Box::new(PythonContext::new()));

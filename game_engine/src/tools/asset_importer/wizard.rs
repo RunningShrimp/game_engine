@@ -210,6 +210,7 @@ impl AssetImportWizard {
                 drop_response.rect,
                 egui::Rounding::same(5),
                 egui::Stroke::new(2.0, egui::Color32::DARK_GRAY),
+                egui::StrokeKind::Middle,
             );
 
             // 检查拖放

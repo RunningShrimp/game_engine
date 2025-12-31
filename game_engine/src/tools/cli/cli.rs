@@ -280,6 +280,7 @@ impl GameEngineCli {
             Commands::Info {} => {
                 self.cmd_info()?;
             }
+            #[cfg(feature = "asset-pipeline")]
             Commands::Optimize {
                 input,
                 output,

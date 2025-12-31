@@ -15,6 +15,7 @@
 //! game-engine info
 //! ```
 
+use clap::Parser;
 use game_engine::tools::cli::GameEngineCli;
 
 fn main() {

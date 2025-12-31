@@ -305,10 +305,14 @@ impl DCCMaterialEditor {
 
         // 材质参数
         if let Some(idx) = self.selected_material {
-            if let Some(material) = self.materials.get_mut(idx) {
-                self.show_pbr_params(ui, material);
+            // 先显示PBR参数
+            if self.materials.get(idx).is_some() {
+                self.show_pbr_params_ui(ui, idx);
                 ui.separator();
-                self.show_texture_slots(ui, material);
+            }
+            // 然后显示纹理槽
+            if self.materials.get(idx).is_some() {
+                self.show_texture_slots_ui(ui, idx);
             }
         }
 
@@ -327,7 +331,7 @@ impl DCCMaterialEditor {
 
     /// 显示PBR参数
 
-    fn show_pbr_params(&mut self, ui: &mut egui::Ui, material: &mut PBRMaterialParams) {
+    fn show_pbr_params(ui: &mut egui::Ui, material: &mut PBRMaterialParams) {
         ui.label("PBR Parameters:");
 
         // 基础颜色
@@ -381,7 +385,7 @@ impl DCCMaterialEditor {
 
     /// 显示纹理槽
 
-    fn show_texture_slots(&mut self, ui: &mut egui::Ui, material: &mut PBRMaterialParams) {
+    fn show_texture_slots(ui: &mut egui::Ui, material: &mut PBRMaterialParams) {
         ui.label("Textures:");
 
         let texture_types = [
@@ -419,6 +423,20 @@ impl DCCMaterialEditor {
                     }
                 });
             }
+        }
+    }
+
+    /// 显示PBR参数UI（使用索引避免借用冲突）
+    fn show_pbr_params_ui(&mut self, ui: &mut egui::Ui, idx: MaterialID) {
+        if let Some(material) = self.materials.get_mut(idx) {
+            Self::show_pbr_params(ui, material);
+        }
+    }
+
+    /// 显示纹理槽UI（使用索引避免借用冲突）
+    fn show_texture_slots_ui(&mut self, ui: &mut egui::Ui, idx: MaterialID) {
+        if let Some(material) = self.materials.get_mut(idx) {
+            Self::show_texture_slots(ui, material);
         }
     }
 
@@ -494,7 +512,7 @@ impl DCCMaterialEditor {
         // 绘制占位符
         painter.rect_filled(
             rect,
-            egui::Rounding::same(4.0),
+            egui::Rounding::same(4),
             egui::Color32::from_rgb(60, 60, 60),
         );
 

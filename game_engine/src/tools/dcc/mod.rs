@@ -13,6 +13,9 @@ pub mod material_editor;
 pub mod mesh_editor;
 pub mod uv_editor;
 
+#[cfg(feature = "blender")]
+pub mod blender_bridge;
+
 #[cfg(test)]
 mod tests;
 
@@ -34,6 +37,12 @@ pub use uv_editor::{SnapSettings, UVEditor, UVID, UVIsland, UVTransform};
 
 pub use integrator::{
     EditorOperation, ExportOptions, GeneratedScript, ScriptGenerator, ScriptLanguage,
+};
+
+#[cfg(feature = "blender")]
+pub use blender_bridge::{
+    BlenderBridge, BlenderBridgeConfig, BlenderBridgeManager, BlenderError, BlenderMaterial,
+    BlenderMesh, BlenderObject, BlenderScene,
 };
 
 /// DCC工具套件

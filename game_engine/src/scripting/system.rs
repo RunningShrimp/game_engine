@@ -10,6 +10,8 @@ use std::thread;
 pub enum ScriptLanguage {
     /// JavaScript语言
     JavaScript,
+    /// TypeScript语言
+    TypeScript,
     /// Python语言
     Python,
     /// Lua语言
@@ -24,7 +26,7 @@ pub enum ScriptLanguage {
 #[derive(Debug, Clone)]
 pub enum ScriptResult {
     /// 执行成功，包含返回值
-    Success(String),
+    Success(ScriptValue),
     /// 执行失败，包含错误信息
     Error(String),
     /// 执行成功但无返回值
@@ -34,19 +36,34 @@ pub enum ScriptResult {
 /// 脚本上下文 - 线程安全的脚本执行环境
 pub trait ScriptContext: Send + Sync {
     /// 执行脚本代码
-    fn execute(&mut self, code: &str) -> ScriptResult;
+    fn execute(&mut self, script: &str, source_code: Option<&str>) -> ScriptResult;
 
     /// 调用脚本函数
-    fn call_function(&mut self, name: &str, args: &[ScriptValue]) -> ScriptResult;
+    fn call(&mut self, function: &str, args: &[ScriptValue]) -> ScriptResult;
+
+    /// 评估表达式
+    fn eval(&mut self, expression: &str) -> ScriptResult;
 
     /// 设置全局变量
     fn set_global(&mut self, name: &str, value: ScriptValue) -> ScriptResult;
 
     /// 获取全局变量
-    fn get_global(&self, name: &str) -> Option<ScriptValue>;
+    fn get_global(&mut self, name: &str) -> ScriptResult;
 
     /// 重置上下文
     fn reset(&mut self);
+
+    /// 获取脚本语言
+    fn language(&self) -> ScriptLanguage;
+
+    /// 检查函数是否存在
+    fn has_function(&mut self, name: &str) -> bool {
+        // 默认实现：尝试eval typeof检查
+        match self.eval(&format!("typeof {}", name)) {
+            ScriptResult::Success(ScriptValue::String(s)) if s == "function" => true,
+            _ => false,
+        }
+    }
 }
 
 /// 脚本值 - 跨语言的通用数据类型
@@ -55,11 +72,11 @@ pub enum ScriptValue {
     /// 空值
     Null,
     /// 布尔值
-    Bool(bool),
+    Boolean(bool),
     /// 整数值
-    Int(i64),
+    Integer(i64),
     /// 浮点数值
-    Float(f64),
+    Number(f64),
     /// 字符串值
     String(String),
     /// 数组值
@@ -103,7 +120,7 @@ impl ScriptSystem {
             }
         };
         if let Some(context) = contexts.get_mut(&language) {
-            context.execute(code)
+            context.execute(code, None)
         } else {
             ScriptResult::Error(format!("No context registered for {language:?}"))
         }
@@ -134,7 +151,7 @@ impl ScriptSystem {
             }
         };
         if let Some(context) = contexts.get_mut(&language) {
-            context.call_function(name, args)
+            context.call(name, args)
         } else {
             ScriptResult::Error(format!("No context registered for {language:?}"))
         }
@@ -163,14 +180,17 @@ impl ScriptSystem {
 
     /// 获取全局变量
     pub fn get_global(&self, language: ScriptLanguage, name: &str) -> Option<ScriptValue> {
-        let contexts = match safe_lock(&self.contexts, "ScriptSystem.contexts") {
+        let mut contexts = match safe_lock(&self.contexts, "ScriptSystem.contexts") {
             Ok(c) => c,
             Err(e) => {
                 tracing::error!(target: "scripting", "Failed to acquire contexts lock: {}", e);
                 return None;
             }
         };
-        contexts.get(&language).and_then(|ctx| ctx.get_global(name))
+        contexts.get_mut(&language).and_then(|ctx| match ctx.get_global(name) {
+            ScriptResult::Success(value) => Some(value),
+            _ => None,
+        })
     }
 }
 
@@ -300,13 +320,15 @@ impl JavaScriptContext {
                                 if value.is_undefined() || value.is_null() {
                                     result = ScriptResult::Void;
                                 } else if let Ok(s) = value.get::<String>() {
-                                    result = ScriptResult::Success(s);
+                                    result = ScriptResult::Success(ScriptValue::String(s));
                                 } else if let Ok(n) = value.get::<f64>() {
-                                    result = ScriptResult::Success(n.to_string());
+                                    result = ScriptResult::Success(ScriptValue::Number(n));
                                 } else if let Ok(b) = value.get::<bool>() {
-                                    result = ScriptResult::Success(b.to_string());
+                                    result = ScriptResult::Success(ScriptValue::Boolean(b));
                                 } else {
-                                    result = ScriptResult::Success("[object]".to_string());
+                                    result = ScriptResult::Success(ScriptValue::String(
+                                        "[object]".to_string(),
+                                    ));
                                 }
                             }
                             Err(e) => {
@@ -320,9 +342,9 @@ impl JavaScriptContext {
                             .iter()
                             .map(|v| match v {
                                 ScriptValue::Null => "null".to_string(),
-                                ScriptValue::Bool(b) => b.to_string(),
-                                ScriptValue::Int(i) => i.to_string(),
-                                ScriptValue::Float(f) => f.to_string(),
+                                ScriptValue::Boolean(b) => b.to_string(),
+                                ScriptValue::Integer(i) => i.to_string(),
+                                ScriptValue::Number(f) => f.to_string(),
                                 ScriptValue::String(s) => {
                                     format!("\"{}\"", s.replace('\"', "\\\""))
                                 }
@@ -340,11 +362,13 @@ impl JavaScriptContext {
                                     if value.is_undefined() || value.is_null() {
                                         result = ScriptResult::Void;
                                     } else if let Ok(s) = value.get::<String>() {
-                                        result = ScriptResult::Success(s);
+                                        result = ScriptResult::Success(ScriptValue::String(s));
                                     } else if let Ok(n) = value.get::<f64>() {
-                                        result = ScriptResult::Success(n.to_string());
+                                        result = ScriptResult::Success(ScriptValue::Number(n));
                                     } else {
-                                        result = ScriptResult::Success("[object]".to_string());
+                                        result = ScriptResult::Success(ScriptValue::String(
+                                            "[object]".to_string(),
+                                        ));
                                     }
                                 }
                                 Err(e) => {
@@ -357,9 +381,9 @@ impl JavaScriptContext {
                     JsCommand::SetGlobal(name, value, response) => {
                         let js_value = match &value {
                             ScriptValue::Null => "null".to_string(),
-                            ScriptValue::Bool(b) => b.to_string(),
-                            ScriptValue::Int(i) => i.to_string(),
-                            ScriptValue::Float(f) => f.to_string(),
+                            ScriptValue::Boolean(b) => b.to_string(),
+                            ScriptValue::Integer(i) => i.to_string(),
+                            ScriptValue::Number(f) => f.to_string(),
                             ScriptValue::String(s) => format!("\"{}\"", s.replace('\"', "\\\"")),
                             ScriptValue::Array(_) => "[]".to_string(),
                             ScriptValue::Object(_) => "{}".to_string(),
@@ -412,10 +436,9 @@ impl JavaScriptContext {
 }
 
 impl ScriptContext for JavaScriptContext {
-    fn execute(&mut self, code: &str) -> ScriptResult {
+    fn execute(&mut self, script: &str, _source_code: Option<&str>) -> ScriptResult {
         let (tx, rx) = mpsc::channel();
-        if self.sender.send(JsCommand::Execute(code.to_string(), tx)).is_ok() {
-            // Safe to unwrap_or: channel closure indicates JavaScript thread crashed
+        if self.sender.send(JsCommand::Execute(script.to_string(), tx)).is_ok() {
             rx.recv().unwrap_or(ScriptResult::Error(
                 "JavaScript thread channel closed".to_string(),
             ))
@@ -424,26 +447,32 @@ impl ScriptContext for JavaScriptContext {
         }
     }
 
-    fn call_function(&mut self, name: &str, args: &[ScriptValue]) -> ScriptResult {
+    fn call(&mut self, function: &str, args: &[ScriptValue]) -> ScriptResult {
         let (tx, rx) = mpsc::channel();
         if self
             .sender
-            .send(JsCommand::CallFunction(name.to_string(), args.to_vec(), tx))
+            .send(JsCommand::CallFunction(
+                function.to_string(),
+                args.to_vec(),
+                tx,
+            ))
             .is_ok()
         {
-            // Safe to unwrap_or: channel closure indicates JavaScript thread crashed
             rx.recv().unwrap_or(ScriptResult::Error(
                 "JavaScript thread channel closed".to_string(),
             ))
         } else {
             ScriptResult::Error("Failed to send command".to_string())
         }
+    }
+
+    fn eval(&mut self, expression: &str) -> ScriptResult {
+        self.execute(expression, None)
     }
 
     fn set_global(&mut self, name: &str, value: ScriptValue) -> ScriptResult {
         let (tx, rx) = mpsc::channel();
         if self.sender.send(JsCommand::SetGlobal(name.to_string(), value, tx)).is_ok() {
-            // Safe to unwrap_or: channel closure indicates JavaScript thread crashed
             rx.recv().unwrap_or(ScriptResult::Error(
                 "JavaScript thread channel closed".to_string(),
             ))
@@ -452,12 +481,15 @@ impl ScriptContext for JavaScriptContext {
         }
     }
 
-    fn get_global(&self, name: &str) -> Option<ScriptValue> {
+    fn get_global(&mut self, name: &str) -> ScriptResult {
         let (tx, rx) = mpsc::channel();
         if self.sender.send(JsCommand::GetGlobal(name.to_string(), tx)).is_ok() {
-            rx.recv().ok().flatten()
+            match rx.recv().ok().flatten() {
+                Some(value) => ScriptResult::Success(value),
+                None => ScriptResult::Error(format!("Global '{}' not found", name)),
+            }
         } else {
-            None
+            ScriptResult::Error("Failed to send command".to_string())
         }
     }
 
@@ -466,6 +498,10 @@ impl ScriptContext for JavaScriptContext {
         if self.sender.send(JsCommand::Reset(tx)).is_ok() {
             let _ = rx.recv();
         }
+    }
+
+    fn language(&self) -> ScriptLanguage {
+        ScriptLanguage::JavaScript
     }
 }
 
@@ -489,13 +525,20 @@ impl PythonContext {
 }
 
 impl ScriptContext for PythonContext {
-    fn execute(&mut self, code: &str) -> ScriptResult {
-        // 占位实现
-        ScriptResult::Success(format!("Executed Python: {code}"))
+    fn execute(&mut self, script: &str, _source_code: Option<&str>) -> ScriptResult {
+        // 占位实现 - 后续会被真实的Python绑定替换
+        ScriptResult::Success(ScriptValue::String(format!("Executed Python: {}", script)))
     }
 
-    fn call_function(&mut self, name: &str, _args: &[ScriptValue]) -> ScriptResult {
-        ScriptResult::Success(format!("Called Python function: {name}"))
+    fn call(&mut self, function: &str, _args: &[ScriptValue]) -> ScriptResult {
+        ScriptResult::Success(ScriptValue::String(format!(
+            "Called Python function: {}",
+            function
+        )))
+    }
+
+    fn eval(&mut self, expression: &str) -> ScriptResult {
+        self.execute(expression, None)
     }
 
     fn set_global(&mut self, name: &str, value: ScriptValue) -> ScriptResult {
@@ -503,12 +546,19 @@ impl ScriptContext for PythonContext {
         ScriptResult::Void
     }
 
-    fn get_global(&self, name: &str) -> Option<ScriptValue> {
-        self.globals.get(name).cloned()
+    fn get_global(&mut self, name: &str) -> ScriptResult {
+        match self.globals.get(name) {
+            Some(value) => ScriptResult::Success(value.clone()),
+            None => ScriptResult::Error(format!("Global '{}' not found", name)),
+        }
     }
 
     fn reset(&mut self) {
         self.globals.clear();
+    }
+
+    fn language(&self) -> ScriptLanguage {
+        ScriptLanguage::Python
     }
 }
 
@@ -537,25 +587,25 @@ mod tests {
         // 执行有返回值的脚本
         let result = system.execute(ScriptLanguage::JavaScript, "1 + 2");
         assert!(
-            matches!(result, ScriptResult::Success(ref s) if s == "3"),
-            "Expected '3', got {:?}",
+            matches!(result, ScriptResult::Success(ScriptValue::Integer(ref s)) if *s == 3),
+            "Expected 3, got {:?}",
             result
         );
 
         // 执行字符串运算
         let result = system.execute(ScriptLanguage::JavaScript, "'Hello' + ' World'");
         assert!(
-            matches!(result, ScriptResult::Success(ref s) if s == "Hello World"),
+            matches!(result, ScriptResult::Success(ScriptValue::String(ref s)) if s == "Hello World"),
             "Expected 'Hello World', got {:?}",
             result
         );
 
         // 设置全局变量
-        system.set_global(ScriptLanguage::JavaScript, "test", ScriptValue::Int(42));
+        system.set_global(ScriptLanguage::JavaScript, "test", ScriptValue::Integer(42));
 
         // 获取全局变量
         let value = system.get_global(ScriptLanguage::JavaScript, "test");
-        assert!(matches!(value, Some(ScriptValue::Int(42))));
+        assert!(matches!(value, Some(ScriptValue::Integer(42))));
 
         // 使用引擎API
         let result = system.execute(ScriptLanguage::JavaScript, "Engine.time()");

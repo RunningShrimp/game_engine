@@ -77,6 +77,7 @@ use crate::core::editor::EditorEventHandler;
 
 pub mod animation_editor;
 pub mod asset_browser;
+#[cfg(feature = "ai")]
 pub mod behavior_tree_editor;
 pub mod build_tool;
 pub mod code_generator;
@@ -114,6 +115,7 @@ pub use undo_redo::{
 pub use world_inspector::WorldInspector;
 // 向后兼容：增强功能已整合到基础版本
 pub use animation_editor::{AnimationEditor, AnimationEvent, KeyframeSelection, TrackType};
+#[cfg(feature = "ai")]
 pub use behavior_tree_editor::{
     BehaviorNodeType, BehaviorTreeEditor, NodeExecutionStatus, VisualBehaviorNode,
 };

@@ -293,9 +293,76 @@ impl DecisionTree {
     pub fn get_all_nodes(&self) -> &HashMap<u64, DecisionTreeNode> {
         &self.nodes
     }
+
+    /// 获取当前树（用于DecisionTreeEditor）
+    pub fn get_current_tree(&self) -> &DecisionTree {
+        self
+    }
+
+    /// 获取当前树可变引用（用于DecisionTreeEditor）
+    pub fn get_current_tree_mut(&mut self) -> &mut DecisionTree {
+        self
+    }
 }
 
 use std::collections::HashSet;
+
+/// 决策树编辑器
+pub struct DecisionTreeEditor {
+    /// 决策树
+    tree: DecisionTree,
+}
+
+impl DecisionTreeEditor {
+    /// 创建新的编辑器
+    pub fn new(tree: DecisionTree) -> Self {
+        Self { tree }
+    }
+
+    /// 获取当前树
+    pub fn get_current_tree(&self) -> &DecisionTree {
+        &self.tree
+    }
+
+    /// 获取当前树可变引用
+    pub fn get_current_tree_mut(&mut self) -> &mut DecisionTree {
+        &mut self.tree
+    }
+
+    /// 创建新树
+    pub fn create_tree(&mut self, name: String) {
+        self.tree = DecisionTree::new(name);
+    }
+
+    /// 加载树
+    pub fn load_tree(&mut self, tree: DecisionTree) {
+        self.tree = tree;
+    }
+
+    /// 保存当前树
+    pub fn save_current_tree(&self) -> DecisionTree {
+        self.tree.clone()
+    }
+
+    /// 获取树的可变引用
+    pub fn tree_mut(&mut self) -> &mut DecisionTree {
+        &mut self.tree
+    }
+}
+
+impl std::ops::Deref for DecisionTreeEditor {
+    type Target = DecisionTree;
+
+    fn deref(&self) -> &Self::Target {
+        &self.tree
+    }
+}
+
+impl std::ops::DerefMut for DecisionTreeEditor {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.tree
+    }
+}
 
 /// 节点更新
 #[derive(Debug, Clone)]

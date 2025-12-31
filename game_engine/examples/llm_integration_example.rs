@@ -4,12 +4,12 @@
 
 use game_engine::ai::{
     claude::ClaudeAdapter,
-    local::{LocalLLMAdapter, LLMRuntime},
+    local::{LLMRuntime, LocalLLMAdapter},
     npc::{HybridMode, IntelligentNPC, NPCConfig, NPCManager},
     openai::OpenAIAdapter,
     service::{
-        Action, ActionType, AIService, ContentPrompt, ContentType, EnvironmentState,
-        Message, MoodState, NPCContext, NPCStatus, Personality, PlayerState, Situation,
+        AIService, Action, ActionType, ContentPrompt, ContentType, EnvironmentState, Message,
+        MoodState, NPCContext, NPCStatus, Personality, PlayerState, Situation,
     },
 };
 use std::collections::HashMap;
@@ -73,9 +73,7 @@ fn setup_openai_adapter() -> OpenAIAdapter {
         "demo-key".to_string()
     });
 
-    OpenAIAdapter::new(&api_key, "gpt-4")
-        .with_max_tokens(150)
-        .with_temperature(0.7)
+    OpenAIAdapter::new(&api_key, "gpt-4").with_max_tokens(150).with_temperature(0.7)
 }
 
 /// 设置Claude适配器
@@ -167,7 +165,7 @@ async fn demonstrate_content_generation(
             }
             println!("  置信度: {:.2}", content.confidence);
         }
-        Err(e) {
+        Err(e) => {
             println!("  内容生成失败: {}", e);
         }
     }
@@ -184,11 +182,17 @@ async fn demonstrate_hybrid_npc() -> Result<(), Box<dyn std::error::Error>> {
 
     #[async_trait::async_trait]
     impl AIService for MockAIService {
-        async fn generate_dialogue(&self, _context: &NPCContext) -> Result<String, game_engine::ai::service::AIError> {
+        async fn generate_dialogue(
+            &self,
+            _context: &NPCContext,
+        ) -> Result<String, game_engine::ai::service::AIError> {
             Ok("Hello, traveler! Welcome to our shop.".to_string())
         }
 
-        async fn decide_action(&self, _situation: &Situation) -> Result<Action, game_engine::ai::service::AIError> {
+        async fn decide_action(
+            &self,
+            _situation: &Situation,
+        ) -> Result<Action, game_engine::ai::service::AIError> {
             Ok(Action {
                 action_type: ActionType::Speak {
                     message: "Greetings!".to_string(),
@@ -199,7 +203,11 @@ async fn demonstrate_hybrid_npc() -> Result<(), Box<dyn std::error::Error>> {
             })
         }
 
-        async fn generate_content(&self, _prompt: &ContentPrompt) -> Result<game_engine::ai::service::GeneratedContent, game_engine::ai::service::AIError> {
+        async fn generate_content(
+            &self,
+            _prompt: &ContentPrompt,
+        ) -> Result<game_engine::ai::service::GeneratedContent, game_engine::ai::service::AIError>
+        {
             Ok(game_engine::ai::service::GeneratedContent {
                 content: "Generated quest content".to_string(),
                 content_type: ContentType::QuestDescription,
@@ -248,11 +256,17 @@ async fn demonstrate_npc_manager() -> Result<(), Box<dyn std::error::Error>> {
 
     #[async_trait::async_trait]
     impl AIService for MockAIService {
-        async fn generate_dialogue(&self, _context: &NPCContext) -> Result<String, game_engine::ai::service::AIError> {
+        async fn generate_dialogue(
+            &self,
+            _context: &NPCContext,
+        ) -> Result<String, game_engine::ai::service::AIError> {
             Ok("Mock response".to_string())
         }
 
-        async fn decide_action(&self, _situation: &Situation) -> Result<Action, game_engine::ai::service::AIError> {
+        async fn decide_action(
+            &self,
+            _situation: &Situation,
+        ) -> Result<Action, game_engine::ai::service::AIError> {
             Ok(Action {
                 action_type: ActionType::Wait,
                 parameters: HashMap::new(),
@@ -261,7 +275,11 @@ async fn demonstrate_npc_manager() -> Result<(), Box<dyn std::error::Error>> {
             })
         }
 
-        async fn generate_content(&self, _prompt: &ContentPrompt) -> Result<game_engine::ai::service::GeneratedContent, game_engine::ai::service::AIError> {
+        async fn generate_content(
+            &self,
+            _prompt: &ContentPrompt,
+        ) -> Result<game_engine::ai::service::GeneratedContent, game_engine::ai::service::AIError>
+        {
             Ok(game_engine::ai::service::GeneratedContent {
                 content: "Mock content".to_string(),
                 content_type: ContentType::QuestDescription,
@@ -296,7 +314,8 @@ async fn demonstrate_npc_manager() -> Result<(), Box<dyn std::error::Error>> {
     let all_stats = manager.get_all_stats();
     println!("  NPC性能统计:");
     for (entity_id, stats) in all_stats {
-        println!("    NPC {}: {} 次LLM调用, {} 次传统AI调用",
+        println!(
+            "    NPC {}: {} 次LLM调用, {} 次传统AI调用",
             entity_id.index(),
             stats.llm_calls,
             stats.traditional_calls

@@ -32,3 +32,8 @@ impl ModelFormat {
         }
     }
 }
+
+fn main() {
+    println!("Model format converter - not yet implemented");
+    println!("Supported formats: glTF, GLB, OBJ, FBX");
+}

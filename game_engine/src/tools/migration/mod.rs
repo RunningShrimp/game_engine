@@ -15,11 +15,46 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
+pub mod api_mapping;
+pub mod asset_converter;
+pub mod component_mapping;
+pub mod scene_migrator;
+pub mod script_converter;
 pub mod unity;
 pub mod unreal;
+pub mod wizard;
 
 pub use unity::{UnityProjectImporter, UnityScene};
 pub use unreal::{UnrealBlueprint, UnrealProjectImporter};
+
+#[cfg(feature = "serde_yaml")]
+pub use scene_migrator::{
+    HierarchyNode, MigratedComponent, MigratedEntity, MigratedScene, SceneMetadata,
+    SceneMigratorConfig, UnitySceneMigrator,
+};
+
+#[cfg(feature = "serde_yaml")]
+pub use asset_converter::{
+    AssetConverterConfig, AssetFormat, ConvertedAnimation, ConvertedMaterial, ConvertedModel,
+    MaterialConversionMode, MaterialMapping, MeshData, SkeletonData, TextureQuality,
+    UnityAssetConverter,
+};
+
+#[cfg(feature = "regex")]
+pub use script_converter::{
+    ConversionResult, ConvertedScript, ScriptLanguage, ScriptTarget, UnityScriptConverter,
+};
+
+pub use api_mapping::{
+    APIMappingTable, APIMappingType, ConvertedScript as ApiConvertedScript,
+    ScriptLanguage as ApiScriptLanguage, ScriptTarget as ApiScriptTarget, UnityAPICategory,
+    UnityAPIMapping,
+};
+pub use component_mapping::{
+    ComponentMapping, ComponentMappingRegistry, ComponentProperty, UnityComponent,
+    UnityComponentType,
+};
+pub use wizard::{MigrationWizard, WizardError, WizardResult, quick_migrate};
 
 // =============================================================================
 // 迁移配置

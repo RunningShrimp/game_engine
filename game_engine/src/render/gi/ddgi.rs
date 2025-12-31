@@ -154,10 +154,10 @@ impl DDGIVolume {
             IrradianceTexture::new(device, config, total_probes, probe_counts)?;
 
         // 创建深度纹理
-        let depth_texture = Self::create_depth_texture(device, config, total_probes)?;
+        let depth_texture = Self::create_depth_texture(device, config, total_probes);
 
         // 创建偏移纹理
-        let offset_texture = Self::create_offset_texture(device, config, total_probes)?;
+        let offset_texture = Self::create_offset_texture(device, config, total_probes);
 
         // 创建绑定组布局
         let bind_group_layout = Self::create_bind_group_layout(device);

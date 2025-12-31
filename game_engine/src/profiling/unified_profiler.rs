@@ -2,9 +2,9 @@
 //
 // 提供统一的性能剖析接口，集成多种剖析后端
 
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
-use serde::{Deserialize, Serialize};
 
 // ============================================================================
 // 剖析后端类型

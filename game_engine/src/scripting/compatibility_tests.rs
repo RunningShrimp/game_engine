@@ -86,7 +86,7 @@ mod tests {
         }
 
         // 2. 测试set_global和get_global方法
-        let test_value = ScriptValue::Int(42);
+        let test_value = ScriptValue::Integer(42);
         let set_result = context.set_global("test_var", test_value.clone());
 
         match language_name {
@@ -199,7 +199,7 @@ mod tests {
         // 测试函数调用
         let result = context.call_function(
             "Math.pow",
-            &[ScriptValue::Float(2.0), ScriptValue::Float(3.0)],
+            &[ScriptValue::Number(2.0), ScriptValue::Number(3.0)],
         );
 
         assert!(
@@ -288,11 +288,11 @@ mod tests {
     fn test_script_value_type_compatibility() {
         let test_values = vec![
             ScriptValue::Null,
-            ScriptValue::Bool(true),
-            ScriptValue::Int(42),
-            ScriptValue::Float(3.14),
+            ScriptValue::Boolean(true),
+            ScriptValue::Integer(42),
+            ScriptValue::Number(3.14),
             ScriptValue::String("test".to_string()),
-            ScriptValue::Array(vec![ScriptValue::Int(1), ScriptValue::Int(2)]),
+            ScriptValue::Array(vec![ScriptValue::Integer(1), ScriptValue::Integer(2)]),
             ScriptValue::Object(std::collections::HashMap::from([(
                 "key".to_string(),
                 ScriptValue::String("value".to_string()),
@@ -309,9 +309,9 @@ mod tests {
 
             let lua_value = match value {
                 ScriptValue::Null => crate::scripting::LuaValue::Nil,
-                ScriptValue::Bool(b) => crate::scripting::LuaValue::Boolean(*b),
-                ScriptValue::Int(i) => crate::scripting::LuaValue::Number(*i as f64),
-                ScriptValue::Float(f) => crate::scripting::LuaValue::Number(*f as f64),
+                ScriptValue::Boolean(b) => crate::scripting::LuaValue::Boolean(*b),
+                ScriptValue::Integer(i) => crate::scripting::LuaValue::Number(*i as f64),
+                ScriptValue::Number(f) => crate::scripting::LuaValue::Number(*f as f64),
                 ScriptValue::String(s) => crate::scripting::LuaValue::String(s.clone()),
                 _ => crate::scripting::LuaValue::Nil,
             };
@@ -327,9 +327,9 @@ mod tests {
                         "JavaScript should handle Null value type"
                     );
                 }
-                ScriptValue::Bool(_)
-                | ScriptValue::Int(_)
-                | ScriptValue::Float(_)
+                ScriptValue::Boolean(_)
+                | ScriptValue::Integer(_)
+                | ScriptValue::Number(_)
                 | ScriptValue::String(_) => {
                     assert!(
                         matches!(js_set, ScriptResult::Success(_) | ScriptResult::Void),

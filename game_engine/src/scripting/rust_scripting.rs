@@ -2,7 +2,7 @@
 //
 //  提供Rust代码的动态编译和执行功能。
 
-use super::system::{ScriptContext, ScriptResult, ScriptValue};
+use super::system::{ScriptContext, ScriptLanguage, ScriptResult, ScriptValue};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
@@ -149,12 +149,12 @@ impl RustScriptContextAdapter {
 }
 
 impl ScriptContext for RustScriptContextAdapter {
-    fn execute(&mut self, code: &str) -> ScriptResult {
+    fn execute(&mut self, script: &str, _source_code: Option<&str>) -> ScriptResult {
         // 使用一个临时脚本名执行代码
         let script_name = format!("inline_{}", crate::core::utils::current_timestamp_nanos());
 
         if let Ok(mut engine) = self.engine.lock() {
-            match engine.execute_script(&script_name, code) {
+            match engine.execute_script(&script_name, script) {
                 Ok(_) => ScriptResult::Void,
                 Err(e) => ScriptResult::Error(e),
             }
@@ -163,15 +163,19 @@ impl ScriptContext for RustScriptContextAdapter {
         }
     }
 
-    fn call_function(&mut self, name: &str, _args: &[ScriptValue]) -> ScriptResult {
+    fn call(&mut self, function: &str, args: &[ScriptValue]) -> ScriptResult {
         if let Ok(engine) = self.engine.lock() {
-            match engine.call_function(name) {
+            match engine.call_function(function) {
                 Ok(_) => ScriptResult::Void,
                 Err(e) => ScriptResult::Error(e),
             }
         } else {
             ScriptResult::Error("Failed to lock Rust script engine".to_string())
         }
+    }
+
+    fn eval(&mut self, expression: &str) -> ScriptResult {
+        self.execute(expression, None)
     }
 
     fn set_global(&mut self, name: &str, value: ScriptValue) -> ScriptResult {
@@ -183,11 +187,13 @@ impl ScriptContext for RustScriptContextAdapter {
         }
     }
 
-    fn get_global(&self, name: &str) -> Option<ScriptValue> {
-        if let Ok(globals) = self.globals.lock() {
-            globals.get(name).cloned()
-        } else {
-            None
+    fn get_global(&mut self, name: &str) -> ScriptResult {
+        match self.globals.lock() {
+            Ok(globals) => match globals.get(name) {
+                Some(value) => ScriptResult::Success(value.clone()),
+                None => ScriptResult::Error(format!("Global '{}' not found", name)),
+            },
+            Err(_) => ScriptResult::Error("Failed to lock globals".to_string()),
         }
     }
 
@@ -196,6 +202,15 @@ impl ScriptContext for RustScriptContextAdapter {
             globals.clear();
         }
         // Rust脚本引擎不需要重置，因为它没有全局状态
+    }
+
+    fn language(&self) -> ScriptLanguage {
+        ScriptLanguage::Rust
+    }
+
+    fn has_function(&mut self, name: &str) -> bool {
+        // Rust脚本系统没有函数检测机制，返回false
+        false
     }
 }
 

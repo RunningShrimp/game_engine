@@ -93,9 +93,15 @@ egui-winit = "0.33.3"
 
 # Scripting
 rquickjs = { version = "0.11.0", features = ["full"] }
-# pyo3 and wasmtime temporarily disabled - unused in current codebase
-# pyo3 = { version = "0.27.2", features = ["auto-initialize"], optional = true }
-# wasmtime = { version = "39.0.1", optional = true }
+# TypeScript/JavaScript runtime (暂时禁用，版本兼容性问题)
+# deno_core = { version = "0.298.0", optional = true }
+# TypeScript compiler (暂时禁用，版本兼容性问题)
+# swc = { version = "0.275.0", optional = true }
+# swc_common = { version = "0.33.27", optional = true }
+# swc_ecma_parser = { version = "0.149.3", optional = true }
+# swc_ecma_codegen = { version = "0.153.2", optional = true }
+# Python bindings
+pyo3 = { version = "0.27.2", features = ["auto-initialize"], optional = true }
 
 # Logging
 log.workspace = true
@@ -126,7 +132,6 @@ tracy-client = { version = "0.18", optional = true }
 # hyper = { version = "1.8", features = ["full"] }  # Removed: transitive dependency via axum
 axum-server = "0.8.0"
 chrono = "0.4.42"
-pyo3 = "0.27.2"
 
 # CLI tools dependencies
 clap = { version = "4.0", features = ["derive"], optional = true }
@@ -414,7 +419,35 @@ ai = ["ai-openai", "ai-claude", "ai-local"]
 ## ```bash
 ## cargo build --features pyo3
 ## ```
-# pyo3 = ["dep:pyo3"]  # Temporarily disabled - unused in current codebase
+pyo3 = ["dep:pyo3"]
+
+## 启用TypeScript脚本支持
+##
+## 增加的依赖：
+## - deno_core = "0.298" (约15MB)
+## - swc = "0.275" (约20MB，编译器)
+##
+## 支持的功能：
+## - TypeScript脚本运行时
+## - 类型检查和智能提示
+## - 现代JavaScript/TypeScript特性
+## - 从TypeScript调用Rust API
+##
+## 使用场景：
+## - 类型安全的游戏脚本
+## - 现代Web开发体验
+## - 大型项目脚本开发
+##
+## 注意：
+## - 编译时间会显著增加
+## - 需要Node.js生态工具链
+## - **暂时禁用**: swc生态系统版本兼容性问题，等待官方修复
+##
+## 示例：
+## ```bash
+## cargo build --features typescript
+## ```
+# typescript = ["deno_core", "swc", "swc_common", "swc_ecma_parser", "swc_ecma_codegen"]
 
 ### 网络安全
 ## 启用安全的密钥交换协议（推荐用于生产环境）

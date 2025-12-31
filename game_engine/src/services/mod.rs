@@ -1,6 +1,7 @@
 /// 音频服务模块
 pub mod audio;
-/// Python脚本服务模块
+/// Python脚本服务模块（需要pyo3 feature）
+#[cfg(feature = "pyo3")]
 pub mod python_scripting;
 /// 渲染服务模块
 pub mod render;

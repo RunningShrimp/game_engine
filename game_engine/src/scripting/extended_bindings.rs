@@ -31,7 +31,7 @@ impl ExtendedEcsBindings {
 
         // 添加Sprite组件
         api.register_function("add_sprite", move |args| {
-            if let Some(ScriptValue::Int(entity_id)) = args.first() {
+            if let Some(ScriptValue::Integer(entity_id)) = args.first() {
                 let mut world = match safe_lock(&world, "ExtendedEcsBindings.world") {
                     Ok(w) => w,
                     Err(e) => {
@@ -43,7 +43,7 @@ impl ExtendedEcsBindings {
 
                 if let Ok(mut entity_mut) = world.get_entity_mut(entity) {
                     entity_mut.insert(Sprite::default());
-                    ScriptResult::Success("Sprite component added".to_string())
+                    ScriptResult::Success(ScriptValue::String("Sprite component added".to_string()))
                 } else {
                     ScriptResult::Error("Entity not found".to_string())
                 }
@@ -57,10 +57,10 @@ impl ExtendedEcsBindings {
         // 设置Sprite颜色
         api.register_function("set_sprite_color", move |args| {
             if let (
-                Some(ScriptValue::Int(entity_id)),
-                Some(ScriptValue::Float(r)),
-                Some(ScriptValue::Float(g)),
-                Some(ScriptValue::Float(b)),
+                Some(ScriptValue::Integer(entity_id)),
+                Some(ScriptValue::Number(r)),
+                Some(ScriptValue::Number(g)),
+                Some(ScriptValue::Number(b)),
             ) = (args.first(), args.get(1), args.get(2), args.get(3))
             {
                 let mut world = match safe_lock(&world, "ExtendedEcsBindings.world") {
@@ -74,7 +74,7 @@ impl ExtendedEcsBindings {
 
                 if let Some(mut sprite) = world.get_mut::<Sprite>(entity) {
                     sprite.color = [*r as f32, *g as f32, *b as f32, 1.0];
-                    ScriptResult::Success("Sprite color updated".to_string())
+                    ScriptResult::Success(ScriptValue::String("Sprite color updated".to_string()))
                 } else {
                     ScriptResult::Error("Sprite component not found".to_string())
                 }
@@ -88,9 +88,9 @@ impl ExtendedEcsBindings {
         // 设置Sprite UV缩放
         api.register_function("set_sprite_uv_scale", move |args| {
             if let (
-                Some(ScriptValue::Int(entity_id)),
-                Some(ScriptValue::Float(u)),
-                Some(ScriptValue::Float(v)),
+                Some(ScriptValue::Integer(entity_id)),
+                Some(ScriptValue::Number(u)),
+                Some(ScriptValue::Number(v)),
             ) = (args.first(), args.get(1), args.get(2))
             {
                 let mut world = match safe_lock(&world, "ExtendedEcsBindings.world") {
@@ -104,7 +104,7 @@ impl ExtendedEcsBindings {
 
                 if let Some(mut sprite) = world.get_mut::<Sprite>(entity) {
                     sprite.uv_scale = [*u as f32, *v as f32];
-                    ScriptResult::Success("Sprite UV scale updated".to_string())
+                    ScriptResult::Success(ScriptValue::String("Sprite UV scale updated".to_string()))
                 } else {
                     ScriptResult::Error("Sprite component not found".to_string())
                 }
@@ -117,7 +117,7 @@ impl ExtendedEcsBindings {
 
         // 获取Sprite信息
         api.register_function("get_sprite", move |args| {
-            if let Some(ScriptValue::Int(entity_id)) = args.first() {
+            if let Some(ScriptValue::Integer(entity_id)) = args.first() {
                 let world = match safe_lock(&world, "ExtendedEcsBindings.world") {
                     Ok(w) => w,
                     Err(e) => {
@@ -137,7 +137,7 @@ impl ExtendedEcsBindings {
                         sprite.tex_index,
                         sprite.layer
                     );
-                    ScriptResult::Success(info)
+                    ScriptResult::Success(ScriptValue::String(info))
                 } else {
                     ScriptResult::Error("Sprite component not found".to_string())
                 }
@@ -153,7 +153,7 @@ impl ExtendedEcsBindings {
 
         // 添加Camera组件
         api.register_function("add_camera", move |args| {
-            if let Some(ScriptValue::Int(entity_id)) = args.first() {
+            if let Some(ScriptValue::Integer(entity_id)) = args.first() {
                 let mut world = match safe_lock(&world, "ExtendedEcsBindings.world") {
                     Ok(w) => w,
                     Err(e) => {
@@ -173,7 +173,7 @@ impl ExtendedEcsBindings {
                             far: 100.0,
                         },
                     });
-                    ScriptResult::Success("Camera component added".to_string())
+                    ScriptResult::Success(ScriptValue::String("Camera component added".to_string()))
                 } else {
                     ScriptResult::Error("Entity not found".to_string())
                 }
@@ -186,7 +186,7 @@ impl ExtendedEcsBindings {
 
         // 设置Camera FOV
         api.register_function("set_camera_fov", move |args| {
-            if let (Some(ScriptValue::Int(entity_id)), Some(ScriptValue::Float(_fov))) =
+            if let (Some(ScriptValue::Integer(entity_id)), Some(ScriptValue::Number(_fov))) =
                 (args.first(), args.get(1))
             {
                 let mut world = match safe_lock(&world, "ExtendedEcsBindings.world") {
@@ -202,7 +202,7 @@ impl ExtendedEcsBindings {
                     if let Projection::Perspective { fov, .. } = &mut camera.projection {
                         *fov = (*fov).to_radians();
                     }
-                    ScriptResult::Success("Camera FOV updated".to_string())
+                    ScriptResult::Success(ScriptValue::String("Camera FOV updated".to_string()))
                 } else {
                     ScriptResult::Error("Camera component not found".to_string())
                 }
@@ -218,9 +218,9 @@ impl ExtendedEcsBindings {
         // 设置Camera近平面和远平面
         api.register_function("set_camera_planes", move |args| {
             if let (
-                Some(ScriptValue::Int(entity_id)),
-                Some(ScriptValue::Float(near)),
-                Some(ScriptValue::Float(far)),
+                Some(ScriptValue::Integer(entity_id)),
+                Some(ScriptValue::Number(near)),
+                Some(ScriptValue::Number(far)),
             ) = (args.first(), args.get(1), args.get(2))
             {
                 let mut world = match safe_lock(&world, "ExtendedEcsBindings.world") {
@@ -247,7 +247,7 @@ impl ExtendedEcsBindings {
                             *f = *far as f32;
                         }
                     }
-                    ScriptResult::Success("Camera planes updated".to_string())
+                    ScriptResult::Success(ScriptValue::String("Camera planes updated".to_string()))
                 } else {
                     ScriptResult::Error("Camera component not found".to_string())
                 }
@@ -260,7 +260,7 @@ impl ExtendedEcsBindings {
 
         // 获取Camera信息
         api.register_function("get_camera", move |args| {
-            if let Some(ScriptValue::Int(entity_id)) = args.first() {
+            if let Some(ScriptValue::Integer(entity_id)) = args.first() {
                 let world = match safe_lock(&world, "ExtendedEcsBindings.world") {
                     Ok(w) => w,
                     Err(e) => {
@@ -284,7 +284,7 @@ impl ExtendedEcsBindings {
                             )
                         }
                     };
-                    ScriptResult::Success(info)
+                    ScriptResult::Success(ScriptValue::String(info))
                 } else {
                     ScriptResult::Error("Camera component not found".to_string())
                 }
@@ -318,17 +318,17 @@ mod tests {
         let entity_id = entity.to_bits() as i64;
 
         // 添加Sprite组件
-        let result = api.call("add_sprite", &[ScriptValue::Int(entity_id)]);
+        let result = api.call("add_sprite", &[ScriptValue::Integer(entity_id)]);
         assert!(matches!(result, ScriptResult::Success(_)));
 
         // 设置Sprite颜色
         let result = api.call(
             "set_sprite_color",
             &[
-                ScriptValue::Int(entity_id),
-                ScriptValue::Float(1.0),
-                ScriptValue::Float(0.0),
-                ScriptValue::Float(0.0),
+                ScriptValue::Integer(entity_id),
+                ScriptValue::Number(1.0),
+                ScriptValue::Number(0.0),
+                ScriptValue::Number(0.0),
             ],
         );
         assert!(matches!(result, ScriptResult::Success(_)));
@@ -353,13 +353,13 @@ mod tests {
         let entity_id = entity.to_bits() as i64;
 
         // 添加Camera组件
-        let result = api.call("add_camera", &[ScriptValue::Int(entity_id)]);
+        let result = api.call("add_camera", &[ScriptValue::Integer(entity_id)]);
         assert!(matches!(result, ScriptResult::Success(_)));
 
         // 设置Camera FOV
         let result = api.call(
             "set_camera_fov",
-            &[ScriptValue::Int(entity_id), ScriptValue::Float(60.0)],
+            &[ScriptValue::Integer(entity_id), ScriptValue::Number(60.0)],
         );
         assert!(matches!(result, ScriptResult::Success(_)));
     }

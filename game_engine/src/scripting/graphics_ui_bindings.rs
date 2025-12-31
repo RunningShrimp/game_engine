@@ -32,11 +32,11 @@ impl GraphicsUiBindings {
         // 设置精灵颜色
         api.register_function("set_sprite_color", move |args| {
             if let (
-                Some(ScriptValue::Int(entity_id)),
-                Some(ScriptValue::Float(r)),
-                Some(ScriptValue::Float(g)),
-                Some(ScriptValue::Float(b)),
-                Some(ScriptValue::Float(a)),
+                Some(ScriptValue::Integer(entity_id)),
+                Some(ScriptValue::Number(r)),
+                Some(ScriptValue::Number(g)),
+                Some(ScriptValue::Number(b)),
+                Some(ScriptValue::Number(a)),
             ) = (
                 args.first(),
                 args.get(1),
@@ -55,7 +55,7 @@ impl GraphicsUiBindings {
 
                 if let Some(mut sprite) = world.get_mut::<Sprite>(entity) {
                     sprite.color = [*r as f32, *g as f32, *b as f32, *a as f32];
-                    ScriptResult::Success("Sprite color updated".to_string())
+                    ScriptResult::Success(ScriptValue::String("Sprite color updated".to_string()))
                 } else {
                     ScriptResult::Error("Sprite component not found".to_string())
                 }
@@ -69,9 +69,9 @@ impl GraphicsUiBindings {
         // 设置精灵大小
         api.register_function("set_sprite_size", move |args| {
             if let (
-                Some(ScriptValue::Int(entity_id)),
-                Some(ScriptValue::Float(width)),
-                Some(ScriptValue::Float(height)),
+                Some(ScriptValue::Integer(entity_id)),
+                Some(ScriptValue::Number(width)),
+                Some(ScriptValue::Number(height)),
             ) = (args.first(), args.get(1), args.get(2))
             {
                 let mut world = match safe_lock(&world, "GraphicsUiBindings.world") {
@@ -85,7 +85,7 @@ impl GraphicsUiBindings {
 
                 if let Some(mut sprite) = world.get_mut::<Sprite>(entity) {
                     sprite.uv_scale = [*width as f32, *height as f32];
-                    ScriptResult::Success("Sprite size updated".to_string())
+                    ScriptResult::Success(ScriptValue::String("Sprite size updated".to_string()))
                 } else {
                     ScriptResult::Error("Sprite component not found".to_string())
                 }
@@ -101,13 +101,13 @@ impl GraphicsUiBindings {
         // 绘制线条 (简化版,实际需要添加到渲染队列)
         api.register_function("draw_line", move |args| {
             if let (
-                Some(ScriptValue::Float(x1)),
-                Some(ScriptValue::Float(y1)),
-                Some(ScriptValue::Float(x2)),
-                Some(ScriptValue::Float(y2)),
-                Some(ScriptValue::Float(r)),
-                Some(ScriptValue::Float(g)),
-                Some(ScriptValue::Float(b)),
+                Some(ScriptValue::Number(x1)),
+                Some(ScriptValue::Number(y1)),
+                Some(ScriptValue::Number(x2)),
+                Some(ScriptValue::Number(y2)),
+                Some(ScriptValue::Number(r)),
+                Some(ScriptValue::Number(g)),
+                Some(ScriptValue::Number(b)),
             ) = (
                 args.first(),
                 args.get(1),
@@ -118,9 +118,9 @@ impl GraphicsUiBindings {
                 args.get(6),
             ) {
                 // 实际实现需要将线条添加到调试渲染队列
-                ScriptResult::Success(format!(
+                ScriptResult::Success(ScriptValue::String(format!(
                     "Drawing line from ({x1}, {y1}) to ({x2}, {y2}) with color ({r}, {g}, {b})"
-                ))
+                )))
             } else {
                 ScriptResult::Error("draw_line() requires x1, y1, x2, y2, r, g, b".to_string())
             }
@@ -129,12 +129,12 @@ impl GraphicsUiBindings {
         // 绘制圆形 (简化版)
         api.register_function("draw_circle", move |args| {
             if let (
-                Some(ScriptValue::Float(x)),
-                Some(ScriptValue::Float(y)),
-                Some(ScriptValue::Float(radius)),
-                Some(ScriptValue::Float(r)),
-                Some(ScriptValue::Float(g)),
-                Some(ScriptValue::Float(b)),
+                Some(ScriptValue::Number(x)),
+                Some(ScriptValue::Number(y)),
+                Some(ScriptValue::Number(radius)),
+                Some(ScriptValue::Number(r)),
+                Some(ScriptValue::Number(g)),
+                Some(ScriptValue::Number(b)),
             ) = (
                 args.first(),
                 args.get(1),
@@ -143,9 +143,9 @@ impl GraphicsUiBindings {
                 args.get(4),
                 args.get(5),
             ) {
-                ScriptResult::Success(format!(
+                ScriptResult::Success(ScriptValue::String(format!(
                     "Drawing circle at ({x}, {y}) with radius {radius} and color ({r}, {g}, {b})"
-                ))
+                )))
             } else {
                 ScriptResult::Error("draw_circle() requires x, y, radius, r, g, b".to_string())
             }
@@ -154,13 +154,13 @@ impl GraphicsUiBindings {
         // 绘制矩形 (简化版)
         api.register_function("draw_rect", move |args| {
             if let (
-                Some(ScriptValue::Float(x)),
-                Some(ScriptValue::Float(y)),
-                Some(ScriptValue::Float(width)),
-                Some(ScriptValue::Float(height)),
-                Some(ScriptValue::Float(r)),
-                Some(ScriptValue::Float(g)),
-                Some(ScriptValue::Float(b)),
+                Some(ScriptValue::Number(x)),
+                Some(ScriptValue::Number(y)),
+                Some(ScriptValue::Number(width)),
+                Some(ScriptValue::Number(height)),
+                Some(ScriptValue::Number(r)),
+                Some(ScriptValue::Number(g)),
+                Some(ScriptValue::Number(b)),
             ) = (
                 args.first(),
                 args.get(1),
@@ -170,9 +170,9 @@ impl GraphicsUiBindings {
                 args.get(5),
                 args.get(6),
             ) {
-                ScriptResult::Success(format!(
+                ScriptResult::Success(ScriptValue::String(format!(
                     "Drawing rect at ({x}, {y}) with size {width}x{height} and color ({r}, {g}, {b})"
-                ))
+                )))
             } else {
                 ScriptResult::Error("draw_rect() requires x, y, width, height, r, g, b".to_string())
             }
@@ -183,13 +183,15 @@ impl GraphicsUiBindings {
         // 设置相机位置
         api.register_function("set_camera_position", move |args| {
             if let (
-                Some(ScriptValue::Float(x)),
-                Some(ScriptValue::Float(y)),
-                Some(ScriptValue::Float(z)),
+                Some(ScriptValue::Number(x)),
+                Some(ScriptValue::Number(y)),
+                Some(ScriptValue::Number(z)),
             ) = (args.first(), args.get(1), args.get(2))
             {
                 // 实际实现需要找到Camera组件并更新其Transform
-                ScriptResult::Success(format!("Camera position set to ({x}, {y}, {z})"))
+                ScriptResult::Success(ScriptValue::String(format!(
+                    "Camera position set to ({x}, {y}, {z})"
+                )))
             } else {
                 ScriptResult::Error("set_camera_position() requires x, y, z".to_string())
             }
@@ -202,11 +204,13 @@ impl GraphicsUiBindings {
         api.register_function("ui_text", move |args| {
             if let (
                 Some(ScriptValue::String(text)),
-                Some(ScriptValue::Float(x)),
-                Some(ScriptValue::Float(y)),
+                Some(ScriptValue::Number(x)),
+                Some(ScriptValue::Number(y)),
             ) = (args.first(), args.get(1), args.get(2))
             {
-                ScriptResult::Success(format!("Displaying text '{text}' at ({x}, {y})"))
+                ScriptResult::Success(ScriptValue::String(format!(
+                    "Displaying text '{text}' at ({x}, {y})"
+                )))
             } else {
                 ScriptResult::Error("ui_text() requires text, x, y".to_string())
             }
@@ -216,12 +220,14 @@ impl GraphicsUiBindings {
         api.register_function("ui_button", move |args| {
             if let (
                 Some(ScriptValue::String(label)),
-                Some(ScriptValue::Float(x)),
-                Some(ScriptValue::Float(y)),
+                Some(ScriptValue::Number(x)),
+                Some(ScriptValue::Number(y)),
             ) = (args.first(), args.get(1), args.get(2))
             {
                 // 实际实现需要集成UI系统
-                ScriptResult::Success(format!("Button '{label}' at ({x}, {y})"))
+                ScriptResult::Success(ScriptValue::String(format!(
+                    "Button '{label}' at ({x}, {y})"
+                )))
             } else {
                 ScriptResult::Error("ui_button() requires label, x, y".to_string())
             }
@@ -231,14 +237,14 @@ impl GraphicsUiBindings {
         api.register_function("ui_slider", move |args| {
             if let (
                 Some(ScriptValue::String(label)),
-                Some(ScriptValue::Float(min)),
-                Some(ScriptValue::Float(max)),
-                Some(ScriptValue::Float(value)),
+                Some(ScriptValue::Number(min)),
+                Some(ScriptValue::Number(max)),
+                Some(ScriptValue::Number(value)),
             ) = (args.first(), args.get(1), args.get(2), args.get(3))
             {
-                ScriptResult::Success(format!(
+                ScriptResult::Success(ScriptValue::String(format!(
                     "Slider '{label}' with range [{min}, {max}] and value {value}"
-                ))
+                )))
             } else {
                 ScriptResult::Error("ui_slider() requires label, min, max, value".to_string())
             }
@@ -248,10 +254,10 @@ impl GraphicsUiBindings {
         api.register_function("ui_image", move |args| {
             if let (
                 Some(ScriptValue::String(image_path)),
-                Some(ScriptValue::Float(x)),
-                Some(ScriptValue::Float(y)),
-                Some(ScriptValue::Float(width)),
-                Some(ScriptValue::Float(height)),
+                Some(ScriptValue::Number(x)),
+                Some(ScriptValue::Number(y)),
+                Some(ScriptValue::Number(width)),
+                Some(ScriptValue::Number(height)),
             ) = (
                 args.first(),
                 args.get(1),
@@ -259,9 +265,9 @@ impl GraphicsUiBindings {
                 args.get(3),
                 args.get(4),
             ) {
-                ScriptResult::Success(format!(
+                ScriptResult::Success(ScriptValue::String(format!(
                     "Image '{image_path}' at ({x}, {y}) with size {width}x{height}"
-                ))
+                )))
             } else {
                 ScriptResult::Error(
                     "ui_image() requires image_path, x, y, width, height".to_string(),
@@ -273,10 +279,10 @@ impl GraphicsUiBindings {
         api.register_function("ui_panel", move |args| {
             if let (
                 Some(ScriptValue::String(title)),
-                Some(ScriptValue::Float(x)),
-                Some(ScriptValue::Float(y)),
-                Some(ScriptValue::Float(width)),
-                Some(ScriptValue::Float(height)),
+                Some(ScriptValue::Number(x)),
+                Some(ScriptValue::Number(y)),
+                Some(ScriptValue::Number(width)),
+                Some(ScriptValue::Number(height)),
             ) = (
                 args.first(),
                 args.get(1),
@@ -284,9 +290,9 @@ impl GraphicsUiBindings {
                 args.get(3),
                 args.get(4),
             ) {
-                ScriptResult::Success(format!(
+                ScriptResult::Success(ScriptValue::String(format!(
                     "Panel '{title}' at ({x}, {y}) with size {width}x{height}"
-                ))
+                )))
             } else {
                 ScriptResult::Error("ui_panel() requires title, x, y, width, height".to_string())
             }
@@ -295,14 +301,14 @@ impl GraphicsUiBindings {
         // 获取鼠标位置 (占位实现)
         api.register_function("get_mouse_position", move |_args| {
             // 实际实现需要从输入系统获取鼠标位置
-            ScriptResult::Success("Mouse position: (0, 0)".to_string())
+            ScriptResult::Success(ScriptValue::String("Mouse position: (0, 0)".to_string()))
         });
 
         // 检查按键状态 (占位实现)
         api.register_function("is_key_pressed", move |args| {
             if let Some(ScriptValue::String(key)) = args.first() {
                 // 实际实现需要从输入系统查询按键状态
-                ScriptResult::Success(format!("Key '{key}' is not pressed"))
+                ScriptResult::Success(ScriptValue::String(format!("Key '{key}' is not pressed")))
             } else {
                 ScriptResult::Error("is_key_pressed() requires a key name".to_string())
             }
@@ -336,11 +342,11 @@ mod tests {
         let result = api.call(
             "set_sprite_color",
             &[
-                ScriptValue::Int(entity_id),
-                ScriptValue::Float(1.0),
-                ScriptValue::Float(0.0),
-                ScriptValue::Float(0.0),
-                ScriptValue::Float(1.0),
+                ScriptValue::Integer(entity_id),
+                ScriptValue::Number(1.0),
+                ScriptValue::Number(0.0),
+                ScriptValue::Number(0.0),
+                ScriptValue::Number(1.0),
             ],
         );
         assert!(matches!(result, ScriptResult::Success(_)));
@@ -360,8 +366,8 @@ mod tests {
             "ui_text",
             &[
                 ScriptValue::String("Hello, World!".to_string()),
-                ScriptValue::Float(100.0),
-                ScriptValue::Float(200.0),
+                ScriptValue::Number(100.0),
+                ScriptValue::Number(200.0),
             ],
         );
         assert!(matches!(result, ScriptResult::Success(_)));
@@ -371,8 +377,8 @@ mod tests {
             "ui_button",
             &[
                 ScriptValue::String("Click Me".to_string()),
-                ScriptValue::Float(150.0),
-                ScriptValue::Float(250.0),
+                ScriptValue::Number(150.0),
+                ScriptValue::Number(250.0),
             ],
         );
         assert!(matches!(result, ScriptResult::Success(_)));

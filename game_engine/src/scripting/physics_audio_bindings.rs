@@ -32,7 +32,7 @@ impl PhysicsAudioBindings {
 
         // 添加Velocity组件
         api.register_function("add_velocity", move |args| {
-            if let Some(ScriptValue::Int(entity_id)) = args.first() {
+            if let Some(ScriptValue::Integer(entity_id)) = args.first() {
                 let mut world = match safe_lock(&world, "PhysicsAudioBindings.world") {
                     Ok(w) => w,
                     Err(e) => {
@@ -47,7 +47,7 @@ impl PhysicsAudioBindings {
                         lin: Vec3::ZERO,
                         ang: Vec3::ZERO,
                     });
-                    ScriptResult::Success("Velocity component added".to_string())
+                    ScriptResult::Success(ScriptValue::String("Velocity component added".to_string()))
                 } else {
                     ScriptResult::Error("Entity not found".to_string())
                 }
@@ -61,10 +61,10 @@ impl PhysicsAudioBindings {
         // 设置线性速度
         api.register_function("set_linear_velocity", move |args| {
             if let (
-                Some(ScriptValue::Int(entity_id)),
-                Some(ScriptValue::Float(x)),
-                Some(ScriptValue::Float(y)),
-                Some(ScriptValue::Float(z)),
+                Some(ScriptValue::Integer(entity_id)),
+                Some(ScriptValue::Number(x)),
+                Some(ScriptValue::Number(y)),
+                Some(ScriptValue::Number(z)),
             ) = (args.first(), args.get(1), args.get(2), args.get(3))
             {
                 let mut world = match safe_lock(&world, "PhysicsAudioBindings.world") {
@@ -78,7 +78,7 @@ impl PhysicsAudioBindings {
 
                 if let Some(mut velocity) = world.get_mut::<Velocity>(entity) {
                     velocity.lin = Vec3::new(*x as f32, *y as f32, *z as f32);
-                    ScriptResult::Success("Linear velocity updated".to_string())
+                    ScriptResult::Success(ScriptValue::String("Linear velocity updated".to_string()))
                 } else {
                     ScriptResult::Error("Velocity component not found".to_string())
                 }
@@ -92,10 +92,10 @@ impl PhysicsAudioBindings {
         // 设置角速度
         api.register_function("set_angular_velocity", move |args| {
             if let (
-                Some(ScriptValue::Int(entity_id)),
-                Some(ScriptValue::Float(x)),
-                Some(ScriptValue::Float(y)),
-                Some(ScriptValue::Float(z)),
+                Some(ScriptValue::Integer(entity_id)),
+                Some(ScriptValue::Number(x)),
+                Some(ScriptValue::Number(y)),
+                Some(ScriptValue::Number(z)),
             ) = (args.first(), args.get(1), args.get(2), args.get(3))
             {
                 let mut world = match safe_lock(&world, "PhysicsAudioBindings.world") {
@@ -109,7 +109,7 @@ impl PhysicsAudioBindings {
 
                 if let Some(mut velocity) = world.get_mut::<Velocity>(entity) {
                     velocity.ang = Vec3::new(*x as f32, *y as f32, *z as f32);
-                    ScriptResult::Success("Angular velocity updated".to_string())
+                    ScriptResult::Success(ScriptValue::String("Angular velocity updated".to_string()))
                 } else {
                     ScriptResult::Error("Velocity component not found".to_string())
                 }
@@ -124,7 +124,7 @@ impl PhysicsAudioBindings {
 
         // 获取速度信息
         api.register_function("get_velocity", move |args| {
-            if let Some(ScriptValue::Int(entity_id)) = args.first() {
+            if let Some(ScriptValue::Integer(entity_id)) = args.first() {
                 let world = match safe_lock(&world, "PhysicsAudioBindings.world") {
                     Ok(w) => w,
                     Err(e) => {
@@ -144,7 +144,7 @@ impl PhysicsAudioBindings {
                         velocity.ang.y,
                         velocity.ang.z
                     );
-                    ScriptResult::Success(info)
+                    ScriptResult::Success(ScriptValue::String(info))
                 } else {
                     ScriptResult::Error("Velocity component not found".to_string())
                 }
@@ -158,10 +158,10 @@ impl PhysicsAudioBindings {
         // 应用力 (简化版,直接修改速度)
         api.register_function("apply_force", move |args| {
             if let (
-                Some(ScriptValue::Int(entity_id)),
-                Some(ScriptValue::Float(fx)),
-                Some(ScriptValue::Float(fy)),
-                Some(ScriptValue::Float(fz)),
+                Some(ScriptValue::Integer(entity_id)),
+                Some(ScriptValue::Number(fx)),
+                Some(ScriptValue::Number(fy)),
+                Some(ScriptValue::Number(fz)),
             ) = (args.first(), args.get(1), args.get(2), args.get(3))
             {
                 let mut world = match safe_lock(&world, "PhysicsAudioBindings.world") {
@@ -176,7 +176,7 @@ impl PhysicsAudioBindings {
                 if let Some(mut velocity) = world.get_mut::<Velocity>(entity) {
                     // 简化的力应用:直接加到速度上
                     velocity.lin += Vec3::new(*fx as f32, *fy as f32, *fz as f32) * 0.01;
-                    ScriptResult::Success("Force applied".to_string())
+                    ScriptResult::Success(ScriptValue::String("Force applied".to_string()))
                 } else {
                     ScriptResult::Error("Velocity component not found".to_string())
                 }
@@ -190,12 +190,12 @@ impl PhysicsAudioBindings {
         // 射线检测 (简化版)
         api.register_function("raycast", move |args| {
             if let (
-                Some(ScriptValue::Float(ox)),
-                Some(ScriptValue::Float(oy)),
-                Some(ScriptValue::Float(oz)),
-                Some(ScriptValue::Float(dx)),
-                Some(ScriptValue::Float(dy)),
-                Some(ScriptValue::Float(dz)),
+                Some(ScriptValue::Number(ox)),
+                Some(ScriptValue::Number(oy)),
+                Some(ScriptValue::Number(oz)),
+                Some(ScriptValue::Number(dx)),
+                Some(ScriptValue::Number(dy)),
+                Some(ScriptValue::Number(dz)),
             ) = (
                 args.first(),
                 args.get(1),
@@ -234,13 +234,13 @@ impl PhysicsAudioBindings {
                 }
 
                 if let Some(entity) = closest_entity {
-                    ScriptResult::Success(format!(
+                    ScriptResult::Success(ScriptValue::String(format!(
                         "Hit entity {} at distance {}",
                         entity.to_bits(),
                         closest_distance
-                    ))
+                    )))
                 } else {
-                    ScriptResult::Success("No hit".to_string())
+                    ScriptResult::Success(ScriptValue::String("No hit".to_string()))
                 }
             } else {
                 ScriptResult::Error(
@@ -256,7 +256,7 @@ impl PhysicsAudioBindings {
         api.register_function("play_sound", move |args| {
             if let Some(ScriptValue::String(sound_name)) = args.first() {
                 // 实际实现需要集成音频库
-                ScriptResult::Success(format!("Playing sound: {sound_name}"))
+                ScriptResult::Success(ScriptValue::String(format!("Playing sound: {sound_name}")))
             } else {
                 ScriptResult::Error("play_sound() requires a sound name".to_string())
             }
@@ -265,7 +265,7 @@ impl PhysicsAudioBindings {
         // 播放音乐 (占位实现)
         api.register_function("play_music", move |args| {
             if let Some(ScriptValue::String(music_name)) = args.first() {
-                ScriptResult::Success(format!("Playing music: {music_name}"))
+                ScriptResult::Success(ScriptValue::String(format!("Playing music: {music_name}")))
             } else {
                 ScriptResult::Error("play_music() requires a music name".to_string())
             }
@@ -273,14 +273,14 @@ impl PhysicsAudioBindings {
 
         // 停止音乐 (占位实现)
         api.register_function("stop_music", move |_args| {
-            ScriptResult::Success("Music stopped".to_string())
+            ScriptResult::Success(ScriptValue::String("Music stopped".to_string()))
         });
 
         // 设置音量 (占位实现)
         api.register_function("set_volume", move |args| {
-            if let Some(ScriptValue::Float(volume)) = args.first() {
+            if let Some(ScriptValue::Number(volume)) = args.first() {
                 let volume = (*volume as f32).clamp(0.0, 1.0);
-                ScriptResult::Success(format!("Volume set to {volume}"))
+                ScriptResult::Success(ScriptValue::String(format!("Volume set to {volume}")))
             } else {
                 ScriptResult::Error("set_volume() requires a volume value (0.0-1.0)".to_string())
             }
@@ -290,14 +290,14 @@ impl PhysicsAudioBindings {
         api.register_function("play_sound_3d", move |args| {
             if let (
                 Some(ScriptValue::String(sound_name)),
-                Some(ScriptValue::Float(x)),
-                Some(ScriptValue::Float(y)),
-                Some(ScriptValue::Float(z)),
+                Some(ScriptValue::Number(x)),
+                Some(ScriptValue::Number(y)),
+                Some(ScriptValue::Number(z)),
             ) = (args.first(), args.get(1), args.get(2), args.get(3))
             {
-                ScriptResult::Success(format!(
+                ScriptResult::Success(ScriptValue::String(format!(
                     "Playing 3D sound '{sound_name}' at position ({x}, {y}, {z})"
-                ))
+                )))
             } else {
                 ScriptResult::Error("play_sound_3d() requires sound_name, x, y, z".to_string())
             }
@@ -328,17 +328,17 @@ mod tests {
         let entity_id = entity.to_bits() as i64;
 
         // 添加Velocity组件
-        let result = api.call("add_velocity", &[ScriptValue::Int(entity_id)]);
+        let result = api.call("add_velocity", &[ScriptValue::Integer(entity_id)]);
         assert!(matches!(result, ScriptResult::Success(_)));
 
         // 设置线性速度
         let result = api.call(
             "set_linear_velocity",
             &[
-                ScriptValue::Int(entity_id),
-                ScriptValue::Float(1.0),
-                ScriptValue::Float(2.0),
-                ScriptValue::Float(3.0),
+                ScriptValue::Integer(entity_id),
+                ScriptValue::Number(1.0),
+                ScriptValue::Number(2.0),
+                ScriptValue::Number(3.0),
             ],
         );
         assert!(matches!(result, ScriptResult::Success(_)));
@@ -361,7 +361,7 @@ mod tests {
         assert!(matches!(result, ScriptResult::Success(_)));
 
         // 设置音量
-        let result = api.call("set_volume", &[ScriptValue::Float(0.5)]);
+        let result = api.call("set_volume", &[ScriptValue::Number(0.5)]);
         assert!(matches!(result, ScriptResult::Success(_)));
     }
 }

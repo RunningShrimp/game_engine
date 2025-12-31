@@ -113,6 +113,12 @@ pub mod local;
 /// NPC系统集成 - LLM与NPC系统集成
 pub mod npc;
 
+/// LLM缓存系统 - 响应缓存和成本优化
+pub mod llm_cache;
+
+/// 成本追踪系统 - API调用成本追踪和预算控制
+pub mod cost_tracking;
+
 // 测试模块
 #[cfg(test)]
 mod flocking_tests;
@@ -146,6 +152,18 @@ pub use service::{
 
 // 重新导出NPC系统集成类型
 pub use npc::{HybridMode, IntelligentNPC, NPCConfig, NPCManager, PerformanceStats};
+
+// 重新导出NPC预设系统类型
+pub use npc::presets::{NPCPreset, NPCPresetBuilder, NPCPresetCategory, PresetManager};
+
+// 重新导出LLM缓存系统类型
+pub use llm_cache::{CacheConfig, CacheEntry, CacheKey, CacheStats, CostEstimator, LLMCache};
+
+// 重新导出成本追踪系统类型
+pub use cost_tracking::{
+    APICallRecord, BudgetConfig, BudgetStatus, CostReport, CostStatistics, CostTracker,
+    ModelCostStats, NPCCostStats,
+};
 
 // 条件导出LLM适配器
 #[cfg(feature = "ai-openai")]

@@ -1,0 +1,72 @@
+{
+  "type": "BehaviorTree",
+  "root": {
+    "type": "Selector",
+    "name": "Knight Root",
+    "children": [
+      {
+        "type": "Sequence",
+        "name": "Protect Sequence",
+        "children": [
+          {
+            "type": "Condition",
+            "name": "Innocent in Danger",
+            "check": "innocent_threatened"
+          },
+          {
+            "type": "Action",
+            "name": "Draw Weapon",
+            "execute": "equip_weapon"
+          },
+          {
+            "type": "Action",
+            "name": "Defend",
+            "execute": "protect_target"
+          }
+        ]
+      },
+      {
+        "type": "Sequence",
+        "name": "Combat Sequence",
+        "children": [
+          {
+            "type": "Condition",
+            "name": "Enemy Detected",
+            "check": "has_hostile_target"
+          },
+          {
+            "type": "Action",
+            "name": "Challenge Enemy",
+            "execute": "shout_challenge"
+          },
+          {
+            "type": "Action",
+            "name": "Attack",
+            "execute": "attack_target"
+          }
+        ]
+      },
+      {
+        "type": "Sequence",
+        "name": "Noble Sequence",
+        "children": [
+          {
+            "type": "Condition",
+            "name": "Need Help",
+            "check": "someone_needs_aid"
+          },
+          {
+            "type": "Action",
+            "name": "Offer Assistance",
+            "execute": "offer_help"
+          }
+        ]
+      },
+      {
+        "type": "Action",
+        "name": "Maintain Vigil",
+        "execute": "stand_watch"
+      }
+    ]
+  }
+}

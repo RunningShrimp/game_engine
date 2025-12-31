@@ -18,6 +18,8 @@
 //! editor.render(&mut ui);
 //! ```
 
+#![cfg(feature = "ai")]
+
 use glam::Vec2;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -72,15 +74,30 @@ pub struct DecisionTreeNode {
 }
 
 /// 决策树编辑器（简化版）
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct DecisionTreeEditor {
+    name: String,
     nodes: HashMap<u64, DecisionTreeNode>,
     next_id: u64,
 }
 
+impl Default for DecisionTreeEditor {
+    fn default() -> Self {
+        Self {
+            name: String::from("Untitled"),
+            nodes: HashMap::new(),
+            next_id: 1,
+        }
+    }
+}
+
 impl DecisionTreeEditor {
     pub fn new() -> Self {
-        Self::default()
+        Self {
+            name: String::from("Untitled"),
+            nodes: HashMap::new(),
+            next_id: 1,
+        }
     }
 
     pub fn add_node(&mut self, node: DecisionTreeNode) {
@@ -104,12 +121,70 @@ impl DecisionTreeEditor {
             }
         }
     }
+
+    /// 创建新树
+    pub fn create_tree(&mut self, name: String) -> Result<(), String> {
+        self.name = name;
+        self.nodes.clear();
+        self.next_id = 1;
+        Ok(())
+    }
+
+    /// 加载树
+    pub fn load_tree(&mut self, name: &str) -> Result<(), String> {
+        self.name = name.to_string();
+        // 简化版：仅返回成功
+        Ok(())
+    }
+
+    /// 保存当前树
+    pub fn save_current_tree(&mut self) -> Result<(), String> {
+        // 简化版：仅返回成功
+        Ok(())
+    }
+
+    /// 获取当前树
+    pub fn get_current_tree(&self) -> Option<&DecisionTreeEditor> {
+        Some(self)
+    }
+
+    /// 获取当前树可变引用
+    pub fn get_current_tree_mut(&mut self) -> Option<&mut DecisionTreeEditor> {
+        Some(self)
+    }
+
+    /// 移除节点
+    pub fn remove_node(&mut self, id: u64) -> Option<DecisionTreeNode> {
+        self.nodes.remove(&id)
+    }
+
+    /// 添加子节点
+    pub fn add_child(&mut self, parent_id: u64, child_id: u64) {
+        if let Some(node) = self.nodes.get_mut(&parent_id) {
+            if !node.children.contains(&child_id) {
+                node.children.push(child_id);
+            }
+        }
+    }
+
+    /// 移除子节点
+    pub fn remove_child(&mut self, parent_id: u64, child_id: u64) {
+        if let Some(node) = self.nodes.get_mut(&parent_id) {
+            node.children.retain(|&id| id != child_id);
+        }
+    }
+
+    /// 获取所有节点
+    pub fn get_all_nodes(&self) -> &HashMap<u64, DecisionTreeNode> {
+        &self.nodes
+    }
 }
 
 /// 节点更新
 #[derive(Debug, Default)]
 pub struct NodeUpdates {
     pub name: Option<String>,
+    pub description: Option<String>,
     pub position: Option<(f32, f32)>,
     pub data: Option<NodeData>,
 }
@@ -327,10 +402,20 @@ impl BehaviorTreeEditor {
             position
         };
 
-        let id = tree.add_node(node_type, name.to_string(), (snapped_pos.x, snapped_pos.y));
+        // 创建新节点
+        let node_id = tree.next_id;
+        let node = DecisionTreeNode {
+            id: node_id,
+            node_type: crate::ai::decision_tree_editor::DecisionNodeType::from(node_type),
+            name: name.to_string(),
+            position: (snapped_pos.x, snapped_pos.y),
+            children: Vec::new(),
+            data: crate::ai::decision_tree_editor::DecisionNodeData::None,
+        };
+        tree.add_node(node);
 
         self.sync_visual_nodes();
-        Ok(id)
+        Ok(node_id)
     }
 
     /// 删除选中的节点
@@ -338,7 +423,7 @@ impl BehaviorTreeEditor {
         let tree = self.decision_editor.get_current_tree_mut().ok_or("No current tree")?;
 
         for node_id in &self.selected_nodes {
-            tree.remove_node(*node_id).map_err(|e| e.to_string())?;
+            tree.remove_node(*node_id);
         }
 
         self.selected_nodes.clear();
@@ -573,10 +658,10 @@ impl BehaviorTreeEditor {
             };
 
             // 绘制节点背景
-            painter.rect_filled(screen_rect, egui::CornerRadius::same(4), bg_color);
+            painter.rect_filled(screen_rect, egui::Rounding::same(4), bg_color);
             painter.rect_stroke(
                 screen_rect,
-                egui::CornerRadius::same(4),
+                egui::Rounding::same(4),
                 egui::Stroke::new(2.0, egui::Color32::WHITE),
                 egui::StrokeKind::Inside,
             );

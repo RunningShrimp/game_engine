@@ -65,8 +65,12 @@
 //! - **增量更新** - 只更新活动的动画实体
 //! - **内存优化** - 动画数据共享和缓存
 
+/// 动画混合树 - 复杂的动画混合和混合空间
+pub mod blending;
 /// 动画剪辑 - 包含多条动画轨道的完整动画
 pub mod clip;
+/// 动画压缩 - 动画数据压缩和优化
+pub mod compression;
 /// 关键帧系统 - 定义动画关键帧和插值模式
 pub mod keyframe;
 /// 并行动画系统 - 并行处理多个动画实体
@@ -82,6 +86,8 @@ pub mod simd_skinning;
 pub mod skeleton;
 /// 皮肤网格 - 支持骨骼蒙皮的网格系统
 pub mod skinned_mesh;
+/// 动画状态机 - 动画状态机和状态转换系统
+pub mod state_machine;
 
 pub use clip::AnimationClip;
 pub use keyframe::{InterpolationMode, Keyframe, KeyframeTrack};
@@ -91,6 +97,19 @@ pub use player::{
 pub use service::AnimationService;
 pub use skeleton::{Bone, BoneTransform, Skeleton, SkeletonPose};
 pub use skinned_mesh::{SkinnedMesh, SkinnedMeshPipeline, SkinnedVertex3D};
+
+// 动画混合树导出
+pub use blending::{AnimationBlendTree, AnimationState, BlendSpace1D, BlendSpace2D, BlendTreeNode};
+
+// 动画状态机导出
+pub use state_machine::{
+    AnimationLayer, AnimationState as AnimationStateEntry, AnimationStateMachine, AvatarMask,
+    HumanoidBones, LayerBlendingMode, Parameter, ParameterOperator, ParameterType, ParameterValue,
+    StateTransition, TransitionCondition,
+};
+
+// 动画压缩导出
+pub use compression::{AnimationCompressor, CompressionConfig, CompressionStats};
 
 // SIMD蒙皮导出
 pub use simd_skinning::{BoneTransforms, SimdSkinningProcessor};
