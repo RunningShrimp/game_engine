@@ -6,6 +6,7 @@ use crate::debug::{
     panels::{ComponentPanel, ConsolePanel, EntityPanel, PerformancePanel, ResourcePanel},
     DebugConfig,
 };
+use crate::tools::asset_importer::AssetImportWizard;
 use bevy_ecs::prelude::*;
 use std::time::Instant;
 
@@ -29,6 +30,10 @@ pub struct DebugUI {
     ui_state: DebugUIState,
     /// 创建时间
     creation_time: Instant,
+    /// 资源导入向导
+    import_wizard: Option<AssetImportWizard>,
+    /// 是否显示导入向导
+    show_import_wizard: bool,
 }
 
 /// 调试UI内部状态
@@ -42,6 +47,8 @@ struct DebugUIState {
     frame_count: u64,
     /// 上次更新时间
     last_update: Instant,
+    /// 是否显示工具菜单
+    show_tools_menu: bool,
 }
 
 impl DebugUI {
@@ -79,8 +86,11 @@ impl DebugUI {
                 frame_time: 0.0,
                 frame_count: 0,
                 last_update: Instant::now(),
+                show_tools_menu: false,
             },
             creation_time: Instant::now(),
+            import_wizard: None,
+            show_import_wizard: false,
         }
     }
 
@@ -130,6 +140,17 @@ impl DebugUI {
             self.resource_panel.show(ctx, world);
         }
 
+        // 显示导入向导
+        if self.show_import_wizard {
+            if let Some(wizard) = &mut self.import_wizard {
+                let result = wizard.show(ctx);
+                if result == crate::tools::asset_importer::WizardResult::Closed {
+                    self.show_import_wizard = false;
+                    self.import_wizard = None;
+                }
+            }
+        }
+
         // 更新帧计数
         self.ui_state.frame_count += 1;
     }
@@ -176,6 +197,17 @@ impl DebugUI {
     /// 获取控制台面板引用
     pub fn console_panel(&mut self) -> &mut ConsolePanel {
         &mut self.console_panel
+    }
+
+    /// 显示资源导入向导
+    pub fn show_import_wizard(&mut self) {
+        self.import_wizard = Some(AssetImportWizard::new());
+        self.show_import_wizard = true;
+    }
+
+    /// 获取导入向导的可变引用
+    pub fn import_wizard_mut(&mut self) -> Option<&mut AssetImportWizard> {
+        self.import_wizard.as_mut()
     }
 
     /// 更新帧时间
@@ -234,6 +266,15 @@ impl DebugUI {
                         self.config.show_resources = true;
                         ui.close_menu();
                     }
+                });
+
+                ui.menu_button("Tools", |ui| {
+                    if ui.button("Import Assets").clicked() {
+                        self.show_import_wizard();
+                        ui.close_menu();
+                    }
+                    ui.separator();
+                    ui.label("More tools coming soon...");
                 });
 
                 ui.separator();

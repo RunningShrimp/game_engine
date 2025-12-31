@@ -18,6 +18,7 @@
 //! editor.render(&mut ui);
 //! ```
 
+#[cfg(feature = "ai-integration")]
 use crate::ai::decision_tree_editor::{
     DecisionNodeData, DecisionNodeType, DecisionTreeEditor, DecisionTreeNode, NodeUpdates,
 };

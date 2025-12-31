@@ -95,6 +95,24 @@ pub mod state_machine;
 /// 效用AI系统 - 基于数值决策的AI系统
 pub mod utility;
 
+/// LLM集成接口 - 统一的AI服务抽象
+pub mod service;
+
+/// OpenAI适配器 - OpenAI API集成
+#[cfg(feature = "ai-openai")]
+pub mod openai;
+
+/// Claude适配器 - Anthropic Claude API集成
+#[cfg(feature = "ai-claude")]
+pub mod claude;
+
+/// 本地模型适配器 - 本地LLM推理
+#[cfg(feature = "ai-local")]
+pub mod local;
+
+/// NPC系统集成 - LLM与NPC系统集成
+pub mod npc;
+
 // 测试模块
 #[cfg(test)]
 mod flocking_tests;
@@ -102,6 +120,8 @@ mod flocking_tests;
 mod navmesh_tests;
 #[cfg(test)]
 mod pathfinding_tests;
+#[cfg(test)]
+mod llm_tests;
 
 pub use navmesh::{
     ColliderGeometry, NavMesh, NavMeshConfig, NavMeshError, NavMeshGenerator, NavPolygon,
@@ -117,6 +137,26 @@ pub use pathfinding::{
     NavigationMesh, PathConnection, PathNode, PathfindingRequest, PathfindingResult,
     PathfindingService,
 };
+
+// 重新导出LLM集成相关类型
+pub use service::{
+    AIService, AIError, Action, ActionType, ContentPrompt, ContentType, GeneratedContent,
+    Message, MoodState, NPCContext, NPCStatus, Personality, PlayerState, Situation, Threat,
+    ThreatType,
+};
+
+// 重新导出NPC系统集成类型
+pub use npc::{HybridMode, IntelligentNPC, NPCConfig, NPCManager, PerformanceStats};
+
+// 条件导出LLM适配器
+#[cfg(feature = "ai-openai")]
+pub use openai::OpenAIAdapter;
+
+#[cfg(feature = "ai-claude")]
+pub use claude::ClaudeAdapter;
+
+#[cfg(feature = "ai-local")]
+pub use local::{LocalLLMAdapter, LocalLLMConfig, LLMRuntime};
 
 use bevy_ecs::prelude::*;
 use glam::Vec3;
@@ -249,13 +289,16 @@ pub enum StateTransition {
 
 // NavigationMesh, NavNode, NavConnection 现在在 pathfinding 模块中定义
 
-/// AI 服务 - 封装 AI 业务逻辑
-pub struct AIService;
+/// AI 服务助手 - 封装传统 AI 业务逻辑
+///
+/// 这是一个遗留的辅助结构，用于传统行为树和状态机操作。
+/// 新代码应使用LLM集成的`AIService` trait。
+pub struct AIServiceHelper;
 
 #[cfg(test)]
 mod tests;
 
-impl AIService {
+impl AIServiceHelper {
     /// 创建行为树
     pub fn create_behavior_tree(root: BehaviorNode) -> BehaviorTree {
         BehaviorTree { root }

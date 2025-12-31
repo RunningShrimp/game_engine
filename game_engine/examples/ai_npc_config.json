@@ -1,0 +1,198 @@
+{
+  "npcs": [
+    {
+      "id": "merchant_01",
+      "name": "Friendly Merchant",
+      "ai_mode": "hybrid",
+      "personality": {
+        "friendliness": 0.9,
+        "formality": 0.3,
+        "humor": 0.5,
+        "bravery": 0.4,
+        "greed": 0.7,
+        "custom_traits": {
+          "bargaining_skill": 0.8,
+          "generosity": 0.6
+        }
+      },
+      "mood": {
+        "happiness": 0.8,
+        "anger": 0.1,
+        "fear": 0.05,
+        "trust": 0.6
+      },
+      "llm_config": {
+        "provider": "openai",
+        "model": "gpt-4",
+        "max_tokens": 150,
+        "temperature": 0.7,
+        "latency_threshold": 2.0
+      },
+      "behavior_config": {
+        "complexity_threshold": 0.6,
+        "min_confidence": 0.5,
+        "adaptive_adjustment_interval": 60
+      }
+    },
+    {
+      "id": "guard_01",
+      "name": "City Guard",
+      "ai_mode": "adaptive",
+      "personality": {
+        "friendliness": 0.4,
+        "formality": 0.8,
+        "humor": 0.2,
+        "bravery": 0.9,
+        "greed": 0.3,
+        "custom_traits": {
+          "duty": 0.95,
+          "suspicion": 0.7
+        }
+      },
+      "mood": {
+        "happiness": 0.6,
+        "anger": 0.2,
+        "fear": 0.1,
+        "trust": 0.4
+      },
+      "llm_config": {
+        "provider": "claude",
+        "model": "claude-3-opus-20240229",
+        "max_tokens": 100,
+        "temperature": 0.5,
+        "latency_threshold": 2.5
+      },
+      "behavior_config": {
+        "complexity_threshold": 0.7,
+        "min_confidence": 0.6,
+        "adaptive_adjustment_interval": 45
+      }
+    },
+    {
+      "id": "villager_01",
+      "name": "Village Elder",
+      "ai_mode": "traditional_only",
+      "personality": {
+        "friendliness": 0.7,
+        "formality": 0.6,
+        "humor": 0.4,
+        "bravery": 0.5,
+        "greed": 0.2,
+        "custom_traits": {
+          "wisdom": 0.9,
+          "patience": 0.8
+        }
+      },
+      "mood": {
+        "happiness": 0.7,
+        "anger": 0.1,
+        "fear": 0.15,
+        "trust": 0.7
+      }
+    },
+    {
+      "id": "enemy_boss",
+      "name": "Dungeon Boss",
+      "ai_mode": "llm_only",
+      "personality": {
+        "friendliness": 0.1,
+        "formality": 0.5,
+        "humor": 0.3,
+        "bravery": 0.95,
+        "greed": 0.8,
+        "custom_traits": {
+          "aggression": 0.9,
+          "cunning": 0.85
+        }
+      },
+      "mood": {
+        "happiness": 0.3,
+        "anger": 0.8,
+        "fear": 0.05,
+        "trust": 0.1
+      },
+      "llm_config": {
+        "provider": "openai",
+        "model": "gpt-4",
+        "max_tokens": 200,
+        "temperature": 0.9,
+        "latency_threshold": 3.0
+      },
+      "behavior_config": {
+        "complexity_threshold": 0.5,
+        "min_confidence": 0.7,
+        "adaptive_adjustment_interval": 30
+      }
+    },
+    {
+      "id": "companion_01",
+      "name": "AI Companion",
+      "ai_mode": "hybrid",
+      "personality": {
+        "friendliness": 0.95,
+        "formality": 0.2,
+        "humor": 0.8,
+        "bravery": 0.7,
+        "greed": 0.1,
+        "custom_traits": {
+          "loyalty": 0.95,
+          "playfulness": 0.7
+        }
+      },
+      "mood": {
+        "happiness": 0.9,
+        "anger": 0.05,
+        "fear": 0.1,
+        "trust": 0.9
+      },
+      "llm_config": {
+        "provider": "local",
+        "model": "llama-2-7b-chat.gguf",
+        "max_tokens": 120,
+        "temperature": 0.8,
+        "latency_threshold": 1.0,
+        "runtime": "llama.cpp",
+        "context_size": 2048,
+        "threads": 4,
+        "gpu_layers": 32
+      },
+      "behavior_config": {
+        "complexity_threshold": 0.4,
+        "min_confidence": 0.5,
+        "adaptive_adjustment_interval": 60
+      }
+    }
+  ],
+  "global_settings": {
+    "default_provider": "openai",
+    "fallback_to_traditional": true,
+    "enable_performance_monitoring": true,
+    "log_llm_calls": true,
+    "cache_llm_responses": true,
+    "max_concurrent_requests": 5
+  },
+  "provider_settings": {
+    "openai": {
+      "api_key_env": "OPENAI_API_KEY",
+      "base_url": "https://api.openai.com/v1/chat/completions",
+      "default_model": "gpt-3.5-turbo",
+      "timeout_seconds": 30,
+      "max_retries": 3
+    },
+    "claude": {
+      "api_key_env": "ANTHROPIC_API_KEY",
+      "base_url": "https://api.anthropic.com/v1/messages",
+      "default_model": "claude-3-sonnet-20240229",
+      "timeout_seconds": 30,
+      "max_retries": 3
+    },
+    "local": {
+      "executable_path": "llama-cli",
+      "model_dir": "/models",
+      "default_model": "llama-2-7b.gguf",
+      "timeout_seconds": 60,
+      "default_threads": 4,
+      "default_gpu_layers": 0
+    }
+  }
+}

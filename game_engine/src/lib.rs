@@ -117,6 +117,7 @@
 
 // Public module re-exports
 // 公开模块重导出
+#[cfg(feature = "ai-integration")]
 pub mod ai;
 pub mod animation;
 pub mod audio;

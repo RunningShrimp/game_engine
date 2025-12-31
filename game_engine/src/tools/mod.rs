@@ -7,6 +7,18 @@ pub mod resource_analysis;
 pub mod ai_assistant;
 pub mod migration;
 
+// DCC工具集成（条件编译）
+#[cfg(feature = "dcc-tools")]
+pub mod dcc;
+
+// 资源导入工具（条件编译）
+#[cfg(feature = "asset-importer")]
+pub mod asset_importer;
+
+// 资源优化管线（条件编译）
+#[cfg(feature = "asset-pipeline")]
+pub mod asset_pipeline;
+
 #[cfg(feature = "cli")]
 pub mod cli;
 
@@ -22,3 +34,30 @@ pub use resource_analysis::{
 
 #[cfg(feature = "lsp")]
 pub use lsp::{EngineAPIRegistry, GameEngineLSP};
+
+// 重新导出资源导入工具（条件编译）
+#[cfg(feature = "asset-importer")]
+pub use asset_importer::{
+    AssetImporter, AssetImportWizard, AssetFormat, AssetValidator,
+    BatchImporter, BatchImportSettings, BatchProgress, BatchReport,
+    CompressionFormat, DetectorError, FileAnalysis, ImportOptions, ImportResult,
+    ImportSettings, PreviewData, ValidationIssue, ValidationResult, WizardResult, WizardStep,
+};
+
+// 重新导出DCC工具（条件编译）
+#[cfg(feature = "dcc-tools")]
+pub use dcc::{
+    DCCToolkit, MeshEditor, DCCMaterialEditor, DCCAnimationEditor, UVEditor, ScriptGenerator,
+    EditMode, TransformTool, VertexID, EdgeID, FaceID,
+    MaterialID, TextureType, AnimationID, KeyframeID, UVID,
+    ScriptLanguage, EditorOperation, GeneratedScript,
+};
+
+// 重新导出Asset Pipeline（条件编译）
+#[cfg(feature = "asset-pipeline")]
+pub use asset_pipeline::{
+    AssetPipeline, AssetMetadata, AssetProcessor, AssetType, OptimizationError,
+    OptimizationResult, PipelineConfig, PipelineReport, Platform, QualityPreset,
+    QualityAnalyzer, QualityReport, MetricStatus, AssetBundler, Bundle, LODGenerator,
+    TextureOptimizer, ShaderOptimizer,
+};

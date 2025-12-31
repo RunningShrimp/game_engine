@@ -107,6 +107,96 @@ pub enum Commands {
     /// game-engine info
     /// ```
     Info {},
+
+    /// Optimize game assets
+    ///
+    /// Automatically optimize game assets including LOD generation, texture compression,
+    /// shader optimization, and asset bundling.
+    ///
+    /// # Examples
+    ///
+    /// ```bash
+    /// game-engine optimize ./assets -o ./assets_optimized
+    /// game-engine optimize ./assets -o ./assets_mobile --platform Mobile --quality High
+    /// ```
+    #[cfg(feature = "asset-pipeline")]
+    Optimize {
+        /// Input assets directory
+        #[arg(short, long)]
+        input: PathBuf,
+
+        /// Output directory
+        #[arg(short, long)]
+        output: PathBuf,
+
+        /// Quality preset (Low, Medium, High, Ultra)
+        #[arg(long)]
+        quality: Option<String>,
+
+        /// Target platform (PC, Mobile, Web, Console)
+        #[arg(long)]
+        platform: Option<String>,
+
+        /// Disable LOD generation
+        #[arg(long, default_value = "false")]
+        no_lod: bool,
+
+        /// Disable texture compression
+        #[arg(long, default_value = "false")]
+        no_compress: bool,
+
+        /// Disable shader optimization
+        #[arg(long, default_value = "false")]
+        no_shader_opt: bool,
+
+        /// Concurrent jobs
+        #[arg(short, long, default_value = "4")]
+        jobs: usize,
+    },
+
+    /// Analyze asset quality
+    ///
+    /// Analyze assets and generate quality reports.
+    ///
+    /// # Examples
+    ///
+    /// ```bash
+    /// game-engine analyze ./assets
+    /// game-engine analyze ./assets -o quality_report.html
+    /// ```
+    Analyze {
+        /// Input assets directory
+        #[arg(short, long)]
+        input: PathBuf,
+
+        /// Output report path
+        #[arg(short, long)]
+        output: Option<PathBuf>,
+    },
+
+    /// Bundle assets
+    ///
+    /// Bundle assets into a single package file.
+    ///
+    /// # Examples
+    ///
+    /// ```bash
+    /// game-engine bundle ./assets_optimized -o game.pak
+    /// game-engine bundle ./assets -o game.vfs --format virtual
+    /// ```
+    Bundle {
+        /// Input directory
+        #[arg(short, long)]
+        input: PathBuf,
+
+        /// Output bundle file
+        #[arg(short, long)]
+        output: PathBuf,
+
+        /// Bundle format (pak, loose, virtual)
+        #[arg(long, default_value = "pak")]
+        format: String,
+    },
 }
 
 /// Template management commands
@@ -156,6 +246,28 @@ impl GameEngineCli {
             }
             Commands::Info {} => {
                 self.cmd_info()?;
+            }
+            Commands::Optimize {
+                input,
+                output,
+                quality,
+                platform,
+                no_lod,
+                no_compress,
+                no_shader_opt,
+                jobs,
+            } => {
+                self.cmd_optimize(input, output, quality, platform, *no_lod, *no_compress, *no_shader_opt, *jobs)?;
+            }
+            Commands::Analyze { input, output } => {
+                self.cmd_analyze(input, output)?;
+            }
+            Commands::Bundle {
+                input,
+                output,
+                format,
+            } => {
+                self.cmd_bundle(input, output, format)?;
             }
         }
 
@@ -369,6 +481,128 @@ dist/"#;
         println!("  game-engine template list --detailed");
         println!("  game-engine new --help");
         println!();
+
+        Ok(())
+    }
+
+    /// Executes the 'optimize' command
+    #[cfg(feature = "asset-pipeline")]
+    fn cmd_optimize(
+        &self,
+        input: &PathBuf,
+        output: &PathBuf,
+        quality: &Option<String>,
+        platform: &Option<String>,
+        no_lod: bool,
+        no_compress: bool,
+        no_shader_opt: bool,
+        jobs: usize,
+    ) -> Result<(), CliError> {
+        use crate::tools::asset_pipeline::{PipelineConfig, Platform, QualityPreset, AssetPipeline};
+        use tokio::runtime::Runtime;
+
+        println!("🎯 Optimizing assets...");
+        println!();
+
+        // 解析质量预设
+        let quality_preset = if let Some(q) = quality {
+            QualityPreset::from_str(q).ok_or_else(|| CliError::InvalidTemplate(q.clone()))?
+        } else {
+            QualityPreset::High
+        };
+
+        // 解析平台
+        let target_platform = match platform.as_deref() {
+            Some("PC") => Platform::PC,
+            Some("Mobile") => Platform::Mobile,
+            Some("Web") => Platform::Web,
+            Some("Console") => Platform::Console,
+            Some(other) => {
+                return Err(CliError::InvalidTemplate(format!("Invalid platform: {}", other)))
+            }
+            None => Platform::PC,
+        };
+
+        // 创建配置
+        let config = PipelineConfig {
+            auto_lod: !no_lod,
+            lod_levels: quality_preset.recommended_lod_levels(),
+            auto_compress: !no_compress,
+            texture_options: Default::default(),
+            auto_optimize_shaders: !no_shader_opt,
+            target_platform,
+            quality_preset,
+            concurrent_jobs: jobs,
+            verbose: self.verbose > 0,
+        };
+
+        // 创建runtime并运行优化
+        let rt = Runtime::new().map_err(|e| CliError::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
+        rt.block_on(async {
+            let pipeline = AssetPipeline::new(config);
+            let report = pipeline.optimize_assets(input, output).await
+                .map_err(|e| CliError::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
+
+            report.print_summary();
+            Ok::<(), CliError>(())
+        })?;
+
+        println!();
+        println!("✅ Optimization complete!");
+        println!("📁 Output: {}", output.display());
+
+        Ok(())
+    }
+
+    /// Executes the 'analyze' command
+    fn cmd_analyze(&self, input: &PathBuf, output: &Option<PathBuf>) -> Result<(), CliError> {
+        use crate::tools::asset_pipeline::QualityAnalyzer;
+
+        println!("🔍 Analyzing assets...");
+        println!();
+
+        let analyzer = QualityAnalyzer::new();
+
+        // 简化实现：显示基本信息
+        println!("Scanning: {}", input.display());
+        println!();
+        println!("Note: Full analysis will be implemented in the next version.");
+        println!("For now, this is a placeholder for the analysis feature.");
+
+        if let Some(output_path) = output {
+            println!();
+            println!("Report will be saved to: {}", output_path.display());
+        }
+
+        Ok(())
+    }
+
+    /// Executes the 'bundle' command
+    fn cmd_bundle(
+        &self,
+        input: &PathBuf,
+        output: &PathBuf,
+        format: &str,
+    ) -> Result<(), CliError> {
+        use crate::tools::asset_pipeline::{AssetBundler, BundleFormat};
+
+        println!("📦 Bundling assets...");
+        println!();
+
+        let bundler = AssetBundler::new();
+        let bundle_format = match format.to_lowercase().as_str() {
+            "pak" => BundleFormat::Pak,
+            "loose" => BundleFormat::Loose,
+            "virtual" => BundleFormat::Virtual,
+            _ => return Err(CliError::InvalidTemplate(format!("Invalid bundle format: {}", format))),
+        };
+
+        println!("Input: {}", input.display());
+        println!("Output: {}", output.display());
+        println!("Format: {:?}", bundle_format);
+        println!();
+        println!("Note: Full bundling will be implemented in the next version.");
+        println!("For now, this is a placeholder for the bundling feature.");
 
         Ok(())
     }
