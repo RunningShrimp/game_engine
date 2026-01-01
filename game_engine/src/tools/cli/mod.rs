@@ -33,6 +33,10 @@ pub mod cli;
 pub mod project_generator;
 #[cfg(feature = "cli")]
 pub mod template;
+#[cfg(feature = "cli")]
+pub mod wizard;
 
 #[cfg(feature = "cli")]
 pub use cli::GameEngineCli;
+#[cfg(feature = "cli")]
+pub use wizard::{ProjectWizard, WizardConfig, WizardError, WizardResult};

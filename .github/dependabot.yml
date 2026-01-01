@@ -1,0 +1,127 @@
+# Dependabot配置文件
+# 自动检测并创建依赖更新PR
+
+version: 2
+updates:
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    reviewers:
+      - "wangbiao"
+    assignees:
+      - "wangbiao"
+
+  # Rust Cargo dependencies
+  - package-ecosystem: "cargo"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "cargo"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "rust"
+    reviewers:
+      - "wangbiao"
+    assignees:
+      - "wangbiao"
+    # 忽略某些依赖的更新
+    ignore:
+      # 主要版本更新可能包含破坏性变更
+      - dependency-name: "wgpu"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "bevy"
+        update-types: ["version-update:semver-major"]
+    # 允许自动合并某些更新
+    allow:
+      - dependency-type: "direct"
+      - dependency-type: "production"
+      - update-type: "semver-patch"
+
+  # Rust Cargo dependencies (game_engine_profiling)
+  - package-ecosystem: "cargo"
+    directory: "/game_engine_profiling"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "cargo"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "rust"
+      - "profiling"
+    reviewers:
+      - "wangbiao"
+    assignees:
+      - "wangbiao"
+
+  # Rust Cargo dependencies (examples)
+  - package-ecosystem: "cargo"
+    directory: "/examples"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "cargo"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "rust"
+      - "examples"
+    reviewers:
+      - "wangbiao"
+    assignees:
+      - "wangbiao"
+
+  # Python dependencies (scripts)
+  - package-ecosystem: "pip"
+    directory: "/scripts"
+    schedule:
+      interval: "monthly"
+    commit-message:
+      prefix: "pip"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "python"
+    reviewers:
+      - "wangbiao"
+    assignees:
+      - "wangbiao"
+
+  # Docker dependencies
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+    commit-message:
+      prefix: "docker"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "docker"
+    reviewers:
+      - "wangbiao"
+    assignees:
+      - "wangbiao"
+
+# 设置PR审查规则
+pull-request-branch-name:
+  separator: "-"
+  prefix: "dep-"
+
+# 配置版本更新策略
+open-pull-requests-limit: 10

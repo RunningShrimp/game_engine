@@ -1,0 +1,285 @@
+{
+  "name": "game-engine",
+  "displayName": "Game Engine Support",
+  "description": "Language Server and Debug Adapter for the Game Engine",
+  "version": "0.1.0",
+  "publisher": "game-engine",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Debuggers"
+  ],
+  "activationEvents": [
+    "onLanguage:lua",
+    "onLanguage:typescript",
+    "onLanguage:javascript",
+    "onLanguage:python",
+    "onLanguage:rust",
+    "onCommand:game-engine.startLSP",
+    "onDebugInitialConfigurations",
+    "onDebugResolve:game-engine"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "lua",
+        "aliases": ["Lua", "lua"],
+        "extensions": [".lua"],
+        "configuration": "./language-configuration.json"
+      },
+      {
+        "id": "typescript",
+        "aliases": ["TypeScript", "ts"],
+        "extensions": [".ts", ".tsx"],
+        "configuration": "./language-configuration.json"
+      },
+      {
+        "id": "javascript",
+        "aliases": ["JavaScript", "js"],
+        "extensions": [".js", ".jsx"],
+        "configuration": "./language-configuration.json"
+      },
+      {
+        "id": "python",
+        "aliases": ["Python", "py"],
+        "extensions": [".py"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [],
+    "commands": [
+      {
+        "command": "game-engine.startLSP",
+        "title": "Start Game Engine LSP Server",
+        "category": "Game Engine"
+      },
+      {
+        "command": "game-engine.stopLSP",
+        "title": "Stop Game Engine LSP Server",
+        "category": "Game Engine"
+      },
+      {
+        "command": "game-engine.restartLSP",
+        "title": "Restart Game Engine LSP Server",
+        "category": "Game Engine"
+      }
+    ],
+    "configuration": {
+      "title": "Game Engine",
+      "properties": {
+        "game-engine.lsp.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable Game Engine Language Server"
+        },
+        "game-engine.lsp.path": {
+          "type": "string",
+          "default": "game-engine-lsp",
+          "description": "Path to the Game Engine LSP server binary"
+        },
+        "game-engine.lsp.args": {
+          "type": "array",
+          "default": [],
+          "description": "Additional arguments to pass to the LSP server"
+        },
+        "game-engine.lsp.trace.server": {
+          "type": "string",
+          "enum": ["off", "messages", "verbose"],
+          "default": "off",
+          "description": "Traces the communication between VS Code and the Game Engine LSP server"
+        },
+        "game-engine.debug.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable Game Engine Debug Adapter"
+        },
+        "game-engine.debug.port": {
+          "type": "number",
+          "default": 4711,
+          "description": "Port for the DAP server"
+        }
+      }
+    },
+    "breakpoints": [
+      {
+        "language": "lua"
+      },
+      {
+        "language": "typescript"
+      },
+      {
+        "language": "javascript"
+      },
+      {
+        "language": "python"
+      }
+    ],
+    "debuggers": [
+      {
+        "type": "game-engine",
+        "label": "Game Engine Debugger",
+        "languages": ["lua", "typescript", "javascript", "python"],
+        "configurationAttributes": {
+          "launch": {
+            "properties": {
+              "script": {
+                "type": "string",
+                "description": "The script to debug",
+                "default": "${workspaceFolder}/main.lua"
+              },
+              "scriptPath": {
+                "type": "string",
+                "description": "Absolute path to the script",
+                "default": "${workspaceFolder}/main.lua"
+              },
+              "scriptLanguage": {
+                "type": "string",
+                "enum": ["lua", "typescript", "javascript", "python"],
+                "description": "Script language",
+                "default": "lua"
+              },
+              "cwd": {
+                "type": "string",
+                "description": "Working directory",
+                "default": "${workspaceFolder}"
+              },
+              "stopOnEntry": {
+                "type": "boolean",
+                "description": "Automatically stop after launch",
+                "default": false
+              },
+              "trace": {
+                "type": "boolean",
+                "description": "Enable logging of the Debug Adapter Protocol",
+                "default": false
+              },
+              "dapPort": {
+                "type": "number",
+                "description": "DAP server port",
+                "default": 4711
+              }
+          },
+          "required": ["scriptPath"]
+        },
+        "attach": {
+          "properties": {
+            "port": {
+              "type": "number",
+              "description": "DAP server port",
+              "default": 4711
+            },
+            "scriptLanguage": {
+              "type": "string",
+              "enum": ["lua", "typescript", "javascript", "python"],
+              "description": "Script language",
+              "default": "lua"
+            },
+            "trace": {
+              "type": "boolean",
+              "description": "Enable logging of the Debug Adapter Protocol",
+              "default": false
+            }
+          },
+          "required": ["port"]
+        }
+      },
+        "initialConfigurations": [
+          {
+            "type": "game-engine",
+            "request": "launch",
+            "name": "Debug Lua Script",
+            "scriptPath": "${workspaceFolder}/scripts/main.lua",
+            "scriptLanguage": "lua",
+            "cwd": "${workspaceFolder}",
+            "stopOnEntry": false
+          },
+          {
+            "type": "game-engine",
+            "request": "launch",
+            "name": "Debug TypeScript Script",
+            "scriptPath": "${workspaceFolder}/src/main.ts",
+            "scriptLanguage": "typescript",
+            "cwd": "${workspaceFolder}",
+            "stopOnEntry": false
+          },
+          {
+            "type": "game-engine",
+            "request": "launch",
+            "name": "Debug Python Script",
+            "scriptPath": "${workspaceFolder}/scripts/main.py",
+            "scriptLanguage": "python",
+            "cwd": "${workspaceFolder}",
+            "stopOnEntry": false
+          },
+          {
+            "type": "game-engine",
+            "request": "attach",
+            "name": "Attach to Game Engine Debugger",
+            "port": 4711,
+            "scriptLanguage": "lua"
+          }
+        ],
+        "configurationSnippets": [
+          {
+            "label": "Game Engine: Launch Lua Script",
+            "description": "Debug a Lua script using the Game Engine",
+            "body": {
+              "type": "game-engine",
+              "request": "launch",
+              "name": "Debug Lua Script",
+              "scriptPath": "^\"\\${workspaceFolder}/scripts/main.lua\"",
+              "scriptLanguage": "lua",
+              "cwd": "^\"\\${workspaceFolder}",
+              "stopOnEntry": false
+            }
+          },
+          {
+            "label": "Game Engine: Launch TypeScript Script",
+            "description": "Debug a TypeScript script using the Game Engine",
+            "body": {
+              "type": "game-engine",
+              "request": "launch",
+              "name": "Debug TypeScript Script",
+              "scriptPath": "^\"\\${workspaceFolder}/src/main.ts\"",
+              "scriptLanguage": "typescript",
+              "cwd": "^\"\\${workspaceFolder}",
+              "stopOnEntry": false
+            }
+          },
+          {
+            "label": "Game Engine: Launch Python Script",
+            "description": "Debug a Python script using the Game Engine",
+            "body": {
+              "type": "game-engine",
+              "request": "launch",
+              "name": "Debug Python Script",
+              "scriptPath": "^\"\\${workspaceFolder}/scripts/main.py",
+              "scriptLanguage": "python",
+              "cwd": "^\"\\${workspaceFolder}",
+              "stopOnEntry": false
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.0",
+    "vscode-debugadapter": "^1.52.0"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.80.0",
+    "typescript": "^5.2.0"
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  }
+}

@@ -4,6 +4,7 @@
 
 use bevy_ecs::prelude::*;
 use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 
 /// ECS World fixture
 pub struct WorldFixture {
@@ -47,7 +48,7 @@ pub struct TimeTracker {
     pub elapsed: std::time::Duration,
 }
 
-/// 名称组件
+/// 名称组件（测试专用）
 #[derive(Debug, Component)]
 pub struct Name {
     pub value: String,
@@ -56,24 +57,6 @@ pub struct Name {
 impl Name {
     pub fn new(value: String) -> Self {
         Self { value }
-    }
-}
-
-/// 变换组件
-#[derive(Debug, Component, Default)]
-pub struct Transform {
-    pub position: (f32, f32, f32),
-    pub rotation: (f32, f32, f32, f32),
-    pub scale: (f32, f32, f32),
-}
-
-impl Default for Transform {
-    fn default() -> Self {
-        Self {
-            position: (0.0, 0.0, 0.0),
-            rotation: (0.0, 0.0, 0.0, 1.0),
-            scale: (1.0, 1.0, 1.0),
-        }
     }
 }
 
@@ -252,7 +235,6 @@ mod tests {
     use super::*;
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_world_fixture() {
         let mut fixture = WorldFixture::new();
         let entity = fixture.spawn_test_entity();
@@ -268,7 +250,6 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_scene_fixture() {
         let fixture = SceneFixture::new()
             .expect("SceneFixture::new should not fail in test context");
@@ -276,7 +257,6 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_performance_fixture() {
         let mut fixture = PerformanceFixture::new();
 

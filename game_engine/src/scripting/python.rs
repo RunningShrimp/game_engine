@@ -408,7 +408,18 @@ impl Engine {
     }
 
     fn spawn_entity(&self) -> u64 {
-        // TODO: 调用引擎API
+        // 生成实体ID
+        // 注意：当前使用AtomicU64生成伪实体ID，实际实现需要访问ECS World
+        //
+        // 实际实现应该:
+        // 1. 获取ECS World引用（通过全局状态或依赖注入）
+        // 2. 调用 world.spawn_empty() 或 world.spawn((...components))
+        // 3. 返回 entity.to_bits() 作为 u64
+        //
+        // 示例:
+        // let world = get_world_from_context(); // 需要实现
+        // let entity = world.spawn_empty();
+        // entity.to_bits()
         use std::sync::atomic::{AtomicU64, Ordering};
         static NEXT_ID: AtomicU64 = AtomicU64::new(1);
         NEXT_ID.fetch_add(1, Ordering::Relaxed)

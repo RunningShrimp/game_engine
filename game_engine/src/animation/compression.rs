@@ -227,20 +227,23 @@ impl AnimationCompressor {
         let keyframes = &track.keyframes;
 
         // 保留第一个关键帧
-        reduced.add_keyframe(keyframes[0]);
+        reduced.add_keyframe(keyframes[0].time, keyframes[0].value.clone());
 
         let mut last_kept = 0;
         for i in 1..keyframes.len() - 1 {
             // 检查是否可以跳过这个关键帧
             let dist = distance_fn(&keyframes[last_kept], &keyframes[i]);
             if dist > tolerance {
-                reduced.add_keyframe(keyframes[i]);
+                reduced.add_keyframe(keyframes[i].time, keyframes[i].value.clone());
                 last_kept = i;
             }
         }
 
         // 保留最后一个关键帧
-        reduced.add_keyframe(keyframes[keyframes.len() - 1]);
+        reduced.add_keyframe(
+            keyframes[keyframes.len() - 1].time,
+            keyframes[keyframes.len() - 1].value.clone(),
+        );
 
         reduced
     }
@@ -256,19 +259,19 @@ impl AnimationCompressor {
         let mut quantized = clip.clone();
 
         // 量化位置
-        for (_entity_id, track) in clip.position_tracks.iter() {
+        for (entity_id, track) in clip.position_tracks.iter() {
             let quantized_track = self.quantize_track(track, self.config.position_bits);
             quantized.position_tracks.insert(*entity_id, quantized_track);
         }
 
         // 量化旋转
-        for (_entity_id, track) in clip.rotation_tracks.iter() {
+        for (entity_id, track) in clip.rotation_tracks.iter() {
             let quantized_track = self.quantize_track(track, self.config.rotation_bits);
             quantized.rotation_tracks.insert(*entity_id, quantized_track);
         }
 
         // 量化缩放
-        for (_entity_id, track) in clip.scale_tracks.iter() {
+        for (entity_id, track) in clip.scale_tracks.iter() {
             let quantized_track = self.quantize_track(track, self.config.scale_bits);
             quantized.scale_tracks.insert(*entity_id, quantized_track);
         }

@@ -5,23 +5,50 @@
 use crate::impl_default;
 /// 脚本API模块
 pub mod api;
+/// 音频系统脚本API模块
+pub mod audio_api;
+/// C#支持模块
+#[cfg(feature = "csharp")]
+pub mod csharp;
+/// C#生命周期钩子模块
+#[cfg(feature = "csharp")]
+pub mod csharp_lifecycle;
 /// ECS脚本绑定模块
 pub mod ecs_bindings;
 /// 脚本引擎模块
 pub mod engine;
+/// 实体API模块
+pub mod entity_api;
 /// 扩展绑定模块
 pub mod extended_bindings;
+/// 跨语言FFI层
+pub mod ffi;
 /// 图形UI绑定模块
 pub mod graphics_ui_bindings;
+/// 输入事件分发模块
+pub mod input_dispatcher;
+/// JavaScript生命周期钩子模块
+pub mod javascript_lifecycle;
+/// 生命周期钩子系统
+pub mod lifecycle;
+/// Lua生命周期钩子模块
+pub mod lua_lifecycle;
 /// Lua支持模块
 pub mod lua_support;
 /// 网络API绑定模块
 pub mod network_api;
+/// 物理系统脚本API模块
+pub mod physics_api;
 /// 物理音频绑定模块
 pub mod physics_audio_bindings;
 /// Python支持模块
 #[cfg(feature = "pyo3")]
 pub mod python;
+/// Python生命周期钩子模块
+#[cfg(feature = "pyo3")]
+pub mod python_lifecycle;
+/// 资源管理脚本API模块
+pub mod resource_api;
 /// Rust脚本模块
 pub mod rust_scripting;
 /// 脚本系统模块
@@ -31,6 +58,9 @@ pub mod thread_safe;
 /// TypeScript支持模块
 #[cfg(feature = "typescript")]
 pub mod typescript;
+/// TypeScript生命周期钩子模块
+#[cfg(feature = "typescript")]
+pub mod typescript_lifecycle;
 
 #[cfg(test)]
 mod lua_tests;
@@ -38,18 +68,34 @@ mod lua_tests;
 #[cfg(test)]
 mod compatibility_tests;
 
+pub use audio_api::AudioScriptApi;
 pub use engine::*;
+pub use entity_api::{EntityApi, EntityQueryBuilder, EntityTemplate, TemplateComponent};
+pub use javascript_lifecycle::{JavaScriptLifecycleHooks, JavaScriptLifecycleHooksFactory};
+pub use lifecycle::{LifecycleHooks, LifecycleHooksComponent, LifecyclePhase, LifecycleScheduler};
+#[cfg(feature = "mlua")]
+pub use lua_lifecycle::{LuaLifecycleHooks, LuaLifecycleHooksFactory};
 pub use lua_support::{LuaContext, LuaEngine, LuaValue};
 pub use network_api::{NetworkApi, NetworkScriptContext};
+pub use physics_api::PhysicsScriptApi;
 pub use rust_scripting::{RustScriptContext, RustScriptContextAdapter, RustScriptEngine};
 pub use system::{JavaScriptContext, PythonContext};
 pub use system::{ScriptContext, ScriptLanguage, ScriptResult, ScriptSystem, ScriptValue};
 
 #[cfg(feature = "typescript")]
 pub use typescript::{TypeScriptContext, TypeScriptRuntime};
+#[cfg(feature = "typescript")]
+pub use typescript_lifecycle::{TypeScriptLifecycleHooks, TypeScriptLifecycleHooksFactory};
 
 #[cfg(feature = "pyo3")]
 pub use python::{PythonContextImpl, PythonRuntime};
+#[cfg(feature = "pyo3")]
+pub use python_lifecycle::{PythonLifecycleHooks, PythonLifecycleHooksFactory};
+
+#[cfg(feature = "csharp")]
+pub use csharp::{CSharpConfig, CSharpContext, CSharpRuntime};
+#[cfg(feature = "csharp")]
+pub use csharp_lifecycle::{CSharpLifecycleHooks, CSharpLifecycleHooksFactory};
 
 use bevy_ecs::prelude::*;
 
@@ -66,6 +112,8 @@ pub struct ScriptingConfig {
     pub enable_typescript: bool,
     /// 是否启用Python脚本
     pub enable_python: bool,
+    /// 是否启用C#脚本
+    pub enable_csharp: bool,
     /// 脚本热重载
     pub hot_reload: bool,
     /// 脚本执行超时 (毫秒)
@@ -78,6 +126,7 @@ impl_default!(ScriptingConfig {
     enable_javascript: false,
     enable_typescript: false,
     enable_python: false,
+    enable_csharp: true,
     hot_reload: true,
     execution_timeout_ms: 5000,
 });
@@ -91,16 +140,25 @@ pub struct ScriptingResource {
     pub lua_engine: Option<LuaEngine>,
     /// Rust脚本引擎
     pub rust_engine: Option<RustScriptEngine>,
+    /// C#运行时
+    #[cfg(feature = "csharp")]
+    pub csharp_runtime: Option<CSharpRuntime>,
     /// 脚本系统配置
     pub config: ScriptingConfig,
 }
 
-impl_default!(ScriptingResource {
-    system: ScriptSystem::new(),
-    lua_engine: None,
-    rust_engine: None,
-    config: ScriptingConfig::default(),
-});
+impl Default for ScriptingResource {
+    fn default() -> Self {
+        Self {
+            system: ScriptSystem::new(),
+            lua_engine: None,
+            rust_engine: None,
+            #[cfg(feature = "csharp")]
+            csharp_runtime: None,
+            config: ScriptingConfig::default(),
+        }
+    }
+}
 
 /// 脚本组件 - 附加到需要脚本行为的实体
 #[derive(Component, Debug, Clone)]
@@ -234,7 +292,34 @@ fn execute_script(
             // 结果处理已由execute_script内部处理
         }
         ScriptLanguage::CSharp => {
-            return Err("C# script support not implemented".to_string());
+            #[cfg(feature = "csharp")]
+            {
+                if let Some(ref runtime) = scripting.csharp_runtime {
+                    // 创建上下文并执行
+                    let mut ctx = runtime.create_context();
+                    // 设置实体上下文
+                    let _ = ctx.set_global(
+                        "current_entity",
+                        ScriptValue::Number(entity.to_bits() as f64),
+                    );
+                    // 执行脚本
+                    let result = ctx.execute(&script.script_name, Some(&script.script_source));
+                    match result {
+                        ScriptResult::Error(e) => {
+                            return Err(format!("C# script execution error: {}", e));
+                        }
+                        _ => {}
+                    }
+                } else {
+                    return Err("C# runtime not available".to_string());
+                }
+            }
+            #[cfg(not(feature = "csharp"))]
+            {
+                return Err(
+                    "C# script support not enabled. Enable with 'csharp' feature.".to_string(),
+                );
+            }
         }
     }
 
@@ -243,12 +328,8 @@ fn execute_script(
 
 /// 初始化脚本系统
 pub fn setup_scripting(world: &mut World, config: ScriptingConfig) {
-    let mut resource = ScriptingResource {
-        system: ScriptSystem::new(),
-        lua_engine: None,
-        rust_engine: None,
-        config: config.clone(),
-    };
+    let mut resource = ScriptingResource::default();
+    resource.config = config.clone();
 
     // 初始化Lua引擎
     if config.enable_lua {
@@ -306,7 +387,22 @@ pub fn setup_scripting(world: &mut World, config: ScriptingConfig) {
             .register_context(ScriptLanguage::Python, Box::new(PythonContext::new()));
     }
 
+    // 初始化C#运行时
+    #[cfg(feature = "csharp")]
+    if config.enable_csharp {
+        let csharp_runtime = CSharpRuntime::new();
+        resource.csharp_runtime = Some(csharp_runtime);
+
+        // 注册C#上下文到通用脚本系统
+        resource
+            .system
+            .register_context(ScriptLanguage::CSharp, Box::new(CSharpContext::new()));
+    }
+
     world.insert_resource(resource);
+
+    // 设置生命周期系统
+    lifecycle::setup_lifecycle_systems(world);
 }
 
 /// 便捷函数：创建Lua脚本组件
@@ -324,6 +420,18 @@ pub fn create_lua_script(script_name: &str, script_source: &str) -> ScriptCompon
 pub fn create_rust_script(script_name: &str, script_source: &str) -> ScriptComponent {
     ScriptComponent {
         language: ScriptLanguage::Rust,
+        script_name: script_name.to_string(),
+        script_source: script_source.to_string(),
+        enabled: true,
+        execution_frequency: ScriptExecutionFrequency::EveryFrame,
+    }
+}
+
+/// 便捷函数：创建C#脚本组件
+#[cfg(feature = "csharp")]
+pub fn create_csharp_script(script_name: &str, script_source: &str) -> ScriptComponent {
+    ScriptComponent {
+        language: ScriptLanguage::CSharp,
         script_name: script_name.to_string(),
         script_source: script_source.to_string(),
         enabled: true,

@@ -513,13 +513,6 @@ pub enum WasmDeployError {
     DeploymentError(String),
 }
 
-// 导出主要类型
-pub use {
-    BuildPhase, BuildStatus, CIPipelineConfig, CIPipelineIntegration, CIPlatform,
-    ChunkLoadStrategy, ChunkPriority, CodeChunk, CodeChunkManifest, CodeChunks, DeploymentResult,
-    DeploymentTarget, WasmBundle, WasmDeployConfig, WasmDeployTool, WasmOptLevel,
-};
-
 /// CI/CD集成
 pub struct CIPipelineIntegration {
     /// 配置

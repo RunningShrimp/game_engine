@@ -4,6 +4,7 @@
 
 use crate::tools::cli::project_generator::{GeneratorError, ProjectGenerator};
 use crate::tools::cli::template::{ProjectTemplate, TemplateRegistry};
+use crate::tools::cli::wizard::{ProjectWizard, WizardError};
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
@@ -330,10 +331,27 @@ impl GameEngineCli {
 
         let generator = ProjectGenerator::new();
 
-        let template = if interactive {
-            generator.generate_interactive(name, output)?;
+        if interactive {
+            // Use the enhanced wizard for interactive mode
+            let wizard = ProjectWizard::new();
+            let config = wizard.run()?;
+
+            let project_path = wizard.generate_project(&config)?;
+
+            println!();
+            println!("✨ Project created successfully!");
+            println!();
+            println!("📁 Location: {}", project_path.display());
+            println!();
+            println!("🚀 Next steps:");
+            println!("   cd {}", config.name);
+            println!("   cargo run");
+            println!();
+
             return Ok(());
-        } else {
+        }
+
+        let template = {
             match template {
                 Some(t) => ProjectTemplate::from_name(t)
                     .ok_or_else(|| CliError::InvalidTemplate(t.clone()))?,
@@ -1054,7 +1072,10 @@ set_default("game")
 #[derive(Debug, thiserror::Error)]
 pub enum CliError {
     #[error("Generator error: {0}")]
-    GeneratorError(#[from] GeneratorError),
+    Generator(#[from] GeneratorError),
+
+    #[error("Wizard error: {0}")]
+    Wizard(#[from] WizardError),
 
     #[error("Invalid template: {0}")]
     InvalidTemplate(String),
@@ -1064,6 +1085,12 @@ pub enum CliError {
 
     #[error("Project already initialized")]
     AlreadyInitialized,
+
+    #[error("User cancelled operation")]
+    UserCancelled,
+
+    #[error("Invalid input: {0}")]
+    InvalidInput(String),
 
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),

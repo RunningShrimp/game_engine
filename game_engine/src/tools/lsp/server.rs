@@ -2,10 +2,14 @@
 //!
 //! Main LSP server implementation using tower-lsp.
 
+use super::code_actions::CodeActionsProvider;
 use super::completion::{CompletionContext, CompletionProvider};
 use super::diagnostics::DiagnosticProvider;
+use super::documents::{DocumentCache, SymbolIndex};
+use super::formatting::CodeFormatter;
 use super::hover::HoverProvider;
 use super::registry::EngineAPIRegistry;
+use super::symbols::{DocumentSymbolsProvider, WorkspaceSymbolsProvider};
 use tower_lsp::jsonrpc::Result;
 use tower_lsp::lsp_types::*;
 use tower_lsp::{Client, LanguageServer};
@@ -28,6 +32,24 @@ pub struct GameEngineLSP {
 
     /// Diagnostic provider
     diagnostic_provider: DiagnosticProvider,
+
+    /// Document cache for tracking open documents
+    document_cache: DocumentCache,
+
+    /// Symbol index for go-to-definition
+    symbol_index: SymbolIndex,
+
+    /// Document symbols provider
+    document_symbols_provider: DocumentSymbolsProvider,
+
+    /// Workspace symbols provider
+    workspace_symbols_provider: WorkspaceSymbolsProvider,
+
+    /// Code actions provider
+    code_actions_provider: CodeActionsProvider,
+
+    /// Code formatter
+    code_formatter: CodeFormatter,
 }
 
 impl GameEngineLSP {
@@ -37,6 +59,12 @@ impl GameEngineLSP {
         let completion_provider = CompletionProvider::new(registry.clone());
         let hover_provider = HoverProvider::new(registry.clone());
         let diagnostic_provider = DiagnosticProvider::new(registry.clone());
+        let document_cache = DocumentCache::new(100, std::time::Duration::from_secs(300));
+        let symbol_index = SymbolIndex::new();
+        let document_symbols_provider = DocumentSymbolsProvider::new(symbol_index.clone());
+        let workspace_symbols_provider = WorkspaceSymbolsProvider::new(symbol_index.clone());
+        let code_actions_provider = CodeActionsProvider::new(registry.clone());
+        let code_formatter = CodeFormatter::new();
 
         Self {
             client,
@@ -44,6 +72,12 @@ impl GameEngineLSP {
             completion_provider,
             hover_provider,
             diagnostic_provider,
+            document_cache,
+            symbol_index,
+            document_symbols_provider,
+            workspace_symbols_provider,
+            code_actions_provider,
+            code_formatter,
         }
     }
 
@@ -122,6 +156,11 @@ impl LanguageServer for GameEngineLSP {
             }),
             hover_provider: Some(HoverProviderCapability::Simple(true)),
             definition_provider: Some(OneOf::Left(true)),
+            document_symbol_provider: Some(OneOf::Left(true)),
+            workspace_symbol_provider: Some(OneOf::Left(true)),
+            code_action_provider: Some(CodeActionProviderCapability::Simple(true)),
+            document_formatting_provider: Some(OneOf::Left(true)),
+            document_range_formatting_provider: Some(OneOf::Left(true)),
             // Note: diagnostic_provider is not available in tower-lsp 0.20
             // We use client.publish_diagnostics in did_open/did_change instead
             ..Default::default()
@@ -157,6 +196,10 @@ impl LanguageServer for GameEngineLSP {
                 ),
             )
             .await;
+
+        // Index engine API symbols for go-to-definition
+        self.symbol_index.index_engine_api(&self.registry).await;
+        self.client.log_message(MessageType::INFO, "Engine API symbols indexed").await;
     }
 
     async fn shutdown(&self) -> Result<()> {
@@ -167,22 +210,34 @@ impl LanguageServer for GameEngineLSP {
     }
 
     async fn did_open(&self, params: DidOpenTextDocumentParams) {
+        let uri = params.text_document.uri.clone();
+        let text = params.text_document.text.clone();
+        let version = params.text_document.version;
+        let language_id = params.text_document.language_id.clone();
+
         self.client
-            .log_message(
-                MessageType::INFO,
-                format!("File opened: {}", params.text_document.uri),
-            )
+            .log_message(MessageType::INFO, format!("File opened: {}", uri))
             .await;
 
-        let uri = params.text_document.uri;
-        let text = params.text_document.text;
-        let version = params.text_document.version;
+        // Cache the document
+        use super::documents::DocumentCacheEntry;
+        let entry = DocumentCacheEntry {
+            text: text.clone(),
+            version,
+            language_id: language_id.clone(),
+            modified: std::time::Instant::now(),
+        };
+        self.document_cache.put(uri.to_string(), entry).await;
 
+        // Index symbols in the document
+        self.symbol_index.index_document(&uri.to_string(), &text, &language_id).await;
+
+        // Publish diagnostics
         self.publish_diagnostics(uri, version, &text).await;
     }
 
     async fn did_change(&self, params: DidChangeTextDocumentParams) {
-        let uri = params.text_document.uri;
+        let uri = params.text_document.uri.clone();
         let version = params.text_document.version;
 
         // Get full text from changes
@@ -194,22 +249,43 @@ impl LanguageServer for GameEngineLSP {
             .next();
 
         if let Some(text) = text {
+            // Get language_id from cache before updating
+            let language_id = if let Some(entry) = self.document_cache.get(&uri.to_string()).await {
+                entry.language_id.clone()
+            } else {
+                return;
+            };
+
+            // Update the cached document
+            use super::documents::DocumentCacheEntry;
+            let entry = DocumentCacheEntry {
+                text: text.clone(),
+                version,
+                language_id: language_id.clone(),
+                modified: std::time::Instant::now(),
+            };
+            self.document_cache.put(uri.to_string(), entry).await;
+
+            // Re-index symbols in the document
+            self.symbol_index.index_document(&uri.to_string(), &text, &language_id).await;
+
+            // Publish diagnostics
             self.publish_diagnostics(uri, version, &text).await;
         }
     }
 
     async fn did_close(&self, params: DidCloseTextDocumentParams) {
+        let uri = params.text_document.uri.clone();
+
         self.client
-            .log_message(
-                MessageType::INFO,
-                format!("File closed: {}", params.text_document.uri),
-            )
+            .log_message(MessageType::INFO, format!("File closed: {}", uri))
             .await;
 
+        // Remove from cache
+        self.document_cache.remove(&uri.to_string()).await;
+
         // Clear diagnostics
-        self.client
-            .publish_diagnostics(params.text_document.uri, Vec::new(), None)
-            .await;
+        self.client.publish_diagnostics(uri, Vec::new(), None).await;
     }
 
     async fn completion(&self, params: CompletionParams) -> Result<Option<CompletionResponse>> {
@@ -268,10 +344,107 @@ impl LanguageServer for GameEngineLSP {
         params: GotoDefinitionParams,
     ) -> Result<Option<GotoDefinitionResponse>> {
         let text_document_position = params.text_document_position_params;
+        let uri = text_document_position.text_document.uri;
 
-        // For now, return None as we don't have actual source code locations
-        // In a full implementation, this would return locations to definitions
-        Ok(None)
+        // Get document text from cache
+        let text = match self.get_document_text(&uri).await {
+            Some(text) => text,
+            None => return Ok(None),
+        };
+
+        // Extract the word at the cursor position
+        let word = match Self::extract_word_at_position(&text, text_document_position.position) {
+            Some(word) => word,
+            None => return Ok(None),
+        };
+
+        // Find symbol definitions
+        let locations = self.symbol_index.find_symbol(&word).await;
+
+        if locations.is_empty() {
+            Ok(None)
+        } else {
+            // Convert symbol locations to LSP locations
+            let lsp_locations: Vec<Location> =
+                locations.iter().map(|loc| loc.to_lsp_location()).collect();
+
+            Ok(Some(GotoDefinitionResponse::Array(lsp_locations)))
+        }
+    }
+
+    async fn document_symbol(
+        &self,
+        params: DocumentSymbolParams,
+    ) -> Result<Option<DocumentSymbolResponse>> {
+        let uri = params.text_document.uri.to_string();
+        let symbols = self.document_symbols_provider.get_document_symbols(&uri).await;
+
+        if symbols.is_empty() {
+            Ok(None)
+        } else {
+            Ok(Some(DocumentSymbolResponse::Nested(symbols)))
+        }
+    }
+
+    // Note: workspace_symbol is not in tower-lsp 0.20 LanguageServer trait
+    // This would need to be implemented as a custom request handler
+    // For now, we'll skip it and focus on other features
+
+    async fn code_action(&self, params: CodeActionParams) -> Result<Option<CodeActionResponse>> {
+        let uri = params.text_document.uri;
+        let range = params.range;
+        let context = params.context;
+
+        let actions = self.code_actions_provider.get_code_actions(&uri, &range, &context).await;
+
+        if actions.is_empty() {
+            Ok(None)
+        } else {
+            Ok(Some(CodeActionResponse::Array(actions)))
+        }
+    }
+
+    async fn formatting(&self, params: DocumentFormattingParams) -> Result<Option<Vec<TextEdit>>> {
+        let uri = params.text_document.uri;
+        let options = params.options;
+
+        let text = match self.get_document_text(&uri).await {
+            Some(text) => text,
+            None => return Ok(None),
+        };
+
+        let formatted = self.code_formatter.format(&text, &options);
+
+        Ok(Some(vec![TextEdit {
+            range: Range {
+                start: Position {
+                    line: 0,
+                    character: 0,
+                },
+                end: Position {
+                    line: text.lines().count() as u32,
+                    character: 0,
+                },
+            },
+            new_text: formatted,
+        }]))
+    }
+
+    async fn range_formatting(
+        &self,
+        params: DocumentRangeFormattingParams,
+    ) -> Result<Option<Vec<TextEdit>>> {
+        let uri = params.text_document.uri;
+        let range = params.range;
+        let options = params.options;
+
+        let text = match self.get_document_text(&uri).await {
+            Some(text) => text,
+            None => return Ok(None),
+        };
+
+        let edits = self.code_formatter.format_range(&text, &range, &options);
+        Ok(Some(edits))
     }
 
     // Note: diagnostics method removed due to conflict with LanguageServer trait
@@ -279,18 +452,22 @@ impl LanguageServer for GameEngineLSP {
 }
 
 impl GameEngineLSP {
-    /// Get current line from document (simplified implementation)
-    async fn get_current_line(&self, _uri: &Url, _position: Position) -> Option<String> {
-        // In a real implementation, this would retrieve the cached document content
-        // For now, return empty string
-        None
+    /// Get current line from document
+    async fn get_current_line(&self, uri: &Url, position: Position) -> Option<String> {
+        if let Some(entry) = self.document_cache.get(uri.as_str()).await {
+            Self::get_line_at_position(&entry.text, position)
+        } else {
+            None
+        }
     }
 
-    /// Get full document text (simplified implementation)
-    async fn get_document_text(&self, _uri: &Url) -> Option<String> {
-        // In a real implementation, this would retrieve the cached document content
-        // For now, return None
-        None
+    /// Get full document text
+    async fn get_document_text(&self, uri: &Url) -> Option<String> {
+        if let Some(entry) = self.document_cache.get(uri.as_str()).await {
+            Some(entry.text)
+        } else {
+            None
+        }
     }
 }
 

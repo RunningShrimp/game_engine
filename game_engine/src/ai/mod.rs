@@ -74,6 +74,8 @@ pub mod astar_search;
 pub mod behavior_tree;
 /// 行为树JSON序列化 - 用于从JSON加载/保存行为树
 pub mod behavior_tree_serialization;
+/// AI组件系统 - 行为树节点、黑板等组件
+pub mod components;
 /// 决策树编辑器 - 用于编辑决策树的可视化工具
 pub mod decision_tree_editor;
 /// 群集系统 - 用于群集行为的寻路和避障
@@ -112,6 +114,9 @@ pub mod local;
 
 /// NPC系统集成 - LLM与NPC系统集成
 pub mod npc;
+
+/// AI行为预设库 - 预定义的NPC行为树和AI组件
+pub mod presets;
 
 /// LLM缓存系统 - 响应缓存和成本优化
 pub mod llm_cache;

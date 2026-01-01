@@ -1122,7 +1122,7 @@ pub struct ContextMenu {
 }
 
 /// 上下文菜单项
-#[derive(Debug, Clone, Component)]
+#[derive(Clone, Component)]
 pub struct ContextMenuItem {
     /// 标签
     pub label: String,
@@ -1132,6 +1132,17 @@ pub struct ContextMenuItem {
     pub shortcut: Option<String>,
     /// 回调
     pub callback: Option<ClickCallback>,
+}
+
+impl std::fmt::Debug for ContextMenuItem {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ContextMenuItem")
+            .field("label", &self.label)
+            .field("enabled", &self.enabled)
+            .field("shortcut", &self.shortcut)
+            .field("callback", &self.callback.as_ref().map(|_| "<callback>"))
+            .finish()
+    }
 }
 
 impl ContextMenu {

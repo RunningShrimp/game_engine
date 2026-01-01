@@ -1,0 +1,89 @@
+# 文档自动部署工作流
+# 当docs/目录有更改时，自动构建并部署到GitHub Pages
+
+name: Deploy Documentation
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'docs/**'
+      - 'book.toml'
+      - '.github/workflows/docs.yml'
+  pull_request:
+    branches:
+      - main
+      - master
+    paths:
+      - 'docs/**'
+      - 'book.toml'
+
+# 设置GITHUB_TOKEN权限
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 允许一个并发部署
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  # 构建文档作业
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup mdBook
+        uses: peaceiris/actions-mdbook@v2
+        with:
+          mdbook-version: 'latest'
+          mdbook-plugins: |
+            mdbook-linkcheck
+
+      - name: Build documentation
+        run: |
+          cd docs
+          mdbook build
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./docs/book
+
+  # 部署作业
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+  # 链接检查作业（可选）
+  linkcheck:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup mdBook
+        uses: peaceiris/actions-mdbook@v2
+        with:
+          mdbook-version: 'latest'
+          mdbook-plugins: |
+            mdbook-linkcheck
+
+      - name: Check links
+        run: |
+          cd docs
+          mdbook linkcheck

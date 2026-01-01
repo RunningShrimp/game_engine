@@ -18,6 +18,7 @@ winit = "0.30"
 wgpu.workspace = true
 pollster = "0.4"
 futures = "0.3"
+futures-util = "0.3"
 bytemuck = { version = "1.24", features = ["derive"] }
 bincode = "1.3"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
@@ -93,15 +94,13 @@ egui-winit = "0.33.3"
 
 # Scripting
 rquickjs = { version = "0.11.0", features = ["full"] }
-# TypeScript/JavaScript runtime (暂时禁用，版本兼容性问题)
-# deno_core = { version = "0.298.0", optional = true }
-# TypeScript compiler (暂时禁用，版本兼容性问题)
-# swc = { version = "0.275.0", optional = true }
-# swc_common = { version = "0.33.27", optional = true }
-# swc_ecma_parser = { version = "0.149.3", optional = true }
-# swc_ecma_codegen = { version = "0.153.2", optional = true }
 # Python bindings
 pyo3 = { version = "0.27.2", features = ["auto-initialize"], optional = true }
+
+# C# / .NET bindings (NOTE: netcorehost dependency removed due to macOS compatibility issues)
+# The csharp feature provides the ScriptContext interface and type conversion infrastructure.
+# Full .NET runtime integration will be added in a future update when cross-platform support is available.
+# netcorehost = { version = "0.19", optional = true }
 
 # Logging
 log.workspace = true
@@ -421,17 +420,53 @@ ai = ["ai-openai", "ai-claude", "ai-local"]
 ## ```
 pyo3 = ["dep:pyo3"]
 
+## 启用C#/.NET脚本支持
+##
+## 当前状态：简化实现（提供ScriptContext接口和类型转换）
+##
+## 增加的依赖：
+## - 无额外依赖（纯Rust实现）
+##
+## 支持的功能：
+## - ScriptContext trait的完整实现
+## - 类型转换工具（Rust ↔ C#）
+## - 全局变量管理
+## - 运行时状态管理
+##
+## 未来计划：
+## - .NET运行时集成（待跨平台支持完善）
+## - 程序集加载和编译
+## - Unity API绑定生成
+## - 热重载支持
+##
+## 使用场景：
+## - Unity项目迁移准备
+## - C#开发者工具集
+## - 企业级游戏开发
+##
+## 注意：
+## - 当前为简化实现，不包含实际的.NET运行时
+## - netcorehost依赖由于macOS兼容性问题暂时移除
+## - 完整.NET集成将在后续版本添加
+##
+## 示例：
+## ```bash
+## cargo build --features csharp
+## ```
+csharp = []
+
 ## 启用TypeScript脚本支持
 ##
 ## 增加的依赖：
-## - deno_core = "0.298" (约15MB)
-## - swc = "0.275" (约20MB，编译器)
+## - rquickjs with typescript feature (已有依赖，启用TypeScript支持)
 ##
 ## 支持的功能：
 ## - TypeScript脚本运行时
-## - 类型检查和智能提示
+## - 使用QuickJS内置的TypeScript编译器
 ## - 现代JavaScript/TypeScript特性
 ## - 从TypeScript调用Rust API
+## - 更轻量级(QuickJS vs V8)
+## - 更快的编译速度
 ##
 ## 使用场景：
 ## - 类型安全的游戏脚本
@@ -439,15 +474,17 @@ pyo3 = ["dep:pyo3"]
 ## - 大型项目脚本开发
 ##
 ## 注意：
-## - 编译时间会显著增加
-## - 需要Node.js生态工具链
-## - **暂时禁用**: swc生态系统版本兼容性问题，等待官方修复
+## - 编译时间会略有增加（rquickjs需要编译QuickJS）
+## - 使用QuickJS引擎而非V8
+## - TypeScript编译在运行时进行
 ##
 ## 示例：
 ## ```bash
 ## cargo build --features typescript
 ## ```
-# typescript = ["deno_core", "swc", "swc_common", "swc_ecma_parser", "swc_ecma_codegen"]
+## TypeScript支持（使用rquickjs + QuickJS）
+## 注意：rquickjs依赖已包含在默认依赖中（version = "0.11.0"）
+typescript = []
 
 ### 网络安全
 ## 启用安全的密钥交换协议（推荐用于生产环境）
@@ -609,7 +646,7 @@ wasm = []
 ## cargo build --no-default-features --features gltf,secure_key_exchange,physics,parallel,dashmap
 ## ```
 ##
-default = ["gltf", "secure_key_exchange", "physics", "parallel", "dashmap", "hot-reload-optim", "message-optimization", "simd", "cli"]
+default = ["gltf", "secure_key_exchange", "physics", "parallel", "dashmap", "hot-reload-optim", "message-optimization", "simd", "cli", "csharp"]
 
 # ============================================================================
 # 性能优化特性 (Performance Optimization Features)

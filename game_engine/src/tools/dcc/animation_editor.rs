@@ -681,7 +681,7 @@ mod tests {
 
     #[test]
     fn test_time_conversion() {
-        let editor = DCCAnimationEditor::new();
+        let mut editor = DCCAnimationEditor::new();
 
         editor.set_current_time(1.0);
         assert!((editor.get_current_time() - 1.0).abs() < 0.001);

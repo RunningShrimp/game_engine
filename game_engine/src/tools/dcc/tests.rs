@@ -9,7 +9,7 @@ mod integration_tests {
     #[test]
     fn test_dcc_toolkit_full_workflow() {
         // 创建完整的DCC工具套件
-        let toolkit = crate::tools::dcc::DCCToolkit::new();
+        let mut toolkit = crate::tools::dcc::DCCToolkit::new();
 
         // 测试网格编辑器
         assert_eq!(

@@ -385,7 +385,12 @@ impl DCCMaterialEditor {
 
     /// 显示纹理槽
 
-    fn show_texture_slots(ui: &mut egui::Ui, material: &mut PBRMaterialParams) {
+    fn show_texture_slots(
+        ui: &mut egui::Ui,
+        material: &mut PBRMaterialParams,
+        material_id: MaterialID,
+        pending_browse: &mut Option<(MaterialID, TextureType)>,
+    ) {
         ui.label("Textures:");
 
         let texture_types = [
@@ -408,7 +413,7 @@ impl DCCMaterialEditor {
 
                     if slot.enabled {
                         if ui.button("Browse").clicked() {
-                            // TODO: 打开文件选择对话框
+                            *pending_browse = Some((material_id, texture_type));
                         }
 
                         if let Some(path) = &slot.path {
@@ -435,8 +440,15 @@ impl DCCMaterialEditor {
 
     /// 显示纹理槽UI（使用索引避免借用冲突）
     fn show_texture_slots_ui(&mut self, ui: &mut egui::Ui, idx: MaterialID) {
+        let mut pending_browse = None;
+
         if let Some(material) = self.materials.get_mut(idx) {
-            Self::show_texture_slots(ui, material);
+            Self::show_texture_slots(ui, material, idx, &mut pending_browse);
+        }
+
+        // 处理文件浏览请求（在借用释放后）
+        if let Some((material_id, texture_type)) = pending_browse {
+            self.browse_texture_file_internal(material_id, texture_type);
         }
     }
 
@@ -538,10 +550,198 @@ impl DCCMaterialEditor {
         self.materials.get(id).map(|m| m.clone().into())
     }
 
+    /// 浏览纹理文件（内部实现）
+    pub fn browse_texture_file_internal(
+        &mut self,
+        material_id: MaterialID,
+        texture_type: TextureType,
+    ) {
+        #[cfg(feature = "file_dialog")]
+        {
+            use rfd::FileHandle;
+
+            // 打开文件选择对话框
+            if let Some(file) = rfd::FileDialog::new()
+                .add_filter(
+                    "texture",
+                    &["png", "jpg", "jpeg", "dds", "ktx", "tga", "bmp", "webp"],
+                )
+                .pick_file()
+            {
+                let path = file.path().to_path_buf();
+
+                // 更新材质的纹理路径
+                if let Some(material) = self.materials.get_mut(material_id) {
+                    if let Some(slot) = material.textures.get_mut(&texture_type) {
+                        slot.path = Some(path);
+                        slot.enabled = true;
+
+                        tracing::info!(
+                            "Loaded texture for material {:?}, slot {:?}: {:?}",
+                            material_id,
+                            texture_type,
+                            slot.path
+                        );
+                    }
+                }
+            }
+        }
+
+        #[cfg(not(feature = "file_dialog"))]
+        {
+            tracing::warn!(
+                "File dialog feature not enabled. Enable 'file_dialog' feature to use texture browser."
+            );
+        }
+    }
+
+    /// 浏览纹理文件（兼容旧API）
+    pub fn browse_texture_file(&mut self, material_id: MaterialID, slot_idx: usize) {
+        // 根据slot_idx映射到TextureType
+        let texture_types = [
+            TextureType::Albedo,
+            TextureType::Normal,
+            TextureType::Roughness,
+            TextureType::Metallic,
+            TextureType::AmbientOcclusion,
+            TextureType::Emissive,
+            TextureType::Clearcoat,
+        ];
+
+        if slot_idx < texture_types.len() {
+            self.browse_texture_file_internal(material_id, texture_types[slot_idx]);
+        } else {
+            tracing::warn!("Invalid texture slot index: {}", slot_idx);
+        }
+    }
+
+    /// 渲染材质预览
+    pub fn render_material_preview(&mut self, material_id: MaterialID) {
+        // 简化实现：记录预览请求
+        // 完整实现需要：
+        // 1. 创建离屏渲染目标
+        // 2. 设置预览几何体（球体/平面/立方体）
+        // 3. 应用材质参数和纹理
+        // 4. 渲染PBR光照
+        // 5. 输出到纹理
+
+        if let Some(material) = self.get_material(material_id) {
+            tracing::info!(
+                "Rendering material preview: {} (albedo: {:?}, metallic: {}, roughness: {})",
+                self.material_names.get(material_id).unwrap_or(&"Unknown".to_string()),
+                material.albedo,
+                material.metallic,
+                material.roughness
+            );
+
+            // TODO: 完整实现需要渲染管线集成
+            // 当前实现仅用于演示框架
+        }
+    }
+
     /// 获取所有材质
-    pub fn get_all_materials(&self) -> &[(String, PBRMaterialParams)] {
-        // TODO: 实现迭代器
-        &[]
+    pub fn get_all_materials(&self) -> Vec<(String, PBRMaterialParams)> {
+        self.material_names
+            .iter()
+            .zip(self.materials.iter())
+            .map(|(name, material)| (name.clone(), material.clone()))
+            .collect()
+    }
+
+    /// 创建材质迭代器
+    pub fn iter(&self) -> MaterialIterator {
+        MaterialIterator {
+            editor: self,
+            index: 0,
+        }
+    }
+}
+
+/// 材质迭代器
+///
+/// 允许按名称或类型筛选材质
+pub struct MaterialIterator<'a> {
+    editor: &'a DCCMaterialEditor,
+    index: usize,
+}
+
+impl<'a> MaterialIterator<'a> {
+    /// 按名称筛选
+    pub fn filter_by_name(self, name_pattern: &str) -> FilteredMaterialIterator<'a> {
+        FilteredMaterialIterator {
+            editor: self.editor,
+            index: 0,
+            name_pattern: Some(name_pattern.to_string()),
+            texture_type_filter: None,
+        }
+    }
+
+    /// 按纹理类型筛选
+    pub fn filter_by_texture_type(self, texture_type: TextureType) -> FilteredMaterialIterator<'a> {
+        FilteredMaterialIterator {
+            editor: self.editor,
+            index: 0,
+            name_pattern: None,
+            texture_type_filter: Some(texture_type),
+        }
+    }
+}
+
+impl<'a> Iterator for MaterialIterator<'a> {
+    type Item = (String, PBRMaterialParams);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index < self.editor.materials.len() {
+            let name = self.editor.material_names[self.index].clone();
+            let material = self.editor.materials[self.index].clone();
+            self.index += 1;
+            Some((name, material))
+        } else {
+            None
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let remaining = self.editor.materials.len().saturating_sub(self.index);
+        (remaining, Some(remaining))
+    }
+}
+
+/// 过滤后的材质迭代器
+pub struct FilteredMaterialIterator<'a> {
+    editor: &'a DCCMaterialEditor,
+    index: usize,
+    name_pattern: Option<String>,
+    texture_type_filter: Option<TextureType>,
+}
+
+impl<'a> Iterator for FilteredMaterialIterator<'a> {
+    type Item = (String, PBRMaterialParams);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        while self.index < self.editor.materials.len() {
+            let name = &self.editor.material_names[self.index];
+            let material = &self.editor.materials[self.index];
+            self.index += 1;
+
+            // 应用名称过滤
+            if let Some(pattern) = &self.name_pattern {
+                if !name.contains(pattern) {
+                    continue;
+                }
+            }
+
+            // 应用纹理类型过滤
+            if let Some(texture_type) = self.texture_type_filter {
+                if !material.textures.contains_key(&texture_type) {
+                    continue;
+                }
+            }
+
+            return Some((name.clone(), material.clone()));
+        }
+
+        None
     }
 }
 
@@ -704,5 +904,137 @@ mod tests {
         let params = preset.to_params();
         assert_eq!(params.metallic, 1.0);
         assert_eq!(params.roughness, 0.2);
+    }
+
+    #[test]
+    fn test_material_iterator() {
+        let mut editor = DCCMaterialEditor::new();
+        editor.add_material("Material1".to_string());
+        editor.add_material("Material2".to_string());
+        editor.add_material("WoodMaterial".to_string());
+
+        // 测试基本迭代
+        let materials: Vec<_> = editor.iter().collect();
+        assert_eq!(materials.len(), 3);
+        assert_eq!(materials[0].0, "Material1");
+        assert_eq!(materials[1].0, "Material2");
+        assert_eq!(materials[2].0, "WoodMaterial");
+    }
+
+    #[test]
+    fn test_material_iterator_filter_by_name() {
+        let mut editor = DCCMaterialEditor::new();
+        editor.add_material("WoodMaterial".to_string());
+        editor.add_material("MetalMaterial".to_string());
+        editor.add_material("WoodOak".to_string());
+
+        // 测试名称过滤
+        let wood_materials: Vec<_> = editor.iter().filter_by_name("Wood").collect();
+        assert_eq!(wood_materials.len(), 2);
+        assert_eq!(wood_materials[0].0, "WoodMaterial");
+        assert_eq!(wood_materials[1].0, "WoodOak");
+    }
+
+    #[test]
+    fn test_material_iterator_size_hint() {
+        let mut editor = DCCMaterialEditor::new();
+        editor.add_material("Material1".to_string());
+        editor.add_material("Material2".to_string());
+
+        let mut iter = editor.iter();
+        assert_eq!(iter.size_hint(), (2, Some(2)));
+
+        iter.next();
+        assert_eq!(iter.size_hint(), (1, Some(1)));
+
+        iter.next();
+        assert_eq!(iter.size_hint(), (0, Some(0)));
+    }
+
+    #[test]
+    fn test_get_all_materials() {
+        let mut editor = DCCMaterialEditor::new();
+        editor.add_material("Material1".to_string());
+        editor.add_material("Material2".to_string());
+
+        let all_materials = editor.get_all_materials();
+        assert_eq!(all_materials.len(), 2);
+        assert_eq!(all_materials[0].0, "Material1");
+        assert_eq!(all_materials[1].0, "Material2");
+    }
+
+    #[test]
+    fn test_export_material() {
+        let mut editor = DCCMaterialEditor::new();
+        let id = editor.add_material("TestMaterial".to_string());
+
+        if let Some(material) = editor.get_material_mut(id) {
+            material.albedo = Vec4::new(1.0, 0.0, 0.0, 1.0);
+            material.metallic = 0.8;
+            material.roughness = 0.3;
+        }
+
+        let exported = editor.export_material(id);
+        assert!(exported.is_some());
+
+        let pbr_material = exported.unwrap();
+        assert_eq!(pbr_material.material.base_color.x, 1.0);
+        assert_eq!(pbr_material.material.metallic, 0.8);
+        assert_eq!(pbr_material.material.roughness, 0.3);
+    }
+
+    #[test]
+    fn test_apply_preset() {
+        let mut editor = DCCMaterialEditor::new();
+        let id = editor.add_material("CustomMaterial".to_string());
+
+        editor.apply_preset(id, MaterialPreset::StandardMetal);
+
+        let material = editor.get_material(id).unwrap();
+        assert_eq!(material.metallic, 1.0);
+        assert_eq!(material.roughness, 0.2);
+    }
+
+    #[test]
+    fn test_browse_texture_file() {
+        let mut editor = DCCMaterialEditor::new();
+        let id = editor.add_material("TestMaterial".to_string());
+
+        // 这个测试不会实际打开文件对话框（没有文件对话框feature）
+        // 但可以验证方法调用不会panic
+        editor.browse_texture_file(id, 0);
+
+        // 验证纹理槽存在
+        let material = editor.get_material(id).unwrap();
+        assert!(material.textures.contains_key(&TextureType::Albedo));
+    }
+
+    #[test]
+    fn test_browse_texture_file_internal() {
+        let mut editor = DCCMaterialEditor::new();
+        let id = editor.add_material("TestMaterial".to_string());
+
+        // 测试内部方法
+        editor.browse_texture_file_internal(id, TextureType::Normal);
+
+        // 验证方法调用不会panic（实际文件选择仅在file_dialog feature启用时工作）
+        let material = editor.get_material(id).unwrap();
+        assert!(material.textures.contains_key(&TextureType::Normal));
+    }
+
+    #[test]
+    fn test_render_material_preview() {
+        let mut editor = DCCMaterialEditor::new();
+        let id = editor.add_material("PreviewMaterial".to_string());
+
+        // 设置材质参数
+        if let Some(material) = editor.get_material_mut(id) {
+            material.albedo = Vec4::new(0.5, 0.5, 0.5, 1.0);
+            material.metallic = 0.5;
+            material.roughness = 0.5;
+        }
+
+        // 测试预览方法不会panic
+        editor.render_material_preview(id);
     }
 }

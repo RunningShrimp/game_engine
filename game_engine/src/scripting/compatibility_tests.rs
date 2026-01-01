@@ -158,7 +158,7 @@ mod tests {
     /// 测试Lua特定功能
     fn test_lua_specific_features(context: &mut LuaContext) {
         // 测试函数调用
-        let _ = context.execute("add_func", "function add(a, b) return a + b end");
+        let _ = context.execute("function add(a, b) return a + b end");
 
         let args = vec![
             crate::scripting::LuaValue::Number(3.0),
@@ -173,7 +173,7 @@ mod tests {
         );
 
         // 测试表操作
-        let _ = context.execute("table_test", "t = {x = 10, y = 20}");
+        let _ = context.execute("t = {x = 10, y = 20}");
         let table_value = context.get_global("t");
 
         // 表可能被转换为Object或Array，只要不是None就算成功
@@ -184,7 +184,7 @@ mod tests {
         }
 
         // 测试引擎API绑定
-        let result = context.execute("api_test", "engine.log('Lua API test')");
+        let result = context.execute("engine.log('Lua API test')");
         assert!(
             result.is_ok(),
             "Lua engine API should work, got {:?}",
@@ -374,7 +374,7 @@ mod tests {
         let mut js_context = JavaScriptContext::new();
 
         // 测试语法错误
-        let lua_syntax_error = lua_context.execute("syntax_error", "invalid syntax here");
+        let lua_syntax_error = lua_context.execute("invalid syntax here");
         let js_syntax_error = js_context.execute("invalid syntax here");
 
         assert!(

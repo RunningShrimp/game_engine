@@ -25,6 +25,9 @@ pub mod cli;
 #[cfg(feature = "lsp")]
 pub mod lsp;
 
+#[cfg(feature = "csharp")]
+pub mod csharp_sdk;
+
 // 重新导出主要类型
 pub use resource_analysis::{
     AnalysisResult, DependencyReportGenerator, RedundantAssetCleaner, ResourceDependencyGraph,
@@ -34,6 +37,9 @@ pub use resource_analysis::{
 
 #[cfg(feature = "lsp")]
 pub use lsp::{EngineAPIRegistry, GameEngineLSP};
+
+#[cfg(feature = "csharp")]
+pub use csharp_sdk::CSharpSdkGenerator;
 
 // 重新导出资源导入工具（条件编译）
 #[cfg(feature = "asset-importer")]

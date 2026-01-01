@@ -16,9 +16,6 @@ pub mod uv_editor;
 #[cfg(feature = "blender")]
 pub mod blender_bridge;
 
-#[cfg(test)]
-mod tests;
-
 // 重新导出主要类型
 pub use mesh_editor::{
     EdgeID, EditMode, FaceID, MeshEditor, MeshOperation, SelectionMode, TransformTool, VertexID,

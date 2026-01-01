@@ -1,0 +1,73 @@
+{
+  "comments": {
+    "lineComment": {
+      "//": "lua",
+      "typescript": true,
+      "javascript": true,
+      "python": "#"
+    },
+    "blockComment": {
+      "--[[" : "]]--",
+      "lua": true
+    }
+  },
+  "brackets": [
+    ["{", "}"],
+    ["[", "]"],
+    ["(", ")"]
+  ],
+  "autoClosingPairs": [
+    { "open": "{", "close": "}" },
+    { "open": "[", "close": "]" },
+    { "open": "(", "close": ")" },
+    { "open": "\"", "close": "\"", "notIn": ["string"] },
+    { "open": "'", "close": "'", "notIn": ["string", "comment"] }
+  ],
+  "surroundingPairs": [
+    ["{", "}"],
+    ["[", "]"],
+    ["(", ")"],
+    ["\"", "\""],
+    ["'", "'"],
+    ["true", "false"]
+  ],
+  "folding": {
+    "markers": {
+      "start": "^\\s*--\\s*region\\b",
+      "end": "^\\s*--\\s*endregion\\b"
+    }
+  },
+  "wordPattern": {
+    "lua": "[a-zA-Z_][a-zA-Z0-9_]*",
+    "typescript": "[a-zA-Z_$][\\w$]*",
+    "javascript": "[a-zA-Z_$][\\w$]*",
+    "python": "[a-zA-Z_][a-zA-Z0-9_]*"
+  },
+  "indentationRules": {
+    "lua": {
+      "increaseIndentPattern": "^\\s*(function|then|do|repeat|if)\\b",
+      "decreaseIndentPattern": "^\\s*(end|elseif|else|until)\\b"
+    },
+    "typescript": {
+      "increaseIndentPattern": "^((?!\\/\\/).)*(\\b(case|default|class|interface|type|enum)\\b.*:|\\b(function|try|finally|catch|switch)\\b.*:|(\\{[^}]*|\\[[^\\]]*|\\([^\\)]*)\\s*)$)",
+      "decreaseIndentPattern": "^((?!.*?\\/\\/).*?)(\\}|\\]|\\))\\s*(;|,)?\\s*$"
+    },
+    "javascript": {
+      "increaseIndentPattern": "^((?!\\/\\/).)*(\\b(case|default|class|function)\\b.*:|\\b(function|try|finally|catch|switch)\\b.*:|(\\{[^}]*|\\[[^\\]]*|\\([^\\)]*)\\s*)$)",
+      "decreaseIndentPattern": "^((?!.*?\\/\\/).*?)(\\}|\\]|\\))\\s*(;|,)?\\s*$"
+    },
+    "python": {
+      "increaseIndentPattern": "^((?!.*?#).*?(:|\\b(class|def|if|else|elif|try|except|finally|for|while|with)\\b.*:))",
+      "decreaseIndentPattern": "^((?!.*?#).*(\\b(pass|break|continue|return)\\b.*:))"
+    }
+  },
+  "onEnterRules": [
+    {
+      "beforeText": "^\\s*(function|class|interface|type|enum).*:.*\\{?\\s*$",
+      "afterText": "^\\s*\\}\\s*$",
+      "action": {
+        "indent": "none"
+      }
+    }
+  ]
+}

@@ -89,3 +89,4 @@ echo "🔍 Use 'cargo run --bin compare_performance' to compare against baseline
 
 
 
+

@@ -281,19 +281,121 @@ impl VariableMonitor {
         let mut watch_items = self.watch_items.write().await;
 
         if let Some(watch) = watch_items.get_mut(&id) {
-            // TODO: 实际的表达式求值
-            // 这里简化为返回表达式本身
-            watch.value = Some(format!("<{}>", watch.expression));
-            watch.var_type = Some("unknown".to_string());
-            watch.valid = true;
-            watch.error = None;
+            // 使用表达式求值器
+            match Self::evaluate_expression_internal(&watch.expression, &self.variables).await {
+                Ok((value, var_type)) => {
+                    watch.value = Some(value);
+                    watch.var_type = Some(var_type);
+                    watch.valid = true;
+                    watch.error = None;
 
-            tracing::debug!(
-                "Watch evaluated: {} = {}",
-                watch.expression,
-                watch.value.as_ref().unwrap()
-            );
+                    tracing::debug!(
+                        "Watch evaluated: {} = {}",
+                        watch.expression,
+                        watch.value.as_ref().unwrap()
+                    );
+                }
+                Err(e) => {
+                    watch.value = None;
+                    watch.var_type = None;
+                    watch.valid = false;
+                    watch.error = Some(e);
+
+                    tracing::warn!(
+                        "Watch evaluation failed: {} - {}",
+                        watch.expression,
+                        watch.error.as_ref().unwrap()
+                    );
+                }
+            }
         }
+    }
+
+    /// 内部表达式求值实现
+    async fn evaluate_expression_internal(
+        expression: &str,
+        variables: &HashMap<VariableReference, Variable>,
+    ) -> Result<(String, String), String> {
+        let expression = expression.trim();
+
+        // 1. 字面量值
+        if let Ok(num) = expression.parse::<i64>() {
+            return Ok((num.to_string(), "integer".to_string()));
+        }
+        if let Ok(num) = expression.parse::<f64>() {
+            return Ok((num.to_string(), "float".to_string()));
+        }
+        if expression.starts_with('"') && expression.ends_with('"') {
+            return Ok((expression.to_string(), "string".to_string()));
+        }
+        if expression == "true" || expression == "false" {
+            return Ok((expression.to_string(), "boolean".to_string()));
+        }
+
+        // 2. 简单变量名查找
+        if expression.chars().all(|c| c.is_alphanumeric() || c == '_') {
+            for (_, var) in variables.iter() {
+                if var.name == expression {
+                    return Ok((var.value.clone(), var.var_type.as_str().to_string()));
+                }
+            }
+            return Ok((
+                format!("<undefined: {}>", expression),
+                "unknown".to_string(),
+            ));
+        }
+
+        // 3. 简单的算术表达式
+        if expression.contains('+') {
+            let parts: Vec<&str> = expression.split('+').collect();
+            if parts.len() == 2 {
+                let left = Self::evaluate_expression_internal(parts[0].trim(), variables).await?;
+                let right = Self::evaluate_expression_internal(parts[1].trim(), variables).await?;
+
+                if let (Ok(l), Ok(r)) = (left.0.parse::<i64>(), right.0.parse::<i64>()) {
+                    return Ok((format!("{}", l + r), "integer".to_string()));
+                }
+            }
+        }
+
+        if expression.contains('-') && !expression.starts_with('-') {
+            let parts: Vec<&str> = expression.split('-').collect();
+            if parts.len() == 2 {
+                let left = Self::evaluate_expression_internal(parts[0].trim(), variables).await?;
+                let right = Self::evaluate_expression_internal(parts[1].trim(), variables).await?;
+
+                if let (Ok(l), Ok(r)) = (left.0.parse::<i64>(), right.0.parse::<i64>()) {
+                    return Ok((format!("{}", l - r), "integer".to_string()));
+                }
+            }
+        }
+
+        if expression.contains('*') {
+            let parts: Vec<&str> = expression.split('*').collect();
+            if parts.len() == 2 {
+                let left = Self::evaluate_expression_internal(parts[0].trim(), variables).await?;
+                let right = Self::evaluate_expression_internal(parts[1].trim(), variables).await?;
+
+                if let (Ok(l), Ok(r)) = (left.0.parse::<i64>(), right.0.parse::<i64>()) {
+                    return Ok((format!("{}", l * r), "integer".to_string()));
+                }
+            }
+        }
+
+        if expression.contains('/') {
+            let parts: Vec<&str> = expression.split('/').collect();
+            if parts.len() == 2 {
+                let left = Self::evaluate_expression_internal(parts[0].trim(), variables).await?;
+                let right = Self::evaluate_expression_internal(parts[1].trim(), variables).await?;
+
+                if let (Ok(l), Ok(r)) = (left.0.parse::<f64>(), right.0.parse::<f64>()) {
+                    return Ok((format!("{}", l / r), "float".to_string()));
+                }
+            }
+        }
+
+        // 4. 无法识别的表达式
+        Err(format!("Cannot evaluate expression: {}", expression))
     }
 
     /// 求值所有监视项
@@ -309,22 +411,32 @@ impl VariableMonitor {
 
     /// 求值表达式
     pub async fn evaluate_expression(&self, expression: &str) -> Result<String, String> {
-        // TODO: 实际的表达式求值
-        // 这里简化实现
+        let variables = self.variables.read().await;
+        let result = Self::evaluate_expression_internal(expression, &variables).await?;
+        Ok(result.0)
+    }
 
-        // 检查是否是简单的变量名
-        if expression.chars().all(|c| c.is_alphanumeric() || c == '_') {
-            // 查找变量
-            let variables = self.variables.read().await;
-            for (_, var) in variables.iter() {
-                if var.name == expression {
-                    return Ok(var.value.clone());
-                }
-            }
-        }
+    /// 获取作用域的变量
+    pub async fn get_variables_for_scope(&self, frame_id: i64) -> Vec<Variable> {
+        let variables = self.variables.read().await;
 
-        // 返回表达式本身
-        Ok(format!("<{}>", expression))
+        // 基于frame_id获取变量
+        // 在实际实现中，这里应该从调试器获取特定栈帧的变量
+        variables
+            .values()
+            .filter(|var| {
+                // 简化：根据作用域字符串过滤
+                var.scope.contains(&format!("frame_{}", frame_id))
+                    || var.scope == "Local"
+                    || var.scope == "Global"
+            })
+            .cloned()
+            .collect()
+    }
+
+    /// 浏览变量（获取子变量）
+    pub async fn browse_variable(&self, var_ref: VariableReference) -> Vec<Variable> {
+        self.get_children(var_ref).await
     }
 
     /// 获取变量统计
@@ -649,5 +761,208 @@ mod tests {
         assert_eq!(VariableType::String.as_str(), "string");
         assert_eq!(VariableType::Array.as_str(), "array");
         assert_eq!(VariableType::Object.as_str(), "object");
+    }
+
+    #[tokio::test]
+    async fn test_evaluate_arithmetic_expressions() {
+        let monitor = VariableMonitor::new();
+
+        // 加法
+        let result = monitor.evaluate_expression("5 + 3").await;
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "8");
+
+        // 减法
+        let result = monitor.evaluate_expression("10 - 4").await;
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "6");
+
+        // 乘法
+        let result = monitor.evaluate_expression("6 * 7").await;
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "42");
+
+        // 除法
+        let result = monitor.evaluate_expression("20 / 4").await;
+        assert!(result.is_ok());
+        assert!(result.unwrap(), "5"); // 可能是 "5" 或 "5.0"
+    }
+
+    #[tokio::test]
+    async fn test_evaluate_literal_values() {
+        let monitor = VariableMonitor::new();
+
+        // 整数
+        let result = monitor.evaluate_expression("42").await;
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "42");
+
+        // 浮点数
+        let result = monitor.evaluate_expression("3.14").await;
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "3.14");
+
+        // 布尔值
+        let result = monitor.evaluate_expression("true").await;
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "true");
+
+        let result = monitor.evaluate_expression("false").await;
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "false");
+
+        // 字符串
+        let result = monitor.evaluate_expression("\"hello\"").await;
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "\"hello\"");
+    }
+
+    #[tokio::test]
+    async fn test_browse_variable_children() {
+        let monitor = VariableMonitor::new();
+
+        // 添加一个有子变量的变量（数组）
+        let array_var = Variable {
+            name: "myArray".to_string(),
+            value: "[1, 2, 3]".to_string(),
+            var_type: VariableType::Array,
+            variables_reference: 1001,
+            named_variables: Some(0),
+            indexed_variables: Some(3),
+            evaluate_name: Some("myArray".to_string()),
+            writable: false,
+            scope: "Local".to_string(),
+        };
+        let array_ref = monitor.add_variable(ScopeKind::Local, array_var).await;
+
+        // 添加子元素
+        for i in 0..3 {
+            let elem_var = Variable {
+                name: format!("[{}]", i),
+                value: format!("{}", i + 1),
+                var_type: VariableType::Integer,
+                variables_reference: array_ref,
+                named_variables: None,
+                indexed_variables: None,
+                evaluate_name: None,
+                writable: false,
+                scope: "Local".to_string(),
+            };
+            monitor.add_variable(ScopeKind::Local, elem_var).await;
+        }
+
+        // 浏览子变量
+        let children = monitor.browse_variable(array_ref).await;
+        assert!(!children.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_get_variables_for_scope() {
+        let monitor = VariableMonitor::new();
+
+        // 添加不同作用域的变量
+        monitor
+            .add_variable(
+                ScopeKind::Local,
+                Variable {
+                    name: "local_var".to_string(),
+                    value: "1".to_string(),
+                    var_type: VariableType::Integer,
+                    variables_reference: 0,
+                    named_variables: None,
+                    indexed_variables: None,
+                    evaluate_name: None,
+                    writable: true,
+                    scope: "Local".to_string(),
+                },
+            )
+            .await;
+
+        monitor
+            .add_variable(
+                ScopeKind::Global,
+                Variable {
+                    name: "global_var".to_string(),
+                    value: "2".to_string(),
+                    var_type: VariableType::Integer,
+                    variables_reference: 0,
+                    named_variables: None,
+                    indexed_variables: None,
+                    evaluate_name: None,
+                    writable: true,
+                    scope: "Global".to_string(),
+                },
+            )
+            .await;
+
+        // 获取Local作用域的变量
+        let local_vars = monitor.get_variables_for_scope(1).await;
+        assert!(!local_vars.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_watch_evaluation_error() {
+        let monitor = VariableMonitor::new();
+
+        // 添加一个无效的表达式
+        let id = monitor.add_watch("undefined_var + unknown_var".to_string()).await;
+
+        let watches = monitor.get_watches().await;
+        let watch = watches.iter().find(|w| w.id == id).unwrap();
+
+        // 监视项应该存在
+        assert_eq!(watch.expression, "undefined_var + unknown_var");
+    }
+
+    #[tokio::test]
+    async fn test_clear_variables() {
+        let monitor = VariableMonitor::new();
+
+        // 添加一些变量
+        monitor
+            .add_variable(
+                ScopeKind::Local,
+                Variable {
+                    name: "x".to_string(),
+                    value: "1".to_string(),
+                    var_type: VariableType::Integer,
+                    variables_reference: 0,
+                    named_variables: None,
+                    indexed_variables: None,
+                    evaluate_name: None,
+                    writable: true,
+                    scope: "Local".to_string(),
+                },
+            )
+            .await;
+
+        assert_eq!(monitor.get_stats().await.total_variables, 1);
+
+        // 清除
+        monitor.clear_variables().await;
+
+        assert_eq!(monitor.get_stats().await.total_variables, 0);
+    }
+
+    #[tokio::test]
+    async fn test_clear_scopes() {
+        let monitor = VariableMonitor::new();
+
+        monitor
+            .add_scope(Scope {
+                name: "Local".to_string(),
+                scope_kind: ScopeKind::Local,
+                variables_reference: 1000,
+                named_variables: 5,
+                indexed_variables: 0,
+                expensive: false,
+            })
+            .await;
+
+        assert_eq!(monitor.get_stats().await.total_scopes, 1);
+
+        monitor.clear_scopes().await;
+
+        assert_eq!(monitor.get_stats().await.total_scopes, 0);
     }
 }

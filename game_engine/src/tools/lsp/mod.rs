@@ -6,6 +6,7 @@
 //! - Hover information for engine API
 //! - Go to definition navigation
 //! - Real-time diagnostics and error checking
+//! - Integrated debugging support (DAP)
 //!
 //! ## Features
 //!
@@ -13,6 +14,7 @@
 //! - **Intelligent Completion**: Context-aware suggestions for components, systems, queries
 //! - **Type Information**: Rich hover information for all engine types
 //! - **Error Detection**: Real-time validation of engine API usage
+//! - **Debug Integration**: Built-in DAP server for script debugging
 //!
 //! ## Usage
 //!
@@ -28,13 +30,24 @@
 //! - Completion item capabilities
 //! - Hover capabilities
 //! - Definition capabilities
+//! - Debug adapter capabilities
 
+pub mod code_actions;
 pub mod completion;
+pub mod debug_adapter;
 pub mod diagnostics;
+pub mod documents;
+pub mod formatting;
 pub mod hover;
 pub mod registry;
 pub mod server;
+pub mod symbols;
 
 // Re-exports
+pub use code_actions::CodeActionsProvider;
+pub use debug_adapter::LspDapIntegrator;
+pub use documents::{DocumentCache, SymbolIndex};
+pub use formatting::CodeFormatter;
 pub use registry::EngineAPIRegistry;
 pub use server::GameEngineLSP;
+pub use symbols::{DocumentSymbolsProvider, WorkspaceSymbolsProvider};

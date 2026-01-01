@@ -11,10 +11,7 @@ use std::collections::HashMap;
 #[derive(Debug, Clone, Event)]
 pub enum TouchEvent {
     /// 触摸开始
-    Started {
-        touch_id: u64,
-        position: Vec2,
-    },
+    Started { touch_id: u64, position: Vec2 },
     /// 触摸移动
     Moved {
         touch_id: u64,
@@ -22,14 +19,9 @@ pub enum TouchEvent {
         delta: Vec2,
     },
     /// 触摸结束
-    Ended {
-        touch_id: u64,
-        position: Vec2,
-    },
+    Ended { touch_id: u64, position: Vec2 },
     /// 触摸取消
-    Cancelled {
-        touch_id: u64,
-    },
+    Cancelled { touch_id: u64 },
 }
 
 /// 手势类型
@@ -42,17 +34,11 @@ pub enum GestureType {
     /// 长按
     LongPress,
     /// 滑动
-    Swipe {
-        direction: SwipeDirection,
-    },
+    Swipe { direction: SwipeDirection },
     /// 缩放（双指捏合）
-    Pinch {
-        scale: f32,
-    },
+    Pinch { scale: f32 },
     /// 旋转（双指旋转）
-    Rotation {
-        angle: f32,
-    },
+    Rotation { angle: f32 },
 }
 
 /// 滑动方向
@@ -195,7 +181,11 @@ impl GestureRecognizer {
                     });
                 }
             }
-            TouchEvent::Moved { touch_id, position, delta } => {
+            TouchEvent::Moved {
+                touch_id,
+                position,
+                delta,
+            } => {
                 if let Some(state) = self.active_touches.get_mut(touch_id) {
                     state.current_position = *position;
                     state.last_move_time = crate::core::utils::current_timestamp_f64();
@@ -399,7 +389,9 @@ impl VirtualJoystick {
                     return true;
                 }
             }
-            TouchEvent::Moved { touch_id, position, .. } => {
+            TouchEvent::Moved {
+                touch_id, position, ..
+            } => {
                 if self.touch_id == Some(*touch_id) && self.active {
                     self.update_value(*position);
                     return true;
@@ -569,11 +561,8 @@ mod tests {
 
     #[test]
     fn test_virtual_joystick_creation() {
-        let joystick = VirtualJoystick::new(
-            "joystick_1".to_string(),
-            Vec2::new(100.0, 100.0),
-            100.0,
-        );
+        let joystick =
+            VirtualJoystick::new("joystick_1".to_string(), Vec2::new(100.0, 100.0), 100.0);
 
         assert_eq!(joystick.id, "joystick_1");
         assert!(!joystick.active);

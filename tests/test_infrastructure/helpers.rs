@@ -264,7 +264,6 @@ mod tests {
     use super::*;
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_wait_for_success() {
         let mut counter = 0;
         let result = wait_for(
@@ -280,7 +279,6 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_wait_for_timeout() {
         let result = wait_for(
             || false,
@@ -291,7 +289,6 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_measure_time() {
         let duration = measure_time(|| {
             std::thread::sleep(Duration::from_millis(10));
@@ -300,7 +297,6 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_benchmark() {
         let bench = Benchmark::new("test_bench", 100);
         let result = bench.run(|| {

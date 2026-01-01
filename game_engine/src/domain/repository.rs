@@ -26,6 +26,7 @@ use crate::domain::scene::{Scene, SceneId};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt;
+use std::hash::Hash;
 use std::sync::Arc;
 
 /// 获取ID的trait（为不实现AggregateRoot的类型）
@@ -97,7 +98,7 @@ impl HasId<EntityId> for GameEntity {
 /// ```
 pub trait Repository<ID, T>: Send + Sync
 where
-    ID: Clone + PartialEq + Eq + fmt::Debug + Send + Sync,
+    ID: Clone + PartialEq + Eq + Hash + fmt::Debug + Send + Sync,
     T: HasId<ID> + Clone + Send + Sync,
 {
     /// 添加新聚合
@@ -151,7 +152,7 @@ where
 /// 支持领域事件的Repository（用于完整的聚合根）
 pub trait AggregateRepository<ID, T>: Repository<ID, T>
 where
-    ID: Clone + PartialEq + Eq + fmt::Debug + Send + Sync,
+    ID: Clone + PartialEq + Eq + Hash + fmt::Debug + Send + Sync,
     T: AggregateRoot + HasId<ID> + Clone + Send + Sync,
 {
     /// 获取未提交的事件
@@ -614,16 +615,16 @@ impl Repository<EntityId, GameEntity> for EntityRepository {
 /// 用于快速原型和测试。
 pub struct InMemoryRepository<ID, T>
 where
-    ID: Clone + PartialEq + Eq + fmt::Debug + Send + Sync,
-    T: AggregateRoot + Clone + Send + Sync,
+    ID: Clone + PartialEq + Eq + Hash + fmt::Debug + Send + Sync,
+    T: HasId<ID> + Clone + Send + Sync,
 {
     storage: HashMap<ID, T>,
 }
 
 impl<ID, T> InMemoryRepository<ID, T>
 where
-    ID: Clone + PartialEq + Eq + fmt::Debug + Send + Sync,
-    T: AggregateRoot + Clone + Send + Sync,
+    ID: Clone + PartialEq + Eq + Hash + fmt::Debug + Send + Sync,
+    T: HasId<ID> + Clone + Send + Sync,
 {
     /// 创建新的内存Repository
     pub fn new() -> Self {
@@ -632,22 +633,77 @@ where
         }
     }
 
-    /// 获取ID的辅助函数（需要T实现IdProvider trait）
+    /// 获取ID的辅助函数（使用HasId trait）
     fn get_id(aggregate: &T) -> ID {
-        // 这里需要T提供一个获取ID的方法
-        // 作为示例，这里使用一个占位实现
-        // 实际使用时需要为每个聚合实现IdProvider trait
-        unimplemented!("InMemoryRepository requires Aggregate to implement IdProvider")
+        aggregate.id()
     }
 }
 
 impl<ID, T> Default for InMemoryRepository<ID, T>
 where
-    ID: Clone + PartialEq + Eq + fmt::Debug + Send + Sync,
-    T: AggregateRoot + Clone + Send + Sync,
+    ID: Clone + PartialEq + Eq + Hash + fmt::Debug + Send + Sync,
+    T: HasId<ID> + Clone + Send + Sync,
 {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+/// 实现Repository trait for InMemoryRepository
+impl<ID, T> Repository<ID, T> for InMemoryRepository<ID, T>
+where
+    ID: Clone + PartialEq + Eq + Hash + fmt::Debug + Send + Sync,
+    T: HasId<ID> + Clone + Send + Sync,
+{
+    fn add(&mut self, aggregate: T) -> Result<(), RepositoryError> {
+        let id = Self::get_id(&aggregate);
+        if self.storage.contains_key(&id) {
+            return Err(RepositoryError::AlreadyExists(format!(
+                "Aggregate with id {:?}",
+                id
+            )));
+        }
+        self.storage.insert(id, aggregate);
+        Ok(())
+    }
+
+    fn update(&mut self, aggregate: &T) -> Result<(), RepositoryError> {
+        let id = Self::get_id(aggregate);
+        if !self.storage.contains_key(&id) {
+            return Err(RepositoryError::NotFound(format!(
+                "Aggregate with id {:?}",
+                id
+            )));
+        }
+        self.storage.insert(id, aggregate.clone());
+        Ok(())
+    }
+
+    fn delete(&mut self, id: &ID) -> Result<Option<T>, RepositoryError> {
+        Ok(self.storage.remove(id))
+    }
+
+    fn find_by_id(&self, id: &ID) -> Result<Option<T>, RepositoryError> {
+        Ok(self.storage.get(id).cloned())
+    }
+
+    fn find_all(&self) -> Result<Vec<T>, RepositoryError> {
+        Ok(self.storage.values().cloned().collect())
+    }
+
+    fn exists(&self, id: &ID) -> Result<bool, RepositoryError> {
+        Ok(self.storage.contains_key(id))
+    }
+
+    fn count(&self) -> Result<usize, RepositoryError> {
+        Ok(self.storage.len())
+    }
+
+    fn find_by_predicate<F>(&self, predicate: F) -> Result<Vec<T>, RepositoryError>
+    where
+        F: Fn(&T) -> bool + Send + Sync,
+    {
+        Ok(self.storage.values().filter(|e| predicate(e)).cloned().collect())
     }
 }
 
@@ -767,5 +823,166 @@ mod tests {
         let colliders = repo.get_colliders(&body_id);
         assert!(colliders.is_some());
         assert_eq!(colliders.unwrap().len(), 1);
+    }
+
+    // -------------------------------------------------------------------------
+    // InMemoryRepository 测试
+    // -------------------------------------------------------------------------
+
+    #[test]
+    fn test_inmemory_repository_scene_crud() {
+        let mut repo: InMemoryRepository<SceneId, Scene> = InMemoryRepository::new();
+
+        // 创建测试场景
+        let scene = Scene::new(SceneId::new(1), "TestScene".to_string());
+
+        // 测试 add
+        repo.add(scene.clone()).unwrap();
+        assert_eq!(repo.count().unwrap(), 1);
+
+        // 测试 find_by_id
+        let found = repo.find_by_id(&scene.id()).unwrap();
+        assert!(found.is_some());
+        assert_eq!(found.unwrap().name(), "TestScene");
+
+        // 测试 exists
+        assert!(repo.exists(&scene.id()).unwrap());
+
+        // 测试 update
+        repo.update(&scene).unwrap();
+
+        // 测试 find_all
+        let all = repo.find_all().unwrap();
+        assert_eq!(all.len(), 1);
+
+        // 测试 delete
+        let deleted = repo.delete(&scene.id()).unwrap();
+        assert!(deleted.is_some());
+        assert_eq!(repo.count().unwrap(), 0);
+    }
+
+    #[test]
+    fn test_inmemory_repository_rigid_body_crud() {
+        let mut repo: InMemoryRepository<RigidBodyId, RigidBody> = InMemoryRepository::new();
+
+        // 创建测试刚体
+        let body = RigidBody::new(
+            RigidBodyId::new(1),
+            crate::domain::physics::RigidBodyType::Dynamic,
+            glam::Vec3::ZERO,
+        );
+
+        // 测试 add
+        repo.add(body.clone()).unwrap();
+        assert_eq!(repo.count().unwrap(), 1);
+
+        // 测试 find_by_id
+        let found = repo.find_by_id(&body.id()).unwrap();
+        assert!(found.is_some());
+
+        // 测试 exists
+        assert!(repo.exists(&body.id()).unwrap());
+
+        // 测试 update
+        repo.update(&body).unwrap();
+
+        // 测试 delete
+        repo.delete(&body.id()).unwrap();
+        assert_eq!(repo.count().unwrap(), 0);
+    }
+
+    #[test]
+    fn test_inmemory_repository_error_handling() {
+        let mut repo: InMemoryRepository<SceneId, Scene> = InMemoryRepository::new();
+
+        let scene = Scene::new(SceneId::new(1), "TestScene".to_string());
+
+        // 测试重复添加
+        repo.add(scene.clone()).unwrap();
+        let result = repo.add(scene.clone());
+        assert!(result.is_err());
+
+        // 测试更新不存在的实体
+        let nonexistent_scene = Scene::new(SceneId::new(999), "NonExistent".to_string());
+        let result = repo.update(&nonexistent_scene);
+        assert!(result.is_err());
+
+        // 测试查找不存在的实体
+        let result = repo.find_by_id(&SceneId::new(999));
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_none());
+
+        // 测试删除不存在的实体
+        let result = repo.delete(&SceneId::new(999));
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_none());
+    }
+
+    #[test]
+    fn test_inmemory_repository_find_by_predicate() {
+        let mut repo: InMemoryRepository<SceneId, Scene> = InMemoryRepository::new();
+
+        // 添加多个场景
+        repo.add(Scene::new(SceneId::new(1), "Scene1".to_string())).unwrap();
+        repo.add(Scene::new(SceneId::new(2), "Scene2".to_string())).unwrap();
+        repo.add(Scene::new(SceneId::new(3), "Scene3".to_string())).unwrap();
+
+        // 测试 find_by_predicate
+        let scenes_starting_with_2 =
+            repo.find_by_predicate(|s| s.name().starts_with("Scene2")).unwrap();
+        assert_eq!(scenes_starting_with_2.len(), 1);
+
+        // 测试查找所有包含"Scene"的场景
+        let all_scenes = repo.find_by_predicate(|s| s.name().contains("Scene")).unwrap();
+        assert_eq!(all_scenes.len(), 3);
+
+        // 测试查找不匹配的场景
+        let no_scenes = repo.find_by_predicate(|s| s.name().starts_with("XYZ")).unwrap();
+        assert_eq!(no_scenes.len(), 0);
+    }
+
+    #[test]
+    fn test_inmemory_repository_save() {
+        let mut repo: InMemoryRepository<SceneId, Scene> = InMemoryRepository::new();
+
+        let scene = Scene::new(SceneId::new(1), "TestScene".to_string());
+
+        // 测试 save (add)
+        repo.save(&scene).unwrap();
+        assert_eq!(repo.count().unwrap(), 1);
+        assert!(repo.exists(&scene.id()).unwrap());
+
+        // 测试 save (update)
+        repo.save(&scene).unwrap();
+        assert_eq!(repo.count().unwrap(), 1);
+    }
+
+    #[test]
+    fn test_inmemory_repository_thread_safe() {
+        use std::sync::{Arc, Mutex};
+        use std::thread;
+
+        let repo = Arc::new(Mutex::new(InMemoryRepository::<SceneId, Scene>::new()));
+        let mut handles = vec![];
+
+        // 创建多个线程同时操作Repository
+        for i in 0..10 {
+            let repo_clone = Arc::clone(&repo);
+            let handle = thread::spawn(move || {
+                let mut repo = repo_clone.lock().unwrap();
+                let scene = Scene::new(SceneId::new(i as u64), format!("Scene{}", i));
+                repo.add(scene).unwrap();
+            });
+            handles.push(handle);
+        }
+
+        // 等待所有线程完成
+        for handle in handles {
+            handle.join().unwrap();
+        }
+
+        // 验证所有场景都已添加
+        let repo = repo.lock().unwrap();
+        assert_eq!(repo.count().unwrap(), 10);
     }
 }

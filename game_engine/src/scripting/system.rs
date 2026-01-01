@@ -85,6 +85,37 @@ pub enum ScriptValue {
     Object(HashMap<String, ScriptValue>),
 }
 
+impl ScriptValue {
+    /// 转换为数字（如果可能）
+    pub fn as_number(&self) -> Option<f64> {
+        match self {
+            ScriptValue::Number(n) => Some(*n),
+            ScriptValue::Integer(i) => Some(*i as f64),
+            ScriptValue::Boolean(b) => Some(if *b { 1.0 } else { 0.0 }),
+            _ => None,
+        }
+    }
+
+    /// 转换为布尔值
+    pub fn as_boolean(&self) -> Option<bool> {
+        match self {
+            ScriptValue::Boolean(b) => Some(*b),
+            ScriptValue::Number(n) => Some(*n != 0.0),
+            ScriptValue::Integer(i) => Some(*i != 0),
+            ScriptValue::Null => Some(false),
+            _ => None,
+        }
+    }
+
+    /// 转换为字符串
+    pub fn as_str(&self) -> Option<&str> {
+        match self {
+            ScriptValue::String(s) => Some(s),
+            _ => None,
+        }
+    }
+}
+
 /// 脚本系统 - 管理多个脚本上下文
 pub struct ScriptSystem {
     contexts: Arc<Mutex<HashMap<ScriptLanguage, Box<dyn ScriptContext>>>>,

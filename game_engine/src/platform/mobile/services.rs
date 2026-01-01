@@ -73,14 +73,12 @@ impl GooglePlayGames {
         }
 
         // TODO: 实际的成就解锁逻辑
-        self.achievements.entry(achievement_id.clone()).or_insert_with(|| {
-            Achievement {
-                id: achievement_id,
-                name: String::new(),
-                description: String::new(),
-                unlocked: true,
-                progress: 100,
-            }
+        self.achievements.entry(achievement_id.clone()).or_insert_with(|| Achievement {
+            id: achievement_id,
+            name: String::new(),
+            description: String::new(),
+            unlocked: true,
+            progress: 100,
         });
 
         Ok(())
@@ -106,11 +104,7 @@ impl GooglePlayGames {
     }
 
     /// 提交分数到排行榜
-    pub fn submit_score(
-        &mut self,
-        leaderboard_id: String,
-        score: i64,
-    ) -> Result<(), ServiceError> {
+    pub fn submit_score(&mut self, leaderboard_id: String, score: i64) -> Result<(), ServiceError> {
         if !self.is_signed_in() {
             return Err(ServiceError::NotSignedIn);
         }
@@ -209,25 +203,19 @@ impl GameCenter {
         }
 
         // TODO: 实际的成就报告逻辑
-        self.achievements.entry(achievement_id.clone()).or_insert_with(|| {
-            Achievement {
-                id: achievement_id,
-                name: String::new(),
-                description: String::new(),
-                unlocked: true,
-                progress: 100,
-            }
+        self.achievements.entry(achievement_id.clone()).or_insert_with(|| Achievement {
+            id: achievement_id,
+            name: String::new(),
+            description: String::new(),
+            unlocked: true,
+            progress: 100,
         });
 
         Ok(())
     }
 
     /// 提交分数到排行榜
-    pub fn submit_score(
-        &mut self,
-        leaderboard_id: String,
-        score: i64,
-    ) -> Result<(), ServiceError> {
+    pub fn submit_score(&mut self, leaderboard_id: String, score: i64) -> Result<(), ServiceError> {
         if !self.is_authenticated() {
             return Err(ServiceError::NotSignedIn);
         }
@@ -440,6 +428,21 @@ pub enum ServiceError {
     /// 未知错误
     Unknown(String),
 }
+
+impl std::fmt::Display for ServiceError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ServiceError::NotInitialized => write!(f, "Service not initialized"),
+            ServiceError::NotSignedIn => write!(f, "User not signed in"),
+            ServiceError::PermissionDenied => write!(f, "Permission denied"),
+            ServiceError::NetworkError => write!(f, "Network error"),
+            ServiceError::Timeout => write!(f, "Operation timeout"),
+            ServiceError::Unknown(msg) => write!(f, "Unknown error: {}", msg),
+        }
+    }
+}
+
+impl std::error::Error for ServiceError {}
 
 #[cfg(test)]
 mod tests {

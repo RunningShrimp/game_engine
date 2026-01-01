@@ -117,6 +117,7 @@
 
 // Public module re-exports
 // 公开模块重导出
+pub mod acceleration;
 #[cfg(feature = "ai")]
 pub mod ai;
 pub mod animation;

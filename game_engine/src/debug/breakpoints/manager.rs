@@ -226,8 +226,21 @@ impl BreakpointManager {
 
             // 检查条件
             if let Some(condition) = &bp.condition {
-                // TODO: 实际的条件表达式求值
-                // 这里简化为总是触发
+                // 评估条件表达式
+                if let Some(eval_result) = Self::evaluate_condition(&condition.expression) {
+                    if !eval_result {
+                        tracing::debug!(
+                            "Breakpoint condition false: {} at {}:{} (expression: {})",
+                            bp.id,
+                            source_path,
+                            line,
+                            condition.expression
+                        );
+                        return None;
+                    }
+                }
+
+                // 检查命中次数
                 if let Some(hit_count) = condition.hit_count {
                     if bp.hit_count < hit_count as u32 {
                         return None;
@@ -239,6 +252,70 @@ impl BreakpointManager {
         } else {
             None
         }
+    }
+
+    /// 评估条件表达式
+    /// 返回Some(true)表示条件满足，Some(false)表示不满足，None表示无法评估
+    fn evaluate_condition(expression: &str) -> Option<bool> {
+        // 简化的条件表达式评估
+        // 实际实现应该集成完整的表达式解析器
+
+        let expression = expression.trim();
+
+        // 处理布尔值
+        match expression {
+            "true" => return Some(true),
+            "false" => return Some(false),
+            _ => {}
+        }
+
+        // 处理比较表达式
+        if expression.contains("==") {
+            let parts: Vec<&str> = expression.split("==").collect();
+            if parts.len() == 2 {
+                let left = parts[0].trim();
+                let right = parts[1].trim();
+                // 简化：直接比较字符串
+                return Some(left == right);
+            }
+        }
+
+        if expression.contains("!=") {
+            let parts: Vec<&str> = expression.split("!=").collect();
+            if parts.len() == 2 {
+                let left = parts[0].trim();
+                let right = parts[1].trim();
+                return Some(left != right);
+            }
+        }
+
+        if expression.contains(">") {
+            let parts: Vec<&str> = expression.split(">").collect();
+            if parts.len() == 2 {
+                if let (Ok(left), Ok(right)) = (
+                    parts[0].trim().parse::<i64>(),
+                    parts[1].trim().parse::<i64>(),
+                ) {
+                    return Some(left > right);
+                }
+            }
+        }
+
+        if expression.contains("<") {
+            let parts: Vec<&str> = expression.split("<").collect();
+            if parts.len() == 2 {
+                if let (Ok(left), Ok(right)) = (
+                    parts[0].trim().parse::<i64>(),
+                    parts[1].trim().parse::<i64>(),
+                ) {
+                    return Some(left < right);
+                }
+            }
+        }
+
+        // 默认：如果无法评估，返回true（触发断点）
+        tracing::warn!("Could not evaluate breakpoint condition: '{}'", expression);
+        Some(true)
     }
 
     /// 断点命中
@@ -367,6 +444,8 @@ pub struct BreakpointValidationResult {
 pub struct BreakpointValidator {
     /// 支持的源文件扩展名
     supported_extensions: Vec<String>,
+    /// 源文件根路径
+    source_roots: Vec<String>,
 }
 
 impl BreakpointValidator {
@@ -380,7 +459,17 @@ impl BreakpointValidator {
                 ".py".to_string(),
                 ".rs".to_string(),
             ],
+            source_roots: vec![
+                "scripts/".to_string(),
+                "src/".to_string(),
+                "assets/".to_string(),
+            ],
         }
+    }
+
+    /// 添加源文件根路径
+    pub fn add_source_root(&mut self, root: String) {
+        self.source_roots.push(root);
     }
 
     /// 验证断点
@@ -393,7 +482,10 @@ impl BreakpointValidator {
             return BreakpointValidationResult {
                 id: bp.id,
                 verified: false,
-                error_message: Some(format!("Unsupported file type: {}", bp.source_path)),
+                error_message: Some(format!(
+                    "Unsupported file type: {}. Supported: {:?}",
+                    bp.source_path, self.supported_extensions
+                )),
                 adjusted_line: None,
             };
         }
@@ -408,14 +500,81 @@ impl BreakpointValidator {
             };
         }
 
-        // TODO: 实际的源文件存在性和行数检查
-        // 这里简化为总是验证通过
+        // 验证源文件存在性
+        match self.validate_source_file(&bp.source_path, bp.line) {
+            Ok(Some(adjusted_line)) => BreakpointValidationResult {
+                id: bp.id,
+                verified: true,
+                error_message: None,
+                adjusted_line: Some(adjusted_line),
+            },
+            Ok(None) => BreakpointValidationResult {
+                id: bp.id,
+                verified: true,
+                error_message: None,
+                adjusted_line: None,
+            },
+            Err(e) => BreakpointValidationResult {
+                id: bp.id,
+                verified: false,
+                error_message: Some(e),
+                adjusted_line: None,
+            },
+        }
+    }
 
-        BreakpointValidationResult {
-            id: bp.id,
-            verified: true,
-            error_message: None,
-            adjusted_line: None,
+    /// 验证源文件存在性和行数
+    /// 返回Ok(Some(adjusted_line))如果需要调整行号
+    /// 返回Ok(None)如果文件有效且无需调整
+    /// 返回Err(message)如果验证失败
+    fn validate_source_file(&self, source_path: &str, line: i64) -> Result<Option<i64>, String> {
+        use std::path::{Path, PathBuf};
+
+        // 尝试在源根目录中查找文件
+        let mut found_path: Option<PathBuf> = None;
+
+        // 如果路径是绝对路径，直接检查
+        if Path::new(source_path).is_absolute() {
+            if Path::new(source_path).exists() {
+                found_path = Some(PathBuf::from(source_path));
+            }
+        } else {
+            // 在源根目录中搜索
+            for root in &self.source_roots {
+                let full_path = PathBuf::from(root).join(source_path);
+                if full_path.exists() {
+                    found_path = Some(full_path);
+                    break;
+                }
+            }
+        }
+
+        // 如果找到了文件，检查行数
+        if let Some(path) = found_path {
+            match std::fs::read_to_string(&path) {
+                Ok(content) => {
+                    let line_count = content.lines().count() as i64;
+
+                    if line > line_count {
+                        Err(format!(
+                            "Line {} exceeds file length ({})",
+                            line, line_count
+                        ))
+                    } else {
+                        // 文件有效，无需调整行号
+                        Ok(None)
+                    }
+                }
+                Err(e) => Err(format!("Failed to read file: {}", e)),
+            }
+        } else {
+            // 文件不存在，但可能是动态生成的脚本
+            // 在开发模式下，我们允许设置断点，运行时会验证
+            tracing::warn!(
+                "Source file not found: {} (breakpoint will be verified at runtime)",
+                source_path
+            );
+            Ok(None)
         }
     }
 
@@ -425,6 +584,20 @@ impl BreakpointValidator {
         breakpoints: &[BreakpointInfo],
     ) -> Vec<BreakpointValidationResult> {
         breakpoints.iter().map(|bp| self.validate(bp)).collect()
+    }
+
+    /// 获取支持的文件扩展名
+    pub fn supported_extensions(&self) -> &[String] {
+        &self.supported_extensions
+    }
+
+    /// 添加支持的文件扩展名
+    pub fn add_supported_extension(&mut self, ext: String) {
+        if !ext.starts_with('.') {
+            self.supported_extensions.push(format!(".{}", ext));
+        } else {
+            self.supported_extensions.push(ext);
+        }
     }
 }
 
@@ -622,5 +795,161 @@ mod tests {
         let result = validator.validate(&bp);
         assert!(!result.verified);
         assert!(result.error_message.is_some());
+    }
+
+    #[test]
+    fn test_validator_with_source_roots() {
+        let mut validator = BreakpointValidator::new();
+        validator.add_source_root("test/".to_string());
+
+        let bp = BreakpointInfo {
+            id: 1,
+            bp_type: BreakpointType::Line,
+            source_path: "script.lua".to_string(),
+            line: 10,
+            column: None,
+            function_name: None,
+            status: BreakpointStatus::Unverified,
+            enabled: true,
+            condition: None,
+            log_message: None,
+            hit_count: 0,
+            created_at: 0,
+            last_hit_at: None,
+        };
+
+        let result = validator.validate(&bp);
+        // 文件不存在但应该有警告而不是错误
+        assert!(result.verified);
+    }
+
+    #[test]
+    fn test_evaluate_condition_true() {
+        // 测试 true 条件
+        assert_eq!(BreakpointManager::evaluate_condition("true"), Some(true));
+    }
+
+    #[test]
+    fn test_evaluate_condition_false() {
+        // 测试 false 条件
+        assert_eq!(BreakpointManager::evaluate_condition("false"), Some(false));
+    }
+
+    #[test]
+    fn test_evaluate_condition_equals() {
+        // 测试相等条件
+        assert_eq!(BreakpointManager::evaluate_condition("x == x"), Some(true));
+        assert_eq!(BreakpointManager::evaluate_condition("x == y"), Some(false));
+    }
+
+    #[test]
+    fn test_evaluate_condition_not_equals() {
+        // 测试不等条件
+        assert_eq!(BreakpointManager::evaluate_condition("x != y"), Some(true));
+        assert_eq!(BreakpointManager::evaluate_condition("x != x"), Some(false));
+    }
+
+    #[test]
+    fn test_evaluate_condition_greater_than() {
+        // 测试大于条件
+        assert_eq!(BreakpointManager::evaluate_condition("10 > 5"), Some(true));
+        assert_eq!(BreakpointManager::evaluate_condition("5 > 10"), Some(false));
+    }
+
+    #[test]
+    fn test_evaluate_condition_less_than() {
+        // 测试小于条件
+        assert_eq!(BreakpointManager::evaluate_condition("5 < 10"), Some(true));
+        assert_eq!(BreakpointManager::evaluate_condition("10 < 5"), Some(false));
+    }
+
+    #[tokio::test]
+    async fn test_conditional_breakpoint() {
+        let manager = BreakpointManager::new();
+
+        // 添加带条件的断点
+        let bp = manager
+            .add_breakpoint("/path/to/file.lua".to_string(), 42, BreakpointType::Line)
+            .await;
+
+        // 设置条件
+        let condition = BreakpointCondition {
+            expression: "true".to_string(),
+            hit_count: None,
+        };
+        manager.set_breakpoint_condition("/path/to/file.lua", 42, condition).await;
+
+        // 条件满足，应该触发
+        let should_break = manager.should_break("/path/to/file.lua", 42).await;
+        assert!(should_break.is_some());
+    }
+
+    #[tokio::test]
+    async fn test_conditional_breakpoint_false() {
+        let manager = BreakpointManager::new();
+
+        // 添加带条件的断点
+        let bp = manager
+            .add_breakpoint("/path/to/file.lua".to_string(), 42, BreakpointType::Line)
+            .await;
+
+        // 设置false条件
+        let condition = BreakpointCondition {
+            expression: "false".to_string(),
+            hit_count: None,
+        };
+        manager.set_breakpoint_condition("/path/to/file.lua", 42, condition).await;
+
+        // 条件不满足，不应该触发
+        let should_break = manager.should_break("/path/to/file.lua", 42).await;
+        assert!(should_break.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_hit_count_condition() {
+        let manager = BreakpointManager::new();
+
+        // 添加带命中次数条件的断点
+        let bp = manager
+            .add_breakpoint("/path/to/file.lua".to_string(), 42, BreakpointType::Line)
+            .await;
+
+        // 设置命中次数为3
+        let condition = BreakpointCondition {
+            expression: "true".to_string(),
+            hit_count: Some(3),
+        };
+        manager.set_breakpoint_condition("/path/to/file.lua", 42, condition).await;
+
+        // 前两次不应该触发
+        assert!(manager.should_break("/path/to/file.lua", 42).await.is_none());
+        assert!(manager.should_break("/path/to/file.lua", 42).await.is_none());
+
+        // 模拟命中
+        manager.hit_breakpoint("/path/to/file.lua", 42).await;
+        manager.hit_breakpoint("/path/to/file.lua", 42).await;
+        manager.hit_breakpoint("/path/to/file.lua", 42).await;
+
+        // 第三次应该触发
+        assert!(manager.should_break("/path/to/file.lua", 42).await.is_some());
+    }
+
+    #[tokio::test]
+    async fn test_validator_supported_extensions() {
+        let validator = BreakpointValidator::new();
+        let extensions = validator.supported_extensions();
+
+        assert!(extensions.contains(&".lua".to_string()));
+        assert!(extensions.contains(&".ts".to_string()));
+        assert!(extensions.contains(&".js".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_validator_add_extension() {
+        let mut validator = BreakpointValidator::new();
+        validator.add_supported_extension("cpp".to_string());
+
+        let extensions = validator.supported_extensions();
+        assert!(extensions.contains(&".cpp".to_string()));
     }
 }
