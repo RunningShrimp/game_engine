@@ -49,6 +49,8 @@ pub mod python;
 pub mod python_lifecycle;
 /// 资源管理脚本API模块
 pub mod resource_api;
+/// 移动平台服务脚本API模块
+pub mod mobile_api;
 /// Rust脚本模块
 pub mod rust_scripting;
 /// 脚本系统模块

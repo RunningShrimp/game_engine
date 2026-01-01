@@ -7,8 +7,7 @@ pub mod winit;
 
 use thiserror::Error;
 
-// Platform-specific modules
-#[cfg(any(target_os = "android", target_os = "ios"))]
+// Mobile platform support (available on all platforms with mock implementations when not on mobile)
 pub mod mobile;
 
 // 鸿蒙系统支持 (P2-2.1) - 使用feature flag

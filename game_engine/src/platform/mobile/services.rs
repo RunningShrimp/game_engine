@@ -4,6 +4,10 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
+
+#[cfg(target_os = "android")]
+use super::jni::GooglePlayGamesJNI;
 
 /// Google Play Games服务
 pub struct GooglePlayGames {
@@ -15,6 +19,9 @@ pub struct GooglePlayGames {
     achievements: HashMap<String, Achievement>,
     /// 排行榜
     leaderboards: HashMap<String, Leaderboard>,
+    /// Android JNI包装器（仅Android平台）
+    #[cfg(target_os = "android")]
+    jni_wrapper: Arc<Mutex<GooglePlayGamesJNI>>,
 }
 
 impl GooglePlayGames {
@@ -25,13 +32,29 @@ impl GooglePlayGames {
             current_player: None,
             achievements: HashMap::new(),
             leaderboards: HashMap::new(),
+            #[cfg(target_os = "android")]
+            jni_wrapper: Arc::new(Mutex::new(GooglePlayGamesJNI::new())),
         }
     }
 
     /// 初始化服务
     pub fn initialize(&mut self) -> Result<(), ServiceError> {
-        // TODO: 实际的Google Play Games SDK初始化
+        #[cfg(target_os = "android")]
+        {
+            let mut jni = self.jni_wrapper.lock().map_err(|e| {
+                ServiceError::InternalError(format!("JNI wrapper lock failed: {}", e))
+            })?;
+
+            jni.initialize().map_err(|e| ServiceError::InternalError(e))?;
+        }
+
+        #[cfg(not(target_os = "android"))]
+        {
+            tracing::info!("Google Play Games: running on non-Android platform, using mock");
+        }
+
         self.initialized = true;
+        tracing::info!("Google Play Games service initialized");
         Ok(())
     }
 
@@ -41,19 +64,49 @@ impl GooglePlayGames {
             return Err(ServiceError::NotInitialized);
         }
 
-        // TODO: 实际的登录逻辑
-        self.current_player = Some(PlayerInfo {
-            id: "player_123".to_string(),
-            name: "Player".to_string(),
-            level: 1,
-        });
+        #[cfg(target_os = "android")]
+        {
+            let jni = self.jni_wrapper.lock().map_err(|e| {
+                ServiceError::InternalError(format!("JNI wrapper lock failed: {}", e))
+            })?;
 
+            let signed_in = jni.sign_in().map_err(|e| ServiceError::InternalError(e))?;
+
+            if signed_in {
+                // TODO: 从JNI获取实际玩家信息
+                self.current_player = Some(PlayerInfo {
+                    id: "player_android".to_string(),
+                    name: "Android Player".to_string(),
+                    level: 1,
+                });
+            }
+        }
+
+        #[cfg(not(target_os = "android"))]
+        {
+            // Mock实现
+            self.current_player = Some(PlayerInfo {
+                id: "player_mock".to_string(),
+                name: "Mock Player".to_string(),
+                level: 1,
+            });
+        }
+
+        tracing::info!("Google Play Games sign-in successful");
         Ok(())
     }
 
     /// 登出
     pub fn sign_out(&mut self) {
+        #[cfg(target_os = "android")]
+        {
+            if let Ok(jni) = self.jni_wrapper.lock() {
+                let _ = jni.sign_out();
+            }
+        }
+
         self.current_player = None;
+        tracing::info!("Google Play Games sign-out successful");
     }
 
     /// 是否已登录
@@ -72,15 +125,26 @@ impl GooglePlayGames {
             return Err(ServiceError::NotSignedIn);
         }
 
-        // TODO: 实际的成就解锁逻辑
+        #[cfg(target_os = "android")]
+        {
+            let jni = self.jni_wrapper.lock().map_err(|e| {
+                ServiceError::InternalError(format!("JNI wrapper lock failed: {}", e))
+            })?;
+
+            jni.unlock_achievement(&achievement_id)
+                .map_err(|e| ServiceError::InternalError(e))?;
+        }
+
+        // 更新本地成就状态
         self.achievements.entry(achievement_id.clone()).or_insert_with(|| Achievement {
-            id: achievement_id,
-            name: String::new(),
-            description: String::new(),
+            id: achievement_id.clone(),
+            name: format!("Achievement {}", achievement_id),
+            description: "Unlocked achievement".to_string(),
             unlocked: true,
             progress: 100,
         });
 
+        tracing::info!("Achievement unlocked: {}", achievement_id);
         Ok(())
     }
 
@@ -94,12 +158,29 @@ impl GooglePlayGames {
             return Err(ServiceError::NotSignedIn);
         }
 
-        // TODO: 实际的进度更新逻辑
-        self.achievements.entry(achievement_id).and_modify(|achievement| {
+        #[cfg(target_os = "android")]
+        {
+            let jni = self.jni_wrapper.lock().map_err(|e| {
+                ServiceError::InternalError(format!("JNI wrapper lock failed: {}", e))
+            })?;
+
+            jni.update_achievement_progress(&achievement_id, progress)
+                .map_err(|e| ServiceError::InternalError(e))?;
+        }
+
+        // 更新本地成就状态
+        self.achievements.entry(achievement_id.clone()).and_modify(|achievement| {
             achievement.progress = progress.min(100);
             achievement.unlocked = achievement.progress >= 100;
+        }).or_insert_with(|| Achievement {
+            id: achievement_id.clone(),
+            name: format!("Achievement {}", achievement_id),
+            description: "In progress".to_string(),
+            unlocked: false,
+            progress: progress.min(100),
         });
 
+        tracing::info!("Achievement {} progress updated to {}%", achievement_id, progress);
         Ok(())
     }
 
@@ -109,7 +190,17 @@ impl GooglePlayGames {
             return Err(ServiceError::NotSignedIn);
         }
 
-        // TODO: 实际的分数提交逻辑
+        #[cfg(target_os = "android")]
+        {
+            let jni = self.jni_wrapper.lock().map_err(|e| {
+                ServiceError::InternalError(format!("JNI wrapper lock failed: {}", e))
+            })?;
+
+            jni.submit_score(&leaderboard_id, score)
+                .map_err(|e| ServiceError::InternalError(e))?;
+        }
+
+        tracing::info!("Score {} submitted to leaderboard {}", score, leaderboard_id);
         Ok(())
     }
 
@@ -119,7 +210,21 @@ impl GooglePlayGames {
             return Err(ServiceError::NotSignedIn);
         }
 
-        // TODO: 显示Google Play Games排行榜UI
+        #[cfg(target_os = "android")]
+        {
+            let jni = self.jni_wrapper.lock().map_err(|e| {
+                ServiceError::InternalError(format!("JNI wrapper lock failed: {}", e))
+            })?;
+
+            jni.show_leaderboard(&leaderboard_id)
+                .map_err(|e| ServiceError::InternalError(e))?;
+        }
+
+        #[cfg(not(target_os = "android"))]
+        {
+            tracing::info!("Showing leaderboard UI (mock): {}", leaderboard_id);
+        }
+
         Ok(())
     }
 
@@ -129,7 +234,21 @@ impl GooglePlayGames {
             return Err(ServiceError::NotSignedIn);
         }
 
-        // TODO: 显示Google Play Games成就UI
+        #[cfg(target_os = "android")]
+        {
+            let jni = self.jni_wrapper.lock().map_err(|e| {
+                ServiceError::InternalError(format!("JNI wrapper lock failed: {}", e))
+            })?;
+
+            jni.show_achievements()
+                .map_err(|e| ServiceError::InternalError(e))?;
+        }
+
+        #[cfg(not(target_os = "android"))]
+        {
+            tracing::info!("Showing achievements UI (mock)");
+        }
+
         Ok(())
     }
 }

@@ -6,6 +6,10 @@ pub mod config;
 pub mod input;
 pub mod services;
 
+// JNI模块仅在Android平台可用
+#[cfg(target_os = "android")]
+pub mod jni;
+
 pub use config::MobileConfig;
 
 #[cfg(target_os = "ios")]
