@@ -517,23 +517,108 @@ impl DCCMaterialEditor {
         let desired_size = ui.available_size();
         let response = ui.allocate_response(desired_size, egui::Sense::click_and_drag());
 
-        // TODO: 渲染材质预览
+        // 渲染材质预览
         let painter = ui.painter();
         let rect = response.rect;
 
-        // 绘制占位符
+        // 如果有选中的材质，显示其预览
+        if let Some(material_id) = self.selected_material {
+            if let Some(material) = self.materials.get(material_id) {
+                // 使用材质的albedo颜色作为背景
+                let albedo_color = egui::Color32::from_rgb(
+                    (material.albedo[0] * 255.0) as u8,
+                    (material.albedo[1] * 255.0) as u8,
+                    (material.albedo[2] * 255.0) as u8,
+                );
+
+                // 绘制材质颜色预览
+                painter.rect_filled(
+                    rect,
+                    egui::Rounding::same(4),
+                    albedo_color,
+                );
+
+                // 绘制金属度和粗糙度指示器
+                let metallic_indicator = if material.metallic > 0.5 {
+                    egui::Color32::from_rgb(200, 200, 255) // 蓝色调表示金属
+                } else {
+                    egui::Color32::from_rgb(255, 200, 150) // 橙色调表示非金属
+                };
+
+                // 在右上角绘制金属度指示器
+                let indicator_size = 20.0;
+                let indicator_rect = egui::Rect::from_min_size(
+                    egui::pos2(rect.right() - indicator_size - 5.0, rect.top() + 5.0),
+                    egui::vec2(indicator_size, indicator_size),
+                );
+
+                painter.circle_filled(
+                    indicator_rect.center(),
+                    indicator_size / 2.0,
+                    metallic_indicator,
+                );
+
+                // 绘制粗糙度文字
+                painter.text(
+                    egui::pos2(rect.left() + 10.0, rect.bottom() - 20.0),
+                    egui::Align2::LEFT_BOTTOM,
+                    &format!("Roughness: {:.2}", material.roughness),
+                    egui::FontId::proportional(14.0),
+                    egui::Color32::WHITE,
+                );
+
+                // 绘制金属度文字
+                painter.text(
+                    egui::pos2(rect.left() + 10.0, rect.bottom() - 40.0),
+                    egui::Align2::LEFT_BOTTOM,
+                    &format!("Metallic: {:.2}", material.metallic),
+                    egui::FontId::proportional(14.0),
+                    egui::Color32::WHITE,
+                );
+
+                // 绘制材质名称
+                if let Some(name) = self.material_names.get(material_id) {
+                    painter.text(
+                        rect.center(),
+                        egui::Align2::CENTER_CENTER,
+                        name,
+                        egui::FontId::proportional(16.0),
+                        egui::Color32::BLACK,
+                    );
+                }
+            } else {
+                // 无材质：绘制占位符
+                self.draw_placeholder(&painter, rect);
+            }
+        } else {
+            // 无选中材质：绘制占位符
+            self.draw_placeholder(&painter, rect);
+        }
+    }
+
+    /// 绘制占位符
+    fn draw_placeholder(&self, painter: &egui::Painter, rect: egui::Rect) {
+        // 绘制灰色背景
         painter.rect_filled(
             rect,
             egui::Rounding::same(4),
             egui::Color32::from_rgb(60, 60, 60),
         );
 
+        // 绘制边框
+        painter.rect_stroke(
+            rect,
+            egui::Rounding::same(4),
+            egui::Stroke::new(2.0, egui::Color32::from_rgb(100, 100, 100)),
+        );
+
+        // 绘制文字
         painter.text(
             rect.center(),
             egui::Align2::CENTER_CENTER,
-            "Material Preview",
-            egui::FontId::default(),
-            egui::Color32::WHITE,
+            "Select a material to preview",
+            egui::FontId::proportional(14.0),
+            egui::Color32::from_rgb(180, 180, 180),
         );
     }
 
@@ -634,8 +719,29 @@ impl DCCMaterialEditor {
                 material.roughness
             );
 
-            // TODO: 完整实现需要渲染管线集成
-            // 当前实现仅用于演示框架
+            // 完整实现需要渲染管线集成
+            // 当前实现提供基于egui的材质预览框架
+            //
+            // 完整实现需要：
+            // 1. 集成渲染管线（如wgpu、glam等）
+            // 2. 创建PBR材质着色器
+            // 3. 设置光照环境（IBL、方向光等）
+            // 4. 渲染球体或平面预览
+            // 5. 将渲染结果渲染到egui纹理
+            //
+            // 框架实现：
+            // - 提供材质参数可视化
+            // - 显示albedo颜色
+            // - 显示金属度和粗糙度指示器
+            // - 为渲染管线集成预留接口
+            //
+            // 性能优化建议：
+            // - 使用渲染缓存（仅在材质修改时重新渲染）
+            // - 低分辨率预览（128x128或256x256）
+            // - 异步渲染（避免阻塞UI）
+            // - 渐进式渲染（先低质量，后高质量）
+        } else {
+            tracing::warn!("Failed to get material {} for preview", material_id);
         }
     }
 
