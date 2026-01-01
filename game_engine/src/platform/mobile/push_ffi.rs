@@ -16,8 +16,8 @@ use std::sync::{Arc, Mutex};
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum PushPlatform {
     Unknown = 0,
-    FCM = 1,      // Firebase Cloud Messaging (Android)
-    APNs = 2,     // Apple Push Notification Service (iOS)
+    FCM = 1,  // Firebase Cloud Messaging (Android)
+    APNs = 2, // Apple Push Notification Service (iOS)
 }
 
 /// 推送通知权限状态
@@ -87,11 +87,11 @@ impl FCMFFI {
         let status = unsafe { self.fcm_request_permission() };
 
         match status {
-            PushPermissionStatus::Authorized as c_int => {
+            val if val == PushPermissionStatus::Authorized as c_int => {
                 self.permission_status = PushPermissionStatus::Authorized;
                 Ok(true)
             }
-            PushPermissionStatus::Denied as c_int => {
+            val if val == PushPermissionStatus::Denied as c_int => {
                 self.permission_status = PushPermissionStatus::Denied;
                 Ok(false)
             }
@@ -110,9 +110,7 @@ impl FCMFFI {
             return Err("Permission not granted".to_string());
         }
 
-        let topic_cstring = CString::new(topic).map_err(|_| {
-            "Invalid topic string".to_string()
-        })?;
+        let topic_cstring = CString::new(topic).map_err(|_| "Invalid topic string".to_string())?;
 
         let result = unsafe { self.fcm_subscribe_to_topic(topic_cstring.as_ptr()) };
 
@@ -126,9 +124,7 @@ impl FCMFFI {
 
     /// 取消订阅主题
     pub fn unsubscribe_from_topic(&self, topic: &str) -> Result<(), String> {
-        let topic_cstring = CString::new(topic).map_err(|_| {
-            "Invalid topic string".to_string()
-        })?;
+        let topic_cstring = CString::new(topic).map_err(|_| "Invalid topic string".to_string())?;
 
         let result = unsafe { self.fcm_unsubscribe_from_topic(topic_cstring.as_ptr()) };
 
@@ -216,15 +212,15 @@ impl APNsFFI {
         let status = unsafe { self.apns_request_permission() };
 
         match status {
-            PushPermissionStatus::Authorized as c_int => {
+            val if val == PushPermissionStatus::Authorized as c_int => {
                 self.permission_status = PushPermissionStatus::Authorized;
                 Ok(true)
             }
-            PushPermissionStatus::Denied as c_int => {
+            val if val == PushPermissionStatus::Denied as c_int => {
                 self.permission_status = PushPermissionStatus::Denied;
                 Ok(false)
             }
-            PushPermissionStatus::Provisional as c_int => {
+            val if val == PushPermissionStatus::Provisional as c_int => {
                 self.permission_status = PushPermissionStatus::Provisional;
                 Ok(true) // Provisional也视为授权
             }
@@ -306,9 +302,14 @@ impl APNsFFI {
         apns_register_ffi()
     }
 
-    unsafe fn apns_send_local_notification(&self, title: *const c_char, body: *const c_char) -> c_int {
+    unsafe fn apns_send_local_notification(
+        &self,
+        title: *const c_char,
+        body: *const c_char,
+    ) -> c_int {
         extern "C" {
-            fn apns_send_local_notification_ffi(title: *const c_char, body: *const c_char) -> c_int;
+            fn apns_send_local_notification_ffi(title: *const c_char, body: *const c_char)
+            -> c_int;
         }
         apns_send_local_notification_ffi(title, body)
     }
@@ -337,6 +338,9 @@ mod tests {
 
     #[test]
     fn test_permission_status() {
-        assert_eq!(PushPermissionStatus::Authorized, PushPermissionStatus::Authorized);
+        assert_eq!(
+            PushPermissionStatus::Authorized,
+            PushPermissionStatus::Authorized
+        );
     }
 }

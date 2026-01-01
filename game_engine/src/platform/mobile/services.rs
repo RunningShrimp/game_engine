@@ -12,7 +12,10 @@ use super::jni::GooglePlayGamesJNI;
 #[cfg(target_os = "ios")]
 use super::ios_ffi::GameCenterFFI;
 
-use super::push_ffi::{FCMFFI, APNsFFI};
+use super::in_app_purchase_ffi::{
+    BillingFFI, ProductInfo, ProductType, PurchaseInfo, StoreKitFFI, SubscriptionInfo,
+};
+use super::push_ffi::{APNsFFI, FCMFFI};
 
 /// Google Play Games服务
 pub struct GooglePlayGames {
@@ -174,18 +177,25 @@ impl GooglePlayGames {
         }
 
         // 更新本地成就状态
-        self.achievements.entry(achievement_id.clone()).and_modify(|achievement| {
-            achievement.progress = progress.min(100);
-            achievement.unlocked = achievement.progress >= 100;
-        }).or_insert_with(|| Achievement {
-            id: achievement_id.clone(),
-            name: format!("Achievement {}", achievement_id),
-            description: "In progress".to_string(),
-            unlocked: false,
-            progress: progress.min(100),
-        });
+        self.achievements
+            .entry(achievement_id.clone())
+            .and_modify(|achievement| {
+                achievement.progress = progress.min(100);
+                achievement.unlocked = achievement.progress >= 100;
+            })
+            .or_insert_with(|| Achievement {
+                id: achievement_id.clone(),
+                name: format!("Achievement {}", achievement_id),
+                description: "In progress".to_string(),
+                unlocked: false,
+                progress: progress.min(100),
+            });
 
-        tracing::info!("Achievement {} progress updated to {}%", achievement_id, progress);
+        tracing::info!(
+            "Achievement {} progress updated to {}%",
+            achievement_id,
+            progress
+        );
         Ok(())
     }
 
@@ -205,7 +215,11 @@ impl GooglePlayGames {
                 .map_err(|e| ServiceError::InternalError(e))?;
         }
 
-        tracing::info!("Score {} submitted to leaderboard {}", score, leaderboard_id);
+        tracing::info!(
+            "Score {} submitted to leaderboard {}",
+            score,
+            leaderboard_id
+        );
         Ok(())
     }
 
@@ -245,8 +259,7 @@ impl GooglePlayGames {
                 ServiceError::InternalError(format!("JNI wrapper lock failed: {}", e))
             })?;
 
-            jni.show_achievements()
-                .map_err(|e| ServiceError::InternalError(e))?;
+            jni.show_achievements().map_err(|e| ServiceError::InternalError(e))?;
         }
 
         #[cfg(not(target_os = "android"))]
@@ -406,7 +419,11 @@ impl GameCenter {
                 .map_err(|e| ServiceError::InternalError(e))?;
         }
 
-        tracing::info!("Score {} submitted to leaderboard {}", score, leaderboard_id);
+        tracing::info!(
+            "Score {} submitted to leaderboard {}",
+            score,
+            leaderboard_id
+        );
         Ok(())
     }
 
@@ -422,8 +439,7 @@ impl GameCenter {
                 ServiceError::InternalError(format!("FFI wrapper lock failed: {}", e))
             })?;
 
-            ffi.show_game_center()
-                .map_err(|e| ServiceError::InternalError(e))?;
+            ffi.show_game_center().map_err(|e| ServiceError::InternalError(e))?;
         }
 
         #[cfg(not(target_os = "ios"))]
@@ -475,18 +491,20 @@ impl PushNotificationService {
     pub fn initialize(&mut self) -> Result<(), ServiceError> {
         #[cfg(target_os = "android")]
         {
-            let mut fcm = self.fcm_ffi.lock().map_err(|e| {
-                ServiceError::InternalError(format!("FCM FFI lock failed: {}", e))
-            })?;
+            let mut fcm = self
+                .fcm_ffi
+                .lock()
+                .map_err(|e| ServiceError::InternalError(format!("FCM FFI lock failed: {}", e)))?;
 
             fcm.initialize().map_err(|e| ServiceError::InternalError(e))?;
         }
 
         #[cfg(target_os = "ios")]
         {
-            let mut apns = self.apns_ffi.lock().map_err(|e| {
-                ServiceError::InternalError(format!("APNs FFI lock failed: {}", e))
-            })?;
+            let mut apns = self
+                .apns_ffi
+                .lock()
+                .map_err(|e| ServiceError::InternalError(format!("APNs FFI lock failed: {}", e)))?;
 
             apns.initialize().map_err(|e| ServiceError::InternalError(e))?;
         }
@@ -509,9 +527,10 @@ impl PushNotificationService {
 
         #[cfg(target_os = "android")]
         {
-            let mut fcm = self.fcm_ffi.lock().map_err(|e| {
-                ServiceError::InternalError(format!("FCM FFI lock failed: {}", e))
-            })?;
+            let mut fcm = self
+                .fcm_ffi
+                .lock()
+                .map_err(|e| ServiceError::InternalError(format!("FCM FFI lock failed: {}", e)))?;
 
             let granted = fcm.request_permission().map_err(|e| ServiceError::InternalError(e))?;
             self.permission_granted = granted;
@@ -520,9 +539,10 @@ impl PushNotificationService {
 
         #[cfg(target_os = "ios")]
         {
-            let mut apns = self.apns_ffi.lock().map_err(|e| {
-                ServiceError::InternalError(format!("APNs FFI lock failed: {}", e))
-            })?;
+            let mut apns = self
+                .apns_ffi
+                .lock()
+                .map_err(|e| ServiceError::InternalError(format!("APNs FFI lock failed: {}", e)))?;
 
             let granted = apns.request_permission().map_err(|e| ServiceError::InternalError(e))?;
             self.permission_granted = granted;
@@ -552,15 +572,19 @@ impl PushNotificationService {
         #[cfg(target_os = "android")]
         {
             // Android使用FCM发送本地通知（需要实现）
-            tracing::info!("Sending local notification (Android): {}", notification.title);
+            tracing::info!(
+                "Sending local notification (Android): {}",
+                notification.title
+            );
             return Ok(());
         }
 
         #[cfg(target_os = "ios")]
         {
-            let apns = self.apns_ffi.lock().map_err(|e| {
-                ServiceError::InternalError(format!("APNs FFI lock failed: {}", e))
-            })?;
+            let apns = self
+                .apns_ffi
+                .lock()
+                .map_err(|e| ServiceError::InternalError(format!("APNs FFI lock failed: {}", e)))?;
 
             apns.send_local_notification(&notification.title, &notification.body)
                 .map_err(|e| ServiceError::InternalError(e))?;
@@ -571,7 +595,11 @@ impl PushNotificationService {
 
         #[cfg(not(any(target_os = "android", target_os = "ios")))]
         {
-            tracing::info!("Local notification sent (mock): {} - {}", notification.title, notification.body);
+            tracing::info!(
+                "Local notification sent (mock): {} - {}",
+                notification.title,
+                notification.body
+            );
         }
 
         Ok(())
@@ -585,12 +613,12 @@ impl PushNotificationService {
 
         #[cfg(target_os = "android")]
         {
-            let fcm = self.fcm_ffi.lock().map_err(|e| {
-                ServiceError::InternalError(format!("FCM FFI lock failed: {}", e))
-            })?;
+            let fcm = self
+                .fcm_ffi
+                .lock()
+                .map_err(|e| ServiceError::InternalError(format!("FCM FFI lock failed: {}", e)))?;
 
-            fcm.subscribe_to_topic(&topic)
-                .map_err(|e| ServiceError::InternalError(e))?;
+            fcm.subscribe_to_topic(&topic).map_err(|e| ServiceError::InternalError(e))?;
 
             tracing::info!("Subscribed to topic: {}", topic);
         }
@@ -613,12 +641,12 @@ impl PushNotificationService {
     pub fn unsubscribe_from_topic(&self, topic: String) -> Result<(), ServiceError> {
         #[cfg(target_os = "android")]
         {
-            let fcm = self.fcm_ffi.lock().map_err(|e| {
-                ServiceError::InternalError(format!("FCM FFI lock failed: {}", e))
-            })?;
+            let fcm = self
+                .fcm_ffi
+                .lock()
+                .map_err(|e| ServiceError::InternalError(format!("FCM FFI lock failed: {}", e)))?;
 
-            fcm.unsubscribe_from_topic(&topic)
-                .map_err(|e| ServiceError::InternalError(e))?;
+            fcm.unsubscribe_from_topic(&topic).map_err(|e| ServiceError::InternalError(e))?;
 
             tracing::info!("Unsubscribed from topic: {}", topic);
         }
@@ -629,6 +657,287 @@ impl PushNotificationService {
         }
 
         Ok(())
+    }
+}
+
+/// 应用内购买服务
+pub struct InAppPurchaseService {
+    /// 是否已初始化
+    initialized: bool,
+    /// Android Google Play Billing FFI包装器（仅Android平台）
+    #[cfg(target_os = "android")]
+    billing_ffi: Arc<Mutex<BillingFFI>>,
+    /// iOS StoreKit FFI包装器（仅iOS平台）
+    #[cfg(target_os = "ios")]
+    storekit_ffi: Arc<Mutex<StoreKitFFI>>,
+    /// 商品列表缓存
+    products_cache: Vec<ProductInfo>,
+}
+
+impl InAppPurchaseService {
+    /// 创建新的应用内购买服务
+    pub fn new() -> Self {
+        Self {
+            initialized: false,
+            #[cfg(target_os = "android")]
+            billing_ffi: Arc::new(Mutex::new(BillingFFI::new())),
+            #[cfg(target_os = "ios")]
+            storekit_ffi: Arc::new(Mutex::new(StoreKitFFI::new())),
+            products_cache: Vec::new(),
+        }
+    }
+
+    /// 初始化服务
+    pub fn initialize(&mut self) -> Result<(), ServiceError> {
+        #[cfg(target_os = "android")]
+        {
+            let mut billing = self.billing_ffi.lock().map_err(|e| {
+                ServiceError::InternalError(format!("Billing FFI lock failed: {}", e))
+            })?;
+
+            billing.initialize().map_err(|e| ServiceError::InternalError(e))?;
+        }
+
+        #[cfg(target_os = "ios")]
+        {
+            let mut storekit = self.storekit_ffi.lock().map_err(|e| {
+                ServiceError::InternalError(format!("StoreKit FFI lock failed: {}", e))
+            })?;
+
+            storekit.initialize().map_err(|e| ServiceError::InternalError(e))?;
+        }
+
+        #[cfg(not(any(target_os = "android", target_os = "ios")))]
+        {
+            tracing::info!("In-App Purchase: running on non-mobile platform, using mock");
+        }
+
+        self.initialized = true;
+        tracing::info!("In-App Purchase service initialized");
+        Ok(())
+    }
+
+    /// 查询商品信息
+    pub fn query_products(
+        &mut self,
+        product_ids: Vec<String>,
+    ) -> Result<Vec<ProductInfo>, ServiceError> {
+        if !self.initialized {
+            return Err(ServiceError::NotInitialized);
+        }
+
+        #[cfg(target_os = "android")]
+        {
+            let billing = self.billing_ffi.lock().map_err(|e| {
+                ServiceError::InternalError(format!("Billing FFI lock failed: {}", e))
+            })?;
+
+            let products = billing
+                .query_products(product_ids)
+                .map_err(|e| ServiceError::InternalError(e))?;
+
+            self.products_cache = products.clone();
+            return Ok(products);
+        }
+
+        #[cfg(target_os = "ios")]
+        {
+            let storekit = self.storekit_ffi.lock().map_err(|e| {
+                ServiceError::InternalError(format!("StoreKit FFI lock failed: {}", e))
+            })?;
+
+            let products = storekit
+                .query_products(product_ids)
+                .map_err(|e| ServiceError::InternalError(e))?;
+
+            self.products_cache = products.clone();
+            return Ok(products);
+        }
+
+        #[cfg(not(any(target_os = "android", target_os = "ios")))]
+        {
+            // Mock实现
+            let mock_products: Vec<ProductInfo> = product_ids
+                .iter()
+                .map(|id| ProductInfo {
+                    product_id: id.clone(),
+                    title: format!("Product {}", id),
+                    description: format!("Description for {}", id),
+                    price: "$0.99".to_string(),
+                    price_amount_micros: 990000,
+                    currency_code: "USD".to_string(),
+                    product_type: ProductType::Consumable,
+                })
+                .collect();
+
+            self.products_cache = mock_products.clone();
+            tracing::info!("Queried products (mock): {} products", mock_products.len());
+            return Ok(mock_products);
+        }
+    }
+
+    /// 购买商品
+    pub fn purchase(&self, product_id: String) -> Result<String, ServiceError> {
+        if !self.initialized {
+            return Err(ServiceError::NotInitialized);
+        }
+
+        #[cfg(target_os = "android")]
+        {
+            let billing = self.billing_ffi.lock().map_err(|e| {
+                ServiceError::InternalError(format!("Billing FFI lock failed: {}", e))
+            })?;
+
+            let purchase_token =
+                billing.purchase(&product_id).map_err(|e| ServiceError::InternalError(e))?;
+
+            tracing::info!("Purchase successful: {}", product_id);
+            return Ok(purchase_token);
+        }
+
+        #[cfg(target_os = "ios")]
+        {
+            let storekit = self.storekit_ffi.lock().map_err(|e| {
+                ServiceError::InternalError(format!("StoreKit FFI lock failed: {}", e))
+            })?;
+
+            let purchase_token =
+                storekit.purchase(&product_id).map_err(|e| ServiceError::InternalError(e))?;
+
+            tracing::info!("Purchase successful: {}", product_id);
+            return Ok(purchase_token);
+        }
+
+        #[cfg(not(any(target_os = "android", target_os = "ios")))]
+        {
+            let mock_token = format!("mock_token_{}", product_id);
+            tracing::info!("Purchase successful (mock): {}", product_id);
+            return Ok(mock_token);
+        }
+    }
+
+    /// 消耗购买（消耗型商品）
+    pub fn consume(&self, purchase_token: String) -> Result<(), ServiceError> {
+        if !self.initialized {
+            return Err(ServiceError::NotInitialized);
+        }
+
+        #[cfg(target_os = "android")]
+        {
+            let billing = self.billing_ffi.lock().map_err(|e| {
+                ServiceError::InternalError(format!("Billing FFI lock failed: {}", e))
+            })?;
+
+            billing.consume(&purchase_token).map_err(|e| ServiceError::InternalError(e))?;
+
+            tracing::info!("Purchase consumed: {}", purchase_token);
+            return Ok(());
+        }
+
+        #[cfg(target_os = "ios")]
+        {
+            // iOS不需要手动消耗消耗型商品，系统自动处理
+            tracing::info!("Consumable purchases are auto-consumed on iOS");
+            return Ok(());
+        }
+
+        #[cfg(not(any(target_os = "android", target_os = "ios")))]
+        {
+            tracing::info!("Purchase consumed (mock): {}", purchase_token);
+            return Ok(());
+        }
+    }
+
+    /// 恢复购买（非消耗型商品）
+    pub fn restore_purchases(&self) -> Result<Vec<PurchaseInfo>, ServiceError> {
+        if !self.initialized {
+            return Err(ServiceError::NotInitialized);
+        }
+
+        #[cfg(target_os = "android")]
+        {
+            let billing = self.billing_ffi.lock().map_err(|e| {
+                ServiceError::InternalError(format!("Billing FFI lock failed: {}", e))
+            })?;
+
+            let purchases =
+                billing.restore_purchases().map_err(|e| ServiceError::InternalError(e))?;
+
+            tracing::info!("Restored {} purchases", purchases.len());
+            return Ok(purchases);
+        }
+
+        #[cfg(target_os = "ios")]
+        {
+            let storekit = self.storekit_ffi.lock().map_err(|e| {
+                ServiceError::InternalError(format!("StoreKit FFI lock failed: {}", e))
+            })?;
+
+            let purchases =
+                storekit.restore_purchases().map_err(|e| ServiceError::InternalError(e))?;
+
+            tracing::info!("Restored {} purchases", purchases.len());
+            return Ok(purchases);
+        }
+
+        #[cfg(not(any(target_os = "android", target_os = "ios")))]
+        {
+            tracing::info!("Restored purchases (mock): 0 purchases");
+            return Ok(Vec::new());
+        }
+    }
+
+    /// 查询订阅状态
+    pub fn query_subscription(
+        &self,
+        product_id: String,
+    ) -> Result<Option<SubscriptionInfo>, ServiceError> {
+        if !self.initialized {
+            return Err(ServiceError::NotInitialized);
+        }
+
+        #[cfg(target_os = "android")]
+        {
+            let billing = self.billing_ffi.lock().map_err(|e| {
+                ServiceError::InternalError(format!("Billing FFI lock failed: {}", e))
+            })?;
+
+            let subscription = billing
+                .query_subscription(&product_id)
+                .map_err(|e| ServiceError::InternalError(e))?;
+
+            return Ok(subscription);
+        }
+
+        #[cfg(target_os = "ios")]
+        {
+            let storekit = self.storekit_ffi.lock().map_err(|e| {
+                ServiceError::InternalError(format!("StoreKit FFI lock failed: {}", e))
+            })?;
+
+            let subscription = storekit
+                .query_subscription(&product_id)
+                .map_err(|e| ServiceError::InternalError(e))?;
+
+            return Ok(subscription);
+        }
+
+        #[cfg(not(any(target_os = "android", target_os = "ios")))]
+        {
+            tracing::info!("Queried subscription (mock): {}", product_id);
+            return Ok(None);
+        }
+    }
+
+    /// 获取缓存的商品列表
+    pub fn get_cached_products(&self) -> &[ProductInfo] {
+        &self.products_cache
+    }
+}
+
+impl Default for InAppPurchaseService {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -737,6 +1046,8 @@ pub enum ServiceError {
     NetworkError,
     /// 超时
     Timeout,
+    /// 内部错误
+    InternalError(String),
     /// 未知错误
     Unknown(String),
 }
@@ -749,6 +1060,7 @@ impl std::fmt::Display for ServiceError {
             ServiceError::PermissionDenied => write!(f, "Permission denied"),
             ServiceError::NetworkError => write!(f, "Network error"),
             ServiceError::Timeout => write!(f, "Operation timeout"),
+            ServiceError::InternalError(msg) => write!(f, "Internal error: {}", msg),
             ServiceError::Unknown(msg) => write!(f, "Unknown error: {}", msg),
         }
     }

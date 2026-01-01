@@ -125,9 +125,8 @@ impl GameCenterFFI {
             return Err("User not authenticated".to_string());
         }
 
-        let identifier_cstring = CString::new(identifier).map_err(|_| {
-            "Invalid achievement identifier".to_string()
-        })?;
+        let identifier_cstring =
+            CString::new(identifier).map_err(|_| "Invalid achievement identifier".to_string())?;
 
         let success = unsafe { self.gc_report_achievement(identifier_cstring.as_ptr()) };
 
@@ -145,9 +144,8 @@ impl GameCenterFFI {
             return Err("User not authenticated".to_string());
         }
 
-        let leaderboard_cstring = CString::new(leaderboard_id).map_err(|_| {
-            "Invalid leaderboard identifier".to_string()
-        })?;
+        let leaderboard_cstring = CString::new(leaderboard_id)
+            .map_err(|_| "Invalid leaderboard identifier".to_string())?;
 
         let success = unsafe { self.gc_submit_score(leaderboard_cstring.as_ptr(), score) };
 
@@ -188,9 +186,8 @@ impl GameCenterFFI {
             return Err("User not authenticated".to_string());
         }
 
-        let leaderboard_cstring = CString::new(leaderboard_id).map_err(|_| {
-            "Invalid leaderboard identifier".to_string()
-        })?;
+        let leaderboard_cstring = CString::new(leaderboard_id)
+            .map_err(|_| "Invalid leaderboard identifier".to_string())?;
 
         let success = unsafe { self.gc_show_leaderboard(leaderboard_cstring.as_ptr()) };
 
@@ -324,7 +321,10 @@ mod tests {
 
     #[test]
     fn test_authentication_status() {
-        assert_eq!(GKAuthenticationStatus::Authenticated, GKAuthenticationStatus::Authenticated);
+        assert_eq!(
+            GKAuthenticationStatus::Authenticated,
+            GKAuthenticationStatus::Authenticated
+        );
         assert_eq!(GKAchievementState::Completed, GKAchievementState::Completed);
     }
 }

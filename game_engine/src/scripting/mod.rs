@@ -35,6 +35,8 @@ pub mod lifecycle;
 pub mod lua_lifecycle;
 /// Lua支持模块
 pub mod lua_support;
+/// 移动平台服务脚本API模块
+pub mod mobile_api;
 /// 网络API绑定模块
 pub mod network_api;
 /// 物理系统脚本API模块
@@ -49,8 +51,6 @@ pub mod python;
 pub mod python_lifecycle;
 /// 资源管理脚本API模块
 pub mod resource_api;
-/// 移动平台服务脚本API模块
-pub mod mobile_api;
 /// Rust脚本模块
 pub mod rust_scripting;
 /// 脚本系统模块

@@ -2,10 +2,10 @@
 //!
 //! 提供Google Play Games、Game Center、推送通知等功能的脚本接口
 
-use crate::scripting::{api::ScriptApi, system::ScriptValue, ScriptResult};
 use crate::platform::mobile::{
-    GooglePlayGames, GameCenter, PushNotificationService, Notification,
+    GameCenter, GooglePlayGames, InAppPurchaseService, Notification, PushNotificationService,
 };
+use crate::scripting::{ScriptResult, api::ScriptApi, system::ScriptValue};
 use std::sync::{Arc, Mutex};
 
 /// 移动平台脚本API
@@ -16,6 +16,8 @@ pub struct MobileScriptApi {
     game_center: Arc<Mutex<GameCenter>>,
     /// 推送通知服务
     push_notifications: Arc<Mutex<PushNotificationService>>,
+    /// 应用内购买服务
+    in_app_purchase: Arc<Mutex<InAppPurchaseService>>,
 }
 
 impl MobileScriptApi {
@@ -27,6 +29,7 @@ impl MobileScriptApi {
             push_notifications: Arc::new(Mutex::new(PushNotificationService::new(
                 crate::platform::mobile::NotificationPlatform::Firebase,
             ))),
+            in_app_purchase: Arc::new(Mutex::new(InAppPurchaseService::new())),
         }
     }
 
@@ -40,6 +43,9 @@ impl MobileScriptApi {
 
         // ========== 推送通知API ==========
         self.register_push_notification_api(api);
+
+        // ========== 应用内购买API ==========
+        self.register_in_app_purchase_api(api);
     }
 
     /// 注册Google Play Games API
@@ -125,7 +131,9 @@ impl MobileScriptApi {
         let gpg = self.google_play_games.clone();
         api.register_function("gpg_unlock_achievement", move |args| {
             if args.is_empty() {
-                return ScriptResult::Error("gpg_unlock_achievement() requires achievement_id".to_string());
+                return ScriptResult::Error(
+                    "gpg_unlock_achievement() requires achievement_id".to_string(),
+                );
             }
 
             let achievement_id = match &args[0] {
@@ -139,7 +147,9 @@ impl MobileScriptApi {
             };
 
             match gpg_guard.unlock_achievement(achievement_id) {
-                Ok(()) => ScriptResult::Success(ScriptValue::String("Achievement unlocked".to_string())),
+                Ok(()) => {
+                    ScriptResult::Success(ScriptValue::String("Achievement unlocked".to_string()))
+                }
                 Err(e) => ScriptResult::Error(format!("Failed to unlock achievement: {}", e)),
             }
         });
@@ -149,7 +159,8 @@ impl MobileScriptApi {
         api.register_function("gpg_set_achievement_progress", move |args| {
             if args.len() < 2 {
                 return ScriptResult::Error(
-                    "gpg_set_achievement_progress() requires achievement_id and progress".to_string(),
+                    "gpg_set_achievement_progress() requires achievement_id and progress"
+                        .to_string(),
                 );
             }
 
@@ -169,7 +180,9 @@ impl MobileScriptApi {
             };
 
             match gpg_guard.update_achievement_progress(achievement_id, progress) {
-                Ok(()) => ScriptResult::Success(ScriptValue::String("Progress updated".to_string())),
+                Ok(()) => {
+                    ScriptResult::Success(ScriptValue::String("Progress updated".to_string()))
+                }
                 Err(e) => ScriptResult::Error(format!("Failed to update progress: {}", e)),
             }
         });
@@ -178,7 +191,9 @@ impl MobileScriptApi {
         let gpg = self.google_play_games.clone();
         api.register_function("gpg_submit_score", move |args| {
             if args.len() < 2 {
-                return ScriptResult::Error("gpg_submit_score() requires leaderboard_id and score".to_string());
+                return ScriptResult::Error(
+                    "gpg_submit_score() requires leaderboard_id and score".to_string(),
+                );
             }
 
             let leaderboard_id = match &args[0] {
@@ -206,7 +221,9 @@ impl MobileScriptApi {
         let gpg = self.google_play_games.clone();
         api.register_function("gpg_show_leaderboard", move |args| {
             if args.is_empty() {
-                return ScriptResult::Error("gpg_show_leaderboard() requires leaderboard_id".to_string());
+                return ScriptResult::Error(
+                    "gpg_show_leaderboard() requires leaderboard_id".to_string(),
+                );
             }
 
             let leaderboard_id = match &args[0] {
@@ -220,7 +237,9 @@ impl MobileScriptApi {
             };
 
             match gpg_guard.show_leaderboard(leaderboard_id) {
-                Ok(()) => ScriptResult::Success(ScriptValue::String("Leaderboard shown".to_string())),
+                Ok(()) => {
+                    ScriptResult::Success(ScriptValue::String("Leaderboard shown".to_string()))
+                }
                 Err(e) => ScriptResult::Error(format!("Failed to show leaderboard: {}", e)),
             }
         });
@@ -234,7 +253,9 @@ impl MobileScriptApi {
             };
 
             match gpg_guard.show_achievements() {
-                Ok(()) => ScriptResult::Success(ScriptValue::String("Achievements shown".to_string())),
+                Ok(()) => {
+                    ScriptResult::Success(ScriptValue::String("Achievements shown".to_string()))
+                }
                 Err(e) => ScriptResult::Error(format!("Failed to show achievements: {}", e)),
             }
         });
@@ -252,7 +273,9 @@ impl MobileScriptApi {
             };
 
             match gc_guard.initialize() {
-                Ok(()) => ScriptResult::Success(ScriptValue::String("Game Center initialized".to_string())),
+                Ok(()) => ScriptResult::Success(ScriptValue::String(
+                    "Game Center initialized".to_string(),
+                )),
                 Err(e) => ScriptResult::Error(format!("Initialization failed: {}", e)),
             }
         });
@@ -275,7 +298,9 @@ impl MobileScriptApi {
         let gc = self.game_center.clone();
         api.register_function("gc_report_achievement", move |args| {
             if args.is_empty() {
-                return ScriptResult::Error("gc_report_achievement() requires achievement_id".to_string());
+                return ScriptResult::Error(
+                    "gc_report_achievement() requires achievement_id".to_string(),
+                );
             }
 
             let achievement_id = match &args[0] {
@@ -289,7 +314,9 @@ impl MobileScriptApi {
             };
 
             match gc_guard.report_achievement(achievement_id) {
-                Ok(()) => ScriptResult::Success(ScriptValue::String("Achievement reported".to_string())),
+                Ok(()) => {
+                    ScriptResult::Success(ScriptValue::String("Achievement reported".to_string()))
+                }
                 Err(e) => ScriptResult::Error(format!("Failed to report achievement: {}", e)),
             }
         });
@@ -298,7 +325,9 @@ impl MobileScriptApi {
         let gc = self.game_center.clone();
         api.register_function("gc_submit_score", move |args| {
             if args.len() < 2 {
-                return ScriptResult::Error("gc_submit_score() requires leaderboard_id and score".to_string());
+                return ScriptResult::Error(
+                    "gc_submit_score() requires leaderboard_id and score".to_string(),
+                );
             }
 
             let leaderboard_id = match &args[0] {
@@ -331,7 +360,9 @@ impl MobileScriptApi {
             };
 
             match gc_guard.show_game_center() {
-                Ok(()) => ScriptResult::Success(ScriptValue::String("Game Center shown".to_string())),
+                Ok(()) => {
+                    ScriptResult::Success(ScriptValue::String("Game Center shown".to_string()))
+                }
                 Err(e) => ScriptResult::Error(format!("Failed to show Game Center: {}", e)),
             }
         });
@@ -349,7 +380,9 @@ impl MobileScriptApi {
             };
 
             match pn_guard.initialize() {
-                Ok(()) => ScriptResult::Success(ScriptValue::String("Push notifications initialized".to_string())),
+                Ok(()) => ScriptResult::Success(ScriptValue::String(
+                    "Push notifications initialized".to_string(),
+                )),
                 Err(e) => ScriptResult::Error(format!("Initialization failed: {}", e)),
             }
         });
@@ -372,7 +405,9 @@ impl MobileScriptApi {
         let pn = self.push_notifications.clone();
         api.register_function("push_send_local", move |args| {
             if args.len() < 2 {
-                return ScriptResult::Error("push_send_local() requires title and body".to_string());
+                return ScriptResult::Error(
+                    "push_send_local() requires title and body".to_string(),
+                );
             }
 
             let title = match &args[0] {
@@ -393,9 +428,171 @@ impl MobileScriptApi {
             };
 
             match pn_guard.send_local_notification(notification) {
-                Ok(()) => ScriptResult::Success(ScriptValue::String("Notification sent".to_string())),
+                Ok(()) => {
+                    ScriptResult::Success(ScriptValue::String("Notification sent".to_string()))
+                }
                 Err(e) => ScriptResult::Error(format!("Failed to send notification: {}", e)),
             }
+        });
+    }
+
+    /// 注册应用内购买API
+    fn register_in_app_purchase_api(&self, api: &mut ScriptApi) {
+        let iap = self.in_app_purchase.clone();
+
+        // 初始化应用内购买服务
+        let iap = self.in_app_purchase.clone();
+        api.register_function("iap_initialize", move |args| {
+            let mut iap_guard = match iap.lock() {
+                Ok(guard) => guard,
+                Err(e) => return ScriptResult::Error(format!("Failed to acquire lock: {}", e)),
+            };
+
+            match iap_guard.initialize() {
+                Ok(()) => ScriptResult::Success(ScriptValue::String(
+                    "In-App Purchase service initialized".to_string(),
+                )),
+                Err(e) => ScriptResult::Error(format!("Initialization failed: {}", e)),
+            }
+        });
+
+        // 查询商品信息
+        let iap = self.in_app_purchase.clone();
+        api.register_function("iap_query_products", move |args| {
+            let mut iap_guard = match iap.lock() {
+                Ok(guard) => guard,
+                Err(e) => return ScriptResult::Error(format!("Failed to acquire lock: {}", e)),
+            };
+
+            // 从参数中提取商品ID列表
+            let product_ids = if args.len() >= 1 {
+                match &args[0] {
+                    ScriptValue::Array(ids) => {
+                        let mut result = Vec::new();
+                        for id in ids {
+                            if let ScriptValue::String(s) = id {
+                                result.push(s.clone());
+                            }
+                        }
+                        result
+                    }
+                    _ => return ScriptResult::Error("Expected array of product IDs".to_string()),
+                }
+            } else {
+                return ScriptResult::Error("Missing product IDs argument".to_string());
+            };
+
+            match iap_guard.query_products(product_ids) {
+                Ok(products) => {
+                    let products_json = serde_json::to_string(&products).unwrap_or_default();
+                    ScriptResult::Success(ScriptValue::String(products_json))
+                }
+                Err(e) => ScriptResult::Error(format!("Failed to query products: {}", e)),
+            }
+        });
+
+        // 购买商品
+        let iap = self.in_app_purchase.clone();
+        api.register_function("iap_purchase", move |args| {
+            let iap_guard = match iap.lock() {
+                Ok(guard) => guard,
+                Err(e) => return ScriptResult::Error(format!("Failed to acquire lock: {}", e)),
+            };
+
+            if args.len() < 1 {
+                return ScriptResult::Error("Missing product ID argument".to_string());
+            }
+
+            let product_id = match &args[0] {
+                ScriptValue::String(s) => s.clone(),
+                _ => return ScriptResult::Error("Expected product ID as string".to_string()),
+            };
+
+            match iap_guard.purchase(product_id) {
+                Ok(purchase_token) => ScriptResult::Success(ScriptValue::String(purchase_token)),
+                Err(e) => ScriptResult::Error(format!("Purchase failed: {}", e)),
+            }
+        });
+
+        // 消耗购买（消耗型商品）
+        let iap = self.in_app_purchase.clone();
+        api.register_function("iap_consume", move |args| {
+            let iap_guard = match iap.lock() {
+                Ok(guard) => guard,
+                Err(e) => return ScriptResult::Error(format!("Failed to acquire lock: {}", e)),
+            };
+
+            if args.len() < 1 {
+                return ScriptResult::Error("Missing purchase token argument".to_string());
+            }
+
+            let purchase_token = match &args[0] {
+                ScriptValue::String(s) => s.clone(),
+                _ => return ScriptResult::Error("Expected purchase token as string".to_string()),
+            };
+
+            match iap_guard.consume(purchase_token) {
+                Ok(()) => ScriptResult::Success(ScriptValue::String(
+                    "Purchase consumed successfully".to_string(),
+                )),
+                Err(e) => ScriptResult::Error(format!("Failed to consume purchase: {}", e)),
+            }
+        });
+
+        // 恢复购买（非消耗型商品）
+        let iap = self.in_app_purchase.clone();
+        api.register_function("iap_restore", move |args| {
+            let iap_guard = match iap.lock() {
+                Ok(guard) => guard,
+                Err(e) => return ScriptResult::Error(format!("Failed to acquire lock: {}", e)),
+            };
+
+            match iap_guard.restore_purchases() {
+                Ok(purchases) => {
+                    let purchases_json = serde_json::to_string(&purchases).unwrap_or_default();
+                    ScriptResult::Success(ScriptValue::String(purchases_json))
+                }
+                Err(e) => ScriptResult::Error(format!("Failed to restore purchases: {}", e)),
+            }
+        });
+
+        // 查询订阅状态
+        let iap = self.in_app_purchase.clone();
+        api.register_function("iap_query_subscription", move |args| {
+            let iap_guard = match iap.lock() {
+                Ok(guard) => guard,
+                Err(e) => return ScriptResult::Error(format!("Failed to acquire lock: {}", e)),
+            };
+
+            if args.len() < 1 {
+                return ScriptResult::Error("Missing product ID argument".to_string());
+            }
+
+            let product_id = match &args[0] {
+                ScriptValue::String(s) => s.clone(),
+                _ => return ScriptResult::Error("Expected product ID as string".to_string()),
+            };
+
+            match iap_guard.query_subscription(product_id) {
+                Ok(subscription) => {
+                    let sub_json = serde_json::to_string(&subscription).unwrap_or_default();
+                    ScriptResult::Success(ScriptValue::String(sub_json))
+                }
+                Err(e) => ScriptResult::Error(format!("Failed to query subscription: {}", e)),
+            }
+        });
+
+        // 获取缓存的商品列表
+        let iap = self.in_app_purchase.clone();
+        api.register_function("iap_get_cached_products", move |args| {
+            let iap_guard = match iap.lock() {
+                Ok(guard) => guard,
+                Err(e) => return ScriptResult::Error(format!("Failed to acquire lock: {}", e)),
+            };
+
+            let products = iap_guard.get_cached_products();
+            let products_json = serde_json::to_string(&products).unwrap_or_default();
+            ScriptResult::Success(ScriptValue::String(products_json))
         });
     }
 }

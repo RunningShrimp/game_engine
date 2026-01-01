@@ -17,6 +17,9 @@ pub mod ios_ffi;
 // 推送通知FFI模块
 pub mod push_ffi;
 
+// 应用内购买FFI模块
+pub mod in_app_purchase_ffi;
+
 pub use config::MobileConfig;
 
 #[cfg(target_os = "ios")]
@@ -27,8 +30,8 @@ pub mod android_services;
 
 // Re-export commonly used types
 pub use services::{
-    Achievement, GameCenter, GooglePlayGames, Leaderboard, Notification, NotificationPlatform,
-    PlayerInfo, PushNotificationService, ServiceError,
+    Achievement, GameCenter, GooglePlayGames, InAppPurchaseService, Leaderboard, Notification,
+    NotificationPlatform, PlayerInfo, PushNotificationService, ServiceError,
 };
 
 #[cfg(target_os = "ios")]

@@ -36,7 +36,7 @@
 
 #![cfg(target_os = "android")]
 
-use std::ffi::{CString, CStr};
+use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_int, c_void};
 use std::sync::{Arc, Mutex};
 
@@ -111,22 +111,15 @@ impl GooglePlayGamesJNI {
     ///
     /// # Safety
     /// 必须由Android系统在加载库时调用
-    pub unsafe fn on_load(
-        &mut self,
-        jvm: *mut JavaVM,
-        reserved: *mut c_void,
-    ) -> c_int {
+    pub unsafe fn on_load(&mut self, jvm: *mut JavaVM, reserved: *mut c_void) -> c_int {
         tracing::info!("JNI_OnLoad called");
 
         self.jvm = Some(jvm);
 
         // 获取JNI环境
         let mut env: *mut JNIEnv = std::ptr::null_mut();
-        let get_env_result = ((**jvm).GetEnv as *const () as *const fn(
-            *mut JavaVM,
-            *mut *mut JNIEnv,
-            c_int,
-        ) -> c_int)(
+        let get_env_result = ((**jvm).GetEnv as *const ()
+            as *const fn(*mut JavaVM, *mut *mut JNIEnv, c_int) -> c_int)(
             jvm,
             &mut env,
             JNIEnvVersion::JNI_VERSION_1_6 as c_int,
@@ -139,12 +132,9 @@ impl GooglePlayGamesJNI {
 
         // 查找GooglePlayGamesWrapper类
         let class_name = CString::new("com/gameengine/mobile/GooglePlayGamesWrapper").unwrap();
-        let class = ((**env).FindClass as *const () as *const fn(
-            *mut JNIEnv,
-            *const c_char,
-        ) -> *mut c_void)(
-            env,
-            class_name.as_ptr()
+        let class = ((**env).FindClass as *const ()
+            as *const fn(*mut JNIEnv, *const c_char) -> *mut c_void)(
+            env, class_name.as_ptr()
         );
 
         if class.is_null() {
@@ -161,11 +151,8 @@ impl GooglePlayGamesJNI {
         if let Some(jvm) = self.jvm {
             unsafe {
                 let mut env: *mut JNIEnv = std::ptr::null_mut();
-                let get_env_result = ((**jvm).GetEnv as *const () as *const fn(
-                    *mut JavaVM,
-                    *mut *mut JNIEnv,
-                    c_int,
-                ) -> c_int)(
+                let get_env_result = ((**jvm).GetEnv as *const ()
+                    as *const fn(*mut JavaVM, *mut *mut JNIEnv, c_int) -> c_int)(
                     jvm,
                     &mut env,
                     JNIEnvVersion::JNI_VERSION_1_6 as c_int,
@@ -225,7 +212,11 @@ impl GooglePlayGamesJNI {
         achievement_id: &str,
         progress: u32,
     ) -> Result<(), String> {
-        tracing::info!("Updating achievement {} progress to {}%", achievement_id, progress);
+        tracing::info!(
+            "Updating achievement {} progress to {}%",
+            achievement_id,
+            progress
+        );
         // TODO: 调用Java的updateAchievementProgress方法
         Ok(())
     }
@@ -267,10 +258,7 @@ impl Default for GooglePlayGamesJNI {
 /// # Safety
 /// 此函数由Android系统调用
 #[no_mangle]
-pub unsafe extern "C" fn JNI_OnLoad(
-    vm: *mut JavaVM,
-    reserved: *mut c_void,
-) -> c_int {
+pub unsafe extern "C" fn JNI_OnLoad(vm: *mut JavaVM, reserved: *mut c_void) -> c_int {
     tracing::info!("JNI_OnLoad: game_engine library loaded");
 
     // TODO: 初始化全局JNI实例
@@ -282,10 +270,7 @@ pub unsafe extern "C" fn JNI_OnLoad(
 /// # Safety
 /// 此函数由Android系统调用
 #[no_mangle]
-pub unsafe extern "C" fn JNI_OnUnload(
-    _vm: *mut JavaVM,
-    _reserved: *mut c_void,
-) {
+pub unsafe extern "C" fn JNI_OnUnload(_vm: *mut JavaVM, _reserved: *mut c_void) {
     tracing::info!("JNI_OnUnload: game_engine library unloaded");
 }
 
