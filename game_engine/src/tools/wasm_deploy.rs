@@ -636,3 +636,466 @@ mod tests {
         assert!(config.is_ok());
     }
 }
+
+/// WASM缓存策略
+#[derive(Debug, Clone)]
+pub struct WasmCacheStrategy {
+    /// 缓存控制头（Cache-Control）
+    pub cache_control: String,
+
+    /// 服务端工作器（Service Worker）支持
+    pub enable_service_worker: bool,
+
+    /// 预缓存资源列表
+    pub precache_assets: Vec<String>,
+
+    /// 缓存优先级
+    pub cache_priority: CachePriority,
+}
+
+/// 缓存优先级
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CachePriority {
+    /// 高优先级（核心WASM）
+    High,
+    /// 中优先级（资源）
+    Medium,
+    /// 低优先级（可选内容）
+    Low,
+}
+
+impl Default for WasmCacheStrategy {
+    fn default() -> Self {
+        Self {
+            cache_control: "public, max-age=31536000, immutable".to_string(),
+            enable_service_worker: true,
+            precache_assets: vec![
+                "game_engine.wasm".to_string(),
+                "game_engine.data".to_string(),
+            ],
+            cache_priority: CachePriority::High,
+        }
+    }
+}
+
+impl WasmCacheStrategy {
+    /// 生成缓存头
+    pub fn generate_cache_headers(&self) -> Vec<(String, String)> {
+        let mut headers = vec![
+            ("Cache-Control".to_string(), self.cache_control.clone()),
+            ("ETag".to_string(), format!("\"{}\"", uuid::Uuid::new_v4())),
+        ];
+
+        if self.enable_service_worker {
+            headers.push(("Service-Worker-Allowed".to_string(), "true".to_string()));
+        }
+
+        headers
+    }
+
+    /// 生成Service Worker脚本
+    pub fn generate_service_worker(&self, wasm_url: &str) -> String {
+        format!(
+            r#"
+// Service Worker for WASM Game Engine
+const CACHE_NAME = 'game-engine-v1';
+const PRECACHE_ASSETS = [
+    '{}',
+    '{}',
+];
+
+self.addEventListener('install', (event) => {{
+    event.waitUntil(
+        caches.open(CACHE_NAME).then((cache) => {{
+            return cache.addAll(PRECACHE_ASSETS);
+        }})
+    );
+}});
+
+self.addEventListener('activate', (event) => {{
+    event.waitUntil(
+        caches.keys().then((cacheNames) => {{
+            return Promise.all(
+                cacheNames
+                    .filter((cacheName) => cacheName !== CACHE_NAME)
+                    .map((cacheName) => caches.delete(cacheName))
+            );
+        }})
+    );
+}});
+
+self.addEventListener('fetch', (event) => {{
+    event.respondWith(
+        caches.match(event.request).then((response) => {{
+            return response || fetch(event.request);
+        }})
+    );
+}});
+"#,
+            wasm_url,
+            PRECACHE_ASSETS.join("',\n    '"),
+            PRECACHE_ASSETS.join("',\n    '")
+        )
+    }
+
+    /// 生成资源提示（Resource Hints）
+    pub fn generate_resource_hints(&self) -> String {
+        let mut hints = String::new();
+
+        // 预加载核心WASM文件
+        hints.push_str(&format!(
+            "<link rel=\"preload\" href=\"game_engine.wasm\" as=\"fetch\" crossorigin>\n"
+        ));
+
+        // 预连接到CDN（如果配置了）
+        hints.push_str("<link rel=\"preconnect\" href=\"https://cdn.example.com\">\n");
+        hints.push_str("<link rel=\"dns-prefetch\" href=\"https://cdn.example.com\">\n");
+
+        // 预加载关键资源
+        for asset in &self.precache_assets {
+            hints.push_str(&format!(
+                "<link rel=\"preload\" href=\"{}\" as=\"fetch\">\n",
+                asset
+            ));
+        }
+
+        hints
+    }
+}
+
+/// CDN配置
+#[derive(Debug, Clone)]
+pub struct CdnConfig {
+    /// CDN提供商
+    pub provider: CdnProvider,
+
+    /// CDN域名
+    pub cdn_domain: String,
+
+    /// 是否启用HTTPS
+    pub enable_https: bool,
+
+    /// 自定义域名（CNAME）
+    pub custom_domain: Option<String>,
+
+    /// 地理分布
+    pub geo_distribution: Vec<String>,
+}
+
+/// CDN提供商
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CdnProvider {
+    /// Cloudflare
+    Cloudflare,
+
+    /// AWS CloudFront
+    AWSCloudFront,
+
+    /// Fastly
+    Fastly,
+
+    /// Azure CDN
+    AzureCDN,
+
+    /// Google Cloud CDN
+    GoogleCloudCDN,
+
+    /// 自定义
+    Custom(String),
+}
+
+impl Default for CdnConfig {
+    fn default() -> Self {
+        Self {
+            provider: CdnProvider::Cloudflare,
+            cdn_domain: "cdn.example.com".to_string(),
+            enable_https: true,
+            custom_domain: None,
+            geo_distribution: vec![
+                "us-east".to_string(),
+                "eu-west".to_string(),
+                "asia-east".to_string(),
+            ],
+        }
+    }
+}
+
+impl CdnConfig {
+    /// 生成CDN URL
+    pub fn generate_cdn_url(&self, asset_path: &str) -> String {
+        let protocol = if self.enable_https { "https" } else { "http" };
+        let domain = self.custom_domain.as_ref().unwrap_or(&self.cdn_domain);
+        format!("{}://{}/{}", protocol, domain, asset_path)
+    }
+
+    /// 生成CDN缓存配置
+    pub fn generate_cdn_cache_config(&self) -> String {
+        match self.provider {
+            CdnProvider::Cloudflare => self.generate_cloudflare_config(),
+            CdnProvider::AWSCloudFront => self.generate_cloudfront_config(),
+            _ => "// Custom CDN configuration\n".to_string(),
+        }
+    }
+
+    fn generate_cloudflare_config(&self) -> String {
+        format!(
+            r#"
+# Cloudflare CDN Cache Configuration
+# TTL Configuration
+_ttl: 2y
+cache_ttl: 31536000
+
+# Browser Cache
+browser_ttl: 604800
+
+# Edge Cache
+edge_cache_ttl: 604800
+
+# Cache Key (ignore query strings for WASM files)
+cache_key: {{
+    main: {{
+        path: {{ ignore: true }}
+    }}
+}}
+
+# Security
+https: true
+security_level: high
+ssl_mode: flexible
+
+# Performance
+minify: true
+rocket_loader: false
+brotli: true
+"#
+        )
+    }
+
+    fn generate_cloudfront_config(&self) -> String {
+        format!(
+            r#"
+# AWS CloudFront Distribution Configuration
+CacheBehavior:
+  TargetOriginId: wasm-origin
+  ViewerProtocolPolicy: redirect-to-https
+  MinTTL: 31536000
+  MaxTTL: 31536000
+  DefaultTTL: 86400
+  Compress: true
+  LambdaFunctionAssociations:
+    - EventType: origin-response
+      LambdaFunctionARN: arn:aws:lambda:...
+
+Origin:
+  Id: wasm-origin
+  DomainName: {}
+  CustomHeaders:
+    - Name: Cache-Control
+      Value: public, max-age=31536000, immutable
+    - Name: Service-Worker-Allowed
+      Value: true
+"#,
+            self.cdn_domain
+        )
+    }
+}
+
+/// WASM性能监控
+#[derive(Debug, Clone)]
+pub struct WasmPerformanceMonitor {
+    /// 监控数据
+    pub metrics: PerformanceMetrics,
+
+    /// 是否启用监控
+    pub enabled: bool,
+
+    /// 监控端点
+    pub monitoring_endpoint: Option<String>,
+}
+
+/// 性能指标
+#[derive(Debug, Clone)]
+pub struct PerformanceMetrics {
+    /// 加载时间（毫秒）
+    pub load_time: u32,
+
+    /// 首次内容绘制（FCP）
+    pub first_contentful_paint: u32,
+
+    /// 最大内容绘制（LCP）
+    pub largest_contentful_paint: u32,
+
+    /// 首次输入延迟（FID）
+    pub first_input_delay: u32,
+
+    /// 累积布局偏移（CLS）
+    pub cumulative_layout_shift: f32,
+
+    /// WASM编译时间
+    pub wasm_compilation_time: u32,
+
+    /// 内存使用
+    pub memory_usage: usize,
+}
+
+impl Default for PerformanceMetrics {
+    fn default() -> Self {
+        Self {
+            load_time: 0,
+            first_contentful_paint: 0,
+            largest_contentful_paint: 0,
+            first_input_delay: 0,
+            cumulative_layout_shift: 0.0,
+            wasm_compilation_time: 0,
+            memory_usage: 0,
+        }
+    }
+}
+
+impl Default for WasmPerformanceMonitor {
+    fn default() -> Self {
+        Self {
+            metrics: PerformanceMetrics::default(),
+            enabled: true,
+            monitoring_endpoint: None,
+        }
+    }
+}
+
+impl WasmPerformanceMonitor {
+    /// 创建性能监控器
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// 生成性能监控脚本
+    pub fn generate_monitoring_script(&self) -> String {
+        format!(
+            r#"
+// WASM Performance Monitoring
+(function() {{
+    const perfData = {{
+        loadTime: 0,
+        fcp: 0,
+        lcp: 0,
+        fid: 0,
+        cls: 0,
+        wasmCompilationTime: 0,
+        memoryUsage: 0
+    }};
+
+    // Measure page load time
+    window.addEventListener('load', () => {{
+        const perfData = performance.getEntriesByType('navigation')[0];
+        if (perfData) {{
+            perfData.loadTime = perfData.loadEventEnd - perfData.fetchStart;
+        }}
+    }});
+
+    // Measure FCP
+    new PerformanceObserver((list) => {{
+        const entries = list.getEntries();
+        const fcpEntry = entries.find(entry => entry.name === 'first-contentful-paint');
+        if (fcpEntry) {{
+            perfData.fcp = Math.round(fcpEntry.startTime);
+        }}
+    }}).observe({{ type: 'paint', buffered: true }});
+
+    // Measure LCP
+    new PerformanceObserver((list) => {{
+        const entries = list.getEntries();
+        const lastEntry = entries[entries.length - 1];
+        perfData.lcp = Math.round(lastEntry.startTime);
+    }}).observe({{ type: 'largest-contentful-paint', buffered: true }});
+
+    // Measure CLS
+    let clsValue = 0;
+    new PerformanceObserver((list) => {{
+        for (const entry of list.getEntries()) {{
+            if (!entry.hadRecentInput) {{
+                clsValue += entry.value;
+            }}
+        }}
+        perfData.cls = clsValue.toFixed(3);
+    }}).observe({{ type: 'layout-shift', buffered: true }});
+
+    // Measure WASM compilation time
+    const wasmStartTime = performance.now();
+    WebAssembly.instantiateStreaming(fetch('game_engine.wasm')).then(results => {{
+        perfData.wasmCompilationTime = Math.round(performance.now() - wasmStartTime);
+        return results;
+    }});
+
+    // Measure memory usage
+    setInterval(() => {{
+        if (performance.memory) {{
+            perfData.memoryUsage = performance.memory.usedJSHeapSize;
+        }}
+    }}, 1000);
+
+    // Send metrics to endpoint
+    function sendMetrics() {{
+        fetch('/api/metrics', {{
+            method: 'POST',
+            headers: {{ 'Content-Type': 'application/json' }},
+            body: JSON.stringify(perfData)
+        }}).catch(console.error);
+    }}
+
+    // Send metrics on page unload
+    window.addEventListener('beforeunload', sendMetrics);
+
+    // Expose metrics globally for debugging
+    window.wasmPerformanceData = perfData;
+}})();
+"#
+        )
+    }
+
+    /// 生成Web Vitals报告
+    pub fn generate_web_vitals_report(&self) -> String {
+        format!(
+            r#"
+<!-- Web Vitals Report -->
+<script>
+function sendWebVitals() {{
+    // Use web-vitals library to measure Core Web Vitals
+    import('https://unpkg.com/web-vitals').then(({{ getCLS, getFID, getLCP }}) => {{
+        getCLS((metric) => {{
+            console.log('CLS:', metric.value);
+            // Send to analytics
+        }});
+
+        getFID((metric) => {{
+            console.log('FID:', metric.value);
+            // Send to analytics
+        }});
+
+        getLCP((metric) => {{
+            console.log('LCP:', metric.value);
+            // Send to analytics
+        }});
+    }});
+}}
+
+sendWebVitals();
+</script>
+"#
+        )
+    }
+
+    /// 记录性能指标
+    pub fn record_metric(&mut self, metric_name: &str, value: f64) {
+        match metric_name {
+            "load_time" => self.metrics.load_time = value as u32,
+            "fcp" => self.metrics.first_contentful_paint = value as u32,
+            "lcp" => self.metrics.largest_contentful_paint = value as u32,
+            "fid" => self.metrics.first_input_delay = value as u32,
+            "cls" => self.metrics.cumulative_layout_shift = value as f32,
+            "wasm_compilation_time" => self.metrics.wasm_compilation_time = value as u32,
+            "memory_usage" => self.metrics.memory_usage = value as usize,
+            _ => tracing::warn!("Unknown metric: {}", metric_name),
+        }
+    }
+}
+
