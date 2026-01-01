@@ -4,6 +4,7 @@
 
 pub mod config;
 pub mod input;
+pub mod performance;
 pub mod services;
 
 // JNI模块仅在Android平台可用
@@ -29,6 +30,11 @@ pub mod ios_services;
 pub mod android_services;
 
 // Re-export commonly used types
+pub use performance::{
+    AdaptiveQualityController, BatteryState, DeviceCapabilities, MemoryStats,
+    MobilePerformanceOptimizer, PerformanceConfig, PerformanceError, PerformanceMode,
+    PerformanceOptimizations, PerformanceSnapshot, QualityLevel, ThermalState,
+};
 pub use services::{
     Achievement, GameCenter, GooglePlayGames, InAppPurchaseService, Leaderboard, Notification,
     NotificationPlatform, PlayerInfo, PushNotificationService, ServiceError,
