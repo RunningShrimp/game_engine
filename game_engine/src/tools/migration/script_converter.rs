@@ -208,9 +208,9 @@ impl UnityScriptConverter {
         // 实际生产环境应该使用语法分析器
 
         let using_re = Regex::new(r"using\s+([^;]+);").unwrap();
-        let class_re = Regex::new(r"public\s+class\s+(\w+)").unwrap();
-        let field_re = Regex::new(r"public\s+(\w+)\s+(\w+)").unwrap();
-        let method_re = Regex::new(r"void\s+(\w+)\s*\(").unwrap();
+        let class_re = Regex::new(r"(?:public\s+)?class\s+(\w+)").unwrap();
+        let field_re = Regex::new(r"public\s+(\w+(?:<[^>]+>)?)\s+(\w+)").unwrap();
+        let method_re = Regex::new(r"(?:public|private|protected)?\s*(?:override\s+)?(?:void|async Task|IEnumerator)\s+(\w+)\s*\(").unwrap();
 
         let mut usings = Vec::new();
         for cap in using_re.captures_iter(code) {
@@ -238,7 +238,10 @@ impl UnityScriptConverter {
         let mut methods = Vec::new();
         for cap in method_re.captures_iter(code) {
             if let Some(method_name) = cap.get(1) {
-                methods.push(method_name.as_str().to_string());
+                // 避免重复添加方法
+                if !methods.contains(&method_name.as_str().to_string()) {
+                    methods.push(method_name.as_str().to_string());
+                }
             }
         }
 
@@ -276,7 +279,7 @@ impl UnityScriptConverter {
         // C#特定转换
         converted_code = converted_code.replace("GameObject", "Entity");
         converted_code = converted_code.replace("Transform", "Transform");
-        converted_code = converted_code.Replace("Rigidbody", "RigidBody");
+        converted_code = converted_code.replace("Rigidbody", "RigidBody");
         converted_code = converted_code.replace("Vector3", "Vec3");
         converted_code = converted_code.replace("Quaternion", "Quat");
 
@@ -284,7 +287,7 @@ impl UnityScriptConverter {
         converted_code = converted_code.replace("public class", "class");
         converted_code = converted_code.replace("public void", "function");
         converted_code = converted_code.replace("void ", "");
-        converted_code = converted_code.Replace("private ", "");
+        converted_code = converted_code.replace("private ", "");
         converted_code = converted_code.replace("protected ", "");
 
         Ok(ConvertedIntermediate {
@@ -363,10 +366,37 @@ impl UnityScriptConverter {
         );
 
         mappings.insert(
+            "GameObject.Instantiate".to_string(),
+            ApiMapping {
+                unity_api: "GameObject.Instantiate".to_string(),
+                engine_api: "spawn_entity".to_string(),
+                conversion_rule: ConversionRule::MethodCall,
+            },
+        );
+
+        mappings.insert(
             "Instantiate".to_string(),
             ApiMapping {
                 unity_api: "Instantiate".to_string(),
                 engine_api: "spawn_entity".to_string(),
+                conversion_rule: ConversionRule::MethodCall,
+            },
+        );
+
+        mappings.insert(
+            "GameObject.Destroy".to_string(),
+            ApiMapping {
+                unity_api: "GameObject.Destroy".to_string(),
+                engine_api: "despawn_entity".to_string(),
+                conversion_rule: ConversionRule::MethodCall,
+            },
+        );
+
+        mappings.insert(
+            "Destroy".to_string(),
+            ApiMapping {
+                unity_api: "Destroy".to_string(),
+                engine_api: "despawn_entity".to_string(),
                 conversion_rule: ConversionRule::MethodCall,
             },
         );
@@ -390,12 +420,66 @@ impl UnityScriptConverter {
             },
         );
 
+        mappings.insert(
+            "transform.localScale".to_string(),
+            ApiMapping {
+                unity_api: "transform.localScale".to_string(),
+                engine_api: "transform.scale".to_string(),
+                conversion_rule: ConversionRule::PropertyAccess,
+            },
+        );
+
+        mappings.insert(
+            "transform.Translate".to_string(),
+            ApiMapping {
+                unity_api: "transform.Translate".to_string(),
+                engine_api: "transform.translate".to_string(),
+                conversion_rule: ConversionRule::MethodCall,
+            },
+        );
+
+        mappings.insert(
+            "transform.Rotate".to_string(),
+            ApiMapping {
+                unity_api: "transform.Rotate".to_string(),
+                engine_api: "transform.rotate".to_string(),
+                conversion_rule: ConversionRule::MethodCall,
+            },
+        );
+
+        mappings.insert(
+            "transform.parent".to_string(),
+            ApiMapping {
+                unity_api: "transform.parent".to_string(),
+                engine_api: "transform.parent".to_string(),
+                conversion_rule: ConversionRule::PropertyAccess,
+            },
+        );
+
+        mappings.insert(
+            "transform.Find".to_string(),
+            ApiMapping {
+                unity_api: "transform.Find".to_string(),
+                engine_api: "transform.find_child".to_string(),
+                conversion_rule: ConversionRule::MethodCall,
+            },
+        );
+
         // Rigidbody API
         mappings.insert(
             "GetComponent<Rigidbody>".to_string(),
             ApiMapping {
                 unity_api: "GetComponent<Rigidbody>".to_string(),
                 engine_api: "get_component<RigidBody>".to_string(),
+                conversion_rule: ConversionRule::MethodCall,
+            },
+        );
+
+        mappings.insert(
+            "GetComponent<Rigidbody2D>".to_string(),
+            ApiMapping {
+                unity_api: "GetComponent<Rigidbody2D>".to_string(),
+                engine_api: "get_component<RigidBody2D>".to_string(),
                 conversion_rule: ConversionRule::MethodCall,
             },
         );
@@ -409,6 +493,52 @@ impl UnityScriptConverter {
             },
         );
 
+        mappings.insert(
+            "AddTorque".to_string(),
+            ApiMapping {
+                unity_api: "AddTorque".to_string(),
+                engine_api: "apply_torque".to_string(),
+                conversion_rule: ConversionRule::MethodCall,
+            },
+        );
+
+        mappings.insert(
+            "velocity".to_string(),
+            ApiMapping {
+                unity_api: "velocity".to_string(),
+                engine_api: "linear_velocity".to_string(),
+                conversion_rule: ConversionRule::PropertyAccess,
+            },
+        );
+
+        mappings.insert(
+            "angularVelocity".to_string(),
+            ApiMapping {
+                unity_api: "angularVelocity".to_string(),
+                engine_api: "angular_velocity".to_string(),
+                conversion_rule: ConversionRule::PropertyAccess,
+            },
+        );
+
+        // Component API
+        mappings.insert(
+            "GetComponent".to_string(),
+            ApiMapping {
+                unity_api: "GetComponent".to_string(),
+                engine_api: "get_component".to_string(),
+                conversion_rule: ConversionRule::MethodCall,
+            },
+        );
+
+        mappings.insert(
+            "AddComponent".to_string(),
+            ApiMapping {
+                unity_api: "AddComponent".to_string(),
+                engine_api: "add_component".to_string(),
+                conversion_rule: ConversionRule::MethodCall,
+            },
+        );
+
         // Time API
         mappings.insert(
             "Time.deltaTime".to_string(),
@@ -416,6 +546,238 @@ impl UnityScriptConverter {
                 unity_api: "Time.deltaTime".to_string(),
                 engine_api: "delta_time".to_string(),
                 conversion_rule: ConversionRule::PropertyAccess,
+            },
+        );
+
+        mappings.insert(
+            "Time.fixedDeltaTime".to_string(),
+            ApiMapping {
+                unity_api: "Time.fixedDeltaTime".to_string(),
+                engine_api: "fixed_delta_time".to_string(),
+                conversion_rule: ConversionRule::PropertyAccess,
+            },
+        );
+
+        mappings.insert(
+            "Time.time".to_string(),
+            ApiMapping {
+                unity_api: "Time.time".to_string(),
+                engine_api: "elapsed_time".to_string(),
+                conversion_rule: ConversionRule::PropertyAccess,
+            },
+        );
+
+        // Input API
+        mappings.insert(
+            "Input.GetAxis".to_string(),
+            ApiMapping {
+                unity_api: "Input.GetAxis".to_string(),
+                engine_api: "get_axis".to_string(),
+                conversion_rule: ConversionRule::MethodCall,
+            },
+        );
+
+        mappings.insert(
+            "Input.GetButton".to_string(),
+            ApiMapping {
+                unity_api: "Input.GetButton".to_string(),
+                engine_api: "is_button_pressed".to_string(),
+                conversion_rule: ConversionRule::MethodCall,
+            },
+        );
+
+        mappings.insert(
+            "Input.GetKeyDown".to_string(),
+            ApiMapping {
+                unity_api: "Input.GetKeyDown".to_string(),
+                engine_api: "is_key_just_pressed".to_string(),
+                conversion_rule: ConversionRule::MethodCall,
+            },
+        );
+
+        mappings.insert(
+            "Input.GetKey".to_string(),
+            ApiMapping {
+                unity_api: "Input.GetKey".to_string(),
+                engine_api: "is_key_pressed".to_string(),
+                conversion_rule: ConversionRule::MethodCall,
+            },
+        );
+
+        mappings.insert(
+            "Input.GetMouseButton".to_string(),
+            ApiMapping {
+                unity_api: "Input.GetMouseButton".to_string(),
+                engine_api: "is_mouse_button_pressed".to_string(),
+                conversion_rule: ConversionRule::MethodCall,
+            },
+        );
+
+        // Camera API
+        mappings.insert(
+            "Camera.main".to_string(),
+            ApiMapping {
+                unity_api: "Camera.main".to_string(),
+                engine_api: "main_camera".to_string(),
+                conversion_rule: ConversionRule::PropertyAccess,
+            },
+        );
+
+        mappings.insert(
+            "Camera.ScreenToWorldPoint".to_string(),
+            ApiMapping {
+                unity_api: "Camera.ScreenToWorldPoint".to_string(),
+                engine_api: "screen_to_world_point".to_string(),
+                conversion_rule: ConversionRule::MethodCall,
+            },
+        );
+
+        // Mathf API
+        mappings.insert(
+            "Mathf.Abs".to_string(),
+            ApiMapping {
+                unity_api: "Mathf.Abs".to_string(),
+                engine_api: "abs".to_string(),
+                conversion_rule: ConversionRule::MethodCall,
+            },
+        );
+
+        mappings.insert(
+            "Mathf.Min".to_string(),
+            ApiMapping {
+                unity_api: "Mathf.Min".to_string(),
+                engine_api: "min".to_string(),
+                conversion_rule: ConversionRule::MethodCall,
+            },
+        );
+
+        mappings.insert(
+            "Mathf.Max".to_string(),
+            ApiMapping {
+                unity_api: "Mathf.Max".to_string(),
+                engine_api: "max".to_string(),
+                conversion_rule: ConversionRule::MethodCall,
+            },
+        );
+
+        mappings.insert(
+            "Mathf.Clamp".to_string(),
+            ApiMapping {
+                unity_api: "Mathf.Clamp".to_string(),
+                engine_api: "clamp".to_string(),
+                conversion_rule: ConversionRule::MethodCall,
+            },
+        );
+
+        mappings.insert(
+            "Mathf.Lerp".to_string(),
+            ApiMapping {
+                unity_api: "Mathf.Lerp".to_string(),
+                engine_api: "lerp".to_string(),
+                conversion_rule: ConversionRule::MethodCall,
+            },
+        );
+
+        mappings.insert(
+            "Mathf.Deg2Rad".to_string(),
+            ApiMapping {
+                unity_api: "Mathf.Deg2Rad".to_string(),
+                engine_api: "DEG_TO_RAD".to_string(),
+                conversion_rule: ConversionRule::Direct,
+            },
+        );
+
+        mappings.insert(
+            "Mathf.Rad2Deg".to_string(),
+            ApiMapping {
+                unity_api: "Mathf.Rad2Deg".to_string(),
+                engine_api: "RAD_TO_DEG".to_string(),
+                conversion_rule: ConversionRule::Direct,
+            },
+        );
+
+        // Physics API
+        mappings.insert(
+            "Physics.Raycast".to_string(),
+            ApiMapping {
+                unity_api: "Physics.Raycast".to_string(),
+                engine_api: "raycast".to_string(),
+                conversion_rule: ConversionRule::MethodCall,
+            },
+        );
+
+        mappings.insert(
+            "Physics.OverlapSphere".to_string(),
+            ApiMapping {
+                unity_api: "Physics.OverlapSphere".to_string(),
+                engine_api: "overlap_sphere".to_string(),
+                conversion_rule: ConversionRule::MethodCall,
+            },
+        );
+
+        // Collider API
+        mappings.insert(
+            "OnCollisionEnter".to_string(),
+            ApiMapping {
+                unity_api: "OnCollisionEnter".to_string(),
+                engine_api: "on_collision_enter".to_string(),
+                conversion_rule: ConversionRule::MethodCall,
+            },
+        );
+
+        mappings.insert(
+            "OnCollisionExit".to_string(),
+            ApiMapping {
+                unity_api: "OnCollisionExit".to_string(),
+                engine_api: "on_collision_exit".to_string(),
+                conversion_rule: ConversionRule::MethodCall,
+            },
+        );
+
+        mappings.insert(
+            "OnTriggerEnter".to_string(),
+            ApiMapping {
+                unity_api: "OnTriggerEnter".to_string(),
+                engine_api: "on_trigger_enter".to_string(),
+                conversion_rule: ConversionRule::MethodCall,
+            },
+        );
+
+        mappings.insert(
+            "OnTriggerExit".to_string(),
+            ApiMapping {
+                unity_api: "OnTriggerExit".to_string(),
+                engine_api: "on_trigger_exit".to_string(),
+                conversion_rule: ConversionRule::MethodCall,
+            },
+        );
+
+        // Animation API
+        mappings.insert(
+            "GetComponent<Animation>".to_string(),
+            ApiMapping {
+                unity_api: "GetComponent<Animation>".to_string(),
+                engine_api: "get_component<Animation>".to_string(),
+                conversion_rule: ConversionRule::MethodCall,
+            },
+        );
+
+        mappings.insert(
+            "GetComponent<Animator>".to_string(),
+            ApiMapping {
+                unity_api: "GetComponent<Animator>".to_string(),
+                engine_api: "get_component<Animator>".to_string(),
+                conversion_rule: ConversionRule::MethodCall,
+            },
+        );
+
+        // Audio API
+        mappings.insert(
+            "GetComponent<AudioSource>".to_string(),
+            ApiMapping {
+                unity_api: "GetComponent<AudioSource>".to_string(),
+                engine_api: "get_component<AudioSource>".to_string(),
+                conversion_rule: ConversionRule::MethodCall,
             },
         );
 
