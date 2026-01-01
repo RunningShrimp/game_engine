@@ -5,6 +5,7 @@
 pub mod resource_analysis;
 
 pub mod ai_assistant;
+pub mod doc_gen;
 pub mod migration;
 
 // DCC工具集成（条件编译）
