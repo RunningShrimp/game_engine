@@ -21,6 +21,7 @@ dirs = "6.0"
 tracing = { workspace = true }
 wgpu = { workspace = true, optional = true }
 num_cpus = "1.17.0"
+game_engine = { version = "0.1.0", path = "../game_engine" }
 
 [dev-dependencies]
 criterion = { version = "0.8.1", features = ["html_reports"] }

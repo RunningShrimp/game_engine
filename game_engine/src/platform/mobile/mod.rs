@@ -10,6 +10,10 @@ pub mod services;
 #[cfg(target_os = "android")]
 pub mod jni;
 
+// iOS FFI模块仅在iOS平台可用
+#[cfg(target_os = "ios")]
+pub mod ios_ffi;
+
 pub use config::MobileConfig;
 
 #[cfg(target_os = "ios")]

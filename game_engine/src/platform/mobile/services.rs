@@ -9,6 +9,9 @@ use std::sync::{Arc, Mutex};
 #[cfg(target_os = "android")]
 use super::jni::GooglePlayGamesJNI;
 
+#[cfg(target_os = "ios")]
+use super::ios_ffi::GameCenterFFI;
+
 /// Google Play Games服务
 pub struct GooglePlayGames {
     /// 是否已初始化
@@ -269,6 +272,9 @@ pub struct GameCenter {
     achievements: HashMap<String, Achievement>,
     /// 排行榜
     leaderboards: HashMap<String, Leaderboard>,
+    /// iOS FFI包装器（仅iOS平台）
+    #[cfg(target_os = "ios")]
+    ffi_wrapper: Arc<Mutex<GameCenterFFI>>,
 }
 
 impl GameCenter {
@@ -279,13 +285,29 @@ impl GameCenter {
             current_player: None,
             achievements: HashMap::new(),
             leaderboards: HashMap::new(),
+            #[cfg(target_os = "ios")]
+            ffi_wrapper: Arc::new(Mutex::new(GameCenterFFI::new())),
         }
     }
 
     /// 初始化服务
     pub fn initialize(&mut self) -> Result<(), ServiceError> {
-        // TODO: 实际的GameKit初始化
+        #[cfg(target_os = "ios")]
+        {
+            let mut ffi = self.ffi_wrapper.lock().map_err(|e| {
+                ServiceError::InternalError(format!("FFI wrapper lock failed: {}", e))
+            })?;
+
+            ffi.initialize().map_err(|e| ServiceError::InternalError(e))?;
+        }
+
+        #[cfg(not(target_os = "ios"))]
+        {
+            tracing::info!("Game Center: running on non-iOS platform, using mock");
+        }
+
         self.initialized = true;
+        tracing::info!("Game Center service initialized");
         Ok(())
     }
 
@@ -295,13 +317,35 @@ impl GameCenter {
             return Err(ServiceError::NotInitialized);
         }
 
-        // TODO: 实际的Game Center认证逻辑
-        self.current_player = Some(PlayerInfo {
-            id: "player_123".to_string(),
-            name: "Player".to_string(),
-            level: 1,
-        });
+        #[cfg(target_os = "ios")]
+        {
+            let ffi = self.ffi_wrapper.lock().map_err(|e| {
+                ServiceError::InternalError(format!("FFI wrapper lock failed: {}", e))
+            })?;
 
+            let authenticated = ffi.authenticate().map_err(|e| ServiceError::InternalError(e))?;
+
+            if authenticated {
+                // TODO: 从FFI获取实际玩家信息
+                self.current_player = Some(PlayerInfo {
+                    id: "player_ios".to_string(),
+                    name: "iOS Player".to_string(),
+                    level: 1,
+                });
+            }
+        }
+
+        #[cfg(not(target_os = "ios"))]
+        {
+            // Mock实现
+            self.current_player = Some(PlayerInfo {
+                id: "player_mock".to_string(),
+                name: "Mock Player".to_string(),
+                level: 1,
+            });
+        }
+
+        tracing::info!("Game Center authentication successful");
         Ok(())
     }
 
@@ -321,15 +365,26 @@ impl GameCenter {
             return Err(ServiceError::NotSignedIn);
         }
 
-        // TODO: 实际的成就报告逻辑
+        #[cfg(target_os = "ios")]
+        {
+            let ffi = self.ffi_wrapper.lock().map_err(|e| {
+                ServiceError::InternalError(format!("FFI wrapper lock failed: {}", e))
+            })?;
+
+            ffi.report_achievement(&achievement_id)
+                .map_err(|e| ServiceError::InternalError(e))?;
+        }
+
+        // 更新本地成就状态
         self.achievements.entry(achievement_id.clone()).or_insert_with(|| Achievement {
-            id: achievement_id,
-            name: String::new(),
-            description: String::new(),
+            id: achievement_id.clone(),
+            name: format!("Achievement {}", achievement_id),
+            description: "Unlocked achievement".to_string(),
             unlocked: true,
             progress: 100,
         });
 
+        tracing::info!("Achievement reported: {}", achievement_id);
         Ok(())
     }
 
@@ -339,7 +394,17 @@ impl GameCenter {
             return Err(ServiceError::NotSignedIn);
         }
 
-        // TODO: 实际的分数提交逻辑
+        #[cfg(target_os = "ios")]
+        {
+            let ffi = self.ffi_wrapper.lock().map_err(|e| {
+                ServiceError::InternalError(format!("FFI wrapper lock failed: {}", e))
+            })?;
+
+            ffi.submit_score(&leaderboard_id, score)
+                .map_err(|e| ServiceError::InternalError(e))?;
+        }
+
+        tracing::info!("Score {} submitted to leaderboard {}", score, leaderboard_id);
         Ok(())
     }
 
@@ -349,7 +414,21 @@ impl GameCenter {
             return Err(ServiceError::NotSignedIn);
         }
 
-        // TODO: 显示Game Center仪表板
+        #[cfg(target_os = "ios")]
+        {
+            let ffi = self.ffi_wrapper.lock().map_err(|e| {
+                ServiceError::InternalError(format!("FFI wrapper lock failed: {}", e))
+            })?;
+
+            ffi.show_game_center()
+                .map_err(|e| ServiceError::InternalError(e))?;
+        }
+
+        #[cfg(not(target_os = "ios"))]
+        {
+            tracing::info!("Showing Game Center dashboard (mock)");
+        }
+
         Ok(())
     }
 }
