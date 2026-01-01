@@ -12,6 +12,8 @@ use super::jni::GooglePlayGamesJNI;
 #[cfg(target_os = "ios")]
 use super::ios_ffi::GameCenterFFI;
 
+use super::push_ffi::{FCMFFI, APNsFFI};
+
 /// Google Play Games服务
 pub struct GooglePlayGames {
     /// 是否已初始化
@@ -447,6 +449,12 @@ pub struct PushNotificationService {
     platform: NotificationPlatform,
     /// 通知权限
     permission_granted: bool,
+    /// Android FCM FFI包装器（仅Android平台）
+    #[cfg(target_os = "android")]
+    fcm_ffi: Arc<Mutex<FCMFFI>>,
+    /// iOS APNs FFI包装器（仅iOS平台）
+    #[cfg(target_os = "ios")]
+    apns_ffi: Arc<Mutex<APNsFFI>>,
 }
 
 impl PushNotificationService {
@@ -456,22 +464,40 @@ impl PushNotificationService {
             initialized: false,
             platform,
             permission_granted: false,
+            #[cfg(target_os = "android")]
+            fcm_ffi: Arc::new(Mutex::new(FCMFFI::new())),
+            #[cfg(target_os = "ios")]
+            apns_ffi: Arc::new(Mutex::new(APNsFFI::new())),
         }
     }
 
     /// 初始化服务
     pub fn initialize(&mut self) -> Result<(), ServiceError> {
-        // TODO: 根据平台初始化推送通知服务
-        match self.platform {
-            NotificationPlatform::Firebase => {
-                // Firebase Cloud Messaging初始化
-            }
-            NotificationPlatform::APNs => {
-                // Apple Push Notification Service初始化
-            }
+        #[cfg(target_os = "android")]
+        {
+            let mut fcm = self.fcm_ffi.lock().map_err(|e| {
+                ServiceError::InternalError(format!("FCM FFI lock failed: {}", e))
+            })?;
+
+            fcm.initialize().map_err(|e| ServiceError::InternalError(e))?;
+        }
+
+        #[cfg(target_os = "ios")]
+        {
+            let mut apns = self.apns_ffi.lock().map_err(|e| {
+                ServiceError::InternalError(format!("APNs FFI lock failed: {}", e))
+            })?;
+
+            apns.initialize().map_err(|e| ServiceError::InternalError(e))?;
+        }
+
+        #[cfg(not(any(target_os = "android", target_os = "ios")))]
+        {
+            tracing::info!("Push notifications: running on non-mobile platform, using mock");
         }
 
         self.initialized = true;
+        tracing::info!("Push notification service initialized");
         Ok(())
     }
 
@@ -481,8 +507,34 @@ impl PushNotificationService {
             return Err(ServiceError::NotInitialized);
         }
 
-        // TODO: 实际的权限请求
-        self.permission_granted = true;
+        #[cfg(target_os = "android")]
+        {
+            let mut fcm = self.fcm_ffi.lock().map_err(|e| {
+                ServiceError::InternalError(format!("FCM FFI lock failed: {}", e))
+            })?;
+
+            let granted = fcm.request_permission().map_err(|e| ServiceError::InternalError(e))?;
+            self.permission_granted = granted;
+            return Ok(granted);
+        }
+
+        #[cfg(target_os = "ios")]
+        {
+            let mut apns = self.apns_ffi.lock().map_err(|e| {
+                ServiceError::InternalError(format!("APNs FFI lock failed: {}", e))
+            })?;
+
+            let granted = apns.request_permission().map_err(|e| ServiceError::InternalError(e))?;
+            self.permission_granted = granted;
+            return Ok(granted);
+        }
+
+        #[cfg(not(any(target_os = "android", target_os = "ios")))]
+        {
+            self.permission_granted = true; // Mock实现
+            tracing::info!("Push notification permission granted (mock)");
+        }
+
         Ok(self.permission_granted)
     }
 
@@ -497,7 +549,31 @@ impl PushNotificationService {
             return Err(ServiceError::PermissionDenied);
         }
 
-        // TODO: 发送本地通知
+        #[cfg(target_os = "android")]
+        {
+            // Android使用FCM发送本地通知（需要实现）
+            tracing::info!("Sending local notification (Android): {}", notification.title);
+            return Ok(());
+        }
+
+        #[cfg(target_os = "ios")]
+        {
+            let apns = self.apns_ffi.lock().map_err(|e| {
+                ServiceError::InternalError(format!("APNs FFI lock failed: {}", e))
+            })?;
+
+            apns.send_local_notification(&notification.title, &notification.body)
+                .map_err(|e| ServiceError::InternalError(e))?;
+
+            tracing::info!("Local notification sent: {}", notification.title);
+            return Ok(());
+        }
+
+        #[cfg(not(any(target_os = "android", target_os = "ios")))]
+        {
+            tracing::info!("Local notification sent (mock): {} - {}", notification.title, notification.body);
+        }
+
         Ok(())
     }
 
@@ -507,13 +583,51 @@ impl PushNotificationService {
             return Err(ServiceError::PermissionDenied);
         }
 
-        // TODO: 订阅远程通知主题
+        #[cfg(target_os = "android")]
+        {
+            let fcm = self.fcm_ffi.lock().map_err(|e| {
+                ServiceError::InternalError(format!("FCM FFI lock failed: {}", e))
+            })?;
+
+            fcm.subscribe_to_topic(&topic)
+                .map_err(|e| ServiceError::InternalError(e))?;
+
+            tracing::info!("Subscribed to topic: {}", topic);
+        }
+
+        #[cfg(target_os = "ios")]
+        {
+            // iOS通过APNs订阅主题（不同实现）
+            tracing::info!("Topic subscription not implemented for iOS APNs");
+        }
+
+        #[cfg(not(any(target_os = "android", target_os = "ios")))]
+        {
+            tracing::info!("Subscribed to topic (mock): {}", topic);
+        }
+
         Ok(())
     }
 
     /// 取消订阅
     pub fn unsubscribe_from_topic(&self, topic: String) -> Result<(), ServiceError> {
-        // TODO: 取消订阅
+        #[cfg(target_os = "android")]
+        {
+            let fcm = self.fcm_ffi.lock().map_err(|e| {
+                ServiceError::InternalError(format!("FCM FFI lock failed: {}", e))
+            })?;
+
+            fcm.unsubscribe_from_topic(&topic)
+                .map_err(|e| ServiceError::InternalError(e))?;
+
+            tracing::info!("Unsubscribed from topic: {}", topic);
+        }
+
+        #[cfg(not(target_os = "android"))]
+        {
+            tracing::info!("Unsubscribed from topic (mock): {}", topic);
+        }
+
         Ok(())
     }
 }

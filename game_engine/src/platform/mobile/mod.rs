@@ -14,6 +14,9 @@ pub mod jni;
 #[cfg(target_os = "ios")]
 pub mod ios_ffi;
 
+// 推送通知FFI模块
+pub mod push_ffi;
+
 pub use config::MobileConfig;
 
 #[cfg(target_os = "ios")]
