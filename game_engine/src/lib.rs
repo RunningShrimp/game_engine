@@ -123,6 +123,8 @@ pub mod ai;
 pub mod animation;
 pub mod audio;
 pub mod build;
+#[cfg(feature = "compiler")]
+pub mod compiler;
 pub mod collaboration;
 pub mod common_errors;
 pub mod config;
