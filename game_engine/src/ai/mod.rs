@@ -124,6 +124,9 @@ pub mod llm_cache;
 /// 成本追踪系统 - API调用成本追踪和预算控制
 pub mod cost_tracking;
 
+/// NPU推理加速 - 本地LLM推理和实时对话
+pub mod npu;
+
 // 测试模块
 #[cfg(test)]
 mod flocking_tests;
@@ -168,6 +171,13 @@ pub use llm_cache::{CacheConfig, CacheEntry, CacheKey, CacheStats, CostEstimator
 pub use cost_tracking::{
     APICallRecord, BudgetConfig, BudgetStatus, CostReport, CostStatistics, CostTracker,
     ModelCostStats, NPCCostStats,
+};
+
+// 重新导出NPU推理加速类型
+pub use npu::{
+    DialogMessage, DialogRole, InferenceResult, InferenceSession, LoadedModel, ModelConfig,
+    ModelType, NPUBackend, NPUConfig, NPUError, NPUInferenceEngine, PerformanceStatistics,
+    QuantizationPrecision,
 };
 
 // 条件导出LLM适配器
