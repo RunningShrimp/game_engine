@@ -102,18 +102,10 @@ impl Default for SimdSkinnedVertex {
 }
 
 /// 骨骼变换矩阵资源
-#[derive(Resource, Debug, Clone)]
+#[derive(Resource, Debug, Clone, Default)]
 pub struct BoneTransforms {
     /// 骨骼变换矩阵列表
     pub bone_matrices: Vec<Mat4>,
-}
-
-impl Default for BoneTransforms {
-    fn default() -> Self {
-        Self {
-            bone_matrices: Vec::new(),
-        }
-    }
 }
 
 /// SIMD线性混合蒙皮（LBS）系统

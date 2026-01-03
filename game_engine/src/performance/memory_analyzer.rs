@@ -41,7 +41,7 @@ pub struct AllocationRecord {
 }
 
 /// 内存统计
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct MemoryStats {
     /// 总分配量（字节）
     pub total_allocated: u64,
@@ -55,19 +55,6 @@ pub struct MemoryStats {
     pub deallocation_count: u64,
     /// 活动分配数
     pub active_allocations: u64,
-}
-
-impl Default for MemoryStats {
-    fn default() -> Self {
-        Self {
-            total_allocated: 0,
-            current_usage: 0,
-            peak_usage: 0,
-            allocation_count: 0,
-            deallocation_count: 0,
-            active_allocations: 0,
-        }
-    }
 }
 
 // ==================== 泄漏检测器 ====================

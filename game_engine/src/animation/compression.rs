@@ -227,14 +227,14 @@ impl AnimationCompressor {
         let keyframes = &track.keyframes;
 
         // 保留第一个关键帧
-        reduced.add_keyframe(keyframes[0].time, keyframes[0].value.clone());
+        reduced.add_keyframe(keyframes[0].time, keyframes[0].value);
 
         let mut last_kept = 0;
         for i in 1..keyframes.len() - 1 {
             // 检查是否可以跳过这个关键帧
             let dist = distance_fn(&keyframes[last_kept], &keyframes[i]);
             if dist > tolerance {
-                reduced.add_keyframe(keyframes[i].time, keyframes[i].value.clone());
+                reduced.add_keyframe(keyframes[i].time, keyframes[i].value);
                 last_kept = i;
             }
         }
@@ -242,7 +242,7 @@ impl AnimationCompressor {
         // 保留最后一个关键帧
         reduced.add_keyframe(
             keyframes[keyframes.len() - 1].time,
-            keyframes[keyframes.len() - 1].value.clone(),
+            keyframes[keyframes.len() - 1].value,
         );
 
         reduced
