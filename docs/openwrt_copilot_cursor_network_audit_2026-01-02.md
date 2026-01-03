@@ -8,6 +8,8 @@
 
 - `sh scripts/openwrt/counter_growth_6min.sh root@192.168.88.1`
 - `sh scripts/openwrt/export_pstore.sh root@192.168.88.1`
+- `sh scripts/openwrt/endpoint_regression_ipv4.sh root@192.168.88.1`
+- `sh scripts/openwrt/package_cake_panic_report.sh root@192.168.88.1`
 
 ## 0. 本次已落地的变更（单 WAN + OpenClash）
 
@@ -19,12 +21,12 @@
 ## 1. 关键现状摘要
 
 - WAN：`pppoe-wan`（IPv4 PPPoE），防火墙开启 `mtu_fix=1`
-- 防火墙：开启 `flow_offloading=1` 且 `flow_offloading_hw=1`；nft `flowtable ft` 已生效
+- 防火墙：`flow_offloading=0` 且 `flow_offloading_hw=0`（为 OpenClash 透明代理稳定性优先）
 - NAT：`fullcone=2`（全锥形 NAT）
-- 多拨/多 WAN：`mwan3` 服务正在运行；存在 policy routing / 黑洞规则
-- QoS/SQM：未安装 `tc`（因此也没有 SQM/qdisc 整形）
-- DNS：dnsmasq 使用本地指定上游（223.5.5.5、119.29.29.29），但系统 resolv 里也出现 8.8.8.8（通常来自 PPPoE peer DNS）
-- OpenClash：已安装但当前 `openclash.config.enable='0'`（未启用）
+- 多拨/多 WAN：`mwan3` 已停用（单 WAN 场景避免策略路由误判/黑洞）
+- QoS/SQM：出口使用默认 `fq_codel`；当前固件/内核下 **不要启用 CAKE（`sch_cake`）**（会触发 panic 重启）
+- DNS：`network.wan.peerdns=0`，dnsmasq `noresolv=1`，并启用 `filter_aaaa=1`（规避异常 IPv6 路径导致的连通性问题）
+- OpenClash：`openclash.config.enable='1'`（已启用；DNS 上游指向本地 127.0.0.1#7874）
 
 ## 2. 发现的问题（与 Copilot/Cursor 的 “net::ERR_CONNECTION_CLOSED” 高相关）
 

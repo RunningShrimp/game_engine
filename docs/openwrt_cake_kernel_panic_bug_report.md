@@ -49,6 +49,16 @@ tc qdisc replace dev pppoe-wan root cake diffserv4 nat ack-filter
 - openwrt_audit/2026-01-02_220730/05_pstore_reboot_logs.txt
   - Oops/panic with `sch_cake` present in module list; call trace in softirq/forwarding path (`__dev_queue_xmit`, `ip_forward`, `br_nf_hook_thresh`, etc)
 
+## One-command evidence bundle
+
+To collect crash logs + key system context into a single attachment:
+
+```sh
+sh scripts/openwrt/package_cake_panic_report.sh root@192.168.88.1
+```
+
+This produces `openwrt_audit/<timestamp>/cake_panic_report.tar.gz`.
+
 ## Notes
 
 - This is reproducible on the current firmware/kernel combination.
