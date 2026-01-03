@@ -105,7 +105,10 @@
 // - 提供GPU驱动的渲染优化
 // - 集成PBR材质系统和全局光照
 
+pub mod atmosphere;
 pub mod comprehensive_tests;
+pub mod gpu_optimization_example;
+pub mod gpu_unified_manager_v2;
 pub mod integrated_gpu;
 pub mod lod_generator;
 pub mod mesh;
@@ -122,6 +125,7 @@ pub mod tilemap;
 pub mod uv_atlas;
 #[cfg(target_arch = "wasm32")]
 pub mod webgl_adapter;
+pub mod wgpu_compat;
 pub mod wgpu_modules;
 pub mod wgpu_utils;
 
@@ -261,6 +265,17 @@ pub use gpu_instancing::{
 // Re-export unified GPU render manager (整合GPU剔除和间接绘制)
 pub use gpu_unified_manager::{GpuRenderConfig, GpuRenderManager, GpuRenderStats};
 
+// Re-export enhanced GPU render manager v2
+pub use gpu_unified_manager_v2::{
+    EnhancedGpuRenderConfig, EnhancedGpuRenderManager, EnhancedGpuRenderStats,
+};
+
+// Re-export GPU optimization example
+pub use gpu_optimization_example::{
+    CullingComparisonResult, GpuOptimizationExample, PerformanceTestResult, VramStressTestResult,
+    run_gpu_optimization_demo,
+};
+
 // Re-export Ray Tracing components (including enhanced features)
 pub use ray_tracing::{
     BVHNode, Camera as RayTracingCamera, Light, LightType, Material, RayTracingAcceleration,
@@ -281,6 +296,14 @@ pub use light_baking::{
 
 // Re-export Volumetric Rendering components
 pub use volumetric::{Camera as VolumetricCamera, FogType, VolumetricConfig, VolumetricRenderer};
+
+// Re-export Atmospheric Rendering components
+pub use atmosphere::{
+    AtmosphereConfig, AtmosphereQuality, AtmosphereSystem, CloudConfig, CloudQuality,
+    CloudRenderer, CloudType, FogConfig, FogQuality, FogRenderer, FogType as AtmosphereFogType,
+    GroundFogConfig, HeightFogConfig, LightScatteringConfig, VolumetricFogConfig,
+    VolumetricLightConfig, WeatherState, WeatherSystem,
+};
 
 // Re-export DDGI components
 pub use gi::{

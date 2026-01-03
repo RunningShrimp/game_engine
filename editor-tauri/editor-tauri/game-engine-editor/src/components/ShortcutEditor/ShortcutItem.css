@@ -1,0 +1,144 @@
+.shortcut-item {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 16px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border-color);
+  align-items: center;
+  transition: background 0.2s;
+}
+
+.shortcut-item:hover {
+  background: var(--bg-hover);
+}
+
+.shortcut-item.editing {
+  background: var(--bg-secondary);
+  border-left: 3px solid var(--accent-color);
+}
+
+.item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.item-description {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.item-context {
+  font-size: 12px;
+  color: var(--text-secondary);
+  padding: 2px 8px;
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  align-self: flex-start;
+}
+
+.item-category {
+  font-size: 12px;
+  color: var(--text-secondary);
+  align-self: flex-start;
+}
+
+.item-keys {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.keys-display {
+  font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+  font-size: 13px;
+  color: var(--accent-color);
+  font-weight: 500;
+}
+
+.recording-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: var(--recording-bg);
+  border: 1px solid var(--recording-border);
+  border-radius: 4px;
+}
+
+.recording-dot {
+  width: 8px;
+  height: 8px;
+  background: #ff4444;
+  border-radius: 50%;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.recording-text {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.recorded-keys {
+  font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+  font-size: 13px;
+  color: var(--accent-color);
+}
+
+.customized-badge {
+  font-size: 11px;
+  padding: 2px 6px;
+  background: var(--badge-bg);
+  color: var(--badge-text);
+  border-radius: 3px;
+  font-weight: 500;
+}
+
+.item-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.action-btn {
+  padding: 6px 12px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+
+.action-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--accent-color);
+}
+
+.action-btn.save {
+  background: var(--accent-color);
+  color: white;
+  border-color: var(--accent-color);
+}
+
+.action-btn.save:hover {
+  filter: brightness(1.1);
+}
+
+.action-btn.reset {
+  color: var(--warning-text);
+  border-color: var(--warning-border);
+}
+
+.action-btn.reset:hover {
+  background: var(--warning-bg);
+}

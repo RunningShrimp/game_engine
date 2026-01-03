@@ -383,13 +383,22 @@ impl AssetBundler {
                 engine_version: env!("CARGO_PKG_VERSION").to_string(),
                 custom: {
                     let mut custom = HashMap::new();
-                    custom.insert("compression_time_ms".to_string(), compression_time.to_string());
-                    custom.insert("deduplication_enabled".to_string(),
-                        self.optimization_config.enable_deduplication.to_string());
-                    custom.insert("priority_sorting_enabled".to_string(),
-                        self.optimization_config.enable_priority_sorting.to_string());
-                    custom.insert("dependency_analysis_enabled".to_string(),
-                        self.optimization_config.enable_dependency_analysis.to_string());
+                    custom.insert(
+                        "compression_time_ms".to_string(),
+                        compression_time.to_string(),
+                    );
+                    custom.insert(
+                        "deduplication_enabled".to_string(),
+                        self.optimization_config.enable_deduplication.to_string(),
+                    );
+                    custom.insert(
+                        "priority_sorting_enabled".to_string(),
+                        self.optimization_config.enable_priority_sorting.to_string(),
+                    );
+                    custom.insert(
+                        "dependency_analysis_enabled".to_string(),
+                        self.optimization_config.enable_dependency_analysis.to_string(),
+                    );
                     custom
                 },
             },
@@ -624,18 +633,10 @@ impl AssetBundler {
                     OptimizationError::BundleError(format!("Zlib compression failed: {}", e))
                 })
             }
-            CompressionAlgorithm::LZ4 => {
-                self.compress_lz4(data)
-            }
-            CompressionAlgorithm::Zstd => {
-                self.compress_zstd(data)
-            }
-            CompressionAlgorithm::Brotli => {
-                self.compress_brotli(data)
-            }
-            CompressionAlgorithm::LZMA => {
-                self.compress_lzma(data)
-            }
+            CompressionAlgorithm::LZ4 => self.compress_lz4(data),
+            CompressionAlgorithm::Zstd => self.compress_zstd(data),
+            CompressionAlgorithm::Brotli => self.compress_brotli(data),
+            CompressionAlgorithm::LZMA => self.compress_lzma(data),
             CompressionAlgorithm::Auto => {
                 // Already handled above
                 Ok(data.to_vec())
@@ -644,7 +645,11 @@ impl AssetBundler {
 
         let duration = start.elapsed();
         if duration.as_millis() > 100 {
-            println!("  Compression took {}ms for {} bytes", duration.as_millis(), data.len());
+            println!(
+                "  Compression took {}ms for {} bytes",
+                duration.as_millis(),
+                data.len()
+            );
         }
 
         result
@@ -721,7 +726,11 @@ impl AssetBundler {
             let mut best_match = 0;
             let mut best_distance = 0;
 
-            let search_start = if pos > MAX_DISTANCE { pos - MAX_DISTANCE } else { 0 };
+            let search_start = if pos > MAX_DISTANCE {
+                pos - MAX_DISTANCE
+            } else {
+                0
+            };
 
             for i in search_start..pos {
                 let mut match_len = 0;
@@ -749,22 +758,18 @@ impl AssetBundler {
             } else {
                 // 写入字面量
                 let mut literal_len = 1;
-                while pos + literal_len < data.len()
-                    && literal_len < 15
-                    && {
-                        // 检查接下来的字节是否能找到匹配
-                        let mut found = false;
-                        for i in search_start..(pos + literal_len) {
-                            if i + MIN_MATCH <= pos + literal_len
-                                && data[pos + literal_len] == data[i]
-                            {
-                                found = true;
-                                break;
-                            }
+                while pos + literal_len < data.len() && literal_len < 15 && {
+                    // 检查接下来的字节是否能找到匹配
+                    let mut found = false;
+                    for i in search_start..(pos + literal_len) {
+                        if i + MIN_MATCH <= pos + literal_len && data[pos + literal_len] == data[i]
+                        {
+                            found = true;
+                            break;
                         }
-                        !found
                     }
-                {
+                    !found
+                } {
                     literal_len += 1;
                 }
 
@@ -857,9 +862,14 @@ impl AssetBundler {
                 unique_assets.push(result.clone());
             } else {
                 // 重复资源，记录到缓存
-                self.deduplication_cache
-                    .insert(checksum.into_bytes(), result.asset_path.to_string_lossy().to_string());
-                println!("  Deduplicated: {} (duplicate content)", result.asset_path.display());
+                self.deduplication_cache.insert(
+                    checksum.into_bytes(),
+                    result.asset_path.to_string_lossy().to_string(),
+                );
+                println!(
+                    "  Deduplicated: {} (duplicate content)",
+                    result.asset_path.display()
+                );
             }
         }
 
@@ -877,8 +887,7 @@ impl AssetBundler {
             let a_priority = self.get_asset_priority(a);
             let b_priority = self.get_asset_priority(b);
 
-            b_priority.cmp(&a_priority)
-                .then_with(|| a.asset_path.cmp(&b.asset_path))
+            b_priority.cmp(&a_priority).then_with(|| a.asset_path.cmp(&b.asset_path))
         });
     }
 
@@ -906,7 +915,8 @@ impl AssetBundler {
             return std::collections::HashMap::new();
         }
 
-        let mut dependencies: std::collections::HashMap<String, Vec<String>> = std::collections::HashMap::new();
+        let mut dependencies: std::collections::HashMap<String, Vec<String>> =
+            std::collections::HashMap::new();
 
         for result in results {
             let mut deps = Vec::new();
@@ -916,7 +926,10 @@ impl AssetBundler {
                 if let Ok(content) = std::fs::read_to_string(&result.asset_path) {
                     // 提取引用的资源路径（简化实现）
                     for line in content.lines() {
-                        if line.contains("asset=\"") || line.contains("texture=\"") || line.contains("model=\"") {
+                        if line.contains("asset=\"")
+                            || line.contains("texture=\"")
+                            || line.contains("model=\"")
+                        {
                             if let Some(start) = line.find('"') {
                                 if let Some(end) = line[start + 1..].find('"') {
                                     let asset_path = &line[start + 1..start + 1 + end];
@@ -951,10 +964,7 @@ impl AssetBundler {
             }
 
             if !deps.is_empty() {
-                dependencies.insert(
-                    result.asset_path.to_string_lossy().to_string(),
-                    deps,
-                );
+                dependencies.insert(result.asset_path.to_string_lossy().to_string(), deps);
             }
         }
 
@@ -994,9 +1004,8 @@ impl AssetBundler {
             *algorithm_usage.entry(entry.compression).or_insert(0) += 1;
 
             let type_name = format!("{:?}", entry.asset_type);
-            let stats = asset_type_stats
-                .entry(type_name.clone())
-                .or_insert(AssetCompressionStats {
+            let stats =
+                asset_type_stats.entry(type_name.clone()).or_insert(AssetCompressionStats {
                     count: 0,
                     original_size: 0,
                     compressed_size: 0,

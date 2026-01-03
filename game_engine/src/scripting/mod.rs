@@ -10,9 +10,42 @@ pub mod audio_api;
 /// C#支持模块
 #[cfg(feature = "csharp")]
 pub mod csharp;
+/// C#编译缓存模块
+#[cfg(feature = "csharp")]
+pub mod csharp_compile_cache;
+/// .NET 运行时集成模块（跨平台 - 使用 dotnet CLI）
+#[cfg(feature = "csharp")]
+pub mod csharp_dotnet;
+/// C#热重载模块
+#[cfg(feature = "csharp")]
+pub mod csharp_hot_reload;
+/// C#优化热重载模块
+#[cfg(feature = "csharp")]
+pub mod csharp_hot_reload_optimized;
+/// C# JIT/AOT优化模块
+#[cfg(feature = "csharp")]
+pub mod csharp_jit_aot;
 /// C#生命周期钩子模块
 #[cfg(feature = "csharp")]
 pub mod csharp_lifecycle;
+/// C#内存管理优化模块
+#[cfg(feature = "csharp")]
+pub mod csharp_memory;
+/// Mono 运行时集成模块（macOS - 可选）
+#[cfg(all(feature = "csharp", feature = "mono", target_os = "macos"))]
+pub mod csharp_mono;
+/// .NET Core 运行时集成模块（跨平台 - 使用 netcorehost - macOS不支持）
+#[cfg(feature = "csharp")]
+pub mod csharp_netcorehost;
+/// C#进程池模块（性能优化）
+#[cfg(feature = "csharp")]
+pub mod csharp_process_pool;
+/// C#性能分析工具模块
+#[cfg(feature = "csharp")]
+pub mod csharp_profiler;
+/// C#运行时集成模块（.NET Framework - Windows/Linux）
+#[cfg(feature = "csharp")]
+pub mod csharp_runtime;
 /// ECS脚本绑定模块
 pub mod ecs_bindings;
 /// 脚本引擎模块

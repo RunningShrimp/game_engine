@@ -426,12 +426,12 @@ impl NPUInferenceEngine {
             config.backend
         };
 
-        let config = NPUConfig {
-            backend,
-            ..config
-        };
+        let config = NPUConfig { backend, ..config };
 
-        println!("NPU Inference Engine initialized with backend: {}", config.backend.name());
+        println!(
+            "NPU Inference Engine initialized with backend: {}",
+            config.backend.name()
+        );
 
         Self {
             config,
@@ -482,10 +482,7 @@ impl NPUInferenceEngine {
             quantized: self.config.enable_quantization,
         });
 
-        println!(
-            "Model loaded successfully in {}ms",
-            load_time.as_millis()
-        );
+        println!("Model loaded successfully in {}ms", load_time.as_millis());
 
         Ok(())
     }
@@ -604,7 +601,9 @@ impl NPUInferenceEngine {
         let mut full_text = String::new();
 
         // 模拟流式输出
-        let words = vec!["Hello", "there", "!", "How", "can", "I", "help", "you", "today?"];
+        let words = vec![
+            "Hello", "there", "!", "How", "can", "I", "help", "you", "today?",
+        ];
         for word in words {
             full_text.push_str(word);
             full_text.push(' ');
@@ -687,8 +686,15 @@ impl std::fmt::Display for NPUError {
         match self {
             NPUError::NoModelLoaded => write!(f, "No model loaded"),
             NPUError::SessionNotFound(id) => write!(f, "Session not found: {}", id),
-            NPUError::InsufficientMemory { required, available } => {
-                write!(f, "Insufficient memory: required {}MB, available {}MB", required, available)
+            NPUError::InsufficientMemory {
+                required,
+                available,
+            } => {
+                write!(
+                    f,
+                    "Insufficient memory: required {}MB, available {}MB",
+                    required, available
+                )
             }
             NPUError::ModelLoadFailed(msg) => write!(f, "Failed to load model: {}", msg),
             NPUError::InferenceFailed(msg) => write!(f, "Inference failed: {}", msg),

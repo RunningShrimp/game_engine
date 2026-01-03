@@ -1,0 +1,503 @@
+/**
+ * Timeline组件样式
+ */
+
+/* ==================== 容器 ==================== */
+.timeline-container {
+  display: flex;
+  flex-direction: column;
+  background: #1e293b;
+  border-top: 1px solid #334155;
+  height: 400px;
+  user-select: none;
+}
+
+/* ==================== 顶部工具栏 ==================== */
+.timeline-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 16px;
+  background: #0f172a;
+  border-bottom: 1px solid #334155;
+}
+
+.timeline-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.timeline-icon {
+  font-size: 18px;
+}
+
+.timeline-name {
+  color: #e2e8f0;
+}
+
+.timeline-close-btn {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.timeline-close-btn:hover {
+  background: #334155;
+  color: #f1f5f9;
+}
+
+/* ==================== 播放控制 ==================== */
+.timeline-playback-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: #1e293b;
+  border-bottom: 1px solid #334155;
+}
+
+.playback-btn {
+  background: #334155;
+  border: 1px solid #475569;
+  color: #e2e8f0;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  height: 32px;
+  transition: all 0.2s;
+}
+
+.playback-btn:hover:not(:disabled) {
+  background: #475569;
+  border-color: #64748b;
+}
+
+.playback-btn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.playback-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.playback-btn.primary {
+  background: #3b82f6;
+  border-color: #3b82f6;
+}
+
+.playback-btn.primary:hover:not(:disabled) {
+  background: #2563eb;
+  border-color: #2563eb;
+}
+
+.playback-btn.active {
+  background: #22c55e;
+  border-color: #22c55e;
+}
+
+.playback-speed-selector {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #334155;
+  border: 1px solid #475569;
+  border-radius: 6px;
+  padding: 4px 8px;
+  margin-left: 16px;
+}
+
+.playback-speed-label {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.playback-speed-select {
+  background: transparent;
+  border: none;
+  color: #e2e8f0;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 2px 4px;
+  outline: none;
+}
+
+.playback-speed-select option {
+  background: #1e293b;
+  color: #e2e8f0;
+}
+
+.playback-time-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 13px;
+  color: #94a3b8;
+  background: #334155;
+  padding: 6px 12px;
+  border-radius: 6px;
+}
+
+.playback-current-time {
+  color: #f1f5f9;
+  font-weight: 600;
+}
+
+.playback-total-time {
+  color: #94a3b8;
+}
+
+/* ==================== 时间标尺 ==================== */
+.timeline-ruler {
+  position: relative;
+  height: 32px;
+  background: #0f172a;
+  border-bottom: 1px solid #334155;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.timeline-ruler-canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.timeline-ruler-ticks {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+}
+
+.timeline-ruler-tick {
+  position: absolute;
+  bottom: 0;
+  background: #475569;
+}
+
+.timeline-ruler-tick.major {
+  height: 16px;
+  width: 1px;
+}
+
+.timeline-ruler-tick.minor {
+  height: 8px;
+  width: 1px;
+}
+
+.timeline-ruler-label {
+  position: absolute;
+  bottom: 18px;
+  font-size: 11px;
+  color: #94a3b8;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  transform: translateX(-50%);
+}
+
+.timeline-ruler-hover-indicator {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: #f59e0b;
+  pointer-events: none;
+  display: none;
+}
+
+.timeline-ruler:hover .timeline-ruler-hover-indicator {
+  display: block;
+}
+
+/* ==================== 主内容区域 ==================== */
+.timeline-content {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ==================== 轨道列表 ==================== */
+.timeline-track-list {
+  width: 250px;
+  background: #0f172a;
+  border-right: 1px solid #334155;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.timeline-track-item {
+  border-bottom: 1px solid #1e293b;
+}
+
+.timeline-track-header {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  gap: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.timeline-track-header:hover {
+  background: #1e293b;
+}
+
+.timeline-track-icon {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.timeline-track-icon:hover {
+  opacity: 1;
+}
+
+.timeline-track-expand-icon {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: #64748b;
+  transition: transform 0.2s;
+}
+
+.timeline-track-expand-icon.expanded {
+  transform: rotate(90deg);
+}
+
+.timeline-track-name {
+  flex: 1;
+  font-size: 13px;
+  color: #e2e8f0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.timeline-track-header.muted .timeline-track-name {
+  opacity: 0.5;
+}
+
+.timeline-track-curves {
+  background: #0f172a;
+}
+
+.timeline-track-curve-item {
+  display: flex;
+  align-items: center;
+  padding: 4px 12px 4px 40px;
+  gap: 8px;
+  font-size: 12px;
+  color: #94a3b8;
+  border-left: 3px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.timeline-track-curve-item:hover {
+  background: #1e293b;
+}
+
+.timeline-track-curve-item.selected {
+  background: #1e293b;
+  border-left-color: #3b82f6;
+}
+
+/* ==================== 关键帧区域 ==================== */
+.keyframe-area {
+  flex: 1;
+  position: relative;
+  background: #1e293b;
+  overflow-x: auto;
+  overflow-y: auto;
+}
+
+.curve-row {
+  position: relative;
+  height: 32px;
+  border-bottom: 1px solid #334155;
+  background: repeating-linear-gradient(
+    to right,
+    transparent,
+    transparent 99px,
+    #334155 99px,
+    #334155 100px
+  );
+}
+
+/* ==================== 关键帧 ==================== */
+.keyframe {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  z-index: 10;
+  user-select: none;
+}
+
+.keyframe:hover {
+  transform: translate(-50%, -50%) scale(1.2);
+  z-index: 20;
+}
+
+.keyframe.selected {
+  filter: brightness(1.3);
+  transform: translate(-50%, -50%) scale(1.1);
+  z-index: 15;
+}
+
+/* ==================== 播放头 ==================== */
+.playhead {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #ef4444;
+  z-index: 100;
+  pointer-events: none;
+}
+
+.playhead::before {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 8px solid #ef4444;
+}
+
+.playhead-handle {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 12px;
+  height: 12px;
+  background: #ef4444;
+  cursor: ew-resize;
+  border-radius: 2px;
+  pointer-events: auto;
+}
+
+/* ==================== 底部状态栏 ==================== */
+.timeline-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 16px;
+  background: #0f172a;
+  border-top: 1px solid #334155;
+  font-size: 12px;
+}
+
+.timeline-status,
+.timeline-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #64748b;
+}
+
+.timeline-status span,
+.timeline-info span {
+  white-space: nowrap;
+}
+
+/* ==================== 滚动条样式 ==================== */
+.timeline-track-list::-webkit-scrollbar,
+.keyframe-area::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.timeline-track-list::-webkit-scrollbar-track,
+.keyframe-area::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+
+.timeline-track-list::-webkit-scrollbar-thumb,
+.keyframe-area::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 4px;
+}
+
+.timeline-track-list::-webkit-scrollbar-thumb:hover,
+.keyframe-area::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* ==================== 工具提示 ==================== */
+.timeline-tooltip {
+  position: absolute;
+  background: #1e293b;
+  color: #e2e8f0;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  pointer-events: none;
+  z-index: 1000;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* ==================== 响应式调整 ==================== */
+@media (max-width: 768px) {
+  .timeline-track-list {
+    width: 200px;
+  }
+
+  .playback-time-display {
+    display: none;
+  }
+}
+
+/* ==================== 拖拽状态 ==================== */
+.keyframe.dragging {
+  opacity: 0.6;
+  cursor: grabbing;
+}
+
+/* ==================== 禁用状态 ==================== */
+.timeline-track-item.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}

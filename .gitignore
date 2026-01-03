@@ -52,3 +52,6 @@ game_engine_profiling/
 
 # OS files
 Thumbs.db
+
+# Local OpenWrt audit dumps (may contain credentials)
+openwrt_audit/

@@ -1,0 +1,25 @@
+[package]
+name = "preview-generator"
+version = "0.1.0"
+edition = "2021"
+description = "Generate previews for asset store assets"
+
+[[bin]]
+name = "preview-generator"
+path = "src/main.rs"
+
+[dependencies]
+# CLI framework
+clap = { version = "4.4", features = ["derive"] }
+
+# Error handling
+anyhow = "1.0"
+
+# Image processing
+image = "0.24"
+
+# 3D model loading
+obj = "0.10"
+
+# Gltf loading (optional)
+# gltf = "1.4"

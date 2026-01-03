@@ -1,0 +1,153 @@
+{
+  "name": "game-engine-vscode",
+  "displayName": "Game Engine Language Support",
+  "description": "Intelligent code completion, hover info, and diagnostics for Game Engine projects",
+  "version": "0.3.0",
+  "publisher": "GameEngine",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Linters",
+    "Other"
+  ],
+  "keywords": [
+    "game engine",
+    "rust",
+    "lsp",
+    "language server",
+    "code intelligence",
+    "ecs",
+    "game development"
+  ],
+  "activationEvents": [
+    "onLanguage:rust",
+    "onCommand:gameEngine.restartLSP",
+    "onCommand:gameEngine.showDocumentation"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "gameEngine.restartLSP",
+        "title": "Restart LSP Server",
+        "category": "Game Engine"
+      },
+      {
+        "command": "gameEngine.showDocumentation",
+        "title": "Show Documentation",
+        "category": "Game Engine"
+      },
+      {
+        "command": "gameEngine.openPlayground",
+        "title": "Open Playground",
+        "category": "Game Engine"
+      },
+      {
+        "command": "gameEngine.runDiagnostics",
+        "title": "Run Diagnostics",
+        "category": "Game Engine"
+      },
+      {
+        "command": "gameEngine.showPerformance",
+        "title": "Show Performance Stats",
+        "category": "Game Engine"
+      }
+    ],
+    "configuration": {
+      "title": "Game Engine",
+      "properties": {
+        "gameEngine.lsp.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable Game Engine LSP Server"
+        },
+        "gameEngine.lsp.path": {
+          "type": "string",
+          "description": "Path to game-engine-lsp executable",
+          "default": ""
+        },
+        "gameEngine.lsp.args": {
+          "type": "array",
+          "description": "Arguments to pass to the LSP server",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        },
+        "gameEngine.lsp.trace.server": {
+          "type": "string",
+          "enum": ["off", "messages", "verbose"],
+          "default": "off",
+          "description": "Traces the communication between VS Code and the language server."
+        },
+        "gameEngine.lsp.maxNumberOfProblems": {
+          "type": "number",
+          "default": 100,
+          "description": "Maximum number of problems to report"
+        },
+        "gameEngine.completion.enable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable code completion"
+        },
+        "gameEngine.hover.enable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable hover information"
+        },
+        "gameEngine.diagnostics.enable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable real-time diagnostics"
+        }
+      }
+    },
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "gameEngine.restartLSP",
+          "when": "editorLangId == rust"
+        },
+        {
+          "command": "gameEngine.showDocumentation",
+          "when": "editorLangId == rust"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.80.0",
+    "@types/glob": "^8.1.0",
+    "@types/mocha": "^10.0.1",
+    "@types/node": "20.x",
+    "@typescript-eslint/eslint-plugin": "^6.4.0",
+    "@typescript-eslint/parser": "^6.4.0",
+    "eslint": "^8.47.0",
+    "glob": "^10.3.0",
+    "mocha": "^10.2.0",
+    "typescript": "^5.1.6",
+    "@vscode/test-electron": "^2.3.4"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/game-engine/vscode-extension"
+  },
+  "bugs": {
+    "url": "https://github.com/game-engine/vscode-extension/issues"
+  },
+  "homepage": "https://github.com/game-engine/vscode-extension#readme",
+  "license": "MIT"
+}

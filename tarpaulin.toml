@@ -1,0 +1,33 @@
+[cargo-tarpaulin]
+# 覆盖率配置
+out = ["Html", "Xml"]
+output-dir = "target/coverage"
+run-types = ["Tests"]
+timeout = "300"
+timeout-setup = "120"
+timeout-teardown = "60"
+
+# 排除的文件
+exclude = ["*/tests/*", "*_test.rs", "benches/*", "examples/*", "src/bin/*"]
+
+# 包含的文件
+include-src = true
+
+# 报告配置
+report-uri = ""
+branch-coverage = true
+fail-under = 30
+
+# 执行配置
+packages = []
+
+# 特性配置
+features = []
+all-features = false
+no-default-features = false
+
+# 测试超时
+test-timeout = "300"
+
+# 并行
+jobs = "4"

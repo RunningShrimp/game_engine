@@ -2,9 +2,9 @@
 //!
 //! 用于识别、跟踪和解决代码库中的技术债务。
 
+use regex::Regex;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use regex::Regex;
 
 /// 技术债务管理器
 pub struct TechnicalDebtManager {
@@ -42,7 +42,7 @@ pub struct DebtItem {
 }
 
 /// 债务类型
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum DebtType {
     /// TODO 注释
     Todo,
@@ -71,7 +71,7 @@ pub enum DebtType {
 }
 
 /// 优先级
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Priority {
     /// P0 - 关键
     P0,
@@ -84,7 +84,7 @@ pub enum Priority {
 }
 
 /// 债务状态
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum DebtStatus {
     /// 未处理
     Open,
@@ -165,8 +165,7 @@ impl TechnicalDebtManager {
             .map_err(|e| DebtError::IoError(format!("无法读取目录 {}: {}", dir.display(), e)))?;
 
         for entry in entries {
-            let entry = entry
-                .map_err(|e| DebtError::IoError(format!("无法读取目录项: {}", e)))?;
+            let entry = entry.map_err(|e| DebtError::IoError(format!("无法读取目录项: {}", e)))?;
             let path = entry.path();
 
             if path.is_dir() {
@@ -181,8 +180,9 @@ impl TechnicalDebtManager {
 
     /// 扫描单个文件
     fn scan_file(&mut self, file_path: &Path) -> Result<(), DebtError> {
-        let content = std::fs::read_to_string(file_path)
-            .map_err(|e| DebtError::IoError(format!("无法读取文件 {}: {}", file_path.display(), e)))?;
+        let content = std::fs::read_to_string(file_path).map_err(|e| {
+            DebtError::IoError(format!("无法读取文件 {}: {}", file_path.display(), e))
+        })?;
 
         let lines: Vec<&str> = content.lines().collect();
 
@@ -205,10 +205,14 @@ impl TechnicalDebtManager {
                     file_path: file_path.to_path_buf(),
                     line_number,
                     debt_type: DebtType::Todo,
-                    priority: Self::infer_priority_from_description(caps.get(1).map(|m| m.as_str()).unwrap_or("")),
+                    priority: Self::infer_priority_from_description(
+                        caps.get(1).map(|m| m.as_str()).unwrap_or(""),
+                    ),
                     description: caps.get(1).map(|m| m.as_str()).unwrap_or("").to_string(),
                     suggested_fix: "实现待办事项".to_string(),
-                    estimated_effort_hours: Self::estimate_effort(&caps.get(1).map(|m| m.as_str()).unwrap_or("")),
+                    estimated_effort_hours: Self::estimate_effort(
+                        &caps.get(1).map(|m| m.as_str()).unwrap_or(""),
+                    ),
                     created_at: chrono::Utc::now().format("%Y-%m-%d").to_string(),
                     status: DebtStatus::Open,
                 });
@@ -318,7 +322,8 @@ impl TechnicalDebtManager {
     fn infer_priority_from_description(description: &str) -> Priority {
         let desc_lower = description.to_lowercase();
 
-        if desc_lower.contains("关键") || desc_lower.contains("crash") || desc_lower.contains("bug") {
+        if desc_lower.contains("关键") || desc_lower.contains("crash") || desc_lower.contains("bug")
+        {
             Priority::P0
         } else if desc_lower.contains("重要") || desc_lower.contains("urgent") {
             Priority::P1
@@ -379,26 +384,17 @@ impl TechnicalDebtManager {
 
     /// 按优先级筛选债务
     pub fn filter_by_priority(&self, priority: Priority) -> Vec<&DebtItem> {
-        self.debt_items
-            .iter()
-            .filter(|debt| debt.priority == priority)
-            .collect()
+        self.debt_items.iter().filter(|debt| debt.priority == priority).collect()
     }
 
     /// 按类型筛选债务
     pub fn filter_by_type(&self, debt_type: DebtType) -> Vec<&DebtItem> {
-        self.debt_items
-            .iter()
-            .filter(|debt| debt.debt_type == debt_type)
-            .collect()
+        self.debt_items.iter().filter(|debt| debt.debt_type == debt_type).collect()
     }
 
     /// 按状态筛选债务
     pub fn filter_by_status(&self, status: DebtStatus) -> Vec<&DebtItem> {
-        self.debt_items
-            .iter()
-            .filter(|debt| debt.status == status)
-            .collect()
+        self.debt_items.iter().filter(|debt| debt.status == status).collect()
     }
 
     /// 获取高优先级债务（P0 和 P1）
@@ -416,7 +412,10 @@ impl TechnicalDebtManager {
         // 概览
         report.push_str(&format!("## 概览\n\n"));
         report.push_str(&format!("- 总债务数: {}\n", self.statistics.total_debts));
-        report.push_str(&format!("- 总预计工作量: {} 人时\n\n", self.statistics.total_effort_hours));
+        report.push_str(&format!(
+            "- 总预计工作量: {} 人时\n\n",
+            self.statistics.total_effort_hours
+        ));
 
         // 按优先级分类
         report.push_str("## 按优先级分类\n\n");
@@ -453,7 +452,8 @@ impl TechnicalDebtManager {
 
     /// 导出债务列表到 CSV
     pub fn export_to_csv(&self, output_path: &Path) -> Result<(), DebtError> {
-        let mut csv = String::from("ID,File,Line,Type,Priority,Description,Suggested Fix,Effort (hours)\n");
+        let mut csv =
+            String::from("ID,File,Line,Type,Priority,Description,Suggested Fix,Effort (hours)\n");
 
         for debt in &self.debt_items {
             csv.push_str(&format!(

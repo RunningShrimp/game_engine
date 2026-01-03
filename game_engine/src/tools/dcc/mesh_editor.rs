@@ -411,7 +411,8 @@ impl MeshEditor {
 
                 if length > 0.0001 {
                     // 球面投影
-                    let u = 0.5 + (pos.x / (2.0 * length)).atan2(pos.z) / std::f32::consts::PI * 2.0;
+                    let u =
+                        0.5 + (pos.x / (2.0 * length)).atan2(pos.z) / std::f32::consts::PI * 2.0;
                     let v = 0.5 - (pos.y / length).acos() / std::f32::consts::PI;
 
                     vertex.uv[0] = u;
@@ -443,8 +444,8 @@ impl MeshEditor {
                     // 查找相邻顶点（简化：基于三角形索引）
                     for (j, other) in mesh.vertices.iter().enumerate() {
                         if i != j {
-                            let dist = Vec2::from_array(vertex.uv)
-                                .distance(Vec2::from_array(other.uv));
+                            let dist =
+                                Vec2::from_array(vertex.uv).distance(Vec2::from_array(other.uv));
 
                             if dist < 0.1 {
                                 // 假设是相邻顶点
@@ -456,10 +457,7 @@ impl MeshEditor {
                     }
 
                     if count > 0 {
-                        new_uvs[i] = [
-                            avg_u / count as f32,
-                            avg_v / count as f32,
-                        ];
+                        new_uvs[i] = [avg_u / count as f32, avg_v / count as f32];
                     }
                 }
 
@@ -567,7 +565,8 @@ impl MeshEditor {
             // 实现顶点倒角：在顶点周围创建新顶点
             // 简化实现：移动顶点位置
             if let Some(mesh) = &mut self.current_mesh {
-                let original_positions: Vec<Vec3> = self.selected_vertices
+                let original_positions: Vec<Vec3> = self
+                    .selected_vertices
                     .iter()
                     .map(|&id| {
                         let idx = id as usize;
@@ -594,7 +593,12 @@ impl MeshEditor {
                     }
                 }
 
-                tracing::info!("Beveled {} vertices (amount={}, segments={})", self.selected_vertices.len(), amount, segments);
+                tracing::info!(
+                    "Beveled {} vertices (amount={}, segments={})",
+                    self.selected_vertices.len(),
+                    amount,
+                    segments
+                );
             }
         }
     }
@@ -621,8 +625,8 @@ impl MeshEditor {
                     for &vertex_id in &self.selected_vertices {
                         let idx = vertex_id as usize;
                         if idx < mesh.vertices.len() && idx != target_idx {
-                            let distance = Vec3::from_array(mesh.vertices[idx].pos)
-                                .distance(target_pos);
+                            let distance =
+                                Vec3::from_array(mesh.vertices[idx].pos).distance(target_pos);
 
                             if distance <= threshold {
                                 // 焊接到目标位置
@@ -631,7 +635,11 @@ impl MeshEditor {
                         }
                     }
 
-                    tracing::info!("Welded {} vertices (threshold={})", self.selected_vertices.len(), threshold);
+                    tracing::info!(
+                        "Welded {} vertices (threshold={})",
+                        self.selected_vertices.len(),
+                        threshold
+                    );
                 }
             }
         }
@@ -642,7 +650,8 @@ impl MeshEditor {
         if !self.selected_vertices.is_empty() {
             if let Some(mesh) = &mut self.current_mesh {
                 // 收集要删除的顶点索引（降序排序以便从后往前删除）
-                let mut vertices_to_delete: Vec<usize> = self.selected_vertices
+                let mut vertices_to_delete: Vec<usize> = self
+                    .selected_vertices
                     .iter()
                     .map(|&id| id as usize)
                     .filter(|&idx| idx < mesh.vertices.len())
@@ -787,8 +796,7 @@ impl MeshEditor {
                             pos: mid_pos.to_array(),
                             uv: [0.5, 0.5],
                             normal: [0.0, 1.0, 0.0],
-                            tangent: [1.0, 0.0, 0.0],
-                            color: [255, 255, 255, 255],
+                            tangent: [1.0, 0.0, 0.0, 1.0],
                         });
 
                         tracing::info!("Bridged edges {} and {}", edge_ids[0], edge_ids[1]);
@@ -829,21 +837,17 @@ impl MeshEditor {
     /// 应用对称变换
     fn apply_symmetry(&mut self) {
         if let Some(mesh) = &mut self.current_mesh {
-            // 确定对称轴
-            let symmetry_axis = match self.symmetry_axis {
-                0 => Vec3::X,  // X轴对称（镜像YZ平面）
-                1 => Vec3::Y,  // Y轴对称（镜像XZ平面）
-                2 => Vec3::Z,  // Z轴对称（镜像XY平面）
-                _ => Vec3::X,
-            };
-
+            // 确定对称轴（symmetry_axis已经是Vec3类型）
             // 创建镜像变换矩阵
             let mut mirror_transform = Mat4::IDENTITY;
-            match self.symmetry_axis {
-                0 => mirror_transform.x_axis.x = -1.0,  // X轴镜像
-                1 => mirror_transform.y_axis.y = -1.0,  // Y轴镜像
-                2 => mirror_transform.z_axis.z = -1.0,  // Z轴镜像
-                _ => {}
+
+            // 根据symmetry_axis的值判断哪个轴
+            if self.symmetry_axis == Vec3::X {
+                mirror_transform.x_axis.x = -1.0; // X轴镜像
+            } else if self.symmetry_axis == Vec3::Y {
+                mirror_transform.y_axis.y = -1.0; // Y轴镜像
+            } else if self.symmetry_axis == Vec3::Z {
+                mirror_transform.z_axis.z = -1.0; // Z轴镜像
             }
 
             // 对每个选中的顶点创建对称副本
@@ -990,8 +994,7 @@ impl MeshEditor {
                                 pos: final_pos.to_array(),
                                 uv: mesh.vertices[base_idx + i].uv,
                                 normal: normal.to_array(),
-                                tangent: [1.0, 0.0, 0.0],
-                                color: [255, 255, 255, 255],
+                                tangent: [1.0, 0.0, 0.0, 1.0],
                             });
                         }
 

@@ -1,0 +1,33 @@
+/**
+ * TrackList组件样式
+ */
+
+.timeline-tracks-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+  color: #64748b;
+}
+
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.empty-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #94a3b8;
+}
+
+.empty-description {
+  font-size: 13px;
+  color: #64748b;
+  max-width: 200px;
+  line-height: 1.5;
+}

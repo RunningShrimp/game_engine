@@ -1,8 +1,10 @@
 pub mod adapter;
 pub mod detection;
+pub mod detection_extended;
 pub mod hardware_info;
 pub mod native_input;
 pub mod power_aware;
+pub mod validation;
 pub mod winit;
 
 use thiserror::Error;
@@ -24,7 +26,11 @@ pub mod web_fs;
 #[cfg(target_arch = "wasm32")]
 pub mod web_input;
 
+// Console platform support
 pub mod console;
+
+// Mock platform system for testing
+pub mod mock;
 
 use std::path::Path;
 use std::sync::mpsc::Sender;
@@ -548,6 +554,19 @@ pub use harmonyos_wgpu::{
 pub use console::{
     ButtonState, ConsoleConfig, ConsoleInputHandler, ConsolePerformanceMonitor, ConsolePlatform,
     ControllerState, get_console_config, is_console_platform,
+};
+
+// Console platform submodules
+pub use console::achievements::*;
+pub use console::certification::*;
+pub use console::cloud_save::*;
+pub use console::controller_extended::*;
+
+// Unified platform services
+pub mod unified;
+pub use unified::{
+    PlatformCapabilities, PlatformServiceError, UnifiedAchievement, UnifiedLeaderboardEntry,
+    UnifiedNotification, UnifiedPlatformService, UnifiedPlayerInfo, UnifiedProduct,
 };
 
 // 平台检测工具

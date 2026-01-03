@@ -169,6 +169,8 @@ impl FCMFFI {
 
 #[cfg(target_os = "android")]
 unsafe impl Send for FCMFFI {}
+
+#[cfg(target_os = "android")]
 unsafe impl Sync for FCMFFI {}
 
 #[cfg(target_os = "android")]
@@ -317,6 +319,8 @@ impl APNsFFI {
 
 #[cfg(target_os = "ios")]
 unsafe impl Send for APNsFFI {}
+
+#[cfg(target_os = "ios")]
 unsafe impl Sync for APNsFFI {}
 
 #[cfg(target_os = "ios")]

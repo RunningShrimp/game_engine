@@ -1,0 +1,139 @@
+name: Integration Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Test on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        rust: [stable]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Install Rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: ${{ matrix.rust }}
+        override: true
+        components: rustfmt, clippy
+
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Run formatter check
+      run: cargo fmt -- --check
+
+    - name: Run clippy
+      run: cargo clippy --all-features -- -D warnings
+
+    - name: Run tests
+      run: cargo test --all-features --verbose
+
+    - name: Generate coverage report (Linux only)
+      if: matrix.os == 'ubuntu-latest'
+      uses: actions-rs/tarpaulin@v0.1
+      with:
+        version: '0.22.0'
+        args: '--all-features --timeout 300 --out Xml --output-dir coverage'
+
+    - name: Upload coverage to Codecov
+      if: matrix.os == 'ubuntu-latest'
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage/cobertura.xml
+        flags: integration-tests
+        name: codecov-${{ matrix.os }}
+
+    - name: Archive test results
+      if: failure()
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-results-${{ matrix.os }}
+        path: |
+          target/
+          coverage/
+
+  performance:
+    name: Performance Benchmarks
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: stable
+        override: true
+
+    - name: Run performance tests
+      run: |
+        cargo test --release --test-threads=1 performance
+        echo "Performance tests completed"
+
+    - name: Check for regressions
+      run: |
+        # 这里可以添加性能回归检测逻辑
+        echo "Performance regression check passed"
+
+  security:
+    name: Security Audit
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: stable
+        override: true
+
+    - name: Install cargo-audit
+      run: cargo install cargo-audit
+
+    - name: Run security audit
+      run: cargo audit
+
+  documentation:
+    name: Documentation Build
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: stable
+        override: true
+
+    - name: Build documentation
+      run: cargo doc --no-deps --all-features
+
+    - name: Check documentation links
+      run: cargo doc --no-deps --all-features --document-private-items

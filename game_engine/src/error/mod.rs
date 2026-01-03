@@ -63,6 +63,8 @@ pub mod resource_error;
 pub mod retry;
 /// 序列化错误类型 - 序列化和反序列化错误
 pub mod serialization;
+/// 简化的错误定义宏 - 快速定义标准错误类型
+pub mod simple_macros;
 /// 系统错误类型 - 系统级别的错误
 pub mod system_error;
 /// 错误处理Trait - 减少重复代码的工具trait
@@ -128,6 +130,11 @@ pub use convenience::{
 // Only export safe_unwrap_with_log in debug builds
 #[cfg(debug_assertions)]
 pub use convenience::safe_unwrap_with_log;
+
+// Note: The simple error macros are automatically exported at the crate root
+// due to #[macro_export]. They can be used directly as:
+// use game_engine::error::simple_error;
+// (or just use them directly without use statement)
 
 /// 错误严重级别 - 表示错误的严重程度
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]

@@ -14,10 +14,18 @@ use bevy_ecs::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
+pub mod code_analysis;
 pub mod code_generation;
 pub mod code_review;
 pub mod test_generation;
 
+pub use code_analysis::{
+    AICodeAnalyzer, BottleneckSeverity, BottleneckType, CodeMetrics, CodeQualityIssue,
+    CodeQualityReport, ComplexityMetrics, DependencyAnalysis, MemoryUsageAnalysis,
+    PerformanceAnalysis, PerformanceBottleneck, QualityCategory, RefactoringEffort,
+    RefactoringPriority, RefactoringRisk, RefactoringSuggestion, RefactoringSuggestions,
+    RefactoringType,
+};
 pub use code_generation::{AICodeGenerator, CodeGenerationRequest};
 pub use code_review::{AICodeReviewer, CodeReviewIssue, CodeReviewReport};
 pub use test_generation::{AITestGenerator, TestGenerationResult};

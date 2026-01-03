@@ -30,6 +30,8 @@
 #[cfg(feature = "cli")]
 pub mod cli;
 #[cfg(feature = "cli")]
+pub mod dependency;
+#[cfg(feature = "cli")]
 pub mod project_generator;
 #[cfg(feature = "cli")]
 pub mod template;

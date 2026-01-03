@@ -1,0 +1,269 @@
+name: Dependency Updates
+
+on:
+  schedule:
+    - cron: '0 0 * * 1'  # Every Monday at 00:00 UTC
+  workflow_dispatch:
+
+jobs:
+  # Update Rust dependencies
+  update-rust-dependencies:
+    name: Update Rust Dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: Install cargo-edit
+        run: cargo install cargo-edit
+
+      - name: Update dependencies
+        run: |
+          cargo upgrade
+          cargo update
+
+      - name: Check for build issues
+        run: |
+          cargo check --all-targets
+          cargo test --no-fail-fast
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: update Rust dependencies"
+          title: "chore: update Rust dependencies"
+          body: |
+            Automated dependency update by GitHub Actions
+
+            ## Changes
+            - Updated all Rust dependencies to latest compatible versions
+
+            ## Checklist
+            - [ ] All tests pass
+            - [ ] No breaking changes detected
+            - [ ] Manual testing completed
+          branch: dependencies/update-rust
+          delete-branch: true
+
+  # Update C# dependencies
+  update-csharp-dependencies:
+    name: Update C# Dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Update NuGet packages
+        run: |
+          find . -name "*.csproj" -type f -exec dotnet add {} update \;
+
+      - name: Build C# projects
+        run: |
+          find . -name "*.csproj" -type f -exec dotnet build {} \;
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: update C# dependencies"
+          title: "chore: update C# dependencies"
+          body: |
+            Automated dependency update by GitHub Actions
+
+            ## Changes
+            - Updated all NuGet packages to latest compatible versions
+
+            ## Checklist
+            - [ ] All tests pass
+            - [ ] No breaking changes detected
+          branch: dependencies/update-csharp
+          delete-branch: true
+
+  # Security audit
+  security-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: Run cargo audit
+        run: |
+          cargo install cargo-audit
+          cargo audit --json > audit-report.json
+
+      - name: Parse audit results
+        id: audit
+        run: |
+          if [ -s audit-report.json ]; then
+            VULN_COUNT=$(jq '.vulnerabilities | length' audit-report.json)
+            echo "vulnerabilities=$VULN_COUNT" >> $GITHUB_OUTPUT
+
+            if [ "$VULN_COUNT" -gt 0 ]; then
+              echo "Vulnerabilities found: $VULN_COUNT"
+              jq '.' audit-report.json
+              exit 1
+            fi
+          fi
+
+      - name: Create issue if vulnerabilities found
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const auditReport = JSON.parse(fs.readFileSync('audit-report.json', 'utf8'));
+
+            const body = `## 🔒 Security Audit Report
+
+            ${auditReport.vulnerabilities.length} vulnerabilities detected in dependencies.
+
+            ### Details
+            ${JSON.stringify(auditReport, null, 2)}
+
+            ### Action Required
+            Please update vulnerable dependencies as soon as possible.
+            `;
+
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '🔒 Security: Vulnerable dependencies detected',
+              body: body,
+              labels: ['security', 'dependencies', 'high-priority']
+            });
+
+  # Check for outdated dependencies
+  check-outdated:
+    name: Check Outdated Dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: Install cargo-outdated
+        run: cargo install cargo-outdated
+
+      - name: Check for outdated dependencies
+        run: |
+          cargo outdated --format json > outdated-report.json || true
+
+      - name: Create summary
+        run: |
+          echo "## Outdated Dependencies" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          if [ -s outdated-report.json ]; then
+            cat outdated-report.json >> $GITHUB_STEP_SUMMARY
+          else
+            echo "All dependencies are up to date!" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+      - name: Create issue if outdated found
+        if: hashFiles('outdated-report.json') != ''
+        run: |
+          if [ -s outdated-report.json ]; then
+            gh issue create \
+              --title "📦 Outdated dependencies detected" \
+              --body "The following dependencies are outdated:
+              $(cat outdated-report.json)" \
+              --label "dependencies" \
+              --label "maintenance"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # License compliance check
+  license-check:
+    name: License Compliance Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install cargo-deny
+        run: cargo install cargo-deny
+
+      - name: Run license check
+        run: cargo deny check licenses
+
+      - name: Check for GPL/AGPL/LGPL
+        run: |
+          cargo deny check licenses --filter "GPL|AGPL|LGPL" || {
+            echo "Copyleft licenses detected"
+            exit 1
+          }
+
+  # Advisory database check
+  advisory-check:
+    name: Advisory Database Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install cargo-deny
+        run: cargo install cargo-deny
+
+      - name: Run advisory check
+        run: |
+          cargo deny check advisories
+          cargo deny check bans
+
+  # Dependency size analysis
+  dependency-size:
+    name: Dependency Size Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: Install cargo-count
+        run: cargo install cargo-count
+
+      - name: Analyze dependency sizes
+        run: |
+          for crate in game_engine game_engine_cli game_engine_lsp; do
+            if [ -d "crates/$crate" ]; then
+              echo "## $crate dependency size" >> $GITHUB_STEP_SUMMARY
+              cargo count --crates crates/$crate >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+
+      - name: Check for bloated dependencies
+        run: |
+          cargo install cargo-bloat
+          cargo bloat --release --crates > bloat-report.txt || true
+
+      - name: Upload bloat report
+        uses: actions/upload-artifact@v3
+        with:
+          name: bloat-report
+          path: bloat-report.txt

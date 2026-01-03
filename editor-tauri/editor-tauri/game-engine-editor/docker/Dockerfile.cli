@@ -1,0 +1,74 @@
+# Game Engine CLI - Dockerfile
+# Multi-stage build for optimized image size
+
+# Stage 1: Build
+FROM rust:1.70-slim as builder
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    pkg-config \
+    libssl-dev \
+    libxcb-render0-dev \
+    libxcb-shape0-dev \
+    libxcb-xfixes0-dev \
+    libxkbcommon-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /build
+
+# Copy Cargo files
+COPY Cargo.toml Cargo.lock ./
+COPY crates/ ./crates/
+
+# Build CLI in release mode
+RUN cargo build --release --bin game-engine
+
+# Stage 2: Runtime
+FROM debian:bookworm-slim
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    libssl3 \
+    libxcb-render0 \
+    libxcb-shape0 \
+    libxcb-xfixes0 \
+    libxkbcommon0 \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user
+RUN useradd -m -u 1000 gameengine
+
+# Copy binary from builder
+COPY --from=builder /build/target/release/game-engine /usr/local/bin/
+
+# Set permissions
+RUN chmod +x /usr/local/bin/game-engine
+
+# Create working directory
+WORKDIR /workspace
+
+# Switch to non-root user
+USER gameengine
+
+# Set environment variables
+ENV RUST_LOG=info
+ENV RUST_BACKTRACE=1
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD game-engine --version || exit 1
+
+# Metadata
+LABEL org.opencontainers.image.title="Game Engine CLI"
+LABEL org.opencontainers.image.description="Command-line tools for Game Engine"
+LABEL org.opencontainers.image.vendor="Game Engine"
+LABEL org.opencontainers.image.licenses="MIT"
+LABEL org.opencontainers.image.source="https://github.com/game-engine/game-engine"
+
+# Set entrypoint
+ENTRYPOINT ["/usr/local/bin/game-engine"]
+CMD ["--help"]
+
+# Expose ports for Live Link and debugging
+EXPOSE 8080 9090

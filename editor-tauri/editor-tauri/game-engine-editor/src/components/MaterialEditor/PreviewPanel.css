@@ -1,0 +1,74 @@
+/* Preview Panel Styles */
+
+.preview-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 12px;
+  background: #252525;
+}
+
+.preview-header {
+  margin-bottom: 12px;
+}
+
+.preview-header h4 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: #e0e0e0;
+}
+
+.preview-controls {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.preview-controls button {
+  flex: 1;
+  padding: 6px 12px;
+  background: #3d3d3d;
+  border: 1px solid #505050;
+  border-radius: 4px;
+  color: #b0b0b0;
+  cursor: pointer;
+  font-size: 11px;
+  transition: all 0.2s;
+}
+
+.preview-controls button:hover {
+  background: #4d4d4d;
+  border-color: #606060;
+  color: #e0e0e0;
+}
+
+.preview-controls button.active {
+  background: #5b9bd5;
+  border-color: #7ab8e8;
+  color: #ffffff;
+}
+
+.preview-panel canvas {
+  width: 100%;
+  height: auto;
+  border-radius: 4px;
+  background: #1a1a1a;
+  border: 1px solid #404040;
+  cursor: grab;
+}
+
+.preview-panel canvas:active {
+  cursor: grabbing;
+}
+
+.preview-info {
+  margin-top: 8px;
+  text-align: center;
+}
+
+.preview-info p {
+  margin: 0;
+  font-size: 11px;
+  color: #707070;
+}

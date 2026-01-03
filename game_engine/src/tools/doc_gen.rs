@@ -30,7 +30,7 @@ pub struct GeneratedDocument {
 }
 
 /// 文档类型
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum DocType {
     /// API 文档
     Api,
@@ -106,7 +106,11 @@ impl DocumentationGenerator {
     }
 
     /// 生成单个模块的 API 文档
-    fn generate_module_api_doc(&self, module: &str, title: &str) -> Result<GeneratedDocument, DocGenError> {
+    fn generate_module_api_doc(
+        &self,
+        module: &str,
+        title: &str,
+    ) -> Result<GeneratedDocument, DocGenError> {
         let doc_path = self.output_dir.join(format!("api/{}.md", module));
 
         // 创建文档内容
@@ -174,7 +178,8 @@ impl DocumentationGenerator {
 
             let content = format!(
                 "# {}\n\n## 概述\n\n本指南将帮助您 {}。\n\n## 前置要求\n\n- Rust 1.70 或更高版本\n- 操作系统：Windows/macOS/Linux\n\n## 步骤 1：准备工作\n\nTODO: 添加详细步骤\n\n## 步骤 2：执行\n\nTODO: 添加详细步骤\n\n## 步骤 3：验证\n\nTODO: 添加验证步骤\n\n## 故障排除\n\n### 问题 1\n\n**症状**：TODO\n\n**解决方案**：TODO\n\n## 下一步\n\n- 查看相关教程\n- 阅读示例代码\n",
-                title, title.replace("指南", "")
+                title,
+                title.replace("指南", "")
             );
 
             self.write_doc(&doc_path, &content)?;
@@ -206,7 +211,9 @@ impl DocumentationGenerator {
 
             let content = format!(
                 "# {}\n\n## 教程概述\n\n本教程将教您 {}。\n\n## 学习目标\n\n完成本教程后，您将能够：\n\n- TODO: 目标 1\n- TODO: 目标 2\n\n## 预计时间\n\n约 30 分钟\n\n## 开始\n\n### 第 1 步\n\nTODO: 添加步骤\n\n### 第 2 步\n\nTODO: 添加步骤\n\n## 完整代码\n\n```rust\n// TODO: 添加完整示例代码\n```\n\n## 运行程序\n\n```bash\ncargo run --example {}\n```\n\n## 进阶挑战\n\n- TODO: 添加挑战\n\n## 相关资源\n\n- [API 文档](../api/)\n- [更多示例](../examples/)\n",
-                title, title.replace("教程", ""), tutorial
+                title,
+                title.replace("教程", ""),
+                tutorial
             );
 
             self.write_doc(&doc_path, &content)?;
@@ -238,14 +245,12 @@ impl DocumentationGenerator {
             .map_err(|e| DocGenError::IoError(format!("无法读取示例目录: {}", e)))?;
 
         for entry in entries {
-            let entry = entry.map_err(|e| DocGenError::IoError(format!("无法读取目录项: {}", e)))?;
+            let entry =
+                entry.map_err(|e| DocGenError::IoError(format!("无法读取目录项: {}", e)))?;
             let path = entry.path();
 
             if path.extension().and_then(|s| s.to_str()) == Some("rs") {
-                let file_name = path
-                    .file_stem()
-                    .and_then(|s| s.to_str())
-                    .unwrap_or("unknown");
+                let file_name = path.file_stem().and_then(|s| s.to_str()).unwrap_or("unknown");
 
                 let title = format!("{} 示例", file_name.replace("_", " "));
                 let doc = self.generate_example_doc(&path, &title)?;
@@ -257,11 +262,12 @@ impl DocumentationGenerator {
     }
 
     /// 生成单个示例的文档
-    fn generate_example_doc(&self, example_path: &Path, title: &str) -> Result<GeneratedDocument, DocGenError> {
-        let file_name = example_path
-            .file_stem()
-            .and_then(|s| s.to_str())
-            .unwrap_or("unknown");
+    fn generate_example_doc(
+        &self,
+        example_path: &Path,
+        title: &str,
+    ) -> Result<GeneratedDocument, DocGenError> {
+        let file_name = example_path.file_stem().and_then(|s| s.to_str()).unwrap_or("unknown");
 
         let doc_path = self.output_dir.join(format!("examples/{}.md", file_name));
 
@@ -274,10 +280,7 @@ impl DocumentationGenerator {
 
         let content = format!(
             "# {}\n\n## 示例说明\n\n{}\n\n## 源代码\n\n```rust\n{}\n```\n\n## 运行方法\n\n```bash\ncargo run --example {}\n```\n\n## 预期输出\n\n```\nTODO: 添加预期输出\n```\n\n## 相关文档\n\n- [API 文档](../api/)\n- [教程](../tutorials/)\n",
-            title,
-            description,
-            code,
-            file_name
+            title, description, code, file_name
         );
 
         self.write_doc(&doc_path, &content)?;
@@ -330,10 +333,7 @@ impl DocumentationGenerator {
         // 按类型分组
         let mut grouped: HashMap<DocType, Vec<&GeneratedDocument>> = HashMap::new();
         for doc in &self.generated_docs {
-            grouped
-                .entry(doc.doc_type.clone())
-                .or_insert_with(Vec::new)
-                .push(doc);
+            grouped.entry(doc.doc_type.clone()).or_insert_with(Vec::new).push(doc);
         }
 
         // 生成索引
@@ -392,8 +392,9 @@ impl DocumentationGenerator {
     fn write_doc(&self, path: &Path, content: &str) -> Result<(), DocGenError> {
         // 确保目录存在
         if let Some(parent) = path.parent() {
-            fs::create_dir_all(parent)
-                .map_err(|e| DocGenError::IoError(format!("无法创建目录 {}: {}", parent.display(), e)))?;
+            fs::create_dir_all(parent).map_err(|e| {
+                DocGenError::IoError(format!("无法创建目录 {}: {}", parent.display(), e))
+            })?;
         }
 
         // 写入文件
@@ -438,10 +439,8 @@ mod tests {
 
     #[test]
     fn test_extract_code_description() {
-        let generator = DocumentationGenerator::new(
-            PathBuf::from("/tmp"),
-            PathBuf::from("/tmp/output"),
-        );
+        let generator =
+            DocumentationGenerator::new(PathBuf::from("/tmp"), PathBuf::from("/tmp/output"));
 
         let code = r#"//! This is a test example.
 //! It demonstrates doc extraction.

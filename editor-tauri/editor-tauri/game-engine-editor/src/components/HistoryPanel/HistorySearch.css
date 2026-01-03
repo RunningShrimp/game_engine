@@ -1,0 +1,186 @@
+/* History Search Styles */
+
+.history-search {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.search-input-container {
+  display: flex;
+  gap: 8px;
+  padding: 16px;
+  border-bottom: 1px solid #333;
+}
+
+.search-input {
+  flex: 1;
+  padding: 8px 12px;
+  background: #3c3c3c;
+  border: 1px solid #555;
+  border-radius: 4px;
+  color: #d4d4d4;
+  font-size: 14px;
+  outline: none;
+}
+
+.search-input:focus {
+  border-color: #007acc;
+}
+
+.search-btn {
+  padding: 8px 16px;
+  background: #007acc;
+  border: none;
+  border-radius: 4px;
+  color: white;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.search-btn:hover:not(:disabled) {
+  background: #0098ff;
+}
+
+.search-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.search-results {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.search-results-header {
+  padding: 12px;
+  background: #264d73;
+  border-radius: 4px;
+  margin-bottom: 16px;
+  font-size: 13px;
+}
+
+.search-results-section {
+  margin-bottom: 24px;
+}
+
+.search-results-section h4 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #888;
+}
+
+.search-results-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.search-result-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  background: #2d2d30;
+  border: 1px solid #3c3c3c;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.search-result-item:hover {
+  background: #37373d;
+  border-color: #555;
+}
+
+.search-result-item.bookmark {
+  border-left: 3px solid #ff9e4a;
+}
+
+.result-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.result-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.result-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #d4d4d4;
+  margin-bottom: 4px;
+}
+
+.result-description {
+  font-size: 13px;
+  color: #b4b4b4;
+  margin-bottom: 4px;
+}
+
+.result-meta {
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+  color: #888;
+}
+
+.result-id {
+  font-family: 'Courier New', monospace;
+}
+
+.result-time {
+  color: #888;
+}
+
+.result-tags {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.tag {
+  font-size: 11px;
+  padding: 2px 6px;
+  background: #3c3c3c;
+  border-radius: 3px;
+  color: #888;
+}
+
+.result-jump-btn {
+  padding: 6px 12px;
+  background: #007acc;
+  border: none;
+  border-radius: 4px;
+  color: white;
+  font-size: 12px;
+  cursor: pointer;
+  align-self: center;
+}
+
+.result-jump-btn:hover {
+  background: #0098ff;
+}
+
+.search-hint {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+}
+
+.search-hint p {
+  margin: 8px 0;
+  font-size: 14px;
+}
+
+.search-hint .hint {
+  color: #888;
+  font-size: 13px;
+}

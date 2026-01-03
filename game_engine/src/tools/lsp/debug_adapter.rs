@@ -10,6 +10,8 @@
 //! - 变量监视同步
 //! - 调用栈和作用域信息提供
 
+#![cfg(feature = "debug-ui")]
+
 use crate::debug::dap::server::{Breakpoint, DapConfig, DapServer, DapSessionState};
 use std::sync::Arc;
 use tokio::sync::Mutex;

@@ -1,0 +1,110 @@
+# Docker ignore patterns
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# CI/CD
+.github
+
+# Documentation
+*.md
+!README.md
+docs/
+book/
+
+# Test files
+tests/
+benches/
+*.test.rs
+
+# Target and build artifacts
+target/
+**/target/
+Cargo.lock
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Backup files
+*.bak
+*.backup
+
+# Distribution
+dist/
+build/
+
+# Node modules (if any)
+node_modules/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Examples (not needed in runtime)
+examples/
+
+# Tools and scripts
+scripts/
+*.sh
+
+# CI configurations
+docker-compose*.yml
+.dockerignore
+
+# Files that should be generated
+*.pdb
+*.ilk
+*.exe
+*.dll
+*.dylib
+*.so
+
+# Release artifacts
+*.tar.gz
+*.zip
+*.deb
+*.rpm
+
+# Coverage reports
+tarpaulin-report.html
+*.profdata
+*.profdata
+
+# Large files
+*.a
+*.lib
+*.o
+*.obj
+
+# Configuration (use defaults in Docker)
+Cargo.toml.local
+.config/
+
+# Lock files (except for workspace)
+**/Cargo.lock
+
+# Workspace files (generated locally)
+Cargo.toml.workspace

@@ -1,0 +1,177 @@
+/* Node Styles */
+
+.node {
+  position: absolute;
+  min-width: 160px;
+  background: #2d2d2d;
+  border: 2px solid #404040;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  user-select: none;
+  cursor: pointer;
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
+
+.node:hover {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+
+.node.selected {
+  border-color: #5b9bd5;
+  box-shadow: 0 0 0 2px rgba(91, 155, 213, 0.3), 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+
+.node-header {
+  padding: 8px 12px;
+  border-radius: 4px 4px 0 0;
+  font-weight: 500;
+  font-size: 13px;
+  color: #ffffff;
+  cursor: grab;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.node-header:active {
+  cursor: grabbing;
+}
+
+.node-title {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.node-label-input {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+  padding: 2px 6px;
+  color: #ffffff;
+  font-size: 13px;
+  outline: none;
+}
+
+.node-label-input:focus {
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.node-body {
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.node-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 24px;
+}
+
+.node-row.parameter {
+  margin: 4px 0;
+}
+
+.port-container {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+}
+
+.port-container.input {
+  justify-content: flex-start;
+}
+
+.port-container.output {
+  justify-content: flex-end;
+}
+
+.port {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #606060;
+  border: 2px solid #808080;
+  cursor: crosshair;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.port:hover {
+  background: #808080;
+  border-color: #a0a0a0;
+  transform: scale(1.2);
+}
+
+.input-port {
+  background: #5b9bd5;
+  border-color: #7ab8e8;
+}
+
+.output-port {
+  background: #e74c3c;
+  border-color: #ff6b5b;
+}
+
+.port-label {
+  font-size: 11px;
+  color: #b0b0b0;
+  white-space: nowrap;
+}
+
+.parameter-label {
+  font-size: 11px;
+  color: #b0b0b0;
+  min-width: 60px;
+}
+
+.parameter-control {
+  flex: 1;
+  display: flex;
+  gap: 4px;
+}
+
+.parameter-input {
+  width: 100%;
+  background: #1a1a1a;
+  border: 1px solid #404040;
+  border-radius: 3px;
+  padding: 4px 8px;
+  color: #e0e0e0;
+  font-size: 11px;
+  outline: none;
+}
+
+.parameter-input:focus {
+  border-color: #5b9bd5;
+}
+
+.parameter-color {
+  width: 100%;
+  height: 24px;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.node-resize-handle {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 12px;
+  height: 12px;
+  cursor: nwse-resize;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.node:hover .node-resize-handle {
+  opacity: 0.5;
+}

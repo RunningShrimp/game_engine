@@ -1,0 +1,100 @@
+# Game Engine Runtime - Dockerfile
+# Provides runtime libraries and SDK for game development
+
+# Stage 1: Build
+FROM rust:1.70-slim as builder
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    pkg-config \
+    libssl-dev \
+    libxcb-render0-dev \
+    libxcb-shape0-dev \
+    libxcb-xfixes0-dev \
+    libxkbcommon-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /build
+
+# Copy Cargo files
+COPY Cargo.toml Cargo.lock ./
+COPY crates/ ./crates/
+
+# Build all libraries
+RUN cargo build --release
+
+# Stage 2: Runtime
+FROM debian:bookworm-slim
+
+# Install runtime and development dependencies
+RUN apt-get update && apt-get install -y \
+    libssl3 \
+    libxcb-render0 \
+    libxcb-shape0 \
+    libxcb-xfixes0 \
+    libxkbcommon0 \
+    pkg-config \
+    ca-certificates \
+    curl \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install .NET SDK for C# scripting
+RUN apt-get update && apt-get install -y \
+    dotnet-sdk-8.0 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Rust toolchain for scripting
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+# Create non-root user
+RUN useradd -m -u 1000 gameengine
+
+# Copy runtime libraries from builder
+COPY --from=builder /build/target/release/libgame_engine.so /usr/local/lib/
+COPY --from=builder /build/target/release/libgame_engine.so.0 /usr/local/lib/
+
+# Copy C# SDK
+COPY --from=builder /build/scripting/csharp/GameEngine.SDK/bin/Release /usr/local/share/game-engine/csharp/
+
+# Copy example templates
+COPY --from=builder /build/templates /usr/local/share/game-engine/templates/
+
+# Update library cache
+RUN ldconfig
+
+# Set permissions
+RUN chmod -R 755 /usr/local/lib/ /usr/local/share/game-engine/
+
+# Create working directory
+WORKDIR /workspace
+
+# Switch to non-root user
+USER gameengine
+
+# Set environment variables
+ENV RUST_LOG=info
+ENV RUST_BACKTRACE=1
+ENV DOTNET_ROOT=/usr/share/dotnet
+ENV DOTNET_CLI_TELEMETRY_OPTOUT=1
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD dotnet --info || exit 1
+
+# Metadata
+LABEL org.opencontainers.image.title="Game Engine Runtime"
+LABEL org.opencontainers.image.description="Runtime libraries and SDK for Game Engine"
+LABEL org.opencontainers.image.vendor="Game Engine"
+LABEL org.opencontainers.image.licenses="MIT"
+LABEL org.opencontainers.image.source="https://github.com/game-engine/game-engine"
+
+# Set default shell
+SHELL ["/bin/bash", "-c"]
+
+# Expose ports for Live Link and debugging
+EXPOSE 8080 9090
+
+# Default command - show version
+CMD ["/bin/bash", "-c", "dotnet --info && rustc --version && echo 'Game Engine Runtime Ready'"]

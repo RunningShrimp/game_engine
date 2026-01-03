@@ -400,7 +400,7 @@ impl LanguageServer for GameEngineLSP {
         if actions.is_empty() {
             Ok(None)
         } else {
-            Ok(Some(CodeActionResponse::Array(actions)))
+            Ok(Some(actions))
         }
     }
 

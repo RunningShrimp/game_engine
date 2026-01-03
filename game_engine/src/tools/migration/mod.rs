@@ -244,25 +244,388 @@ impl MigrationManager {
 
     /// 转换纹理
     async fn convert_textures(&self) -> Result<(), MigrationError> {
-        // TODO: 实现纹理转换
+        use std::fs;
+
+        // 查找所有纹理文件
+        let assets_path = self.config.project_path.join("Assets");
+        let mut texture_count = 0;
+
+        // 递归查找纹理
+        if let Ok(entries) = fs::read_dir(&assets_path) {
+            for entry in entries.flatten() {
+                if let Ok(file_type) = entry.file_type() {
+                    let path = entry.path();
+                    if file_type.is_file() {
+                        let extension = path.extension().and_then(|e| e.to_str()).unwrap_or("");
+
+                        match extension {
+                            "png" | "jpg" | "jpeg" | "tga" | "psd" | "gif" | "bmp" | "exr" => {
+                                // 转换纹理
+                                self.convert_single_texture(&path)?;
+                                texture_count += 1;
+                            }
+                            _ => {}
+                        }
+                    } else if file_type.is_dir() {
+                        // 递归处理子目录
+                        self.convert_textures_recursive(&path, &mut texture_count)?;
+                    }
+                }
+            }
+        }
+
+        tracing::info!("Converted {} textures", texture_count);
+        Ok(())
+    }
+
+    /// 递归转换纹理
+    fn convert_textures_recursive(
+        &self,
+        dir_path: &std::path::Path,
+        count: &mut u32,
+    ) -> Result<(), MigrationError> {
+        use std::fs;
+
+        if let Ok(entries) = fs::read_dir(dir_path) {
+            for entry in entries.flatten() {
+                if let Ok(file_type) = entry.file_type() {
+                    let path = entry.path();
+                    if file_type.is_file() {
+                        let extension = path.extension().and_then(|e| e.to_str()).unwrap_or("");
+
+                        match extension {
+                            "png" | "jpg" | "jpeg" | "tga" | "psd" | "gif" | "bmp" | "exr" => {
+                                self.convert_single_texture(&path)?;
+                                *count += 1;
+                            }
+                            _ => {}
+                        }
+                    } else if file_type.is_dir() {
+                        self.convert_textures_recursive(&path, count)?;
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// 转换单个纹理
+    fn convert_single_texture(&self, texture_path: &std::path::Path) -> Result<(), MigrationError> {
+        use std::fs;
+
+        // 读取纹理文件
+        let _texture_data = fs::read(texture_path)
+            .map_err(|e| MigrationError::FileReadError(format!("Failed to read texture: {}", e)))?;
+
+        // 确定输出路径
+        let relative_path =
+            texture_path.strip_prefix(&self.config.project_path).unwrap_or(texture_path);
+        let output_path = self.config.output_path.join(relative_path);
+
+        // 创建输出目录
+        if let Some(parent) = output_path.parent() {
+            fs::create_dir_all(parent).map_err(|e| {
+                MigrationError::ConversionError(format!("Failed to create output dir: {}", e))
+            })?;
+        }
+
+        // 复制纹理到输出目录（实际项目中可能需要格式转换）
+        fs::copy(texture_path, &output_path).map_err(|e| {
+            MigrationError::ConversionError(format!("Failed to copy texture: {}", e))
+        })?;
+
+        tracing::debug!("Converted texture: {:?}", texture_path.file_name());
         Ok(())
     }
 
     /// 转换网格
     async fn convert_meshes(&self) -> Result<(), MigrationError> {
-        // TODO: 实现网格转换
+        use std::fs;
+
+        let assets_path = self.config.project_path.join("Assets");
+        let mut mesh_count = 0;
+
+        if let Ok(entries) = fs::read_dir(&assets_path) {
+            for entry in entries.flatten() {
+                if let Ok(file_type) = entry.file_type() {
+                    let path = entry.path();
+                    if file_type.is_file() {
+                        let extension = path.extension().and_then(|e| e.to_str()).unwrap_or("");
+
+                        match extension {
+                            "fbx" | "obj" | "gltf" | "glb" => {
+                                self.convert_single_mesh(&path)?;
+                                mesh_count += 1;
+                            }
+                            _ => {}
+                        }
+                    } else if file_type.is_dir() {
+                        self.convert_meshes_recursive(&path, &mut mesh_count)?;
+                    }
+                }
+            }
+        }
+
+        tracing::info!("Converted {} meshes", mesh_count);
+        Ok(())
+    }
+
+    /// 递归转换网格
+    fn convert_meshes_recursive(
+        &self,
+        dir_path: &std::path::Path,
+        count: &mut u32,
+    ) -> Result<(), MigrationError> {
+        use std::fs;
+
+        if let Ok(entries) = fs::read_dir(dir_path) {
+            for entry in entries.flatten() {
+                if let Ok(file_type) = entry.file_type() {
+                    let path = entry.path();
+                    if file_type.is_file() {
+                        let extension = path.extension().and_then(|e| e.to_str()).unwrap_or("");
+
+                        match extension {
+                            "fbx" | "obj" | "gltf" | "glb" => {
+                                self.convert_single_mesh(&path)?;
+                                *count += 1;
+                            }
+                            _ => {}
+                        }
+                    } else if file_type.is_dir() {
+                        self.convert_meshes_recursive(&path, count)?;
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// 转换单个网格
+    fn convert_single_mesh(&self, mesh_path: &std::path::Path) -> Result<(), MigrationError> {
+        use std::fs;
+
+        // 读取网格文件
+        let _mesh_data = fs::read(mesh_path)
+            .map_err(|e| MigrationError::FileReadError(format!("Failed to read mesh: {}", e)))?;
+
+        // 确定输出路径
+        let relative_path = mesh_path.strip_prefix(&self.config.project_path).unwrap_or(mesh_path);
+        let output_path = self.config.output_path.join(relative_path);
+
+        // 创建输出目录
+        if let Some(parent) = output_path.parent() {
+            fs::create_dir_all(parent).map_err(|e| {
+                MigrationError::ConversionError(format!("Failed to create output dir: {}", e))
+            })?;
+        }
+
+        // 复制网格到输出目录（实际项目中可能需要格式转换，如FBX→自定义格式）
+        fs::copy(mesh_path, &output_path)
+            .map_err(|e| MigrationError::ConversionError(format!("Failed to copy mesh: {}", e)))?;
+
+        tracing::debug!("Converted mesh: {:?}", mesh_path.file_name());
         Ok(())
     }
 
     /// 转换材质
     async fn convert_materials(&self) -> Result<(), MigrationError> {
-        // TODO: 实现材质转换
+        use std::fs;
+
+        let assets_path = self.config.project_path.join("Assets");
+        let mut material_count = 0;
+
+        if let Ok(entries) = fs::read_dir(&assets_path) {
+            for entry in entries.flatten() {
+                if let Ok(file_type) = entry.file_type() {
+                    let path = entry.path();
+                    if file_type.is_file() {
+                        let extension = path.extension().and_then(|e| e.to_str()).unwrap_or("");
+
+                        if extension == "mat" || extension == "asset" {
+                            // 检查是否是材质文件
+                            if let Ok(content) = fs::read_to_string(&path) {
+                                if content.contains("Shader") || content.contains("Material") {
+                                    self.convert_single_material(&path, &content)?;
+                                    material_count += 1;
+                                }
+                            }
+                        }
+                    } else if file_type.is_dir() {
+                        self.convert_materials_recursive(&path, &mut material_count)?;
+                    }
+                }
+            }
+        }
+
+        tracing::info!("Converted {} materials", material_count);
+        Ok(())
+    }
+
+    /// 递归转换材质
+    fn convert_materials_recursive(
+        &self,
+        dir_path: &std::path::Path,
+        count: &mut u32,
+    ) -> Result<(), MigrationError> {
+        use std::fs;
+
+        if let Ok(entries) = fs::read_dir(dir_path) {
+            for entry in entries.flatten() {
+                if let Ok(file_type) = entry.file_type() {
+                    let path = entry.path();
+                    if file_type.is_file() {
+                        let extension = path.extension().and_then(|e| e.to_str()).unwrap_or("");
+
+                        if extension == "mat" || extension == "asset" {
+                            if let Ok(content) = fs::read_to_string(&path) {
+                                if content.contains("Shader") || content.contains("Material") {
+                                    self.convert_single_material(&path, &content)?;
+                                    *count += 1;
+                                }
+                            }
+                        }
+                    } else if file_type.is_dir() {
+                        self.convert_materials_recursive(&path, count)?;
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// 转换单个材质
+    fn convert_single_material(
+        &self,
+        material_path: &std::path::Path,
+        content: &str,
+    ) -> Result<(), MigrationError> {
+        use std::fs;
+
+        // 解析Unity材质
+        let shader_name = extract_shader_name(content);
+
+        // 转换材质配置
+        let converted_material = convert_unity_material_to_engine(content, &shader_name);
+
+        // 确定输出路径
+        let relative_path =
+            material_path.strip_prefix(&self.config.project_path).unwrap_or(material_path);
+        let output_path = self.config.output_path.join(relative_path);
+
+        // 创建输出目录
+        if let Some(parent) = output_path.parent() {
+            fs::create_dir_all(parent).map_err(|e| {
+                MigrationError::ConversionError(format!("Failed to create output dir: {}", e))
+            })?;
+        }
+
+        // 写入转换后的材质
+        fs::write(&output_path, converted_material).map_err(|e| {
+            MigrationError::ConversionError(format!("Failed to write material: {}", e))
+        })?;
+
+        tracing::debug!(
+            "Converted material: {:?} with shader: {}",
+            material_path.file_name(),
+            shader_name
+        );
         Ok(())
     }
 
     /// 转换场景
     async fn convert_scenes(&self) -> Result<(), MigrationError> {
-        // TODO: 实现场景转换
+        use std::fs;
+
+        let assets_path = self.config.project_path.join("Assets");
+        let mut scene_count = 0;
+
+        if let Ok(entries) = fs::read_dir(&assets_path) {
+            for entry in entries.flatten() {
+                if let Ok(file_type) = entry.file_type() {
+                    let path = entry.path();
+                    if file_type.is_file() {
+                        let extension = path.extension().and_then(|e| e.to_str()).unwrap_or("");
+
+                        if extension == "unity" {
+                            self.convert_single_scene(&path).await?;
+                            scene_count += 1;
+                        }
+                    } else if file_type.is_dir() {
+                        self.convert_scenes_recursive(&path, &mut scene_count).await?;
+                    }
+                }
+            }
+        }
+
+        tracing::info!("Converted {} scenes", scene_count);
+        Ok(())
+    }
+
+    /// 递归转换场景
+    async fn convert_scenes_recursive(
+        &self,
+        dir_path: &std::path::Path,
+        count: &mut u32,
+    ) -> Result<(), MigrationError> {
+        use std::fs;
+
+        if let Ok(entries) = fs::read_dir(dir_path) {
+            for entry in entries.flatten() {
+                if let Ok(file_type) = entry.file_type() {
+                    let path = entry.path();
+                    if file_type.is_file() {
+                        let extension = path.extension().and_then(|e| e.to_str()).unwrap_or("");
+
+                        if extension == "unity" {
+                            self.convert_single_scene(&path).await?;
+                            *count += 1;
+                        }
+                    } else if file_type.is_dir() {
+                        // 使用Box::pin支持异步递归
+                        Box::pin(self.convert_scenes_recursive(&path, count)).await?;
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// 转换单个场景
+    async fn convert_single_scene(
+        &self,
+        scene_path: &std::path::Path,
+    ) -> Result<(), MigrationError> {
+        // 使用UnityProjectImporter导入场景
+        let importer = UnityProjectImporter::new();
+        let scene_path_buf = scene_path.to_path_buf();
+        let unity_scene = importer.import_scene(&scene_path_buf).await?;
+
+        // 转换场景为引擎格式
+        let engine_scene = convert_unity_scene_to_engine(&unity_scene);
+
+        // 确定输出路径
+        let relative_path =
+            scene_path.strip_prefix(&self.config.project_path).unwrap_or(scene_path);
+        let output_path = self.config.output_path.join(relative_path);
+
+        // 创建输出目录
+        if let Some(parent) = output_path.parent() {
+            std::fs::create_dir_all(parent).map_err(|e| {
+                MigrationError::ConversionError(format!("Failed to create output dir: {}", e))
+            })?;
+        }
+
+        // 写入转换后的场景
+        std::fs::write(&output_path, engine_scene).map_err(|e| {
+            MigrationError::ConversionError(format!("Failed to write scene: {}", e))
+        })?;
+
+        tracing::info!(
+            "Converted scene: {} with {} GameObjects",
+            unity_scene.name,
+            unity_scene.game_objects.len()
+        );
         Ok(())
     }
 
@@ -381,6 +744,86 @@ impl DomainEvent for MigrationEvent {
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }
+}
+
+// =============================================================================
+// 辅助函数
+// =============================================================================
+
+/// 提取Unity材质中的Shader名称
+fn extract_shader_name(material_content: &str) -> String {
+    // 在Unity材质文件中查找Shader引用
+    if let Some(line) = material_content.lines().find(|line| line.contains("shader")) {
+        // 提取Shader名称
+        if let Some(start) = line.find('"') {
+            if let Some(end) = line[start + 1..].find('"') {
+                return line[start + 1..start + 1 + end].to_string();
+            }
+        }
+    }
+    "Standard".to_string() // 默认Shader
+}
+
+/// 转换Unity材质到引擎材质
+fn convert_unity_material_to_engine(material_content: &str, shader_name: &str) -> String {
+    // 这里是一个简化的材质转换实现
+    // 实际项目中需要解析完整的Unity材质结构
+
+    format!(
+        r#"# Converted Unity Material
+# Original Shader: {}
+
+engine_material:
+  shader_type: "{}"
+  properties:
+    albedo_color: [1.0, 1.0, 1.0, 1.0]
+    metallic: 0.0
+    smoothness: 0.5
+    normal_scale: 1.0
+  textures: {{}}
+"#,
+        shader_name, shader_name
+    )
+}
+
+/// 转换Unity场景到引擎场景
+fn convert_unity_scene_to_engine(unity_scene: &UnityScene) -> String {
+    let mut scene_yaml = format!("# Converted Unity Scene: {}\n\n", unity_scene.name);
+    scene_yaml.push_str("entities:\n");
+
+    // 转换每个GameObject
+    for game_obj in &unity_scene.game_objects {
+        scene_yaml.push_str(&format!("- name: \"{}\"\n", game_obj.name));
+        scene_yaml.push_str(&format!(
+            "  position: [{}, {}, {}]\n",
+            game_obj.transform.position.0,
+            game_obj.transform.position.1,
+            game_obj.transform.position.2
+        ));
+        scene_yaml.push_str(&format!(
+            "  rotation: [{}, {}, {}, {}]\n",
+            game_obj.transform.rotation.0,
+            game_obj.transform.rotation.1,
+            game_obj.transform.rotation.2,
+            game_obj.transform.rotation.3
+        ));
+        scene_yaml.push_str(&format!(
+            "  scale: [{}, {}, {}]\n",
+            game_obj.transform.scale.0, game_obj.transform.scale.1, game_obj.transform.scale.2
+        ));
+
+        // 添加组件
+        if !game_obj.components.is_empty() {
+            scene_yaml.push_str("  components:\n");
+            for component in &game_obj.components {
+                scene_yaml.push_str(&format!("    - {}\n", component));
+            }
+        }
+
+        scene_yaml.push_str("\n");
+    }
+
+    scene_yaml
 }
 
 // =============================================================================

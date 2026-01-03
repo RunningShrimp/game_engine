@@ -2,7 +2,7 @@
 //!
 //! 即时编译IL字节码为本地机器码。
 
-use super::{JITCompiler, JITCode, JITError, Value};
+use super::{JITCode, JITCompiler, JITError, Value};
 
 pub struct NativeJITCompiler;
 

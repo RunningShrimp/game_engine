@@ -2,7 +2,7 @@
 //!
 //! 执行IL字节码的虚拟机实现。
 
-use super::bytecode::{Opcode, Instruction};
+use super::bytecode::{Instruction, Opcode};
 use std::collections::HashMap;
 
 /// 虚拟机
@@ -73,12 +73,7 @@ impl VirtualMachine {
             let opcode = bytecode[self.pc];
             let opcode_enum = match Self::decode_opcode(opcode) {
                 Some(op) => op,
-                None => {
-                    return Err(VMError::Other(format!(
-                        "Unknown opcode: 0x{:02X}",
-                        opcode
-                    )))
-                }
+                None => return Err(VMError::Other(format!("Unknown opcode: 0x{:02X}", opcode))),
             };
 
             self.execute_instruction(opcode_enum, bytecode)?;
@@ -211,7 +206,10 @@ impl VirtualMachine {
                 let string = String::from_utf8(bytes.to_vec()).unwrap();
                 Ok(Value::String(string))
             }
-            _ => Err(VMError::Other(format!("Unknown constant type: 0x{:02X}", type_byte))),
+            _ => Err(VMError::Other(format!(
+                "Unknown constant type: 0x{:02X}",
+                type_byte
+            ))),
         }
     }
 

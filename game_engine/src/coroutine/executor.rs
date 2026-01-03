@@ -69,21 +69,21 @@ struct CoroutineInfo {
 
 /// 执行器统计
 #[derive(Debug, Clone, Default)]
-struct ExecutorStats {
+pub struct ExecutorStats {
     /// 总创建数
-    total_created: u64,
+    pub total_created: u64,
     /// 总完成数
-    total_completed: u64,
+    pub total_completed: u64,
     /// 总失败数
-    total_failed: u64,
+    pub total_failed: u64,
     /// 总取消数
-    total_cancelled: u64,
+    pub total_cancelled: u64,
     /// 当前运行数
-    currently_running: usize,
+    pub currently_running: usize,
     /// 当前等待数
-    currently_waiting: usize,
+    pub currently_waiting: usize,
     /// 总执行次数
-    total_executions: u64,
+    pub total_executions: u64,
 }
 
 impl CoroutineExecutor {
@@ -652,21 +652,26 @@ fn create_coroutine_waker(id: CoroutineId, executor_ref: ExecutorRef) -> Waker {
     const VTABLE: RawWakerVTable = RawWakerVTable::new(clone_waker, wake, wake_by_ref, drop_waker);
 
     unsafe fn clone_waker(data: *const ()) -> RawWaker {
-        let arc = Arc::from_raw(data as *const WakerData);
-        let data_copy = arc.clone();
-        std::mem::forget(arc); // 不减少原Arc的引用计数
-
-        RawWaker::new(Arc::into_raw(data_copy) as *const (), &VTABLE)
+        unsafe {
+            let arc = Arc::from_raw(data as *const WakerData);
+            let data_copy = arc.clone();
+            std::mem::forget(arc); // 不减少原Arc的引用计数
+            RawWaker::new(Arc::into_raw(data_copy) as *const (), &VTABLE)
+        }
     }
 
     unsafe fn wake(data: *const ()) {
-        wake_by_ref(data);
-        let _ = Arc::from_raw(data as *const WakerData); // 减少引用计数
+        unsafe {
+            wake_by_ref(data);
+        }
+        unsafe {
+            let _ = Arc::from_raw(data as *const WakerData);
+        } // 减少引用计数
     }
 
     unsafe fn wake_by_ref(data: *const ()) {
         // 创建裸指针引用
-        let arc: &WakerData = &*{ data as *const WakerData };
+        let arc: &WakerData = unsafe { &*{ data as *const WakerData } };
 
         // 检查是否已经唤醒（避免重复加入队列）
         if arc.woken.swap(true, Ordering::SeqCst) {

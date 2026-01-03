@@ -1,0 +1,40 @@
+/* Connection Line Styles */
+
+.connection-line {
+  cursor: pointer;
+}
+
+.connection-path {
+  fill: none;
+  stroke: #808080;
+  stroke-width: 2;
+  stroke-linecap: round;
+  transition: stroke 0.2s, stroke-width 0.2s;
+}
+
+.connection-line:hover .connection-path {
+  stroke: #a0a0a0;
+  stroke-width: 3;
+}
+
+.connection-line.temporary .connection-path {
+  stroke: #5b9bd5;
+  stroke-width: 2;
+  stroke-dasharray: 5, 5;
+}
+
+.connection-remove-button {
+  fill: #e74c3c;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.connection-line:hover .connection-remove-button {
+  opacity: 1;
+}
+
+.connection-remove-button:hover {
+  transform: scale(1.5);
+  fill: #ff6b5b;
+}

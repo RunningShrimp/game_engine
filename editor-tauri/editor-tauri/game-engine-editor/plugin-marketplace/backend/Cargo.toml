@@ -1,0 +1,30 @@
+[package]
+name = "plugin-marketplace-backend"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+actix-web = "4.4"
+actix-cors = "0.7"
+actix-rt = "2.9"
+tokio = { version = "1.35", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid"] }
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.6", features = ["v4", "serde"] }
+jsonwebtoken = "9.2"
+bcrypt = "0.15"
+aws-config = { version = "1.1", features = ["behavior-version-latest"] }
+aws-sdk-s3 = "1.14"
+env_logger = "0.11"
+log = "0.4"
+dotenv = "0.15"
+thiserror = "1.0"
+validator = { version = "0.18", features = ["derive"] }
+mime = "0.3"
+mime_guess = "2.0"
+bytes = "1.5"
+futures = "0.3"
+async-trait = "0.1"
+rand = "0.8"

@@ -2,7 +2,7 @@
 //
 //  提供额外的断言宏和函数，增强测试可读性。
 
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 /// 断言两个浮点数近似相等
 ///
@@ -206,31 +206,26 @@ mod tests {
     use super::*;
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_assert_approx_eq() {
         assert_approx_eq(1.0, 1.001, 0.01);
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_assert_vec_approx_eq() {
         assert_vec_approx_eq(&[1.0, 2.0], &[1.001, 2.001], 0.01);
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_assert_contains() {
         assert_contains(&[1, 2, 3], &2);
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_assert_not_contains() {
         assert_not_contains(&[1, 2, 3], &4);
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_assert_panics() {
         assert_panics(|| {
             panic!("test panic");
@@ -238,7 +233,6 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_assert_not_panics() {
         assert_not_panics(|| {
             let x = 1 + 1;
@@ -247,7 +241,6 @@ mod tests {
     }
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_assert_completed_within() {
         assert_completed_within(Duration::from_millis(100), || {
             std::thread::sleep(Duration::from_millis(10));

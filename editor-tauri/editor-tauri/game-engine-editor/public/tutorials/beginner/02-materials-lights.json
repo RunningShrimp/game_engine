@@ -1,0 +1,82 @@
+{
+  "id": "tutorial-002",
+  "title": "材质和光照基础",
+  "description": "学习如何为3D对象应用材质，设置光照效果，创建更加真实的场景。",
+  "category": "beginner",
+  "difficulty": "easy",
+  "estimated_time": 20,
+  "prerequisites": ["tutorial-001"],
+  "skills": ["材质系统", "光照", "着色器基础"],
+  "xp_reward": 120,
+  "badges": ["lighting_master"],
+  "steps": [
+    {
+      "id": "step-002-01",
+      "title": "材质系统简介",
+      "content": "<h2>什么是材质？</h2><p>材质定义了3D对象的表面属性，包括颜色、纹理、金属度、粗糙度等。</p><h3>材质属性：</h3><ul><li><strong>基础颜色（Albedo）</strong>：对象的表面颜色</li><li><strong>金属度（Metallic）</strong>：0=非金属，1=纯金属</li><li><strong>粗糙度（Roughness）</strong>：0=完全光滑，1=完全粗糙</li><li><strong> emissive</strong>：自发光颜色</li></ul>",
+      "type": "concept",
+      "hints": [
+        "材质就像现实中的物体表面属性",
+        "不同的材质组合可以模拟各种真实材料"
+      ],
+      "order": 0
+    },
+    {
+      "id": "step-002-02",
+      "title": "创建基础材质",
+      "content": "<h2>创建一个红色材质</h2><p>让我们创建一个简单的红色塑料材质：</p>",
+      "type": "demo",
+      "code_template": "// 创建材质\nlet material = Material::new();\nmaterial.set_albedo(Color::rgb(1.0, 0.0, 0.0)); // 红色\nmaterial.set_metallic(0.0); // 非金属\nmaterial.set_roughness(0.5); // 中等粗糙度\n\nprintln!(\"材质创建完成\");",
+      "expected_output": "材质创建完成",
+      "hints": [],
+      "order": 1
+    },
+    {
+      "id": "step-002-03",
+      "title": "应用材质到对象",
+      "content": "<h2>为对象应用材质</h2><p>创建材质后，需要将其应用到3D对象上：</p>",
+      "type": "exercise",
+      "code_template": "// 创建立方体和材质\nlet cube = create_entity(\"红立方体\");\nlet material = Material::new();\nmaterial.set_albedo(Color::rgb(1.0, 0.0, 0.0));\n\n// TODO: 将材质应用到立方体\n\nprintln!(\"材质已应用\");",
+      "expected_output": "材质已应用",
+      "hints": [
+        "使用entity.set_material(material)方法",
+        "一个对象只能有一个材质"
+      ],
+      "order": 2
+    },
+    {
+      "id": "step-002-04",
+      "title": "添加光源",
+      "content": "<h2>场景光照</h2><p>没有光照，场景会是一片漆黑。让我们添加几个光源：</p>",
+      "type": "demo",
+      "code_template": "// 添加方向光（类似太阳光）\nlet sun_light = create_directional_light();\nsun_light.set_direction(Vec3::new(-1.0, -1.0, -1.0));\nsun_light.set_intensity(1.0);\nsun_light.set_color(Color::WHITE);\n\n// 添加点光源（类似灯泡）\nlet point_light = create_point_light();\npoint_light.set_position(Vec3::new(2.0, 3.0, 2.0));\npoint_light.set_intensity(500.0);\npoint_light.set_color(Color::rgb(1.0, 0.9, 0.8)); // 暖光\n\nprintln!(\"光源添加完成\");",
+      "expected_output": "光源添加完成",
+      "hints": [],
+      "order": 3
+    },
+    {
+      "id": "step-002-05",
+      "title": "创建金属材质",
+      "content": "<h2>PBR材质：金属和塑料</h2><p>PBR（基于物理的渲染）材质可以模拟真实世界的材料。让我们创建一个金色金属材质：</p>",
+      "type": "exercise",
+      "code_template": "// TODO: 创建金色金属材质\n// 提示：\n// - 基础颜色：RGB(1.0, 0.76, 0.34)\n// - 金属度：1.0（完全金属）\n// - 粗糙度：0.2（比较光滑）\n\nlet gold_material = Material::new();\n// ... 你的代码 ...\n\nprintln!(\"金质材质创建完成\");",
+      "expected_output": "金质材质创建完成",
+      "hints": [
+        "使用gold_material.set_metallic(1.0)设置为纯金属",
+        "金色的RGB大约是(1.0, 0.76, 0.34)",
+        "粗糙度设低一些可以获得更闪亮的效果"
+      ],
+      "order": 4
+    }
+  ],
+  "challenges": [
+    {
+      "id": "challenge-002-01",
+      "title": "创建材质球展示场景",
+      "description": "创建一个包含不同材质的球体展示场景，展示金属、塑料、玻璃等不同材质效果。",
+      "type": "creative",
+      "difficulty": "medium",
+      "xp_reward": 80
+    }
+  ]
+}

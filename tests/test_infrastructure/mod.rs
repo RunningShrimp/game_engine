@@ -78,7 +78,6 @@ mod tests {
     use super::*;
 
     #[test]
-#[ignore]  // TODO: Fix compilation errors
     fn test_test_tools() {
         let tools = TestTools::new("example_test");
         std::thread::sleep(std::time::Duration::from_millis(10));

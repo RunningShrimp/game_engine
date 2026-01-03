@@ -532,11 +532,7 @@ impl DCCMaterialEditor {
                 );
 
                 // 绘制材质颜色预览
-                painter.rect_filled(
-                    rect,
-                    egui::Rounding::same(4),
-                    albedo_color,
-                );
+                painter.rect_filled(rect, egui::Rounding::same(4), albedo_color);
 
                 // 绘制金属度和粗糙度指示器
                 let metallic_indicator = if material.metallic > 0.5 {
@@ -610,6 +606,7 @@ impl DCCMaterialEditor {
             rect,
             egui::Rounding::same(4),
             egui::Stroke::new(2.0, egui::Color32::from_rgb(100, 100, 100)),
+            egui::StrokeKind::Middle,
         );
 
         // 绘制文字

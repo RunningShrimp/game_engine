@@ -2,8 +2,10 @@
 //!
 //! Provides mobile platform-specific functionality for iOS and Android.
 
+pub mod common;
 pub mod config;
 pub mod input;
+pub mod lifecycle;
 pub mod performance;
 pub mod services;
 
@@ -21,6 +23,18 @@ pub mod push_ffi;
 // 应用内购买FFI模块
 pub mod in_app_purchase_ffi;
 
+// Re-export in-app purchase types
+pub use in_app_purchase_ffi::{
+    ProductInfo, ProductType, PurchaseInfo, PurchaseStatus, SubscriptionInfo,
+};
+
+// Platform-specific FFI types
+#[cfg(target_os = "android")]
+pub use in_app_purchase_ffi::BillingFFI;
+
+#[cfg(target_os = "ios")]
+pub use in_app_purchase_ffi::StoreKitFFI;
+
 pub use config::MobileConfig;
 
 #[cfg(target_os = "ios")]
@@ -30,6 +44,15 @@ pub mod ios_services;
 pub mod android_services;
 
 // Re-export commonly used types
+pub use common::{
+    AdError, AdLoader, AdType, AdsConfig, Analytics, AnalyticsError, AnalyticsEvent,
+    AnalyticsValue, CrashReporting, MobileAds, ShareContent, ShareError, ShareResult,
+    SocialPlatform, SocialSharing,
+};
+pub use lifecycle::{
+    AppState, BackgroundTask, ConfigChange, LifecycleCallback, LifecycleError, LifecycleEvent,
+    MobileLifecycle, TaskStatus,
+};
 pub use performance::{
     AdaptiveQualityController, BatteryState, DeviceCapabilities, MemoryStats,
     MobilePerformanceOptimizer, PerformanceConfig, PerformanceError, PerformanceMode,

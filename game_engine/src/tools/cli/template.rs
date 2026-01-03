@@ -42,12 +42,62 @@ pub enum ProjectTemplate {
     /// - 3D physics
     /// - Example arena map
     Fps3D,
+
+    /// 2D Top-Down RPG template
+    ///
+    /// Includes:
+    /// - Top-down camera system
+    /// - Tile-based world
+    /// - Dialog system
+    /// - Inventory system
+    /// - Character stats
+    /// - Quest system
+    TopDownRPG,
+
+    /// 3D Third-Person Action template
+    ///
+    /// Includes:
+    /// - Third-person camera
+    /// - Character controller
+    /// - Combat system
+    /// - Animation blending
+    /// - Enemy AI
+    /// - 3D environment
+    ThirdPersonAction,
+
+    /// Multiplayer Game template
+    ///
+    /// Includes:
+    /// - Networked gameplay
+    /// - Player synchronization
+    /// - Server-authoritative physics
+    /// - Matchmaking system
+    /// - Lobby system
+    Multiplayer,
+
+    /// VR Experience template
+    ///
+    /// Includes:
+    /// - VR headset support
+    /// - Motion controller tracking
+    /// - Teleportation system
+    /// - VR UI system
+    /// - Performance optimization
+    VirtualReality,
 }
 
 impl ProjectTemplate {
     /// Returns all available templates
     pub fn all() -> Vec<Self> {
-        vec![Self::Basic, Self::Platformer2D, Self::Fps3D]
+        vec![
+            Self::Basic,
+            Self::Platformer2D,
+            Self::Fps3D,
+            Self::TopDownRPG,
+            Self::ThirdPersonAction,
+            Self::Multiplayer,
+            Self::VirtualReality,
+        ]
     }
 
     /// Returns the template name as a string
@@ -56,6 +106,10 @@ impl ProjectTemplate {
             Self::Basic => "basic",
             Self::Platformer2D => "2d-platformer",
             Self::Fps3D => "3d-fps",
+            Self::TopDownRPG => "2d-rpg",
+            Self::ThirdPersonAction => "3d-action",
+            Self::Multiplayer => "multiplayer",
+            Self::VirtualReality => "vr",
         }
     }
 
@@ -65,6 +119,10 @@ impl ProjectTemplate {
             Self::Basic => "Basic game template with minimal setup",
             Self::Platformer2D => "2D platformer game with physics, tile maps, and sprites",
             Self::Fps3D => "3D first-person shooter with lighting, weapons, and AI",
+            Self::TopDownRPG => "2D top-down RPG with dialogs, inventory, and quests",
+            Self::ThirdPersonAction => "3D third-person action game with combat and animations",
+            Self::Multiplayer => "Multiplayer game with networking and matchmaking",
+            Self::VirtualReality => "VR experience with headset and controller support",
         }
     }
 
@@ -79,7 +137,21 @@ impl ProjectTemplate {
             "basic" => Some(Self::Basic),
             "2d-platformer" => Some(Self::Platformer2D),
             "3d-fps" => Some(Self::Fps3D),
+            "2d-rpg" => Some(Self::TopDownRPG),
+            "3d-action" => Some(Self::ThirdPersonAction),
+            "multiplayer" => Some(Self::Multiplayer),
+            "vr" => Some(Self::VirtualReality),
             _ => None,
+        }
+    }
+
+    /// Returns templates by category
+    pub fn by_category(category: TemplateCategory) -> Vec<Self> {
+        match category {
+            TemplateCategory::Starter => vec![Self::Basic],
+            TemplateCategory::TwoD => vec![Self::Platformer2D, Self::TopDownRPG],
+            TemplateCategory::ThreeD => vec![Self::Fps3D, Self::ThirdPersonAction],
+            TemplateCategory::Advanced => vec![Self::Multiplayer, Self::VirtualReality],
         }
     }
 }
@@ -88,6 +160,19 @@ impl fmt::Display for ProjectTemplate {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.name())
     }
+}
+
+/// Template categories
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+pub enum TemplateCategory {
+    /// Starter templates
+    Starter,
+    /// 2D games
+    TwoD,
+    /// 3D games
+    ThreeD,
+    /// Advanced features
+    Advanced,
 }
 
 /// Template metadata and configuration
@@ -105,12 +190,16 @@ pub struct TemplateMetadata {
     pub categories: Vec<String>,
     /// Tags for search
     pub tags: Vec<String>,
+    /// Estimated difficulty (1-5)
+    pub difficulty: u8,
+    /// Estimated setup time in minutes
+    pub setup_time_minutes: u32,
 }
 
 impl TemplateMetadata {
     /// Creates metadata for a template
     pub fn new(template: &ProjectTemplate) -> Self {
-        let (required_features, categories, tags) = match template {
+        let (required_features, categories, tags, difficulty, setup_time) = match template {
             ProjectTemplate::Basic => (
                 vec!["rendering".to_string(), "ecs".to_string()],
                 vec!["starter".to_string(), "minimal".to_string()],
@@ -119,6 +208,8 @@ impl TemplateMetadata {
                     "simple".to_string(),
                     "starter".to_string(),
                 ],
+                1,
+                5,
             ),
             ProjectTemplate::Platformer2D => (
                 vec![
@@ -134,6 +225,8 @@ impl TemplateMetadata {
                     "physics".to_string(),
                     "tiles".to_string(),
                 ],
+                2,
+                15,
             ),
             ProjectTemplate::Fps3D => (
                 vec![
@@ -150,6 +243,75 @@ impl TemplateMetadata {
                     "shooter".to_string(),
                     "ai".to_string(),
                 ],
+                4,
+                30,
+            ),
+            ProjectTemplate::TopDownRPG => (
+                vec![
+                    "rendering".to_string(),
+                    "ecs".to_string(),
+                    "2d".to_string(),
+                    "ui".to_string(),
+                ],
+                vec!["2d".to_string(), "rpg".to_string()],
+                vec![
+                    "rpg".to_string(),
+                    "2d".to_string(),
+                    "top-down".to_string(),
+                    "inventory".to_string(),
+                    "quests".to_string(),
+                ],
+                3,
+                25,
+            ),
+            ProjectTemplate::ThirdPersonAction => (
+                vec![
+                    "rendering".to_string(),
+                    "ecs".to_string(),
+                    "physics".to_string(),
+                    "3d".to_string(),
+                    "animation".to_string(),
+                ],
+                vec!["3d".to_string(), "action".to_string()],
+                vec![
+                    "action".to_string(),
+                    "3d".to_string(),
+                    "third-person".to_string(),
+                    "combat".to_string(),
+                ],
+                4,
+                35,
+            ),
+            ProjectTemplate::Multiplayer => (
+                vec![
+                    "rendering".to_string(),
+                    "ecs".to_string(),
+                    "networking".to_string(),
+                ],
+                vec!["multiplayer".to_string(), "networking".to_string()],
+                vec![
+                    "multiplayer".to_string(),
+                    "networking".to_string(),
+                    "online".to_string(),
+                ],
+                5,
+                45,
+            ),
+            ProjectTemplate::VirtualReality => (
+                vec![
+                    "rendering".to_string(),
+                    "ecs".to_string(),
+                    "vr".to_string(),
+                    "physics".to_string(),
+                ],
+                vec!["vr".to_string(), "advanced".to_string()],
+                vec![
+                    "vr".to_string(),
+                    "virtual-reality".to_string(),
+                    "headset".to_string(),
+                ],
+                5,
+                40,
             ),
         };
 
@@ -160,6 +322,8 @@ impl TemplateMetadata {
             required_features,
             categories,
             tags,
+            difficulty,
+            setup_time_minutes: setup_time,
         }
     }
 }

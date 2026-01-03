@@ -64,14 +64,18 @@
 //! ```
 
 // 引擎核心依赖的模块
+pub mod analyzer;
 pub mod auto_fix;
 pub mod benchmarking;
+pub mod cache_system;
+pub mod cpu_gpu_optimization;
 pub mod gpu;
 pub mod memory;
 pub mod memory_analyzer;
 pub mod monitoring;
 pub mod optimization;
 pub mod optimization_suggestion;
+pub mod parallel_optimization;
 pub mod profiler;
 pub mod render_analyzer;
 pub mod rendering;

@@ -1,0 +1,17 @@
+[metadata]
+name = "{{plugin-name}}"
+version = "0.1.0"
+description = "{{description}}"
+author = "{{author}}"
+
+[metadata.capabilities]
+# Available capabilities: render, audio, physics, network, filesystem, user_interface, scene_modification, asset_pipeline
+
+[config]
+enabled = true
+auto_load = true
+hot_reload = true
+
+[config.settings]
+# Add your plugin-specific settings here
+# example_setting = "value"

@@ -12,10 +12,26 @@ use super::jni::GooglePlayGamesJNI;
 #[cfg(target_os = "ios")]
 use super::ios_ffi::GameCenterFFI;
 
+// Platform-specific FFI imports
+#[cfg(target_os = "android")]
 use super::in_app_purchase_ffi::{
-    BillingFFI, ProductInfo, ProductType, PurchaseInfo, StoreKitFFI, SubscriptionInfo,
+    BillingFFI, ProductInfo, ProductType, PurchaseInfo, SubscriptionInfo,
 };
-use super::push_ffi::{APNsFFI, FCMFFI};
+
+#[cfg(target_os = "ios")]
+use super::in_app_purchase_ffi::{
+    ProductInfo, ProductType, PurchaseInfo, StoreKitFFI, SubscriptionInfo,
+};
+
+// Fallback stub types for non-mobile platforms
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
+use super::in_app_purchase_ffi::{ProductInfo, ProductType, PurchaseInfo, SubscriptionInfo};
+
+#[cfg(target_os = "android")]
+use super::push_ffi::FCMFFI;
+
+#[cfg(target_os = "ios")]
+use super::push_ffi::APNsFFI;
 
 /// Google Play Games服务
 pub struct GooglePlayGames {
@@ -97,6 +113,7 @@ impl GooglePlayGames {
                 id: "player_mock".to_string(),
                 name: "Mock Player".to_string(),
                 level: 1,
+                avatar_url: None,
             });
         }
 
@@ -357,6 +374,7 @@ impl GameCenter {
                 id: "player_mock".to_string(),
                 name: "Mock Player".to_string(),
                 level: 1,
+                avatar_url: None,
             });
         }
 
@@ -996,6 +1014,9 @@ pub struct PlayerInfo {
     pub name: String,
     /// 等级
     pub level: u32,
+    /// 头像URL
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub avatar_url: Option<String>,
 }
 
 /// 成就

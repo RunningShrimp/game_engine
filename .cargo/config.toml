@@ -1,74 +1,31 @@
-# Cargo配置 - 优化构建和基准测试
-
 [build]
-# 使用增量编译（开发时）
-# incremental = true  # 默认在debug模式启用
+# 启用并行编译
+jobs = 4
 
 [profile.dev]
-# 开发配置
-opt-level = 0          # 无优化
-debug = true           # 包含调试信息
-split-debuginfo = "unpacked"  # 分离调试信息（macOS友好）
-
-[profile.release]
-# 发布配置
-opt-level = 3          # 最高优化
-lto = true             # 链接时优化
-codegen-units = 1      # 单个代码生成单元（更好的优化）
-strip = true           # 移除符号信息（减小二进制大小）
-debug = false          # 不包含调试信息
-panic = "abort"        # panic时直接abort（减小二进制大小）
-overflow-checks = false # 禁用溢出检查（性能优化）
-
-[profile.bench]
-# 基准测试配置（继承release，可以覆盖）
-inherits = "release"
-opt-level = 3
-lto = true
-codegen-units = 1      # 单个代码生成单元确保稳定的结果
-debug = false          # 不包含调试信息
-strip = false          # 保留符号信息（profiling时有用）
+# 开发构建优化
+opt-level = 0
+debug = true
+split-debuginfo = "unpacked"
 
 [profile.test]
-# 测试配置
-opt-level = 1          # 轻度优化（加快测试运行）
+# 测试构建优化
+opt-level = 1
 debug = true
 
-[profile.dev.package."*"]
-# 依赖项在dev模式下也优化（加快编译和测试）
-opt-level = 2
+[profile.bench]
+# 基准测试优化
+inherits = "release"
+debug = true
 
-# ============================================================================
-# Benchmark特定配置
-# ============================================================================
-
-[bench]
-# 稳定的tick rate（用于benchmark）
-steady-tick = true
-
-# ============================================================================
-# 网络优化（用于网络benchmark）
-# ============================================================================
-
-[profile.bench.package."*"]
-# 确保所有依赖在benchmark时都充分优化
+[profile.release]
+# 发布构建优化
 opt-level = 3
-
-# ============================================================================
-# 特定包的优化配置
-# ============================================================================
-
-# 优化serde（序列化性能）
-[profile.bench.package.serde]
-opt-level = 3
+lto = "fat"
 codegen-units = 1
+panic = "abort"
+strip = true
 
-# 优化bevy_ecs（ECS性能）
-[profile.bench.package.bevy_ecs]
-opt-level = 3
-codegen-units = 1
-
-# 优化数学库
-[profile.bench.package.glam]
-opt-level = 3
-codegen-units = 1
+# Netlify测试覆盖率配置
+[target.'cfg(not(windows))']
+llvm-flags = "-C instrument-coverage"

@@ -30,7 +30,7 @@ impl CodeFormatter {
 
         let mut formatted = String::new();
         let lines: Vec<&str> = text.lines().collect();
-        let mut indent_level = 0;
+        let mut indent_level: i32 = 0;
         let indent_char = if options.insert_spaces {
             " ".repeat(options.tab_size as usize)
         } else {

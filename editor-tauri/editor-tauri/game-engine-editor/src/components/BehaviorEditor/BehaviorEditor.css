@@ -1,0 +1,165 @@
+/**
+ * Behavior Editor Styles
+ * Main editor container and layout styles
+ */
+
+.behavior-editor {
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #1a1a2e;
+  overflow: hidden;
+}
+
+.editor-content {
+  flex: 1;
+  position: relative;
+  display: flex;
+  overflow: hidden;
+}
+
+.editor-canvas {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+  .properties-panel,
+  .blackboard-editor {
+    width: 300px !important;
+  }
+
+  .node-palette {
+    width: 280px !important;
+  }
+
+  .debug-panel {
+    width: 350px !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .behavior-toolbar {
+    flex-wrap: wrap;
+    height: auto;
+    padding: 10px;
+  }
+
+  .toolbar-section {
+    flex-wrap: wrap;
+  }
+
+  .button-text {
+    display: none;
+  }
+
+  .properties-panel,
+  .blackboard-editor {
+    width: 280px !important;
+    max-height: 50vh !important;
+  }
+
+  .node-palette {
+    width: 250px !important;
+    max-height: 60vh !important;
+  }
+
+  .debug-panel {
+    width: 300px !important;
+    max-height: 40vh !important;
+  }
+}
+
+/* Dark theme adjustments */
+@media (prefers-color-scheme: dark) {
+  .behavior-editor {
+    background: #0d0d1a;
+  }
+}
+
+/* Print styles */
+@media print {
+  .behavior-toolbar,
+  .node-palette,
+  .properties-panel,
+  .blackboard-editor,
+  .debug-panel {
+    display: none !important;
+  }
+
+  .behavior-editor {
+    height: auto;
+    overflow: visible;
+  }
+
+  .editor-canvas {
+    overflow: visible;
+  }
+}
+
+/* Loading state */
+.behavior-editor.loading {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.behavior-editor.loading::after {
+  content: 'Loading...';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 24px;
+  color: #ffffff;
+}
+
+/* Error state */
+.behavior-editor.error {
+  background: rgba(244, 67, 54, 0.1);
+}
+
+.behavior-editor.error::before {
+  content: '⚠️ Error loading behavior tree';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 20px;
+  color: #f44336;
+  text-align: center;
+}
+
+/* Accessibility */
+.behavior-editor:focus-visible {
+  outline: 2px solid #00a8ff;
+  outline-offset: -2px;
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+  .behavior-editor {
+    background: #000000;
+  }
+
+  .behavior-toolbar,
+  .node-palette,
+  .properties-panel,
+  .blackboard-editor,
+  .debug-panel {
+    border-width: 3px;
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .behavior-node,
+  .connection-line,
+  .toolbar-button,
+  .palette-node {
+    transition: none !important;
+    animation: none !important;
+  }
+}

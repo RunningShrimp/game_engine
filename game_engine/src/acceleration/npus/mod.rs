@@ -274,6 +274,8 @@ pub enum TensorData {
     Int8(Vec<i8>),
     /// UINT8数据
     UInt8(Vec<u8>),
+    /// INT32数据（用于LLM tokens）
+    Int32(Vec<i32>),
 }
 
 /// 张量数据类型
@@ -283,6 +285,7 @@ pub enum TensorDType {
     Float16,
     Int8,
     UInt8,
+    Int32,
 }
 
 impl NPUTensor {

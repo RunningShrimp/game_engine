@@ -2,8 +2,8 @@
 //!
 //! 提供各种优化通道以改进生成的IL字节码性能。
 
-use super::bytecode::{Opcode, Instruction, BytecodeStream};
 use super::CompileError;
+use super::bytecode::{BytecodeStream, Instruction, Opcode};
 
 /// 优化器trait
 pub trait Optimizer {
@@ -36,7 +36,7 @@ impl Optimizer for ConstantFolder {
     fn optimize(&mut self, bytecode: Vec<u8>) -> Result<Vec<u8>, CompileError> {
         // 简化的常量折叠实现
         let mut optimized = bytecode.clone();
-        
+
         for _ in 0..self.passes {
             optimized = self.fold_constants(optimized)?;
         }
@@ -59,22 +59,22 @@ impl ConstantFolder {
                 if i >= 9 {
                     // 简化：假设前面是两个常量
                     let result_opcode = match opcode {
-                        0x50 => Some((0x50, self.add_consts(
-                            &bytecode[i - 8..i],
-                            &bytecode[i - 16..i - 8],
-                        ))),
-                        0x51 => Some((0x51, self.sub_consts(
-                            &bytecode[i - 8..i],
-                            &bytecode[i - 16..i - 8],
-                        ))),
-                        0x52 => Some((0x52, self.mul_consts(
-                            &bytecode[i - 8..i],
-                            &bytecode[i - 16..i - 8],
-                        ))),
-                        0x53 => Some((0x53, self.div_consts(
-                            &bytecode[i - 8..i],
-                            &bytecode[i - 16..i - 8],
-                        ))),
+                        0x50 => Some((
+                            0x50,
+                            self.add_consts(&bytecode[i - 8..i], &bytecode[i - 16..i - 8]),
+                        )),
+                        0x51 => Some((
+                            0x51,
+                            self.sub_consts(&bytecode[i - 8..i], &bytecode[i - 16..i - 8]),
+                        )),
+                        0x52 => Some((
+                            0x52,
+                            self.mul_consts(&bytecode[i - 8..i], &bytecode[i - 16..i - 8]),
+                        )),
+                        0x53 => Some((
+                            0x53,
+                            self.div_consts(&bytecode[i - 8..i], &bytecode[i - 16..i - 8]),
+                        )),
                         _ => None,
                     };
 

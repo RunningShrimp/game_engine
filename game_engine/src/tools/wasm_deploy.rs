@@ -701,7 +701,7 @@ impl WasmCacheStrategy {
 const CACHE_NAME = 'game-engine-v1';
 const PRECACHE_ASSETS = [
     '{}',
-    '{}',
+    '{}.data',
 ];
 
 self.addEventListener('install', (event) => {{
@@ -733,8 +733,7 @@ self.addEventListener('fetch', (event) => {{
 }});
 "#,
             wasm_url,
-            PRECACHE_ASSETS.join("',\n    '"),
-            PRECACHE_ASSETS.join("',\n    '")
+            wasm_url.trim_end_matches(".wasm")
         )
     }
 
@@ -1098,4 +1097,3 @@ sendWebVitals();
         }
     }
 }
-

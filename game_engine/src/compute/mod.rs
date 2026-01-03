@@ -45,10 +45,12 @@
 pub mod cuda;
 pub mod rocm;
 pub mod gpu_capabilities;
+pub mod backend;
 
 pub use cuda::{CudaContext, CudaPhysicsSystem, CudaParticleSystem, CudaMeshProcessor, CudaError};
 pub use rocm::{RocmContext, RocmPhysicsSystem, GpuComputeBackend};
 pub use gpu_capabilities::{GpuCapabilities, GpuVendor, GpuArchitecture, OptimizationHint, OptimizationType};
+pub use backend::{ComputeManager, ComputeBackend, ComputeError, ComputeSystemInfo};
 
 use bevy_ecs::prelude::*;
 

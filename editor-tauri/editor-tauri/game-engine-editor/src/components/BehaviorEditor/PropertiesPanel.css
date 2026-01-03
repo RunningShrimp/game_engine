@@ -1,0 +1,339 @@
+/**
+ * Properties Panel Styles
+ */
+
+.properties-panel-toggle {
+  position: absolute;
+  right: 20px;
+  top: 80px;
+  width: 50px;
+  height: 50px;
+  background: rgba(30, 30, 40, 0.95);
+  border: 2px solid rgba(100, 100, 120, 0.5);
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 24px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.properties-panel-toggle:hover {
+  background: rgba(50, 50, 60, 0.95);
+  border-color: rgba(150, 150, 180, 0.7);
+  transform: scale(1.05);
+}
+
+.properties-panel {
+  position: absolute;
+  right: 20px;
+  top: 80px;
+  width: 360px;
+  max-height: calc(100% - 100px);
+  background: rgba(30, 30, 40, 0.95);
+  border: 2px solid rgba(100, 100, 120, 0.5);
+  border-radius: 8px;
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  z-index: 100;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.panel-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.close-button:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.panel-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.panel-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.panel-content::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.panel-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+.panel-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.panel-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.panel-empty p {
+  margin: 8px 0;
+}
+
+.panel-empty .hint {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.property-section {
+  margin-bottom: 20px;
+}
+
+.property-label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.property-input,
+.property-textarea,
+.parameter-input,
+.parameter-textarea,
+.parameter-select {
+  width: 100%;
+  padding: 10px 12px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: #ffffff;
+  font-size: 14px;
+  outline: none;
+  transition: all 0.2s ease;
+  font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+}
+
+.property-input:focus,
+.property-textarea:focus,
+.parameter-input:focus,
+.parameter-textarea:focus,
+.parameter-select:focus {
+  border-color: #00a8ff;
+  box-shadow: 0 0 0 3px rgba(0, 168, 255, 0.1);
+}
+
+.property-input.readonly {
+  background: rgba(0, 0, 0, 0.2);
+  color: rgba(255, 255, 255, 0.5);
+  cursor: not-allowed;
+}
+
+.property-textarea,
+.parameter-textarea {
+  resize: vertical;
+  min-height: 60px;
+}
+
+.node-type-badge-large {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(0, 168, 255, 0.1);
+  border: 1px solid rgba(0, 168, 255, 0.3);
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.node-icon {
+  font-size: 32px;
+}
+
+.node-type-name {
+  font-size: 16px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #00a8ff;
+}
+
+.section-header {
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.parameter-item {
+  margin-bottom: 16px;
+}
+
+.parameter-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.parameter-number {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.parameter-number input {
+  flex: 1;
+}
+
+.parameter-hint {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
+  margin-top: 4px;
+}
+
+.parameter-toggle {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 26px;
+}
+
+.parameter-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.2);
+  transition: 0.3s;
+  border-radius: 26px;
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 20px;
+  width: 20px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.3s;
+  border-radius: 50%;
+}
+
+.parameter-toggle input:checked + .toggle-slider {
+  background-color: #00a8ff;
+}
+
+.parameter-toggle input:checked + .toggle-slider:before {
+  transform: translateX(24px);
+}
+
+.position-display {
+  display: flex;
+  gap: 12px;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 6px;
+  font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.debug-info {
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 6px;
+}
+
+.debug-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  font-size: 13px;
+}
+
+.debug-label {
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 500;
+}
+
+.debug-status {
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.debug-status-idle {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.debug-status-running {
+  color: #ffcc00;
+}
+
+.debug-status-success {
+  color: #00ff88;
+}
+
+.debug-status-failure {
+  color: #ff4444;
+}
+
+.children-info {
+  padding: 10px;
+  background: rgba(0, 168, 255, 0.1);
+  border: 1px solid rgba(0, 168, 255, 0.2);
+  border-radius: 6px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.8);
+  text-align: center;
+}

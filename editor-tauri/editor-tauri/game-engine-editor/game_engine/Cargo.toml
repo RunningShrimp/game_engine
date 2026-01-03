@@ -1,0 +1,86 @@
+[package]
+name = "game_engine"
+version = "0.1.0"
+edition = "2021"
+authors = ["Game Engine Team"]
+description = "Game engine with Nanite virtual geometry support"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+# GPU rendering
+wgpu = { version = "0.19", features = ["spirv"] }
+
+# Serialization
+bytemuck = { version = "1.14", features = ["derive"] }
+
+# Error handling
+thiserror = "1.0"
+
+# Async runtime (optional)
+tokio = { version = "1.35", features = ["full"], optional = true }
+
+# Logging
+log = "0.4"
+env_logger = "0.11"
+
+# LSP Server dependencies
+tower-lsp = { version = "0.20", optional = true }
+serde = { version = "1.0", features = ["derive"], optional = true }
+serde_json = { version = "1.0", optional = true }
+tokio-util = { version = "0.7", features = ["compat"], optional = true }
+tracing = { version = "0.1", optional = true }
+tracing-subscriber = { version = "0.3", features = ["env-filter"], optional = true }
+
+# Code parsing and analysis
+syn = { version = "2.0", features = ["full", "extra-traits"], optional = true }
+proc-macro2 = { version = "1.0", optional = true }
+
+[dev-dependencies]
+# Benchmarking
+criterion = "0.5"
+
+# Testing
+mockall = "0.12"
+
+[[bench]]
+name = "nanite_bench"
+harness = false
+
+[features]
+default = []
+async = ["tokio"]
+lsp = [
+    "tower-lsp",
+    "serde",
+    "serde_json",
+    "tokio",
+    "tokio-util",
+    "tracing",
+    "tracing-subscriber",
+    "syn",
+    "proc-macro2"
+]
+
+[lib]
+name = "game_engine"
+path = "src/lib.rs"
+
+[[example]]
+name = "nanite_example"
+path = "examples/nanite_example.rs"
+
+# LSP Server binary
+[[bin]]
+name = "game-engine-lsp"
+path = "src/lsp/main.rs"
+required-features = ["lsp"]
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true
+
+[profile.bench]
+inherits = "release"
+debug = true

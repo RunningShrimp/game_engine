@@ -25,22 +25,22 @@
 //! - **调试信息**: 丰富的调试信息支持
 
 pub mod bytecode;
-pub mod parser;
-pub mod optimizer;
 pub mod codegen;
-pub mod vm;
-pub mod jit;
 pub mod debug;
 pub mod hot_reload;
+pub mod jit;
+pub mod optimizer;
+pub mod parser;
+pub mod vm;
 
-use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 /// IL编译器版本
 pub const IL_VERSION: &str = "1.0.0";
 
 /// IL魔术字节（用于文件识别）
-pub const IL_MAGIC: &[u8; 4] = b"IL\0\1";
+pub const IL_MAGIC: &[u8; 4] = b"IL\x00\x01";
 
 /// IL字节码文件头
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -217,13 +217,9 @@ pub enum SymbolType {
     /// 类型
     Type(Type),
     /// 结构体
-    Struct {
-        fields: Vec<(String, Type)>,
-    },
+    Struct { fields: Vec<(String, Type)> },
     /// 枚举
-    Enum {
-        variants: Vec<String>,
-    },
+    Enum { variants: Vec<String> },
 }
 
 /// 类型
@@ -259,13 +255,17 @@ pub enum Type {
 /// 整数大小
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum IntegerSize {
-    I8, I16, I32, I64,
+    I8,
+    I16,
+    I32,
+    I64,
 }
 
 /// 浮点数大小
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FloatSize {
-    F32, F64,
+    F32,
+    F64,
 }
 
 /// 函数
@@ -504,7 +504,11 @@ impl ILCompiler {
     }
 
     /// 编译源代码
-    pub fn compile(&mut self, source_code: &str, filename: &str) -> Result<CompileResult, CompileError> {
+    pub fn compile(
+        &mut self,
+        source_code: &str,
+        filename: &str,
+    ) -> Result<CompileResult, CompileError> {
         let start_time = std::time::Instant::now();
 
         // 1. 解析源代码
@@ -553,30 +557,27 @@ impl ILCompiler {
     fn parse(&mut self, source_code: &str, filename: &str) -> Result<AST, CompileError> {
         // 根据源语言选择解析器
         match self.source_language {
-            SourceLanguage::Lua => {
-                parser::lua::parse_lua(source_code, filename)
-            }
+            SourceLanguage::Lua => parser::lua::parse_lua(source_code, filename),
             SourceLanguage::TypeScript => {
                 parser::typescript::parse_typescript(source_code, filename)
             }
-            SourceLanguage::CSharp => {
-                parser::csharp::parse_csharp(source_code, filename)
-            }
+            SourceLanguage::CSharp => parser::csharp::parse_csharp(source_code, filename),
             SourceLanguage::Rust => {
                 // Rust解析器（简化版）
                 parser::rust::parse_rust(source_code, filename)
             }
-            _ => {
-                Err(CompileError {
-                    error_type: CompileErrorType::Other("Unsupported language".to_string()),
-                    message: format!("Source language {:?} is not supported", self.source_language),
-                    location: SourceLocation {
-                        file: filename.to_string(),
-                        line: 0,
-                        column: 0,
-                    },
-                })
-            }
+            _ => Err(CompileError {
+                error_type: CompileErrorType::Other("Unsupported language".to_string()),
+                message: format!(
+                    "Source language {:?} is not supported",
+                    self.source_language
+                ),
+                location: SourceLocation {
+                    file: filename.to_string(),
+                    line: 0,
+                    column: 0,
+                },
+            }),
         }
     }
 
@@ -607,10 +608,14 @@ impl ILCompiler {
     /// 声明符号
     fn declare_symbols(&mut self, stmt: &Statement) -> Result<(), CompileError> {
         match stmt {
-            Statement::FunctionDecl { name, params, return_type, .. } => {
-                let param_types = params.iter().map(|p| {
-                    (p.name.clone(), p.param_type.clone())
-                }).collect();
+            Statement::FunctionDecl {
+                name,
+                params,
+                return_type,
+                ..
+            } => {
+                let param_types =
+                    params.iter().map(|p| (p.name.clone(), p.param_type.clone())).collect();
 
                 let symbol = Symbol {
                     name: name.clone(),
@@ -669,13 +674,20 @@ impl ILCompiler {
                     self.check_statement(stmt)?;
                 }
             }
-            Statement::VarDecl { initial_value, var_type, .. } => {
+            Statement::VarDecl {
+                initial_value,
+                var_type,
+                ..
+            } => {
                 if let Some(expr) = initial_value {
                     let expr_type = self.infer_expr_type(expr)?;
                     if &expr_type != var_type && var_type != &Type::Any {
                         return Err(CompileError {
                             error_type: CompileErrorType::TypeError,
-                            message: format!("Type mismatch: expected {:?}, got {:?}", var_type, expr_type),
+                            message: format!(
+                                "Type mismatch: expected {:?}, got {:?}",
+                                var_type, expr_type
+                            ),
                             location: SourceLocation {
                                 file: "".to_string(),
                                 line: 0,
@@ -733,9 +745,12 @@ impl ILCompiler {
                             Ok(Type::Any)
                         }
                     }
-                    BinaryOp::Eq | BinaryOp::Ne | BinaryOp::Lt | BinaryOp::Le | BinaryOp::Gt | BinaryOp::Ge => {
-                        Ok(Type::Bool)
-                    }
+                    BinaryOp::Eq
+                    | BinaryOp::Ne
+                    | BinaryOp::Lt
+                    | BinaryOp::Le
+                    | BinaryOp::Gt
+                    | BinaryOp::Ge => Ok(Type::Bool),
                     _ => Ok(Type::Any),
                 }
             }
@@ -834,7 +849,9 @@ impl ILCompiler {
     /// 写入语句
     fn write_statement(&mut self, stmt: &Statement, bytecode: &mut Vec<u8>) {
         match stmt {
-            Statement::FunctionDecl { name, params, body, .. } => {
+            Statement::FunctionDecl {
+                name, params, body, ..
+            } => {
                 // 函数声明（简化）
                 bytecode.push(0x10); // FUNCTION_DEF
                 bytecode.extend_from_slice(&(name.len() as u8).to_be_bytes());
@@ -845,7 +862,11 @@ impl ILCompiler {
                 }
                 bytecode.push(0x11); // END_FUNCTION
             }
-            Statement::VarDecl { name, initial_value, .. } => {
+            Statement::VarDecl {
+                name,
+                initial_value,
+                ..
+            } => {
                 bytecode.push(0x20); // VAR_DECL
                 bytecode.extend_from_slice(&(name.len() as u8).to_be_bytes());
                 bytecode.extend_from_slice(name.as_bytes());
@@ -991,17 +1012,11 @@ pub enum Statement {
         initial_value: Option<Expression>,
     },
     /// 返回语句
-    Return {
-        value: Option<Expression>,
-    },
+    Return { value: Option<Expression> },
     /// 表达式语句
-    Expression {
-        expr: Expression,
-    },
+    Expression { expr: Expression },
     /// 块语句
-    Block {
-        statements: Vec<Statement>,
-    },
+    Block { statements: Vec<Statement> },
     /// If语句
     If {
         condition: Expression,
@@ -1026,13 +1041,9 @@ pub enum Statement {
 #[derive(Debug, Clone)]
 pub enum Expression {
     /// 字面量
-    Literal {
-        literal: Literal,
-    },
+    Literal { literal: Literal },
     /// 标识符
-    Identifier {
-        name: String,
-    },
+    Identifier { name: String },
     /// 二元运算
     Binary {
         left: Box<Expression>,
@@ -1138,13 +1149,13 @@ pub enum Value {
 
 // 模块声明（在实际文件中，这些会独立成文件）
 pub mod bytecode;
-pub mod parser;
-pub mod optimizer;
 pub mod codegen;
-pub mod vm;
-pub mod jit;
 pub mod debug;
 pub mod hot_reload;
+pub mod jit;
+pub mod optimizer;
+pub mod parser;
+pub mod vm;
 
 #[cfg(test)]
 mod tests {

@@ -1,0 +1,56 @@
+/**
+ * Track组件样式
+ */
+
+.timeline-track-keyframes-count {
+  font-size: 11px;
+  color: #64748b;
+  padding: 2px 6px;
+  background: #1e293b;
+  border-radius: 10px;
+  min-width: 20px;
+  text-align: center;
+}
+
+.curve-color-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.curve-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #94a3b8;
+}
+
+.curve-keyframes-count {
+  font-size: 10px;
+  color: #64748b;
+  padding: 1px 4px;
+  background: #0f172a;
+  border-radius: 8px;
+  min-width: 16px;
+  text-align: center;
+}
+
+.curve-empty {
+  padding: 16px 12px 16px 40px;
+  font-size: 12px;
+  color: #475569;
+  font-style: italic;
+}
+
+/* 轨道拖拽相关 */
+.timeline-track-header.dragging {
+  opacity: 0.5;
+  background: #1e293b;
+}
+
+.timeline-track-header.drag-over {
+  background: #334155;
+  border-top: 2px solid #3b82f6;
+}

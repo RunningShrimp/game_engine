@@ -13,6 +13,14 @@ use std::collections::HashSet;
 /// UV ID类型
 pub type UVID = usize;
 
+/// 投影轴枚举（用于UV展开）
+#[derive(Debug, Clone, Copy)]
+enum ProjectionAxis {
+    XY, // 投影到XY平面（使用X, Y坐标）
+    XZ, // 投影到XZ平面（使用X, Z坐标）
+    YZ, // 投影到YZ平面（使用Y, Z坐标）
+}
+
 /// UV岛
 #[derive(Debug, Clone)]
 pub struct UVIsland {
@@ -24,6 +32,8 @@ pub struct UVIsland {
     pub bounds: (Vec2, Vec2),
     /// 是否选中
     pub selected: bool,
+    /// 原始3D顶点位置（用于UV展开）
+    pub positions_3d: Vec<Vec3>,
 }
 
 impl UVIsland {
@@ -153,8 +163,18 @@ impl UVEditor {
 
     /// 加载UV数据
     pub fn load_uvs(&mut self, uvs: Vec<Vec2>, triangles: Vec<[usize; 3]>) {
+        self.load_uvs_with_positions(uvs, triangles, Vec::new());
+    }
+
+    /// 加载UV数据（带3D位置）
+    pub fn load_uvs_with_positions(
+        &mut self,
+        uvs: Vec<Vec2>,
+        triangles: Vec<[usize; 3]>,
+        positions_3d: Vec<Vec3>,
+    ) {
         // 实现UV岛检测算法
-        let island = self.detect_uv_island(&uvs, &triangles);
+        let island = self.detect_uv_island(&uvs, &triangles, &positions_3d);
         self.uv_islands = vec![island];
         self.clear_selection();
     }
@@ -494,22 +514,30 @@ impl UVEditor {
     pub fn unwrap_uvs(&mut self) {
         // 实现UV展开算法（LSCM: Least Squares Conformal Maps）
         if !self.uv_islands.is_empty() {
-            tracing::info!("Unwrapping UV islands using LSCM algorithm");
+            tracing::info!("Unwrapping UV islands using planar projection");
 
-            // 简化实现：平面投影
-            // 完整实现需要构建邻接图和求解最小二乘保角映射
+            // 平面投影实现
             for island in &mut self.uv_islands {
-                // 方法1：平面投影（沿X轴）
-                for uv in &mut island.uvs {
-                    let pos = if let Some(pos_3d) = &uv.position_3d {
-                        *pos_3d
-                    } else {
-                        Vec3::ZERO
-                    };
+                if island.positions_3d.is_empty() {
+                    // 如果没有3D位置数据，使用默认UV
+                    for uv in &mut island.uvs {
+                        *uv = Vec2::new(0.5, 0.5);
+                    }
+                    continue;
+                }
 
-                    // 使用X-Z平面投影
-                    uv.coordinates.x = (pos.x + 1.0) * 0.5; // 归一化到[0,1]
-                    uv.coordinates.y = (pos.z + 1.0) * 0.5;
+                // 计算最佳投影平面（基于法线）
+                let normal = Self::calculate_island_normal(island);
+
+                // 选择投影平面（XY, XZ, 或 YZ）
+                let projection_axis = Self::choose_projection_axis(normal);
+
+                // 应用平面投影
+                for (i, uv) in island.uvs.iter_mut().enumerate() {
+                    if i < island.positions_3d.len() {
+                        let pos = island.positions_3d[i];
+                        *uv = Self::project_to_plane(pos, projection_axis);
+                    }
                 }
 
                 // 计算UV岛的边界框并归一化
@@ -519,10 +547,10 @@ impl UVEditor {
                 let mut max_v = f32::MIN;
 
                 for uv in &island.uvs {
-                    min_u = min_u.min(uv.coordinates.x);
-                    min_v = min_v.min(uv.coordinates.y);
-                    max_u = max_u.max(uv.coordinates.x);
-                    max_v = max_v.max(uv.coordinates.y);
+                    min_u = min_u.min(uv.x);
+                    min_v = min_v.min(uv.y);
+                    max_u = max_u.max(uv.x);
+                    max_v = max_v.max(uv.y);
                 }
 
                 let u_range = max_u - min_u;
@@ -530,13 +558,16 @@ impl UVEditor {
 
                 if u_range > 0.0001 && v_range > 0.0001 {
                     for uv in &mut island.uvs {
-                        uv.coordinates.x = (uv.coordinates.x - min_u) / u_range;
-                        uv.coordinates.y = (uv.coordinates.y - min_v) / v_range;
+                        uv.x = (uv.x - min_u) / u_range;
+                        uv.y = (uv.y - min_v) / v_range;
                     }
                 }
             }
 
-            tracing::info!("UV unwrapping completed for {} islands", self.uv_islands.len());
+            tracing::info!(
+                "UV unwrapping completed for {} islands",
+                self.uv_islands.len()
+            );
         }
     }
 
@@ -551,7 +582,7 @@ impl UVEditor {
 
             for island in &mut self.uv_islands {
                 for _ in 0..iterations {
-                    let mut new_uvs: Vec<Vec2> = island.uvs.iter().map(|uv| uv.coordinates).collect();
+                    let mut new_uvs: Vec<Vec2> = island.uvs.iter().map(|uv| *uv).collect();
 
                     // 对每个UV点
                     for (i, uv) in island.uvs.iter().enumerate() {
@@ -562,12 +593,12 @@ impl UVEditor {
                         // 查找相邻UV点（基于三角形连接）
                         for (j, other_uv) in island.uvs.iter().enumerate() {
                             if i != j {
-                                let dist = uv.coordinates.distance(other_uv.coordinates);
+                                let dist = uv.distance(*other_uv);
 
                                 // 如果距离较小，认为是相邻的
                                 if dist < 0.2 {
-                                    avg_u += other_uv.coordinates.x;
-                                    avg_v += other_uv.coordinates.y;
+                                    avg_u += other_uv.x;
+                                    avg_v += other_uv.y;
                                     count += 1;
                                 }
                             }
@@ -582,12 +613,15 @@ impl UVEditor {
 
                     // 应用新的UV坐标
                     for (i, uv) in island.uvs.iter_mut().enumerate() {
-                        uv.coordinates = new_uvs[i];
+                        *uv = new_uvs[i];
                     }
                 }
             }
 
-            tracing::info!("UV relaxation completed for {} islands", self.uv_islands.len());
+            tracing::info!(
+                "UV relaxation completed for {} islands",
+                self.uv_islands.len()
+            );
         }
     }
 
@@ -606,8 +640,8 @@ impl UVEditor {
                 let mut max_uv = Vec2::new(f32::MIN, f32::MIN);
 
                 for uv in &island.uvs {
-                    min_uv = min_uv.min(uv.coordinates);
-                    max_uv = max_uv.max(uv.coordinates);
+                    min_uv = min_uv.min(*uv);
+                    max_uv = max_uv.max(*uv);
                 }
 
                 island_bounds.push((i, (min_uv, max_uv)));
@@ -632,23 +666,27 @@ impl UVEditor {
                 let offset_x = col as f32 * cell_width;
                 let offset_y = row as f32 * cell_height;
 
-                // 移动UV岛
-                for uv in &mut self.uv_islands[*island_idx].uvs {
-                    // 首先归一化到其边界框
-                    let (min_uv, max_uv) = {
-                        let mut min = Vec2::new(f32::MAX, f32::MAX);
-                        let mut max = Vec2::new(f32::MIN, f32::MIN);
-                        for u in &self.uv_islands[*island_idx].uvs {
-                            min = min.min(u.coordinates);
-                            max = max.max(u.coordinates);
-                        }
-                        (min, max)
-                    };
+                // 移动UV岛 - 首先计算边界框
+                let (min_uv, max_uv) = {
+                    let mut min = Vec2::new(f32::MAX, f32::MAX);
+                    let mut max = Vec2::new(f32::MIN, f32::MIN);
+                    for u in &self.uv_islands[*island_idx].uvs {
+                        min = min.min(*u);
+                        max = max.max(*u);
+                    }
+                    (min, max)
+                };
 
+                // 然后修改UV坐标
+                for uv in &mut self.uv_islands[*island_idx].uvs {
                     let range = max_uv - min_uv;
                     if range.x > 0.0001 && range.y > 0.0001 {
-                        uv.coordinates.x = (uv.coordinates.x - min_uv.x) / range.x * cell_width * 0.9 + offset_x + cell_width * 0.05;
-                        uv.coordinates.y = (uv.coordinates.y - min_uv.y) / range.y * cell_height * 0.9 + offset_y + cell_height * 0.05;
+                        uv.x = (uv.x - min_uv.x) / range.x * cell_width * 0.9
+                            + offset_x
+                            + cell_width * 0.05;
+                        uv.y = (uv.y - min_uv.y) / range.y * cell_height * 0.9
+                            + offset_y
+                            + cell_height * 0.05;
                     }
                 }
             }
@@ -658,7 +696,12 @@ impl UVEditor {
     }
 
     /// 检测UV岛
-    fn detect_uv_island(&self, uvs: &[Vec2], triangles: &[[usize; 3]]) -> UVIsland {
+    fn detect_uv_island(
+        &self,
+        uvs: &[Vec2],
+        triangles: &[[usize; 3]],
+        positions_3d: &[Vec3],
+    ) -> UVIsland {
         // 简化实现：计算UV边界框
         let mut min_uv = Vec2::new(f32::MAX, f32::MAX);
         let mut max_uv = Vec2::new(f32::MIN, f32::MIN);
@@ -673,6 +716,7 @@ impl UVEditor {
             triangles: triangles.to_vec(),
             bounds: (min_uv, max_uv),
             selected: false,
+            positions_3d: positions_3d.to_vec(),
         }
     }
 
@@ -684,6 +728,68 @@ impl UVEditor {
             }
         }
         None
+    }
+
+    /// 计算UV岛的平均法线
+    fn calculate_island_normal(island: &UVIsland) -> Vec3 {
+        if island.positions_3d.len() < 3 {
+            return Vec3::Y; // 默认向上
+        }
+
+        let mut normal = Vec3::ZERO;
+        let mut triangle_count = 0;
+
+        // 遍历所有三角形计算法线
+        for triangle in &island.triangles {
+            if triangle[0] < island.positions_3d.len()
+                && triangle[1] < island.positions_3d.len()
+                && triangle[2] < island.positions_3d.len()
+            {
+                let v0 = island.positions_3d[triangle[0]];
+                let v1 = island.positions_3d[triangle[1]];
+                let v2 = island.positions_3d[triangle[2]];
+
+                // 计算三角形法线
+                let edge1 = v1 - v0;
+                let edge2 = v2 - v0;
+                let tri_normal = edge1.cross(edge2);
+
+                if tri_normal.length() > 0.0001 {
+                    normal += tri_normal.normalize();
+                    triangle_count += 1;
+                }
+            }
+        }
+
+        if triangle_count > 0 {
+            normal / triangle_count as f32
+        } else {
+            Vec3::Y
+        }
+    }
+
+    /// 根据法线选择最佳投影平面
+    fn choose_projection_axis(normal: Vec3) -> ProjectionAxis {
+        let normal = normal.abs();
+
+        // 选择法线分量最小的平面进行投影
+        // 这样可以最大限度地减少变形
+        if normal.x <= normal.y && normal.x <= normal.z {
+            ProjectionAxis::YZ // X分量最小，投影到YZ平面
+        } else if normal.y <= normal.x && normal.y <= normal.z {
+            ProjectionAxis::XZ // Y分量最小，投影到XZ平面
+        } else {
+            ProjectionAxis::XY // Z分量最小，投影到XY平面
+        }
+    }
+
+    /// 将3D位置投影到2D UV坐标
+    fn project_to_plane(pos: Vec3, axis: ProjectionAxis) -> Vec2 {
+        match axis {
+            ProjectionAxis::XY => Vec2::new(pos.x, pos.y),
+            ProjectionAxis::XZ => Vec2::new(pos.x, pos.z),
+            ProjectionAxis::YZ => Vec2::new(pos.y, pos.z),
+        }
     }
 }
 

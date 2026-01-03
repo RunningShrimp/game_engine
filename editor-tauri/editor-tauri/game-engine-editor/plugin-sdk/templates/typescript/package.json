@@ -1,0 +1,23 @@
+{
+  "name": "{{plugin-name}}",
+  "version": "0.1.0",
+  "description": "{{description}}",
+  "main": "dist/plugin.js",
+  "types": "dist/plugin.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "test": "jest"
+  },
+  "keywords": [
+    "game-engine",
+    "plugin",
+    "typescript"
+  ],
+  "author": "{{author}}",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/game-engine-editor": "^0.1.0",
+    "typescript": "^5.0.0"
+  }
+}

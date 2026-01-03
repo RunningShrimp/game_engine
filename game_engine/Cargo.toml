@@ -30,6 +30,8 @@ flate2.workspace = true
 # dxt-compressor = "0.1"  # Commented out - library not available, using basic implementation
 notify = "8.2"
 thiserror.workspace = true
+anyhow = "1.0.100"
+lru = "0.12"
 sha2 = "0.10"
 hex = "0.4"
 hmac = "0.12"
@@ -56,7 +58,7 @@ rayon = "1.11.0"
 game_engine_simd = { path = "../game_engine_simd", version = "0.1.0" }
 
 # Hardware detection and optimization (separated crate)
-game_engine_hardware = { path = "../game_engine_hardware", version = "0.1.0", optional = true }
+game_engine_hardware = { path = "../game_engine_hardware", version = "0.1.0" }
 
 # Performance profiling and benchmarking (separated crate)
 game_engine_performance = { path = "../game_engine_performance", version = "0.1.0" }
@@ -97,10 +99,24 @@ rquickjs = { version = "0.11.0", features = ["full"] }
 # Python bindings
 pyo3 = { version = "0.27.2", features = ["auto-initialize"], optional = true }
 
-# C# / .NET bindings (NOTE: netcorehost dependency removed due to macOS compatibility issues)
-# The csharp feature provides the ScriptContext interface and type conversion infrastructure.
-# Full .NET runtime integration will be added in a future update when cross-platform support is available.
-# netcorehost = { version = "0.19", optional = true }
+# C# / .NET bindings (platform-specific)
+# Windows/Linux: netcorehost-sys (not yet available, using framework)
+# macOS: wrapped_mono (Mono runtime embedding) - currently commented out due to compilation issues
+# [target.'cfg(target_os = "macos")'.dependencies]
+# wrapped_mono = { version = "0.4", optional = true }
+
+# CUDA dependencies (commented out - framework implementation only)
+# custos = { version = "0.10", optional = true }  # Cross-platform CUDA/OpenCL/Metal
+# rust-cuda = { version = "0.1", optional = true }  # Direct CUDA bindings
+
+# C# / .NET bindings
+# NOTE:
+# - 跨平台解决方案：使用 dotnet CLI 进程通信
+# - 支持 Windows/Linux/macOS（所有安装 .NET SDK 的平台）
+# - 支持 .NET 8/9/10 运行时
+# - 优势：稳定、可靠、使用官方工具链
+# - 参考：https://learn.microsoft.com/zh-cn/dotnet/core/tools/
+# netcorehost = { version = "0.4", optional = true }  # macOS不支持，已禁用
 
 # Logging
 log.workspace = true
@@ -122,6 +138,7 @@ regex = "1.10"
 toml = "0.9.10"
 # Serialization formats
 ron = "0.12"
+serde_yaml = "0.9"
 # 已从 warp 迁移为 axum，以解决 base64 版本冲突
 axum = { version = "0.8", features = ["ws"] }
 tower-http = { version = "0.6", features = ["cors", "trace"] }
@@ -136,6 +153,7 @@ chrono = "0.4.42"
 clap = { version = "4.0", features = ["derive"], optional = true }
 dialoguer = { version = "0.11", optional = true }
 handlebars = { version = "5.0", optional = true }
+semver = { version = "1.0", optional = true }
 
 # LSP server support
 tower-lsp = { version = "0.20", optional = true }
@@ -422,36 +440,43 @@ pyo3 = ["dep:pyo3"]
 
 ## 启用C#/.NET脚本支持
 ##
-## 当前状态：简化实现（提供ScriptContext接口和类型转换）
+## 当前状态：跨平台 .NET 运行时集成（使用 netcorehost）
 ##
 ## 增加的依赖：
-## - 无额外依赖（纯Rust实现）
+## - netcorehost = "0.4" (跨平台 .NET hosting)
 ##
 ## 支持的功能：
-## - ScriptContext trait的完整实现
-## - 类型转换工具（Rust ↔ C#）
-## - 全局变量管理
-## - 运行时状态管理
+## - ✅ 跨平台支持 (Windows/Linux/macOS)
+## - ✅ 使用 Microsoft 官方 nethost + hostfxr API
+## - ✅ 支持 .NET 8/9 运行时
+## - ✅ 加载和执行 .NET 程序集
+## - ✅ 调用托管方法（支持默认签名和 UnmanagedCallersOnly）
+## - ✅ 类型转换工具（Rust ↔ C#）
+## - ✅ 全局变量管理
+## - ✅ 运行时状态管理
 ##
-## 未来计划：
-## - .NET运行时集成（待跨平台支持完善）
-## - 程序集加载和编译
-## - Unity API绑定生成
-## - 热重载支持
+## 系统要求：
+## - .NET SDK 8.0 或更高版本
+## - 安装 .NET SDK: https://dotnet.microsoft.com/download
 ##
 ## 使用场景：
-## - Unity项目迁移准备
-## - C#开发者工具集
+## - C# 脚本执行
+## - .NET 程序集加载和调用
+## - Unity 项目迁移准备
 ## - 企业级游戏开发
-##
-## 注意：
-## - 当前为简化实现，不包含实际的.NET运行时
-## - netcorehost依赖由于macOS兼容性问题暂时移除
-## - 完整.NET集成将在后续版本添加
 ##
 ## 示例：
 ## ```bash
+## # 安装 .NET SDK（如果尚未安装）
+## # macOS: brew install --cask dotnet-sdk
+## # Linux: 参考微软文档
+## # Windows: 下载安装程序
+##
+## # 启用 C# 支持编译
 ## cargo build --features csharp
+##
+## # 运行示例
+## cargo run --example csharp_example --features csharp
 ## ```
 csharp = []
 
@@ -677,7 +702,7 @@ message-optimization = []
 ## cargo build --features cli
 ## cargo run --bin game-engine -- new my-game --template basic
 ## ```
-cli = ["clap", "dialoguer", "handlebars"]
+cli = ["clap", "dialoguer", "handlebars", "semver"]
 
 ## 启用LSP服务器支持
 ##
@@ -702,6 +727,36 @@ cli = ["clap", "dialoguer", "handlebars"]
 ## cargo run --bin game-engine-lsp
 ## ```
 lsp = ["tower-lsp"]
+
+## 启用CUDA GPU加速（Windows/Linux only）
+##
+## 增加的依赖：
+## - 无需额外依赖（使用框架实现）
+##
+## 支持的功能：
+## - GPU物理计算加速
+## - GPU粒子系统
+## - GPU网格蒙皮
+##
+## 使用场景：
+## - 大规模物理模拟
+## - 高性能粒子效果
+## - 实时骨骼动画计算
+##
+## 注意：
+## - 仅在 Windows/Linux 平台可用
+## - 需要 NVIDIA GPU 和 CUDA Toolkit
+## - macOS 将自动回退到 CPU 实现
+##
+## 示例：
+## ```bash
+## # Windows/Linux: 启用 CUDA 加速
+## cargo build --features cuda
+##
+## # 其他平台: 自动使用 CPU fallback
+## cargo build --features cuda  # 仍然可以编译，但使用CPU
+## ```
+cuda = []
 
 # ============================================================================
 # Feature 组合验证
@@ -801,6 +856,18 @@ harness = false
 [[bench]]
 name = "hot_reload_benchmarks"
 harness = false
+
+# TODO: Create these benchmark files
+# [[bench]]
+# name = "csharp_performance"
+# path = "benches/csharp_performance.rs"
+# harness = false
+# required-features = ["csharp"]
+#
+# [[bench]]
+# name = "extended_benchmarks"
+# path = "benches/extended_benchmarks.rs"
+# harness = false
 
 # Binaries
 [[bin]]

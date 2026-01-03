@@ -460,7 +460,10 @@ impl MobilePerformanceOptimizer {
     }
 
     /// 更新性能状态
-    pub fn update(&mut self, frame_time_ms: f32) -> Result<PerformanceOptimizations, PerformanceError> {
+    pub fn update(
+        &mut self,
+        frame_time_ms: f32,
+    ) -> Result<PerformanceOptimizations, PerformanceError> {
         let now = Instant::now();
 
         // 更新内存统计
@@ -558,7 +561,8 @@ impl MobilePerformanceOptimizer {
         let mode_factor = self.current_mode.performance_factor();
 
         Ok(PerformanceOptimizations {
-            target_frame_rate: (self.config.target_frame_rate as f32 * thermal_factor * mode_factor) as u32,
+            target_frame_rate: (self.config.target_frame_rate as f32 * thermal_factor * mode_factor)
+                as u32,
             quality_level,
             resolution_scale: quality_level.resolution_scale() * thermal_factor * mode_factor,
             shadow_quality: quality_level.shadow_quality(),
@@ -665,7 +669,9 @@ pub enum PerformanceError {
 impl std::fmt::Display for PerformanceError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            PerformanceError::DeviceDetectionFailed => write!(f, "Failed to detect device capabilities"),
+            PerformanceError::DeviceDetectionFailed => {
+                write!(f, "Failed to detect device capabilities")
+            }
             PerformanceError::BatteryDetectionFailed => write!(f, "Failed to detect battery state"),
             PerformanceError::ThermalDetectionFailed => write!(f, "Failed to detect thermal state"),
             PerformanceError::OutOfMemory => write!(f, "Out of memory"),

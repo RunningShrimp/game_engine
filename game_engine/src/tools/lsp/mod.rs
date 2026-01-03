@@ -34,6 +34,7 @@
 
 pub mod code_actions;
 pub mod completion;
+#[cfg(feature = "debug-ui")]
 pub mod debug_adapter;
 pub mod diagnostics;
 pub mod documents;
@@ -45,6 +46,7 @@ pub mod symbols;
 
 // Re-exports
 pub use code_actions::CodeActionsProvider;
+#[cfg(feature = "debug-ui")]
 pub use debug_adapter::LspDapIntegrator;
 pub use documents::{DocumentCache, SymbolIndex};
 pub use formatting::CodeFormatter;

@@ -1,0 +1,402 @@
+name: Issue Management
+
+on:
+  issues:
+    types: [opened, edited, deleted, labeled, unlabeled, reopened, closed, assigned, unassigned]
+  issue_comment:
+    types: [created, edited, deleted]
+  schedule:
+    - cron: '0 9 * * 1'  # Every Monday at 9:00 UTC
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  # Auto-label issues
+  auto-label:
+    name: Auto-label Issues
+    runs-on: ubuntu-latest
+    if: github.event_name == 'issues' && github.event.action == 'opened'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Auto-label
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issue = context.payload.issue;
+            const title = issue.title.toLowerCase();
+            const body = issue.body.toLowerCase();
+
+            const labels = [];
+
+            // Detect type
+            if (title.includes('bug') || title.includes('error') || title.includes('crash') || title.includes('fix')) {
+              labels.push('bug');
+            } else if (title.includes('feature') || title.includes('enhancement') || title.includes('add ')) {
+              labels.push('enhancement');
+            } else if (title.includes('docs') || title.includes('documentation')) {
+              labels.push('documentation');
+            } else if (title.includes('performance') || title.includes('slow') || title.includes('optimize')) {
+              labels.push('performance');
+            } else if (title.includes('security') || title.includes('vulnerability')) {
+              labels.push('security');
+            } else if (title.includes('question') || title.includes('help') || title.includes('how to')) {
+              labels.push('question');
+            }
+
+            // Detect area
+            if (body.includes('lsp') || title.includes('lsp')) {
+              labels.push('area:lsp');
+            } else if (body.includes('c#') || body.includes('csharp') || title.includes('c#')) {
+              labels.push('area:csharp');
+            } else if (body.includes('network') || title.includes('network')) {
+              labels.push('area:network');
+            } else if (body.includes('render') || title.includes('render')) {
+              labels.push('area:render');
+            } else if (body.includes('physics') || title.includes('physics')) {
+              labels.push('area:physics');
+            } else if (body.includes('audio') || title.includes('audio')) {
+              labels.push('area:audio');
+            } else if (body.includes('ui') || title.includes('ui')) {
+              labels.push('area:ui');
+            }
+
+            // Detect priority
+            if (title.includes('critical') || title.includes('blocker') || title.includes('urgent')) {
+              labels.push('priority:critical');
+            } else if (title.includes('high')) {
+              labels.push('priority:high');
+            } else if (title.includes('low')) {
+              labels.push('priority:low');
+            }
+
+            // Detect good first issue
+            if (labels.length === 1 && labels.includes('enhancement')) {
+              labels.push('good first issue');
+            }
+
+            // Add labels
+            if (labels.length > 0) {
+              await github.rest.issues.setLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                labels: labels
+              });
+            }
+
+  # Assign issues based on labels
+  auto-assign:
+    name: Auto-assign Issues
+    runs-on: ubuntu-latest
+    if: github.event_name == 'issues' && github.event.action == 'labeled'
+    steps:
+      - name: Auto-assign
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issue = context.payload.issue;
+            const label = context.payload.label.name;
+
+            const assignees = {
+              'area:lsp': 'lsp-maintainer',
+              'area:csharp': 'csharp-maintainer',
+              'area:network': 'network-maintainer',
+              'area:render': 'render-maintainer',
+              'area:physics': 'physics-maintainer',
+              'area:audio': 'audio-maintainer',
+              'area:ui': 'ui-maintainer',
+              'security': 'security-team',
+              'performance': 'performance-team'
+            };
+
+            if (assignees[label]) {
+              await github.rest.issues.addAssignees({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                assignees: [assignees[label]]
+              });
+            }
+
+  # Check for missing information
+  check-issue-template:
+    name: Check Issue Template
+    runs-on: ubuntu-latest
+    if: github.event_name == 'issues' && github.event.action == 'opened'
+    steps:
+      - name: Check template
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issue = context.payload.issue;
+            const body = issue.body.toLowerCase();
+
+            const requiredSections = [
+              'bug description',
+              'reproduction steps',
+              'expected behavior',
+              'actual behavior',
+              'environment'
+            ];
+
+            const missingSections = requiredSections.filter(section => !body.includes(section));
+
+            if (missingSections.length > 0 && !issue.labels.some(l => l.name === 'question')) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: `### ⚠️ Missing Information
+
+                Your issue appears to be missing some required information:
+
+                ${missingSections.map(s => `- ${s}`).join('\n')}
+
+                Please update your issue with the missing information. You can edit your issue by clicking the pencil icon in the top right.
+
+                For reference, please use the issue template when creating bug reports.
+                `
+              });
+
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                labels: ['needs-information']
+              });
+            }
+
+  # Respond to common questions
+  auto-respond:
+    name: Auto-respond to Questions
+    runs-on: ubuntu-latest
+    if: github.event_name == 'issue_comment' && github.event.action == 'created'
+    steps:
+      - name: Auto-respond
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const comment = context.payload.comment.body.toLowerCase();
+            const issueNumber = context.payload.issue.number;
+
+            // Common responses
+            const responses = {
+              'when will': `The team is working hard on this! Unfortunately, we can't provide exact timelines for features. Please check the [project roadmap](ROADMAP.md) for planned items.`,
+              'how to install': `To install the Game Engine CLI:
+
+              \`\`\`bash
+              cargo install game-engine-cli
+              \`\`\`
+
+              For detailed installation instructions, see our [Quick Start Guide](https://docs.game-engine.dev/getting-started).`,
+              'error': `It looks like you're encountering an error. To help us debug this, please provide:
+
+              1. The exact error message
+              2. Steps to reproduce
+              3. Your environment (OS, Rust version, etc.)
+
+              You can get your Rust version with: \`rustc --version\``,
+              'help': `Thanks for reaching out! For help:
+
+              - Check our [documentation](https://docs.game-engine.dev)
+              - Search [existing issues](https://github.com/game-engine/game-engine/issues)
+              - Ask on [Discord](https://discord.gg/game-engine)
+              - Create a [new discussion](https://github.com/game-engine/game-engine/discussions)
+              `
+            };
+
+            for (const [keyword, response] of Object.entries(responses)) {
+              if (comment.includes(keyword)) {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issueNumber,
+                  body: response
+                });
+                break;
+              }
+            }
+
+  # Stale issue management
+  stale-issues:
+    name: Manage Stale Issues
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Mark stale issues
+        uses: actions/stale@v8
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          days-before-stale: 30
+          days-before-close: 14
+          stale-issue-label: 'stale'
+          stale-issue-message: |
+            This issue has been automatically marked as stale because it has not had
+            recent activity. It will be closed in 14 days if no further activity occurs.
+
+            If this issue is still relevant, please:
+            - Comment with additional information
+            - Add a reaction to keep it open
+            - Remove the `stale` label
+
+            Thank you for your contributions!
+          close-issue-message: |
+            This issue has been closed due to inactivity.
+
+            If you believe this issue is still relevant, please:
+            - Reopen the issue
+            - Provide a brief comment explaining why it should remain open
+
+          exempt-issue-labels: 'bug,security,enhancement,good first issue'
+          operations-per-run: 100
+
+      - name: Mark stale PRs
+        uses: actions/stale@v8
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          days-before-stale: 14
+          days-before-close: 7
+          stale-pr-label: 'stale'
+          stale-pr-message: |
+            This pull request has been automatically marked as stale because it has not had
+            recent activity. It will be closed in 7 days if no further activity occurs.
+
+            If this PR is still being worked on, please:
+            - Comment with an update
+            - Push a new commit
+            - Remove the `stale` label
+
+          close-pr-message: |
+            This pull request has been closed due to inactivity.
+
+            If you would like to continue working on this, please reopen it.
+          exempt-pr-labels: 'work-in-progress,under-review'
+
+  # Weekly issue summary
+  weekly-summary:
+    name: Create Weekly Summary
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+    steps:
+      - name: Generate summary
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'all',
+              since: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+            });
+
+            const opened = issues.filter(i => i.created_at > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
+            const closed = issues.filter(i => i.closed_at && i.closed_at > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
+
+            const body = `## 📊 Weekly Issue Summary
+
+            ### New Issues (${opened.length})
+            ${opened.map(i => `- #${i.number}: ${i.title}`).join('\n')}
+
+            ### Closed Issues (${closed.length})
+            ${closed.map(i => `- #${i.number}: ${i.title}`).join('\n')}
+
+            ---
+            *Generated on ${new Date().toLocaleDateString()}*`;
+
+            // Create discussion or issue
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `📊 Weekly Summary - ${new Date().toLocaleDateString()}`,
+              body: body,
+              labels: ['weekly-summary', 'meta']
+            });
+
+  # Label cleanup
+  cleanup-labels:
+    name: Cleanup Labels
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Delete unused labels
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const unusedLabels = [
+              'wontfix',
+              'duplicate',
+              'invalid',
+              'help wanted',
+              'more-info-needed'
+            ];
+
+            for (const label of unusedLabels) {
+              try {
+                await github.rest.issues.deleteLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name: label
+                });
+              } catch (error) {
+                // Label might not exist
+              }
+            }
+
+  # Issue triage
+  triage-issues:
+    name: Triage Issues
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+    steps:
+      - name: Triage untriaged issues
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'needs-triage'
+            });
+
+            for (const issue of issues) {
+              // Calculate priority based on age and reactions
+              const age = Date.now() - new Date(issue.created_at).getTime();
+              const daysOld = Math.floor(age / (1000 * 60 * 60 * 24));
+
+              let priority = 'priority:low';
+              if (daysOld > 30 || issue.labels.some(l => l.name === 'bug' || l.name === 'security')) {
+                priority = 'priority:high';
+              } else if (daysOld > 14) {
+                priority = 'priority:medium';
+              }
+
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                labels: [priority]
+              });
+
+              await github.rest.issues.removeLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                name: 'needs-triage'
+              });
+            }

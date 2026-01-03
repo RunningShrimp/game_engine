@@ -13,7 +13,7 @@ use std::sync::{Arc, Mutex};
 
 /// 商品类型
 #[repr(C)]
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum ProductType {
     Unknown = 0,
     /// 消耗型商品（游戏货币、道具等）
@@ -26,7 +26,7 @@ pub enum ProductType {
 
 /// 购买状态
 #[repr(C)]
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum PurchaseStatus {
     Unknown = 0,
     /// 购买中
@@ -250,6 +250,8 @@ impl BillingFFI {
 
 #[cfg(target_os = "android")]
 unsafe impl Send for BillingFFI {}
+
+#[cfg(target_os = "android")]
 unsafe impl Sync for BillingFFI {}
 
 #[cfg(target_os = "android")]
@@ -460,6 +462,8 @@ impl StoreKitFFI {
 
 #[cfg(target_os = "ios")]
 unsafe impl Send for StoreKitFFI {}
+
+#[cfg(target_os = "ios")]
 unsafe impl Sync for StoreKitFFI {}
 
 #[cfg(target_os = "ios")]

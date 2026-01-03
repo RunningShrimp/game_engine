@@ -1,8 +1,26 @@
 //! Unreal Engine 5项目导入器
 
 use super::{MigrationError, ProjectAnalysis};
+use std::collections::HashMap;
 use std::fs;
+use std::future::Future;
 use std::path::PathBuf;
+use std::pin::Pin;
+
+/// 资源迁移报告
+#[derive(Debug, Clone)]
+pub struct AssetMigrationReport {
+    /// 转换的蓝图数
+    pub converted_blueprints: u32,
+    /// 转换的材质数
+    pub converted_materials: u32,
+    /// 转换的纹理数
+    pub converted_textures: u32,
+    /// 转换的网格数
+    pub converted_meshes: u32,
+    /// 警告列表
+    pub warnings: Vec<String>,
+}
 
 /// Unreal项目导入器
 pub struct UnrealProjectImporter {
@@ -294,12 +312,12 @@ impl UnrealProjectImporter {
         // 初始化变量
         for variable in &blueprint.variables {
             if let Some(default_value) = &variable.default_value {
-                let type_prefix = match variable.var_type.as_str() {
-                    "float" | "double" => "",
-                    "int" | "int32" | "int64" => "",
-                    "bool" | "boolean" => "",
-                    "FString" | "string" => '"',
-                    _ => "",
+                let (type_prefix, type_suffix) = match variable.var_type.as_str() {
+                    "float" | "double" => ("", ""),
+                    "int" | "int32" | "int64" => ("", ""),
+                    "bool" | "boolean" => ("", ""),
+                    "FString" | "string" => ("\"", "\""),
+                    _ => ("", ""),
                 };
 
                 code.push_str(&format!(
@@ -307,7 +325,7 @@ impl UnrealProjectImporter {
                     variable.name.to_lowercase(),
                     type_prefix,
                     default_value,
-                    if type_prefix == '"' { '"' } else { "" }
+                    type_suffix
                 ));
             }
         }
@@ -503,6 +521,117 @@ impl UnrealProjectImporter {
                 }
             }
         }
+    }
+
+    /// 迁移UE5资源
+    pub async fn migrate_assets(
+        &self,
+        output_path: &PathBuf,
+    ) -> Result<AssetMigrationReport, MigrationError> {
+        let content_path = self.project_path.join("Content");
+        let mut converted_blueprints = 0;
+        let mut converted_materials = 0;
+        let mut converted_textures = 0;
+        let mut converted_meshes = 0;
+        let mut warnings = Vec::new();
+
+        // 递归扫描并转换资源
+        if let Ok(entries) = fs::read_dir(&content_path) {
+            for entry in entries.flatten() {
+                self.convert_asset_recursive(
+                    entry.path(),
+                    output_path,
+                    &mut converted_blueprints,
+                    &mut converted_materials,
+                    &mut converted_textures,
+                    &mut converted_meshes,
+                    &mut warnings,
+                )
+                .await?;
+            }
+        }
+
+        Ok(AssetMigrationReport {
+            converted_blueprints,
+            converted_materials,
+            converted_textures,
+            converted_meshes,
+            warnings,
+        })
+    }
+
+    /// 递归转换资源
+    fn convert_asset_recursive<'a>(
+        &'a self,
+        asset_path: PathBuf,
+        output_path: &'a PathBuf,
+        converted_blueprints: &'a mut u32,
+        converted_materials: &'a mut u32,
+        converted_textures: &'a mut u32,
+        converted_meshes: &'a mut u32,
+        warnings: &'a mut Vec<String>,
+    ) -> Pin<Box<dyn Future<Output = Result<(), MigrationError>> + 'a>> {
+        let output_path = output_path.clone();
+        Box::pin(async move {
+            if asset_path.is_dir() {
+                if let Ok(entries) = fs::read_dir(&asset_path) {
+                    for entry in entries.flatten() {
+                        self.convert_asset_recursive(
+                            entry.path(),
+                            &output_path,
+                            converted_blueprints,
+                            converted_materials,
+                            converted_textures,
+                            converted_meshes,
+                            warnings,
+                        )
+                        .await?;
+                    }
+                }
+            } else {
+                let extension = asset_path.extension().and_then(|e| e.to_str()).unwrap_or("");
+
+                match extension {
+                    "uasset" => {
+                        let file_name =
+                            asset_path.file_stem().and_then(|s| s.to_str()).unwrap_or("");
+
+                        let file_name_lower = file_name.to_lowercase();
+                        if file_name_lower.contains("bp_")
+                            || file_name_lower.contains("_bp")
+                            || file_name_lower.contains("blueprint")
+                        {
+                            // 转换蓝图
+                            match self.import_blueprint(&asset_path).await {
+                                Ok(_blueprint) => {
+                                    // TODO: 生成Lua/C#代码
+                                    *converted_blueprints += 1;
+                                }
+                                Err(e) => {
+                                    warnings.push(format!(
+                                        "Failed to convert blueprint {:?}: {}",
+                                        asset_path, e
+                                    ));
+                                }
+                            }
+                        } else if file_name_lower.contains("mat_")
+                            || file_name_lower.contains("_mat")
+                            || file_name_lower.contains("material")
+                        {
+                            *converted_materials += 1;
+                        } else {
+                            *converted_textures += 1;
+                        }
+                    }
+                    "umap" => {
+                        // 场景文件,暂不处理
+                    }
+                    _ => {}
+                }
+            }
+
+            Ok(())
+        })
     }
 }
 

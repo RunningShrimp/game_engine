@@ -1,0 +1,60 @@
+/* Material Editor Example Styles */
+
+.material-editor-example {
+  display: flex;
+  flex-direction: column;
+  width: 100vw;
+  height: 100vh;
+  background: #1a1a1a;
+  color: #e0e0e0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+}
+
+.example-header {
+  padding: 20px;
+  background: #2d2d2d;
+  border-bottom: 1px solid #404040;
+  text-align: center;
+}
+
+.example-header h1 {
+  margin: 0 0 8px 0;
+  font-size: 24px;
+  font-weight: 500;
+  color: #e0e0e0;
+}
+
+.example-header p {
+  margin: 0;
+  font-size: 14px;
+  color: #b0b0b0;
+}
+
+.example-content {
+  flex: 1;
+  overflow: hidden;
+}
+
+.example-footer {
+  padding: 16px 20px;
+  background: #252525;
+  border-top: 1px solid #404040;
+}
+
+.example-info h3 {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: #e0e0e0;
+}
+
+.example-info ul {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 13px;
+  color: #b0b0b0;
+}
+
+.example-info li {
+  margin: 4px 0;
+}

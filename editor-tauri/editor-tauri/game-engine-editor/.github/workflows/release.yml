@@ -1,0 +1,550 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., v0.3.0)'
+        required: true
+        type: string
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+permissions:
+  contents: write
+
+jobs:
+  # Create GitHub release
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version from tag
+        id: get_version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/}"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "version_number=${VERSION#v}" >> $GITHUB_OUTPUT
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          VERSION_NUMBER="${{ steps.get_version.outputs.version_number }}"
+
+          # Extract changelog from CHANGELOG.md
+          sed -n "/## \[$VERSION_NUMBER\]/,/^## /p" CHANGELOG.md | head -n -1 > release-notes.md
+
+          # Add release summary
+          cat >> release-notes.md << 'EOF'
+
+          ## 📦 Downloads
+
+          Choose the appropriate package for your platform:
+
+          - **CLI Tools**: `game-engine-cli`
+          - **LSP Server**: `game-engine-lsp`
+          - **Runtime Libraries**: `game-engine-runtime`
+          - **Source Code**: `.tar.gz`
+
+          ## 🚀 Quick Start
+
+          ```bash
+          # Install CLI tools
+          cargo install game-engine-cli
+
+          # Create new project
+          game-engine new my-game --template 3d-game
+
+          # Run game
+          cd my-game
+          game-engine run
+          ```
+
+          ## 📚 Documentation
+
+          - [Quick Start Guide](https://docs.game-engine.dev/getting-started)
+          - [API Reference](https://docs.game-engine.dev/api)
+          - [Migration Guide](https://github.com/game-engine/game-engine/blob/master/UPGRADE.md)
+
+          ## 🙏 Credits
+
+          Thanks to all contributors who made this release possible!
+          EOF
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.get_version.outputs.version }}
+          name: Release ${{ steps.get_version.outputs.version }}
+          body_path: release-notes.md
+          draft: false
+          prerelease: ${{ contains(steps.get_version.outputs.version, '-') }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Build and publish to crates.io
+  publish-crates:
+    name: Publish to crates.io
+    needs: create-release
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        crate:
+          - game_engine
+          - game_engine_cli
+          - game_engine_lsp
+          - game_engine_runtime
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: Cache cargo registry
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-publish-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo index
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-cargo-index-publish-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Login to crates.io
+        run: cargo login ${{ secrets.CRATES_IO_TOKEN }}
+
+      - name: Publish ${{ matrix.crate }}
+        run: |
+          cd crates/${{ matrix.crate }}
+          cargo publish --no-verify
+
+  # Build binaries for multiple platforms
+  build-binaries:
+    name: Build (${{ matrix.target }})
+    needs: create-release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            archive: tar.gz
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-latest
+            archive: tar.gz
+
+          # macOS
+          - target: x86_64-apple-darwin
+            os: macos-latest
+            archive: tar.gz
+          - target: aarch64-apple-darwin
+            os: macos-latest
+            archive: tar.gz
+
+          # Windows
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            archive: zip
+          - target: aarch64-pc-windows-msvc
+            os: windows-latest
+            archive: zip
+
+          # WebAssembly
+          - target: wasm32-wasi
+            os: ubuntu-latest
+            archive: tar.gz
+          - target: wasm32-unknown-emscripten
+            os: ubuntu-latest
+            archive: tar.gz
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+          target: ${{ matrix.target }}
+
+      - name: Install cross-compilation tools
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          cargo install cross --git https://github.com/cross-rs/cross
+
+      - name: Install Emscripten
+        if: matrix.target == 'wasm32-unknown-emscripten'
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: '3.1.38'
+          actions-cache-folder: 'emsdk-cache'
+
+      - name: Cache cargo registry
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-build-${{ matrix.target }}-registry-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo index
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-cargo-build-${{ matrix.target }}-index-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo build
+        uses: actions/cache@v3
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-build-${{ matrix.target }}-target-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build CLI
+        run: |
+          if command -v cross &> /dev/null; then
+            cross build --release --target ${{ matrix.target }} --bin game-engine
+          else
+            cargo build --release --target ${{ matrix.target }} --bin game-engine
+          fi
+
+      - name: Build LSP
+        run: |
+          if command -v cross &> /dev/null; then
+            cross build --release --target ${{ matrix.target }} --bin game-engine-lsp
+          else
+            cargo build --release --target ${{ matrix.target }} --bin game-engine-lsp
+          fi
+
+      - name: Prepare archive
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/}"
+          VERSION_NUMBER="${VERSION#v}"
+
+          mkdir -p artifacts
+
+          # Copy binaries
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            cp target/${{ matrix.target }}/release/game-engine.exe artifacts/
+            cp target/${{ matrix.target }}/release/game-engine-lsp.exe artifacts/
+          else
+            cp target/${{ matrix.target }}/release/game-engine artifacts/
+            cp target/${{ matrix.target }}/release/game-engine-lsp artifacts/
+          fi
+
+          # Copy additional files
+          cp -r docs artifacts/
+          cp README.md LICENSE CHANGELOG.md artifacts/
+
+          # Create archive
+          cd artifacts
+          if [ "${{ matrix.archive }}" = "zip" ]; then
+            7z a ../game-engine-${VERSION_NUMBER}-${{ matrix.target }}.zip *
+          else
+            tar czf ../game-engine-${VERSION_NUMBER}-${{ matrix.target }}.tar.gz *
+          fi
+          cd ..
+
+      - name: Upload to release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            game-engine-*-${{ matrix.target }}.${{ matrix.archive }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Build and publish Docker images
+  publish-docker:
+    name: Publish Docker Images
+    needs: create-release
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        platform:
+          - linux/amd64
+          - linux/arm64
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Extract version
+        id: version
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/}"
+          VERSION_NUMBER="${VERSION#v}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "version_number=$VERSION_NUMBER" >> $GITHUB_OUTPUT
+
+      - name: Build and push CLI image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/Dockerfile.cli
+          platforms: ${{ matrix.platform }}
+          push: true
+          tags: |
+            gameengine/cli:${{ steps.version.outputs.version }}
+            gameengine/cli:latest
+            gameengine/cli:${{ steps.version.outputs.version_number }}
+          labels: |
+            org.opencontainers.image.title=Game Engine CLI
+            org.opencontainers.image.description=Command-line tools for Game Engine
+            org.opencontainers.image.version=${{ steps.version.outputs.version_number }}
+            org.opencontainers.image.created=${{ github.event.head_commit.timestamp }}
+
+      - name: Build and push runtime image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/Dockerfile.runtime
+          platforms: ${{ matrix.platform }}
+          push: true
+          tags: |
+            gameengine/runtime:${{ steps.version.outputs.version }}
+            gameengine/runtime:latest
+            gameengine/runtime:${{ steps.version.outputs.version_number }}
+          labels: |
+            org.opencontainers.image.title=Game Engine Runtime
+            org.opencontainers.image.description=Runtime libraries for Game Engine
+            org.opencontainers.image.version=${{ steps.version.outputs.version_number }}
+            org.opencontainers.image.created=${{ github.event.head_commit.timestamp }}
+
+  # Build and publish NuGet packages
+  publish-nuget:
+    name: Publish to NuGet
+    needs: create-release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Extract version
+        id: version
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/}"
+          VERSION_NUMBER="${VERSION#v}"
+          echo "version_number=$VERSION_NUMBER" >> $GITHUB_OUTPUT
+
+      - name: Build C# SDK
+        run: |
+          cd scripting/csharp/GameEngine.SDK
+          dotnet pack -c Release -p:Version=${{ steps.version.outputs.version_number }}
+
+      - name: Publish to NuGet
+        run: |
+          dotnet nuget push scripting/csharp/GameEngine.SDK/bin/Release/GameEngine.SDK.${{ steps.version.outputs.version_number }}.nupkg \
+            --api-key ${{ secrets.NUGET_API_KEY }} \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate
+
+  # Generate and upload documentation
+  publish-docs:
+    name: Publish Documentation
+    needs: create-release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: Install mdBook
+        run: |
+          cargo install mdbook
+          cargo install mdbook-linkcheck
+          cargo install mdbook-catppuccin
+
+      - name: Generate API documentation
+        run: |
+          cargo doc --all --no-deps --all-features
+
+      - name: Build user guide
+        run: |
+          cd docs
+          mdbook build
+          mdbook linkcheck
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs/book
+          publish_branch: gh-pages
+          force_orphan: true
+
+      - name: Upload API docs artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: api-docs
+          path: target/doc
+
+  # Create release announcement
+  announce-release:
+    name: Announce Release
+    needs: [publish-crates, build-binaries, publish-docker, publish-nuget, publish-docs]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Extract version
+        id: version
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/}"
+          VERSION_NUMBER="${VERSION#v}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "version_number=$VERSION_NUMBER" >> $GITHUB_OUTPUT
+
+      - name: Create announcement
+        run: |
+          cat > release-announcement.md << EOF
+          🎉 **Game Engine ${{ steps.version.outputs.version }} is now available!**
+
+          📦 **Installation**:
+          \`\`\`bash
+          cargo install game-engine-cli
+          \`\`\`
+
+          Or download binaries from the [GitHub Release](https://github.com/game-engine/game-engine/releases/tag/${{ steps.version.outputs.version }})
+
+          📚 **Documentation**: [docs.game-engine.dev](https://docs.game-engine.dev)
+
+          🚀 **What's New**:
+          $(sed -n "/## \[${{ steps.version.outputs.version_number }}\]/,/^## /p" CHANGELOG.md | head -n -20 | tail -n +3)
+
+          🙏 **Thanks** to all contributors!
+          EOF
+
+      - name: Post to Discord
+        uses: sarisia/actions-status-discord@v1
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          title: Game Engine ${{ steps.version.outputs.version }} Released
+          description: |
+            🎉 New release available!
+            Download: https://github.com/game-engine/game-engine/releases/tag/${{ steps.version.outputs.version }}
+            Docs: https://docs.game-engine.dev
+          color: 0x57F287
+          username: Game Engine Bot
+
+      - name: Tweet release
+        uses: ethomson/send-tweet-action@v1
+        with:
+          status: |
+            🎉 Game Engine ${{ steps.version.outputs.version }} is now available!
+
+            📦 Install: cargo install game-engine-cli
+            📚 Docs: https://docs.game-engine.dev
+            🔗 Release: https://github.com/game-engine/game-engine/releases/tag/${{ steps.version.outputs.version }}
+          consumer-key: ${{ secrets.TWITTER_CONSUMER_KEY }}
+          consumer-secret: ${{ secrets.TWITTER_CONSUMER_SECRET }}
+          access-token: ${{ secrets.TWITTER_ACCESS_TOKEN }}
+          access-token-secret: ${{ secrets.TWITTER_ACCESS_TOKEN_SECRET }}
+
+  # Post-release tasks
+  post-release:
+    name: Post Release Tasks
+    needs: [create-release, announce-release]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create maintenance branch
+        if: contains(github.ref, 'refs/tags/v')
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/}"
+          VERSION_NUMBER="${VERSION#v}"
+          MAJOR_MINOR=$(echo $VERSION_NUMBER | cut -d. -f1,2)
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git checkout -b maintenance/$MAJOR_MINOR
+          git push origin maintenance/$MAJOR_MINOR
+
+      - name: Update next version in Cargo.toml
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/}"
+          VERSION_NUMBER="${VERSION#v}"
+
+          # Increment patch version for next development
+          IFS='.' read -ra VERSION_PARTS <<< "$VERSION_NUMBER"
+          NEXT_PATCH=$((VERSION_PARTS[2] + 1))
+          NEXT_VERSION="${VERSION_PARTS[0]}.${VERSION_PARTS[1]}.$NEXT_PATCH-dev"
+
+          # Update Cargo.toml files
+          find . -name "Cargo.toml" -type f -exec sed -i "s/^version = \"$VERSION_NUMBER\"/version = \"$NEXT_VERSION\"/" {} \;
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git commit -am "chore: bump version to $NEXT_VERSION"
+          git push origin master
+
+      - name: Close milestone
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const version = '${{ github.ref }}'.replace('refs/tags/v', '');
+            const milestones = await github.rest.issues.listMilestones({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open'
+            });
+
+            for (const milestone of milestones.data) {
+              if (milestone.title === version) {
+                await github.rest.issues.updateMilestone({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  milestone_number: milestone.number,
+                  state: 'closed'
+                });
+                break;
+              }
+            }

@@ -4,10 +4,12 @@
 
 pub mod resource_analysis;
 
+#[cfg(feature = "ai")]
 pub mod ai_assistant;
+
 pub mod doc_gen;
-pub mod tech_debt;
 pub mod migration;
+pub mod tech_debt;
 
 // DCC工具集成（条件编译）
 pub mod dcc;

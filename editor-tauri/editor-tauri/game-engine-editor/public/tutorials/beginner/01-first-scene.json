@@ -1,0 +1,93 @@
+{
+  "id": "tutorial-001",
+  "title": "创建你的第一个3D场景",
+  "description": "学习如何创建和管理3D场景，添加基础对象，并设置场景属性。",
+  "category": "beginner",
+  "difficulty": "easy",
+  "estimated_time": 15,
+  "prerequisites": [],
+  "skills": ["场景管理", "3D基础", "编辑器操作"],
+  "xp_reward": 100,
+  "badges": ["first_scene_creator"],
+  "steps": [
+    {
+      "id": "step-001-01",
+      "title": "了解场景系统",
+      "content": "<h2>什么是场景？</h2><p>在游戏引擎中，场景（Scene）是游戏世界的容器。每个场景包含3D对象、灯光、相机等所有元素。</p><h3>关键概念：</h3><ul><li><strong>场景管理器</strong>：负责创建、切换和管理场景</li><li><strong>场景根节点</strong>：所有对象的父节点</li><li><strong>场景属性</strong>：名称、背景色、环境光等</li></ul>",
+      "type": "concept",
+      "hints": [
+        "场景就像电影的舞台，所有3D对象都在场景中表演",
+        "一个游戏可以有多个场景，比如主菜单、游戏关卡、结束界面等"
+      ],
+      "order": 0
+    },
+    {
+      "id": "step-001-02",
+      "title": "创建新场景",
+      "content": "<h2>创建你的第一个场景</h2><p>让我们通过代码创建一个新场景。场景管理器提供了创建场景的API。</p><p>使用以下代码创建一个名为“我的第一个场景”的场景：</p>",
+      "type": "demo",
+      "code_template": "// 创建场景的代码示例\nlet scene = create_scene(\"我的第一个场景\");\nprintln!(\"场景创建成功: {}\", scene.name);",
+      "expected_output": "场景创建成功: 我的第一个场景",
+      "hints": [
+        "确保调用了create_scene函数",
+        "场景名称不能为空",
+        "创建后可以修改场景属性"
+      ],
+      "order": 1
+    },
+    {
+      "id": "step-001-03",
+      "title": "添加3D立方体",
+      "content": "<h2>添加3D对象到场景</h2><p>现在让我们在场景中添加一个简单的3D立方体。立方体是最基础的3D形状之一。</p><p>使用以下代码创建一个立方体：</p>",
+      "type": "exercise",
+      "code_template": "// 创建立方体\nlet cube = create_entity(\"Cube\");\n// TODO: 添加立方体到场景\n\nprintln!(\"立方体已创建\");",
+      "expected_output": "立方体已创建",
+      "hints": [
+        "使用scene.add_entity()方法将对象添加到场景",
+        "确保在添加前实体已经创建",
+        "立方体会被添加到场景的根节点下"
+      ],
+      "order": 2
+    },
+    {
+      "id": "step-001-04",
+      "title": "设置立方体位置",
+      "content": "<h2>变换对象位置</h2><p>每个3D对象都有一个变换（Transform）组件，包含位置、旋转和缩放。</p><p>让我们将立方体移动到(0, 1, 0)的位置：</p>",
+      "type": "exercise",
+      "code_template": "// 设置立方体位置\nlet position = Vec3::new(0.0, 1.0, 0.0);\n// TODO: 将立方体移动到指定位置\n\nprintln!(\"立方体位置: ({}, {}, {})\", position.x, position.y, position.z);",
+      "expected_output": "立方体位置: (0, 1, 0)",
+      "hints": [
+        "使用entity.set_position()方法设置位置",
+        "Vec3::new(x, y, z)创建一个3D向量",
+        "位置是世界坐标系中的坐标"
+      ],
+      "order": 3
+    },
+    {
+      "id": "step-001-05",
+      "title": "保存场景",
+      "content": "<h2>持久化场景</h2><p>创建场景后，我们需要保存它以便下次加载。场景会保存为.json格式。</p><p>使用以下代码保存场景：</p>",
+      "type": "demo",
+      "code_template": "// 保存场景到文件\nsave_scene(\"my_first_scene.json\");\nprintln!(\"场景已保存\");",
+      "expected_output": "场景已保存",
+      "hints": [
+        "场景文件包含所有实体和组件信息",
+        "保存后可以在编辑器中打开",
+        "文件路径可以是相对路径或绝对路径"
+      ],
+      "order": 4
+    }
+  ],
+  "challenges": [
+    {
+      "id": "challenge-001-01",
+      "title": "创建多彩场景",
+      "description": "创建一个包含5个不同颜色立方体的场景，每个立方体位于不同的位置。",
+      "type": "creative",
+      "difficulty": "easy",
+      "starter_code": "// 创建场景\nlet scene = create_scene(\"多彩场景\");\n\n// TODO: 创建5个立方体，设置不同的颜色和位置\n// 提示：可以使用红色、绿色、蓝色、黄色、紫色\n\n// 示例：\n// let cube1 = create_colored_cube(\"红立方体\", Color::RED);\n// cube1.set_position(Vec3::new(-2.0, 0.0, 0.0));\n// scene.add_entity(cube1);\n\nprintln!(\"多彩场景创建完成！\");",
+      "solution": "// 创建场景\nlet scene = create_scene(\"多彩场景\");\n\n// 创建5个不同颜色的立方体\nlet colors = vec![\n    (Color::RED, Vec3::new(-2.0, 0.0, 0.0)),\n    (Color::GREEN, Vec3::new(-1.0, 0.0, 0.0)),\n    (Color::BLUE, Vec3::new(0.0, 0.0, 0.0)),\n    (Color::YELLOW, Vec3::new(1.0, 0.0, 0.0)),\n    (Color::PURPLE, Vec3::new(2.0, 0.0, 0.0)),\n];\n\nfor (i, (color, pos)) in colors.iter().enumerate() {\n    let cube = create_colored_cube(&format!(\"立方体{}\", i + 1), *color);\n    cube.set_position(*pos);\n    scene.add_entity(cube);\n}\n\nprintln!(\"多彩场景创建完成！\");",
+      "xp_reward": 50
+    }
+  ]
+}

@@ -9,6 +9,7 @@ pub use crate::platform::MouseButton;
 pub use crate::platform::WatchHandle;
 pub use crate::platform::Window as PlatformWindow;
 pub use crate::platform::console::{ConsoleConfig, ConsolePlatform};
+pub use crate::platform::detection_extended::Platform;
 pub use crate::platform::hardware_info::HardwareInfo;
 pub use crate::platform::power_aware::{PowerAwareManager, PowerState};
 pub use crate::platform::winit::WinitWindow;
@@ -64,7 +65,31 @@ impl PlatformAdapter {
     pub fn new() -> Result<Self, PlatformAdapterError> {
         let hardware = HardwareInfo::detect();
         let power_aware = PowerAwareManager::new();
-        let console = ConsoleConfig::from_hardware(&hardware);
+
+        // Detect platform from OS
+        #[cfg(target_os = "windows")]
+        let platform = Platform::Windows;
+        #[cfg(target_os = "macos")]
+        let platform = Platform::MacOS;
+        #[cfg(target_os = "linux")]
+        let platform = Platform::Linux;
+        #[cfg(target_os = "android")]
+        let platform = Platform::Android;
+        #[cfg(target_os = "ios")]
+        let platform = Platform::IOS;
+        #[cfg(target_arch = "wasm32")]
+        let platform = Platform::Web;
+        #[cfg(not(any(
+            target_os = "windows",
+            target_os = "macos",
+            target_os = "linux",
+            target_os = "android",
+            target_os = "ios",
+            target_arch = "wasm32"
+        )))]
+        let platform = Platform::Unknown;
+
+        let console = ConsoleConfig::from_extended_platform(platform);
 
         #[cfg(target_arch = "wasm32")]
         {

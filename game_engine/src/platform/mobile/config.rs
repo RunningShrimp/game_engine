@@ -2,7 +2,7 @@
 //
 //  提供移动平台特定的优化和配置
 
-use crate::config::graphics::GraphicsConfig;
+use crate::config::graphics::{AntiAliasing, GraphicsConfig, QualityLevel};
 use crate::impl_default;
 use crate::render::texture_compression::Platform;
 use game_engine_hardware::{AutoConfig, HardwareInfo};
@@ -72,18 +72,25 @@ impl MobileConfig {
     pub fn apply_to_graphics_config(&self, config: &mut GraphicsConfig) {
         // 移动平台优化
         if Platform::current() == Platform::Android || Platform::current() == Platform::IOS {
-            // 降低MSAA（移动平台性能敏感）
-            config.msaa_samples = config.msaa_samples.min(4);
+            // 降低MSAA（移动平台性能敏感）- 限制为MSAA 4x
+            match config.anti_aliasing {
+                AntiAliasing::MSAA8x => {
+                    config.anti_aliasing = AntiAliasing::MSAA4x;
+                }
+                _ => {}
+            }
 
             // 启用纹理压缩
             config.texture_compression.enabled = true;
 
             // 降低阴影质量
-            config.shadow_quality = config.shadow_quality.min(2);
+            if config.shadow_quality > QualityLevel::Medium {
+                config.shadow_quality = QualityLevel::Medium;
+            }
 
             // 启用动态分辨率
             if self.dynamic_resolution {
-                config.resolution_scale = self.max_resolution_scale;
+                config.upscaling.render_scale = self.max_resolution_scale;
             }
         }
     }

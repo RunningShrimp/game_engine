@@ -1,0 +1,106 @@
+/* Material Editor Main Styles */
+
+.material-editor {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  background: #1a1a1a;
+  color: #e0e0e0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+}
+
+.material-editor-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  background: #2d2d2d;
+  border-bottom: 1px solid #404040;
+  gap: 16px;
+}
+
+.toolbar-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.toolbar-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: #3d3d3d;
+  border: 1px solid #505050;
+  border-radius: 4px;
+  color: #e0e0e0;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+
+.toolbar-button:hover {
+  background: #4d4d4d;
+  border-color: #606060;
+}
+
+.toolbar-button .icon {
+  font-size: 14px;
+}
+
+.material-name {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+  color: #ffffff;
+}
+
+.material-editor-content {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.material-editor-sidebar {
+  width: 280px;
+  background: #252525;
+  border-right: 1px solid #404040;
+  overflow-y: auto;
+}
+
+.material-editor-canvas {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.material-editor-preview {
+  width: 320px;
+  background: #252525;
+  border-left: 1px solid #404040;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Scrollbar Styles */
+.material-editor-sidebar::-webkit-scrollbar,
+.material-editor-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.material-editor-sidebar::-webkit-scrollbar-track,
+.material-editor-content::-webkit-scrollbar-track {
+  background: #1a1a1a;
+}
+
+.material-editor-sidebar::-webkit-scrollbar-thumb,
+.material-editor-content::-webkit-scrollbar-thumb {
+  background: #404040;
+  border-radius: 4px;
+}
+
+.material-editor-sidebar::-webkit-scrollbar-thumb:hover,
+.material-editor-content::-webkit-scrollbar-thumb:hover {
+  background: #505050;
+}

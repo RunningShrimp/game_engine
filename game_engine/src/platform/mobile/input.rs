@@ -25,7 +25,7 @@ pub enum TouchEvent {
 }
 
 /// 手势类型
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum GestureType {
     /// 点击
     Tap,
@@ -201,12 +201,12 @@ impl GestureRecognizer {
             TouchEvent::Ended { touch_id, position } => {
                 if let Some(state) = self.active_touches.remove(touch_id) {
                     // 检查点击
-                    if let Some(gesture) = self.check_tap(state, position) {
+                    if let Some(gesture) = self.check_tap(&state, position) {
                         return Some(gesture);
                     }
 
                     // 检查滑动
-                    if let Some(gesture) = self.check_swipe(state, position) {
+                    if let Some(gesture) = self.check_swipe(&state, position) {
                         return Some(gesture);
                     }
                 }

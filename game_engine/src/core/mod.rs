@@ -30,6 +30,7 @@
 //! - 领域事件存储
 //! - 事件重放
 //! - CQRS模式支持
+pub mod constructor;
 pub mod editor;
 pub mod engine;
 pub mod error;
@@ -42,7 +43,7 @@ pub mod system_parallel_scheduler;
 pub mod system_scheduler;
 pub mod systems;
 pub mod utils;
-pub mod validation; // 输入验证框架
+pub mod validation; // 输入验证框架 // 构造函数简化宏
 #[macro_use]
 pub mod macros;
 
