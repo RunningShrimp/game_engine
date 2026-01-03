@@ -548,8 +548,11 @@ impl MigrationManager {
                         let extension = path.extension().and_then(|e| e.to_str()).unwrap_or("");
 
                         if extension == "unity" {
-                            self.convert_single_scene(&path).await?;
-                            scene_count += 1;
+                            #[cfg(feature = "serde_yaml")]
+                            {
+                                self.convert_single_scene(&path).await?;
+                                scene_count += 1;
+                            }
                         }
                     } else if file_type.is_dir() {
                         self.convert_scenes_recursive(&path, &mut scene_count).await?;
@@ -578,8 +581,11 @@ impl MigrationManager {
                         let extension = path.extension().and_then(|e| e.to_str()).unwrap_or("");
 
                         if extension == "unity" {
-                            self.convert_single_scene(&path).await?;
-                            *count += 1;
+                            #[cfg(feature = "serde_yaml")]
+                            {
+                                self.convert_single_scene(&path).await?;
+                                *count += 1;
+                            }
                         }
                     } else if file_type.is_dir() {
                         // 使用Box::pin支持异步递归
@@ -592,6 +598,7 @@ impl MigrationManager {
     }
 
     /// 转换单个场景
+    #[cfg(feature = "serde_yaml")]
     async fn convert_single_scene(
         &self,
         scene_path: &std::path::Path,

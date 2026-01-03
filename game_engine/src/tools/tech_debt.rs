@@ -2,6 +2,7 @@
 //!
 //! 用于识别、跟踪和解决代码库中的技术债务。
 
+#[cfg(feature = "regex")]
 use regex::Regex;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -171,6 +172,7 @@ impl TechnicalDebtManager {
             if path.is_dir() {
                 self.scan_directory(&path)?;
             } else if path.extension().and_then(|s| s.to_str()) == Some("rs") {
+                #[cfg(feature = "regex")]
                 self.scan_file(&path)?;
             }
         }
@@ -179,6 +181,7 @@ impl TechnicalDebtManager {
     }
 
     /// 扫描单个文件
+    #[cfg(feature = "regex")]
     fn scan_file(&mut self, file_path: &Path) -> Result<(), DebtError> {
         let content = std::fs::read_to_string(file_path).map_err(|e| {
             DebtError::IoError(format!("无法读取文件 {}: {}", file_path.display(), e))

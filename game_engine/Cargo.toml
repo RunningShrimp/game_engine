@@ -93,6 +93,7 @@ openxr = "0.20.0"
 egui = "0.33.3"
 egui-wgpu = "0.33.3"
 egui-winit = "0.33.3"
+rfd = { version = "0.14", optional = true }
 
 # Scripting
 rquickjs = { version = "0.11.0", features = ["full"] }
@@ -135,13 +136,13 @@ dirs = "6.0.0"
 
 # Asset Pipeline dependencies
 walkdir = "2.4"
-regex = "1.10"
+regex = { version = "1.10", optional = true }
 # ort = { version = "2.0.0-rc.10", features = ["download-binaries"], optional = true }  # REMOVED: 未使用的ML依赖 (~50MB)
 # webbrowser = { version = "1.0.6", optional = true }  # REMOVED: unused dependency
 toml = "0.9.10"
 # Serialization formats
 ron = "0.12"
-serde_yaml = "0.9"
+serde_yaml = { version = "0.9", optional = true }
 # 已从 warp 迁移为 axum，以解决 base64 版本冲突
 axum = { version = "0.8", features = ["ws"] }
 tower-http = { version = "0.6", features = ["cors", "trace"] }
@@ -268,6 +269,31 @@ fbx = ["fbxcel"]
 ## cargo build --features obj
 ## ```
 obj = []
+
+## 启用Blender集成支持
+##
+## 增加的依赖：
+## - 无额外依赖
+##
+## 支持的功能：
+## - Blender文件格式支持
+## - Blender Python API集成
+## - 实时DCC连接
+##
+## 使用场景：
+## - Blender资源导入
+## - 与Blender工作流集成
+## - 实时预览和同步
+##
+## 注意：
+## - 需要Blender安装
+## - 支持Blender 3.0+
+##
+## 示例：
+## ```bash
+## cargo build --features blender
+## ```
+blender = []
 
 ## 启用鸿蒙系统支持
 ##
@@ -674,6 +700,126 @@ wasm = []
 ## cargo build --no-default-features --features gltf,secure_key_exchange,physics,parallel,dashmap
 ## ```
 ##
+## DCC工具集成 (DCC Tools Integration)
+##
+## 支持的功能：
+## - Blender插件集成
+## - 材质编辑器
+## - UV编辑器
+## - 网格编辑器
+##
+## 使用场景：
+## - 与DCC工具集成
+## - 资源管线自动化
+## - 美术工作流优化
+##
+## 示例：
+## ```bash
+## cargo build --features dcc-tools
+## ```
+dcc-tools = []
+
+## 资源导入器 (Asset Importer)
+##
+## 支持的功能：
+## - 资源导入向导
+## - 格式检测
+## - 资源验证
+## - 预览生成
+##
+## 使用场景：
+## - 图形化资源导入
+## - 批量资源处理
+## - 资源管理
+##
+## 示例：
+## ```bash
+## cargo build --features asset-importer
+## ```
+asset-importer = []
+
+## 资源管道 (Asset Pipeline)
+##
+## 支持的功能：
+## - 资源优化
+## - LOD生成
+## - 纹理压缩
+## - 资源打包
+##
+## 使用场景：
+## - 自动化资源处理
+## - 性能优化
+## - 资源打包发布
+##
+## 示例：
+## ```bash
+## cargo build --features asset-pipeline
+## ```
+asset-pipeline = []
+
+## 序列化支持 (Serialization Support)
+##
+## 增加的依赖：
+## - serde_yaml (可选)
+##
+## 支持的功能：
+## - YAML格式支持
+## - 配置文件解析
+## - 数据序列化
+##
+## 使用场景：
+## - 配置管理
+## - 数据交换
+## - 资源格式支持
+##
+## 示例：
+## ```bash
+## cargo build --features serde_yaml
+## ```
+serde_yaml = ["dep:serde_yaml"]
+
+## 正则表达式支持 (Regular Expression Support)
+##
+## 增加的依赖：
+## - regex (可选)
+##
+## 支持的功能：
+## - 模式匹配
+## - 文本搜索
+## - 数据验证
+##
+## 使用场景：
+## - 文本处理
+## - 数据验证
+## - 高级搜索
+##
+## 示例：
+## ```bash
+## cargo build --features regex
+## ```
+regex = ["dep:regex"]
+
+## 文件对话框支持 (File Dialog Support)
+##
+## 增加的依赖：
+## - rfd (可选，Rust File Dialog)
+##
+## 支持的功能：
+## - 原生文件选择对话框
+## - 文件保存对话框
+## - 目录选择
+##
+## 使用场景：
+## - DCC工具集成
+## - 资源浏览器
+## - 文件导入导出
+##
+## 示例：
+## ```bash
+## cargo build --features file_dialog
+## ```
+file_dialog = ["dep:rfd"]
+
 default = ["gltf", "secure_key_exchange", "physics", "parallel", "dashmap", "hot-reload-optim", "message-optimization", "simd", "cli", "csharp"]
 
 # ============================================================================

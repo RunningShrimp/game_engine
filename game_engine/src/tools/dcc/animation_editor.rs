@@ -252,7 +252,6 @@ impl DCCAnimationEditor {
     }
 
     /// 显示UI
-
     pub fn show_ui(&mut self, ctx: &egui::Context) {
         egui::Window::new("Animation Editor")
             .default_size([800.0, 600.0])
@@ -262,7 +261,6 @@ impl DCCAnimationEditor {
     }
 
     /// 显示编辑器UI
-
     fn show_editor_ui(&mut self, ui: &mut egui::Ui) {
         // 播放控制
         ui.horizontal(|ui| {
@@ -321,7 +319,6 @@ impl DCCAnimationEditor {
     }
 
     /// 显示时间轴
-
     fn show_timeline(&mut self, ui: &mut egui::Ui) {
         let available_width = ui.available_width();
         let height = 120.0;
@@ -454,7 +451,6 @@ impl DCCAnimationEditor {
     }
 
     /// 显示关键帧编辑器
-
     fn show_keyframe_editor(&mut self, ui: &mut egui::Ui, animation: &AnimationData) {
         ui.label("Keyframe Editor:");
 
@@ -515,7 +511,6 @@ impl DCCAnimationEditor {
     }
 
     /// 显示动画列表
-
     fn show_animation_list(&mut self, ui: &mut egui::Ui) {
         ui.label("Animations:");
 

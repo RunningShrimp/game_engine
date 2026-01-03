@@ -185,7 +185,6 @@ impl UVEditor {
     }
 
     /// 显示UI
-
     pub fn show_ui(&mut self, ctx: &egui::Context) {
         egui::Window::new("UV Editor").default_size([600.0, 500.0]).show(ctx, |ui| {
             self.show_editor_ui(ui);
@@ -193,7 +192,6 @@ impl UVEditor {
     }
 
     /// 显示编辑器UI
-
     fn show_editor_ui(&mut self, ui: &mut egui::Ui) {
         // 工具栏
         ui.horizontal(|ui| {
@@ -256,7 +254,6 @@ impl UVEditor {
     }
 
     /// 显示UV视图
-
     fn show_uv_view(&mut self, ui: &mut egui::Ui) {
         let available_size = ui.available_size();
         let response = ui.allocate_response(available_size, egui::Sense::click_and_drag());
@@ -299,7 +296,6 @@ impl UVEditor {
     }
 
     /// 绘制棋盘格背景
-
     fn draw_checkerboard(&self, painter: &egui::Painter, rect: egui::Rect) {
         let checker_size = 20.0;
         let mut white = true;
@@ -330,7 +326,6 @@ impl UVEditor {
     }
 
     /// 绘制UV网格
-
     fn draw_uv_grid(&self, painter: &egui::Painter, rect: egui::Rect) {
         let grid_steps = 8;
         let step_x = rect.width() / grid_steps as f32;
@@ -376,7 +371,6 @@ impl UVEditor {
     }
 
     /// 绘制UV岛
-
     fn draw_uv_island(&self, painter: &egui::Painter, rect: egui::Rect, island: &UVIsland) {
         let color = if island.selected {
             egui::Color32::YELLOW
@@ -417,7 +411,6 @@ impl UVEditor {
     }
 
     /// 绘制UV边界（0-1范围）
-
     fn draw_uv_bounds(&self, painter: &egui::Painter, rect: egui::Rect) {
         let padding = 2.0;
         let bounds = egui::Rect::from_min_max(

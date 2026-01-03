@@ -31,6 +31,24 @@
 
 ## 2. 发现的问题（与 Copilot/Cursor 的 “net::ERR_CONNECTION_CLOSED” 高相关）
 
+### P0：OpenClash 自动选节点/解锁检测导致连接被主动关闭
+
+现象：在路由器侧 `/tmp/openclash.log` 可见 OpenClash 每隔数分钟执行一次“Auto Select Proxy … Unlock”，其中包含 OpenAI/相关组的检测与可能的策略切换。
+
+关键风险点：当 `openclash.config.stream_auto_select_close_con='1'` 时，OpenClash 在切换/更新期间可能**主动关闭现有连接**，浏览器/VS Code 侧会表现为：
+
+- `Sorry, there was a network error. Please try again later.`
+- `Error Code: net::ERR_CONNECTION_CLOSED`
+
+已采取的缓解（稳定性优先）：
+
+```sh
+uci set openclash.config.stream_auto_select_close_con='0'
+uci set openclash.config.stream_auto_select_openai='0'
+uci commit openclash
+/etc/init.d/openclash restart
+```
+
 ### P0：mwan3 造成的链路误判与路由抖动
 
 - 日志中出现：`mwan3track: Check (ping) failed ... on interface wan (pppoe-wan)`

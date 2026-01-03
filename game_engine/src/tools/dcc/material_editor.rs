@@ -262,7 +262,6 @@ impl DCCMaterialEditor {
     }
 
     /// 显示UI
-
     pub fn show_ui(&mut self, ctx: &egui::Context) {
         egui::Window::new("Material Editor")
             .default_size([400.0, 600.0])
@@ -272,7 +271,6 @@ impl DCCMaterialEditor {
     }
 
     /// 显示编辑器UI
-
     fn show_editor_ui(&mut self, ui: &mut egui::Ui) {
         // 材质列表
         ui.horizontal(|ui| {
@@ -330,7 +328,6 @@ impl DCCMaterialEditor {
     }
 
     /// 显示PBR参数
-
     fn show_pbr_params(ui: &mut egui::Ui, material: &mut PBRMaterialParams) {
         ui.label("PBR Parameters:");
 
@@ -384,7 +381,6 @@ impl DCCMaterialEditor {
     }
 
     /// 显示纹理槽
-
     fn show_texture_slots(
         ui: &mut egui::Ui,
         material: &mut PBRMaterialParams,
@@ -453,7 +449,6 @@ impl DCCMaterialEditor {
     }
 
     /// 显示预览设置
-
     fn show_preview_settings(&mut self, ui: &mut egui::Ui) {
         ui.label("Preview Settings:");
 
@@ -512,7 +507,6 @@ impl DCCMaterialEditor {
     }
 
     /// 显示预览窗口
-
     fn show_preview_window(&mut self, ui: &mut egui::Ui) {
         let desired_size = ui.available_size();
         let response = ui.allocate_response(desired_size, egui::Sense::click_and_drag());

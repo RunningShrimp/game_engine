@@ -61,6 +61,22 @@ ssh_run "uci set network.wan.peerdns='0' && uci -q delete network.wan.dns && uci
 echo "[3.8/4] Restarting OpenClash (if enabled)..."
 ssh_run 'if [ "$(uci -q get openclash.config.enable 2>/dev/null || echo 0)" = "1" ]; then /etc/init.d/openclash restart || true; else echo "OpenClash not enabled, skip"; fi'
 
+echo "[3.85/4] OpenClash devtools stability (avoid forced connection closes)..."
+ssh_run '
+  if [ "$(uci -q get openclash.config.enable 2>/dev/null || echo 0)" = "1" ]; then
+    # OpenClash's streaming auto-select can run periodically and (when configured)
+    # forcibly close connections, which surfaces as net::ERR_CONNECTION_CLOSED in browsers.
+    # For dev tools stability, avoid forced closes and avoid touching OpenAI/Copilot flows.
+    uci set openclash.config.stream_auto_select_close_con="0" 2>/dev/null || true
+    uci set openclash.config.stream_auto_select_openai="0" 2>/dev/null || true
+    uci commit openclash 2>/dev/null || true
+    /etc/init.d/openclash restart >/dev/null 2>&1 || true
+    echo "Applied: stream_auto_select_close_con=0, stream_auto_select_openai=0"
+  else
+    echo "OpenClash not enabled, skip"
+  fi
+'
+
 echo "[3.9/4] Checking for noisy/broken diag kmods (non-invasive)..."
 ssh_run 'if opkg list-installed 2>/dev/null | grep -q "^kmod-inet-diag "; then echo "NOTE: kmod-inet-diag is installed. If dmesg shows inet_diag Unknown symbol sock_diag_* spam, consider: opkg remove kmod-inet-diag"; else echo "OK: kmod-inet-diag not installed"; fi'
 

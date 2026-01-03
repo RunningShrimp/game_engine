@@ -6,7 +6,7 @@ use glam::Vec4;
 use serde::{Deserialize, Serialize};
 
 /// UI主题
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Theme {
     /// 颜色方案
     pub colors: ColorScheme,
@@ -177,16 +177,6 @@ impl Default for StyleScheme {
             shadow_blur: 4.0,
             shadow_color: UIColor::rgba(0.0, 0.0, 0.0, 0.3),
             transition_duration: 0.2,
-        }
-    }
-}
-
-impl Default for Theme {
-    fn default() -> Self {
-        Self {
-            colors: ColorScheme::default(),
-            fonts: FontScheme::default(),
-            styles: StyleScheme::default(),
         }
     }
 }

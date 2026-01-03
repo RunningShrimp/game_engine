@@ -1,9 +1,11 @@
 //! Unity项目导入器
 
 use super::{MigrationError, ProjectAnalysis};
-use serde_yaml::Value as Yaml;
 use std::fs;
 use std::path::PathBuf;
+
+#[cfg(feature = "serde_yaml")]
+use serde_yaml::Value as Yaml;
 
 /// 迁移报告
 #[derive(Debug, Clone)]
@@ -236,6 +238,7 @@ impl UnityProjectImporter {
     }
 
     /// 导入场景
+    #[cfg(feature = "serde_yaml")]
     pub async fn import_scene(&self, scene_path: &PathBuf) -> Result<UnityScene, MigrationError> {
         // 读取.unity场景文件（YAML格式）
         let content = fs::read_to_string(scene_path).map_err(|e| {
@@ -486,6 +489,7 @@ impl UnityProjectImporter {
     }
 
     /// 解析单个GameObject的YAML
+    #[cfg(feature = "serde_yaml")]
     fn parse_game_object_yaml(&self, yaml: &Yaml) -> Result<UnityGameObject, MigrationError> {
         let name = yaml.get("m_Name").and_then(|v| v.as_str()).unwrap_or("Unnamed").to_string();
 
@@ -553,6 +557,7 @@ impl UnityProjectImporter {
     }
 
     /// 解析Transform组件
+    #[cfg(feature = "serde_yaml")]
     fn parse_transform_yaml(&self, yaml: &Yaml) -> Result<UnityTransform, MigrationError> {
         // 默认值
         let mut position = (0.0, 0.0, 0.0);

@@ -362,6 +362,12 @@ impl Image {
     }
 }
 
+impl Default for Image {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 // ============================================================================
 // 容器组件 (6-9)
 // ============================================================================
@@ -399,6 +405,12 @@ impl Panel {
     /// 添加子组件
     pub fn add_child(&mut self, child: Entity) {
         self.children.push(child);
+    }
+}
+
+impl Default for Panel {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
