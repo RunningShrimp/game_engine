@@ -446,10 +446,8 @@ impl NpcLlmAi {
             NpcActionType::Help
         } else if response_upper.contains("EXPLORE") {
             NpcActionType::Explore
-        } else if response_upper.contains("INTERACT") {
-            NpcActionType::Interact
         } else {
-            NpcActionType::Interact // 默认
+            NpcActionType::Interact // 默认 (包含INTERACT)
         };
 
         Ok(NpcAction {

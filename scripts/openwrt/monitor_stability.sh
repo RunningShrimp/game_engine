@@ -44,6 +44,9 @@ mkdir -p "$OUTROOT"
 echo "$TS" >"$OUTROOT/_timestamp.txt"
 echo "monitor_stability" >"$OUTROOT/_monitor_run.txt"
 
+SUMMARY_TSV="$OUTROOT/summary.tsv"
+echo "cycle\tstart_utc\tuptime_before_s\tuptime_after_s\treboot\tgithub_fail\tcopilot_fail\tct_invalid_dpkts\tdns_hijack_dpkts\tquic_reject_dpkts" >"$SUMMARY_TSV"
+
 # Each cycle is approximately 6 minutes (counter sampler sleeps 2m twice).
 CYCLES=$(( (MINUTES + 5) / 6 ))
 if [ "$CYCLES" -lt 1 ]; then
@@ -69,6 +72,8 @@ while [ "$i" -le "$CYCLES" ]; do
   fi
 
   echo "[cycle $i/$CYCLES] starting $(date -u '+%F %T UTC')"
+
+  CYCLE_START_UTC="$(date -u '+%F %T UTC')"
 
   # record uptime before
   UPTIME_BEFORE="$($SSH_BASE "$TARGET" 'cut -d. -f1 /proc/uptime 2>/dev/null || echo 0' 2>/dev/null || echo 0)"
@@ -168,7 +173,12 @@ while [ "$i" -le "$CYCLES" ]; do
   UPTIME_AFTER="$($SSH_BASE "$TARGET" 'cut -d. -f1 /proc/uptime 2>/dev/null || echo 0' 2>/dev/null || echo 0)"
   echo "uptime_after_s=$UPTIME_AFTER" >>"$CYCLE_DIR/00_uptime.txt"
 
+  REBOOT=0
   if [ "$UPTIME_AFTER" -gt 0 ] && [ "$UPTIME_BEFORE" -gt 0 ] && [ "$UPTIME_AFTER" -lt "$UPTIME_BEFORE" ]; then
+    REBOOT=1
+  fi
+
+  if [ "$REBOOT" -eq 1 ]; then
     echo "[cycle $i] detected reboot (uptime decreased: $UPTIME_BEFORE -> $UPTIME_AFTER); exporting pstore" | tee "$CYCLE_DIR/05_reboot_detected.txt" >/dev/null
     $SSH_BASE "$TARGET" '
       echo "=== uptime"; uptime; echo
@@ -180,6 +190,24 @@ while [ "$i" -le "$CYCLES" ]; do
       done
     ' >"$CYCLE_DIR/05_pstore_reboot_logs.txt" 2>/dev/null || true
   fi
+
+  # write one-line summary
+  GH_FAIL="$(sed -n "s/^https:\/\/api.github.com ok=[0-9]* fail=\([0-9]*\)$/\1/p" "$CYCLE_DIR/06_endpoint_regression_ipv4.txt" 2>/dev/null | head -n 1)"
+  CP_FAIL="$(sed -n "s/^https:\/\/api.githubcopilot.com ok=[0-9]* fail=\([0-9]*\)$/\1/p" "$CYCLE_DIR/06_endpoint_regression_ipv4.txt" 2>/dev/null | head -n 1)"
+  [ -n "$GH_FAIL" ] || GH_FAIL=0
+  [ -n "$CP_FAIL" ] || CP_FAIL=0
+
+  CT_DPKTS=0
+  DNS_DPKTS=0
+  QUIC_DPKTS=0
+  if [ -f "$CYCLE_DIR/09_nft_key_counters_delta.txt" ]; then
+    CT_DPKTS="$(awk '/^ct_invalid_drop#/ { for(i=1;i<=NF;i++) if($i ~ /^d_packets=/){ sub("d_packets=","",$i); s+=$i } } END{ print s+0 }' "$CYCLE_DIR/09_nft_key_counters_delta.txt" 2>/dev/null)"
+    DNS_DPKTS="$(awk '/^openclash_dns_hijack#/ { for(i=1;i<=NF;i++) if($i ~ /^d_packets=/){ sub("d_packets=","",$i); s+=$i } } END{ print s+0 }' "$CYCLE_DIR/09_nft_key_counters_delta.txt" 2>/dev/null)"
+    QUIC_DPKTS="$(awk '/^openclash_quic_reject#/ { for(i=1;i<=NF;i++) if($i ~ /^d_packets=/){ sub("d_packets=","",$i); s+=$i } } END{ print s+0 }' "$CYCLE_DIR/09_nft_key_counters_delta.txt" 2>/dev/null)"
+  fi
+
+  printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" \
+    "$i" "$CYCLE_START_UTC" "$UPTIME_BEFORE" "$UPTIME_AFTER" "$REBOOT" "$GH_FAIL" "$CP_FAIL" "$CT_DPKTS" "$DNS_DPKTS" "$QUIC_DPKTS" >>"$SUMMARY_TSV"
 
   echo "[cycle $i/$CYCLES] done $(date -u '+%F %T UTC')"
   i=$((i + 1))

@@ -40,13 +40,12 @@ impl AppleNERuntime {
     fn has_ane_support(device: &metal::MTLDevice) -> bool {
         // 检查是否支持Neural Engine
         // 简化实现：假设M1+ Mac支持ANE
-        if device.name().contains("Apple") {
-            if device.name().contains("M1")
+        if device.name().contains("Apple")
+            && (device.name().contains("M1")
                 || device.name().contains("M2")
-                || device.name().contains("M3")
-            {
-                return true;
-            }
+                || device.name().contains("M3"))
+        {
+            return true;
         }
 
         // 检查macOS版本
@@ -182,7 +181,7 @@ impl NPUModelImpl for AppleNEModel {
                     data: TensorData::Float32(feature.to_vec()),
                     shape: feature.shape(),
                     dtype: TensorDType::Float32,
-                    name: Some(format!("output_{}", i)),
+                    name: Some(format!("output_{i}")),
                 };
                 outputs.push(tensor);
             }
@@ -256,6 +255,12 @@ pub mod core_ml {
 
     pub struct FeatureProvider;
 
+    impl Default for FeatureProvider {
+        fn default() -> Self {
+            Self::new()
+        }
+    }
+
     impl FeatureProvider {
         pub fn new() -> Self {
             Self
@@ -284,6 +289,12 @@ pub mod core_ml {
 
     pub struct Prediction {
         features: Vec<Option<Feature>>,
+    }
+
+    impl Default for Prediction {
+        fn default() -> Self {
+            Self::new()
+        }
     }
 
     impl Prediction {
