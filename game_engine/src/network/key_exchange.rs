@@ -68,7 +68,6 @@ trait KeyExchangeBackend: Send + Sync {
 struct SecureKeyExchangeBackend;
 
 #[cfg(feature = "secure_key_exchange")]
-
 impl KeyExchangeBackend for SecureKeyExchangeBackend {
     fn generate_keypair(&self) -> ([u8; 32], [u8; 32]) {
         use rand::RngCore;

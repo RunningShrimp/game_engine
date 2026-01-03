@@ -279,6 +279,7 @@ pub fn detect_platform_compile_time() -> Platform {
         feature = "harmonyos",
         any(target_os = "ohos", target_os = "harmonyos")
     ))]
+    #[expect(unexpected_cfgs, reason = "ohos and harmonyos are custom target OS")]
     {
         return Platform::HarmonyOS;
     }
