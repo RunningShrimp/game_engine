@@ -444,6 +444,12 @@ impl ScrollView {
     }
 }
 
+impl Default for ScrollView {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// 8. ListView - 列表视图
 #[derive(Component, Clone)]
 pub struct ListView {
@@ -494,6 +500,12 @@ impl ListView {
     /// 获取选中项
     pub fn get_selected(&self) -> Option<&ListItem> {
         self.selected_index.and_then(|idx| self.items.get(idx))
+    }
+}
+
+impl Default for ListView {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -827,12 +839,14 @@ impl ProgressBar {
     }
 
     /// 获取格式化文本
-    pub fn get_text(&self) -> String {
-        if self.show_text {
-            self.text_format.replace("{0}", &format!("{:.0}", self.progress * 100.0))
-        } else {
-            String::new()
-        }
+    pub fn get_formatted_text(&self) -> String {
+        self.text_format.replace("{0}", &format!("{:.0}", self.progress * 100.0))
+    }
+}
+
+impl Default for ProgressBar {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -906,9 +920,15 @@ impl LoadingSpinner {
         }
     }
 
-    /// 更新动画
+    /// 更新旋转
     pub fn update(&mut self) {
         self.rotation = (self.rotation + self.rotation_speed) % 360.0;
+    }
+}
+
+impl Default for LoadingSpinner {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -975,6 +995,58 @@ impl Canvas {
     pub fn add_command(&mut self, command: DrawCommand) {
         self.draw_commands.push(command);
     }
+
+    /// 绘制线条
+    pub fn draw_line(&mut self, start: Vec2, end: Vec2, color: [f32; 4], width: f32) {
+        self.add_command(DrawCommand::Line {
+            start,
+            end,
+            color,
+            width,
+        });
+    }
+
+    /// 绘制矩形
+    pub fn draw_rect(&mut self, position: Vec2, size: Vec2, color: [f32; 4], filled: bool) {
+        self.add_command(DrawCommand::Rect {
+            position,
+            size,
+            color,
+            filled,
+        });
+    }
+
+    /// 绘制圆形
+    pub fn draw_circle(&mut self, center: Vec2, radius: f32, color: [f32; 4], filled: bool) {
+        self.add_command(DrawCommand::Circle {
+            center,
+            radius,
+            color,
+            filled,
+        });
+    }
+
+    /// 绘制文本
+    pub fn draw_text(
+        &mut self,
+        position: Vec2,
+        text: impl Into<String>,
+        size: f32,
+        color: [f32; 4],
+    ) {
+        self.add_command(DrawCommand::Text {
+            position,
+            text: text.into(),
+            size,
+            color,
+        });
+    }
+}
+
+impl Default for Canvas {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 /// 19. TabControl - 选项卡控件
@@ -1033,6 +1105,19 @@ impl TabControl {
     /// 获取当前选项卡
     pub fn get_current_tab(&self) -> Option<&TabItem> {
         self.tabs.get(self.selected_index)
+    }
+
+    /// 选择选项卡
+    pub fn select_tab(&mut self, index: usize) {
+        if index < self.tabs.len() {
+            self.selected_index = index;
+        }
+    }
+}
+
+impl Default for TabControl {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -1163,6 +1248,22 @@ impl ContextMenu {
             shortcut: None,
             callback: None,
         });
+    }
+
+    /// 显示菜单
+    pub fn show(&mut self) {
+        self.visible = true;
+    }
+
+    /// 隐藏菜单
+    pub fn hide(&mut self) {
+        self.visible = false;
+    }
+}
+
+impl Default for ContextMenu {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

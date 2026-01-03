@@ -42,6 +42,7 @@ TS="$(date +%F_%H%M%S)"
 OUTROOT="openwrt_audit/$TS"
 mkdir -p "$OUTROOT"
 echo "$TS" >"$OUTROOT/_timestamp.txt"
+echo "monitor_stability" >"$OUTROOT/_monitor_run.txt"
 
 # Each cycle is approximately 6 minutes (counter sampler sleeps 2m twice).
 CYCLES=$(( (MINUTES + 5) / 6 ))
@@ -124,13 +125,17 @@ while [ "$i" -le "$CYCLES" ]; do
         next
       }
 
-      # Derive a stable key per rule line:
-      # - for ct_invalid_drop: single key
-      # - for openclash_*: prefer comment string
+      # Derive a stable key per rule line using nft handle when available.
+      # This avoids collisions when multiple rules share the same comment.
       k = section
-      if (section ~ /^openclash_/) {
-        if (index($0, "OpenClash QUIC REJECT") > 0) k = "openclash_quic_reject"
-        else if (index($0, "OpenClash DNS Hijack") > 0) k = "openclash_dns_hijack"
+      h = ""
+      if (match($0, /# handle [0-9]+/)) {
+        hs = substr($0, RSTART, RLENGTH)
+        gsub("# handle ", "", hs)
+        h = hs
+      }
+      if (h != "") {
+        k = section "#" h
       }
       emit(k, p, b)
     }

@@ -955,7 +955,7 @@ dist/"#;
         println!("Comparing templates...");
         println!();
 
-        let changes = vec![
+        let changes = [
             "Update Cargo.toml dependencies",
             "Upgrade main.rs to new API",
             "Update project structure",
