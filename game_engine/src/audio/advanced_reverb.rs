@@ -1,12 +1,52 @@
 // 高级混响系统
 //
-// 实现基于房间几何的实时混响
+// 实现基于房间几何的实时混响，支持高阶反射和混响预设
 
 use std::collections::HashMap;
 use std::f32::consts::PI;
 
 /// 声音速度 (m/s)
 const SPEED_OF_SOUND: f32 = 343.0;
+
+/// 混响预设
+#[derive(Debug, Clone, Copy)]
+pub enum ReverbPreset {
+    /// 小房间（卧室）
+    SmallRoom,
+    /// 中型房间（客厅）
+    MediumRoom,
+    /// 大厅
+    LargeHall,
+    /// 教堂
+    Cathedral,
+    /// 音乐厅
+    ConcertHall,
+    /// 录音棚
+    Studio,
+    /// 森林（户外）
+    Forest,
+    /// 山洞
+    Cave,
+    /// 自定义
+    Custom { rt60: f32, density: f32 },
+}
+
+impl ReverbPreset {
+    /// 获取预设参数
+    pub fn get_parameters(&self) -> (f32, f32, f32, f32) {
+        match self {
+            ReverbPreset::SmallRoom => (0.5, 0.3, 0.7, 0.5), // RT60=0.5s, 密度, 早期反射, 后期混响
+            ReverbPreset::MediumRoom => (1.0, 0.5, 0.6, 0.6), // RT60=1.0s
+            ReverbPreset::LargeHall => (2.5, 0.7, 0.5, 0.7), // RT60=2.5s
+            ReverbPreset::Cathedral => (4.0, 0.8, 0.4, 0.8), // RT60=4.0s
+            ReverbPreset::ConcertHall => (2.0, 0.7, 0.5, 0.7), // RT60=2.0s
+            ReverbPreset::Studio => (0.3, 0.2, 0.8, 0.4),    // RT60=0.3s
+            ReverbPreset::Forest => (1.5, 0.4, 0.3, 0.5),    // RT60=1.5s
+            ReverbPreset::Cave => (3.0, 0.6, 0.3, 0.8),      // RT60=3.0s
+            ReverbPreset::Custom { rt60, density } => (*rt60, *density, 0.5, 0.6),
+        }
+    }
+}
 
 /// 墙壁位置
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -24,6 +64,7 @@ pub struct RoomReverb {
     dimensions: (f32, f32, f32),         // 房间尺寸 (宽, 高, 深)
     reflection_order: usize,             // 反射阶数
     wall_absorption: HashMap<Wall, f32>, // 墙壁吸音系数
+    preset: ReverbPreset,                // 混响预设
 }
 
 impl RoomReverb {
@@ -43,7 +84,42 @@ impl RoomReverb {
             dimensions,
             reflection_order: 3, // 计算3阶反射
             wall_absorption,
+            preset: ReverbPreset::MediumRoom,
         }
+    }
+
+    /// 从预设创建房间混响
+    pub fn from_preset(dimensions: (f32, f32, f32), preset: ReverbPreset) -> Self {
+        let mut reverb = Self::new(dimensions);
+        reverb.set_preset(preset);
+        reverb
+    }
+
+    /// 设置混响预设
+    pub fn set_preset(&mut self, preset: ReverbPreset) {
+        self.preset = preset;
+
+        // 根据预设调整墙壁吸音系数
+        match preset {
+            ReverbPreset::SmallRoom => {
+                // 较高的吸音系数
+                self.wall_absorption.insert(Wall::Floor, 0.15);
+                self.wall_absorption.insert(Wall::Ceiling, 0.10);
+            }
+            ReverbPreset::Cathedral => {
+                // 较低的吸音系数（石墙）
+                self.wall_absorption.insert(Wall::Left, 0.01);
+                self.wall_absorption.insert(Wall::Right, 0.01);
+                self.wall_absorption.insert(Wall::Floor, 0.02);
+                self.wall_absorption.insert(Wall::Ceiling, 0.02);
+            }
+            _ => {}
+        }
+    }
+
+    /// 获取当前预设
+    pub fn get_preset(&self) -> ReverbPreset {
+        self.preset
     }
 
     /// 设置墙壁材质
@@ -116,7 +192,7 @@ impl RoomReverb {
         }
     }
 
-    /// 生成镜像源
+    /// 生成镜像源（支持高阶反射）
     fn generate_image_sources(
         &self,
         source_pos: (f32, f32, f32),
@@ -124,37 +200,53 @@ impl RoomReverb {
     ) -> Vec<(f32, f32, f32)> {
         let mut images = Vec::new();
 
-        // 简化版：只计算一阶反射
-        if order == 1 {
-            // 左墙反射
-            images.push((-source_pos.0, source_pos.1, source_pos.2));
-            // 右墙反射
-            images.push((
-                2.0 * self.dimensions.0 - source_pos.0,
-                source_pos.1,
-                source_pos.2,
-            ));
-            // 地板反射
-            images.push((source_pos.0, -source_pos.1, source_pos.2));
-            // 天花板反射
-            images.push((
-                source_pos.0,
-                2.0 * self.dimensions.1 - source_pos.1,
-                source_pos.2,
-            ));
-            // 前墙反射
-            images.push((source_pos.0, source_pos.1, -source_pos.2));
-            // 后墙反射
-            images.push((
-                source_pos.0,
-                source_pos.1,
-                2.0 * self.dimensions.2 - source_pos.2,
-            ));
-        }
-
-        // TODO: 实现高阶反射
+        // 生成高阶反射
+        // 使用递归方式生成镜像源
+        self.generate_image_sources_recursive(source_pos, order, 0, &mut images);
 
         images
+    }
+
+    /// 递归生成镜像源
+    fn generate_image_sources_recursive(
+        &self,
+        pos: (f32, f32, f32),
+        max_order: usize,
+        current_order: usize,
+        images: &mut Vec<(f32, f32, f32)>,
+    ) {
+        if current_order >= max_order {
+            return;
+        }
+
+        // 对每个墙面生成镜像
+        let walls = [
+            (Wall::Left, -1, 0, 0, 0.0), // x = 0
+            (Wall::Right, 1, 0, 0, self.dimensions.0),
+            (Wall::Floor, 0, -1, 0, 0.0), // y = 0
+            (Wall::Ceiling, 0, 1, 0, self.dimensions.1),
+            (Wall::Front, 0, 0, -1, 0.0), // z = 0
+            (Wall::Back, 0, 0, 1, self.dimensions.2),
+        ];
+
+        for (wall, sign_x, sign_y, sign_z, offset) in walls {
+            // 计算镜像位置
+            let mirrored = match (sign_x, sign_y, sign_z) {
+                (-1, 0, 0) => (-pos.0, pos.1, pos.2),
+                (1, 0, 0) => (2.0 * self.dimensions.0 - pos.0, pos.1, pos.2),
+                (0, -1, 0) => (pos.0, -pos.1, pos.2),
+                (0, 1, 0) => (pos.0, 2.0 * self.dimensions.1 - pos.1, pos.2),
+                (0, 0, -1) => (pos.0, pos.1, -pos.2),
+                (0, 0, 1) => (pos.0, pos.1, 2.0 * self.dimensions.2 - pos.2),
+                _ => pos,
+            };
+
+            // 添加镜像源
+            images.push(mirrored);
+
+            // 递归生成更高阶的反射
+            self.generate_image_sources_recursive(mirrored, max_order, current_order + 1, images);
+        }
     }
 
     /// 计算两点距离

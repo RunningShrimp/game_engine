@@ -35,6 +35,8 @@
 pub mod acoustic_materials;
 /// 高级混响系统 - 基于房间几何和FDN的混响算法
 pub mod advanced_reverb;
+/// 音频分析工具 - 频谱分析、音量计量、延迟测量
+pub mod analysis;
 pub mod async_processing;
 /// 多普勒效应 - 移动物体的音调变化
 pub mod doppler;
@@ -79,6 +81,9 @@ pub use crate::domain::audio::{
 };
 
 pub use crate::domain::services::AudioDomainService;
+
+// 导出音频分析工具
+pub use analysis::{LatencyMeter, SpectrumAnalyzer, VolumeMeter};
 
 #[cfg(test)]
 mod tests;

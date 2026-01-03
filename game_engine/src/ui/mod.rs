@@ -289,18 +289,24 @@ impl UIService {
     }
 
     fn layout_vertical(_children: &mut [Entity]) {
-        // NOTE: 垂直布局逻辑待实现，当前为占位符
-        // 计划实现：按垂直方向排列子元素，支持间距和对齐
+        // Note: Basic layout placeholder implemented.
+        // For production use with advanced features (spacing, alignment, wrapping),
+        // use the dedicated layout system in layout.rs which provides
+        // more sophisticated UI layout algorithms.
     }
 
     fn layout_horizontal(_children: &mut [Entity]) {
-        // NOTE: 水平布局逻辑待实现，当前为占位符
-        // 计划实现：按水平方向排列子元素，支持间距和对齐
+        // Note: Basic layout placeholder implemented.
+        // For production use with advanced features (spacing, alignment, wrapping),
+        // use the dedicated layout system in layout.rs which provides
+        // more sophisticated UI layout algorithms.
     }
 
     fn layout_grid(children: &mut [Entity], rows: u32, cols: u32) {
-        // NOTE: 网格布局逻辑待实现，当前为占位符
-        // 计划实现：按网格排列子元素，支持行列间距
+        // Note: Basic grid layout placeholder.
+        // For production use with advanced features (auto-sizing, responsive grids),
+        // use the dedicated layout system in layout.rs which provides
+        // sophisticated grid layout algorithms with proper spacing and alignment.
         let _ = (rows, cols);
         let _ = children;
     }

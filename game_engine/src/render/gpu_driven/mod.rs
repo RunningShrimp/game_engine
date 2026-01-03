@@ -41,6 +41,7 @@
 
 pub mod command_generator;
 pub mod culling;
+pub mod culling_enhanced;
 pub mod culling_manager;
 pub mod indirect;
 pub mod indirect_manager;
@@ -52,6 +53,7 @@ use crate::render::occlusion_culling::HierarchicalZCulling;
 
 pub use command_generator::GpuCommandGenerator;
 pub use culling::{CullingUniforms, GpuCuller, GpuInstance};
+pub use culling_enhanced::{CullingEnhancedConfig, CullingStats, EnhancedGpuCuller};
 pub use culling_manager::GpuCullingManager;
 pub use indirect::{DrawIndirectArgs, IndirectDrawBuffer};
 pub use indirect_manager::{GpuIndirectDrawConfig, GpuIndirectDrawManager};

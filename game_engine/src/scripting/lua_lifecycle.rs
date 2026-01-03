@@ -3,14 +3,17 @@
 // 集成lifecycle系统与mlua Lua引擎，支持Unity风格的生命周期回调
 
 #[cfg(feature = "mlua")]
+#[allow(unexpected_cfgs, reason = "mlua is a custom feature")]
 use crate::ecs::Entity;
 #[cfg(feature = "mlua")]
+#[allow(unexpected_cfgs, reason = "mlua is a custom feature")]
 use crate::scripting::{
     lifecycle::{LifecycleHooks, LifecyclePhase},
     lua_support::LuaValue,
     system::{ScriptContext, ScriptLanguage, ScriptResult},
 };
 #[cfg(feature = "mlua")]
+#[allow(unexpected_cfgs, reason = "mlua is a custom feature")]
 use mlua::{Function, Lua, Result as LuaResult, Value as LuaValueInternal};
 use std::sync::{Arc, Mutex};
 
@@ -18,6 +21,7 @@ use std::sync::{Arc, Mutex};
 ///
 /// 为Lua脚本提供Unity风格的生命周期回调支持
 #[cfg(feature = "mlua")]
+#[allow(unexpected_cfgs, reason = "mlua is a custom feature")]
 pub struct LuaLifecycleHooks {
     /// 脚本名称
     script_name: String,
@@ -30,6 +34,7 @@ pub struct LuaLifecycleHooks {
 }
 
 #[cfg(feature = "mlua")]
+#[allow(unexpected_cfgs, reason = "mlua is a custom feature")]
 impl LuaLifecycleHooks {
     /// 创建新的Lua生命周期钩子
     ///
@@ -148,6 +153,7 @@ impl LuaLifecycleHooks {
 }
 
 #[cfg(feature = "mlua")]
+#[allow(unexpected_cfgs, reason = "mlua is a custom feature")]
 impl LifecycleHooks for LuaLifecycleHooks {
     fn on_enable(&mut self, entity: Entity) {
         let args = vec![Self::entity_to_value(entity)];
@@ -415,9 +421,11 @@ impl LifecycleHooks for LuaLifecycleHooks {
 ///
 /// 提供便捷函数来创建Lua生命周期钩子
 #[cfg(feature = "mlua")]
+#[allow(unexpected_cfgs, reason = "mlua is a custom feature")]
 pub struct LuaLifecycleHooksFactory;
 
 #[cfg(feature = "mlua")]
+#[allow(unexpected_cfgs, reason = "mlua is a custom feature")]
 impl LuaLifecycleHooksFactory {
     /// 为Lua脚本创建生命周期钩子组件
     ///

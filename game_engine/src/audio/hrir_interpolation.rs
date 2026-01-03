@@ -7,7 +7,7 @@ use crate::audio::hrtf_processor::HrirDataset;
 /// HRIR插值器
 pub struct HrirInterpolator {
     dataset: HrirDataset,
-    interpolation_method: InterpolationMethod,
+    pub(crate) interpolation_method: InterpolationMethod,
 }
 
 /// 插值方法

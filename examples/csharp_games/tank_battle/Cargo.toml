@@ -1,0 +1,25 @@
+[package]
+name = "tank_battle"
+version = "0.1.0"
+edition = "2024"
+authors = ["Game Engine Team"]
+description = "Multiplayer Tank Battle - Demonstrating C# scripting and networking"
+
+[[bin]]
+name = "tank_battle"
+path = "src/main.rs"
+
+[[bin]]
+name = "tank_battle_server"
+path = "src/server.rs"
+
+[dependencies]
+game_engine = { path = "../../../", features = ["csharp", "network", "physics"] }
+log = "0.4"
+env_logger = "0.11"
+
+[features]
+default = ["csharp", "network", "physics"]
+csharp = ["game_engine/csharp"]
+network = ["game_engine/network"]
+physics = ["game_engine/physics"]

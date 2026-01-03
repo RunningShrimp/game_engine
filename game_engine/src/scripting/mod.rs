@@ -2,6 +2,8 @@
 //
 //  提供Lua、TypeScript、Python和Rust脚本集成，支持运行时脚本执行、热重载和跨语言互操作。
 
+#![allow(unexpected_cfgs, reason = "mono and other features are custom")]
+
 use crate::impl_default;
 /// 脚本API模块
 pub mod api;
@@ -33,6 +35,7 @@ pub mod csharp_lifecycle;
 pub mod csharp_memory;
 /// Mono 运行时集成模块（macOS - 可选）
 #[cfg(all(feature = "csharp", feature = "mono", target_os = "macos"))]
+#[allow(unexpected_cfgs, reason = "mono is a custom feature")]
 pub mod csharp_mono;
 /// .NET Core 运行时集成模块（跨平台 - 使用 netcorehost - macOS不支持）
 #[cfg(feature = "csharp")]
@@ -109,6 +112,7 @@ pub use entity_api::{EntityApi, EntityQueryBuilder, EntityTemplate, TemplateComp
 pub use javascript_lifecycle::{JavaScriptLifecycleHooks, JavaScriptLifecycleHooksFactory};
 pub use lifecycle::{LifecycleHooks, LifecycleHooksComponent, LifecyclePhase, LifecycleScheduler};
 #[cfg(feature = "mlua")]
+#[allow(unexpected_cfgs, reason = "mlua is a custom feature")]
 pub use lua_lifecycle::{LuaLifecycleHooks, LuaLifecycleHooksFactory};
 pub use lua_support::{LuaContext, LuaEngine, LuaValue};
 pub use network_api::{NetworkApi, NetworkScriptContext};

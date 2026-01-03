@@ -3,6 +3,8 @@
 //! Extended platform detection system with compile-time and runtime capabilities checking.
 //! Supports all console platforms with detailed hardware feature queries.
 
+#![allow(unexpected_cfgs, reason = "custom target OS values for console platforms")]
+
 use crate::platform::console::{ConsoleConfig, ConsolePlatform};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -279,7 +281,7 @@ pub fn detect_platform_compile_time() -> Platform {
         feature = "harmonyos",
         any(target_os = "ohos", target_os = "harmonyos")
     ))]
-    #[expect(unexpected_cfgs, reason = "ohos and harmonyos are custom target OS")]
+    #[allow(unexpected_cfgs, reason = "ohos and harmonyos are custom target OS")]
     {
         return Platform::HarmonyOS;
     }
@@ -288,16 +290,19 @@ pub fn detect_platform_compile_time() -> Platform {
         any(target_os = "psp", target_os = "horizon"),
         not(feature = "mock-console")
     ))]
+    #[allow(unexpected_cfgs, reason = "psp and horizon are custom target OS")]
     {
         return Platform::NintendoSwitch;
     }
 
     #[cfg(all(target_os = "psx", not(feature = "mock-console")))]
+    #[allow(unexpected_cfgs, reason = "psx is a custom target OS")]
     {
         return Platform::PlayStation4;
     }
 
     #[cfg(all(target_os = "ps5", not(feature = "mock-console")))]
+    #[allow(unexpected_cfgs, reason = "ps5 is a custom target OS")]
     {
         return Platform::PlayStation5;
     }
@@ -306,16 +311,19 @@ pub fn detect_platform_compile_time() -> Platform {
         any(target_os = "xbox_one", target_os = "xbox"),
         not(feature = "mock-console")
     ))]
+    #[allow(unexpected_cfgs, reason = "xbox_one and xbox are custom target OS")]
     {
         return Platform::XboxOne;
     }
 
     #[cfg(all(target_os = "xbox_series", not(feature = "mock-console")))]
+    #[allow(unexpected_cfgs, reason = "xbox_series is a custom target OS")]
     {
         return Platform::XboxSeries;
     }
 
     #[cfg(feature = "mock-console")]
+    #[allow(unexpected_cfgs, reason = "mock-console is a custom feature")]
     {
         // When using mock-console feature, default to desktop
         #[cfg(target_os = "windows")]

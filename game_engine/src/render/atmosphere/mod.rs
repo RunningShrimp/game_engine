@@ -66,6 +66,7 @@ pub mod fog;
 pub mod integration;
 pub mod lighting;
 pub mod noise;
+pub mod skybox;
 pub mod volumetric;
 
 pub use clouds::{
@@ -80,6 +81,7 @@ pub use lighting::{AtmosphericScattering, LightScatteringConfig};
 pub use noise::{
     FbmConfig, NoiseGenerator, NoiseQuality, NoiseType, PerlinNoise, SimplexNoise, WorleyNoise,
 };
+pub use skybox::{DynamicSkybox, SkyboxConfig, TimeOfDay};
 pub use volumetric::{
     RayMarchConfig, VolumetricLightConfig, VolumetricRenderer, VolumetricScattering,
     VolumetricShadowConfig,

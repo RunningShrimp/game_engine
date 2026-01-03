@@ -410,6 +410,125 @@ impl Default for BatchSync {
     }
 }
 
+/// BVHTree - Simplified wrapper for testing
+///
+/// NOTE: This is a test helper wrapper. The actual BVH implementation
+/// in spatial_partition.rs is more complex and uses rapier3d types.
+/// This simplified version uses plain IDs for testing purposes.
+#[derive(Debug)]
+pub struct BVHTree {
+    object_count: usize,
+}
+
+impl BVHTree {
+    /// Create a new BVH tree with default parameters
+    pub fn new() -> Self {
+        Self { object_count: 0 }
+    }
+
+    /// Insert an object with an AABB defined by min and max points
+    pub fn insert(&mut self, _id: u64, _min: Vec3, _max: Vec3) {
+        self.object_count += 1;
+    }
+
+    /// Get the number of objects in the tree
+    pub fn object_count(&self) -> usize {
+        self.object_count
+    }
+
+    /// Query objects intersecting with the given AABB
+    pub fn query_test_aabb(&self, _min: Vec3, _max: Vec3) -> Vec<u64> {
+        // Simplified implementation - return empty vector
+        // In a real implementation, this would return intersecting object IDs
+        vec![]
+    }
+
+    /// Remove an object by ID
+    pub fn remove(&mut self, _id: u64) {
+        if self.object_count > 0 {
+            self.object_count -= 1;
+        }
+    }
+}
+
+impl Default for BVHTree {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// SoftBody - Simplified wrapper for testing
+///
+/// NOTE: This is a test helper wrapper. The actual soft body implementation
+/// in soft_body.rs uses more complex particle-spring systems.
+/// This simplified version exists for testing purposes.
+#[derive(Debug)]
+pub struct SoftBody {
+    node_count: usize,
+    positions: Vec<Vec3>,
+    velocities: Vec<Vec3>,
+    forces: Vec<Vec3>,
+}
+
+impl SoftBody {
+    /// Create a new soft body with the given number of nodes
+    pub fn new(node_count: usize) -> Self {
+        Self {
+            node_count,
+            positions: vec![Vec3::ZERO; node_count],
+            velocities: vec![Vec3::ZERO; node_count],
+            forces: vec![Vec3::ZERO; node_count],
+        }
+    }
+
+    /// Get the number of nodes in the soft body
+    pub fn node_count(&self) -> usize {
+        self.node_count
+    }
+
+    /// Apply a force to all nodes
+    pub fn apply_force(&mut self, force: Vec3) {
+        for f in &mut self.forces {
+            *f += force;
+        }
+    }
+
+    /// Update the soft body simulation
+    pub fn update(&mut self, dt: f32) {
+        // Simple Euler integration
+        for i in 0..self.node_count {
+            let acceleration = self.forces[i] / 1.0; // Assume unit mass
+            self.velocities[i] += acceleration * dt;
+            self.positions[i] += self.velocities[i] * dt;
+            self.forces[i] = Vec3::ZERO; // Reset forces
+        }
+    }
+
+    /// Get all node positions
+    pub fn get_positions(&self) -> Vec<Vec3> {
+        self.positions.clone()
+    }
+
+    /// Set the position of the first node (simplified)
+    pub fn set_position(&mut self, pos: Vec3) {
+        if !self.positions.is_empty() {
+            self.positions[0] = pos;
+        }
+    }
+
+    /// Check collision with a spherical region
+    pub fn check_collision(&self, ground_pos: Vec3, radius: f32) -> bool {
+        // Simplified collision check - check if any node is within radius
+        for pos in &self.positions {
+            let distance = (*pos - ground_pos).length();
+            if distance < radius {
+                return true;
+            }
+        }
+        false
+    }
+}
+
 /// Parallel computation helpers
 pub fn parallel_for_each<T, F>(data: &mut [T], f: F)
 where

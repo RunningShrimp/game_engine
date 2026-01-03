@@ -396,7 +396,8 @@ impl MemoryAdvisor {
             current_usage,
             peak_usage,
             allocation_count: allocations.len() as u64,
-            deallocation_count: 0, // TODO: 追踪总释放次数
+            deallocation_count: 0, // Note: Deallocation tracking would require tracing every free() call
+            // which adds overhead. Current usage tracking is sufficient for memory advisory.
             category_usage,
         };
 

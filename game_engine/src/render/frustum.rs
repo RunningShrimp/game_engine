@@ -102,6 +102,11 @@ impl Frustum {
         }
     }
 
+    /// 从视图投影矩阵引用创建视锥体
+    pub fn from_view_projection_ref(view_proj: &Mat4) -> Self {
+        Self::from_view_projection(*view_proj)
+    }
+
     /// 从4分量向量提取平面
     fn extract_plane(plane_vec: glam::Vec4) -> Plane {
         let normal = Vec3::new(plane_vec.x, plane_vec.y, plane_vec.z);
@@ -163,6 +168,14 @@ impl Frustum {
         }
 
         true
+    }
+
+    /// 检查中心+范围表示的AABB是否与视锥体相交
+    /// 这是一个便捷方法，用于使用center和extent（半尺寸）表示的包围盒
+    pub fn test_aabb_center_extent(&self, center: Vec3, extent: Vec3) -> bool {
+        let min = center - extent;
+        let max = center + extent;
+        self.intersects_aabb(min, max)
     }
 
     /// 计算包围盒上离平面最近的点

@@ -21,6 +21,7 @@ pub mod asset_importer;
 
 // 资源优化管线（条件编译）
 #[cfg(feature = "asset-pipeline")]
+#[allow(unexpected_cfgs, reason = "asset-pipeline is a custom feature")]
 pub mod asset_pipeline;
 
 #[cfg(feature = "cli")]
@@ -70,6 +71,7 @@ pub use wasm_deploy::{
 
 // 重新导出Asset Pipeline（条件编译）
 #[cfg(feature = "asset-pipeline")]
+#[allow(unexpected_cfgs, reason = "asset-pipeline is a custom feature")]
 pub use asset_pipeline::{
     AssetBundler, AssetMetadata, AssetPipeline, AssetProcessor, AssetType, Bundle, LODGenerator,
     MetricStatus, OptimizationError, OptimizationResult, PipelineConfig, PipelineReport, Platform,

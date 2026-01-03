@@ -1939,6 +1939,7 @@ dependencies = [
  "serde_json",
  "serde_yaml",
  "sha2",
+ "syn",
  "tempfile",
  "thiserror 2.0.17",
  "tokio",

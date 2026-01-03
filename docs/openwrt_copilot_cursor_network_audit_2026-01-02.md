@@ -10,6 +10,7 @@
 - `sh scripts/openwrt/export_pstore.sh root@192.168.88.1`
 - `sh scripts/openwrt/endpoint_regression_ipv4.sh root@192.168.88.1`
 - `sh scripts/openwrt/package_cake_panic_report.sh root@192.168.88.1`
+- `sh scripts/openwrt/monitor_stability.sh root@192.168.88.1 60`
 
 ## 0. 本次已落地的变更（单 WAN + OpenClash）
 

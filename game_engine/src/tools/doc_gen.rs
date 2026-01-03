@@ -1,10 +1,43 @@
 //! 文档生成工具
 //!
 //! 自动生成项目文档，包括 API 文档、架构图等。
+//!
+//! # 功能特性
+//!
+//! - 自动从Rust源代码提取API文档
+//! - 支持Markdown格式输出
+//! - 生成架构图和流程图
+//! - 创建交互式教程
+//! - 生成完整的示例文档
+//! - 文档覆盖率分析
 
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
+use syn::{Item, ItemEnum, ItemFn, ItemStruct, Visibility};
+
+/// API文档项详情
+#[derive(Debug, Clone)]
+pub struct ApiDetail {
+    /// 项名称
+    pub name: String,
+    /// 文档注释
+    pub documentation: String,
+    /// 源代码位置
+    pub source_location: SourceLocation,
+    /// 相关API
+    pub related_apis: Vec<String>,
+    /// 示例代码
+    pub examples: Vec<String>,
+}
+
+/// 源代码位置
+#[derive(Debug, Clone)]
+pub struct SourceLocation {
+    pub file: String,
+    pub line: usize,
+    pub module: String,
+}
 
 /// 文档生成器
 pub struct DocumentationGenerator {
@@ -408,6 +441,256 @@ impl DocumentationGenerator {
     pub fn get_generated_docs(&self) -> &[GeneratedDocument] {
         &self.generated_docs
     }
+
+    /// 分析文档覆盖率
+    pub fn analyze_coverage(&self) -> DocCoverageReport {
+        let mut report = DocCoverageReport::default();
+
+        // 统计各类文档数量
+        for doc in &self.generated_docs {
+            match doc.doc_type {
+                DocType::Api => report.api_count += 1,
+                DocType::Tutorial => report.tutorial_count += 1,
+                DocType::Guide => report.guide_count += 1,
+                DocType::Architecture => report.architecture_count += 1,
+                DocType::Reference => report.reference_count += 1,
+                DocType::Example => report.example_count += 1,
+            }
+            report.total_word_count += doc.word_count;
+        }
+
+        report.total_docs = self.generated_docs.len();
+
+        // 计算覆盖率百分比（基于目标：每个主要模块至少有API文档、教程和指南）
+        let target_docs = 50; // 假设目标是50个文档
+        report.coverage_percentage = (report.total_docs as f32 / target_docs as f32 * 100.0) as u32;
+
+        report
+    }
+
+    /// 生成文档覆盖率报告
+    pub fn generate_coverage_report(&self, output_path: &Path) -> Result<(), DocGenError> {
+        let report = self.analyze_coverage();
+
+        let content = format!(
+            "# 文档覆盖率报告\n\n\
+            ## 总体统计\n\n\
+            - **总文档数**: {}\n\
+            - **API文档**: {}\n\
+            - **教程**: {}\n\
+            - **指南**: {}\n\
+            - **架构文档**: {}\n\
+            - **参考手册**: {}\n\
+            - **示例**: {}\n\
+            - **总字数**: {}\n\
+            - **覆盖率**: {}%\n\n\
+            ## 详细分析\n\n\
+            ### 按类型分布\n\n\
+            | 类型 | 数量 | 占比 |\n\
+            |------|------|------|\n\
+            | API文档 | {} | {:.1}% |\n\
+            | 教程 | {} | {:.1}% |\n\
+            | 指南 | {} | {:.1}% |\n\
+            | 架构文档 | {} | {:.1}% |\n\
+            | 参考手册 | {} | {:.1}% |\n\
+            | 示例 | {} | {:.1}% |\n\n\
+            ### 改进建议\n\n\
+            {}\
+            ## 附录\n\n\
+            生成时间: {}\n",
+            report.total_docs,
+            report.api_count,
+            report.tutorial_count,
+            report.guide_count,
+            report.architecture_count,
+            report.reference_count,
+            report.example_count,
+            report.total_word_count,
+            report.coverage_percentage,
+            report.api_count,
+            (report.api_count as f32 / report.total_docs as f32 * 100.0),
+            report.tutorial_count,
+            (report.tutorial_count as f32 / report.total_docs as f32 * 100.0),
+            report.guide_count,
+            (report.guide_count as f32 / report.total_docs as f32 * 100.0),
+            report.architecture_count,
+            (report.architecture_count as f32 / report.total_docs as f32 * 100.0),
+            report.reference_count,
+            (report.reference_count as f32 / report.total_docs as f32 * 100.0),
+            report.example_count,
+            (report.example_count as f32 / report.total_docs as f32 * 100.0),
+            self.generate_improvement_suggestions(&report),
+            chrono::Local::now().format("%Y-%m-%d %H:%M:%S")
+        );
+
+        self.write_doc(output_path, &content)?;
+
+        Ok(())
+    }
+
+    /// 生成改进建议
+    fn generate_improvement_suggestions(&self, report: &DocCoverageReport) -> String {
+        let mut suggestions = String::new();
+
+        if report.tutorial_count < 10 {
+            suggestions.push_str(&format!(
+                "- 🔴 **教程不足**: 当前{}个教程，建议至少10个\n",
+                report.tutorial_count
+            ));
+        }
+
+        if report.guide_count < 5 {
+            suggestions.push_str(&format!(
+                "- 🟡 **指南缺失**: 当前{}个指南，建议至少5个\n",
+                report.guide_count
+            ));
+        }
+
+        if report.example_count < 20 {
+            suggestions.push_str(&format!(
+                "- 🟡 **示例不够**: 当前{}个示例，建议至少20个\n",
+                report.example_count
+            ));
+        }
+
+        if report.api_count < 15 {
+            suggestions.push_str(&format!(
+                "- 🟠 **API文档不完整**: 当前{}个API文档，建议至少15个\n",
+                report.api_count
+            ));
+        }
+
+        if suggestions.is_empty() {
+            suggestions.push_str("✅ 文档覆盖率良好，继续保持！\n\n");
+        }
+
+        suggestions
+    }
+
+    /// 从源代码提取API详情
+    pub fn extract_api_details(&self, source_file: &Path) -> Result<Vec<ApiDetail>, DocGenError> {
+        let code = fs::read_to_string(source_file)
+            .map_err(|e| DocGenError::ParseError(format!("无法读取源文件: {}", e)))?;
+
+        let syntax = syn::parse_file(&code)
+            .map_err(|e| DocGenError::ParseError(format!("解析失败: {}", e)))?;
+
+        let mut apis = Vec::new();
+
+        for item in syntax.items {
+            match &item {
+                Item::Fn(item_fn) => {
+                    if let Visibility::Public(_) = &item_fn.vis {
+                        let api = ApiDetail {
+                            name: item_fn.sig.ident.to_string(),
+                            documentation: self.extract_docs_from_attrs(&item_fn.attrs),
+                            source_location: SourceLocation {
+                                file: source_file.display().to_string(),
+                                line: 0, // TODO: 从Span提取行号需要proc-macro2的特定版本
+                                module: "crate".to_string(), // TODO: 提取真实模块路径
+                            },
+                            related_apis: Vec::new(), // TODO: 分析关联API
+                            examples: self.extract_examples_from_attrs(&item_fn.attrs),
+                        };
+                        apis.push(api);
+                    }
+                }
+                Item::Struct(item_struct) => {
+                    if let Visibility::Public(_) = &item_struct.vis {
+                        let api = ApiDetail {
+                            name: item_struct.ident.to_string(),
+                            documentation: self.extract_docs_from_attrs(&item_struct.attrs),
+                            source_location: SourceLocation {
+                                file: source_file.display().to_string(),
+                                line: 0, // TODO: 从Span提取行号需要proc-macro2的特定版本
+                                module: "crate".to_string(),
+                            },
+                            related_apis: Vec::new(),
+                            examples: self.extract_examples_from_attrs(&item_struct.attrs),
+                        };
+                        apis.push(api);
+                    }
+                }
+                Item::Enum(item_enum) => {
+                    if let Visibility::Public(_) = &item_enum.vis {
+                        let api = ApiDetail {
+                            name: item_enum.ident.to_string(),
+                            documentation: self.extract_docs_from_attrs(&item_enum.attrs),
+                            source_location: SourceLocation {
+                                file: source_file.display().to_string(),
+                                line: 0, // TODO: 从Span提取行号需要proc-macro2的特定版本
+                                module: "crate".to_string(),
+                            },
+                            related_apis: Vec::new(),
+                            examples: self.extract_examples_from_attrs(&item_enum.attrs),
+                        };
+                        apis.push(api);
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        Ok(apis)
+    }
+
+    /// 从属性中提取文档
+    fn extract_docs_from_attrs(&self, attrs: &[syn::Attribute]) -> String {
+        let mut docs = String::new();
+
+        for attr in attrs {
+            if attr.path().is_ident("doc") {
+                if let syn::Meta::NameValue(meta) = &attr.meta {
+                    if let syn::Expr::Lit(expr_lit) = &meta.value {
+                        if let syn::Lit::Str(lit_str) = &expr_lit.lit {
+                            let line = lit_str.value();
+                            let line = line.strip_prefix(' ').unwrap_or(&line);
+                            docs.push_str(line);
+                            docs.push('\n');
+                        }
+                    }
+                }
+            }
+        }
+
+        docs.trim().to_string()
+    }
+
+    /// 从属性中提取示例代码
+    fn extract_examples_from_attrs(&self, attrs: &[syn::Attribute]) -> Vec<String> {
+        let mut examples = Vec::new();
+
+        for attr in attrs {
+            if attr.path().is_ident("doc") {
+                if let syn::Meta::NameValue(meta) = &attr.meta {
+                    if let syn::Expr::Lit(expr_lit) = &meta.value {
+                        if let syn::Lit::Str(lit_str) = &expr_lit.lit {
+                            let line = lit_str.value();
+                            if line.contains("```") {
+                                examples.push(line);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        examples
+    }
+}
+
+/// 文档覆盖率报告
+#[derive(Debug, Clone, Default)]
+pub struct DocCoverageReport {
+    pub total_docs: usize,
+    pub api_count: usize,
+    pub tutorial_count: usize,
+    pub guide_count: usize,
+    pub architecture_count: usize,
+    pub reference_count: usize,
+    pub example_count: usize,
+    pub total_word_count: usize,
+    pub coverage_percentage: u32,
 }
 
 /// 文档生成错误

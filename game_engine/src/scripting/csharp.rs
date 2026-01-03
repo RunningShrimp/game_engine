@@ -37,6 +37,8 @@ use super::{
 };
 
 #[cfg(all(feature = "csharp", feature = "mono", target_os = "macos"))]
+#[allow(unexpected_cfgs, reason = "mono is a custom feature")]
+#[allow(unexpected_cfgs, reason = "mono is a custom feature")]
 use super::csharp_mono::MonoHost;
 
 /// .NET程序集元数据
@@ -226,7 +228,6 @@ impl NetValue {
             serde_json::Value::Object(obj) => NetValue::Object(
                 obj.iter().map(|(k, v)| (k.clone(), NetValue::from_json(v))).collect(),
             ),
-            _ => NetValue::Null,
         }
     }
 }
@@ -269,6 +270,7 @@ pub struct CSharpContext {
 
     /// Mono 运行时主机（macOS - 可选，需要启用 mono feature）
     #[cfg(all(feature = "csharp", feature = "mono", target_os = "macos"))]
+    #[allow(unexpected_cfgs, reason = "mono is a custom feature")]
     mono_host: Option<MonoHost>,
 
     /// .NET Framework 运行时主机（已弃用 - 仅用于兼容）
@@ -297,6 +299,7 @@ impl Clone for CSharpContext {
             #[cfg(feature = "csharp")]
             netcorehost: None, // Clone 不复制运行时句柄
             #[cfg(all(feature = "csharp", feature = "mono", target_os = "macos"))]
+            #[allow(unexpected_cfgs, reason = "mono is a custom feature")]
             mono_host: None, // Clone 不复制运行时句柄
             runtime_host: None, // Clone 不复制运行时句柄
             runtime_initialized: Arc::new(Mutex::new(false)),
@@ -384,6 +387,7 @@ impl CSharpContext {
 
         // Mono 运行时（macOS 可选，需要 mono feature）
         #[cfg(all(feature = "csharp", feature = "mono", target_os = "macos"))]
+        #[allow(unexpected_cfgs, reason = "mono is a custom feature")]
         let mono_host = None; // DotNetCliHost 优先
 
         // 其他运行时（已弃用）
@@ -409,6 +413,7 @@ impl CSharpContext {
             #[cfg(feature = "csharp")]
             netcorehost,
             #[cfg(all(feature = "csharp", feature = "mono", target_os = "macos"))]
+            #[allow(unexpected_cfgs, reason = "mono is a custom feature")]
             mono_host,
             runtime_host,
             runtime_initialized: Arc::new(Mutex::new(runtime_initialized)),
@@ -439,6 +444,7 @@ impl CSharpContext {
 
         // Mono 运行时（macOS 可选）
         #[cfg(all(feature = "csharp", feature = "mono", target_os = "macos"))]
+        #[allow(unexpected_cfgs, reason = "mono is a custom feature")]
         {
             if let Some(ref mono_host) = self.mono_host {
                 if mono_host.initialized {

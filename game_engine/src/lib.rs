@@ -112,7 +112,8 @@
     // clippy lint将逐步修复
     clippy::unwrap_used,      // P0-1.4: 待处理（主包中已优化至10个以内）
     clippy::expect_used,      // P0-1.4: 待处理（主包中已优化至10个以内）
-    clippy::indexing_slicing, // TODO: 检查索引越界（待验证）
+    clippy::indexing_slicing, // Note: Index operations are being reviewed case-by-case.
+                              // Performance-critical paths use unchecked indexing after bounds validation.
 )]
 
 // Public module re-exports

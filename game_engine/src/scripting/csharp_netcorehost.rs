@@ -36,6 +36,7 @@ pub struct NetCoreHost {
 
     /// hostfxr 上下文（仅当 netcorehost 可用时）
     #[cfg(all(feature = "csharp", feature = "netcorehost"))]
+    #[allow(unexpected_cfgs, reason = "netcorehost is a custom feature")]
     hostfxr_context: Option<netcorehost::hostfxr::Hostfxr>,
 
     /// 已加载的程序集缓存
@@ -57,6 +58,7 @@ impl NetCoreHost {
     /// println!("Runtime version: {:?}", host.get_runtime_version());
     /// ```
     #[cfg(all(feature = "csharp", feature = "netcorehost"))]
+    #[allow(unexpected_cfgs, reason = "netcorehost is a custom feature")]
     pub fn initialize() -> Result<Self, String> {
         tracing::info!("Initializing .NET runtime using netcorehost (cross-platform)");
 
@@ -89,6 +91,7 @@ impl NetCoreHost {
     }
 
     #[cfg(all(feature = "csharp", not(feature = "netcorehost")))]
+    #[allow(unexpected_cfgs, reason = "netcorehost is a custom feature")]
     pub fn initialize() -> Result<Self, String> {
         tracing::info!("netcorehost feature not enabled, using fallback implementation");
 
@@ -167,6 +170,7 @@ impl NetCoreHost {
         tracing::debug!("Loading .NET assembly: {:?}", path);
 
         #[cfg(all(feature = "csharp", feature = "netcorehost"))]
+        #[allow(unexpected_cfgs, reason = "netcorehost is a custom feature")]
         {
             if let Some(ref _hostfxr) = self.hostfxr_context {
                 return self.load_assembly_with_netcorehost(path);
@@ -244,6 +248,7 @@ impl NetCoreHost {
         );
 
         #[cfg(all(feature = "csharp", feature = "netcorehost"))]
+        #[allow(unexpected_cfgs, reason = "netcorehost is a custom feature")]
         {
             if let Some(ref hostfxr) = self.hostfxr_context {
                 return self.invoke_method_with_netcorehost(
@@ -262,6 +267,7 @@ impl NetCoreHost {
 
     /// 使用 netcorehost 调用方法
     #[cfg(all(feature = "csharp", feature = "netcorehost"))]
+    #[allow(unexpected_cfgs, reason = "netcorehost is a custom feature")]
     fn invoke_method_with_netcorehost(
         &self,
         hostfxr: &netcorehost::hostfxr::Hostfxr,
@@ -370,6 +376,7 @@ impl NetCoreHost {
 
                 // 使用 netcorehost 加载并执行
                 #[cfg(all(feature = "csharp", feature = "netcorehost"))]
+                #[allow(unexpected_cfgs, reason = "netcorehost is a custom feature")]
                 {
                     if let Some(ref hostfxr) = self.hostfxr_context {
                         return self.execute_compiled_assembly(
@@ -419,6 +426,7 @@ impl NetCoreHost {
 
     /// 使用 netcorehost 执行已编译的程序集
     #[cfg(all(feature = "csharp", feature = "netcorehost"))]
+    #[allow(unexpected_cfgs, reason = "netcorehost is a custom feature")]
     fn execute_compiled_assembly(
         &self,
         hostfxr: &netcorehost::hostfxr::Hostfxr,

@@ -8,10 +8,29 @@
 //! - **代码审查**: 自动代码审查和优化建议
 //! - **测试生成**: 自动生成单元测试
 //! - **LSP集成**: 代码补全和提示
+//!
+//! ## 配置管理
+//!
+//! AI工具支持从环境变量或配置文件加载配置：
+//!
+//! ```bash
+//! # OpenAI配置
+//! export OPENAI_API_KEY="your-key"
+//! export OPENAI_MODEL="gpt-4"
+//!
+//! # Anthropic配置
+//! export ANTHROPIC_API_KEY="your-key"
+//! export ANTHROPIC_MODEL="claude-3-opus-20240229"
+//!
+//! # 本地模型配置
+//! export LOCAL_MODEL_ENDPOINT="http://localhost:11434/api/generate"
+//! export LOCAL_MODEL_NAME="llama2"
+//! ```
 
 use crate::domain::events::{DomainEvent, EventError};
 use bevy_ecs::prelude::*;
 use serde::{Deserialize, Serialize};
+use std::env;
 use std::path::PathBuf;
 
 pub mod code_analysis;
@@ -21,14 +40,21 @@ pub mod test_generation;
 
 pub use code_analysis::{
     AICodeAnalyzer, BottleneckSeverity, BottleneckType, CodeMetrics, CodeQualityIssue,
-    CodeQualityReport, ComplexityMetrics, DependencyAnalysis, MemoryUsageAnalysis,
-    PerformanceAnalysis, PerformanceBottleneck, QualityCategory, RefactoringEffort,
-    RefactoringPriority, RefactoringRisk, RefactoringSuggestion, RefactoringSuggestions,
-    RefactoringType,
+    CodeQualityReport, ComplexityMetrics, DependencyAnalysis,
+    IssueSeverity as AnalysisIssueSeverity, MemoryUsageAnalysis, PerformanceAnalysis,
+    PerformanceBottleneck, QualityCategory, QualityIssue, RefactoringEffort, RefactoringPriority,
+    RefactoringRisk, RefactoringSuggestion, RefactoringSuggestions, RefactoringType,
 };
-pub use code_generation::{AICodeGenerator, CodeGenerationRequest};
-pub use code_review::{AICodeReviewer, CodeReviewIssue, CodeReviewReport};
-pub use test_generation::{AITestGenerator, TestGenerationResult};
+pub use code_generation::{
+    AICodeGenerator, CodeGenerationRequest, CodeOptimizationResult, ProviderInfo,
+};
+pub use code_review::{
+    AICodeReviewer, BestPracticeReport, CodeReviewIssue, CodeReviewReport, IssueCategory,
+    IssueSeverity, StyleReport,
+};
+pub use test_generation::{
+    AITestGenerator, TestCaseRecommendation, TestCoverageReport, TestGenerationResult, TestPriority,
+};
 
 // =============================================================================
 // AI提供者
@@ -56,6 +82,8 @@ pub struct AIConfig {
     pub api_key: String,
     /// 模型名称
     pub model: String,
+    /// API端点
+    pub api_endpoint: Option<String>,
     /// 最大token数
     pub max_tokens: u32,
     /// 温度 (0.0 - 1.0)
@@ -68,9 +96,125 @@ impl Default for AIConfig {
             provider: AIProvider::OpenAI,
             api_key: String::new(),
             model: "gpt-4".to_string(),
+            api_endpoint: Some("https://api.openai.com/v1/chat/completions".to_string()),
             max_tokens: 2048,
             temperature: 0.7,
         }
+    }
+}
+
+impl AIConfig {
+    /// 从环境变量加载配置
+    pub fn from_env(provider: AIProvider) -> Result<Self, String> {
+        let (api_key, model, endpoint) = match provider {
+            AIProvider::OpenAI => (
+                env::var("OPENAI_API_KEY").map_err(|_| "OPENAI_API_KEY not set".to_string())?,
+                env::var("OPENAI_MODEL").unwrap_or("gpt-4".to_string()),
+                env::var("OPENAI_ENDPOINT").ok(),
+            ),
+            AIProvider::Anthropic => (
+                env::var("ANTHROPIC_API_KEY")
+                    .map_err(|_| "ANTHROPIC_API_KEY not set".to_string())?,
+                env::var("ANTHROPIC_MODEL").unwrap_or("claude-3-opus-20240229".to_string()),
+                env::var("ANTHROPIC_ENDPOINT").ok(),
+            ),
+            AIProvider::Local => (
+                String::new(), // 本地模型不需要API密钥
+                env::var("LOCAL_MODEL_NAME").unwrap_or("llama2".to_string()),
+                Some(
+                    env::var("LOCAL_MODEL_ENDPOINT")
+                        .unwrap_or("http://localhost:11434/api/generate".to_string()),
+                ),
+            ),
+            AIProvider::Other => {
+                return Err("Unsupported provider".to_string());
+            }
+        };
+
+        Ok(Self {
+            provider,
+            api_key,
+            model,
+            api_endpoint: endpoint,
+            ..Default::default()
+        })
+    }
+
+    /// 创建OpenAI配置
+    pub fn openai(api_key: impl Into<String>) -> Self {
+        Self {
+            provider: AIProvider::OpenAI,
+            api_key: api_key.into(),
+            model: "gpt-4".to_string(),
+            api_endpoint: None,
+            ..Default::default()
+        }
+    }
+
+    /// 创建Anthropic配置
+    pub fn anthropic(api_key: impl Into<String>) -> Self {
+        Self {
+            provider: AIProvider::Anthropic,
+            api_key: api_key.into(),
+            model: "claude-3-opus-20240229".to_string(),
+            api_endpoint: None,
+            ..Default::default()
+        }
+    }
+
+    /// 创建本地模型配置
+    pub fn local(endpoint: impl Into<String>, model: impl Into<String>) -> Self {
+        Self {
+            provider: AIProvider::Local,
+            api_key: String::new(),
+            model: model.into(),
+            api_endpoint: Some(endpoint.into()),
+            ..Default::default()
+        }
+    }
+
+    /// 设置模型
+    pub fn with_model(mut self, model: impl Into<String>) -> Self {
+        self.model = model.into();
+        self
+    }
+
+    /// 设置温度
+    pub fn with_temperature(mut self, temperature: f32) -> Self {
+        self.temperature = temperature.max(0.0).min(1.0);
+        self
+    }
+
+    /// 设置最大token数
+    pub fn with_max_tokens(mut self, max_tokens: u32) -> Self {
+        self.max_tokens = max_tokens;
+        self
+    }
+
+    /// 设置API端点
+    pub fn with_endpoint(mut self, endpoint: impl Into<String>) -> Self {
+        self.api_endpoint = Some(endpoint.into());
+        self
+    }
+
+    /// 验证配置
+    pub fn validate(&self) -> Result<(), String> {
+        match self.provider {
+            AIProvider::OpenAI | AIProvider::Anthropic => {
+                if self.api_key.is_empty() {
+                    return Err(format!("{:?} API key is required", self.provider));
+                }
+            }
+            AIProvider::Local => {
+                if self.api_endpoint.is_none() {
+                    return Err("Local model endpoint is required".to_string());
+                }
+            }
+            AIProvider::Other => {
+                return Err("Unsupported provider".to_string());
+            }
+        }
+        Ok(())
     }
 }
 
@@ -132,9 +276,9 @@ pub enum AIError {
     /// API错误
     ApiError(String),
     /// 网络错误
-    NetworkError(String),
+    Network(String),
     /// 解析错误
-    ParseError(String),
+    Parse(String),
     /// 配额限制
     RateLimited,
     /// 无效API密钥
@@ -147,8 +291,8 @@ impl std::fmt::Display for AIError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             AIError::ApiError(msg) => write!(f, "API error: {}", msg),
-            AIError::NetworkError(msg) => write!(f, "Network error: {}", msg),
-            AIError::ParseError(msg) => write!(f, "Parse error: {}", msg),
+            AIError::Network(msg) => write!(f, "Network error: {}", msg),
+            AIError::Parse(msg) => write!(f, "Parse error: {}", msg),
             AIError::RateLimited => write!(f, "Rate limited"),
             AIError::InvalidApiKey => write!(f, "Invalid API key"),
             AIError::Other(msg) => write!(f, "Error: {}", msg),

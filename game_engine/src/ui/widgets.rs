@@ -751,11 +751,11 @@ pub struct Dropdown {
     /// 是否启用
     pub enabled: bool,
     /// 改变回调
-    pub on_change: Option<usizeChangeCallback>,
+    pub on_change: Option<UsizeChangeCallback>,
 }
 
 /// 索引改变回调类型
-pub type usizeChangeCallback = Arc<Mutex<Box<dyn Fn(usize) + Send + 'static>>>;
+pub type UsizeChangeCallback = Arc<Mutex<Box<dyn Fn(usize) + Send + 'static>>>;
 
 impl Dropdown {
     /// 创建新下拉菜单

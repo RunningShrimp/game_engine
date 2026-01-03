@@ -19,6 +19,22 @@ ssh_run() {
 echo "[1/4] Checking reachability..."
 ssh_run 'echo OK; uname -a' >/dev/null
 
+echo "[1.5/4] Guardrail: ensure CAKE (sch_cake) is not installed/loaded..."
+ssh_run '
+  if lsmod 2>/dev/null | grep -q "^sch_cake"; then
+    echo "sch_cake is loaded; attempting unload to avoid kernel panic";
+    rmmod sch_cake 2>/dev/null || true;
+  else
+    echo "OK: sch_cake not loaded";
+  fi
+  if opkg list-installed 2>/dev/null | grep -q "^kmod-sched-cake "; then
+    echo "kmod-sched-cake is installed; removing to avoid kernel panic";
+    opkg remove kmod-sched-cake 2>/dev/null || true;
+  else
+    echo "OK: kmod-sched-cake not installed";
+  fi
+'
+
 echo "[2/4] Disabling mwan3 (recommended when single-WAN)..."
 ssh_run '/etc/init.d/mwan3 stop 2>/dev/null || true; /etc/init.d/mwan3 disable 2>/dev/null || true; echo "mwan3 status:"; /etc/init.d/mwan3 status 2>/dev/null || true'
 
@@ -40,7 +56,7 @@ ssh_run "uci set network.wan.peerdns='0' && uci -q delete network.wan.dns && uci
          uci set dhcp.@dnsmasq[0].noresolv='1' && \
          uci set dhcp.@dnsmasq[0].filter_aaaa='1' && \
          uci commit dhcp && \
-         /etc/init.d/network restart && /etc/init.d/dnsmasq restart"
+         (/etc/init.d/network restart || true) && /etc/init.d/dnsmasq restart"
 
 echo "[3.8/4] Restarting OpenClash (if enabled)..."
 ssh_run 'if [ "$(uci -q get openclash.config.enable 2>/dev/null || echo 0)" = "1" ]; then /etc/init.d/openclash restart || true; else echo "OpenClash not enabled, skip"; fi'

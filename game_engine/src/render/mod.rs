@@ -113,6 +113,7 @@ pub mod integrated_gpu;
 pub mod lod_generator;
 pub mod mesh;
 pub mod mesh_simplifier;
+pub mod performance_analyzer;
 pub mod quality_assessor;
 pub mod shader_async;
 pub mod shader_cache;
@@ -274,6 +275,11 @@ pub use gpu_unified_manager_v2::{
 pub use gpu_optimization_example::{
     CullingComparisonResult, GpuOptimizationExample, PerformanceTestResult, VramStressTestResult,
     run_gpu_optimization_demo,
+};
+
+pub use performance_analyzer::{
+    FpsTrend, OptimizationSuggestion, PerfConfig, PerformanceAnalyzer, PerformanceBottleneck,
+    PerformanceReport, SuggestionType,
 };
 
 // Re-export Ray Tracing components (including enhanced features)

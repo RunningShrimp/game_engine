@@ -125,6 +125,9 @@ log.workspace = true
 tracing.workspace = true
 tracing-subscriber = { version = "0.3.22", features = ["fmt", "env-filter"] }
 rand.workspace = true
+
+# Documentation generation
+syn = { version = "2.0", features = ["full", "extra-traits"] }
 rodio = "0.21.1"
 raw-window-handle = "0.6.2"
 num_cpus = "1.17"

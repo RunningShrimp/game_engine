@@ -147,6 +147,7 @@ pub enum Commands {
     /// game-engine optimize ./assets -o ./assets_mobile --platform Mobile --quality High
     /// ```
     #[cfg(feature = "asset-pipeline")]
+    #[allow(unexpected_cfgs, reason = "asset-pipeline is a custom feature")]
     Optimize {
         /// Input assets directory
         #[arg(short, long)]
@@ -356,6 +357,7 @@ impl GameEngineCli {
                 self.cmd_info()?;
             }
             #[cfg(feature = "asset-pipeline")]
+            #[allow(unexpected_cfgs, reason = "asset-pipeline is a custom feature")]
             Commands::Optimize {
                 input,
                 output,
@@ -649,6 +651,7 @@ dist/"#;
 
     /// Executes the 'optimize' command
     #[cfg(feature = "asset-pipeline")]
+    #[allow(unexpected_cfgs, reason = "asset-pipeline is a custom feature")]
     fn cmd_optimize(
         &self,
         input: &PathBuf,
@@ -726,6 +729,7 @@ dist/"#;
 
     /// Executes the 'analyze' command
     #[cfg(feature = "asset-pipeline")]
+    #[allow(unexpected_cfgs, reason = "asset-pipeline is a custom feature")]
     fn cmd_analyze(&self, input: &PathBuf, output: &Option<PathBuf>) -> Result<(), CliError> {
         use crate::tools::asset_pipeline::QualityAnalyzer;
 
@@ -750,6 +754,7 @@ dist/"#;
 
     /// Executes the 'analyze' command (no asset-pipeline feature)
     #[cfg(not(feature = "asset-pipeline"))]
+    #[allow(unexpected_cfgs, reason = "asset-pipeline is a custom feature")]
     fn cmd_analyze(&self, input: &PathBuf, output: &Option<PathBuf>) -> Result<(), CliError> {
         println!("🔍 Analyzing assets...");
         println!();
@@ -770,6 +775,7 @@ dist/"#;
 
     /// Executes the 'bundle' command
     #[cfg(feature = "asset-pipeline")]
+    #[allow(unexpected_cfgs, reason = "asset-pipeline is a custom feature")]
     fn cmd_bundle(&self, input: &PathBuf, output: &PathBuf, format: &str) -> Result<(), CliError> {
         use crate::tools::asset_pipeline::{AssetBundler, BundleFormat};
 
@@ -801,6 +807,7 @@ dist/"#;
 
     /// Executes the 'bundle' command (no asset-pipeline feature)
     #[cfg(not(feature = "asset-pipeline"))]
+    #[allow(unexpected_cfgs, reason = "asset-pipeline is a custom feature")]
     fn cmd_bundle(&self, input: &PathBuf, output: &PathBuf, format: &str) -> Result<(), CliError> {
         println!("📦 Bundling assets...");
         println!();

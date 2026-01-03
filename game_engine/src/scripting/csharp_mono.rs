@@ -22,15 +22,18 @@
 //! 3. 重新编译
 
 // 注意：当前使用条件编译来禁用 Mono 集成
-// 要启用 Mono 支持，请将下面的 #[cfg(feature = "mono")] 改为 #[cfg(feature = "mono")]
-
+// 要启用 Mono 支持，请将下面的 #[cfg(feature = "mono")]
+// 改为 #[cfg(feature = "mono")]
+#[allow(unexpected_cfgs, reason = "mono is a custom feature")]
 #[cfg(feature = "mono")]
+#[allow(unexpected_cfgs, reason = "mono is a custom feature")]
 use crate::scripting::csharp::{AssemblyMetadata, FunctionSignature, TypeMetadata};
 use std::path::PathBuf;
 use std::sync::Mutex;
 
 /// Mono 运行时主机
 #[cfg(feature = "mono")]
+#[allow(unexpected_cfgs, reason = "mono is a custom feature")]
 #[derive(Debug)]
 pub struct MonoHost {
     /// Mono 运行时是否已初始化
@@ -38,6 +41,7 @@ pub struct MonoHost {
 
     /// Mono 域（AppDomain）
     #[cfg(feature = "mono")]
+    #[allow(unexpected_cfgs, reason = "mono is a custom feature")]
     domain: Option<wrapped_mono::domain::Domain>,
 
     /// 已加载的程序集缓存
@@ -45,6 +49,7 @@ pub struct MonoHost {
 }
 
 #[cfg(feature = "mono")]
+#[allow(unexpected_cfgs, reason = "mono is a custom feature")]
 impl MonoHost {
     /// 初始化 Mono 运行时
     ///
@@ -120,6 +125,7 @@ impl MonoHost {
         tracing::debug!("Loading .NET assembly: {:?}", path);
 
         #[cfg(feature = "mono")]
+        #[allow(unexpected_cfgs, reason = "mono is a custom feature")]
         {
             if let Some(ref domain) = self.domain {
                 return self.load_assembly_with_mono(domain, path);
@@ -136,6 +142,7 @@ impl MonoHost {
 
     /// 使用 Mono 加载程序集并扫描类型
     #[cfg(feature = "mono")]
+    #[allow(unexpected_cfgs, reason = "mono is a custom feature")]
     fn load_assembly_with_mono(
         &self,
         domain: &wrapped_mono::domain::Domain,
@@ -195,6 +202,7 @@ impl MonoHost {
         );
 
         #[cfg(feature = "mono")]
+        #[allow(unexpected_cfgs, reason = "mono is a custom feature")]
         {
             if let Some(ref domain) = self.domain {
                 return self.invoke_method_with_mono(
@@ -214,6 +222,7 @@ impl MonoHost {
 
     /// 使用 Mono 调用方法
     #[cfg(feature = "mono")]
+    #[allow(unexpected_cfgs, reason = "mono is a custom feature")]
     fn invoke_method_with_mono(
         &self,
         domain: &wrapped_mono::domain::Domain,
@@ -314,6 +323,7 @@ impl MonoHost {
 }
 
 #[cfg(feature = "mono")]
+#[allow(unexpected_cfgs, reason = "mono is a custom feature")]
 impl Drop for MonoHost {
     fn drop(&mut self) {
         if self.initialized {
@@ -324,8 +334,10 @@ impl Drop for MonoHost {
 }
 
 #[cfg(feature = "mono")]
+#[allow(unexpected_cfgs, reason = "mono is a custom feature")]
 unsafe impl Send for MonoHost {}
 #[cfg(feature = "mono")]
+#[allow(unexpected_cfgs, reason = "mono is a custom feature")]
 unsafe impl Sync for MonoHost {}
 
 /// 已加载的程序集
@@ -373,6 +385,7 @@ mod tests {
 
     #[test]
     #[cfg(feature = "mono")]
+    #[allow(unexpected_cfgs, reason = "mono is a custom feature")]
     fn test_mono_host_initialization() {
         // 这个测试需要 Mono 已安装
         let host = MonoHost::initialize();

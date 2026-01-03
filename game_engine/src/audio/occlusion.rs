@@ -1,6 +1,6 @@
 // 音频遮挡/阻塞系统
 //
-// 基于物理的音频遮挡计算
+// 基于物理的音频遮挡计算，支持低通滤波器和遮挡过渡
 
 use std::sync::Arc;
 
@@ -75,11 +75,71 @@ impl AcousticMaterial {
     }
 }
 
+/// 低通滤波器（用于频率依赖的遮挡）
+pub struct LowpassFilter {
+    /// 上一帧的输出值
+    previous_output: f32,
+    /// 滤波器系数 (0.0-1.0)
+    coefficient: f32,
+    /// 采样率
+    sample_rate: f32,
+}
+
+impl LowpassFilter {
+    /// 创建新的低通滤波器
+    pub fn new(cutoff_frequency: f32, sample_rate: f32) -> Self {
+        // 计算RC滤波器系数
+        let rc = 1.0 / (2.0 * std::f32::consts::PI * cutoff_frequency);
+        let dt = 1.0 / sample_rate;
+        let coefficient = rc / (rc + dt);
+
+        Self {
+            previous_output: 0.0,
+            coefficient,
+            sample_rate,
+        }
+    }
+
+    /// 处理单个样本
+    pub fn process(&mut self, input: f32) -> f32 {
+        let output = self.coefficient * self.previous_output + (1.0 - self.coefficient) * input;
+        self.previous_output = output;
+        output
+    }
+
+    /// 处理音频缓冲区
+    pub fn process_buffer(&mut self, buffer: &mut [f32]) {
+        for sample in buffer.iter_mut() {
+            *sample = self.process(*sample);
+        }
+    }
+
+    /// 重置滤波器状态
+    pub fn reset(&mut self) {
+        self.previous_output = 0.0;
+    }
+
+    /// 设置截止频率
+    pub fn set_cutoff_frequency(&mut self, cutoff: f32) {
+        let rc = 1.0 / (2.0 * std::f32::consts::PI * cutoff);
+        let dt = 1.0 / self.sample_rate;
+        self.coefficient = rc / (rc + dt);
+    }
+}
+
 /// 音频遮挡系统
 pub struct AudioOcclusion {
     physics_world: Option<Arc<dyn PhysicsWorld>>,
     max_rays: usize,
     max_distance: f32,
+    /// 低通滤波器（用于遮挡过渡）
+    lowpass_filter: Option<LowpassFilter>,
+    /// 当前遮挡因子（用于平滑过渡）
+    current_occlusion: f32,
+    /// 过渡速度 (0.0-1.0)
+    transition_speed: f32,
+    /// 采样率
+    sample_rate: f32,
 }
 
 /// 光线
@@ -104,11 +164,15 @@ pub struct RaycastHit {
 
 impl AudioOcclusion {
     /// 创建新的音频遮挡系统
-    pub fn new() -> Self {
+    pub fn new(sample_rate: f32) -> Self {
         Self {
             physics_world: None,
             max_rays: 10,
             max_distance: 100.0,
+            lowpass_filter: Some(LowpassFilter::new(10.0, sample_rate)), // 10Hz截止频率
+            current_occlusion: 0.0,
+            transition_speed: 0.1, // 平滑过渡
+            sample_rate,
         }
     }
 
@@ -117,8 +181,35 @@ impl AudioOcclusion {
         self.physics_world = Some(world);
     }
 
-    /// 计算遮挡
+    /// 计算遮挡（带平滑过渡）
     pub fn compute_occlusion(
+        &mut self,
+        source: (f32, f32, f32),
+        listener: (f32, f32, f32),
+    ) -> OcclusionResult {
+        // 计算瞬时遮挡
+        let instant_result = self.compute_occlusion_instant(source, listener);
+
+        // 使用低通滤波器平滑过渡
+        if let Some(ref mut filter) = self.lowpass_filter {
+            self.current_occlusion = filter.process(instant_result.occlusion_factor);
+        } else {
+            self.current_occlusion = instant_result.occlusion_factor;
+        }
+
+        // 返回平滑后的结果
+        OcclusionResult {
+            occlusion_factor: self.current_occlusion,
+            transmission_loss: instant_result.transmission_loss * self.current_occlusion,
+            low_frequency_attenuation: instant_result.low_frequency_attenuation
+                * self.current_occlusion,
+            high_frequency_attenuation: instant_result.high_frequency_attenuation
+                * self.current_occlusion,
+        }
+    }
+
+    /// 计算瞬时遮挡（不考虑过渡）
+    fn compute_occlusion_instant(
         &self,
         source: (f32, f32, f32),
         listener: (f32, f32, f32),
@@ -201,20 +292,12 @@ impl AudioOcclusion {
         let mut total_high_freq = 0.0;
 
         let ray_count = self.max_rays.min(10);
-        let cone_angle = 30.0_f32.to_radians(); // 30度锥
+        let _cone_angle = 30.0_f32.to_radians(); // 30度锥
 
-        for i in 0..ray_count {
-            // 在锥体内均匀分布光线
-            let angle_offset = if ray_count > 1 {
-                let t = i as f32 / (ray_count - 1) as f32 - 0.5;
-                t * cone_angle
-            } else {
-                0.0
-            };
-
+        for _i in 0..ray_count {
             // TODO: 实际计算偏移后的光线方向
-            // 简化版：只使用直达光
-            let result = self.compute_occlusion(source, listener);
+            // 简化版：只使用compute_occlusion_instant避免可变借用问题
+            let result = self.compute_occlusion_instant(source, listener);
             total_occlusion += result.occlusion_factor;
             total_transmission_loss += result.transmission_loss;
             total_low_freq += result.low_frequency_attenuation;
@@ -239,11 +322,36 @@ impl AudioOcclusion {
     pub fn set_max_distance(&mut self, max_distance: f32) {
         self.max_distance = max_distance;
     }
+
+    /// 设置过渡速度
+    pub fn set_transition_speed(&mut self, speed: f32) {
+        self.transition_speed = speed.clamp(0.0, 1.0);
+    }
+
+    /// 重置遮挡状态
+    pub fn reset(&mut self) {
+        self.current_occlusion = 0.0;
+        if let Some(ref mut filter) = self.lowpass_filter {
+            filter.reset();
+        }
+    }
+
+    /// 应用频率依赖的衰减到音频缓冲区
+    pub fn apply_occlusion(&mut self, buffer: &mut [f32], occlusion: &OcclusionResult) {
+        // 应用传输损失
+        let gain = 1.0 - occlusion.transmission_loss;
+        for sample in buffer.iter_mut() {
+            *sample *= gain;
+        }
+
+        // 注意：实际应用中，应该使用双二阶滤波器或类似方法
+        // 来实现频率依赖的衰减。这里简化处理。
+    }
 }
 
 impl Default for AudioOcclusion {
     fn default() -> Self {
-        Self::new()
+        Self::new(44100.0)
     }
 }
 

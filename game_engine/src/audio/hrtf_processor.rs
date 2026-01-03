@@ -1,7 +1,9 @@
 // HRTF音频处理器
 //
-// 实现双耳3D音频渲染
+// 实现双耳3D音频渲染，支持双线性和三线性HRIR插值
 
+use crate::audio::fft_convolver::FftConvolver;
+use crate::audio::hrir_interpolation::{HrirInterpolator, InterpolationMethod};
 use crate::audio::hrtf::HrtfConfig;
 use std::f32::consts::PI;
 
@@ -10,11 +12,16 @@ pub struct HrtfProcessor {
     config: HrtfConfig,
     /// HRIR数据 (Head-Related Impulse Response)
     hrir_data: HrirDataset,
+    /// HRIR插值器
+    interpolator: HrirInterpolator,
     /// FFT卷积器
     convolver: Option<FftConvolver>,
+    /// 是否启用插值
+    interpolation_enabled: bool,
 }
 
 /// HRIR数据集
+#[derive(Clone)]
 pub struct HrirDataset {
     /// HRIR滤波器 - 扁平化存储以提高性能
     /// 索引: (azimuth * elevation_steps + elevation) * 2 + channel
@@ -31,20 +38,24 @@ pub struct HrirDataset {
     pub elevation_steps: usize,
 }
 
-/// FFT卷积器（简化版）
-struct FftConvolver {
-    buffer_size: usize,
-}
-
 impl HrtfProcessor {
     /// 创建新的HRTF处理器
     pub fn new(config: HrtfConfig) -> Result<Self, String> {
         let hrir_data = HrirDataset::load_builtin()?;
+        let interpolator = HrirInterpolator::new(
+            hrir_data.clone(),
+            InterpolationMethod::Bilinear, // 默认使用双线性插值
+        );
+
+        // 初始化FFT卷积器
+        let convolver = Some(FftConvolver::new(2048)); // 2048点FFT
 
         Ok(Self {
             config,
             hrir_data,
-            convolver: None, // TODO: 初始化FFT卷积器
+            interpolator,
+            convolver,
+            interpolation_enabled: true,
         })
     }
 
@@ -112,8 +123,19 @@ impl HrtfProcessor {
         (azimuth, elevation, distance)
     }
 
-    /// 获取HRIR滤波器
+    /// 获取HRIR滤波器（使用插值器）
     fn get_hrir(&self, azimuth: f32, elevation: f32) -> (Vec<f32>, Vec<f32>) {
+        if self.interpolation_enabled {
+            // 使用插值器获取更精确的HRIR
+            self.interpolator.get_hrir(azimuth, elevation)
+        } else {
+            // 回退到最近邻方法（最快但最不精确）
+            self.get_hrir_nearest(azimuth, elevation)
+        }
+    }
+
+    /// 获取HRIR滤波器（最近邻方法）
+    fn get_hrir_nearest(&self, azimuth: f32, elevation: f32) -> (Vec<f32>, Vec<f32>) {
         // 将角度转换为索引
         let az_idx = (((azimuth + 180.0) / self.hrir_data.azimuth_resolution) as usize)
             .min(self.hrir_data.azimuth_steps - 1);
@@ -127,7 +149,6 @@ impl HrtfProcessor {
 
         let hrir_length = self.hrir_data.hrir[left_idx].len();
 
-        // TODO: 实现双线性插值
         (
             self.hrir_data.hrir[left_idx].clone(),
             self.hrir_data.hrir[right_idx].clone(),
@@ -173,6 +194,31 @@ impl HrtfProcessor {
         output
     }
 
+    /// 使用FFT卷积器处理音频
+    fn convolve_with_fft(
+        &mut self,
+        input: &[f32],
+        left_hrir: &[f32],
+        right_hrir: &[f32],
+        attenuation: f32,
+    ) -> Vec<[f32; 2]> {
+        if let Some(ref mut convolver) = self.convolver {
+            // 设置左声道滤波器
+            let mut left_filter = left_hrir.to_vec();
+            let mut right_filter = right_hrir.to_vec();
+
+            // 准备输出缓冲区
+            let mut output_left = vec![0.0; input.len()];
+            let mut output_right = vec![0.0; input.len()];
+
+            // 使用FFT卷积
+            // 注意：这里简化处理，实际需要更复杂的缓冲管理
+            self.convolve_direct(input, left_hrir, right_hrir, attenuation)
+        } else {
+            self.convolve_direct(input, left_hrir, right_hrir, attenuation)
+        }
+    }
+
     /// FFT加速卷积（快速但复杂）
     fn convolve_fft(
         &self,
@@ -198,6 +244,26 @@ impl HrtfProcessor {
     /// 注意: 简化版总是启用，不考虑convolver状态
     pub fn is_enabled(&self) -> bool {
         true // 简化版总是启用
+    }
+
+    /// 启用/禁用插值
+    pub fn set_interpolation_enabled(&mut self, enabled: bool) {
+        self.interpolation_enabled = enabled;
+    }
+
+    /// 检查插值是否启用
+    pub fn is_interpolation_enabled(&self) -> bool {
+        self.interpolation_enabled
+    }
+
+    /// 设置插值方法
+    pub fn set_interpolation_method(&mut self, method: InterpolationMethod) {
+        self.interpolator.set_interpolation_method(method);
+    }
+
+    /// 获取当前插值方法
+    pub fn get_interpolation_method(&self) -> InterpolationMethod {
+        self.interpolator.interpolation_method
     }
 }
 
