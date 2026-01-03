@@ -449,14 +449,23 @@ impl AssetPipeline {
 
         let elapsed = start.elapsed();
 
+        // 计算实际优化后的大小（所有LOD文件总和）
+        let mut optimized_size = 0u64;
+        for (i, _lod) in lods.iter().enumerate() {
+            let lod_path = lod_dir.join(format!("lod{}.gltf", i));
+            if let Ok(metadata) = tokio::fs::metadata(&lod_path).await {
+                optimized_size += metadata.len();
+            }
+        }
+
         Ok(OptimizationResult {
             asset_path: asset.path.clone(),
             asset_type: AssetType::Model,
             original_size: asset.size,
-            optimized_size: asset.size, // TODO: 计算实际大小
+            optimized_size, // 实际计算的优化后大小
             lods_generated: lods.len(),
             compressed: false,
-            optimized: false,
+            optimized: optimized_size < asset.size,
             processing_time: elapsed.as_secs_f64(),
         })
     }

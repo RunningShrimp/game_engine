@@ -3,7 +3,10 @@
 //! Extended platform detection system with compile-time and runtime capabilities checking.
 //! Supports all console platforms with detailed hardware feature queries.
 
-#![allow(unexpected_cfgs, reason = "custom target OS values for console platforms")]
+#![allow(
+    unexpected_cfgs,
+    reason = "custom target OS values for console platforms"
+)]
 
 use crate::platform::console::{ConsoleConfig, ConsolePlatform};
 use serde::{Deserialize, Serialize};

@@ -252,13 +252,18 @@ impl AssetImportWizard {
                 ui.group(|ui| {
                     ui.heading("Selected Files:");
                     egui::ScrollArea::vertical().max_height(200.0).show(ui, |ui| {
-                        for file in &self.dragged_files {
+                        let mut files_to_remove = Vec::new();
+                        for (idx, file) in self.dragged_files.iter().enumerate() {
                             ui.horizontal(|ui| {
                                 ui.label(format!("📄 {}", file.display()));
                                 if ui.button("×").clicked() {
-                                    // TODO: Remove file
+                                    files_to_remove.push(idx);
                                 }
                             });
+                        }
+                        // Remove files in reverse order to maintain correct indices
+                        for idx in files_to_remove.into_iter().rev() {
+                            self.dragged_files.remove(idx);
                         }
                     });
                 });

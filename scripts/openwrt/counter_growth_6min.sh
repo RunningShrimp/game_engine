@@ -17,9 +17,12 @@ echo "$TS" >"$OUTDIR/_timestamp.txt"
 
 SSH_BASE="ssh -o ConnectTimeout=12 -o StrictHostKeyChecking=accept-new"
 
+SAMPLES="${SAMPLES:-3}"
+INTERVAL_SEC="${INTERVAL_SEC:-120}"
+
 {
   i=1
-  while [ $i -le 3 ]; do
+  while [ $i -le "$SAMPLES" ]; do
     echo "===== SAMPLE $i $(date -u '+%F %T UTC') ====="
     $SSH_BASE "$TARGET" '
       echo "TS_EPOCH=$(date +%s)"
@@ -45,8 +48,8 @@ SSH_BASE="ssh -o ConnectTimeout=12 -o StrictHostKeyChecking=accept-new"
     '
     echo
 
-    if [ $i -lt 3 ]; then
-      sleep 120
+    if [ $i -lt "$SAMPLES" ]; then
+      sleep "$INTERVAL_SEC"
     fi
 
     i=$((i + 1))

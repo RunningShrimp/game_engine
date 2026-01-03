@@ -92,8 +92,7 @@ impl NpuLlmEngine {
         // 检查模型文件是否存在
         if !model_path.exists() {
             return Err(NPUError::ModelLoadFailed(format!(
-                "Model file not found: {:?}",
-                model_path
+                "Model file not found: {model_path:?}"
             )));
         }
 
@@ -277,10 +276,7 @@ impl NpuLlmEngine {
 
     /// 格式化提示词
     fn format_prompt(&self, system_prompt: &str, user_input: &str) -> String {
-        format!(
-            "### System:\n{}\n\n### User:\n{}\n\n### Assistant:\n",
-            system_prompt, user_input
-        )
+        format!("### System:\n{system_prompt}\n\n### User:\n{user_input}\n\n### Assistant:\n")
     }
 
     /// Tokenize（简化实现）

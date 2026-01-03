@@ -71,12 +71,22 @@ impl WebSocketClient {
     }
 
     /// 连接服务器
+    ///
+    /// 注意：当前使用简化实现，仅设置连接状态。
+    /// 完整实现需要使用 tokio-tungstenite 或类似 crate 建立 WebSocket 连接。
     pub async fn connect(&self) -> Result<(), CollaborationError> {
         let mut connected = self.connected.lock().await;
         *connected = true;
 
-        // TODO: 实现实际的WebSocket连接
-        // 这里使用简化实现
+        // 简化实现：完整实现需要：
+        // 1. 使用 tokio_tungstenite 连接到 WebSocket 服务器
+        // 2. 处理握手过程
+        // 3. 设置心跳保持连接
+        // 4. 错误处理和重连逻辑
+        //
+        // 示例：
+        // let ws_stream = TokioActor::connect(&self.url).await?;
+        // self.ws_sender.send(ws_stream).unwrap();
 
         Ok(())
     }
@@ -90,6 +100,9 @@ impl WebSocketClient {
     }
 
     /// 发送消息
+    ///
+    /// 注意：当前使用简化实现，仅打印序列化后的消息。
+    /// 完整实现需要通过 WebSocket 连接实际发送消息。
     pub async fn send(&self, message: NetworkMessage) -> Result<(), CollaborationError> {
         let connected = self.connected.lock().await;
         if !*connected {
@@ -98,25 +111,47 @@ impl WebSocketClient {
             ));
         }
 
-        // TODO: 实际发送WebSocket消息
         let serialized = serde_json::to_string(&message)
             .map_err(|e| CollaborationError::NetworkError(e.to_string()))?;
 
-        // 模拟发送
+        // 简化实现：完整实现需要：
+        // 1. 通过 WebSocket sink 发送序列化后的消息
+        // 2. 处理发送失败的错误
+        // 3. 实现消息队列和重试机制
+        //
+        // 示例：
+        // self.ws_sender.send(Message::Text(serialized)).await?;
+
+        // 模拟发送（用于测试）
         println!("WebSocket sending: {}", serialized);
 
         Ok(())
     }
 
     /// 接收消息
+    ///
+    /// 注意：当前使用简化实现，返回错误提示没有消息。
+    /// 完整实现需要从 WebSocket 连接异步读取消息。
     pub async fn receive(&self) -> Result<NetworkMessage, CollaborationError> {
-        // TODO: 实际接收WebSocket消息
-        // 这里使用简化实现
+        // 简化实现：完整实现需要：
+        // 1. 从 WebSocket stream 异步读取消息
+        // 2. 反序列化接收到的消息
+        // 3. 处理消息类型和错误
+        // 4. 实现消息超时机制
+        //
+        // 示例：
+        // let msg = self.ws_receiver.next().await.ok_or(NetworkError)?;
+        // match msg {
+        //     Message::Text(text) => Ok(serde_json::from_str(&text)?),
+        //     _ => Err(NetworkError),
+        // }
 
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
         // 模拟接收（实际应该从WebSocket读取）
-        Err(CollaborationError::NetworkError("No message".to_string()))
+        Err(CollaborationError::NetworkError(
+            "No message available".to_string(),
+        ))
     }
 
     /// 检查连接状态

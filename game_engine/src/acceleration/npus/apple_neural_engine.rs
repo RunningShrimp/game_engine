@@ -18,7 +18,7 @@ impl AppleNERuntime {
     pub fn new() -> Result<Self, NPUError> {
         // 创建Metal设备
         let device = metal::MTLDevice::system().map_err(|e| {
-            NPUError::DeviceNotAvailable(format!("Failed to create Metal device: {:?}", e))
+            NPUError::DeviceNotAvailable(format!("Failed to create Metal device: {e:?}"))
         })?;
 
         // 验证ANE支持
@@ -65,15 +65,14 @@ impl AppleNERuntime {
         let model_url = std::path::Path::new(model_path);
         if !model_url.exists() {
             return Err(NPUError::ModelLoadFailed(format!(
-                "Model not found: {}",
-                model_path
+                "Model not found: {model_path}"
             )));
         }
 
         // 简化实现：创建模型对象
         // 实际实现需要使用Core ML API
         let model = core_ml::Model::from_url(model_url.to_path_buf())
-            .map_err(|e| NPUError::ModelLoadFailed(format!("Failed to load model: {:?}", e)))?;
+            .map_err(|e| NPUError::ModelLoadFailed(format!("Failed to load model: {e:?}")))?;
 
         Ok(model)
     }
@@ -169,9 +168,10 @@ impl NPUModelImpl for AppleNEModel {
         }
 
         // 执行推理
-        let prediction = self.model.predict(&ml_inputs).map_err(|e| {
-            NPUError::InferenceFailed(format!("Core ML prediction failed: {:?}", e))
-        })?;
+        let prediction = self
+            .model
+            .predict(&ml_inputs)
+            .map_err(|e| NPUError::InferenceFailed(format!("Core ML prediction failed: {e:?}")))?;
 
         // 转换输出
         let mut outputs = Vec::new();

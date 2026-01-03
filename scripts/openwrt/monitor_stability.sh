@@ -13,7 +13,7 @@ set -eu
 #   exports pstore/ramoops logs into the same cycle folder.
 #
 # Usage:
-#   sh scripts/openwrt/monitor_stability.sh root@192.168.88.1 [minutes]
+#   sh scripts/openwrt/monitor_stability.sh root@192.168.88.1 [minutes] [--quick]
 #
 # Examples:
 #   sh scripts/openwrt/monitor_stability.sh root@192.168.88.1 60
@@ -21,6 +21,7 @@ set -eu
 
 TARGET="${1:-}"
 MINUTES="${2:-60}"
+MODE="${3:-}"
 
 if [ -z "$TARGET" ]; then
   echo "Usage: $0 root@192.168.88.1 [minutes]" >&2
@@ -48,6 +49,11 @@ if [ "$CYCLES" -lt 1 ]; then
   CYCLES=1
 fi
 
+QUICK=0
+if [ "$MODE" = "--quick" ] || [ "${QUICK:-0}" = "1" ]; then
+  QUICK=1
+fi
+
 echo "[monitor] target=$TARGET minutes=$MINUTES cycles=$CYCLES"
 echo "[monitor] output=$OUTROOT"
 
@@ -56,6 +62,11 @@ while [ "$i" -le "$CYCLES" ]; do
   CYCLE_DIR="$OUTROOT/cycle_$i"
   mkdir -p "$CYCLE_DIR"
 
+  PREV_DIR=""
+  if [ "$i" -gt 1 ]; then
+    PREV_DIR="$OUTROOT/cycle_$((i - 1))"
+  fi
+
   echo "[cycle $i/$CYCLES] starting $(date -u '+%F %T UTC')"
 
   # record uptime before
@@ -63,7 +74,11 @@ while [ "$i" -le "$CYCLES" ]; do
   echo "uptime_before_s=$UPTIME_BEFORE" >"$CYCLE_DIR/00_uptime.txt"
 
   # counter sampler (writes its own timestamped folder); copy into our cycle folder
-  sh "$SCRIPT_DIR/counter_growth_6min.sh" "$TARGET" >/dev/null
+  if [ "$QUICK" -eq 1 ]; then
+    SAMPLES=1 INTERVAL_SEC=0 sh "$SCRIPT_DIR/counter_growth_6min.sh" "$TARGET" >/dev/null
+  else
+    sh "$SCRIPT_DIR/counter_growth_6min.sh" "$TARGET" >/dev/null
+  fi
   LATEST_SAMPLE_DIR="$(ls -1t openwrt_audit 2>/dev/null | head -n 1)"
   if [ -n "$LATEST_SAMPLE_DIR" ] && [ -f "openwrt_audit/$LATEST_SAMPLE_DIR/04_counter_growth_6min.txt" ]; then
     cp -f "openwrt_audit/$LATEST_SAMPLE_DIR/04_counter_growth_6min.txt" "$CYCLE_DIR/04_counter_growth_6min.txt"
@@ -71,6 +86,78 @@ while [ "$i" -le "$CYCLES" ]; do
 
   # endpoint regression
   sh "$SCRIPT_DIR/endpoint_regression_ipv4.sh" "$TARGET" >"$CYCLE_DIR/06_endpoint_regression_ipv4.txt" 2>&1 || true
+
+  # filtered logs (help correlate disconnects with conntrack/Oops/panic/OpenClash)
+  $SSH_BASE "$TARGET" '
+    logread 2>/dev/null | tail -n 1200 | grep -i -E "(ct state invalid|nf_conntrack|conntrack|Connection reset|reset by peer|panic|Oops|Unable to handle kernel paging request|call trace|softirq|inet_diag|openclash)" | tail -n 300 || true
+  ' >"$CYCLE_DIR/07_logread_filtered_tail.txt" 2>/dev/null || true
+
+  # key nft counters snapshot + delta (OpenClash + ct invalid drop)
+  $SSH_BASE "$TARGET" '
+    set -e
+    echo "ct_invalid_drop:"
+    nft -a list chain inet fw4 accept_to_wan 2>/dev/null | grep -F "ct state invalid" || true
+    echo
+    echo "openclash_quic_reject:"
+    nft -a list ruleset 2>/dev/null | grep -F "OpenClash QUIC REJECT" || true
+    echo
+    echo "openclash_dns_hijack:"
+    nft -a list ruleset 2>/dev/null | grep -F "OpenClash DNS Hijack" || true
+  ' >"$CYCLE_DIR/08_nft_key_rules_raw.txt" 2>/dev/null || true
+
+  awk '
+    function emit(k, p, b) { if (k != "") print k " packets=" p " bytes=" b }
+    /^ct_invalid_drop:/ { section="ct_invalid_drop"; next }
+    /^openclash_quic_reject:/ { section="openclash_quic_reject"; next }
+    /^openclash_dns_hijack:/ { section="openclash_dns_hijack"; next }
+    {
+      if (section == "") next
+      # Extract "counter packets N bytes M" occurrences
+      p = b = ""
+      if (match($0, /counter packets [0-9]+ bytes [0-9]+/)) {
+        s = substr($0, RSTART, RLENGTH)
+        gsub("counter packets ", "", s)
+        split(s, a, " bytes ")
+        p = a[1]
+        b = a[2]
+      } else {
+        next
+      }
+
+      # Derive a stable key per rule line:
+      # - for ct_invalid_drop: single key
+      # - for openclash_*: prefer comment string
+      k = section
+      if (section ~ /^openclash_/) {
+        if (index($0, "OpenClash QUIC REJECT") > 0) k = "openclash_quic_reject"
+        else if (index($0, "OpenClash DNS Hijack") > 0) k = "openclash_dns_hijack"
+      }
+      emit(k, p, b)
+    }
+  ' "$CYCLE_DIR/08_nft_key_rules_raw.txt" >"$CYCLE_DIR/08_nft_key_counters.txt" 2>/dev/null || true
+
+  if [ -n "$PREV_DIR" ] && [ -f "$PREV_DIR/08_nft_key_counters.txt" ] && [ -f "$CYCLE_DIR/08_nft_key_counters.txt" ]; then
+    awk '
+      function getv(line, key) {
+        if (match(line, key "=[0-9]+")) return substr(line, RSTART + length(key) + 1, RLENGTH - length(key) - 1)
+        return 0
+      }
+      FNR==NR {
+        key=$1
+        prev_p[key]=getv($0,"packets")
+        prev_b[key]=getv($0,"bytes")
+        next
+      }
+      {
+        key=$1
+        cur_p=getv($0,"packets")
+        cur_b=getv($0,"bytes")
+        dp=cur_p - (key in prev_p ? prev_p[key] : 0)
+        db=cur_b - (key in prev_b ? prev_b[key] : 0)
+        print key " d_packets=" dp " d_bytes=" db
+      }
+    ' "$PREV_DIR/08_nft_key_counters.txt" "$CYCLE_DIR/08_nft_key_counters.txt" >"$CYCLE_DIR/09_nft_key_counters_delta.txt" 2>/dev/null || true
+  fi
 
   # record uptime after + detect reboot
   UPTIME_AFTER="$($SSH_BASE "$TARGET" 'cut -d. -f1 /proc/uptime 2>/dev/null || echo 0' 2>/dev/null || echo 0)"
