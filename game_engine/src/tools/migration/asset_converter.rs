@@ -551,6 +551,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[cfg(feature = "serde_yaml")]
     fn test_converter_creation() {
         let config = AssetConverterConfig::default();
         let converter = UnityAssetConverter::new(config);

@@ -875,12 +875,14 @@ mod tests {
     use super::*;
 
     #[test]
+    #[cfg(feature = "regex")]
     fn test_converter_creation() {
         let converter = UnityScriptConverter::new();
         assert!(!converter.api_mappings.is_empty());
     }
 
     #[test]
+    #[cfg(feature = "regex")]
     fn test_api_mappings() {
         let converter = UnityScriptConverter::new();
         assert!(converter.api_mappings.contains_key("GameObject.Find"));
@@ -895,6 +897,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "regex")]
     fn test_parse_csharp() {
         let converter = UnityScriptConverter::new();
         let csharp_code = r#"

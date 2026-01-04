@@ -620,6 +620,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[cfg(feature = "serde_yaml")]
     fn test_migrator_creation() {
         let config = SceneMigratorConfig::default();
         let migrator = UnitySceneMigrator::new(config);
