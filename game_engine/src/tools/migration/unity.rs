@@ -2,7 +2,7 @@
 
 use super::{MigrationError, ProjectAnalysis};
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 #[cfg(feature = "serde_yaml")]
 use serde_yaml::Value as Yaml;
@@ -90,6 +90,12 @@ pub struct UnityProjectImporter {
     script_converter: Option<super::script_converter::UnityScriptConverter>,
 }
 
+impl Default for UnityProjectImporter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl UnityProjectImporter {
     /// 创建新导入器
     pub fn new() -> Self {
@@ -108,7 +114,7 @@ impl UnityProjectImporter {
     }
 
     /// 分析Unity项目
-    pub async fn analyze(&self, path: &PathBuf) -> Result<ProjectAnalysis, MigrationError> {
+    pub async fn analyze(&self, path: &Path) -> Result<ProjectAnalysis, MigrationError> {
         // 验证项目路径
         let assets_path = path.join("Assets");
         if !assets_path.exists() {
@@ -411,7 +417,7 @@ impl UnityProjectImporter {
         converted_textures: &mut u32,
         converted_meshes: &mut u32,
         converted_materials: &mut u32,
-        warnings: &mut Vec<String>,
+        _warnings: &mut Vec<String>,
     ) -> Result<(), MigrationError> {
         if asset_path.is_dir() {
             if let Ok(entries) = fs::read_dir(&asset_path) {
@@ -422,7 +428,7 @@ impl UnityProjectImporter {
                         converted_textures,
                         converted_meshes,
                         converted_materials,
-                        warnings,
+                        _warnings,
                     )?;
                 }
             }
@@ -452,8 +458,8 @@ impl UnityProjectImporter {
     /// 转换单个资源
     fn convert_single_asset(
         &self,
-        asset_path: &PathBuf,
-        output_path: &PathBuf,
+        asset_path: &Path,
+        output_path: &Path,
         asset_type: &str,
     ) -> Result<(), MigrationError> {
         let relative_path = asset_path.strip_prefix(&self.project_path).unwrap_or(asset_path);
@@ -461,13 +467,13 @@ impl UnityProjectImporter {
 
         if let Some(parent) = output_file.parent() {
             fs::create_dir_all(parent).map_err(|e| {
-                MigrationError::ConversionError(format!("Failed to create output dir: {}", e))
+                MigrationError::ConversionError(format!("Failed to create output dir: {e}"))
             })?;
         }
 
         // 复制资源文件 (实际项目中需要格式转换)
         fs::copy(asset_path, &output_file).map_err(|e| {
-            MigrationError::ConversionError(format!("Failed to copy {}: {}", asset_type, e))
+            MigrationError::ConversionError(format!("Failed to copy {asset_type}: {e}"))
         })?;
 
         tracing::debug!(

@@ -286,7 +286,7 @@ impl MigrationWizard {
                 })
             }
             Err(e) => {
-                println!("✗ 迁移失败: {}", e);
+                println!("✗ 迁移失败: {e}");
                 println!();
 
                 Err(WizardError::MigrationFailed(e.to_string()))
@@ -312,7 +312,7 @@ impl MigrationWizard {
             if !result.warnings.is_empty() {
                 println!("⚠️  警告:");
                 for warning in &result.warnings {
-                    println!("  - {}", warning);
+                    println!("  - {warning}");
                 }
                 println!();
             }
@@ -320,7 +320,7 @@ impl MigrationWizard {
             if !result.errors.is_empty() {
                 println!("❌ 错误:");
                 for error in &result.errors {
-                    println!("  - {}", error);
+                    println!("  - {error}");
                 }
                 println!();
             }
@@ -393,8 +393,8 @@ impl std::fmt::Display for WizardError {
             WizardError::InvalidSelection => write!(f, "无效的选择"),
             WizardError::PathNotFound(path) => write!(f, "路径不存在: {}", path.display()),
             WizardError::CancelledByUser => write!(f, "用户取消操作"),
-            WizardError::MigrationFailed(msg) => write!(f, "迁移失败: {}", msg),
-            WizardError::IoError(msg) => write!(f, "IO错误: {}", msg),
+            WizardError::MigrationFailed(msg) => write!(f, "迁移失败: {msg}"),
+            WizardError::IoError(msg) => write!(f, "IO错误: {msg}"),
         }
     }
 }

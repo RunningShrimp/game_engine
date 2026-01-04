@@ -87,11 +87,6 @@ impl SemVer {
         })
     }
 
-    /// 转换为字符串
-    pub fn to_string(&self) -> String {
-        format!("{}.{}.{}", self.major, self.minor, self.patch)
-    }
-
     /// 是否为预发布版本（0.x.x）
     pub fn is_pre_release(&self) -> bool {
         self.major == 0
@@ -248,15 +243,15 @@ impl VersionRequirement {
 impl fmt::Display for VersionRequirement {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            VersionRequirement::Exact(v) => write!(f, "={}", v),
-            VersionRequirement::GreaterOrEqual(v) => write!(f, ">={}", v),
-            VersionRequirement::LessThan(v) => write!(f, "<{}", v),
-            VersionRequirement::Range { min, max } => write!(f, ">={},<{}", min, max),
-            VersionRequirement::Compatible(v) => write!(f, "^{}", v),
-            VersionRequirement::Approximate(v) => write!(f, "~{}", v),
+            VersionRequirement::Exact(v) => write!(f, "={v}"),
+            VersionRequirement::GreaterOrEqual(v) => write!(f, ">={v}"),
+            VersionRequirement::LessThan(v) => write!(f, "<{v}"),
+            VersionRequirement::Range { min, max } => write!(f, ">={min},<{max}"),
+            VersionRequirement::Compatible(v) => write!(f, "^{v}"),
+            VersionRequirement::Approximate(v) => write!(f, "~{v}"),
             VersionRequirement::Any => write!(f, "*"),
-            VersionRequirement::Or(left, right) => write!(f, "{} || {}", left, right),
-            VersionRequirement::And(left, right) => write!(f, "{}, {}", left, right),
+            VersionRequirement::Or(left, right) => write!(f, "{left} || {right}"),
+            VersionRequirement::And(left, right) => write!(f, "{left}, {right}"),
         }
     }
 }
@@ -534,8 +529,7 @@ impl WasiSandbox {
         let version = &wasm_bytes[4..8];
         if version != b"\x01\x00\x00\x00" {
             return Err(SandboxError::InvalidWasm(format!(
-                "Unsupported WASM version: {:?}",
-                version
+                "Unsupported WASM version: {version:?}"
             )));
         }
 

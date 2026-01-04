@@ -94,9 +94,9 @@ impl EnvironmentalAudioGenerator {
         }
 
         // 添加持续背景噪声
-        for i in 0..samples {
+        for (i, output_sample) in output.iter_mut().enumerate().take(samples) {
             let noise = self.white_noise(i);
-            output[i] += noise * intensity * 0.1;
+            *output_sample += noise * intensity * 0.1;
         }
 
         output
@@ -285,9 +285,9 @@ impl EnvironmentalAudioGenerator {
         let mut output = vec![0.0; samples];
 
         // 背景嗡嗡声
-        for i in 0..samples {
+        for (i, output_sample) in output.iter_mut().enumerate().take(samples) {
             let base = self.pink_noise(i) * 0.05;
-            output[i] = base;
+            *output_sample = base;
         }
 
         // 车辆经过声

@@ -199,7 +199,24 @@ impl NPUModelImpl for AppleNEModel {
 
 /// Core ML mock（实际项目需要使用真正的coreml-rs绑定）
 pub mod core_ml {
+    use std::fmt;
     use std::path::PathBuf;
+
+    /// Mock错误类型
+    #[derive(Debug, Clone)]
+    pub enum MockError {
+        NotImplemented,
+    }
+
+    impl fmt::Display for MockError {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            match self {
+                MockError::NotImplemented => write!(f, "Mock operation not implemented"),
+            }
+        }
+    }
+
+    impl std::error::Error for MockError {}
 
     #[derive(Debug, Clone)]
     pub struct Model {
@@ -207,7 +224,7 @@ pub mod core_ml {
     }
 
     impl Model {
-        pub fn from_url(_url: std::path::PathBuf) -> Result<Self, ()> {
+        pub fn from_url(_url: std::path::PathBuf) -> Result<Self, MockError> {
             Ok(Self {
                 name: "MockModel".to_string(),
             })
@@ -233,7 +250,7 @@ pub mod core_ml {
             }]
         }
 
-        pub fn predict(&self, _input: &FeatureProvider) -> Result<Prediction, ()> {
+        pub fn predict(&self, _input: &FeatureProvider) -> Result<Prediction, MockError> {
             Ok(Prediction::new())
         }
     }
@@ -326,13 +343,15 @@ pub mod core_ml {
 
 /// Metal mock
 pub mod metal {
+    use super::core_ml::MockError;
+
     #[derive(Debug, Clone)]
     pub struct MTLDevice {
         name: String,
     }
 
     impl MTLDevice {
-        pub fn system() -> Result<Self, ()> {
+        pub fn system() -> Result<Self, MockError> {
             Ok(Self {
                 name: "Apple M1".to_string(),
             })

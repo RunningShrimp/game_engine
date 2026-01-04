@@ -6,12 +6,12 @@
 pub fn core_api_template(namespace: &str, version: &str) -> String {
     format!(
         r#"// Game Engine C# SDK - Core API
-// Version: {}
+// Version: {version}
 
 using System;
 using System.Runtime.InteropServices;
 
-namespace {}
+namespace {namespace}
 {{
     /// <summary>
     /// Core game engine API
@@ -91,8 +91,7 @@ namespace {}
         internal static extern float GetFixedDeltaTime();
     }}
 }}
-"#,
-        version, namespace
+"#
     )
 }
 
@@ -104,7 +103,7 @@ pub fn lifecycle_hooks_template(namespace: &str) -> String {
 
 using System;
 
-namespace {}
+namespace {namespace}
 {{
     /// <summary>
     /// Base class for game scripts with lifecycle hooks
@@ -212,8 +211,7 @@ namespace {}
         public virtual void OnResume() {{ }}
     }}
 }}
-"#,
-        namespace
+"#
     )
 }
 
@@ -225,7 +223,7 @@ pub fn physics_api_template(namespace: &str) -> String {
 using System;
 using System.Numerics;
 
-namespace {}
+namespace {namespace}
 {{
     /// <summary>
     /// Physics API for interacting with the physics system
@@ -309,8 +307,7 @@ namespace {}
                                             out float nx, out float ny, out float nz, out float distance);
     }}
 }}
-"#,
-        namespace
+"#
     )
 }
 
@@ -321,7 +318,7 @@ pub fn audio_api_template(namespace: &str) -> String {
 
 using System;
 
-namespace {}
+namespace {namespace}
 {{
     /// <summary>
     /// Audio API for playing sounds and music
@@ -376,8 +373,7 @@ namespace {}
         internal static extern void SetVolume(ulong sourceId, float volume);
     }}
 }}
-"#,
-        namespace
+"#
     )
 }
 
@@ -388,7 +384,7 @@ pub fn network_api_template(namespace: &str) -> String {
 
 using System;
 
-namespace {}
+namespace {namespace}
 {{
     /// <summary>
     /// Network API for network communication
@@ -433,8 +429,7 @@ namespace {}
         internal static extern bool Receive(byte[] buffer, int length, out int received);
     }}
 }}
-"#,
-        namespace
+"#
     )
 }
 
@@ -443,7 +438,7 @@ pub fn input_api_template(namespace: &str) -> String {
     format!(
         r#"// Game Engine C# SDK - Input API
 
-namespace {}
+namespace {namespace}
 {{
     /// <summary>
     /// Input API for keyboard and mouse input
@@ -499,8 +494,7 @@ namespace {}
         internal static extern void GetMousePosition(out float x, out float y);
     }}
 }}
-"#,
-        namespace
+"#
     )
 }
 
@@ -509,7 +503,7 @@ pub fn ecs_api_template(namespace: &str) -> String {
     format!(
         r#"// Game Engine C# SDK - ECS API
 
-namespace {}
+namespace {namespace}
 {{
     /// <summary>
     /// ECS API for entity and component operations
@@ -542,8 +536,7 @@ namespace {}
         }}
     }}
 }}
-"#,
-        namespace
+"#
     )
 }
 
@@ -552,7 +545,7 @@ pub fn resource_api_template(namespace: &str) -> String {
     format!(
         r#"// Game Engine C# SDK - Resource API
 
-namespace {}
+namespace {namespace}
 {{
     /// <summary>
     /// Resource API for loading and managing game resources
@@ -577,15 +570,13 @@ namespace {}
         }}
     }}
 }}
-"#,
-        namespace
+"#
     )
 }
 
 /// 生成项目文件模板
 pub fn project_file_template(namespace: &str) -> String {
-    format!(
-        r#"<Project Sdk="Microsoft.NET.Sdk">
+    r#"<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -600,7 +591,7 @@ pub fn project_file_template(namespace: &str) -> String {
 
 </Project>
 "#
-    )
+    .to_string()
 }
 
 /// 生成README模板
@@ -629,7 +620,7 @@ This SDK provides C# bindings for the game engine, allowing you to write game sc
 Example:
 
 ```csharp
-using {};
+using {namespace};
 
 public class PlayerController : MonoBehaviour
 {{
@@ -651,7 +642,6 @@ public class PlayerController : MonoBehaviour
 ## API Documentation
 
 See individual API files for detailed documentation.
-"#,
-        namespace
+"#
     )
 }

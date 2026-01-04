@@ -59,7 +59,7 @@ impl JavaScriptLifecycleHooks {
         let enabled = self
             .enabled
             .lock()
-            .map_err(|e| format!("Failed to acquire enabled lock: {}", e))?;
+            .map_err(|e| format!("Failed to acquire enabled lock: {e}"))?;
         if !*enabled {
             return Ok(());
         }
@@ -69,7 +69,7 @@ impl JavaScriptLifecycleHooks {
         let has_function = self
             .context
             .lock()
-            .map_err(|e| format!("Failed to acquire context lock: {}", e))?
+            .map_err(|e| format!("Failed to acquire context lock: {e}"))?
             .has_function(function_name);
 
         if !has_function {
@@ -81,7 +81,7 @@ impl JavaScriptLifecycleHooks {
         let _ = self
             .context
             .lock()
-            .map_err(|e| format!("Failed to acquire context lock: {}", e))?
+            .map_err(|e| format!("Failed to acquire context lock: {e}"))?
             .set_global(
                 "__current_entity_id",
                 ScriptValue::String(self.entity_id.clone()),
@@ -91,7 +91,7 @@ impl JavaScriptLifecycleHooks {
         let result = self
             .context
             .lock()
-            .map_err(|e| format!("Failed to acquire context lock: {}", e))?
+            .map_err(|e| format!("Failed to acquire context lock: {e}"))?
             .call(function_name, args);
 
         match result {
@@ -104,7 +104,7 @@ impl JavaScriptLifecycleHooks {
                     function_name,
                     e
                 );
-                Err(format!("{}: {}", function_name, e))
+                Err(format!("{function_name}: {e}"))
             }
         }
     }
@@ -315,7 +315,7 @@ impl LifecycleHooks for JavaScriptLifecycleHooks {
     fn on_key_down(&mut self, entity: Entity, key: crate::platform::KeyCode) {
         let args = vec![
             Self::entity_to_value(entity),
-            ScriptValue::String(format!("{:?}", key)),
+            ScriptValue::String(format!("{key:?}")),
         ];
         if let Err(e) = self.call_js_function("onKeyDown", &args) {
             tracing::warn!(
@@ -330,7 +330,7 @@ impl LifecycleHooks for JavaScriptLifecycleHooks {
     fn on_key_up(&mut self, entity: Entity, key: crate::platform::KeyCode) {
         let args = vec![
             Self::entity_to_value(entity),
-            ScriptValue::String(format!("{:?}", key)),
+            ScriptValue::String(format!("{key:?}")),
         ];
         if let Err(e) = self.call_js_function("onKeyUp", &args) {
             tracing::warn!(
@@ -345,7 +345,7 @@ impl LifecycleHooks for JavaScriptLifecycleHooks {
     fn on_mouse_down(&mut self, entity: Entity, button: crate::platform::MouseButton) {
         let args = vec![
             Self::entity_to_value(entity),
-            ScriptValue::String(format!("{:?}", button)),
+            ScriptValue::String(format!("{button:?}")),
         ];
         if let Err(e) = self.call_js_function("onMouseDown", &args) {
             tracing::warn!(
@@ -360,7 +360,7 @@ impl LifecycleHooks for JavaScriptLifecycleHooks {
     fn on_mouse_up(&mut self, entity: Entity, button: crate::platform::MouseButton) {
         let args = vec![
             Self::entity_to_value(entity),
-            ScriptValue::String(format!("{:?}", button)),
+            ScriptValue::String(format!("{button:?}")),
         ];
         if let Err(e) = self.call_js_function("onMouseUp", &args) {
             tracing::warn!(
@@ -422,15 +422,11 @@ impl JavaScriptLifecycleHooksFactory {
         context: Arc<Mutex<dyn ScriptContext>>,
     ) -> Result<Box<dyn LifecycleHooks>, String> {
         // 执行脚本以注册生命周期函数
-        let mut ctx =
-            context.lock().map_err(|e| format!("Failed to acquire context lock: {}", e))?;
+        let mut ctx = context.lock().map_err(|e| format!("Failed to acquire context lock: {e}"))?;
 
         // 执行脚本源代码
-        match ctx.execute(&script_source, Some(&script_name)) {
-            ScriptResult::Error(e) => {
-                return Err(format!("Failed to execute script '{}': {}", script_name, e));
-            }
-            _ => {}
+        if let ScriptResult::Error(e) = ctx.execute(&script_source, Some(&script_name)) {
+            return Err(format!("Failed to execute script '{script_name}': {e}"));
         }
 
         drop(ctx);

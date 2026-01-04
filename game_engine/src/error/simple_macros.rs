@@ -100,11 +100,23 @@ macro_rules! simple_error {
             )*
         }
 
-        // 自动为外部错误类型实现From
+        // 自动为外部错误类型实现From（排除String类型以避免冲突）
         $(
             impl From<$variant_ty> for $error_name {
                 fn from(err: $variant_ty) -> Self {
                     $error_name::$variant_name(err)
+                }
+            }
+        )*
+
+        // 为String变体提供便捷构造函数
+        $(
+            impl $error_name {
+                paste! {
+                    #[doc = concat!("Create ", stringify!($variant_name), " error from string")]
+                    pub fn [<new_ $variant_name:snake>](msg: String) -> Self {
+                        Self::$variant_name(msg)
+                    }
                 }
             }
         )*

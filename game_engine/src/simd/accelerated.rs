@@ -488,8 +488,8 @@ impl SimdMatrixOps {
 
         for i in 0..4 {
             for j in 0..4 {
-                for k in 0..4 {
-                    result[i][j] += a[i][k] * b[k][j];
+                for (k, b_val) in b.iter().enumerate().take(4) {
+                    result[i][j] += a[i][k] * b_val[j];
                 }
             }
         }

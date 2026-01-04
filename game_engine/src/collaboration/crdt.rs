@@ -131,7 +131,7 @@ impl CrdtDocument {
                 value,
                 site_id,
             } => {
-                let register = self.registers.entry(key).or_insert_with(LwwRegister::new);
+                let register = self.registers.entry(key).or_default();
                 register.set(value, site_id);
             }
             CrdtOperation::Increment {
@@ -139,7 +139,7 @@ impl CrdtDocument {
                 amount,
                 site_id,
             } => {
-                let counter = self.counters.entry(key).or_insert_with(GCounter::new);
+                let counter = self.counters.entry(key).or_default();
                 counter.increment(site_id, amount);
             }
         }
@@ -203,7 +203,7 @@ impl RgaText {
 impl std::fmt::Display for RgaText {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let text: String = self.chars.iter().map(|c| c.value).collect();
-        write!(f, "{}", text)
+        write!(f, "{text}")
     }
 }
 

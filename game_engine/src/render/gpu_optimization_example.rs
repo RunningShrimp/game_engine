@@ -20,6 +20,12 @@ pub struct GpuOptimizationExample {
     camera_position: (f32, f32, f32),
 }
 
+impl Default for GpuOptimizationExample {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl GpuOptimizationExample {
     /// 创建新的示例
     pub fn new() -> Self {
@@ -48,7 +54,7 @@ impl GpuOptimizationExample {
         config: EnhancedGpuRenderConfig,
     ) -> Result<(), String> {
         let manager = EnhancedGpuRenderManager::new(device, config)
-            .map_err(|e| format!("Failed to create GPU manager: {}", e))?;
+            .map_err(|e| format!("Failed to create GPU manager: {e}"))?;
         self.manager = Some(manager);
         Ok(())
     }
@@ -117,8 +123,8 @@ impl GpuOptimizationExample {
         let instance_count = self.instances.len() as u32;
 
         println!("Starting performance test...");
-        println!("  Instances: {}", instance_count);
-        println!("  Iterations: {}", iterations);
+        println!("  Instances: {instance_count}");
+        println!("  Iterations: {iterations}");
 
         // 上传实例数据
         manager.update_instances(device, queue, &self.instances);
@@ -126,7 +132,7 @@ impl GpuOptimizationExample {
         // 运行测试迭代
         for iter in 0..iterations {
             let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some(&format!("Performance Test Iteration {}", iter)),
+                label: Some(&format!("Performance Test Iteration {iter}")),
             });
 
             // 执行渲染
@@ -312,8 +318,8 @@ impl GpuOptimizationExample {
         let speedup_full = duration1.as_secs_f32() / duration3.as_secs_f32();
 
         println!("\n=== Performance Summary ===");
-        println!("Frustum culling speedup: {:.2}x", speedup_no_cull);
-        println!("Full culling speedup: {:.2}x", speedup_full);
+        println!("Frustum culling speedup: {speedup_no_cull:.2}x");
+        println!("Full culling speedup: {speedup_full:.2}x");
 
         Ok(CullingComparisonResult {
             no_culling_time_ms: duration1.as_millis() as f32,
@@ -365,7 +371,7 @@ impl GpuOptimizationExample {
         println!("Simulating 100 frames...");
         for frame in 0..100 {
             let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some(&format!("VRAM Test Frame {}", frame)),
+                label: Some(&format!("VRAM Test Frame {frame}")),
             });
 
             manager.render(

@@ -171,15 +171,14 @@ fn run_benchmarks_and_collect() -> Result<Vec<(f64, Duration, f64)>, Box<dyn std
         Ok(output) => {
             if !output.status.success() {
                 let stderr = String::from_utf8_lossy(&output.stderr);
-                return Err(format!("基准测试失败: {}", stderr).into());
+                return Err(format!("基准测试失败:{stderr}").into());
             }
 
             // 解析基准测试输出
             parse_benchmark_output(&String::from_utf8_lossy(&output.stdout))
         }
         Err(e) => Err(format!(
-            "无法运行基准测试: {}. 请确保已安装cargo-criterion: cargo install cargo-criterion",
-            e
+            "无法运行基准测试: {e}. 请确保已安装cargo-criterion: cargo install cargo-criterion"
         )
         .into()),
     }
@@ -298,7 +297,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
             Err(e) => {
-                eprintln!("   ⚠ 基准测试运行失败: {}", e);
+                eprintln!("   ⚠ 基准测试运行失败:{e}");
                 eprintln!("   提示: 使用 --simulate 标志进行模拟测试");
                 eprintln!("   或者确保基准测试可以正常运行: cargo bench");
                 std::process::exit(1);
@@ -341,10 +340,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let total = report["regression_count"]["total"].as_u64().unwrap_or(0);
 
     eprintln!("\n📈 回归检测摘要:");
-    eprintln!("   严重回归: {}", severe_count);
-    eprintln!("   中等回归: {}", moderate_count);
-    eprintln!("   轻微回归: {}", minor_count);
-    eprintln!("   总计: {}", total);
+    eprintln!("   严重回归:{severe_count}");
+    eprintln!("   中等回归:{moderate_count}");
+    eprintln!("   轻微回归:{minor_count}");
+    eprintln!("   总计:{total}");
 
     if severe_count > 0 {
         eprintln!("\n❌ 检测到严重性能回归！");
@@ -358,7 +357,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             eprintln!("    当前: {:.2}", regression.current_value);
             eprintln!("    回归: {:.2}%", regression.regression_percent);
             if let Some(ref fix) = regression.suggested_fix {
-                eprintln!("    建议: {}", fix);
+                eprintln!("    建议:{fix}");
             }
         }
 

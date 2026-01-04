@@ -510,11 +510,10 @@ impl MobilePerformanceOptimizer {
         // 检查是否需要切换到省电模式
         if self.config.enable_battery_optimization
             && self.battery_state.should_enable_power_saving(self.config.low_battery_threshold)
+            && self.current_mode != PerformanceMode::PowerSaving
         {
-            if self.current_mode != PerformanceMode::PowerSaving {
-                tracing::info!("Low battery detected, switching to Power Saving mode");
-                self.current_mode = PerformanceMode::PowerSaving;
-            }
+            tracing::info!("Low battery detected, switching to Power Saving mode");
+            self.current_mode = PerformanceMode::PowerSaving;
         }
 
         // 检查热节流
@@ -676,7 +675,7 @@ impl std::fmt::Display for PerformanceError {
             PerformanceError::ThermalDetectionFailed => write!(f, "Failed to detect thermal state"),
             PerformanceError::OutOfMemory => write!(f, "Out of memory"),
             PerformanceError::UnsupportedFeature => write!(f, "Unsupported feature"),
-            PerformanceError::InternalError(msg) => write!(f, "Internal error: {}", msg),
+            PerformanceError::InternalError(msg) => write!(f, "Internal error: {msg}"),
         }
     }
 }

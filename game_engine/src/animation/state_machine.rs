@@ -112,11 +112,11 @@ impl AnimationStateMachine {
 
         // 检查自动转换
         for transition in &self.transitions {
-            if transition.from_state == self.current_state {
-                if self.check_transition_condition(transition) {
-                    self.transition_to(transition.to_state.clone());
-                    break;
-                }
+            if transition.from_state == self.current_state
+                && self.check_transition_condition(transition)
+            {
+                self.transition_to(transition.to_state.clone());
+                break;
             }
         }
 

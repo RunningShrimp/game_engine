@@ -308,7 +308,7 @@ impl ProjectGenerator {
             )
             .default(0)
             .interact()
-            .map_err(|e| GeneratorError::Template(format!("Interactive error: {}", e)))?;
+            .map_err(|e| GeneratorError::Template(format!("Interactive error: {e}")))?;
 
         let template = &templates[selection];
 
@@ -512,7 +512,7 @@ impl ProjectGenerator {
     }
 
     /// 分析代码重复
-    fn analyze_duplication(&self, _project_path: &Path, _warnings: &mut Vec<String>) -> u8 {
+    fn analyze_duplication(&self, _project_path: &Path, _warnings: &mut [String]) -> u8 {
         // 简化实现 - 实际应该使用更复杂的算法
         90
     }
@@ -536,7 +536,7 @@ impl ProjectGenerator {
             return 100; // 没有源文件,认为是满分
         }
 
-        let coverage = if test_files >= source_files {
+        if test_files >= source_files {
             suggestions.push("Excellent test coverage!".to_string());
             100
         } else if test_files > source_files / 2 {
@@ -544,9 +544,7 @@ impl ProjectGenerator {
         } else {
             suggestions.push("Consider adding more tests".to_string());
             50
-        };
-
-        coverage
+        }
     }
 
     /// 分析文档完整性
@@ -572,7 +570,7 @@ impl ProjectGenerator {
     }
 
     /// 分析错误处理
-    fn analyze_error_handling(&self, _project_path: &Path, _warnings: &mut Vec<String>) -> u8 {
+    fn analyze_error_handling(&self, _project_path: &Path, _warnings: &mut [String]) -> u8 {
         // 简化实现
         85
     }
@@ -651,8 +649,8 @@ impl ProjectGenerator {
         template: &str,
         version: &str,
     ) -> Result<(), GeneratorError> {
-        println!("Upgrading project to template version: {}", version);
-        println!("Template: {}", template);
+        println!("Upgrading project to template version: {version}");
+        println!("Template: {template}");
         println!("Project: {}", project_path.display());
 
         // TODO: 实际的模板升级逻辑

@@ -336,10 +336,7 @@ impl PerformanceAnalyzer {
 
         // 记录pass性能
         for pass in &self.current_passes {
-            self.pass_performance
-                .entry(pass.name.clone())
-                .or_insert_with(Vec::new)
-                .push(pass.clone());
+            self.pass_performance.entry(pass.name.clone()).or_default().push(pass.clone());
         }
     }
 
@@ -603,7 +600,7 @@ impl PerformanceAnalyzer {
 
         println!("\n=== 性能瓶颈 ===");
         for bottleneck in &report.bottlenecks {
-            println!("{:?}", bottleneck);
+            println!("{bottleneck:?}");
         }
 
         println!("\n=== 优化建议 ===");

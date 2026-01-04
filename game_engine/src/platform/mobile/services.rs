@@ -163,7 +163,7 @@ impl GooglePlayGames {
         // 更新本地成就状态
         self.achievements.entry(achievement_id.clone()).or_insert_with(|| Achievement {
             id: achievement_id.clone(),
-            name: format!("Achievement {}", achievement_id),
+            name: format!("Achievement {achievement_id}"),
             description: "Unlocked achievement".to_string(),
             unlocked: true,
             progress: 100,
@@ -202,7 +202,7 @@ impl GooglePlayGames {
             })
             .or_insert_with(|| Achievement {
                 id: achievement_id.clone(),
-                name: format!("Achievement {}", achievement_id),
+                name: format!("Achievement {achievement_id}"),
                 description: "In progress".to_string(),
                 unlocked: false,
                 progress: progress.min(100),
@@ -411,7 +411,7 @@ impl GameCenter {
         // 更新本地成就状态
         self.achievements.entry(achievement_id.clone()).or_insert_with(|| Achievement {
             id: achievement_id.clone(),
-            name: format!("Achievement {}", achievement_id),
+            name: format!("Achievement {achievement_id}"),
             description: "Unlocked achievement".to_string(),
             unlocked: true,
             progress: 100,
@@ -779,8 +779,8 @@ impl InAppPurchaseService {
                 .iter()
                 .map(|id| ProductInfo {
                     product_id: id.clone(),
-                    title: format!("Product {}", id),
-                    description: format!("Description for {}", id),
+                    title: format!("Product {id}"),
+                    description: format!("Description for {id}"),
                     price: "$0.99".to_string(),
                     price_amount_micros: 990000,
                     currency_code: "USD".to_string(),
@@ -790,7 +790,7 @@ impl InAppPurchaseService {
 
             self.products_cache = mock_products.clone();
             tracing::info!("Queried products (mock): {} products", mock_products.len());
-            return Ok(mock_products);
+            Ok(mock_products)
         }
     }
 
@@ -828,9 +828,9 @@ impl InAppPurchaseService {
 
         #[cfg(not(any(target_os = "android", target_os = "ios")))]
         {
-            let mock_token = format!("mock_token_{}", product_id);
+            let mock_token = format!("mock_token_{product_id}");
             tracing::info!("Purchase successful (mock): {}", product_id);
-            return Ok(mock_token);
+            Ok(mock_token)
         }
     }
 
@@ -862,7 +862,7 @@ impl InAppPurchaseService {
         #[cfg(not(any(target_os = "android", target_os = "ios")))]
         {
             tracing::info!("Purchase consumed (mock): {}", purchase_token);
-            return Ok(());
+            Ok(())
         }
     }
 
@@ -901,7 +901,7 @@ impl InAppPurchaseService {
         #[cfg(not(any(target_os = "android", target_os = "ios")))]
         {
             tracing::info!("Restored purchases (mock): 0 purchases");
-            return Ok(Vec::new());
+            Ok(Vec::new())
         }
     }
 
@@ -943,7 +943,7 @@ impl InAppPurchaseService {
         #[cfg(not(any(target_os = "android", target_os = "ios")))]
         {
             tracing::info!("Queried subscription (mock): {}", product_id);
-            return Ok(None);
+            Ok(None)
         }
     }
 
@@ -1081,8 +1081,8 @@ impl std::fmt::Display for ServiceError {
             ServiceError::PermissionDenied => write!(f, "Permission denied"),
             ServiceError::NetworkError => write!(f, "Network error"),
             ServiceError::Timeout => write!(f, "Operation timeout"),
-            ServiceError::InternalError(msg) => write!(f, "Internal error: {}", msg),
-            ServiceError::Unknown(msg) => write!(f, "Unknown error: {}", msg),
+            ServiceError::InternalError(msg) => write!(f, "Internal error: {msg}"),
+            ServiceError::Unknown(msg) => write!(f, "Unknown error: {msg}"),
         }
     }
 }

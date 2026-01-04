@@ -141,10 +141,7 @@ impl LeakDetector {
         // 按类型分组
         let mut type_groups: HashMap<String, Vec<&AllocationRecord>> = HashMap::new();
         for record in self.allocations.values() {
-            type_groups
-                .entry(record.allocation_type.clone())
-                .or_insert_with(Vec::new)
-                .push(record);
+            type_groups.entry(record.allocation_type.clone()).or_default().push(record);
         }
 
         // 分析每个类型
@@ -362,6 +359,12 @@ pub struct StackAllocationStats {
     pub allocation_count: u64,
     pub total_size: u64,
     pub average_size: f32,
+}
+
+impl Default for AllocationProfiler {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl AllocationProfiler {

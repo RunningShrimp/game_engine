@@ -356,8 +356,8 @@ impl CoroutineWaiter {
     /// }
     /// ```
     pub fn notify(&self, id: CoroutineId) {
-        if let Err(_) = self.notify_tx.try_send(id) {
-            eprintln!("Failed to send notification for coroutine {:?}", id);
+        if self.notify_tx.try_send(id).is_err() {
+            eprintln!("Failed to send notification for coroutine {id:?}");
         }
     }
 

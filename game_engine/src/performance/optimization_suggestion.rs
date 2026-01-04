@@ -525,9 +525,9 @@ impl RenderingKnowledgeBase {
     fn new() -> Self {
         Self {
             patterns: vec![
-                RenderingPattern::OverdrawOptimization,
-                RenderingPattern::BatchingOptimization,
-                RenderingPattern::ShaderOptimization,
+                RenderingPattern::Overdraw,
+                RenderingPattern::Batching,
+                RenderingPattern::Shader,
             ],
         }
     }
@@ -604,9 +604,9 @@ impl RenderingKnowledgeBase {
 /// 渲染优化模式
 #[derive(Clone, Copy, Debug)]
 enum RenderingPattern {
-    OverdrawOptimization,
-    BatchingOptimization,
-    ShaderOptimization,
+    Overdraw,
+    Batching,
+    Shader,
 }
 
 // ==================== 内存优化知识库 ====================

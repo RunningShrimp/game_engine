@@ -315,7 +315,7 @@ impl MigrationManager {
 
         // 读取纹理文件
         let _texture_data = fs::read(texture_path)
-            .map_err(|e| MigrationError::FileReadError(format!("Failed to read texture: {}", e)))?;
+            .map_err(|e| MigrationError::FileReadError(format!("Failed to read texture: {e}")))?;
 
         // 确定输出路径
         let relative_path =
@@ -325,14 +325,13 @@ impl MigrationManager {
         // 创建输出目录
         if let Some(parent) = output_path.parent() {
             fs::create_dir_all(parent).map_err(|e| {
-                MigrationError::ConversionError(format!("Failed to create output dir: {}", e))
+                MigrationError::ConversionError(format!("Failed to create output dir: {e}"))
             })?;
         }
 
         // 复制纹理到输出目录（实际项目中可能需要格式转换）
-        fs::copy(texture_path, &output_path).map_err(|e| {
-            MigrationError::ConversionError(format!("Failed to copy texture: {}", e))
-        })?;
+        fs::copy(texture_path, &output_path)
+            .map_err(|e| MigrationError::ConversionError(format!("Failed to copy texture: {e}")))?;
 
         tracing::debug!("Converted texture: {:?}", texture_path.file_name());
         Ok(())
@@ -407,7 +406,7 @@ impl MigrationManager {
 
         // 读取网格文件
         let _mesh_data = fs::read(mesh_path)
-            .map_err(|e| MigrationError::FileReadError(format!("Failed to read mesh: {}", e)))?;
+            .map_err(|e| MigrationError::FileReadError(format!("Failed to read mesh: {e}")))?;
 
         // 确定输出路径
         let relative_path = mesh_path.strip_prefix(&self.config.project_path).unwrap_or(mesh_path);
@@ -416,13 +415,13 @@ impl MigrationManager {
         // 创建输出目录
         if let Some(parent) = output_path.parent() {
             fs::create_dir_all(parent).map_err(|e| {
-                MigrationError::ConversionError(format!("Failed to create output dir: {}", e))
+                MigrationError::ConversionError(format!("Failed to create output dir: {e}"))
             })?;
         }
 
         // 复制网格到输出目录（实际项目中可能需要格式转换，如FBX→自定义格式）
         fs::copy(mesh_path, &output_path)
-            .map_err(|e| MigrationError::ConversionError(format!("Failed to copy mesh: {}", e)))?;
+            .map_err(|e| MigrationError::ConversionError(format!("Failed to copy mesh: {e}")))?;
 
         tracing::debug!("Converted mesh: {:?}", mesh_path.file_name());
         Ok(())
@@ -516,13 +515,13 @@ impl MigrationManager {
         // 创建输出目录
         if let Some(parent) = output_path.parent() {
             fs::create_dir_all(parent).map_err(|e| {
-                MigrationError::ConversionError(format!("Failed to create output dir: {}", e))
+                MigrationError::ConversionError(format!("Failed to create output dir: {e}"))
             })?;
         }
 
         // 写入转换后的材质
         fs::write(&output_path, converted_material).map_err(|e| {
-            MigrationError::ConversionError(format!("Failed to write material: {}", e))
+            MigrationError::ConversionError(format!("Failed to write material: {e}"))
         })?;
 
         tracing::debug!(
@@ -694,10 +693,10 @@ impl std::fmt::Display for MigrationError {
         match self {
             MigrationError::UnsupportedEngine => write!(f, "Unsupported engine"),
             MigrationError::InvalidProjectPath => write!(f, "Invalid project path"),
-            MigrationError::FileReadError(msg) => write!(f, "File read error: {}", msg),
-            MigrationError::ParseError(msg) => write!(f, "Parse error: {}", msg),
-            MigrationError::ConversionError(msg) => write!(f, "Conversion error: {}", msg),
-            MigrationError::Other(msg) => write!(f, "Error: {}", msg),
+            MigrationError::FileReadError(msg) => write!(f, "File read error: {msg}"),
+            MigrationError::ParseError(msg) => write!(f, "Parse error: {msg}"),
+            MigrationError::ConversionError(msg) => write!(f, "Conversion error: {msg}"),
+            MigrationError::Other(msg) => write!(f, "Error: {msg}"),
         }
     }
 }
@@ -778,18 +777,17 @@ fn convert_unity_material_to_engine(material_content: &str, shader_name: &str) -
 
     format!(
         r#"# Converted Unity Material
-# Original Shader: {}
+# Original Shader: {shader_name}
 
 engine_material:
-  shader_type: "{}"
+  shader_type: "{shader_name}"
   properties:
     albedo_color: [1.0, 1.0, 1.0, 1.0]
     metallic: 0.0
     smoothness: 0.5
     normal_scale: 1.0
   textures: {{}}
-"#,
-        shader_name, shader_name
+"#
     )
 }
 
@@ -823,11 +821,11 @@ fn convert_unity_scene_to_engine(unity_scene: &UnityScene) -> String {
         if !game_obj.components.is_empty() {
             scene_yaml.push_str("  components:\n");
             for component in &game_obj.components {
-                scene_yaml.push_str(&format!("    - {}\n", component));
+                scene_yaml.push_str(&format!("    - {component}\n"));
             }
         }
 
-        scene_yaml.push_str("\n");
+        scene_yaml.push('\n');
     }
 
     scene_yaml

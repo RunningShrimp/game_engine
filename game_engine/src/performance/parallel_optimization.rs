@@ -106,17 +106,17 @@ impl TaskGraph {
     pub fn add_node(&mut self, node: TaskNode) {
         let id = node.id;
         self.nodes.insert(id, node);
-        self.adjacency.entry(id).or_insert_with(Vec::new);
+        self.adjacency.entry(id).or_default();
         self.in_degree.entry(id).or_insert(0);
     }
 
     /// 添加任务边（依赖关系）
     pub fn add_edge(&mut self, edge: TaskEdge) {
         // 更新邻接表
-        self.adjacency.entry(edge.from).or_insert_with(Vec::new).push(edge.to);
+        self.adjacency.entry(edge.from).or_default().push(edge.to);
 
         // 更新反向邻接表
-        self.reverse_adjacency.entry(edge.to).or_insert_with(Vec::new).push(edge.from);
+        self.reverse_adjacency.entry(edge.to).or_default().push(edge.from);
 
         // 更新入度
         *self.in_degree.entry(edge.to).or_insert(0) += 1;
@@ -220,7 +220,7 @@ impl TaskGraph {
             let node = &self.nodes[id];
             let min_dep_time = if let Some(deps) = self.adjacency.get(id) {
                 deps.iter()
-                    .map(|dep_id| latest_start.get(dep_id).unwrap_or(&total_time).clone())
+                    .map(|dep_id| *latest_start.get(dep_id).unwrap_or(&total_time))
                     .min()
                     .unwrap_or(total_time)
             } else {
@@ -379,7 +379,7 @@ impl WorkStealingScheduler {
 
     /// 添加任务
     pub async fn add_task(&self, task: TaskNode) {
-        let task_id = task.id.clone();
+        let task_id = task.id;
         let task_graph = self.task_graph.lock().await;
         let mut graph = task_graph;
 

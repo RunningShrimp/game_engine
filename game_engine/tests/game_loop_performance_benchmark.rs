@@ -298,7 +298,7 @@ pub async fn run_complete_benchmark() {
     // 1. 测试异步游戏循环
     tracing::info!("1. 测试异步游戏循环...");
     let async_result = async_game_loop_simulation(iterations).await;
-    println!("{}", async_result);
+    println!("{async_result}");
 
     // 等待一下让系统稳定
     tokio::time::sleep(Duration::from_millis(100)).await;
@@ -306,7 +306,7 @@ pub async fn run_complete_benchmark() {
     // 2. 测试混合模式游戏循环
     tracing::info!("\n2. 测试混合模式游戏循环...");
     let hybrid_result = hybrid_game_loop_test(iterations);
-    println!("{}", hybrid_result);
+    println!("{hybrid_result}");
 
     // 等待一下
     tokio::time::sleep(Duration::from_millis(100)).await;
@@ -314,7 +314,7 @@ pub async fn run_complete_benchmark() {
     // 3. 测试纯同步游戏循环
     tracing::info!("\n3. 测试纯同步游戏循环...");
     let sync_result = sync_game_loop_test(iterations);
-    println!("{}", sync_result);
+    println!("{sync_result}");
 
     // 4. 对比分析
     tracing::info!("\n========================================");
@@ -335,22 +335,13 @@ pub async fn run_complete_benchmark() {
         (hybrid_result.avg_frame_time - sync_result.avg_frame_time).as_micros() as f64;
 
     println!("异步 vs 混合模式:");
-    println!(
-        "  帧时间减少: {:.2}μs ({:.2}%)",
-        async_vs_hybrid_improvement, async_vs_hybrid_percent
-    );
-    println!("  异步开销估计: {:.2}μs", async_vs_hybrid_improvement);
+    println!("  帧时间减少: {async_vs_hybrid_improvement:.2}μs ({async_vs_hybrid_percent:.2}%)");
+    println!("  异步开销估计: {async_vs_hybrid_improvement:.2}μs");
     println!("\n异步 vs 纯同步:");
-    println!(
-        "  帧时间减少: {:.2}μs ({:.2}%)",
-        async_vs_sync_improvement, async_vs_sync_percent
-    );
-    println!("  总异步开销: {:.2}μs", async_vs_sync_improvement);
+    println!("  帧时间减少: {async_vs_sync_improvement:.2}μs ({async_vs_sync_percent:.2}%)");
+    println!("  总异步开销: {async_vs_sync_improvement:.2}μs");
     println!("\n混合模式 vs 纯同步:");
-    println!(
-        "  额外开销: {:.2}μs (异步任务轮询)",
-        hybrid_vs_async_overhead
-    );
+    println!("  额外开销: {hybrid_vs_async_overhead:.2}μs (异步任务轮询)");
 
     // 帧率稳定性对比
     println!("\n帧率稳定性 (标准差):");
@@ -481,7 +472,7 @@ fn generate_performance_report(
     }
 
     // 同时打印到控制台
-    println!("{}", report);
+    println!("{report}");
 }
 
 #[cfg(test)]
@@ -497,8 +488,8 @@ mod tests {
         let hybrid_result = hybrid_game_loop_test(iterations);
 
         println!("\n=== 快速基准测试结果 ===");
-        println!("{}", async_result);
-        println!("{}", hybrid_result);
+        println!("{async_result}");
+        println!("{hybrid_result}");
 
         // 验证混合模式确实更快
         assert!(

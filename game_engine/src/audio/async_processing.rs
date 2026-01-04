@@ -655,7 +655,7 @@ impl AsyncAudioProcessingService {
                     let mut effect_chain = effect_chain_config_clone
                         .as_ref()
                         .and_then(|config| Self::build_effect_chain(config.clone()).ok())
-                        .unwrap_or_else(EffectChain::new);
+                        .unwrap_or_default();
 
                     // 克隆样本数据以便处理
                     let mut audio_samples = samples.clone();

@@ -680,7 +680,7 @@ impl ScriptingService {
 
     /// 调用脚本函数（简化版 - 实际调用在execute中完成）
     pub fn call_function(&self, func_name: &str, args_str: &str) -> Result<(), ScriptError> {
-        let code = format!("{}({});", func_name, args_str);
+        let code = format!("{func_name}({args_str});");
         self.execute(&code)
     }
 
@@ -733,8 +733,8 @@ pub enum ScriptError {
 impl std::fmt::Display for ScriptError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ScriptError::Execution(msg) => write!(f, "Execution error: {}", msg),
-            ScriptError::IoError(msg) => write!(f, "IO error: {}", msg),
+            ScriptError::Execution(msg) => write!(f, "Execution error: {msg}"),
+            ScriptError::IoError(msg) => write!(f, "IO error: {msg}"),
             ScriptError::Timeout => write!(f, "Script execution timeout"),
             ScriptError::MemoryLimitExceeded => write!(f, "Memory limit exceeded"),
         }
@@ -776,7 +776,7 @@ impl ScriptModuleManager {
         if let Some(code) = self.module_cache.get(name) {
             self.service.execute(code)
         } else {
-            Err(ScriptError::Execution(format!("Module {} not found", name)))
+            Err(ScriptError::Execution(format!("Module {name} not found")))
         }
     }
 }

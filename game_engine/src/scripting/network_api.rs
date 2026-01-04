@@ -143,8 +143,7 @@ impl NetworkApi {
         } else if url.starts_with("http://") || url.starts_with("https://") {
             // HTTP连接（用于REST API）
             ScriptResult::Success(ScriptValue::String(format!(
-                "HTTP connection to {} (use http_get/http_post)",
-                url
+                "HTTP connection to {url} (use http_get/http_post)"
             )))
         } else {
             // TCP连接
@@ -201,12 +200,12 @@ impl NetworkApi {
             }
         }
 
-        ScriptResult::Error(format!("Connection '{}' not found", connection_id))
+        ScriptResult::Error(format!("Connection '{connection_id}' not found"))
     }
 
     /// 加入大厅/房间
     pub fn join_lobby(&self, connection_id: String, lobby_id: String) -> ScriptResult {
-        let message = format!(r#"{{"type":"lobby_join","lobby_id":"{}"}}"#, lobby_id);
+        let message = format!(r#"{{"type":"lobby_join","lobby_id":"{lobby_id}"}}"#);
 
         if let Ok(mut ws_clients) = self.ws_clients.try_lock() {
             if ws_clients.contains_key(&connection_id) {
@@ -220,7 +219,7 @@ impl NetworkApi {
             }
         }
 
-        ScriptResult::Error(format!("Connection '{}' not found", connection_id))
+        ScriptResult::Error(format!("Connection '{connection_id}' not found"))
     }
 
     /// 同步玩家状态
@@ -230,8 +229,8 @@ impl NetworkApi {
         state: HashMap<String, ScriptValue>,
     ) -> ScriptResult {
         // 简化：将状态序列化为JSON
-        let state_json = format!(r#"{{"type":"player_state","state":{{}}}}"#);
-        let message = format!(r#"{{"type":"sync","data":{}}}"#, state_json);
+        let state_json = r#"{"type":"player_state","state":{}}"#.to_string();
+        let message = format!(r#"{{"type":"sync","data":{state_json}}}"#);
 
         if let Ok(mut ws_clients) = self.ws_clients.try_lock() {
             if ws_clients.contains_key(&connection_id) {
@@ -245,17 +244,17 @@ impl NetworkApi {
             }
         }
 
-        ScriptResult::Error(format!("Connection '{}' not found", connection_id))
+        ScriptResult::Error(format!("Connection '{connection_id}' not found"))
     }
 
     /// 创建TCP客户端连接
     pub fn tcp_connect(&self, id: String, host: String, port: u16) -> ScriptResult {
         // 构建Socket地址
-        let addr = match format!("{}:{}", host, port).parse::<SocketAddr>() {
+        let addr = match format!("{host}:{port}").parse::<SocketAddr>() {
             Ok(addr) => addr,
             Err(e) => {
                 tracing::error!(target: "network_api", "Invalid address {}:{}", host, port);
-                return ScriptResult::Error(format!("Invalid address {}:{}: {}", host, port, e));
+                return ScriptResult::Error(format!("Invalid address {host}:{port}: {e}"));
             }
         };
 
@@ -313,16 +312,16 @@ impl NetworkApi {
         let mut clients = self.tcp_clients.blocking_lock();
         let client = match clients.get_mut(&id) {
             Some(client) => client,
-            None => return ScriptResult::Error(format!("TCP client '{}' not found", id)),
+            None => return ScriptResult::Error(format!("TCP client '{id}' not found")),
         };
 
         if !client.connected {
-            return ScriptResult::Error(format!("TCP client '{}' is not connected", id));
+            return ScriptResult::Error(format!("TCP client '{id}' is not connected"));
         }
 
         let stream = match &mut client.stream {
             Some(stream) => stream,
-            None => return ScriptResult::Error(format!("TCP client '{}' has no valid stream", id)),
+            None => return ScriptResult::Error(format!("TCP client '{id}' has no valid stream")),
         };
 
         let rt = match tokio::runtime::Handle::try_current() {
@@ -356,7 +355,7 @@ impl NetworkApi {
 
         match result {
             Ok(len) => ScriptResult::Success(ScriptValue::Integer(len as i64)),
-            Err(e) => ScriptResult::Error(format!("Failed to send data: {}", e)),
+            Err(e) => ScriptResult::Error(format!("Failed to send data: {e}")),
         }
     }
 
@@ -365,16 +364,16 @@ impl NetworkApi {
         let mut clients = self.tcp_clients.blocking_lock();
         let client = match clients.get_mut(&id) {
             Some(client) => client,
-            None => return ScriptResult::Error(format!("TCP client '{}' not found", id)),
+            None => return ScriptResult::Error(format!("TCP client '{id}' not found")),
         };
 
         if !client.connected {
-            return ScriptResult::Error(format!("TCP client '{}' is not connected", id));
+            return ScriptResult::Error(format!("TCP client '{id}' is not connected"));
         }
 
         let stream = match &mut client.stream {
             Some(stream) => stream,
-            None => return ScriptResult::Error(format!("TCP client '{}' has no valid stream", id)),
+            None => return ScriptResult::Error(format!("TCP client '{id}' has no valid stream")),
         };
 
         let rt = match tokio::runtime::Handle::try_current() {
@@ -435,7 +434,7 @@ impl NetworkApi {
                     // 标记连接为已关闭
                     client.connected = false;
                 }
-                ScriptResult::Error(format!("Failed to receive data: {}", e))
+                ScriptResult::Error(format!("Failed to receive data: {e}"))
             }
         }
     }
@@ -448,18 +447,18 @@ impl NetworkApi {
                 tracing::info!(target: "network_api", "TCP connection closed: {}", id);
                 ScriptResult::Void
             }
-            None => ScriptResult::Error(format!("TCP client '{}' not found", id)),
+            None => ScriptResult::Error(format!("TCP client '{id}' not found")),
         }
     }
 
     /// 创建UDP客户端
     pub fn udp_bind(&self, id: String, host: String, port: u16) -> ScriptResult {
         // 构建Socket地址
-        let addr = match format!("{}:{}", host, port).parse::<SocketAddr>() {
+        let addr = match format!("{host}:{port}").parse::<SocketAddr>() {
             Ok(addr) => addr,
             Err(e) => {
                 tracing::error!(target: "network_api", "Invalid address {}:{}", host, port);
-                return ScriptResult::Error(format!("Invalid address {}:{}: {}", host, port, e));
+                return ScriptResult::Error(format!("Invalid address {host}:{port}: {e}"));
             }
         };
 
@@ -520,25 +519,24 @@ impl NetworkApi {
         let mut clients = self.udp_clients.blocking_lock();
         let client = match clients.get_mut(&id) {
             Some(client) => client,
-            None => return ScriptResult::Error(format!("UDP client '{}' not found", id)),
+            None => return ScriptResult::Error(format!("UDP client '{id}' not found")),
         };
 
         if !client.bound {
-            return ScriptResult::Error(format!("UDP client '{}' is not bound", id));
+            return ScriptResult::Error(format!("UDP client '{id}' is not bound"));
         }
 
         let socket = match &mut client.socket {
             Some(socket) => socket,
-            None => return ScriptResult::Error(format!("UDP client '{}' has no valid socket", id)),
+            None => return ScriptResult::Error(format!("UDP client '{id}' has no valid socket")),
         };
 
         // 解析目标地址
-        let target_addr = match format!("{}:{}", target_host, target_port).parse::<SocketAddr>() {
+        let target_addr = match format!("{target_host}:{target_port}").parse::<SocketAddr>() {
             Ok(addr) => addr,
             Err(e) => {
                 return ScriptResult::Error(format!(
-                    "Invalid target address {}:{}: {}",
-                    target_host, target_port, e
+                    "Invalid target address {target_host}:{target_port}: {e}"
                 ));
             }
         };
@@ -574,7 +572,7 @@ impl NetworkApi {
 
         match result {
             Ok(len) => ScriptResult::Success(ScriptValue::Integer(len as i64)),
-            Err(e) => ScriptResult::Error(format!("Failed to send UDP data: {}", e)),
+            Err(e) => ScriptResult::Error(format!("Failed to send UDP data: {e}")),
         }
     }
 
@@ -583,16 +581,16 @@ impl NetworkApi {
         let mut clients = self.udp_clients.blocking_lock();
         let client = match clients.get_mut(&id) {
             Some(client) => client,
-            None => return ScriptResult::Error(format!("UDP client '{}' not found", id)),
+            None => return ScriptResult::Error(format!("UDP client '{id}' not found")),
         };
 
         if !client.bound {
-            return ScriptResult::Error(format!("UDP client '{}' is not bound", id));
+            return ScriptResult::Error(format!("UDP client '{id}' is not bound"));
         }
 
         let socket = match &mut client.socket {
             Some(socket) => socket,
-            None => return ScriptResult::Error(format!("UDP client '{}' has no valid socket", id)),
+            None => return ScriptResult::Error(format!("UDP client '{id}' has no valid socket")),
         };
 
         let rt = match tokio::runtime::Handle::try_current() {
@@ -634,7 +632,7 @@ impl NetworkApi {
                 let data = String::from_utf8_lossy(&buffer).to_string();
                 ScriptResult::Success(ScriptValue::String(data))
             }
-            Err(e) => ScriptResult::Error(format!("Failed to receive UDP data: {}", e)),
+            Err(e) => ScriptResult::Error(format!("Failed to receive UDP data: {e}")),
         }
     }
 
@@ -646,7 +644,7 @@ impl NetworkApi {
                 tracing::info!(target: "network_api", "UDP socket closed: {}", id);
                 ScriptResult::Void
             }
-            None => ScriptResult::Error(format!("UDP client '{}' not found", id)),
+            None => ScriptResult::Error(format!("UDP client '{id}' not found")),
         }
     }
 
@@ -710,20 +708,17 @@ impl NetworkApi {
         let mut clients = self.ws_clients.blocking_lock();
         let client = match clients.get_mut(&id) {
             Some(client) => client,
-            None => return ScriptResult::Error(format!("WebSocket client '{}' not found", id)),
+            None => return ScriptResult::Error(format!("WebSocket client '{id}' not found")),
         };
 
         if !client.connected {
-            return ScriptResult::Error(format!("WebSocket client '{}' is not connected", id));
+            return ScriptResult::Error(format!("WebSocket client '{id}' is not connected"));
         }
 
         let ws_stream = match &mut client.ws_stream {
             Some(stream) => stream,
             None => {
-                return ScriptResult::Error(format!(
-                    "WebSocket client '{}' has no valid stream",
-                    id
-                ));
+                return ScriptResult::Error(format!("WebSocket client '{id}' has no valid stream"));
             }
         };
 
@@ -759,7 +754,7 @@ impl NetworkApi {
 
         match result {
             Ok(_) => ScriptResult::Success(ScriptValue::Boolean(true)),
-            Err(e) => ScriptResult::Error(format!("Failed to send WebSocket data: {}", e)),
+            Err(e) => ScriptResult::Error(format!("Failed to send WebSocket data: {e}")),
         }
     }
 
@@ -768,20 +763,17 @@ impl NetworkApi {
         let mut clients = self.ws_clients.blocking_lock();
         let client = match clients.get_mut(&id) {
             Some(client) => client,
-            None => return ScriptResult::Error(format!("WebSocket client '{}' not found", id)),
+            None => return ScriptResult::Error(format!("WebSocket client '{id}' not found")),
         };
 
         if !client.connected {
-            return ScriptResult::Error(format!("WebSocket client '{}' is not connected", id));
+            return ScriptResult::Error(format!("WebSocket client '{id}' is not connected"));
         }
 
         let ws_stream = match &mut client.ws_stream {
             Some(stream) => stream,
             None => {
-                return ScriptResult::Error(format!(
-                    "WebSocket client '{}' has no valid stream",
-                    id
-                ));
+                return ScriptResult::Error(format!("WebSocket client '{id}' has no valid stream"));
             }
         };
 
@@ -853,7 +845,7 @@ impl NetworkApi {
                     // 标记连接为已关闭
                     client.connected = false;
                 }
-                ScriptResult::Error(format!("Failed to receive WebSocket data: {}", e))
+                ScriptResult::Error(format!("Failed to receive WebSocket data: {e}"))
             }
         }
     }
@@ -866,7 +858,7 @@ impl NetworkApi {
                 tracing::info!(target: "network_api", "WebSocket connection closed: {}", id);
                 ScriptResult::Void
             }
-            None => ScriptResult::Error(format!("WebSocket client '{}' not found", id)),
+            None => ScriptResult::Error(format!("WebSocket client '{id}' not found")),
         }
     }
 
@@ -1215,7 +1207,7 @@ impl NetworkScriptContext {
                 api.ws_connect(id, url)
             }
             "http_get" => {
-                if args.len() < 1 {
+                if args.is_empty() {
                     return ScriptResult::Error("http_get requires 1 argument: url".to_string());
                 }
                 let url = match &args[0] {
@@ -1224,7 +1216,7 @@ impl NetworkScriptContext {
                 };
                 api.http_get(url)
             }
-            _ => ScriptResult::Error(format!("Unknown network method: {}", method)),
+            _ => ScriptResult::Error(format!("Unknown network method: {method}")),
         }
     }
 }
@@ -1259,8 +1251,7 @@ impl ScriptContext for NetworkScriptContext {
 
     fn get_global(&mut self, name: &str) -> ScriptResult {
         ScriptResult::Error(format!(
-            "Network API does not support global variables: {}",
-            name
+            "Network API does not support global variables: {name}"
         ))
     }
 
@@ -1384,7 +1375,10 @@ mod tests {
         let _ = api.tcp_connect("send_test".to_string(), "localhost".to_string(), 8080);
 
         // 测试发送
-        let send_result = api.tcp_send("send_test".to_string(), b"Hello, Server!".to_vec());
+        let send_result = api.tcp_send(
+            "send_test".to_string(),
+            String::from_utf8(b"Hello, Server!".to_vec()).unwrap(),
+        );
 
         // 注意：由于没有真实服务器，发送可能失败，这是正常的
         // 我们主要测试API调用不会崩溃
@@ -1404,7 +1398,7 @@ mod tests {
         // 测试发送到远程地址
         let send_result = api.udp_send_to(
             "udp_send_test".to_string(),
-            b"Hello, UDP!".to_vec(),
+            String::from_utf8(b"Hello, UDP!".to_vec()).unwrap(),
             "127.0.0.1".to_string(),
             9092,
         );
@@ -1427,7 +1421,10 @@ mod tests {
         );
 
         // 测试发送（会失败，但API调用应该正常）
-        let send_result = api.ws_send("ws_send_test".to_string(), b"Hello, WebSocket!".to_vec());
+        let send_result = api.ws_send(
+            "ws_send_test".to_string(),
+            String::from_utf8(b"Hello, WebSocket!".to_vec()).unwrap(),
+        );
 
         match send_result {
             ScriptResult::Success(_) | ScriptResult::Error(_) => (),

@@ -144,12 +144,11 @@ impl DocumentationGenerator {
         module: &str,
         title: &str,
     ) -> Result<GeneratedDocument, DocGenError> {
-        let doc_path = self.output_dir.join(format!("api/{}.md", module));
+        let doc_path = self.output_dir.join(format!("api/{module}.md"));
 
         // 创建文档内容
         let content = format!(
-            "# {}\n\n## 概述\n\n本模块提供 {} 相关的 API 接口。\n\n## 核心 Trait\n\n```rust\n// TODO: 从源代码提取 trait 定义\n```\n\n## 结构体\n\n### 主要结构体\n\n```rust\n// TODO: 从源代码提取结构体定义\n```\n\n## 函数\n\n### 公共 API\n\n```rust\n// TODO: 从源代码提取函数签名\n```\n\n## 使用示例\n\n```rust\n// TODO: 添加使用示例\n```\n\n## 注意事项\n\n- TODO: 添加使用注意事项\n\n## 相关文档\n\n- [架构文档](../architecture/{}.md)\n- [教程](../tutorials/{}_guide.md)\n",
-            title, module, module, module
+            "# {title}\n\n## 概述\n\n本模块提供 {module} 相关的 API 接口。\n\n## 核心 Trait\n\n```rust\n// TODO: 从源代码提取 trait 定义\n```\n\n## 结构体\n\n### 主要结构体\n\n```rust\n// TODO: 从源代码提取结构体定义\n```\n\n## 函数\n\n### 公共 API\n\n```rust\n// TODO: 从源代码提取函数签名\n```\n\n## 使用示例\n\n```rust\n// TODO: 添加使用示例\n```\n\n## 注意事项\n\n- TODO: 添加使用注意事项\n\n## 相关文档\n\n- [架构文档](../architecture/{module}.md)\n- [教程](../tutorials/{module}_guide.md)\n"
         );
 
         // 写入文件
@@ -175,11 +174,10 @@ impl DocumentationGenerator {
         ];
 
         for (doc, title) in arch_docs {
-            let doc_path = self.output_dir.join(format!("architecture/{}.md", doc));
+            let doc_path = self.output_dir.join(format!("architecture/{doc}.md"));
 
             let content = format!(
-                "# {}\n\n## 架构概述\n\n本文档描述 {} 的架构设计。\n\n## 设计目标\n\n1. 性能优先\n2. 可扩展性\n3. 易用性\n\n## 架构图\n\n```mermaid\ngraph TD\n    A[开始] --> B[结束]\n```\n\n## 核心组件\n\n### 组件 1\n\n- 功能：TODO\n- 接口：TODO\n\n### 组件 2\n\n- 功能：TODO\n- 接口：TODO\n\n## 数据流\n\n```mermaid\nsequenceDiagram\n    A->>B: 请求\n    B->>A: 响应\n```\n\n## 性能考虑\n\n- TODO: 添加性能分析\n\n## 扩展点\n\n- TODO: 添加扩展点说明\n",
-                title, doc
+                "# {title}\n\n## 架构概述\n\n本文档描述 {doc} 的架构设计。\n\n## 设计目标\n\n1. 性能优先\n2. 可扩展性\n3. 易用性\n\n## 架构图\n\n```mermaid\ngraph TD\n    A[开始] --> B[结束]\n```\n\n## 核心组件\n\n### 组件 1\n\n- 功能：TODO\n- 接口：TODO\n\n### 组件 2\n\n- 功能：TODO\n- 接口：TODO\n\n## 数据流\n\n```mermaid\nsequenceDiagram\n    A->>B: 请求\n    B->>A: 响应\n```\n\n## 性能考虑\n\n- TODO: 添加性能分析\n\n## 扩展点\n\n- TODO: 添加扩展点说明\n"
             );
 
             self.write_doc(&doc_path, &content)?;
@@ -207,7 +205,7 @@ impl DocumentationGenerator {
         ];
 
         for (guide, title) in guides {
-            let doc_path = self.output_dir.join(format!("guides/{}.md", guide));
+            let doc_path = self.output_dir.join(format!("guides/{guide}.md"));
 
             let content = format!(
                 "# {}\n\n## 概述\n\n本指南将帮助您 {}。\n\n## 前置要求\n\n- Rust 1.70 或更高版本\n- 操作系统：Windows/macOS/Linux\n\n## 步骤 1：准备工作\n\nTODO: 添加详细步骤\n\n## 步骤 2：执行\n\nTODO: 添加详细步骤\n\n## 步骤 3：验证\n\nTODO: 添加验证步骤\n\n## 故障排除\n\n### 问题 1\n\n**症状**：TODO\n\n**解决方案**：TODO\n\n## 下一步\n\n- 查看相关教程\n- 阅读示例代码\n",
@@ -240,7 +238,7 @@ impl DocumentationGenerator {
         ];
 
         for (tutorial, title) in tutorials {
-            let doc_path = self.output_dir.join(format!("tutorials/{}.md", tutorial));
+            let doc_path = self.output_dir.join(format!("tutorials/{tutorial}.md"));
 
             let content = format!(
                 "# {}\n\n## 教程概述\n\n本教程将教您 {}。\n\n## 学习目标\n\n完成本教程后，您将能够：\n\n- TODO: 目标 1\n- TODO: 目标 2\n\n## 预计时间\n\n约 30 分钟\n\n## 开始\n\n### 第 1 步\n\nTODO: 添加步骤\n\n### 第 2 步\n\nTODO: 添加步骤\n\n## 完整代码\n\n```rust\n// TODO: 添加完整示例代码\n```\n\n## 运行程序\n\n```bash\ncargo run --example {}\n```\n\n## 进阶挑战\n\n- TODO: 添加挑战\n\n## 相关资源\n\n- [API 文档](../api/)\n- [更多示例](../examples/)\n",
@@ -275,11 +273,10 @@ impl DocumentationGenerator {
 
         // 读取示例文件并生成文档
         let entries = fs::read_dir(&examples_dir)
-            .map_err(|e| DocGenError::IoError(format!("无法读取示例目录: {}", e)))?;
+            .map_err(|e| DocGenError::IoError(format!("无法读取示例目录: {e}")))?;
 
         for entry in entries {
-            let entry =
-                entry.map_err(|e| DocGenError::IoError(format!("无法读取目录项: {}", e)))?;
+            let entry = entry.map_err(|e| DocGenError::IoError(format!("无法读取目录项: {e}")))?;
             let path = entry.path();
 
             if path.extension().and_then(|s| s.to_str()) == Some("rs") {
@@ -302,18 +299,17 @@ impl DocumentationGenerator {
     ) -> Result<GeneratedDocument, DocGenError> {
         let file_name = example_path.file_stem().and_then(|s| s.to_str()).unwrap_or("unknown");
 
-        let doc_path = self.output_dir.join(format!("examples/{}.md", file_name));
+        let doc_path = self.output_dir.join(format!("examples/{file_name}.md"));
 
         // 读取示例代码
         let code = fs::read_to_string(example_path)
-            .map_err(|e| DocGenError::IoError(format!("无法读取示例文件: {}", e)))?;
+            .map_err(|e| DocGenError::IoError(format!("无法读取示例文件: {e}")))?;
 
         // 提取注释作为说明
         let description = self.extract_code_description(&code);
 
         let content = format!(
-            "# {}\n\n## 示例说明\n\n{}\n\n## 源代码\n\n```rust\n{}\n```\n\n## 运行方法\n\n```bash\ncargo run --example {}\n```\n\n## 预期输出\n\n```\nTODO: 添加预期输出\n```\n\n## 相关文档\n\n- [API 文档](../api/)\n- [教程](../tutorials/)\n",
-            title, description, code, file_name
+            "# {title}\n\n## 示例说明\n\n{description}\n\n## 源代码\n\n```rust\n{code}\n```\n\n## 运行方法\n\n```bash\ncargo run --example {file_name}\n```\n\n## 预期输出\n\n```\nTODO: 添加预期输出\n```\n\n## 相关文档\n\n- [API 文档](../api/)\n- [教程](../tutorials/)\n"
         );
 
         self.write_doc(&doc_path, &content)?;
@@ -366,7 +362,7 @@ impl DocumentationGenerator {
         // 按类型分组
         let mut grouped: HashMap<DocType, Vec<&GeneratedDocument>> = HashMap::new();
         for doc in &self.generated_docs {
-            grouped.entry(doc.doc_type.clone()).or_insert_with(Vec::new).push(doc);
+            grouped.entry(doc.doc_type.clone()).or_default().push(doc);
         }
 
         // 生成索引
@@ -375,7 +371,7 @@ impl DocumentationGenerator {
             for doc in api_docs {
                 content.push_str(&format!("- [{}]({})\n", doc.title, doc.path.display()));
             }
-            content.push_str("\n");
+            content.push('\n');
         }
 
         if let Some(arch_docs) = grouped.get(&DocType::Architecture) {
@@ -383,7 +379,7 @@ impl DocumentationGenerator {
             for doc in arch_docs {
                 content.push_str(&format!("- [{}]({})\n", doc.title, doc.path.display()));
             }
-            content.push_str("\n");
+            content.push('\n');
         }
 
         if let Some(guides) = grouped.get(&DocType::Guide) {
@@ -391,7 +387,7 @@ impl DocumentationGenerator {
             for doc in guides {
                 content.push_str(&format!("- [{}]({})\n", doc.title, doc.path.display()));
             }
-            content.push_str("\n");
+            content.push('\n');
         }
 
         if let Some(tutorials) = grouped.get(&DocType::Tutorial) {
@@ -399,7 +395,7 @@ impl DocumentationGenerator {
             for doc in tutorials {
                 content.push_str(&format!("- [{}]({})\n", doc.title, doc.path.display()));
             }
-            content.push_str("\n");
+            content.push('\n');
         }
 
         if let Some(examples) = grouped.get(&DocType::Example) {
@@ -570,10 +566,10 @@ impl DocumentationGenerator {
     /// 从源代码提取API详情
     pub fn extract_api_details(&self, source_file: &Path) -> Result<Vec<ApiDetail>, DocGenError> {
         let code = fs::read_to_string(source_file)
-            .map_err(|e| DocGenError::ParseError(format!("无法读取源文件: {}", e)))?;
+            .map_err(|e| DocGenError::ParseError(format!("无法读取源文件: {e}")))?;
 
         let syntax = syn::parse_file(&code)
-            .map_err(|e| DocGenError::ParseError(format!("解析失败: {}", e)))?;
+            .map_err(|e| DocGenError::ParseError(format!("解析失败: {e}")))?;
 
         let mut apis = Vec::new();
 
@@ -707,9 +703,9 @@ pub enum DocGenError {
 impl std::fmt::Display for DocGenError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            DocGenError::IoError(msg) => write!(f, "IO error: {}", msg),
-            DocGenError::ParseError(msg) => write!(f, "Parse error: {}", msg),
-            DocGenError::TemplateError(msg) => write!(f, "Template error: {}", msg),
+            DocGenError::IoError(msg) => write!(f, "IO error: {msg}"),
+            DocGenError::ParseError(msg) => write!(f, "Parse error: {msg}"),
+            DocGenError::TemplateError(msg) => write!(f, "Template error: {msg}"),
         }
     }
 }

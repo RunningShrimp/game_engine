@@ -197,7 +197,7 @@ impl DependencyGraph {
                 };
 
                 // 添加到依赖列表
-                self.dependencies.entry(name.clone()).or_insert_with(Vec::new).push(dep);
+                self.dependencies.entry(name.clone()).or_default().push(dep);
 
                 // 添加到包列表
                 self.packages.push(Package {

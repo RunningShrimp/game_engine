@@ -240,7 +240,7 @@ impl Eq for EdgeCollapse {}
 impl PartialOrd for EdgeCollapse {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         // BinaryHeap is max-heap, reverse for min-heap behavior
-        other.cost.partial_cmp(&self.cost)
+        Some(self.cmp(other))
     }
 }
 

@@ -535,20 +535,17 @@ impl HtmlReportBuilder {
                     ..
                 } => {
                     html.push_str(&format!(
-                        "<li class=\"autofix success\">✓ {}: {}</li>\n",
-                        optimization_id, improvement_description
+                        "<li class=\"autofix success\">✓ {optimization_id}: {improvement_description}</li>\n"
                     ));
                 }
                 AutoFixResult::Skipped { reason } => {
                     html.push_str(&format!(
-                        "<li class=\"autofix skipped\">⊘ 跳过: {}</li>\n",
-                        reason
+                        "<li class=\"autofix skipped\">⊘ 跳过: {reason}</li>\n"
                     ));
                 }
                 AutoFixResult::Failed { error } => {
                     html.push_str(&format!(
-                        "<li class=\"autofix failed\">✗ 失败: {}</li>\n",
-                        error
+                        "<li class=\"autofix failed\">✗ 失败: {error}</li>\n"
                     ));
                 }
             }
@@ -622,7 +619,7 @@ fn format_system_time(time: SystemTime) -> String {
 
     if let Some(datetime) = UNIX_EPOCH.checked_add(Duration::from_secs(secs)) {
         // 简化版时间格式
-        format!("{:?}", datetime)
+        format!("{datetime:?}")
     } else {
         "Unknown".to_string()
     }

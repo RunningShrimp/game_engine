@@ -258,7 +258,7 @@ impl PhysicsScriptApi {
             let mass = args[1].as_number().unwrap_or(1.0) as f32;
 
             // 存储质量信息（可以使用Resource或自定义组件）
-            ScriptResult::Success(ScriptValue::String(format!("Mass set to {}", mass)))
+            ScriptResult::Success(ScriptValue::String(format!("Mass set to {mass}")))
         });
 
         // 设置阻尼
@@ -279,8 +279,7 @@ impl PhysicsScriptApi {
             let angular = args[2].as_number().unwrap_or(0.0) as f32;
 
             ScriptResult::Success(ScriptValue::String(format!(
-                "Damping set: linear={}, angular={}",
-                linear, angular
+                "Damping set: linear={linear}, angular={angular}"
             )))
         });
     }
@@ -435,8 +434,7 @@ impl PhysicsScriptApi {
             };
 
             ScriptResult::Success(ScriptValue::String(format!(
-                "Collision info for entity {}",
-                entity_id
+                "Collision info for entity {entity_id}"
             )))
         });
     }
@@ -462,8 +460,7 @@ impl PhysicsScriptApi {
             };
 
             ScriptResult::Success(ScriptValue::String(format!(
-                "FixedJoint created: {} <-> {}",
-                entity_a, entity_b
+                "FixedJoint created: {entity_a} <-> {entity_b}"
             )))
         });
 
@@ -498,8 +495,7 @@ impl PhysicsScriptApi {
             };
 
             ScriptResult::Success(ScriptValue::String(format!(
-                "SpringJoint created: {} <-> {}, stiffness={}, damping={}",
-                entity_a, entity_b, stiffness, damping
+                "SpringJoint created: {entity_a} <-> {entity_b}, stiffness={stiffness}, damping={damping}"
             )))
         });
 
@@ -562,8 +558,7 @@ impl PhysicsScriptApi {
             let torque = args[2].as_number().unwrap_or(1000.0) as f32;
 
             ScriptResult::Success(ScriptValue::String(format!(
-                "Joint break force set: joint_id={}, force={}, torque={}",
-                joint_id, force, torque
+                "Joint break force set: joint_id={joint_id}, force={force}, torque={torque}"
             )))
         });
     }
@@ -572,7 +567,7 @@ impl PhysicsScriptApi {
     fn register_material_api(&self, api: &mut ScriptApi) {
         // 创建物理材质
         api.register_function("physics_create_material", move |args| {
-            let friction = if args.len() > 0 {
+            let friction = if !args.is_empty() {
                 args[0].as_number().unwrap_or(0.5) as f32
             } else {
                 0.5
@@ -585,8 +580,7 @@ impl PhysicsScriptApi {
             };
 
             ScriptResult::Success(ScriptValue::String(format!(
-                "Material created: friction={}, restitution={}",
-                friction, restitution
+                "Material created: friction={friction}, restitution={restitution}"
             )))
         });
 
@@ -606,8 +600,7 @@ impl PhysicsScriptApi {
             let friction = args[1].as_number().unwrap_or(0.5) as f32;
 
             ScriptResult::Success(ScriptValue::String(format!(
-                "Friction set: entity_id={}, friction={}",
-                entity_id, friction
+                "Friction set: entity_id={entity_id}, friction={friction}"
             )))
         });
 
@@ -627,8 +620,7 @@ impl PhysicsScriptApi {
             let restitution = args[1].as_number().unwrap_or(0.3) as f32;
 
             ScriptResult::Success(ScriptValue::String(format!(
-                "Restitution set: entity_id={}, restitution={}",
-                entity_id, restitution
+                "Restitution set: entity_id={entity_id}, restitution={restitution}"
             )))
         });
     }

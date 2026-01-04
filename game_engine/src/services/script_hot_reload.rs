@@ -19,7 +19,7 @@
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime};
 
 #[cfg(feature = "hot-reload-optim")]
@@ -180,7 +180,7 @@ pub struct ScriptHotReloadManager {
     watched_scripts: Arc<Mutex<HashMap<PathBuf, ScriptFileInfo>>>,
 
     /// 重载回调
-    reload_callbacks: Arc<RwLock<Vec<Box<dyn Fn(&PathBuf, &str) -> Result<(), String> + Send>>>>,
+    reload_callbacks: Arc<Mutex<Vec<Box<dyn Fn(&PathBuf, &str) -> Result<(), String> + Send>>>>,
 
     /// 状态保持数据
     #[cfg(feature = "hot-reload-optim")]
@@ -229,10 +229,10 @@ impl ReloadRecovery {
     }
 
     /// 备份脚本
-    pub fn backup_script(&self, path: &PathBuf, content: &str) {
+    pub fn backup_script(&self, path: &Path, content: &str) {
         #[cfg(feature = "hot-reload-optim")]
         {
-            self.backup_scripts.insert(path.clone(), content.to_string());
+            self.backup_scripts.insert(path.to_path_buf(), content.to_string());
 
             // 限制备份数量
             if self.backup_scripts.len() > self.max_backups {
@@ -267,7 +267,7 @@ impl ReloadRecovery {
             if let Some(backup) = self.backup_scripts.get(path) {
                 let content = backup.value();
                 std::fs::write(path, content)
-                    .map_err(|e| format!("Failed to restore script: {}", e))?;
+                    .map_err(|e| format!("Failed to restore script: {e}"))?;
                 tracing::info!(target: "hot_reload", "Rolled back: {}", path.display());
             }
         }
@@ -368,7 +368,7 @@ impl ScriptHotReloadManager {
             watched_scripts: DashMap::new(),
             #[cfg(not(feature = "hot-reload-optim"))]
             watched_scripts: Arc::new(Mutex::new(HashMap::new())),
-            reload_callbacks: Arc::new(RwLock::new(Vec::new())),
+            reload_callbacks: Arc::new(Mutex::new(Vec::new())),
             #[cfg(feature = "hot-reload-optim")]
             preserved_state: DashMap::new(),
             #[cfg(not(feature = "hot-reload-optim"))]
@@ -384,14 +384,14 @@ impl ScriptHotReloadManager {
         }
 
         let metadata =
-            std::fs::metadata(&path).map_err(|e| format!("Failed to get metadata: {}", e))?;
+            std::fs::metadata(&path).map_err(|e| format!("Failed to get metadata: {e}"))?;
 
         let last_modified = metadata
             .modified()
-            .map_err(|e| format!("Failed to get modification time: {}", e))?;
+            .map_err(|e| format!("Failed to get modification time: {e}"))?;
 
         let content =
-            std::fs::read_to_string(&path).map_err(|e| format!("Failed to read file: {}", e))?;
+            std::fs::read_to_string(&path).map_err(|e| format!("Failed to read file: {e}"))?;
 
         let content_hash = Self::calculate_hash(&content);
 
@@ -506,7 +506,7 @@ impl ScriptHotReloadManager {
             Err(e) => {
                 return Some(ReloadResult::Failed {
                     path: path.clone(),
-                    error: format!("Failed to get metadata: {}", e),
+                    error: format!("Failed to get metadata: {e}"),
                 });
             }
         };
@@ -517,7 +517,7 @@ impl ScriptHotReloadManager {
             Err(e) => {
                 return Some(ReloadResult::Failed {
                     path: path.clone(),
-                    error: format!("Failed to get modification time: {}", e),
+                    error: format!("Failed to get modification time: {e}"),
                 });
             }
         };
@@ -533,7 +533,7 @@ impl ScriptHotReloadManager {
             Err(e) => {
                 return Some(ReloadResult::Failed {
                     path: path.clone(),
-                    error: format!("Failed to read file: {}", e),
+                    error: format!("Failed to read file: {e}"),
                 });
             }
         };
@@ -558,7 +558,7 @@ impl ScriptHotReloadManager {
         self.recovery.backup_script(path, &file_info.content);
 
         // 执行重载回调
-        let callbacks = self.reload_callbacks.read();
+        let callbacks = self.reload_callbacks.lock().unwrap();
         let mut reload_success = true;
         let mut error_msg = String::new();
 
@@ -621,8 +621,8 @@ impl ScriptHotReloadManager {
         }
 
         // 1. 读取新脚本
-        let new_content = std::fs::read_to_string(file_path)
-            .map_err(|e| format!("Failed to read file: {}", e))?;
+        let new_content =
+            std::fs::read_to_string(file_path).map_err(|e| format!("Failed to read file: {e}"))?;
 
         // 2. 获取旧内容
         let old_content = {
@@ -647,7 +647,7 @@ impl ScriptHotReloadManager {
         let changes = self.analyze_changes(file_path, &old_content, &new_content)?;
 
         // 4. 备份旧内容
-        self.recovery.backup_script(&file_path.to_path_buf(), &old_content);
+        self.recovery.backup_script(file_path, &old_content);
 
         // 5. 仅更新变更的函数
         let mut reloaded_count = 0;
@@ -798,17 +798,17 @@ impl ScriptHotReloadManager {
     where
         F: Fn(&PathBuf, &str) -> Result<(), String> + Send + 'static,
     {
-        self.reload_callbacks.write().push(Box::new(callback));
+        self.reload_callbacks.lock().unwrap().push(Box::new(callback));
     }
 
     /// 保存状态
-    fn preserve_state(&self, path: &PathBuf) {
+    fn preserve_state(&self, path: &Path) {
         // 在实际实现中，这里会保存脚本的状态
         let state = HashMap::new(); // 简化版
 
         #[cfg(feature = "hot-reload-optim")]
         {
-            self.preserved_state.insert(path.clone(), state);
+            self.preserved_state.insert(path.to_path_buf(), state);
         }
 
         #[cfg(not(feature = "hot-reload-optim"))]

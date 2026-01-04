@@ -6,7 +6,7 @@ use crate::tools::cli::project_generator::{GeneratorError, ProjectGenerator};
 use crate::tools::cli::template::{ProjectTemplate, TemplateRegistry};
 use crate::tools::cli::wizard::{ProjectWizard, WizardError};
 use clap::{Parser, Subcommand};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// Game Engine CLI - Project scaffolding and management tool
 #[derive(Parser, Debug)]
@@ -424,10 +424,10 @@ impl GameEngineCli {
         &self,
         name: &str,
         template: &Option<String>,
-        output: &PathBuf,
+        output: &Path,
         interactive: bool,
     ) -> Result<(), CliError> {
-        println!("🎮 Creating new game project: {}", name);
+        println!("🎮 Creating new game project: {name}");
         println!();
 
         let generator = ProjectGenerator::new();
@@ -474,7 +474,7 @@ impl GameEngineCli {
         println!("📁 Location: {}", project_path.display());
         println!();
         println!("🚀 Next steps:");
-        println!("   cd {}", name);
+        println!("   cd {name}");
         println!("   cargo run");
         println!();
 
@@ -529,17 +529,17 @@ impl GameEngineCli {
                 println!();
                 println!("Categories:");
                 for category in &metadata.categories {
-                    println!("  - {}", category);
+                    println!("  - {category}");
                 }
                 println!();
                 println!("Tags:");
                 for tag in &metadata.tags {
-                    println!("  - {}", tag);
+                    println!("  - {tag}");
                 }
                 println!();
                 println!("Required Features:");
                 for feature in &metadata.required_features {
-                    println!("  - {}", feature);
+                    println!("  - {feature}");
                 }
                 println!();
             }
@@ -755,7 +755,7 @@ dist/"#;
     /// Executes the 'analyze' command (no asset-pipeline feature)
     #[cfg(not(feature = "asset-pipeline"))]
     #[allow(unexpected_cfgs, reason = "asset-pipeline is a custom feature")]
-    fn cmd_analyze(&self, input: &PathBuf, output: &Option<PathBuf>) -> Result<(), CliError> {
+    fn cmd_analyze(&self, input: &Path, output: &Option<PathBuf>) -> Result<(), CliError> {
         println!("🔍 Analyzing assets...");
         println!();
 
@@ -776,7 +776,7 @@ dist/"#;
     /// Executes the 'bundle' command
     #[cfg(feature = "asset-pipeline")]
     #[allow(unexpected_cfgs, reason = "asset-pipeline is a custom feature")]
-    fn cmd_bundle(&self, input: &PathBuf, output: &PathBuf, format: &str) -> Result<(), CliError> {
+    fn cmd_bundle(&self, input: &Path, output: &Path, format: &str) -> Result<(), CliError> {
         use crate::tools::asset_pipeline::{AssetBundler, BundleFormat};
 
         println!("📦 Bundling assets...");
@@ -808,13 +808,13 @@ dist/"#;
     /// Executes the 'bundle' command (no asset-pipeline feature)
     #[cfg(not(feature = "asset-pipeline"))]
     #[allow(unexpected_cfgs, reason = "asset-pipeline is a custom feature")]
-    fn cmd_bundle(&self, input: &PathBuf, output: &PathBuf, format: &str) -> Result<(), CliError> {
+    fn cmd_bundle(&self, input: &Path, output: &Path, format: &str) -> Result<(), CliError> {
         println!("📦 Bundling assets...");
         println!();
 
         println!("Input: {}", input.display());
         println!("Output: {}", output.display());
-        println!("Format: {}", format);
+        println!("Format: {format}");
         println!();
         println!("Note: Asset pipeline feature is not enabled.");
         println!("Enable it with: --features asset-pipeline");
@@ -825,7 +825,7 @@ dist/"#;
     /// Executes the 'check' command - Code quality analysis
     fn cmd_check(
         &self,
-        path: &PathBuf,
+        path: &Path,
         output: &Option<PathBuf>,
         format: &str,
         threshold: u8,
@@ -836,8 +836,8 @@ dist/"#;
         println!();
 
         println!("Path: {}", path.display());
-        println!("Format: {}", format);
-        println!("Threshold: {}", threshold);
+        println!("Format: {format}");
+        println!("Threshold: {threshold}");
         if experimental {
             println!("Experimental checks: enabled");
         }
@@ -869,22 +869,18 @@ dist/"#;
             } else {
                 "❌"
             };
-            println!("  {} {}: {}%", status, name, score);
+            println!("  {status} {name}: {score}%");
         }
 
         let overall_score = metrics.iter().map(|(_, s)| s).sum::<u32>() / metrics.len() as u32;
         println!();
-        println!("Overall Quality Score: {}%", overall_score);
+        println!("Overall Quality Score: {overall_score}%");
 
         if overall_score < threshold as u32 {
             println!();
-            println!(
-                "❌ Quality score ({}) is below threshold ({})",
-                overall_score, threshold
-            );
+            println!("❌ Quality score ({overall_score}) is below threshold ({threshold})");
             return Err(CliError::CheckFailed(format!(
-                "Quality score {} is below threshold {}",
-                overall_score, threshold
+                "Quality score {overall_score} is below threshold {threshold}"
             )));
         }
 
@@ -944,10 +940,10 @@ dist/"#;
         // Detect current project template
         let current_template = self.detect_project_template()?;
 
-        println!("Current template: {}", current_template);
+        println!("Current template: {current_template}");
 
         let target_template = template.as_ref().unwrap_or(&current_template);
-        println!("Target template: {}", target_template);
+        println!("Target template: {target_template}");
         println!();
 
         // TODO: Implement actual upgrade logic
@@ -1017,10 +1013,10 @@ dist/"#;
         report.push_str("==================\n\n");
 
         for (name, score) in metrics {
-            report.push_str(&format!("{}: {}%\n", name, score));
+            report.push_str(&format!("{name}: {score}%\n"));
         }
 
-        report.push_str(&format!("\nOverall Score: {}%\n", overall_score));
+        report.push_str(&format!("\nOverall Score: {overall_score}%\n"));
         report
     }
 
@@ -1041,7 +1037,7 @@ dist/"#;
         }
 
         report.push_str("  },\n");
-        report.push_str(&format!("  \"overall_score\": {}", overall_score));
+        report.push_str(&format!("  \"overall_score\": {overall_score}"));
         report.push_str("\n}\n");
 
         report
@@ -1087,8 +1083,7 @@ dist/"#;
                         "bad"
                     };
                     format!(
-                        r#"<div class="metric">{}: <span class="score {}">{}%</span></div>"#,
-                        name, class, score
+                        r#"<div class="metric">{name}: <span class="score {class}">{score}%</span></div>"#
                     )
                 })
                 .collect::<Vec<_>>()
@@ -1097,12 +1092,7 @@ dist/"#;
     }
 
     /// Executes the 'build-system' command
-    fn cmd_build_system(
-        &self,
-        system: &str,
-        output: &PathBuf,
-        force: bool,
-    ) -> Result<(), CliError> {
+    fn cmd_build_system(&self, system: &str, output: &Path, force: bool) -> Result<(), CliError> {
         println!("🔧 Generating build system configuration...");
         println!();
 
@@ -1118,8 +1108,7 @@ dist/"#;
             }
             _ => {
                 return Err(CliError::InvalidTemplate(format!(
-                    "Unsupported build system: {}. Supported: xmake",
-                    system
+                    "Unsupported build system: {system}. Supported: xmake"
                 )));
             }
         }
@@ -1143,14 +1132,14 @@ dist/"#;
     }
 
     /// Generate xmake.lua configuration file
-    fn generate_xmake_config(&self, output: &PathBuf, force: bool) -> Result<(), CliError> {
+    fn generate_xmake_config(&self, output: &Path, force: bool) -> Result<(), CliError> {
         let xmake_path = output.join("xmake.lua");
 
         // Check if file already exists
         if xmake_path.exists() && !force {
             return Err(CliError::Io(std::io::Error::new(
                 std::io::ErrorKind::AlreadyExists,
-                format!("xmake.lua already exists. Use --force to overwrite."),
+                "xmake.lua already exists. Use --force to overwrite.".to_string(),
             )));
         }
 

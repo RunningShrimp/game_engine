@@ -104,7 +104,7 @@ impl OverdrawDetector {
 
     /// 记录overdraw比率
     pub fn record_overdraw(&mut self, ratio: f32) {
-        let ratio = ratio.max(0.0).min(10.0); // 限制在0-10x
+        let ratio = ratio.clamp(0.0, 10.0); // 限制在0-10x
         if self.history.len() >= self.max_history {
             self.history.remove(0);
         }
@@ -446,6 +446,12 @@ pub enum StateChangeType {
     Multiple,
 }
 
+impl Default for PipelineProfiler {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PipelineProfiler {
     /// 创建新的分析器
     pub fn new() -> Self {
@@ -496,7 +502,7 @@ impl PipelineProfiler {
             changes.push("topology");
         }
 
-        if changes.len() == 0 {
+        if changes.is_empty() {
             StateChangeType::Multiple // 无改变，返回Multiple避免误判
         } else if changes.len() == 1 {
             match changes[0] {

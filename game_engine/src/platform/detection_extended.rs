@@ -242,7 +242,7 @@ impl fmt::Display for PlatformVersion {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}.{}.{}", self.major, self.minor, self.patch)?;
         if let Some(build) = &self.build {
-            write!(f, " ({})", build)?;
+            write!(f, " ({build})")?;
         }
         Ok(())
     }
@@ -257,7 +257,7 @@ pub fn detect_platform_compile_time() -> Platform {
 
     #[cfg(target_os = "macos")]
     {
-        return Platform::MacOS;
+        Platform::MacOS
     }
 
     #[cfg(target_os = "linux")]

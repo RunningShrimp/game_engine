@@ -137,10 +137,10 @@ pub enum SyncError {
 impl std::fmt::Display for SyncError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            SyncError::Network(msg) => write!(f, "Network error: {}", msg),
-            SyncError::Serialization(msg) => write!(f, "Serialization error: {}", msg),
+            SyncError::Network(msg) => write!(f, "Network error: {msg}"),
+            SyncError::Serialization(msg) => write!(f, "Serialization error: {msg}"),
             SyncError::Conflict => write!(f, "Sync conflict"),
-            SyncError::Other(msg) => write!(f, "Error: {}", msg),
+            SyncError::Other(msg) => write!(f, "Error: {msg}"),
         }
     }
 }

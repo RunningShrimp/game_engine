@@ -337,10 +337,10 @@ impl OptimizedHotReload {
     /// 递归扫描目录
     fn scan_directory_recursive(&self, dir: &Path) -> Result<(), String> {
         let entries =
-            std::fs::read_dir(dir).map_err(|e| format!("Failed to read directory: {}", e))?;
+            std::fs::read_dir(dir).map_err(|e| format!("Failed to read directory: {e}"))?;
 
         for entry in entries {
-            let entry = entry.map_err(|e| format!("Failed to read entry: {}", e))?;
+            let entry = entry.map_err(|e| format!("Failed to read entry: {e}"))?;
             let path = entry.path();
 
             if path.is_dir() {
@@ -362,14 +362,14 @@ impl OptimizedHotReload {
     }
 
     /// 注册程序集
-    fn register_assembly(&self, path: &PathBuf) -> Result<(), String> {
+    fn register_assembly(&self, path: &Path) -> Result<(), String> {
         let assembly_name =
             path.file_stem().and_then(|s| s.to_str()).unwrap_or("Unknown").to_string();
 
         tracing::debug!("Registering assembly: {}", assembly_name);
 
         let info = AssemblyInfo {
-            path: path.clone(),
+            path: path.to_path_buf(),
             name: assembly_name.clone(),
             loaded_at: Instant::now(),
             is_loaded: false, // 延迟加载
@@ -530,7 +530,7 @@ impl OptimizedHotReload {
     }
 
     /// 编译单个文件
-    fn compile_single_file(&self, file: &PathBuf) -> Result<(), String> {
+    fn compile_single_file(&self, file: &Path) -> Result<(), String> {
         tracing::debug!("Compiling file: {}", file.display());
 
         // 使用dotnet编译
@@ -542,9 +542,9 @@ impl OptimizedHotReload {
             Ok(output) if output.status.success() => Ok(()),
             Ok(output) => {
                 let stderr = String::from_utf8_lossy(&output.stderr);
-                Err(format!("Compilation failed: {}", stderr))
+                Err(format!("Compilation failed: {stderr}"))
             }
-            Err(e) => Err(format!("Failed to execute compile command: {}", e)),
+            Err(e) => Err(format!("Failed to execute compile command: {e}")),
         }
     }
 

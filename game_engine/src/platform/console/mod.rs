@@ -316,26 +316,18 @@ impl ConsoleInputHandler {
 
     /// Get stick position
     pub fn get_stick_position(&self, controller_id: u32, stick: Stick) -> Option<(f32, f32)> {
-        if let Some(controller) = self.get_controller(controller_id) {
-            Some(match stick {
-                Stick::Left => controller.left_stick,
-                Stick::Right => controller.right_stick,
-            })
-        } else {
-            None
-        }
+        self.get_controller(controller_id).map(|controller| match stick {
+            Stick::Left => controller.left_stick,
+            Stick::Right => controller.right_stick,
+        })
     }
 
     /// Get trigger value
     pub fn get_trigger_value(&self, controller_id: u32, trigger: Trigger) -> Option<f32> {
-        if let Some(controller) = self.get_controller(controller_id) {
-            Some(match trigger {
-                Trigger::Left => controller.left_trigger,
-                Trigger::Right => controller.right_trigger,
-            })
-        } else {
-            None
-        }
+        self.get_controller(controller_id).map(|controller| match trigger {
+            Trigger::Left => controller.left_trigger,
+            Trigger::Right => controller.right_trigger,
+        })
     }
 }
 
@@ -506,9 +498,7 @@ pub fn is_console_platform() -> bool {
 /// Get console configuration for the current platform
 pub fn get_console_config() -> Option<ConsoleConfig> {
     if is_console_platform() {
-        let platform = if cfg!(target_os = "psp") {
-            ConsolePlatform::NintendoSwitch
-        } else if cfg!(target_os = "horizon") {
+        let platform = if cfg!(target_os = "psp") || cfg!(target_os = "horizon") {
             ConsolePlatform::NintendoSwitch
         } else if cfg!(target_os = "psx") {
             ConsolePlatform::PlayStation4

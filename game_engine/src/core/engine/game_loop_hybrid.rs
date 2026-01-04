@@ -448,14 +448,14 @@ impl HybridGameLoop {
                     result_tx: _task_tx,
                 } => {
                     let result = Self::process_resource_load(&id, &path).await;
-                    let _ = result_tx.send(result);
+                    drop(result_tx.send(result));
                 }
                 AsyncTask::NetworkRequest {
                     url,
                     result_tx: _task_tx,
                 } => {
                     let result = Self::process_network_request(&url).await;
-                    let _ = result_tx.send(result);
+                    drop(result_tx.send(result));
                 }
                 AsyncTask::AiComputation {
                     entity_id,
@@ -463,13 +463,13 @@ impl HybridGameLoop {
                     result_tx: _task_tx,
                 } => {
                     let result = Self::process_ai_computation(entity_id, &computation_type).await;
-                    let _ = result_tx.send(result);
+                    drop(result_tx.send(result));
                 }
                 AsyncTask::Generic {
                     name,
                     result_tx: _task_tx,
                 } => {
-                    let _ = result_tx.send(AsyncResult::TaskCompleted(name));
+                    drop(result_tx.send(AsyncResult::TaskCompleted(name)));
                 }
             }
         }

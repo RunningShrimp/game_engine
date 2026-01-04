@@ -147,8 +147,8 @@ impl<'a> UnusedDetector<'a> {
             let line = line.trim();
 
             // 匹配 extern crate foo;
-            if line.starts_with("extern crate ") {
-                let crate_name = line["extern crate ".len()..].trim_end_matches(';').trim();
+            if let Some(crate_name) = line.strip_prefix("extern crate ") {
+                let crate_name = crate_name.trim_end_matches(';').trim();
 
                 // 处理重命名：extern crate foo as bar
                 let actual_name = if let Some(as_pos) = crate_name.find(" as ") {
@@ -165,9 +165,9 @@ impl<'a> UnusedDetector<'a> {
         for line in content.lines() {
             let line = line.trim();
 
-            if line.starts_with("use ") {
+            if let Some(path) = line.strip_prefix("use ") {
                 // 提取use语句中的路径
-                let path = line["use ".len()..].trim_end_matches(';').trim();
+                let path = path.trim_end_matches(';').trim();
 
                 // 提取第一段（通常是crate名）
                 if let Some(first_segment) = path.split("::").next() {
@@ -340,7 +340,7 @@ impl<'a> UnusedDetector<'a> {
             .sum();
 
         if total_download_kb > 0 {
-            format!("~{} total", total_download_kb)
+            format!("~{total_download_kb} total")
         } else {
             "Unknown".to_string()
         }
@@ -442,7 +442,7 @@ impl OptimizationReport {
         output.push_str(&format!("未使用依赖数: {}\n", self.total_unused));
         output.push_str(&format!("可安全移除: {}\n", self.safe_to_remove_count));
         output.push_str(&format!("潜在节省: {}\n", self.potential_savings));
-        output.push_str("\n");
+        output.push('\n');
 
         if self.unused_dependencies.is_empty() {
             output.push_str("✅ 未发现未使用的依赖\n");
@@ -465,7 +465,7 @@ impl OptimizationReport {
                     output.push_str(&format!("   节省空间: {}\n", suggestion.savings.download));
                 }
 
-                output.push_str("\n");
+                output.push('\n');
             }
         }
 

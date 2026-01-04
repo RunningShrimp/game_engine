@@ -261,7 +261,7 @@ impl AutoFixEngine {
         // 1. 创建备份
         if let Err(e) = self.rollback_manager.create_backup(context) {
             return AutoFixResult::Failed {
-                error: format!("创建备份失败: {}", e),
+                error: format!("创建备份失败: {e}"),
             };
         }
 
@@ -272,7 +272,7 @@ impl AutoFixEngine {
                 // 失败时回滚
                 let _ = self.rollback_manager.rollback(context);
                 return AutoFixResult::Failed {
-                    error: format!("应用修复失败: {}", e),
+                    error: format!("应用修复失败: {e}"),
                 };
             }
         };
@@ -302,7 +302,7 @@ impl AutoFixEngine {
                 let _ = self.rollback_manager.rollback(context);
 
                 AutoFixResult::Failed {
-                    error: format!("验证失败: {}", e),
+                    error: format!("验证失败: {e}"),
                 }
             }
         }
@@ -418,10 +418,10 @@ impl FixValidator {
 /// 自动修复阴影质量
 fn auto_fix_shadow_quality(context: &AutoFixContext) -> Result<FixOutcome, String> {
     let mut modified_files = Vec::new();
-    let mut logs = Vec::new();
-
-    logs.push("降低阴影质量：High -> Medium".to_string());
-    logs.push("预期FPS提升: 10-20%".to_string());
+    let logs = vec![
+        "降低阴影质量：High -> Medium".to_string(),
+        "预期FPS提升: 10-20%".to_string(),
+    ];
 
     // 在实际实现中，这里会修改配置文件
     modified_files.push("config/graphics.toml".to_string());
@@ -454,10 +454,7 @@ fn rollback_shadow_quality(_context: &AutoFixContext, _outcome: &FixOutcome) -> 
 /// 自动修复VSync
 fn auto_fix_vsync(context: &AutoFixContext) -> Result<FixOutcome, String> {
     let mut modified_files = Vec::new();
-    let mut logs = Vec::new();
-
-    logs.push("禁用垂直同步".to_string());
-    logs.push("帧率上限已移除".to_string());
+    let logs = vec!["禁用垂直同步".to_string(), "帧率上限已移除".to_string()];
 
     modified_files.push("config/graphics.toml".to_string());
 
@@ -486,10 +483,10 @@ fn rollback_vsync(_context: &AutoFixContext, _outcome: &FixOutcome) -> Result<()
 /// 自动修复纹理质量
 fn auto_fix_texture_quality(context: &AutoFixContext) -> Result<FixOutcome, String> {
     let mut modified_files = Vec::new();
-    let mut logs = Vec::new();
-
-    logs.push("降低纹理质量：High -> Medium".to_string());
-    logs.push("预期显存占用减少: 30-50%".to_string());
+    let logs = vec![
+        "降低纹理质量：High -> Medium".to_string(),
+        "预期显存占用减少: 30-50%".to_string(),
+    ];
 
     modified_files.push("config/graphics.toml".to_string());
 
@@ -524,10 +521,10 @@ fn rollback_texture_quality(
 /// 自动修复抗锯齿
 fn auto_fix_anti_aliasing(context: &AutoFixContext) -> Result<FixOutcome, String> {
     let mut modified_files = Vec::new();
-    let mut logs = Vec::new();
-
-    logs.push("降低抗锯齿质量：8x MSAA -> 4x MSAA".to_string());
-    logs.push("预期FPS提升: 5-15%".to_string());
+    let logs = vec![
+        "降低抗锯齿质量：8x MSAA -> 4x MSAA".to_string(),
+        "预期FPS提升: 5-15%".to_string(),
+    ];
 
     modified_files.push("config/graphics.toml".to_string());
 
@@ -556,10 +553,10 @@ fn rollback_anti_aliasing(_context: &AutoFixContext, _outcome: &FixOutcome) -> R
 /// 自动修复批处理
 fn auto_fix_batching(context: &AutoFixContext) -> Result<FixOutcome, String> {
     let mut modified_files = Vec::new();
-    let mut logs = Vec::new();
-
-    logs.push("启用动态批处理".to_string());
-    logs.push("预期Draw Calls减少: 40-60%".to_string());
+    let logs = vec![
+        "启用动态批处理".to_string(),
+        "预期Draw Calls减少: 40-60%".to_string(),
+    ];
 
     modified_files.push("config/rendering.toml".to_string());
 
@@ -588,11 +585,11 @@ fn rollback_batching(_context: &AutoFixContext, _outcome: &FixOutcome) -> Result
 /// 自动修复资源卸载
 fn auto_fix_resource_unloading(context: &AutoFixContext) -> Result<FixOutcome, String> {
     let mut modified_files = Vec::new();
-    let mut logs = Vec::new();
-
-    logs.push("启用自动资源卸载".to_string());
-    logs.push("未使用资源将自动释放".to_string());
-    logs.push("预期内存占用减少: 20-30%".to_string());
+    let logs = vec![
+        "启用自动资源卸载".to_string(),
+        "未使用资源将自动释放".to_string(),
+        "预期内存占用减少: 20-30%".to_string(),
+    ];
 
     modified_files.push("config/resources.toml".to_string());
 

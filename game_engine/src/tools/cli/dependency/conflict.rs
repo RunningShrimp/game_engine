@@ -88,7 +88,7 @@ impl<'a> ConflictDetector<'a> {
 
         for (_package_name, dependencies) in &self.graph.dependencies {
             for dep in dependencies {
-                version_requirements.entry(dep.name.clone()).or_insert_with(Vec::new).push(
+                version_requirements.entry(dep.name.clone()).or_default().push(
                     VersionRequirement {
                         requirement: dep.version_req.clone(),
                         source: _package_name.clone(),
@@ -154,7 +154,7 @@ impl<'a> ConflictDetector<'a> {
                 // 跳过根包
                 seen_packages
                     .entry(package.name.clone())
-                    .or_insert_with(Vec::new)
+                    .or_default()
                     .push(package.version.clone());
             }
         }
@@ -189,7 +189,7 @@ impl<'a> ConflictDetector<'a> {
             .collect();
 
         // 检查传递依赖
-        for (_package_name, dependencies) in &self.graph.dependencies {
+        for dependencies in self.graph.dependencies.values() {
             for dep in dependencies {
                 if dep.source != DependencySource::Direct {
                     // 这是传递依赖
@@ -236,15 +236,14 @@ impl<'a> ConflictDetector<'a> {
                 let mut suggestions = Vec::new();
 
                 suggestions.push(format!(
-                    "更新 {} 到版本 {} 以满足所有要求",
-                    dependency, resolved_version
+                    "更新 {dependency} 到版本 {resolved_version} 以满足所有要求"
                 ));
 
                 // 尝试找到兼容版本
                 if let Some(compatible_version) =
                     self.find_compatible_version(dependency, unsatisfied_requirements)
                 {
-                    suggestions.push(format!("使用版本 {} 作为折中方案", compatible_version));
+                    suggestions.push(format!("使用版本 {compatible_version} 作为折中方案"));
                 }
 
                 suggestions.push("考虑统一依赖的版本要求".to_string());
@@ -264,7 +263,7 @@ impl<'a> ConflictDetector<'a> {
                     versions.join(", ")
                 ));
 
-                suggestions.push(format!("在Cargo.toml中明确指定 {} 的版本", dependency));
+                suggestions.push(format!("在Cargo.toml中明确指定 {dependency} 的版本"));
 
                 suggestions.push("使用cargo update来统一依赖版本".to_string());
 
@@ -279,8 +278,7 @@ impl<'a> ConflictDetector<'a> {
                 let mut suggestions = Vec::new();
 
                 suggestions.push(format!(
-                    "传递依赖 {} 的版本要求 {} 与直接依赖冲突",
-                    dependency, transitive_requirement
+                    "传递依赖 {dependency} 的版本要求 {transitive_requirement} 与直接依赖冲突"
                 ));
 
                 suggestions.push("在Cargo.toml中明确指定版本".to_string());
@@ -410,8 +408,7 @@ impl VersionConflict {
                 resolved_version,
             } => {
                 format!(
-                    "传递依赖 {} 冲突:\n  直接要求: {}\n  传递要求: {}\n  当前版本: {}",
-                    dependency, direct_requirement, transitive_requirement, resolved_version
+                    "传递依赖 {dependency} 冲突:\n  直接要求: {direct_requirement}\n  传递要求: {transitive_requirement}\n  当前版本: {resolved_version}"
                 )
             }
         }
@@ -442,7 +439,7 @@ impl ConflictReport {
         output.push_str("📋 依赖版本冲突报告\n");
         output.push_str(&format!("总冲突数: {}\n", self.total_conflicts));
         output.push_str(&format!("严重冲突: {}\n", self.critical_count));
-        output.push_str("\n");
+        output.push('\n');
 
         if self.conflicts.is_empty() {
             output.push_str("✅ 未发现版本冲突\n");

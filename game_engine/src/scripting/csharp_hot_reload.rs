@@ -207,7 +207,7 @@ impl HotReloadWatcher {
             },
             notify::Config::default(),
         )
-        .map_err(|e| format!("Failed to create file watcher: {}", e))
+        .map_err(|e| format!("Failed to create file watcher: {e}"))
     }
 
     /// 添加事件处理器
@@ -280,10 +280,10 @@ impl HotReloadWatcher {
     /// 递归扫描目录
     fn scan_directory_recursive(&self, dir: &Path) -> Result<(), String> {
         let entries =
-            std::fs::read_dir(dir).map_err(|e| format!("Failed to read directory: {}", e))?;
+            std::fs::read_dir(dir).map_err(|e| format!("Failed to read directory: {e}"))?;
 
         for entry in entries {
-            let entry = entry.map_err(|e| format!("Failed to read entry: {}", e))?;
+            let entry = entry.map_err(|e| format!("Failed to read entry: {e}"))?;
             let path = entry.path();
 
             if path.is_dir() {
@@ -292,11 +292,11 @@ impl HotReloadWatcher {
             } else if path.extension().and_then(|s| s.to_str()) == Some("cs") {
                 // 找到C#脚本
                 let metadata =
-                    path.metadata().map_err(|e| format!("Failed to get file metadata: {}", e))?;
+                    path.metadata().map_err(|e| format!("Failed to get file metadata: {e}"))?;
 
                 let modified = metadata
                     .modified()
-                    .map_err(|e| format!("Failed to get modification time: {}", e))?;
+                    .map_err(|e| format!("Failed to get modification time: {e}"))?;
 
                 let mut scripts = self.scripts.lock().unwrap();
 
@@ -399,7 +399,7 @@ impl HotReloadWatcher {
 
         // 读取源代码
         let source_code =
-            std::fs::read_to_string(path).map_err(|e| format!("Failed to read script: {}", e))?;
+            std::fs::read_to_string(path).map_err(|e| format!("Failed to read script: {e}"))?;
 
         // 使用 .NET 主机编译
         if let Some(ref host) = self.dotnet_host {

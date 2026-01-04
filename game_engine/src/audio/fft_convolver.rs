@@ -123,16 +123,16 @@ impl FftConvolver {
 
         // 复制输入到缓冲区
         let start = self.process_pos % self.fft_size;
-        for i in 0..block_size {
-            self.input_buffer[(start + i) % self.fft_size] = input[i];
+        for (i, &input_val) in input.iter().enumerate().take(block_size) {
+            self.input_buffer[(start + i) % self.fft_size] = input_val;
         }
 
         // 处理左右声道
         if self.filter_freq.len() >= 2 {
             // 准备FFT输入
             let mut fft_input = vec![Complex::new(0.0, 0.0); self.fft_size];
-            for i in 0..self.fft_size {
-                fft_input[i] = Complex::new(self.input_buffer[i], 0.0);
+            for (i, fft_val) in fft_input.iter_mut().enumerate().take(self.fft_size) {
+                *fft_val = Complex::new(self.input_buffer[i], 0.0);
             }
 
             // 执行FFT
@@ -140,14 +140,14 @@ impl FftConvolver {
 
             // 频域相乘 (左声道)
             let mut fft_left = fft_input.clone();
-            for i in 0..self.fft_size {
-                fft_left[i] = fft_left[i] * self.filter_freq[0][i];
+            for (i, fft_val) in fft_left.iter_mut().enumerate().take(self.fft_size) {
+                *fft_val = *fft_val * self.filter_freq[0][i];
             }
 
             // 频域相乘 (右声道)
             let mut fft_right = fft_input;
-            for i in 0..self.fft_size {
-                fft_right[i] = fft_right[i] * self.filter_freq[1][i];
+            for (i, fft_val) in fft_right.iter_mut().enumerate().take(self.fft_size) {
+                *fft_val = *fft_val * self.filter_freq[1][i];
             }
 
             // IFFT回时域

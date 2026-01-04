@@ -50,8 +50,8 @@ impl SpectrumAnalyzer {
         self.fft_in_place(&mut fft_input);
 
         // 计算幅度（只保留前半部分，因为后半部分是对称的）
-        for i in 0..self.fft_size / 2 {
-            let magnitude = fft_input[i].magnitude();
+        for (i, fft_val) in fft_input.iter().enumerate().take(self.fft_size / 2) {
+            let magnitude = fft_val.magnitude();
             self.magnitudes[i] = magnitude;
         }
 

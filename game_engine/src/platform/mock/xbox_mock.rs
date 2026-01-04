@@ -91,8 +91,7 @@ impl MockPlatform for XboxMockPlatform {
         {
             if delta_time > max_time {
                 return Err(MockError::PerformanceConstraintViolation(format!(
-                    "Frame time {}ms exceeds {}ms",
-                    delta_time, max_time
+                    "Frame time {delta_time}ms exceeds {max_time}ms"
                 )));
             }
         }

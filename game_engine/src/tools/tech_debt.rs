@@ -161,12 +161,13 @@ impl TechnicalDebtManager {
     }
 
     /// 扫描目录中的所有文件
-    fn scan_directory(&mut self, dir: &Path) -> Result<(), DebtError> {
-        let entries = std::fs::read_dir(dir)
-            .map_err(|e| DebtError::IoError(format!("无法读取目录 {}: {}", dir.display(), e)))?;
+    #[allow(clippy::only_used_in_recursion)]
+    fn scan_directory(&mut self, _dir: &Path) -> Result<(), DebtError> {
+        let entries = std::fs::read_dir(_dir)
+            .map_err(|e| DebtError::IoError(format!("无法读取目录 {}: {}", _dir.display(), e)))?;
 
         for entry in entries {
-            let entry = entry.map_err(|e| DebtError::IoError(format!("无法读取目录项: {}", e)))?;
+            let entry = entry.map_err(|e| DebtError::IoError(format!("无法读取目录项: {e}")))?;
             let path = entry.path();
 
             if path.is_dir() {
@@ -413,7 +414,7 @@ impl TechnicalDebtManager {
         let mut report = String::from("# 技术债务报告\n\n");
 
         // 概览
-        report.push_str(&format!("## 概览\n\n"));
+        report.push_str("## 概览\n\n");
         report.push_str(&format!("- 总债务数: {}\n", self.statistics.total_debts));
         report.push_str(&format!(
             "- 总预计工作量: {} 人时\n\n",
@@ -424,16 +425,16 @@ impl TechnicalDebtManager {
         report.push_str("## 按优先级分类\n\n");
         for priority in &[Priority::P0, Priority::P1, Priority::P2, Priority::P3] {
             let count = self.statistics.by_priority.get(priority).unwrap_or(&0);
-            report.push_str(&format!("- {:?}: {}\n", priority, count));
+            report.push_str(&format!("- {priority:?}: {count}\n"));
         }
-        report.push_str("\n");
+        report.push('\n');
 
         // 按类型分类
         report.push_str("## 按类型分类\n\n");
         for (debt_type, count) in &self.statistics.by_type {
-            report.push_str(&format!("- {:?}: {}\n", debt_type, count));
+            report.push_str(&format!("- {debt_type:?}: {count}\n"));
         }
-        report.push_str("\n");
+        report.push('\n');
 
         // 高优先级债务详情
         report.push_str("## 高优先级债务 (P0 & P1)\n\n");
@@ -473,7 +474,7 @@ impl TechnicalDebtManager {
         }
 
         std::fs::write(output_path, csv)
-            .map_err(|e| DebtError::IoError(format!("无法写入 CSV 文件: {}", e)))?;
+            .map_err(|e| DebtError::IoError(format!("无法写入 CSV 文件: {e}")))?;
 
         Ok(())
     }
@@ -491,8 +492,8 @@ pub enum DebtError {
 impl std::fmt::Display for DebtError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            DebtError::IoError(msg) => write!(f, "IO error: {}", msg),
-            DebtError::ParseError(msg) => write!(f, "Parse error: {}", msg),
+            DebtError::IoError(msg) => write!(f, "IO error: {msg}"),
+            DebtError::ParseError(msg) => write!(f, "Parse error: {msg}"),
         }
     }
 }

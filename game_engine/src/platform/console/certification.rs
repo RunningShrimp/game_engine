@@ -212,16 +212,13 @@ impl CertificationReport {
 
         report.push_str("┌─ SUMMARY ─────────────────────────────────────────────────┐\n");
         report.push_str(&format!(
-            "│ Total Requirements: {:>4}                            │\n",
-            total
+            "│ Total Requirements: {total:>4}                            │\n"
         ));
         report.push_str(&format!(
-            "│ Passed:              {:>4} ({:>5.1}%)                  │\n",
-            passed, pass_rate
+            "│ Passed:              {passed:>4} ({pass_rate:>5.1}%)                  │\n"
         ));
         report.push_str(&format!(
-            "│ Failed:              {:>4}                            │\n",
-            failed
+            "│ Failed:              {failed:>4}                            │\n"
         ));
         report.push_str(&format!(
             "│ Overall Status:      {:>20}            │\n",
@@ -263,7 +260,7 @@ impl CertificationReport {
         ] {
             let reqs = self.requirements_by_category(*category);
             if !reqs.is_empty() {
-                report.push_str(&format!("┌─ {} ─", category));
+                report.push_str(&format!("┌─ {category} ─"));
                 let padding = 55usize.saturating_sub(category.to_string().len());
                 report.push_str(&"─".repeat(padding));
                 report.push_str("┐\n");
@@ -283,7 +280,7 @@ impl CertificationReport {
                     if !req.passed && !req.description.is_empty() {
                         let padding = " ".repeat(4);
                         let desc_truncated = truncate(&req.description, 46);
-                        report.push_str(&format!("│       {}{}│\n", padding, desc_truncated));
+                        report.push_str(&format!("│       {padding}{desc_truncated}│\n"));
                     }
                 }
                 report
@@ -369,10 +366,10 @@ impl CertificationReport {
         let pass_rate = self.pass_rate();
 
         html.push_str("        <div class='summary'>\n");
-        html.push_str(&format!("            <div class='summary-card'><h3>Total Requirements</h3><div class='value'>{}</div></div>\n", total));
-        html.push_str(&format!("            <div class='summary-card'><h3>Passed</h3><div class='value status-passed'>{}</div></div>\n", passed));
-        html.push_str(&format!("            <div class='summary-card'><h3>Failed</h3><div class='value status-failed'>{}</div></div>\n", failed));
-        html.push_str(&format!("            <div class='summary-card'><h3>Pass Rate</h3><div class='value'>{:.1}%</div></div>\n", pass_rate));
+        html.push_str(&format!("            <div class='summary-card'><h3>Total Requirements</h3><div class='value'>{total}</div></div>\n"));
+        html.push_str(&format!("            <div class='summary-card'><h3>Passed</h3><div class='value status-passed'>{passed}</div></div>\n"));
+        html.push_str(&format!("            <div class='summary-card'><h3>Failed</h3><div class='value status-failed'>{failed}</div></div>\n"));
+        html.push_str(&format!("            <div class='summary-card'><h3>Pass Rate</h3><div class='value'>{pass_rate:.1}%</div></div>\n"));
         html.push_str("        </div>\n");
 
         // Critical failures
@@ -405,8 +402,8 @@ impl CertificationReport {
         ] {
             let reqs = self.requirements_by_category(*category);
             if !reqs.is_empty() {
-                html.push_str(&format!("        <div class='category'>\n"));
-                html.push_str(&format!("            <h2>{}</h2>\n", category));
+                html.push_str("        <div class='category'>\n");
+                html.push_str(&format!("            <h2>{category}</h2>\n"));
                 html.push_str("            <table>\n");
                 html.push_str("                <thead>\n");
                 html.push_str("                    <tr><th>Status</th><th>ID</th><th>Requirement</th><th>Description</th><th>Severity</th><th>Type</th></tr>\n");
@@ -1053,7 +1050,7 @@ fn format_timestamp(time: std::time::SystemTime) -> String {
     match time.duration_since(UNIX_EPOCH) {
         Ok(duration) => {
             let secs = duration.as_secs();
-            format!("{:?}", secs)
+            format!("{secs:?}")
         }
         Err(_) => "Unknown".to_string(),
     }

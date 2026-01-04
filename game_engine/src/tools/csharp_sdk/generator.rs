@@ -33,7 +33,7 @@ impl CSharpSdkGenerator {
     pub fn generate(&self) -> Result<(), String> {
         // 创建输出目录
         fs::create_dir_all(&self.output_dir)
-            .map_err(|e| format!("Failed to create output directory: {}", e))?;
+            .map_err(|e| format!("Failed to create output directory: {e}"))?;
 
         // 生成核心API
         self.generate_core_api()?;
@@ -71,72 +71,70 @@ impl CSharpSdkGenerator {
     fn generate_core_api(&self) -> Result<(), String> {
         let content = templates::core_api_template(&self.namespace, &self.api_version);
         let path = self.output_dir.join("CoreAPI.cs");
-        fs::write(&path, content).map_err(|e| format!("Failed to write CoreAPI.cs: {}", e))?;
+        fs::write(&path, content).map_err(|e| format!("Failed to write CoreAPI.cs: {e}"))?;
         Ok(())
     }
 
     fn generate_lifecycle_hooks(&self) -> Result<(), String> {
         let content = templates::lifecycle_hooks_template(&self.namespace);
         let path = self.output_dir.join("LifecycleHooks.cs");
-        fs::write(&path, content)
-            .map_err(|e| format!("Failed to write LifecycleHooks.cs: {}", e))?;
+        fs::write(&path, content).map_err(|e| format!("Failed to write LifecycleHooks.cs: {e}"))?;
         Ok(())
     }
 
     fn generate_physics_api(&self) -> Result<(), String> {
         let content = templates::physics_api_template(&self.namespace);
         let path = self.output_dir.join("PhysicsAPI.cs");
-        fs::write(&path, content).map_err(|e| format!("Failed to write PhysicsAPI.cs: {}", e))?;
+        fs::write(&path, content).map_err(|e| format!("Failed to write PhysicsAPI.cs: {e}"))?;
         Ok(())
     }
 
     fn generate_audio_api(&self) -> Result<(), String> {
         let content = templates::audio_api_template(&self.namespace);
         let path = self.output_dir.join("AudioAPI.cs");
-        fs::write(&path, content).map_err(|e| format!("Failed to write AudioAPI.cs: {}", e))?;
+        fs::write(&path, content).map_err(|e| format!("Failed to write AudioAPI.cs: {e}"))?;
         Ok(())
     }
 
     fn generate_network_api(&self) -> Result<(), String> {
         let content = templates::network_api_template(&self.namespace);
         let path = self.output_dir.join("NetworkAPI.cs");
-        fs::write(&path, content).map_err(|e| format!("Failed to write NetworkAPI.cs: {}", e))?;
+        fs::write(&path, content).map_err(|e| format!("Failed to write NetworkAPI.cs: {e}"))?;
         Ok(())
     }
 
     fn generate_input_api(&self) -> Result<(), String> {
         let content = templates::input_api_template(&self.namespace);
         let path = self.output_dir.join("InputAPI.cs");
-        fs::write(&path, content).map_err(|e| format!("Failed to write InputAPI.cs: {}", e))?;
+        fs::write(&path, content).map_err(|e| format!("Failed to write InputAPI.cs: {e}"))?;
         Ok(())
     }
 
     fn generate_ecs_api(&self) -> Result<(), String> {
         let content = templates::ecs_api_template(&self.namespace);
         let path = self.output_dir.join("ECSAPI.cs");
-        fs::write(&path, content).map_err(|e| format!("Failed to write ECSAPI.cs: {}", e))?;
+        fs::write(&path, content).map_err(|e| format!("Failed to write ECSAPI.cs: {e}"))?;
         Ok(())
     }
 
     fn generate_resource_api(&self) -> Result<(), String> {
         let content = templates::resource_api_template(&self.namespace);
         let path = self.output_dir.join("ResourceAPI.cs");
-        fs::write(&path, content).map_err(|e| format!("Failed to write ResourceAPI.cs: {}", e))?;
+        fs::write(&path, content).map_err(|e| format!("Failed to write ResourceAPI.cs: {e}"))?;
         Ok(())
     }
 
     fn generate_project_file(&self) -> Result<(), String> {
         let content = templates::project_file_template(&self.namespace);
         let path = self.output_dir.join("GameEngine.csproj");
-        fs::write(&path, content)
-            .map_err(|e| format!("Failed to write GameEngine.csproj: {}", e))?;
+        fs::write(&path, content).map_err(|e| format!("Failed to write GameEngine.csproj: {e}"))?;
         Ok(())
     }
 
     fn generate_readme(&self) -> Result<(), String> {
         let content = templates::readme_template(&self.namespace);
         let path = self.output_dir.join("README.md");
-        fs::write(&path, content).map_err(|e| format!("Failed to write README.md: {}", e))?;
+        fs::write(&path, content).map_err(|e| format!("Failed to write README.md: {e}"))?;
         Ok(())
     }
 }

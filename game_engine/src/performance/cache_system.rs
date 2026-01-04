@@ -560,7 +560,7 @@ where
         println!("  L1: {}/{} 项", l1_size, self.config.l1_size);
         println!("  L2: {}/{} 项", l2_size, self.config.l2_size);
         println!("  L3: {}/{} 项", l3_size, self.config.l3_size);
-        println!("  预取: {} 项", prefetch_size);
+        println!("  预取: {prefetch_size} 项");
         println!("\n访问统计:");
         println!("  L1命中: {}", stats.l1_hits);
         println!("  L2命中: {}", stats.l2_hits);

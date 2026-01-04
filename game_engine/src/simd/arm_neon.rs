@@ -74,100 +74,119 @@ impl NeonVecOps {
     /// 向量加法 (4x float32)
     #[cfg(target_arch = "aarch64")]
     #[inline(always)]
-    pub unsafe fn add_f32x4(a: &[f32; 4], b: &[f32; 4]) -> [f32; 4] {
-        let va = vld1q_f32(a.as_ptr());
-        let vb = vld1q_f32(b.as_ptr());
-        let result = vaddq_f32(va, vb);
+    pub fn add_f32x4(a: &[f32; 4], b: &[f32; 4]) -> [f32; 4] {
+        // Safety: Neon intrinsics require valid pointers, which we have from slices
+        unsafe {
+            let va = vld1q_f32(a.as_ptr());
+            let vb = vld1q_f32(b.as_ptr());
+            let result = vaddq_f32(va, vb);
 
-        let mut output = [0.0f32; 4];
-        vst1q_f32(output.as_mut_ptr(), result);
-        output
+            let mut output = [0.0f32; 4];
+            vst1q_f32(output.as_mut_ptr(), result);
+            output
+        }
     }
 
     /// 向量加法 (4x float32) - 标量回退
     #[cfg(not(target_arch = "aarch64"))]
     #[inline(always)]
-    pub unsafe fn add_f32x4(a: &[f32; 4], b: &[f32; 4]) -> [f32; 4] {
+    pub fn add_f32x4(a: &[f32; 4], b: &[f32; 4]) -> [f32; 4] {
         [a[0] + b[0], a[1] + b[1], a[2] + b[2], a[3] + b[3]]
     }
 
     /// 向量乘法 (4x float32)
     #[cfg(target_arch = "aarch64")]
     #[inline(always)]
-    pub unsafe fn mul_f32x4(a: &[f32; 4], b: &[f32; 4]) -> [f32; 4] {
-        let va = vld1q_f32(a.as_ptr());
-        let vb = vld1q_f32(b.as_ptr());
-        let result = vmulq_f32(va, vb);
+    pub fn mul_f32x4(a: &[f32; 4], b: &[f32; 4]) -> [f32; 4] {
+        // Safety: Neon intrinsics require valid pointers, which we have from slices
+        unsafe {
+            let va = vld1q_f32(a.as_ptr());
+            let vb = vld1q_f32(b.as_ptr());
+            let result = vmulq_f32(va, vb);
 
-        let mut output = [0.0f32; 4];
-        vst1q_f32(output.as_mut_ptr(), result);
-        output
+            let mut output = [0.0f32; 4];
+            vst1q_f32(output.as_mut_ptr(), result);
+            output
+        }
     }
 
     #[cfg(not(target_arch = "aarch64"))]
     #[inline(always)]
-    pub unsafe fn mul_f32x4(a: &[f32; 4], b: &[f32; 4]) -> [f32; 4] {
+    pub fn mul_f32x4(a: &[f32; 4], b: &[f32; 4]) -> [f32; 4] {
         [a[0] * b[0], a[1] * b[1], a[2] * b[2], a[3] * b[3]]
     }
 
     /// 向量点积 (4x float32)
     #[cfg(target_arch = "aarch64")]
     #[inline(always)]
-    pub unsafe fn dot_f32x4(a: &[f32; 4], b: &[f32; 4]) -> f32 {
-        let va = vld1q_f32(a.as_ptr());
-        let vb = vld1q_f32(b.as_ptr());
-        let result = vmulq_f32(va, vb);
+    pub fn dot_f32x4(a: &[f32; 4], b: &[f32; 4]) -> f32 {
+        // Safety: Neon intrinsics require valid pointers, which we have from slices
+        unsafe {
+            let va = vld1q_f32(a.as_ptr());
+            let vb = vld1q_f32(b.as_ptr());
+            let result = vmulq_f32(va, vb);
 
-        // 水平求和
-        let mut sum = [0.0f32; 4];
-        vst1q_f32(sum.as_mut_ptr(), result);
-        sum[0] + sum[1] + sum[2] + sum[3]
+            // 水平求和
+            let mut sum = [0.0f32; 4];
+            vst1q_f32(sum.as_mut_ptr(), result);
+            sum[0] + sum[1] + sum[2] + sum[3]
+        }
     }
 
     #[cfg(not(target_arch = "aarch64"))]
     #[inline(always)]
-    pub unsafe fn dot_f32x4(a: &[f32; 4], b: &[f32; 4]) -> f32 {
+    pub fn dot_f32x4(a: &[f32; 4], b: &[f32; 4]) -> f32 {
         a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3]
     }
 
     /// 向量平方根 (4x float32)
     #[cfg(target_arch = "aarch64")]
     #[inline(always)]
-    pub unsafe fn sqrt_f32x4(a: &[f32; 4]) -> [f32; 4] {
-        let va = vld1q_f32(a.as_ptr());
-        let result = vsqrtq_f32(va);
+    pub fn sqrt_f32x4(a: &[f32; 4]) -> [f32; 4] {
+        // Safety: Neon intrinsics require valid pointers, which we have from slices
+        unsafe {
+            let va = vld1q_f32(a.as_ptr());
+            let result = vsqrtq_f32(va);
 
-        let mut output = [0.0f32; 4];
-        vst1q_f32(output.as_mut_ptr(), result);
-        output
+            let mut output = [0.0f32; 4];
+            vst1q_f32(output.as_mut_ptr(), result);
+            output
+        }
     }
 
     #[cfg(not(target_arch = "aarch64"))]
     #[inline(always)]
-    pub unsafe fn sqrt_f32x4(a: &[f32; 4]) -> [f32; 4] {
+    pub fn sqrt_f32x4(a: &[f32; 4]) -> [f32; 4] {
         [a[0].sqrt(), a[1].sqrt(), a[2].sqrt(), a[3].sqrt()]
     }
 
     /// 向量倒数 (4x float32)
     #[cfg(target_arch = "aarch64")]
     #[inline(always)]
-    pub unsafe fn reciprocal_f32x4(a: &[f32; 4]) -> [f32; 4] {
-        let va = vld1q_f32(a.as_ptr());
-        let ones = vdupq_n_f32(1.0);
-        let result = vdivq_f32(ones, va);
+    pub fn reciprocal_f32x4(a: &[f32; 4]) -> [f32; 4] {
+        // Safety: Neon intrinsics require valid pointers, which we have from slices
+        unsafe {
+            let va = vld1q_f32(a.as_ptr());
+            let ones = vdupq_n_f32(1.0);
+            let result = vdivq_f32(ones, va);
 
-        let mut output = [0.0f32; 4];
-        vst1q_f32(output.as_mut_ptr(), result);
-        output
+            let mut output = [0.0f32; 4];
+            vst1q_f32(output.as_mut_ptr(), result);
+            output
+        }
     }
 
     #[cfg(not(target_arch = "aarch64"))]
     #[inline(always)]
-    pub unsafe fn reciprocal_f32x4(a: &[f32; 4]) -> [f32; 4] {
+    pub fn reciprocal_f32x4(a: &[f32; 4]) -> [f32; 4] {
         [1.0 / a[0], 1.0 / a[1], 1.0 / a[2], 1.0 / a[3]]
     }
 
     /// 向量最小值 (4x float32)
+    ///
+    /// # Safety
+    ///
+    /// The input slices must be valid for reading 4 f32 values each.
     #[cfg(target_arch = "aarch64")]
     #[inline(always)]
     pub unsafe fn min_f32x4(a: &[f32; 4], b: &[f32; 4]) -> [f32; 4] {
@@ -192,6 +211,10 @@ impl NeonVecOps {
     }
 
     /// 向量最大值 (4x float32)
+    ///
+    /// # Safety
+    ///
+    /// The input slices must be valid for reading 4 f32 values each.
     #[cfg(target_arch = "aarch64")]
     #[inline(always)]
     pub unsafe fn max_f32x4(a: &[f32; 4], b: &[f32; 4]) -> [f32; 4] {
@@ -229,20 +252,19 @@ impl NeonArrayOps {
         let len = a.len();
         let simd_len = len & !3; // 对齐到4的倍数
 
-        unsafe {
-            // SIMD处理
-            let i = 0;
-            while i < simd_len {
-                let va = [a[i], a[i + 1], a[i + 2], a[i + 3]];
-                let vb = [b[i], b[i + 1], b[i + 2], b[i + 3]];
-                let result = NeonVecOps::add_f32x4(&va, &vb);
-                output[i..i + 4].copy_from_slice(&result);
-            }
+        // SIMD处理
+        let mut i = 0;
+        while i < simd_len {
+            let va = [a[i], a[i + 1], a[i + 2], a[i + 3]];
+            let vb = [b[i], b[i + 1], b[i + 2], b[i + 3]];
+            let result = NeonVecOps::add_f32x4(&va, &vb);
+            output[i..i + 4].copy_from_slice(&result);
+            i += 4;
+        }
 
-            // 标量处理剩余元素
-            for i in simd_len..len {
-                output[i] = a[i] + b[i];
-            }
+        // 标量处理剩余元素
+        for i in simd_len..len {
+            output[i] = a[i] + b[i];
         }
     }
 
@@ -255,20 +277,19 @@ impl NeonArrayOps {
         let len = a.len();
         let simd_len = len & !3;
 
-        unsafe {
-            // SIMD处理
-            let i = 0;
-            while i < simd_len {
-                let va = [a[i], a[i + 1], a[i + 2], a[i + 3]];
-                let vb = [b[i], b[i + 1], b[i + 2], b[i + 3]];
-                let result = NeonVecOps::mul_f32x4(&va, &vb);
-                output[i..i + 4].copy_from_slice(&result);
-            }
+        // SIMD处理
+        let mut i = 0;
+        while i < simd_len {
+            let va = [a[i], a[i + 1], a[i + 2], a[i + 3]];
+            let vb = [b[i], b[i + 1], b[i + 2], b[i + 3]];
+            let result = NeonVecOps::mul_f32x4(&va, &vb);
+            output[i..i + 4].copy_from_slice(&result);
+            i += 4;
+        }
 
-            // 标量处理剩余元素
-            for i in simd_len..len {
-                output[i] = a[i] * b[i];
-            }
+        // 标量处理剩余元素
+        for i in simd_len..len {
+            output[i] = a[i] * b[i];
         }
     }
 
@@ -280,21 +301,20 @@ impl NeonArrayOps {
         let len = a.len();
         let simd_len = len & !3;
 
-        unsafe {
-            let scalar_vec = [scalar; 4];
+        let scalar_vec = [scalar; 4];
 
-            // SIMD处理
-            let i = 0;
-            while i < simd_len {
-                let va = [a[i], a[i + 1], a[i + 2], a[i + 3]];
-                let result = NeonVecOps::mul_f32x4(&va, &scalar_vec);
-                output[i..i + 4].copy_from_slice(&result);
-            }
+        // SIMD处理
+        let mut i = 0;
+        while i < simd_len {
+            let va = [a[i], a[i + 1], a[i + 2], a[i + 3]];
+            let result = NeonVecOps::mul_f32x4(&va, &scalar_vec);
+            output[i..i + 4].copy_from_slice(&result);
+            i += 4;
+        }
 
-            // 标量处理剩余元素
-            for i in simd_len..len {
-                output[i] = a[i] * scalar;
-            }
+        // 标量处理剩余元素
+        for i in simd_len..len {
+            output[i] = a[i] * scalar;
         }
     }
 
@@ -306,19 +326,18 @@ impl NeonArrayOps {
         let len = a.len();
         let simd_len = len & !3;
 
-        unsafe {
-            // SIMD处理
-            let i = 0;
-            while i < simd_len {
-                let va = [a[i], a[i + 1], a[i + 2], a[i + 3]];
-                let result = NeonVecOps::sqrt_f32x4(&va);
-                output[i..i + 4].copy_from_slice(&result);
-            }
+        // SIMD处理
+        let mut i = 0;
+        while i < simd_len {
+            let va = [a[i], a[i + 1], a[i + 2], a[i + 3]];
+            let result = NeonVecOps::sqrt_f32x4(&va);
+            output[i..i + 4].copy_from_slice(&result);
+            i += 4;
+        }
 
-            // 标量处理剩余元素
-            for i in simd_len..len {
-                output[i] = a[i].sqrt();
-            }
+        // 标量处理剩余元素
+        for i in simd_len..len {
+            output[i] = a[i].sqrt();
         }
     }
 }
@@ -329,52 +348,48 @@ pub struct NeonMatrixOps;
 impl NeonMatrixOps {
     /// 3x3矩阵乘法
     pub fn mul_mat3x3(a: &[f32; 9], b: &[f32; 9]) -> [f32; 9] {
-        unsafe {
-            [
-                NeonVecOps::dot_f32x4(&[a[0], a[1], a[2], 0.0], &[b[0], b[3], b[6], 0.0]),
-                NeonVecOps::dot_f32x4(&[a[0], a[1], a[2], 0.0], &[b[1], b[4], b[7], 0.0]),
-                NeonVecOps::dot_f32x4(&[a[0], a[1], a[2], 0.0], &[b[2], b[5], b[8], 0.0]),
-                NeonVecOps::dot_f32x4(&[a[3], a[4], a[5], 0.0], &[b[0], b[3], b[6], 0.0]),
-                NeonVecOps::dot_f32x4(&[a[3], a[4], a[5], 0.0], &[b[1], b[4], b[7], 0.0]),
-                NeonVecOps::dot_f32x4(&[a[3], a[4], a[5], 0.0], &[b[2], b[5], b[8], 0.0]),
-                NeonVecOps::dot_f32x4(&[a[6], a[7], a[8], 0.0], &[b[0], b[3], b[6], 0.0]),
-                NeonVecOps::dot_f32x4(&[a[6], a[7], a[8], 0.0], &[b[1], b[4], b[7], 0.0]),
-                NeonVecOps::dot_f32x4(&[a[6], a[7], a[8], 0.0], &[b[2], b[5], b[8], 0.0]),
-            ]
-        }
+        [
+            NeonVecOps::dot_f32x4(&[a[0], a[1], a[2], 0.0], &[b[0], b[3], b[6], 0.0]),
+            NeonVecOps::dot_f32x4(&[a[0], a[1], a[2], 0.0], &[b[1], b[4], b[7], 0.0]),
+            NeonVecOps::dot_f32x4(&[a[0], a[1], a[2], 0.0], &[b[2], b[5], b[8], 0.0]),
+            NeonVecOps::dot_f32x4(&[a[3], a[4], a[5], 0.0], &[b[0], b[3], b[6], 0.0]),
+            NeonVecOps::dot_f32x4(&[a[3], a[4], a[5], 0.0], &[b[1], b[4], b[7], 0.0]),
+            NeonVecOps::dot_f32x4(&[a[3], a[4], a[5], 0.0], &[b[2], b[5], b[8], 0.0]),
+            NeonVecOps::dot_f32x4(&[a[6], a[7], a[8], 0.0], &[b[0], b[3], b[6], 0.0]),
+            NeonVecOps::dot_f32x4(&[a[6], a[7], a[8], 0.0], &[b[1], b[4], b[7], 0.0]),
+            NeonVecOps::dot_f32x4(&[a[6], a[7], a[8], 0.0], &[b[2], b[5], b[8], 0.0]),
+        ]
     }
 
     /// 4x4矩阵乘法
     pub fn mul_mat4x4(a: &[f32; 16], b: &[f32; 16]) -> [f32; 16] {
-        unsafe {
-            [
-                NeonVecOps::dot_f32x4(&a[0..4].try_into().unwrap(), &b[0..4].try_into().unwrap()),
-                NeonVecOps::dot_f32x4(&a[0..4].try_into().unwrap(), &b[4..8].try_into().unwrap()),
-                NeonVecOps::dot_f32x4(&a[0..4].try_into().unwrap(), &b[8..12].try_into().unwrap()),
-                NeonVecOps::dot_f32x4(&a[0..4].try_into().unwrap(), &b[12..16].try_into().unwrap()),
-                NeonVecOps::dot_f32x4(&a[4..8].try_into().unwrap(), &b[0..4].try_into().unwrap()),
-                NeonVecOps::dot_f32x4(&a[4..8].try_into().unwrap(), &b[4..8].try_into().unwrap()),
-                NeonVecOps::dot_f32x4(&a[4..8].try_into().unwrap(), &b[8..12].try_into().unwrap()),
-                NeonVecOps::dot_f32x4(&a[4..8].try_into().unwrap(), &b[12..16].try_into().unwrap()),
-                NeonVecOps::dot_f32x4(&a[8..12].try_into().unwrap(), &b[0..4].try_into().unwrap()),
-                NeonVecOps::dot_f32x4(&a[8..12].try_into().unwrap(), &b[4..8].try_into().unwrap()),
-                NeonVecOps::dot_f32x4(&a[8..12].try_into().unwrap(), &b[8..12].try_into().unwrap()),
-                NeonVecOps::dot_f32x4(
-                    &a[8..12].try_into().unwrap(),
-                    &b[12..16].try_into().unwrap(),
-                ),
-                NeonVecOps::dot_f32x4(&a[12..16].try_into().unwrap(), &b[0..4].try_into().unwrap()),
-                NeonVecOps::dot_f32x4(&a[12..16].try_into().unwrap(), &b[4..8].try_into().unwrap()),
-                NeonVecOps::dot_f32x4(
-                    &a[12..16].try_into().unwrap(),
-                    &b[8..12].try_into().unwrap(),
-                ),
-                NeonVecOps::dot_f32x4(
-                    &a[12..16].try_into().unwrap(),
-                    &b[12..16].try_into().unwrap(),
-                ),
-            ]
-        }
+        [
+            NeonVecOps::dot_f32x4(&a[0..4].try_into().unwrap(), &b[0..4].try_into().unwrap()),
+            NeonVecOps::dot_f32x4(&a[0..4].try_into().unwrap(), &b[4..8].try_into().unwrap()),
+            NeonVecOps::dot_f32x4(&a[0..4].try_into().unwrap(), &b[8..12].try_into().unwrap()),
+            NeonVecOps::dot_f32x4(&a[0..4].try_into().unwrap(), &b[12..16].try_into().unwrap()),
+            NeonVecOps::dot_f32x4(&a[4..8].try_into().unwrap(), &b[0..4].try_into().unwrap()),
+            NeonVecOps::dot_f32x4(&a[4..8].try_into().unwrap(), &b[4..8].try_into().unwrap()),
+            NeonVecOps::dot_f32x4(&a[4..8].try_into().unwrap(), &b[8..12].try_into().unwrap()),
+            NeonVecOps::dot_f32x4(&a[4..8].try_into().unwrap(), &b[12..16].try_into().unwrap()),
+            NeonVecOps::dot_f32x4(&a[8..12].try_into().unwrap(), &b[0..4].try_into().unwrap()),
+            NeonVecOps::dot_f32x4(&a[8..12].try_into().unwrap(), &b[4..8].try_into().unwrap()),
+            NeonVecOps::dot_f32x4(&a[8..12].try_into().unwrap(), &b[8..12].try_into().unwrap()),
+            NeonVecOps::dot_f32x4(
+                &a[8..12].try_into().unwrap(),
+                &b[12..16].try_into().unwrap(),
+            ),
+            NeonVecOps::dot_f32x4(&a[12..16].try_into().unwrap(), &b[0..4].try_into().unwrap()),
+            NeonVecOps::dot_f32x4(&a[12..16].try_into().unwrap(), &b[4..8].try_into().unwrap()),
+            NeonVecOps::dot_f32x4(
+                &a[12..16].try_into().unwrap(),
+                &b[8..12].try_into().unwrap(),
+            ),
+            NeonVecOps::dot_f32x4(
+                &a[12..16].try_into().unwrap(),
+                &b[12..16].try_into().unwrap(),
+            ),
+        ]
     }
 }
 
@@ -399,7 +414,7 @@ impl NeonBenchmark {
         // SIMD版本
         let start = Instant::now();
         for _ in 0..iterations {
-            let _ = unsafe { NeonVecOps::add_f32x4(&a, &b) };
+            let _ = NeonVecOps::add_f32x4(&a, &b);
         }
         let simd_time = start.elapsed().as_secs_f64();
 
@@ -453,7 +468,7 @@ mod tests {
         let b = [5.0f32, 6.0, 7.0, 8.0];
         let expected = [6.0f32, 8.0, 10.0, 12.0];
 
-        let result = unsafe { NeonVecOps::add_f32x4(&a, &b) };
+        let result = NeonVecOps::add_f32x4(&a, &b);
         assert_eq!(result, expected);
     }
 
@@ -463,7 +478,7 @@ mod tests {
         let b = [2.0f32, 3.0, 4.0, 5.0];
         let expected = [2.0f32, 6.0, 12.0, 20.0];
 
-        let result = unsafe { NeonVecOps::mul_f32x4(&a, &b) };
+        let result = NeonVecOps::mul_f32x4(&a, &b);
         assert_eq!(result, expected);
     }
 
@@ -473,7 +488,7 @@ mod tests {
         let b = [2.0f32, 3.0, 4.0, 5.0];
         let expected = 1.0 * 2.0 + 2.0 * 3.0 + 3.0 * 4.0 + 4.0 * 5.0; // 40.0
 
-        let result = unsafe { NeonVecOps::dot_f32x4(&a, &b) };
+        let result = NeonVecOps::dot_f32x4(&a, &b);
         assert_eq!(result, expected);
     }
 
@@ -482,7 +497,7 @@ mod tests {
         let a = [1.0f32, 4.0, 9.0, 16.0];
         let expected = [1.0f32, 2.0, 3.0, 4.0];
 
-        let result = unsafe { NeonVecOps::sqrt_f32x4(&a) };
+        let result = NeonVecOps::sqrt_f32x4(&a);
         for i in 0..4 {
             assert!((result[i] - expected[i]).abs() < 0.001);
         }

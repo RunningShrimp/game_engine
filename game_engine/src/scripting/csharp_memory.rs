@@ -372,7 +372,7 @@ impl ObjectPool {
 
             Ok(())
         } else {
-            Err(format!("Object #{} not found in active pool", obj_id))
+            Err(format!("Object #{obj_id} not found in active pool"))
         }
     }
 
@@ -663,7 +663,7 @@ impl MemoryManager {
         report.push_str(&format!("Object Pools: {}\n", pools.len()));
         for (type_name, pool) in pools.iter() {
             let stats = pool.get_stats();
-            report.push_str(&format!("  [{}]\n", type_name));
+            report.push_str(&format!("  [{type_name}]\n"));
             report.push_str(&format!("    Current Size: {}\n", stats.current_size));
             report.push_str(&format!("    Active: {}\n", stats.active_count));
             report.push_str(&format!("    Hit Rate: {:.1}%\n", stats.hit_rate * 100.0));
@@ -761,7 +761,7 @@ impl MemoryLeakDetector {
 
         if let Some(ref path) = self.config.report_path {
             std::fs::write(path, report)
-                .map_err(|e| format!("Failed to write leak report: {}", e))?;
+                .map_err(|e| format!("Failed to write leak report: {e}"))?;
         }
 
         Ok(())

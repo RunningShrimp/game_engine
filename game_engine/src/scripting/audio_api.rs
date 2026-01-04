@@ -118,8 +118,7 @@ impl AudioScriptApi {
             }
 
             ScriptResult::Success(ScriptValue::String(format!(
-                "Playing 2D audio: {}, volume={}, pitch={}, loop={}, source_id={}",
-                clip_name, volume, pitch, loop_param, source_id
+                "Playing 2D audio: {clip_name}, volume={volume}, pitch={pitch}, loop={loop_param}, source_id={source_id}"
             )))
         });
 
@@ -139,8 +138,7 @@ impl AudioScriptApi {
                 if let Some(source) = sources_guard.get_mut(&source_id) {
                     source.is_playing = false;
                     return ScriptResult::Success(ScriptValue::String(format!(
-                        "Stopped audio: {}",
-                        source_id
+                        "Stopped audio: {source_id}"
                     )));
                 }
             }
@@ -164,8 +162,7 @@ impl AudioScriptApi {
                 if let Some(source) = sources_guard.get_mut(&source_id) {
                     source.is_playing = false;
                     return ScriptResult::Success(ScriptValue::String(format!(
-                        "Paused audio: {}",
-                        source_id
+                        "Paused audio: {source_id}"
                     )));
                 }
             }
@@ -189,8 +186,7 @@ impl AudioScriptApi {
                 if let Some(source) = sources_guard.get_mut(&source_id) {
                     source.is_playing = true;
                     return ScriptResult::Success(ScriptValue::String(format!(
-                        "Resumed audio: {}",
-                        source_id
+                        "Resumed audio: {source_id}"
                     )));
                 }
             }
@@ -218,8 +214,7 @@ impl AudioScriptApi {
                 if let Some(source) = sources_guard.get_mut(&source_id) {
                     source.volume = (volume.clamp(0.0, 1.0)) as f32;
                     return ScriptResult::Success(ScriptValue::String(format!(
-                        "Volume set: {}={}",
-                        source_id, volume
+                        "Volume set: {source_id}={volume}"
                     )));
                 }
             }
@@ -247,8 +242,7 @@ impl AudioScriptApi {
                 if let Some(source) = sources_guard.get_mut(&source_id) {
                     source.pitch = (pitch.clamp(0.1, 2.0)) as f32;
                     return ScriptResult::Success(ScriptValue::String(format!(
-                        "Pitch set: {}={}",
-                        source_id, pitch
+                        "Pitch set: {source_id}={pitch}"
                     )));
                 }
             }
@@ -369,8 +363,7 @@ impl AudioScriptApi {
             let max_distance = args[2].as_number().unwrap_or(100.0);
 
             ScriptResult::Success(ScriptValue::String(format!(
-                "Attenuation set: {}=[{}, {}]",
-                source_id, min_distance, max_distance
+                "Attenuation set: {source_id}=[{min_distance}, {max_distance}]"
             )))
         });
 
@@ -390,8 +383,7 @@ impl AudioScriptApi {
             let enabled = args[1].as_boolean().unwrap_or(false);
 
             ScriptResult::Success(ScriptValue::String(format!(
-                "Doppler effect: {}={}",
-                source_id, enabled
+                "Doppler effect: {source_id}={enabled}"
             )))
         });
     }
@@ -428,22 +420,20 @@ impl AudioScriptApi {
             };
 
             ScriptResult::Success(ScriptValue::String(format!(
-                "Playing music: {}, volume={}, loop={}, fade={}s",
-                music_name, volume, loop_param, fade_duration
+                "Playing music: {music_name}, volume={volume}, loop={loop_param}, fade={fade_duration}s"
             )))
         });
 
         // 停止音乐
         api.register_function("audio_stop_music", move |args| {
-            let fade_duration = if args.len() > 0 {
+            let fade_duration = if !args.is_empty() {
                 args[0].as_number().unwrap_or(1.0)
             } else {
                 1.0
             };
 
             ScriptResult::Success(ScriptValue::String(format!(
-                "Music stopped (fade={}s)",
-                fade_duration
+                "Music stopped (fade={fade_duration}s)"
             )))
         });
 
@@ -455,15 +445,12 @@ impl AudioScriptApi {
 
             let volume = args[0].as_number().unwrap_or(0.7);
 
-            ScriptResult::Success(ScriptValue::String(format!(
-                "Music volume set to {}",
-                volume
-            )))
+            ScriptResult::Success(ScriptValue::String(format!("Music volume set to {volume}")))
         });
 
         // 淡入音乐
         api.register_function("audio_fade_in_music", move |args| {
-            let duration = if args.len() > 0 {
+            let duration = if !args.is_empty() {
                 args[0].as_number().unwrap_or(2.0)
             } else {
                 2.0
@@ -476,22 +463,20 @@ impl AudioScriptApi {
             };
 
             ScriptResult::Success(ScriptValue::String(format!(
-                "Music fade in: duration={}s, target_volume={}",
-                duration, target_volume
+                "Music fade in: duration={duration}s, target_volume={target_volume}"
             )))
         });
 
         // 淡出音乐
         api.register_function("audio_fade_out_music", move |args| {
-            let duration = if args.len() > 0 {
+            let duration = if !args.is_empty() {
                 args[0].as_number().unwrap_or(2.0)
             } else {
                 2.0
             };
 
             ScriptResult::Success(ScriptValue::String(format!(
-                "Music fade out: duration={}s",
-                duration
+                "Music fade out: duration={duration}s"
             )))
         });
     }
@@ -522,7 +507,7 @@ impl AudioScriptApi {
 
             let name = clip_name.unwrap_or_else(|| {
                 // 从路径提取文件名
-                clip_path.split('/').last().unwrap_or(&clip_path).to_string()
+                clip_path.split('/').next_back().unwrap_or(&clip_path).to_string()
             });
 
             // 模拟加载音频片段
@@ -538,7 +523,7 @@ impl AudioScriptApi {
                 );
             }
 
-            ScriptResult::Success(ScriptValue::String(format!("Audio clip loaded: {}", name)))
+            ScriptResult::Success(ScriptValue::String(format!("Audio clip loaded: {name}")))
         });
 
         // 卸载音频资源
@@ -556,8 +541,7 @@ impl AudioScriptApi {
             if let Ok(mut clips_guard) = clips.try_lock() {
                 if clips_guard.remove(&clip_name).is_some() {
                     return ScriptResult::Success(ScriptValue::String(format!(
-                        "Audio clip unloaded: {}",
-                        clip_name
+                        "Audio clip unloaded: {clip_name}"
                     )));
                 }
             }

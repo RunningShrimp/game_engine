@@ -284,7 +284,7 @@ impl ScriptDebugger {
     pub fn evaluate_expression(&self, expression: &str) -> Result<String, String> {
         // 在实际实现中，这里会使用脚本引擎来评估表达式
         tracing::info!(target: "script_debugger", "Evaluating expression: {}", expression);
-        Ok(format!("<evaluated: {}>", expression))
+        Ok(format!("<evaluated: {expression}>"))
     }
 
     /// 获取局部变量
@@ -303,7 +303,7 @@ impl ScriptDebugger {
             frame.locals.insert(name.to_string(), value.to_string());
             Ok(())
         } else {
-            Err(format!("Frame {} not found", frame_index))
+            Err(format!("Frame {frame_index} not found"))
         }
     }
 }

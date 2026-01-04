@@ -4,7 +4,7 @@ use super::{MigrationError, ProjectAnalysis};
 use std::collections::HashMap;
 use std::fs;
 use std::future::Future;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::pin::Pin;
 
 /// 资源迁移报告
@@ -28,6 +28,12 @@ pub struct UnrealProjectImporter {
     project_path: PathBuf,
 }
 
+impl Default for UnrealProjectImporter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl UnrealProjectImporter {
     /// 创建新导入器
     pub fn new() -> Self {
@@ -37,7 +43,7 @@ impl UnrealProjectImporter {
     }
 
     /// 分析UE5项目
-    pub async fn analyze(&self, path: &PathBuf) -> Result<ProjectAnalysis, MigrationError> {
+    pub async fn analyze(&self, path: &Path) -> Result<ProjectAnalysis, MigrationError> {
         // 验证项目路径（检查Content目录）
         let content_path = path.join("Content");
         if !content_path.exists() {
@@ -192,7 +198,7 @@ impl UnrealProjectImporter {
     /// 导入蓝图
     pub async fn import_blueprint(
         &self,
-        blueprint_path: &PathBuf,
+        blueprint_path: &Path,
     ) -> Result<UnrealBlueprint, MigrationError> {
         // 读取.uasset蓝图文件
         // 注意：实际UE5 .uasset文件是二进制格式，这里提供框架实现
@@ -400,13 +406,13 @@ impl UnrealProjectImporter {
         }
 
         if !blueprint.variables.is_empty() {
-            code.push_str("\n");
+            code.push('\n');
         }
 
         code.push_str("    private entity: Entity;\n\n");
 
         // 构造函数
-        code.push_str(&format!("    constructor(entity: Entity) {{\n"));
+        code.push_str("    constructor(entity: Entity) {\n");
         code.push_str("        this.entity = entity;\n");
 
         // 初始化变量
@@ -488,14 +494,12 @@ impl UnrealProjectImporter {
                     if language == "lua" {
                         format!("function {}:on_update(delta_time)", "Blueprint")
                     } else {
-                        format!("on_update(delta_time: number): void")
+                        "on_update(delta_time: number): void".to_string()
                     }
+                } else if language == "lua" {
+                    format!("function {}:on_{}()", "Blueprint", node.id.to_lowercase())
                 } else {
-                    if language == "lua" {
-                        format!("function {}:on_{}()", "Blueprint", node.id.to_lowercase())
-                    } else {
-                        format!("on_{}(): void", node.id.to_lowercase())
-                    }
+                    format!("on_{}(): void", node.id.to_lowercase())
                 }
             }
             "Function" => {
@@ -505,12 +509,10 @@ impl UnrealProjectImporter {
                     } else {
                         format!("Engine.log(\"{}\");", "message")
                     }
+                } else if language == "lua" {
+                    format!("self:{}()", node.id.to_lowercase())
                 } else {
-                    if language == "lua" {
-                        format!("self:{}()", node.id.to_lowercase())
-                    } else {
-                        format!("this.{}();", node.id.to_lowercase())
-                    }
+                    format!("this.{}();", node.id.to_lowercase())
                 }
             }
             _ => {
@@ -526,7 +528,7 @@ impl UnrealProjectImporter {
     /// 迁移UE5资源
     pub async fn migrate_assets(
         &self,
-        output_path: &PathBuf,
+        output_path: &Path,
     ) -> Result<AssetMigrationReport, MigrationError> {
         let content_path = self.project_path.join("Content");
         let mut converted_blueprints = 0;
@@ -564,25 +566,24 @@ impl UnrealProjectImporter {
     fn convert_asset_recursive<'a>(
         &'a self,
         asset_path: PathBuf,
-        output_path: &'a PathBuf,
+        _output_path: &'a Path,
         converted_blueprints: &'a mut u32,
         converted_materials: &'a mut u32,
         converted_textures: &'a mut u32,
-        converted_meshes: &'a mut u32,
+        _converted_meshes: &'a mut u32,
         warnings: &'a mut Vec<String>,
     ) -> Pin<Box<dyn Future<Output = Result<(), MigrationError>> + 'a>> {
-        let output_path = output_path.clone();
         Box::pin(async move {
             if asset_path.is_dir() {
                 if let Ok(entries) = fs::read_dir(&asset_path) {
                     for entry in entries.flatten() {
                         self.convert_asset_recursive(
                             entry.path(),
-                            &output_path,
+                            _output_path,
                             converted_blueprints,
                             converted_materials,
                             converted_textures,
-                            converted_meshes,
+                            _converted_meshes,
                             warnings,
                         )
                         .await?;
@@ -609,8 +610,7 @@ impl UnrealProjectImporter {
                                 }
                                 Err(e) => {
                                     warnings.push(format!(
-                                        "Failed to convert blueprint {:?}: {}",
-                                        asset_path, e
+                                        "Failed to convert blueprint {asset_path:?}: {e}"
                                     ));
                                 }
                             }

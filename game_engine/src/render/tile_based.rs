@@ -83,10 +83,7 @@ impl TileSize {
     /// 计算屏幕需要的tile数量
     pub fn calculate_tile_count(&self, screen_width: u32, screen_height: u32) -> (u32, u32) {
         let size = self.size();
-        (
-            (screen_width + size - 1) / size,
-            (screen_height + size - 1) / size,
-        )
+        (screen_width.div_ceil(size), screen_height.div_ceil(size))
     }
 }
 
@@ -402,9 +399,7 @@ impl BandwidthOptimizationHints {
 
     /// 获取推荐的纹理格式
     pub fn recommended_texture_format(&self) -> TextureFormat {
-        if self.use_adreno_optimized_formats {
-            TextureFormat::Astc4x4
-        } else if self.use_mali_lossless_compression {
+        if self.use_adreno_optimized_formats || self.use_mali_lossless_compression {
             TextureFormat::Astc4x4
         } else {
             TextureFormat::Etc2

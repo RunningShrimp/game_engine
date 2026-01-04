@@ -487,10 +487,10 @@ mod tests {
     use super::*;
     #[cfg(feature = "mlua")]
     #[allow(unexpected_cfgs, reason = "mlua is a custom feature")]
-    use mlua::{Lua, Function, Value as LuaValueInternal};
+    use crate::ecs::Entity;
     #[cfg(feature = "mlua")]
     #[allow(unexpected_cfgs, reason = "mlua is a custom feature")]
-    use crate::ecs::Entity;
+    use mlua::{Function, Lua, Value as LuaValueInternal};
 
     #[test]
     #[cfg(feature = "mlua")]

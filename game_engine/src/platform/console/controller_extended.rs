@@ -957,7 +957,7 @@ impl std::fmt::Display for ControllerError {
             ControllerError::NotSupported => write!(f, "Feature not supported on this platform"),
             ControllerError::InvalidControllerId => write!(f, "Invalid controller ID"),
             ControllerError::CalibrationFailed => write!(f, "Motion calibration failed"),
-            ControllerError::PlatformError(msg) => write!(f, "Platform error: {}", msg),
+            ControllerError::PlatformError(msg) => write!(f, "Platform error: {msg}"),
         }
     }
 }

@@ -56,14 +56,14 @@ impl MobileScriptApi {
         api.register_function("gpg_initialize", move |args| {
             let mut gpg_guard = match gpg.lock() {
                 Ok(guard) => guard,
-                Err(e) => return ScriptResult::Error(format!("Failed to acquire lock: {}", e)),
+                Err(e) => return ScriptResult::Error(format!("Failed to acquire lock: {e}")),
             };
 
             match gpg_guard.initialize() {
                 Ok(()) => ScriptResult::Success(ScriptValue::String(
                     "Google Play Games initialized".to_string(),
                 )),
-                Err(e) => ScriptResult::Error(format!("Initialization failed: {}", e)),
+                Err(e) => ScriptResult::Error(format!("Initialization failed: {e}")),
             }
         });
 
@@ -79,7 +79,7 @@ impl MobileScriptApi {
                 Ok(()) => ScriptResult::Success(ScriptValue::Boolean(true)),
                 Err(e) => {
                     tracing::error!("Sign in failed: {}", e);
-                    ScriptResult::Error(format!("Sign in failed: {}", e))
+                    ScriptResult::Error(format!("Sign in failed: {e}"))
                 }
             }
         });
@@ -150,7 +150,7 @@ impl MobileScriptApi {
                 Ok(()) => {
                     ScriptResult::Success(ScriptValue::String("Achievement unlocked".to_string()))
                 }
-                Err(e) => ScriptResult::Error(format!("Failed to unlock achievement: {}", e)),
+                Err(e) => ScriptResult::Error(format!("Failed to unlock achievement: {e}")),
             }
         });
 
@@ -183,7 +183,7 @@ impl MobileScriptApi {
                 Ok(()) => {
                     ScriptResult::Success(ScriptValue::String("Progress updated".to_string()))
                 }
-                Err(e) => ScriptResult::Error(format!("Failed to update progress: {}", e)),
+                Err(e) => ScriptResult::Error(format!("Failed to update progress: {e}")),
             }
         });
 
@@ -213,7 +213,7 @@ impl MobileScriptApi {
 
             match gpg_guard.submit_score(leaderboard_id, score) {
                 Ok(()) => ScriptResult::Success(ScriptValue::String("Score submitted".to_string())),
-                Err(e) => ScriptResult::Error(format!("Failed to submit score: {}", e)),
+                Err(e) => ScriptResult::Error(format!("Failed to submit score: {e}")),
             }
         });
 
@@ -240,7 +240,7 @@ impl MobileScriptApi {
                 Ok(()) => {
                     ScriptResult::Success(ScriptValue::String("Leaderboard shown".to_string()))
                 }
-                Err(e) => ScriptResult::Error(format!("Failed to show leaderboard: {}", e)),
+                Err(e) => ScriptResult::Error(format!("Failed to show leaderboard: {e}")),
             }
         });
 
@@ -256,7 +256,7 @@ impl MobileScriptApi {
                 Ok(()) => {
                     ScriptResult::Success(ScriptValue::String("Achievements shown".to_string()))
                 }
-                Err(e) => ScriptResult::Error(format!("Failed to show achievements: {}", e)),
+                Err(e) => ScriptResult::Error(format!("Failed to show achievements: {e}")),
             }
         });
     }
@@ -269,14 +269,14 @@ impl MobileScriptApi {
         api.register_function("gc_initialize", move |args| {
             let mut gc_guard = match gc.lock() {
                 Ok(guard) => guard,
-                Err(e) => return ScriptResult::Error(format!("Failed to acquire lock: {}", e)),
+                Err(e) => return ScriptResult::Error(format!("Failed to acquire lock: {e}")),
             };
 
             match gc_guard.initialize() {
                 Ok(()) => ScriptResult::Success(ScriptValue::String(
                     "Game Center initialized".to_string(),
                 )),
-                Err(e) => ScriptResult::Error(format!("Initialization failed: {}", e)),
+                Err(e) => ScriptResult::Error(format!("Initialization failed: {e}")),
             }
         });
 
@@ -290,7 +290,7 @@ impl MobileScriptApi {
 
             match gc_guard.authenticate() {
                 Ok(()) => ScriptResult::Success(ScriptValue::Boolean(true)),
-                Err(e) => ScriptResult::Error(format!("Authentication failed: {}", e)),
+                Err(e) => ScriptResult::Error(format!("Authentication failed: {e}")),
             }
         });
 
@@ -317,7 +317,7 @@ impl MobileScriptApi {
                 Ok(()) => {
                     ScriptResult::Success(ScriptValue::String("Achievement reported".to_string()))
                 }
-                Err(e) => ScriptResult::Error(format!("Failed to report achievement: {}", e)),
+                Err(e) => ScriptResult::Error(format!("Failed to report achievement: {e}")),
             }
         });
 
@@ -347,7 +347,7 @@ impl MobileScriptApi {
 
             match gc_guard.submit_score(leaderboard_id, score) {
                 Ok(()) => ScriptResult::Success(ScriptValue::String("Score submitted".to_string())),
-                Err(e) => ScriptResult::Error(format!("Failed to submit score: {}", e)),
+                Err(e) => ScriptResult::Error(format!("Failed to submit score: {e}")),
             }
         });
 
@@ -363,7 +363,7 @@ impl MobileScriptApi {
                 Ok(()) => {
                     ScriptResult::Success(ScriptValue::String("Game Center shown".to_string()))
                 }
-                Err(e) => ScriptResult::Error(format!("Failed to show Game Center: {}", e)),
+                Err(e) => ScriptResult::Error(format!("Failed to show Game Center: {e}")),
             }
         });
     }
@@ -376,14 +376,14 @@ impl MobileScriptApi {
         api.register_function("push_initialize", move |args| {
             let mut pn_guard = match pn.lock() {
                 Ok(guard) => guard,
-                Err(e) => return ScriptResult::Error(format!("Failed to acquire lock: {}", e)),
+                Err(e) => return ScriptResult::Error(format!("Failed to acquire lock: {e}")),
             };
 
             match pn_guard.initialize() {
                 Ok(()) => ScriptResult::Success(ScriptValue::String(
                     "Push notifications initialized".to_string(),
                 )),
-                Err(e) => ScriptResult::Error(format!("Initialization failed: {}", e)),
+                Err(e) => ScriptResult::Error(format!("Initialization failed: {e}")),
             }
         });
 
@@ -397,7 +397,7 @@ impl MobileScriptApi {
 
             match pn_guard.request_permission() {
                 Ok(granted) => ScriptResult::Success(ScriptValue::Boolean(granted)),
-                Err(e) => ScriptResult::Error(format!("Failed to request permission: {}", e)),
+                Err(e) => ScriptResult::Error(format!("Failed to request permission: {e}")),
             }
         });
 
@@ -431,7 +431,7 @@ impl MobileScriptApi {
                 Ok(()) => {
                     ScriptResult::Success(ScriptValue::String("Notification sent".to_string()))
                 }
-                Err(e) => ScriptResult::Error(format!("Failed to send notification: {}", e)),
+                Err(e) => ScriptResult::Error(format!("Failed to send notification: {e}")),
             }
         });
     }
@@ -445,14 +445,14 @@ impl MobileScriptApi {
         api.register_function("iap_initialize", move |args| {
             let mut iap_guard = match iap.lock() {
                 Ok(guard) => guard,
-                Err(e) => return ScriptResult::Error(format!("Failed to acquire lock: {}", e)),
+                Err(e) => return ScriptResult::Error(format!("Failed to acquire lock: {e}")),
             };
 
             match iap_guard.initialize() {
                 Ok(()) => ScriptResult::Success(ScriptValue::String(
                     "In-App Purchase service initialized".to_string(),
                 )),
-                Err(e) => ScriptResult::Error(format!("Initialization failed: {}", e)),
+                Err(e) => ScriptResult::Error(format!("Initialization failed: {e}")),
             }
         });
 
@@ -461,11 +461,11 @@ impl MobileScriptApi {
         api.register_function("iap_query_products", move |args| {
             let mut iap_guard = match iap.lock() {
                 Ok(guard) => guard,
-                Err(e) => return ScriptResult::Error(format!("Failed to acquire lock: {}", e)),
+                Err(e) => return ScriptResult::Error(format!("Failed to acquire lock: {e}")),
             };
 
             // 从参数中提取商品ID列表
-            let product_ids = if args.len() >= 1 {
+            let product_ids = if !args.is_empty() {
                 match &args[0] {
                     ScriptValue::Array(ids) => {
                         let mut result = Vec::new();
@@ -487,7 +487,7 @@ impl MobileScriptApi {
                     let products_json = serde_json::to_string(&products).unwrap_or_default();
                     ScriptResult::Success(ScriptValue::String(products_json))
                 }
-                Err(e) => ScriptResult::Error(format!("Failed to query products: {}", e)),
+                Err(e) => ScriptResult::Error(format!("Failed to query products: {e}")),
             }
         });
 
@@ -496,10 +496,10 @@ impl MobileScriptApi {
         api.register_function("iap_purchase", move |args| {
             let iap_guard = match iap.lock() {
                 Ok(guard) => guard,
-                Err(e) => return ScriptResult::Error(format!("Failed to acquire lock: {}", e)),
+                Err(e) => return ScriptResult::Error(format!("Failed to acquire lock: {e}")),
             };
 
-            if args.len() < 1 {
+            if args.is_empty() {
                 return ScriptResult::Error("Missing product ID argument".to_string());
             }
 
@@ -510,7 +510,7 @@ impl MobileScriptApi {
 
             match iap_guard.purchase(product_id) {
                 Ok(purchase_token) => ScriptResult::Success(ScriptValue::String(purchase_token)),
-                Err(e) => ScriptResult::Error(format!("Purchase failed: {}", e)),
+                Err(e) => ScriptResult::Error(format!("Purchase failed: {e}")),
             }
         });
 
@@ -519,10 +519,10 @@ impl MobileScriptApi {
         api.register_function("iap_consume", move |args| {
             let iap_guard = match iap.lock() {
                 Ok(guard) => guard,
-                Err(e) => return ScriptResult::Error(format!("Failed to acquire lock: {}", e)),
+                Err(e) => return ScriptResult::Error(format!("Failed to acquire lock: {e}")),
             };
 
-            if args.len() < 1 {
+            if args.is_empty() {
                 return ScriptResult::Error("Missing purchase token argument".to_string());
             }
 
@@ -535,7 +535,7 @@ impl MobileScriptApi {
                 Ok(()) => ScriptResult::Success(ScriptValue::String(
                     "Purchase consumed successfully".to_string(),
                 )),
-                Err(e) => ScriptResult::Error(format!("Failed to consume purchase: {}", e)),
+                Err(e) => ScriptResult::Error(format!("Failed to consume purchase: {e}")),
             }
         });
 
@@ -544,7 +544,7 @@ impl MobileScriptApi {
         api.register_function("iap_restore", move |args| {
             let iap_guard = match iap.lock() {
                 Ok(guard) => guard,
-                Err(e) => return ScriptResult::Error(format!("Failed to acquire lock: {}", e)),
+                Err(e) => return ScriptResult::Error(format!("Failed to acquire lock: {e}")),
             };
 
             match iap_guard.restore_purchases() {
@@ -552,7 +552,7 @@ impl MobileScriptApi {
                     let purchases_json = serde_json::to_string(&purchases).unwrap_or_default();
                     ScriptResult::Success(ScriptValue::String(purchases_json))
                 }
-                Err(e) => ScriptResult::Error(format!("Failed to restore purchases: {}", e)),
+                Err(e) => ScriptResult::Error(format!("Failed to restore purchases: {e}")),
             }
         });
 
@@ -561,10 +561,10 @@ impl MobileScriptApi {
         api.register_function("iap_query_subscription", move |args| {
             let iap_guard = match iap.lock() {
                 Ok(guard) => guard,
-                Err(e) => return ScriptResult::Error(format!("Failed to acquire lock: {}", e)),
+                Err(e) => return ScriptResult::Error(format!("Failed to acquire lock: {e}")),
             };
 
-            if args.len() < 1 {
+            if args.is_empty() {
                 return ScriptResult::Error("Missing product ID argument".to_string());
             }
 
@@ -578,7 +578,7 @@ impl MobileScriptApi {
                     let sub_json = serde_json::to_string(&subscription).unwrap_or_default();
                     ScriptResult::Success(ScriptValue::String(sub_json))
                 }
-                Err(e) => ScriptResult::Error(format!("Failed to query subscription: {}", e)),
+                Err(e) => ScriptResult::Error(format!("Failed to query subscription: {e}")),
             }
         });
 
@@ -587,7 +587,7 @@ impl MobileScriptApi {
         api.register_function("iap_get_cached_products", move |args| {
             let iap_guard = match iap.lock() {
                 Ok(guard) => guard,
-                Err(e) => return ScriptResult::Error(format!("Failed to acquire lock: {}", e)),
+                Err(e) => return ScriptResult::Error(format!("Failed to acquire lock: {e}")),
             };
 
             let products = iap_guard.get_cached_products();

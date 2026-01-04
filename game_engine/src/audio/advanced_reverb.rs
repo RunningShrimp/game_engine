@@ -124,7 +124,7 @@ impl RoomReverb {
 
     /// 设置墙壁材质
     pub fn set_wall_material(&mut self, wall: Wall, absorption: f32) {
-        self.wall_absorption.insert(wall, absorption.min(1.0).max(0.0));
+        self.wall_absorption.insert(wall, absorption.clamp(0.0, 1.0));
     }
 
     /// 计算脉冲响应
@@ -170,9 +170,9 @@ impl RoomReverb {
         let rt60 = self.compute_rt60();
         let decay_factor = (-2.0 / rt60).exp();
 
-        for i in (ir_length / 2)..ir_length {
+        for (i, sample) in ir.iter_mut().enumerate().skip(ir_length / 2) {
             let time = i as f32 / sample_rate;
-            ir[i] *= decay_factor.powf(time);
+            *sample *= decay_factor.powf(time);
         }
 
         ir
@@ -301,8 +301,8 @@ impl FdnReverb {
 
             // 应用反馈
             let mut feedback = 0.0;
-            for j in 0..8 {
-                feedback += self.feedback_matrix[i][j] * outputs[j];
+            for (j, &output) in outputs.iter().enumerate().take(8) {
+                feedback += self.feedback_matrix[i][j] * output;
             }
 
             // 应用阻尼

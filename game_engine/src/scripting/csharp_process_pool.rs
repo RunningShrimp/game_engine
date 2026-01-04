@@ -120,7 +120,7 @@ impl DotNetProcess {
 
         // 创建临时目录
         std::fs::create_dir_all(work_dir)
-            .map_err(|e| format!("Failed to create work directory: {}", e))?;
+            .map_err(|e| format!("Failed to create work directory: {e}"))?;
 
         // 创建执行脚本的C#代码
         let script_code = r#"
@@ -203,7 +203,7 @@ class ScriptResult {
 
         let script_path = work_dir.join("script_host.cs");
         std::fs::write(&script_path, script_code)
-            .map_err(|e| format!("Failed to write script: {}", e))?;
+            .map_err(|e| format!("Failed to write script: {e}"))?;
 
         // 编译脚本
         let compile_result = Command::new("dotnet")
@@ -217,7 +217,7 @@ class ScriptResult {
             }
             Ok(output) => {
                 let stderr = String::from_utf8_lossy(&output.stderr);
-                return Err(format!("Script compilation failed: {}", stderr));
+                return Err(format!("Script compilation failed: {stderr}"));
             }
             Err(e) => {
                 // dotnet script 可能未安装，尝试其他方法
@@ -231,7 +231,7 @@ class ScriptResult {
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .spawn()
-            .map_err(|e| format!("Failed to spawn .NET process: {}", e))?;
+            .map_err(|e| format!("Failed to spawn .NET process: {e}"))?;
 
         let stdin = None;
         let stdout = None;
@@ -287,14 +287,14 @@ class ScriptResult {
                 self.state = ProcessState::Idle;
                 self.current_task = None;
 
-                Err(format!("Execution failed: {}", stderr))
+                Err(format!("Execution failed: {stderr}"))
             }
             Err(e) => {
                 // 进程失败
                 self.state = ProcessState::Failed;
                 self.current_task = None;
 
-                Err(format!("Failed to execute: {}", e))
+                Err(format!("Failed to execute: {e}"))
             }
         }
     }
@@ -316,7 +316,7 @@ class ScriptResult {
         tracing::debug!("Terminating process #{}", self.id);
 
         if let Some(mut child) = self.child.take() {
-            child.kill().map_err(|e| format!("Failed to kill process: {}", e))?;
+            child.kill().map_err(|e| format!("Failed to kill process: {e}"))?;
 
             let _ = child.wait();
         }
@@ -419,7 +419,7 @@ impl DotNetProcessPool {
 
         // 创建工作目录
         std::fs::create_dir_all(&work_dir)
-            .map_err(|e| format!("Failed to create work directory: {}", e))?;
+            .map_err(|e| format!("Failed to create work directory: {e}"))?;
 
         let mut pool = Self {
             processes: VecDeque::with_capacity(config.max_processes),
@@ -456,7 +456,7 @@ impl DotNetProcessPool {
         let id = self.next_id;
         self.next_id += 1;
 
-        let process_dir = self.work_dir.join(format!("process_{}", id));
+        let process_dir = self.work_dir.join(format!("process_{id}"));
 
         let process = DotNetProcess::new(id, &process_dir)?;
 

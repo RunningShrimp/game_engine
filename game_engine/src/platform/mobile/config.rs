@@ -73,11 +73,8 @@ impl MobileConfig {
         // 移动平台优化
         if Platform::current() == Platform::Android || Platform::current() == Platform::IOS {
             // 降低MSAA（移动平台性能敏感）- 限制为MSAA 4x
-            match config.anti_aliasing {
-                AntiAliasing::MSAA8x => {
-                    config.anti_aliasing = AntiAliasing::MSAA4x;
-                }
-                _ => {}
+            if config.anti_aliasing == AntiAliasing::MSAA8x {
+                config.anti_aliasing = AntiAliasing::MSAA4x;
             }
 
             // 启用纹理压缩

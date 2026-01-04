@@ -860,12 +860,8 @@ impl CpuGpuOptimizer {
                 if task.data_size > 1024 * 1024 && gpu_load < 0.8 {
                     TaskType::Gpu
                 }
-                // CPU负载低时优先CPU
-                else if cpu_load < 0.5 {
-                    TaskType::Cpu
-                }
-                // 否则选择负载较低的一方
-                else if cpu_load < gpu_load {
+                // CPU负载低时优先CPU，否则选择负载较低的一方
+                else if cpu_load < 0.5 || cpu_load < gpu_load {
                     TaskType::Cpu
                 } else {
                     TaskType::Gpu
@@ -1010,7 +1006,7 @@ impl CpuGpuOptimizer {
         let current_ratio = cpu_count / total;
         let efficiency = 1.0 - (current_ratio - ideal_ratio).abs() * 2.0;
 
-        efficiency.max(0.0).min(1.0)
+        efficiency.clamp(0.0, 1.0)
     }
 
     /// 更新负载均衡策略

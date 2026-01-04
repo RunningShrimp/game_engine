@@ -287,9 +287,9 @@ impl std::fmt::Display for CollaborationError {
         match self {
             CollaborationError::SessionNotFound => write!(f, "Session not found"),
             CollaborationError::PermissionDenied => write!(f, "Permission denied"),
-            CollaborationError::NetworkError(msg) => write!(f, "Network error: {}", msg),
+            CollaborationError::NetworkError(msg) => write!(f, "Network error: {msg}"),
             CollaborationError::Conflict => write!(f, "Operation conflict"),
-            CollaborationError::Other(msg) => write!(f, "Error: {}", msg),
+            CollaborationError::Other(msg) => write!(f, "Error: {msg}"),
         }
     }
 }

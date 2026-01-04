@@ -154,8 +154,7 @@ impl BaseMockPlatform {
         if let PerformanceConstraint::MaxGpuUsage(max_usage) = constraint {
             if usage > max_usage {
                 return Err(MockError::PerformanceConstraintViolation(format!(
-                    "GPU usage {} exceeds limit {}",
-                    usage, max_usage
+                    "GPU usage {usage} exceeds limit {max_usage}"
                 )));
             }
         }
@@ -171,8 +170,7 @@ impl BaseMockPlatform {
         if let PerformanceConstraint::MaxCpuUsage(max_usage) = constraint {
             if usage > max_usage {
                 return Err(MockError::PerformanceConstraintViolation(format!(
-                    "CPU usage {} exceeds limit {}",
-                    usage, max_usage
+                    "CPU usage {usage} exceeds limit {max_usage}"
                 )));
             }
         }

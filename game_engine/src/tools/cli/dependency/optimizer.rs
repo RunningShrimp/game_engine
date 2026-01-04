@@ -184,7 +184,7 @@ impl<'a> DependencyOptimizer<'a> {
     fn add_alternative(&mut self, dependency: &str, alternatives: Vec<Alternative>) {
         self.alternatives_db
             .entry(dependency.to_string())
-            .or_insert_with(Vec::new)
+            .or_default()
             .extend(alternatives);
     }
 
@@ -311,13 +311,7 @@ impl<'a> DependencyOptimizer<'a> {
     fn calculate_total_savings(&self, suggestions: &[OptimizationSuggestion]) -> String {
         let size_reductions: Vec<_> = suggestions
             .iter()
-            .filter_map(|s| {
-                if let Some(alt) = &s.alternative {
-                    Some(alt.size_reduction.as_str())
-                } else {
-                    None
-                }
-            })
+            .filter_map(|s| s.alternative.as_ref().map(|alt| alt.size_reduction.as_str()))
             .collect();
 
         if size_reductions.is_empty() {
@@ -430,7 +424,7 @@ impl OptimizationReport {
         output.push_str(&format!("高优先级: {}\n", self.high_priority_count));
         output.push_str(&format!("中优先级: {}\n", self.medium_priority_count));
         output.push_str(&format!("潜在节省: {}\n", self.potential_savings));
-        output.push_str("\n");
+        output.push('\n');
 
         if self.suggestions.is_empty() {
             output.push_str("✅ 未发现优化机会\n");
@@ -462,7 +456,7 @@ impl OptimizationReport {
                     output.push_str(&format!("   URL: {}\n", alt.url));
                 }
 
-                output.push_str("\n");
+                output.push('\n');
             }
         }
 

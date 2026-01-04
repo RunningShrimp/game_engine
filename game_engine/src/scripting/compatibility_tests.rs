@@ -64,11 +64,11 @@ mod tests {
         println!("Testing {} ScriptContext compatibility...", language_name);
 
         // 1. 测试execute方法
-        let result = context.execute("1 + 1", None);
+        let result = context.execute("1 + 1", "");
         match language_name {
             "Lua" | "JavaScript" => {
                 assert!(
-                    matches!(result, ScriptResult::Success(ref s) if s == "2"),
+                    matches!(result, ScriptResult::Success(ref s) if matches!(s, ScriptValue::String(ref v) if v == "2")),
                     "{} execute should return Success('2'), got {:?}",
                     language_name,
                     result
@@ -158,7 +158,7 @@ mod tests {
     /// 测试Lua特定功能
     fn test_lua_specific_features(context: &mut LuaContext) {
         // 测试函数调用
-        let _ = context.execute("function add(a, b) return a + b end", None);
+        let _ = context.execute("function add(a, b) return a + b end", "");
 
         let args = vec![
             crate::scripting::LuaValue::Number(3.0),
@@ -173,7 +173,7 @@ mod tests {
         );
 
         // 测试表操作
-        let _ = context.execute("t = {x = 10, y = 20}", None);
+        let _ = context.execute("t = {x = 10, y = 20}", "");
         let table_value = context.get_global("t");
 
         // 表可能被转换为Object或Array，只要不是None就算成功
@@ -184,7 +184,7 @@ mod tests {
         }
 
         // 测试引擎API绑定
-        let result = context.execute("engine.log('Lua API test')", None);
+        let result = context.execute("engine.log('Lua API test')", "");
         assert!(
             result.is_ok(),
             "Lua engine API should work, got {:?}",
@@ -203,13 +203,13 @@ mod tests {
         );
 
         assert!(
-            matches!(result, ScriptResult::Success(ref s) if s == "8"),
+            matches!(result, ScriptResult::Success(ref s) if matches!(s, ScriptValue::String(ref v) if v == "8")),
             "JavaScript Math.pow(2, 3) should return '8', got {:?}",
             result
         );
 
         // 测试引擎API绑定
-        let result = context.execute("Engine.log('JS API test')", None);
+        let result = context.execute("Engine.log('JS API test')", "");
         assert!(
             matches!(result, ScriptResult::Success(_) | ScriptResult::Void),
             "JavaScript engine API should work, got {:?}",
@@ -237,13 +237,13 @@ mod tests {
         // 测试不同语言的执行
         let lua_result = system.execute(ScriptLanguage::Lua, "2 * 3");
         assert!(
-            matches!(lua_result, ScriptResult::Success(ref s) if s == "6"),
+            matches!(lua_result, ScriptResult::Success(ref s) if matches!(s, ScriptValue::String(ref v) if v == "6")),
             "Lua execution should work in ScriptSystem"
         );
 
         let js_result = system.execute(ScriptLanguage::JavaScript, "2 * 3");
         assert!(
-            matches!(js_result, ScriptResult::Success(ref s) if s == "6"),
+            matches!(js_result, ScriptResult::Success(ref s) if matches!(s, ScriptValue::String(ref v) if v == "6")),
             "JavaScript execution should work in ScriptSystem"
         );
 
@@ -374,8 +374,8 @@ mod tests {
         let mut js_context = JavaScriptContext::new();
 
         // 测试语法错误
-        let lua_syntax_error = lua_context.execute("invalid syntax here", None);
-        let js_syntax_error = js_context.execute("invalid syntax here", None);
+        let lua_syntax_error = lua_context.execute("invalid syntax here", "");
+        let js_syntax_error = js_context.execute("invalid syntax here", "");
 
         assert!(
             lua_syntax_error.is_err(),

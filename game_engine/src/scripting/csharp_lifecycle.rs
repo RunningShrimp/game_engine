@@ -43,34 +43,30 @@ pub struct CSharpLifecycleHooks {
 
 impl LifecycleHooks for CSharpLifecycleHooks {
     fn on_enable(&mut self, entity: Entity) {
-        let _ =
-            self.call_csharp_function("OnEnable", &[ScriptValue::Number(entity.to_bits() as f64)]);
+        self.call_csharp_function("OnEnable", &[ScriptValue::Number(entity.to_bits() as f64)]);
     }
 
     fn on_disable(&mut self, entity: Entity) {
-        let _ =
-            self.call_csharp_function("OnDisable", &[ScriptValue::Number(entity.to_bits() as f64)]);
+        self.call_csharp_function("OnDisable", &[ScriptValue::Number(entity.to_bits() as f64)]);
     }
 
     fn on_destroy(&mut self, entity: Entity) {
-        let _ =
-            self.call_csharp_function("OnDestroy", &[ScriptValue::Number(entity.to_bits() as f64)]);
+        self.call_csharp_function("OnDestroy", &[ScriptValue::Number(entity.to_bits() as f64)]);
     }
 
     fn on_start(&mut self, entity: Entity) {
-        let _ =
-            self.call_csharp_function("OnStart", &[ScriptValue::Number(entity.to_bits() as f64)]);
+        self.call_csharp_function("OnStart", &[ScriptValue::Number(entity.to_bits() as f64)]);
     }
 
     fn on_shutdown(&mut self, entity: Entity) {
-        let _ = self.call_csharp_function(
+        self.call_csharp_function(
             "OnShutdown",
             &[ScriptValue::Number(entity.to_bits() as f64)],
         );
     }
 
     fn on_update(&mut self, entity: Entity, delta_time: f32) {
-        let _ = self.call_csharp_function(
+        self.call_csharp_function(
             "OnUpdate",
             &[
                 ScriptValue::Number(entity.to_bits() as f64),
@@ -80,7 +76,7 @@ impl LifecycleHooks for CSharpLifecycleHooks {
     }
 
     fn on_fixed_update(&mut self, entity: Entity, fixed_delta_time: f32) {
-        let _ = self.call_csharp_function(
+        self.call_csharp_function(
             "OnFixedUpdate",
             &[
                 ScriptValue::Number(entity.to_bits() as f64),
@@ -90,7 +86,7 @@ impl LifecycleHooks for CSharpLifecycleHooks {
     }
 
     fn on_late_update(&mut self, entity: Entity, delta_time: f32) {
-        let _ = self.call_csharp_function(
+        self.call_csharp_function(
             "OnLateUpdate",
             &[
                 ScriptValue::Number(entity.to_bits() as f64),
@@ -100,7 +96,7 @@ impl LifecycleHooks for CSharpLifecycleHooks {
     }
 
     fn on_collision_enter(&mut self, entity: Entity, other: Entity) {
-        let _ = self.call_csharp_function(
+        self.call_csharp_function(
             "OnCollisionEnter",
             &[
                 ScriptValue::Number(entity.to_bits() as f64),
@@ -110,7 +106,7 @@ impl LifecycleHooks for CSharpLifecycleHooks {
     }
 
     fn on_collision_stay(&mut self, entity: Entity, other: Entity) {
-        let _ = self.call_csharp_function(
+        self.call_csharp_function(
             "OnCollisionStay",
             &[
                 ScriptValue::Number(entity.to_bits() as f64),
@@ -120,7 +116,7 @@ impl LifecycleHooks for CSharpLifecycleHooks {
     }
 
     fn on_collision_exit(&mut self, entity: Entity, other: Entity) {
-        let _ = self.call_csharp_function(
+        self.call_csharp_function(
             "OnCollisionExit",
             &[
                 ScriptValue::Number(entity.to_bits() as f64),
@@ -130,7 +126,7 @@ impl LifecycleHooks for CSharpLifecycleHooks {
     }
 
     fn on_trigger_enter(&mut self, entity: Entity, other: Entity) {
-        let _ = self.call_csharp_function(
+        self.call_csharp_function(
             "OnTriggerEnter",
             &[
                 ScriptValue::Number(entity.to_bits() as f64),
@@ -140,7 +136,7 @@ impl LifecycleHooks for CSharpLifecycleHooks {
     }
 
     fn on_trigger_stay(&mut self, entity: Entity, other: Entity) {
-        let _ = self.call_csharp_function(
+        self.call_csharp_function(
             "OnTriggerStay",
             &[
                 ScriptValue::Number(entity.to_bits() as f64),
@@ -150,7 +146,7 @@ impl LifecycleHooks for CSharpLifecycleHooks {
     }
 
     fn on_trigger_exit(&mut self, entity: Entity, other: Entity) {
-        let _ = self.call_csharp_function(
+        self.call_csharp_function(
             "OnTriggerExit",
             &[
                 ScriptValue::Number(entity.to_bits() as f64),
@@ -160,8 +156,8 @@ impl LifecycleHooks for CSharpLifecycleHooks {
     }
 
     fn on_key_down(&mut self, entity: Entity, key: KeyCode) {
-        let key_str = format!("{:?}", key);
-        let _ = self.call_csharp_function(
+        let key_str = format!("{key:?}");
+        self.call_csharp_function(
             "OnKeyDown",
             &[
                 ScriptValue::Number(entity.to_bits() as f64),
@@ -171,8 +167,8 @@ impl LifecycleHooks for CSharpLifecycleHooks {
     }
 
     fn on_key_up(&mut self, entity: Entity, key: KeyCode) {
-        let key_str = format!("{:?}", key);
-        let _ = self.call_csharp_function(
+        let key_str = format!("{key:?}");
+        self.call_csharp_function(
             "OnKeyUp",
             &[
                 ScriptValue::Number(entity.to_bits() as f64),
@@ -182,8 +178,8 @@ impl LifecycleHooks for CSharpLifecycleHooks {
     }
 
     fn on_mouse_down(&mut self, entity: Entity, button: MouseButton) {
-        let button_str = format!("{:?}", button);
-        let _ = self.call_csharp_function(
+        let button_str = format!("{button:?}");
+        self.call_csharp_function(
             "OnMouseDown",
             &[
                 ScriptValue::Number(entity.to_bits() as f64),
@@ -193,8 +189,8 @@ impl LifecycleHooks for CSharpLifecycleHooks {
     }
 
     fn on_mouse_up(&mut self, entity: Entity, button: MouseButton) {
-        let button_str = format!("{:?}", button);
-        let _ = self.call_csharp_function(
+        let button_str = format!("{button:?}");
+        self.call_csharp_function(
             "OnMouseUp",
             &[
                 ScriptValue::Number(entity.to_bits() as f64),
@@ -204,19 +200,17 @@ impl LifecycleHooks for CSharpLifecycleHooks {
     }
 
     fn on_pause(&mut self, entity: Entity) {
-        let _ =
-            self.call_csharp_function("OnPause", &[ScriptValue::Number(entity.to_bits() as f64)]);
+        self.call_csharp_function("OnPause", &[ScriptValue::Number(entity.to_bits() as f64)]);
     }
 
     fn on_resume(&mut self, entity: Entity) {
-        let _ =
-            self.call_csharp_function("OnResume", &[ScriptValue::Number(entity.to_bits() as f64)]);
+        self.call_csharp_function("OnResume", &[ScriptValue::Number(entity.to_bits() as f64)]);
     }
 }
 
 impl CSharpLifecycleHooks {
     /// 调用C#函数
-    fn call_csharp_function(&mut self, function_name: &str, args: &[ScriptValue]) -> () {
+    fn call_csharp_function(&mut self, function_name: &str, args: &[ScriptValue]) {
         let mut context = self.context.lock().unwrap();
 
         // 检查函数是否存在

@@ -51,12 +51,10 @@
 //! - [`Renderer`](renderer::Renderer) - Renderer interface
 //! - [`RenderState`](renderer::RenderState) - Render state management
 //! - [`Frame`](renderer::Frame) - Frame data structure
-//! 渲染器接口
 //!
 //! ### Input Handling
 //! - [`InputHandler`](input_handler::InputHandler) - Input event processor
 //! - [`InputEvent`](input_handler::InputEvent) - Input event types
-//! 输入事件处理器
 //!
 //! ## Game Loop Patterns
 //!

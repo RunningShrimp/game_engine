@@ -81,15 +81,15 @@ impl ResourceDependencyGraph {
     /// 添加资源节点
     pub fn add_node(&mut self, node: ResourceNode) {
         self.nodes.insert(node.clone());
-        self.edges.entry(node.clone()).or_insert_with(Vec::new);
-        self.reverse_edges.entry(node.clone()).or_insert_with(Vec::new);
+        self.edges.entry(node.clone()).or_default();
+        self.reverse_edges.entry(node.clone()).or_default();
     }
 
     /// 添加依赖关系
     pub fn add_dependency(&mut self, from: ResourceNode, to: ResourceNode) {
         // from 依赖 to
-        self.edges.entry(from.clone()).or_insert_with(Vec::new).push(to.clone());
-        self.reverse_edges.entry(to.clone()).or_insert_with(Vec::new).push(from);
+        self.edges.entry(from.clone()).or_default().push(to.clone());
+        self.reverse_edges.entry(to.clone()).or_default().push(from);
     }
 
     /// 获取资源的直接依赖
@@ -202,24 +202,22 @@ impl ResourceScanner {
 
         fn scan_dir(dir: &Path, resources: &mut Vec<ResourceNode>) -> Result<(), String> {
             let entries =
-                std::fs::read_dir(dir).map_err(|e| format!("Failed to read directory: {}", e))?;
+                std::fs::read_dir(dir).map_err(|e| format!("Failed to read directory: {e}"))?;
 
             for entry in entries {
-                let entry = entry.map_err(|e| format!("Failed to read entry: {}", e))?;
+                let entry = entry.map_err(|e| format!("Failed to read entry: {e}"))?;
                 let path = entry.path();
 
                 if path.is_dir() {
                     scan_dir(&path, resources)?;
-                } else {
-                    if let Some(ext) = path.extension() {
-                        if let Some(ext_str) = ext.to_str() {
-                            let resource_type = ResourceType::from_extension(ext_str);
-                            if resource_type != ResourceType::Unknown {
-                                resources.push(ResourceNode {
-                                    path: path.clone(),
-                                    resource_type,
-                                });
-                            }
+                } else if let Some(ext) = path.extension() {
+                    if let Some(ext_str) = ext.to_str() {
+                        let resource_type = ResourceType::from_extension(ext_str);
+                        if resource_type != ResourceType::Unknown {
+                            resources.push(ResourceNode {
+                                path: path.clone(),
+                                resource_type,
+                            });
                         }
                     }
                 }
@@ -257,7 +255,7 @@ impl ResourceReferenceAnalyzer {
 
         // 读取场景文件内容
         let content = std::fs::read_to_string(scene_path)
-            .map_err(|e| format!("Failed to read scene file: {}", e))?;
+            .map_err(|e| format!("Failed to read scene file: {e}"))?;
 
         // 分析引用（简化实现，实际需要解析具体格式）
         self.analyze_references(&content, scene_path, &scene_node);
@@ -451,7 +449,7 @@ impl RedundantAssetCleaner {
 
         for resource in self.graph.all_resources() {
             let hash = self.compute_file_hash(&resource.path)?;
-            hash_map.entry(hash).or_insert_with(Vec::new).push(resource);
+            hash_map.entry(hash).or_default().push(resource);
         }
 
         // 返回有重复的组
@@ -462,14 +460,14 @@ impl RedundantAssetCleaner {
     fn compute_file_hash(&self, path: &Path) -> Result<u64, String> {
         use std::io::Read;
 
-        let file = std::fs::File::open(path).map_err(|e| format!("Failed to open file: {}", e))?;
+        let file = std::fs::File::open(path).map_err(|e| format!("Failed to open file: {e}"))?;
 
         let mut hasher = std::collections::hash_map::DefaultHasher::new();
         let mut reader = std::io::BufReader::new(file);
 
         let mut buffer = [0u8; 8192];
         loop {
-            let n = reader.read(&mut buffer).map_err(|e| format!("Failed to read file: {}", e))?;
+            let n = reader.read(&mut buffer).map_err(|e| format!("Failed to read file: {e}"))?;
             if n == 0 {
                 break;
             }
@@ -512,7 +510,7 @@ impl DependencyReportGenerator {
         // 按类型分组
         let mut by_type: HashMap<ResourceType, Vec<&ResourceNode>> = HashMap::new();
         for resource in &resources {
-            by_type.entry(resource.resource_type).or_insert_with(Vec::new).push(resource);
+            by_type.entry(resource.resource_type).or_default().push(resource);
         }
 
         report.push_str("## 资源类型分布\n\n");
@@ -535,7 +533,7 @@ impl DependencyReportGenerator {
                 for node in cycle {
                     report.push_str(&format!("  -> {}\n", node.path.display()));
                 }
-                report.push_str("\n");
+                report.push('\n');
             }
         }
 
@@ -564,7 +562,7 @@ impl DependencyReportGenerator {
         }
 
         serde_json::to_string_pretty(&resource_list)
-            .map_err(|e| format!("Failed to serialize JSON: {}", e))
+            .map_err(|e| format!("Failed to serialize JSON: {e}"))
     }
 }
 
@@ -583,7 +581,7 @@ pub fn analyze_project_resources(project_path: &Path) -> Result<AnalysisResult, 
     for resource in &resources {
         if resource.resource_type == ResourceType::Scene {
             if let Err(e) = analyzer.analyze_scene_file(&resource.path) {
-                eprintln!("Warning: {}", e);
+                eprintln!("Warning: {e}");
             }
         }
     }

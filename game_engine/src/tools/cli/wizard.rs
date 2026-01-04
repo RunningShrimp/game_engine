@@ -240,7 +240,7 @@ impl ProjectWizard {
 
         let items: Vec<String> = available_features
             .iter()
-            .map(|(name, desc)| format!("{} - {}", name, desc))
+            .map(|(name, desc)| format!("{name} - {desc}"))
             .collect();
 
         let selections = MultiSelect::with_theme(&self.theme)

@@ -321,7 +321,7 @@ impl QualityAssessor {
 
         // T/V ratio should be close to 2.0 for closed meshes
         let tv_score = 1.0 - (metrics.tv_ratio - 2.0).abs() / 2.0;
-        let tv_score = tv_score.max(0.0).min(1.0);
+        let tv_score = tv_score.clamp(0.0, 1.0);
 
         (triangle_score + tv_score) / 2.0
     }
@@ -334,7 +334,7 @@ impl QualityAssessor {
         let deviation = (metrics.tv_ratio - optimal_ratio).abs();
 
         let score = 1.0 - (deviation / 2.0);
-        score.max(0.0).min(1.0)
+        score.clamp(0.0, 1.0)
     }
 
     /// Predict visual fidelity at given LOD level
@@ -357,7 +357,7 @@ impl QualityAssessor {
         // Visual fidelity decreases with triangle reduction
         let fidelity = reduction * platform_factor;
 
-        fidelity.max(0.0).min(1.0)
+        fidelity.clamp(0.0, 1.0)
     }
 
     /// Recommend optimal LOD level

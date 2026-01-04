@@ -24,19 +24,19 @@ fn main() {
         Ok(cli) => cli,
         Err(e) => {
             // Print error message and exit
-            eprintln!("❌ Error: {}", e);
+            eprintln!("❌ Error: {e}");
             std::process::exit(1);
         }
     };
 
     // Set verbosity level based on -v flags
     if let Err(e) = init_logging(cli.verbose) {
-        eprintln!("Warning: Failed to initialize logging: {}", e);
+        eprintln!("Warning: Failed to initialize logging: {e}");
     }
 
     // Run the command
     if let Err(e) = cli.run() {
-        eprintln!("❌ Error: {}", e);
+        eprintln!("❌ Error: {e}");
         std::process::exit(1);
     }
 }

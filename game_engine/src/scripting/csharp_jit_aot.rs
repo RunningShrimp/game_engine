@@ -347,7 +347,7 @@ impl JitAotOptimizer {
         tracing::info!("JIT compiling assembly: {}", assembly_path.display());
 
         // 检查缓存
-        let cache_key = format!("jit:{:?}", assembly_path);
+        let cache_key = format!("jit:{assembly_path:?}");
         if let Some(cached) = self.check_cache(&cache_key) {
             tracing::debug!("JIT compilation cache hit");
             self.update_cache_stats(true);
@@ -415,10 +415,10 @@ impl JitAotOptimizer {
                     Ok(())
                 } else {
                     let stderr = String::from_utf8_lossy(&output.stderr);
-                    Err(format!("JIT compilation failed: {}", stderr))
+                    Err(format!("JIT compilation failed: {stderr}"))
                 }
             }
-            Err(e) => Err(format!("Failed to trigger JIT compilation: {}", e)),
+            Err(e) => Err(format!("Failed to trigger JIT compilation: {e}")),
         }
     }
 
@@ -439,7 +439,7 @@ impl JitAotOptimizer {
         tracing::info!("AOT compiling assembly: {}", assembly_path.display());
 
         // 检查缓存
-        let cache_key = format!("aot:{:?}:{:?}", assembly_path, output_path);
+        let cache_key = format!("aot:{assembly_path:?}:{output_path:?}");
         if let Some(cached) = self.check_cache(&cache_key) {
             tracing::debug!("AOT compilation cache hit");
             self.update_cache_stats(true);
@@ -545,7 +545,7 @@ impl JitAotOptimizer {
                     compilation_size: 0,
                     diagnostics: vec![CompilationDiagnostic {
                         level: DiagnosticLevel::Error,
-                        message: format!("AOT compilation failed: {}", e),
+                        message: format!("AOT compilation failed: {e}"),
                         file: None,
                         line: None,
                         column: None,
@@ -607,7 +607,7 @@ impl JitAotOptimizer {
                     optimization_stats: None,
                 })
             }
-            Err(e) => Err(format!("Incremental compilation failed: {}", e)),
+            Err(e) => Err(format!("Incremental compilation failed: {e}")),
         }
     }
 

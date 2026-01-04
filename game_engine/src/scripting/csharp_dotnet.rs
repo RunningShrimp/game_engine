@@ -91,7 +91,7 @@ impl DotNetCliHost {
         // 创建临时目录
         let temp_dir = std::env::temp_dir().join("csharp_dotnet");
         std::fs::create_dir_all(&temp_dir)
-            .map_err(|e| format!("Failed to create temp directory: {}", e))?;
+            .map_err(|e| format!("Failed to create temp directory: {e}"))?;
 
         // 初始化编译缓存
         let cache_dir = std::env::temp_dir().join("csharp_compile_cache");
@@ -188,7 +188,7 @@ impl DotNetCliHost {
         }
 
         if !path.exists() {
-            return Err(format!("Assembly file not found: {:?}", path));
+            return Err(format!("Assembly file not found: {path:?}"));
         }
 
         tracing::debug!("Loading .NET assembly: {:?}", path);
@@ -229,7 +229,7 @@ impl DotNetCliHost {
     /// ```
     pub fn invoke_method(
         &self,
-        assembly_path: &PathBuf,
+        assembly_path: &Path,
         type_name: &str,
         method_name: &str,
         args: &[crate::scripting::csharp::NetValue],
@@ -258,7 +258,7 @@ impl DotNetCliHost {
     #[cfg(feature = "csharp")]
     fn generate_invoker_script(
         &self,
-        assembly_path: &PathBuf,
+        assembly_path: &Path,
         type_name: &str,
         method_name: &str,
         args: &[crate::scripting::csharp::NetValue],
@@ -286,16 +286,14 @@ impl DotNetCliHost {
         // 获取类型
         writeln!(
             code,
-            "        var type = assembly.GetType(\"{}\");",
-            type_name
+            "        var type = assembly.GetType(\"{type_name}\");"
         )
         .unwrap();
 
         // 获取方法
         writeln!(
             code,
-            "        var method = type.GetMethod(\"{}\");",
-            method_name
+            "        var method = type.GetMethod(\"{method_name}\");"
         )
         .unwrap();
 
@@ -308,16 +306,16 @@ impl DotNetCliHost {
             for (i, arg) in args.iter().enumerate() {
                 match arg {
                     crate::scripting::csharp::NetValue::Null => {
-                        writeln!(code, "        parameters[{}] = null;", i).unwrap();
+                        writeln!(code, "        parameters[{i}] = null;").unwrap();
                     }
                     crate::scripting::csharp::NetValue::Boolean(b) => {
-                        writeln!(code, "        parameters[{}] = {};", i, b).unwrap();
+                        writeln!(code, "        parameters[{i}] = {b};").unwrap();
                     }
                     crate::scripting::csharp::NetValue::Integer(n) => {
-                        writeln!(code, "        parameters[{}] = {}L;", i, n).unwrap();
+                        writeln!(code, "        parameters[{i}] = {n}L;").unwrap();
                     }
                     crate::scripting::csharp::NetValue::Number(n) => {
-                        writeln!(code, "        parameters[{}] = {};", i, n).unwrap();
+                        writeln!(code, "        parameters[{i}] = {n};").unwrap();
                     }
                     crate::scripting::csharp::NetValue::String(s) => {
                         writeln!(
@@ -329,7 +327,7 @@ impl DotNetCliHost {
                         .unwrap();
                     }
                     _ => {
-                        writeln!(code, "        parameters[{}] = null;", i).unwrap();
+                        writeln!(code, "        parameters[{i}] = null;").unwrap();
                     }
                 }
             }
@@ -399,27 +397,26 @@ impl DotNetCliHost {
         tracing::debug!("Compiling and executing C# script: {}", script_name);
 
         // 创建临时源文件
-        let source_path = self.temp_dir.join(format!("{}.cs", script_name));
-        let project_path = self.temp_dir.join(format!("{}.csproj", script_name));
+        let source_path = self.temp_dir.join(format!("{script_name}.cs"));
+        let project_path = self.temp_dir.join(format!("{script_name}.csproj"));
 
         // 写入源代码
         std::fs::write(&source_path, code)
-            .map_err(|e| format!("Failed to write source file: {}", e))?;
+            .map_err(|e| format!("Failed to write source file: {e}"))?;
 
         // 创建 .csproj 文件（生成DLL库）
-        let dll_name = format!("{}.dll", script_name);
-        let proj_content = format!(
-            r#"<Project Sdk="Microsoft.NET.Sdk">
+        let dll_name = format!("{script_name}.dll");
+        let proj_content = r#"<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
   </PropertyGroup>
 </Project>"#
-        );
+            .to_string();
 
         std::fs::write(&project_path, proj_content)
-            .map_err(|e| format!("Failed to write project file: {}", e))?;
+            .map_err(|e| format!("Failed to write project file: {e}"))?;
 
         // DLL路径
         let dll_path = self.temp_dir.join(&dll_name);
@@ -459,7 +456,7 @@ impl DotNetCliHost {
                     if let Some(ref cache) = self.compile_cache {
                         // 复制DLL到缓存目录
                         let cache_dll_path = cache.get_cache_dir().join(&dll_name);
-                        if let Ok(_) = std::fs::copy(&dll_path, &cache_dll_path) {
+                        if std::fs::copy(&dll_path, &cache_dll_path).is_ok() {
                             if let Err(e) = cache.insert(code, script_name, cache_dll_path) {
                                 tracing::warn!("Failed to cache compiled DLL: {}", e);
                             } else {
@@ -480,9 +477,9 @@ impl DotNetCliHost {
             }
             Ok(output) => {
                 let stderr = String::from_utf8_lossy(&output.stderr);
-                Err(format!("Compilation failed: {}", stderr))
+                Err(format!("Compilation failed: {stderr}"))
             }
-            Err(e) => Err(format!("Failed to run dotnet build: {}", e)),
+            Err(e) => Err(format!("Failed to run dotnet build: {e}")),
         }
     }
 
@@ -540,7 +537,7 @@ impl DotNetCliHost {
                 let stderr = String::from_utf8_lossy(&output.stderr);
 
                 if !output.status.success() {
-                    return Err(format!("DLL execution failed: {}", stderr));
+                    return Err(format!("DLL execution failed: {stderr}"));
                 }
 
                 // 解析输出
@@ -552,7 +549,7 @@ impl DotNetCliHost {
                     ))
                 }
             }
-            Err(e) => Err(format!("Failed to execute DLL: {}", e)),
+            Err(e) => Err(format!("Failed to execute DLL: {e}")),
         }
     }
 
@@ -610,7 +607,7 @@ impl DotNetCliHost {
                 let stderr = String::from_utf8_lossy(&output.stderr);
 
                 if !output.status.success() {
-                    return Err(format!("Cached DLL execution failed: {}", stderr));
+                    return Err(format!("Cached DLL execution failed: {stderr}"));
                 }
 
                 // 解析输出
@@ -622,7 +619,7 @@ impl DotNetCliHost {
                     ))
                 }
             }
-            Err(e) => Err(format!("Failed to execute cached DLL: {}", e)),
+            Err(e) => Err(format!("Failed to execute cached DLL: {e}")),
         }
     }
 
@@ -678,7 +675,7 @@ impl DotNetCliHost {
             // 计算命中率
             if stats.total_executions > 0 {
                 let hit_rate = (stats.pool_hits as f64 / stats.total_executions as f64) * 100.0;
-                result.insert("hit_rate_percent".to_string(), format!("{:.1}", hit_rate));
+                result.insert("hit_rate_percent".to_string(), format!("{hit_rate:.1}"));
             }
 
             Some(result)

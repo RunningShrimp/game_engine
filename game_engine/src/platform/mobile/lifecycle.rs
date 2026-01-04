@@ -356,9 +356,9 @@ pub enum LifecycleError {
 impl std::fmt::Display for LifecycleError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            LifecycleError::TaskNotFound(id) => write!(f, "Task not found: {}", id),
-            LifecycleError::TaskTimeout(id) => write!(f, "Task timeout: {}", id),
-            LifecycleError::InvalidState(msg) => write!(f, "Invalid state: {}", msg),
+            LifecycleError::TaskNotFound(id) => write!(f, "Task not found: {id}"),
+            LifecycleError::TaskTimeout(id) => write!(f, "Task timeout: {id}"),
+            LifecycleError::InvalidState(msg) => write!(f, "Invalid state: {msg}"),
         }
     }
 }

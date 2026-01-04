@@ -79,8 +79,7 @@ impl FFIConverter {
 
             if actual_type != *expected_type && *expected_type != "any" {
                 return Err(format!(
-                    "Argument {}: expected {}, got {}",
-                    i, expected_type, actual_type
+                    "Argument {i}: expected {expected_type}, got {actual_type}"
                 ));
             }
         }
@@ -140,7 +139,7 @@ impl UnifiedAPI {
     pub fn call(&self, name: &str, args: &[ScriptValue]) -> ScriptResult {
         match self.functions.get(name) {
             Some(func) => func(args),
-            None => ScriptResult::Error(format!("Function '{}' not found", name)),
+            None => ScriptResult::Error(format!("Function '{name}' not found")),
         }
     }
 }

@@ -82,7 +82,7 @@ impl CompileCache {
     pub fn new(cache_dir: PathBuf, max_cache_size_mb: usize) -> Result<Self, String> {
         // 创建缓存目录
         fs::create_dir_all(&cache_dir)
-            .map_err(|e| format!("Failed to create cache directory: {}", e))?;
+            .map_err(|e| format!("Failed to create cache directory: {e}"))?;
 
         let cache = Self {
             cache_dir: cache_dir.clone(),
@@ -207,7 +207,7 @@ impl CompileCache {
         for entry in entries.values() {
             if entry.dll_path.exists() {
                 fs::remove_file(&entry.dll_path)
-                    .map_err(|e| format!("Failed to remove cached DLL: {}", e))?;
+                    .map_err(|e| format!("Failed to remove cached DLL: {e}"))?;
             }
         }
 
@@ -255,7 +255,7 @@ impl CompileCache {
         for entry in entries.values() {
             if entry.dll_path.exists() {
                 let metadata = fs::metadata(&entry.dll_path)
-                    .map_err(|e| format!("Failed to get DLL metadata: {}", e))?;
+                    .map_err(|e| format!("Failed to get DLL metadata: {e}"))?;
                 total_size += metadata.len();
             }
         }
@@ -299,8 +299,7 @@ impl CompileCache {
             for (hash, dll_path, script_name, entry_hash) in to_evict {
                 // 删除DLL文件
                 if dll_path.exists() {
-                    fs::remove_file(&dll_path)
-                        .map_err(|e| format!("Failed to evict DLL: {}", e))?;
+                    fs::remove_file(&dll_path).map_err(|e| format!("Failed to evict DLL: {e}"))?;
                 }
 
                 // 移除条目
@@ -332,9 +331,9 @@ impl CompileCache {
         fs::write(
             &index_path,
             serde_json::to_string_pretty(&index_data)
-                .map_err(|e| format!("Failed to serialize cache index: {}", e))?,
+                .map_err(|e| format!("Failed to serialize cache index: {e}"))?,
         )
-        .map_err(|e| format!("Failed to write cache index: {}", e))?;
+        .map_err(|e| format!("Failed to write cache index: {e}"))?;
 
         Ok(())
     }
@@ -349,10 +348,10 @@ impl CompileCache {
         }
 
         let index_data = fs::read_to_string(&index_path)
-            .map_err(|e| format!("Failed to read cache index: {}", e))?;
+            .map_err(|e| format!("Failed to read cache index: {e}"))?;
 
         let index: serde_json::Value = serde_json::from_str(&index_data)
-            .map_err(|e| format!("Failed to parse cache index: {}", e))?;
+            .map_err(|e| format!("Failed to parse cache index: {e}"))?;
 
         // 加载条目
         if let Some(entries_array) = index.get("entries").and_then(|v| v.as_array()) {

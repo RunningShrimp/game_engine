@@ -402,7 +402,7 @@ impl DCCMaterialEditor {
         for texture_type in texture_types {
             if let Some(slot) = material.textures.get_mut(&texture_type) {
                 ui.horizontal(|ui| {
-                    let type_name = format!("{:?}", texture_type);
+                    let type_name = format!("{texture_type:?}");
                     ui.label(type_name);
 
                     ui.checkbox(&mut slot.enabled, "");
@@ -552,7 +552,7 @@ impl DCCMaterialEditor {
                 painter.text(
                     egui::pos2(rect.left() + 10.0, rect.bottom() - 20.0),
                     egui::Align2::LEFT_BOTTOM,
-                    &format!("Roughness: {:.2}", material.roughness),
+                    format!("Roughness: {:.2}", material.roughness),
                     egui::FontId::proportional(14.0),
                     egui::Color32::WHITE,
                 );
@@ -561,7 +561,7 @@ impl DCCMaterialEditor {
                 painter.text(
                     egui::pos2(rect.left() + 10.0, rect.bottom() - 40.0),
                     egui::Align2::LEFT_BOTTOM,
-                    &format!("Metallic: {:.2}", material.metallic),
+                    format!("Metallic: {:.2}", material.metallic),
                     egui::FontId::proportional(14.0),
                     egui::Color32::WHITE,
                 );
@@ -578,11 +578,11 @@ impl DCCMaterialEditor {
                 }
             } else {
                 // 无材质：绘制占位符
-                self.draw_placeholder(&painter, rect);
+                self.draw_placeholder(painter, rect);
             }
         } else {
             // 无选中材质：绘制占位符
-            self.draw_placeholder(&painter, rect);
+            self.draw_placeholder(painter, rect);
         }
     }
 

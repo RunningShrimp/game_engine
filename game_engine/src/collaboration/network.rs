@@ -123,7 +123,7 @@ impl WebSocketClient {
         // self.ws_sender.send(Message::Text(serialized)).await?;
 
         // 模拟发送（用于测试）
-        println!("WebSocket sending: {}", serialized);
+        println!("WebSocket sending: {serialized}");
 
         Ok(())
     }

@@ -433,7 +433,7 @@ impl CoroutineExecutor {
                     }
                     Poll::Ready(Err(e)) => {
                         info.coroutine.mark_failed();
-                        eprintln!("Coroutine {:?} failed: {}", id, e);
+                        eprintln!("Coroutine {id:?} failed: {e}");
                         true
                     }
                     Poll::Pending => {

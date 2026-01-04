@@ -204,7 +204,7 @@ impl UvAtlasGenerator {
         let utilization = total_area * 100.0;
 
         println!("UV Atlas generated successfully!");
-        println!("  Utilization: {:.1}%", utilization);
+        println!("  Utilization: {utilization:.1}%");
         println!("  Meshes packed: {}", placed_islands.len());
 
         Ok(UvAtlas {

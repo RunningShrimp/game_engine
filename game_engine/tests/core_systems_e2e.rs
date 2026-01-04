@@ -125,7 +125,7 @@ mod core_systems_e2e_tests {
         // 验证状态创建
         assert_eq!(state.position, Vec3::new(1.0, 2.0, 3.0));
         assert_eq!(state.linear_velocity, Vec3::new(1.0, 0.0, 0.0));
-        assert_eq!(state.sleeping, false);
+        assert!(!state.sleeping);
 
         // 使用状态创建刚体
         let body_id = RigidBodyId::new(1);

@@ -169,21 +169,21 @@ impl PrefabGenerator {
         }
 
         // struct定义
-        code.push_str(&format!("pub struct {} {{\n", name));
+        code.push_str(&format!("pub struct {name} {{\n"));
 
         // 添加字段
         for entity in &scene.entities {
             let field_name = self.sanitize_name(&entity.name);
             let field_type = self.get_entity_type(entity);
-            code.push_str(&format!("    pub {}: {},\n", field_name, field_type));
+            code.push_str(&format!("    pub {field_name}: {field_type},\n"));
         }
 
         code.push_str("}\n\n");
 
         // 实现Default
-        code.push_str(&format!("impl Default for {} {{\n", name));
+        code.push_str(&format!("impl Default for {name} {{\n"));
         code.push_str("    fn default() -> Self {\n");
-        code.push_str(&format!("        Self {{\n"));
+        code.push_str("        Self {\n");
 
         for entity in &scene.entities {
             let field_name = self.sanitize_name(&entity.name);
@@ -236,13 +236,12 @@ impl PrefabGenerator {
 
         // 创建实体
         code.push_str(&format!(
-            "    let {} = world.spawn_empty().id();\n",
-            entity_name
+            "    let {entity_name} = world.spawn_empty().id();\n"
         ));
 
         // 添加组件
         for component in &entity.components {
-            code.push_str(&format!("    world.entity_mut({})\n", entity_name));
+            code.push_str(&format!("    world.entity_mut({entity_name})\n"));
             code.push_str(&format!(
                 "        .insert({});\n",
                 self.generate_component_init(component)
@@ -250,8 +249,8 @@ impl PrefabGenerator {
         }
 
         // 设置父子关系
-        code.push_str(&format!("    world.entity_mut({})\n", entity_name));
-        code.push_str(&format!("        .set_parent_in_place({});\n\n", parent));
+        code.push_str(&format!("    world.entity_mut({entity_name})\n"));
+        code.push_str(&format!("        .set_parent_in_place({parent});\n\n"));
 
         code
     }
@@ -259,7 +258,7 @@ impl PrefabGenerator {
     /// 生成组件初始化代码
     fn generate_component_init(&self, component: &ComponentData) -> String {
         // 简化版 - 实际实现需要解析组件数据
-        format!("ComponentData {{ /* data */ }}")
+        "ComponentData { /* data */ }".to_string()
     }
 
     /// 获取实体类型
@@ -422,10 +421,7 @@ impl CodeGenerator<Material> for ShaderGenerator {
         let vs_code = self.generate_vertex_shader(material);
         let fs_code = self.generate_fragment_shader(material);
 
-        let full_code = format!(
-            "// Vertex Shader\n{}\n\n// Fragment Shader\n{}",
-            vs_code, fs_code
-        );
+        let full_code = format!("// Vertex Shader\n{vs_code}\n\n// Fragment Shader\n{fs_code}");
 
         let file_name = format!(
             "{}_shader.wgsl",
@@ -485,7 +481,7 @@ impl ParticleGenerator {
             code.push_str(&format!("/// Max particles: {}\n", system.max_particles));
         }
 
-        code.push_str(&format!("pub struct {}Config {{\n", name));
+        code.push_str(&format!("pub struct {name}Config {{\n"));
         code.push_str(&format!(
             "    pub max_particles: usize, // {}\n",
             system.max_particles
@@ -503,7 +499,7 @@ impl ParticleGenerator {
         code.push_str("}\n\n");
 
         // 实现Default
-        code.push_str(&format!("impl Default for {}Config {{\n", name));
+        code.push_str(&format!("impl Default for {name}Config {{\n"));
         code.push_str("    fn default() -> Self {\n");
         code.push_str("        Self {\n");
         code.push_str(&format!(
@@ -603,12 +599,12 @@ impl BehaviorTreeGenerator {
             code.push_str("/// Auto-generated from editor\n");
         }
 
-        code.push_str(&format!("pub struct {}BehaviorTree {{\n", name));
+        code.push_str(&format!("pub struct {name}BehaviorTree {{\n"));
         code.push_str("    pub root: Box<dyn BehaviorNode>,\n");
         code.push_str("}\n\n");
 
         // 实现Builder模式
-        code.push_str(&format!("impl {}BehaviorTree {{\n", name));
+        code.push_str(&format!("impl {name}BehaviorTree {{\n"));
         code.push_str("    pub fn new() -> Self {\n");
         code.push_str("        Self {\n");
         code.push_str("            root: Box::new(SelectorNode::new()),\n");

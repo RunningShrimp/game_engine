@@ -164,7 +164,7 @@ impl NetCoreHost {
         }
 
         if !path.exists() {
-            return Err(format!("Assembly file not found: {:?}", path));
+            return Err(format!("Assembly file not found: {path:?}"));
         }
 
         tracing::debug!("Loading .NET assembly: {:?}", path);
@@ -187,7 +187,7 @@ impl NetCoreHost {
 
     /// 使用 netcorehost 加载程序集并扫描类型
     #[cfg(feature = "csharp")]
-    fn load_assembly_with_netcorehost(&self, path: &PathBuf) -> Result<LoadedAssembly, String> {
+    fn load_assembly_with_netcorehost(&self, path: &Path) -> Result<LoadedAssembly, String> {
         tracing::info!("Loading assembly with netcorehost: {}", path.display());
 
         // 获取程序集名称
@@ -204,7 +204,7 @@ impl NetCoreHost {
         // 暂时返回基本信息
         Ok(LoadedAssembly {
             name,
-            path: path.clone(),
+            path: path.to_path_buf(),
             types: Vec::new(),
         })
     }
@@ -230,7 +230,7 @@ impl NetCoreHost {
     /// ```
     pub fn invoke_method(
         &self,
-        assembly_path: &PathBuf,
+        assembly_path: &Path,
         type_name: &str,
         method_name: &str,
         _args: &[crate::scripting::csharp::NetValue],
@@ -351,12 +351,12 @@ impl NetCoreHost {
 
         // 创建临时源文件
         let temp_dir = std::env::temp_dir();
-        let source_path = temp_dir.join(format!("{}.cs", script_name));
-        let dll_path = temp_dir.join(format!("{}.dll", script_name));
-        let runtime_config_path = temp_dir.join(format!("{}.runtimeconfig.json", script_name));
+        let source_path = temp_dir.join(format!("{script_name}.cs"));
+        let dll_path = temp_dir.join(format!("{script_name}.dll"));
+        let runtime_config_path = temp_dir.join(format!("{script_name}.runtimeconfig.json"));
 
         std::fs::write(&source_path, code)
-            .map_err(|e| format!("Failed to write source file: {}", e))?;
+            .map_err(|e| format!("Failed to write source file: {e}"))?;
 
         // 使用 dotnet CLI 编译
         let compile_result = std::process::Command::new("dotnet")
@@ -401,7 +401,7 @@ impl NetCoreHost {
                         let stderr = String::from_utf8_lossy(&output.stderr);
 
                         if !output.status.success() {
-                            return Err(format!("Execution failed: {}", stderr));
+                            return Err(format!("Execution failed: {stderr}"));
                         }
 
                         // 解析输出（假设返回 JSON）
@@ -413,14 +413,14 @@ impl NetCoreHost {
                             ))
                         }
                     }
-                    Err(e) => Err(format!("Failed to execute: {}", e)),
+                    Err(e) => Err(format!("Failed to execute: {e}")),
                 }
             }
             Ok(output) => {
                 let stderr = String::from_utf8_lossy(&output.stderr);
-                Err(format!("Compilation failed: {}", stderr))
+                Err(format!("Compilation failed: {stderr}"))
             }
-            Err(e) => Err(format!("Failed to run dotnet build: {}", e)),
+            Err(e) => Err(format!("Failed to run dotnet build: {e}")),
         }
     }
 

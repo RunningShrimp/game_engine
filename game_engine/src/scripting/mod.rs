@@ -343,11 +343,8 @@ fn execute_script(
                     );
                     // 执行脚本
                     let result = ctx.execute(&script.script_name, Some(&script.script_source));
-                    match result {
-                        ScriptResult::Error(e) => {
-                            return Err(format!("C# script execution error: {}", e));
-                        }
-                        _ => {}
+                    if let ScriptResult::Error(e) = result {
+                        return Err(format!("C# script execution error: {e}"));
                     }
                 } else {
                     return Err("C# runtime not available".to_string());
@@ -367,8 +364,10 @@ fn execute_script(
 
 /// 初始化脚本系统
 pub fn setup_scripting(world: &mut World, config: ScriptingConfig) {
-    let mut resource = ScriptingResource::default();
-    resource.config = config.clone();
+    let mut resource = ScriptingResource {
+        config: config.clone(),
+        ..Default::default()
+    };
 
     // 初始化Lua引擎
     if config.enable_lua {

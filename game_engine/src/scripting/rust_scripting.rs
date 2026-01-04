@@ -191,7 +191,7 @@ impl ScriptContext for RustScriptContextAdapter {
         match self.globals.lock() {
             Ok(globals) => match globals.get(name) {
                 Some(value) => ScriptResult::Success(value.clone()),
-                None => ScriptResult::Error(format!("Global '{}' not found", name)),
+                None => ScriptResult::Error(format!("Global '{name}' not found")),
             },
             Err(_) => ScriptResult::Error("Failed to lock globals".to_string()),
         }

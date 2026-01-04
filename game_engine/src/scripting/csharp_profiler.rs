@@ -647,7 +647,7 @@ impl Profiler {
             self.config.report_output_dir.clone().unwrap_or_else(|| PathBuf::from("."));
 
         fs::create_dir_all(&output_dir)
-            .map_err(|e| format!("Failed to create output directory: {}", e))?;
+            .map_err(|e| format!("Failed to create output directory: {e}"))?;
 
         let file_name = format!(
             "performance_report_{}.{}",
@@ -659,11 +659,11 @@ impl Profiler {
 
         let content = match format {
             ReportFormat::Json => serde_json::to_string_pretty(report)
-                .map_err(|e| format!("Failed to serialize report: {}", e))?,
+                .map_err(|e| format!("Failed to serialize report: {e}"))?,
             ReportFormat::Text => report.format_text(),
         };
 
-        fs::write(&file_path, content).map_err(|e| format!("Failed to write report: {}", e))?;
+        fs::write(&file_path, content).map_err(|e| format!("Failed to write report: {e}"))?;
 
         tracing::info!("Performance report exported to: {}", file_path.display());
 

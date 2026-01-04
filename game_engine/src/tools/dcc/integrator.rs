@@ -208,7 +208,7 @@ impl ScriptGenerator {
                     let vertices_str =
                         vertices.iter().map(|v| v.to_string()).collect::<Vec<_>>().join(", ");
 
-                    script.push_str(&format!("local vertices = {{{}}}\n", vertices_str));
+                    script.push_str(&format!("local vertices = {{{vertices_str}}}\n"));
                     script.push_str("for _, vid in ipairs(vertices) do\n");
                     script.push_str(&format!(
                         "    mesh:set_vertex_position(vid, transform({}))\n",
@@ -218,10 +218,10 @@ impl ScriptGenerator {
                 }
                 EditorOperation::MaterialChange { material, params } => {
                     if self.export_options.add_comments {
-                        script.push_str(&format!("\n-- Change material {}\n", material));
+                        script.push_str(&format!("\n-- Change material {material}\n"));
                     }
 
-                    script.push_str(&format!("local mat = mesh:get_material({})\n", material));
+                    script.push_str(&format!("local mat = mesh:get_material({material})\n"));
                     script.push_str(&format!(
                         "mat.base_color = {{{}}}\n",
                         self.vec4_to_lua(&params.base_color)
@@ -241,10 +241,10 @@ impl ScriptGenerator {
                     value,
                 } => {
                     if self.export_options.add_comments {
-                        script.push_str(&format!("\n-- Add keyframe to animation {}\n", animation));
+                        script.push_str(&format!("\n-- Add keyframe to animation {animation}\n"));
                     }
 
-                    script.push_str(&format!("local anim = get_animation({})\n", animation));
+                    script.push_str(&format!("local anim = get_animation({animation})\n"));
                     script.push_str(&format!(
                         "anim:add_keyframe({}, {})\n",
                         frame,
@@ -262,13 +262,13 @@ impl ScriptGenerator {
                     }
 
                     let uvs_str = uvs.iter().map(|v| v.to_string()).collect::<Vec<_>>().join(", ");
-                    script.push_str(&format!("local uv_indices = {{{}}}\n", uvs_str));
+                    script.push_str(&format!("local uv_indices = {{{uvs_str}}}\n"));
                     script.push_str("for _, uv_id in ipairs(uv_indices) do\n");
                     script.push_str(&format!(
                         "    mesh:set_uv_translation(uv_id, {}, {})\n",
                         translation.0, translation.1
                     ));
-                    script.push_str(&format!("    mesh:set_uv_rotation(uv_id, {})\n", rotation));
+                    script.push_str(&format!("    mesh:set_uv_rotation(uv_id, {rotation})\n"));
                     script.push_str(&format!(
                         "    mesh:set_uv_scale(uv_id, {}, {})\n",
                         scale.0, scale.1
@@ -330,10 +330,10 @@ impl ScriptGenerator {
                 }
                 EditorOperation::MaterialChange { material, params } => {
                     if self.export_options.add_comments {
-                        script.push_str(&format!("\n    # Change material {}\n", material));
+                        script.push_str(&format!("\n    # Change material {material}\n"));
                     }
 
-                    script.push_str(&format!("    mat = mesh.get_material({})\n", material));
+                    script.push_str(&format!("    mat = mesh.get_material({material})\n"));
                     script.push_str(&format!(
                         "    mat.base_color = {}\n",
                         self.vec4_to_python(&params.base_color)
@@ -353,13 +353,11 @@ impl ScriptGenerator {
                     value,
                 } => {
                     if self.export_options.add_comments {
-                        script.push_str(&format!(
-                            "\n    # Add keyframe to animation {}\n",
-                            animation
-                        ));
+                        script
+                            .push_str(&format!("\n    # Add keyframe to animation {animation}\n"));
                     }
 
-                    script.push_str(&format!("    anim = get_animation({})\n", animation));
+                    script.push_str(&format!("    anim = get_animation({animation})\n"));
                     script.push_str(&format!(
                         "    anim.add_keyframe({}, {})\n",
                         frame,
@@ -386,8 +384,7 @@ impl ScriptGenerator {
                         translation.0, translation.1
                     ));
                     script.push_str(&format!(
-                        "        mesh.set_uv_rotation(uv_id, {})\n",
-                        rotation
+                        "        mesh.set_uv_rotation(uv_id, {rotation})\n"
                     ));
                     script.push_str(&format!(
                         "        mesh.set_uv_scale(uv_id, {}, {})\n",
@@ -441,26 +438,21 @@ impl ScriptGenerator {
                     code.push_str("];\n");
 
                     code.push_str("    for &vid in &vertices {\n");
-                    code.push_str(&format!(
-                        "        let pos = mesh.get_vertex_position(vid)?;\n"
-                    ));
+                    code.push_str("        let pos = mesh.get_vertex_position(vid)?;\n");
                     code.push_str(&format!(
                         "        let new_pos = {} * pos.extend(1.0);\n",
                         self.mat4_to_rust(transform)
                     ));
-                    code.push_str(&format!(
-                        "        mesh.set_vertex_position(vid, new_pos.truncate())?;\n"
-                    ));
+                    code.push_str("        mesh.set_vertex_position(vid, new_pos.truncate())?;\n");
                     code.push_str("    }\n");
                 }
                 EditorOperation::MaterialChange { material, params } => {
                     if self.export_options.add_comments {
-                        code.push_str(&format!("\n    // Change material {}\n", material));
+                        code.push_str(&format!("\n    // Change material {material}\n"));
                     }
 
                     code.push_str(&format!(
-                        "    let mut mat = mesh.get_material({})?;\n",
-                        material
+                        "    let mut mat = mesh.get_material({material})?;\n"
                     ));
                     code.push_str(&format!(
                         "    mat.base_color = {};\n",
@@ -476,7 +468,7 @@ impl ScriptGenerator {
                         "    mat.emissive = {};\n",
                         self.vec3_to_rust(&params.emissive)
                     ));
-                    code.push_str(&format!("    mesh.set_material({}, mat)?;\n", material));
+                    code.push_str(&format!("    mesh.set_material({material}, mat)?;\n"));
                 }
                 EditorOperation::KeyframeAdd {
                     animation,
@@ -484,15 +476,11 @@ impl ScriptGenerator {
                     value,
                 } => {
                     if self.export_options.add_comments {
-                        code.push_str(&format!(
-                            "\n    // Add keyframe to animation {}\n",
-                            animation
-                        ));
+                        code.push_str(&format!("\n    // Add keyframe to animation {animation}\n"));
                     }
 
                     code.push_str(&format!(
-                        "    let anim = engine.get_animation({})?;\n",
-                        animation
+                        "    let anim = engine.get_animation({animation})?;\n"
                     ));
                     code.push_str(&format!(
                         "    anim.add_keyframe({}, {})?;\n",
@@ -522,8 +510,7 @@ impl ScriptGenerator {
                         translation.0, translation.1
                     ));
                     code.push_str(&format!(
-                        "        mesh.set_uv_rotation(uv_id, {})?;\n",
-                        rotation
+                        "        mesh.set_uv_rotation(uv_id, {rotation})?;\n"
                     ));
                     code.push_str(&format!(
                         "        mesh.set_uv_scale(uv_id, Vec2::new({}, {}))?;\n",

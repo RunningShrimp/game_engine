@@ -415,7 +415,7 @@ impl RigidBodyRepository {
 
     /// 添加碰撞体到刚体
     pub fn add_collider(&mut self, body_id: RigidBodyId, collider: Collider) {
-        self.colliders.entry(body_id).or_insert_with(Vec::new).push(collider);
+        self.colliders.entry(body_id).or_default().push(collider);
     }
 
     /// 获取刚体的所有碰撞体
@@ -439,10 +439,7 @@ impl Repository<RigidBodyId, RigidBody> for RigidBodyRepository {
     fn add(&mut self, aggregate: RigidBody) -> Result<(), RepositoryError> {
         let id = aggregate.id();
         if self.bodies.contains_key(&id) {
-            return Err(RepositoryError::AlreadyExists(format!(
-                "RigidBody {:?}",
-                id
-            )));
+            return Err(RepositoryError::AlreadyExists(format!("RigidBody {id:?}")));
         }
         self.bodies.insert(id, aggregate);
         Ok(())
@@ -451,7 +448,7 @@ impl Repository<RigidBodyId, RigidBody> for RigidBodyRepository {
     fn update(&mut self, aggregate: &RigidBody) -> Result<(), RepositoryError> {
         let id = aggregate.id();
         if !self.bodies.contains_key(&id) {
-            return Err(RepositoryError::NotFound(format!("RigidBody {:?}", id)));
+            return Err(RepositoryError::NotFound(format!("RigidBody {id:?}")));
         }
         self.bodies.insert(id, aggregate.clone());
         Ok(())
@@ -534,12 +531,12 @@ impl Repository<EntityId, GameEntity> for EntityRepository {
     fn add(&mut self, aggregate: GameEntity) -> Result<(), RepositoryError> {
         let id = aggregate.id();
         if self.entities.contains_key(&id) {
-            return Err(RepositoryError::AlreadyExists(format!("Entity {:?}", id)));
+            return Err(RepositoryError::AlreadyExists(format!("Entity {id:?}")));
         }
 
         // 索引实体名称（如果有）
         if let Some(name) = aggregate.name() {
-            self.by_name.entry(name.to_string()).or_insert_with(Vec::new).push(id);
+            self.by_name.entry(name.to_string()).or_default().push(id);
         }
 
         self.entities.insert(id, aggregate);
@@ -549,7 +546,7 @@ impl Repository<EntityId, GameEntity> for EntityRepository {
     fn update(&mut self, aggregate: &GameEntity) -> Result<(), RepositoryError> {
         let id = aggregate.id();
         if !self.entities.contains_key(&id) {
-            return Err(RepositoryError::NotFound(format!("Entity {:?}", id)));
+            return Err(RepositoryError::NotFound(format!("Entity {id:?}")));
         }
 
         // 更新名称索引
@@ -562,7 +559,7 @@ impl Repository<EntityId, GameEntity> for EntityRepository {
         }
 
         if let Some(name) = aggregate.name() {
-            self.by_name.entry(name.to_string()).or_insert_with(Vec::new).push(id);
+            self.by_name.entry(name.to_string()).or_default().push(id);
         }
 
         self.entities.insert(id, aggregate.clone());
@@ -659,8 +656,7 @@ where
         let id = Self::get_id(&aggregate);
         if self.storage.contains_key(&id) {
             return Err(RepositoryError::AlreadyExists(format!(
-                "Aggregate with id {:?}",
-                id
+                "Aggregate with id {id:?}"
             )));
         }
         self.storage.insert(id, aggregate);
@@ -671,8 +667,7 @@ where
         let id = Self::get_id(aggregate);
         if !self.storage.contains_key(&id) {
             return Err(RepositoryError::NotFound(format!(
-                "Aggregate with id {:?}",
-                id
+                "Aggregate with id {id:?}"
             )));
         }
         self.storage.insert(id, aggregate.clone());

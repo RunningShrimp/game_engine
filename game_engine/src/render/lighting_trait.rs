@@ -220,7 +220,7 @@ impl LightingModel for BlinnPhong {
         let n_dot_h = surface.normal.dot(half_vector).max(0.0);
 
         // 使用粗糙度作为反光度
-        let shininess = (2.0 / (surface.roughness + 0.001)).floor() as f32;
+        let shininess = (2.0 / (surface.roughness + 0.001)).floor();
         let spec_factor = n_dot_h.powf(shininess);
 
         // 镜面反射强度基于金属度

@@ -199,7 +199,7 @@ impl EntityApi {
             let template = self
                 .templates
                 .get(template_name)
-                .ok_or_else(|| format!("Template '{}' not found", template_name))?;
+                .ok_or_else(|| format!("Template '{template_name}' not found"))?;
 
             let mut entity = world.spawn_empty();
 
@@ -283,10 +283,7 @@ impl EntityApi {
         if world.despawn(entity) {
             Ok(())
         } else {
-            Err(format!(
-                "Entity {:?} not found or already despawned",
-                entity
-            ))
+            Err(format!("Entity {entity:?} not found or already despawned"))
         }
     }
 
@@ -327,7 +324,7 @@ impl EntityApi {
                     world.query::<(Entity, &Velocity)>().iter(&world).map(|(e, _)| e).collect();
                 Ok(entities)
             }
-            _ => Err(format!("Unknown component type: {}", component_name)),
+            _ => Err(format!("Unknown component type: {component_name}")),
         }
     }
 
@@ -443,7 +440,7 @@ impl EntityApi {
                 entity_mut.insert(velocity);
                 Ok(())
             }
-            _ => Err(format!("Unknown component type: {}", component_name)),
+            _ => Err(format!("Unknown component type: {component_name}")),
         }
     }
 
@@ -506,7 +503,7 @@ impl EntityApi {
                 entity_mut.remove::<Velocity>();
                 Ok(())
             }
-            _ => Err(format!("Unknown component type: {}", component_name)),
+            _ => Err(format!("Unknown component type: {component_name}")),
         }
     }
 
@@ -544,7 +541,7 @@ impl EntityApi {
                 let result = world.get::<Velocity>(entity).is_some();
                 Ok(result)
             }
-            _ => Err(format!("Unknown component type: {}", component_name)),
+            _ => Err(format!("Unknown component type: {component_name}")),
         }
     }
 
@@ -626,7 +623,7 @@ impl EntityApi {
                 );
                 Ok(ScriptValue::Object(map))
             }
-            _ => Err(format!("Unknown component type: {}", component_name)),
+            _ => Err(format!("Unknown component type: {component_name}")),
         }
     }
 
@@ -707,7 +704,7 @@ impl EntityApi {
                 }
                 Ok(())
             }
-            _ => Err(format!("Unknown component type: {}", component_name)),
+            _ => Err(format!("Unknown component type: {component_name}")),
         }
     }
 
@@ -751,7 +748,7 @@ impl EntityApi {
             let z = Self::extract_number(obj, "z")? as f32;
             Ok(Vec3::new(x, y, z))
         } else {
-            Err(format!("Expected Vec3 at key '{}'", key))
+            Err(format!("Expected Vec3 at key '{key}'"))
         }
     }
 
@@ -763,7 +760,7 @@ impl EntityApi {
             let w = Self::extract_number(obj, "w")? as f32;
             Ok(Quat::from_xyzw(x, y, z, w))
         } else {
-            Err(format!("Expected Quat at key '{}'", key))
+            Err(format!("Expected Quat at key '{key}'"))
         }
     }
 
@@ -775,7 +772,7 @@ impl EntityApi {
             let a = Self::extract_number(obj, "a")? as f32;
             Ok([r, g, b, a])
         } else {
-            Err(format!("Expected color at key '{}'", key))
+            Err(format!("Expected color at key '{key}'"))
         }
     }
 
@@ -784,10 +781,10 @@ impl EntityApi {
             match value {
                 ScriptValue::Integer(i) => Ok(*i as f64),
                 ScriptValue::Number(f) => Ok(*f),
-                _ => Err(format!("Expected number at key '{}'", key)),
+                _ => Err(format!("Expected number at key '{key}'")),
             }
         } else {
-            Err(format!("Missing key '{}'", key))
+            Err(format!("Missing key '{key}'"))
         }
     }
 }
@@ -829,7 +826,7 @@ impl EntityQueryBuilder {
     /// 在查询结果上进行过滤
     pub fn result(self) -> Result<Vec<Entity>, String> {
         let mut world = safe_lock(&self.world, "EntityQueryBuilder.world")
-            .map_err(|e| format!("Failed to lock world: {}", e))?;
+            .map_err(|e| format!("Failed to lock world: {e}"))?;
 
         // 根据要求的组件组合进行查询
         if self.required_components.is_empty() {
@@ -859,7 +856,7 @@ impl EntityQueryBuilder {
                         world.query::<(Entity, &Velocity)>().iter(&world).map(|(e, _)| e).collect();
                     Ok(entities)
                 }
-                _ => Err(format!("Unknown component type: {}", first_component)),
+                _ => Err(format!("Unknown component type: {first_component}")),
             }
         } else {
             Ok(Vec::new())

@@ -220,9 +220,9 @@ impl ProbeManager {
                     let probe_spacing = config.probe_spacing;
 
                     // 计算插值权重
-                    let base_x = (local_pos.x / probe_spacing).floor() as f32;
-                    let base_y = (local_pos.y / probe_spacing).floor() as f32;
-                    let base_z = (local_pos.z / probe_spacing).floor() as f32;
+                    let base_x = (local_pos.x / probe_spacing).floor();
+                    let base_y = (local_pos.y / probe_spacing).floor();
+                    let base_z = (local_pos.z / probe_spacing).floor();
 
                     let tx = (local_pos.x / probe_spacing - base_x).clamp(0.0, 1.0);
                     let ty = (local_pos.y / probe_spacing - base_y).clamp(0.0, 1.0);

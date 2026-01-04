@@ -149,10 +149,10 @@ impl CompatibilityValidator {
             }
             Platform::NintendoSwitch => {
                 // Switch has more flexible requirements
-                if !self.capabilities.supports_feature(Feature::OnlineMultiplayer) {
-                    if self.strict_mode {
-                        errors.push("Switch should support online multiplayer".into());
-                    }
+                if !self.capabilities.supports_feature(Feature::OnlineMultiplayer)
+                    && self.strict_mode
+                {
+                    errors.push("Switch should support online multiplayer".into());
                 }
             }
             _ => {
@@ -255,10 +255,11 @@ impl CompatibilityValidator {
         }
 
         // Check SIMD support
-        if !self.capabilities.hardware.supports_simd && self.platform.is_console() {
-            if self.strict_mode {
-                errors.push("Console platforms should support SIMD".into());
-            }
+        if !self.capabilities.hardware.supports_simd
+            && self.platform.is_console()
+            && self.strict_mode
+        {
+            errors.push("Console platforms should support SIMD".into());
         }
 
         if errors.is_empty() {
@@ -282,9 +283,7 @@ impl CompatibilityValidator {
 
         for feature in recommended_features {
             if !self.capabilities.supports_feature(feature) {
-                report
-                    .warnings
-                    .push(format!("Recommended feature not available: {:?}", feature));
+                report.warnings.push(format!("Recommended feature not available: {feature:?}"));
             }
         }
 
@@ -374,7 +373,7 @@ impl fmt::Display for CompatibilityReport {
         if !self.errors.is_empty() {
             writeln!(f, "Errors:")?;
             for error in &self.errors {
-                writeln!(f, "  - {}", error)?;
+                writeln!(f, "  - {error}")?;
             }
             writeln!(f)?;
         }
@@ -382,7 +381,7 @@ impl fmt::Display for CompatibilityReport {
         if !self.warnings.is_empty() {
             writeln!(f, "Warnings:")?;
             for warning in &self.warnings {
-                writeln!(f, "  - {}", warning)?;
+                writeln!(f, "  - {warning}")?;
             }
             writeln!(f)?;
         }
@@ -428,7 +427,7 @@ impl HardwareCapabilityMatrix {
             // Add feature availability
             let mut features = HashMap::new();
             for feature in &caps.supported_features {
-                features.insert(format!("{:?}", feature), true);
+                features.insert(format!("{feature:?}"), true);
             }
 
             platforms.insert(platform_name.clone(), caps);

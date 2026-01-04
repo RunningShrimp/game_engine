@@ -196,8 +196,8 @@ impl std::fmt::Display for CoroutineError {
         match self {
             CoroutineError::Timeout => write!(f, "Coroutine execution timeout"),
             CoroutineError::Cancelled => write!(f, "Coroutine was cancelled"),
-            CoroutineError::ScriptError(msg) => write!(f, "Script error: {}", msg),
-            CoroutineError::Other(msg) => write!(f, "Error: {}", msg),
+            CoroutineError::ScriptError(msg) => write!(f, "Script error: {msg}"),
+            CoroutineError::Other(msg) => write!(f, "Error: {msg}"),
         }
     }
 }

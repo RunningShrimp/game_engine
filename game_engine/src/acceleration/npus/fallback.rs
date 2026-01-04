@@ -35,8 +35,7 @@ impl NPURuntimeImpl for CPURuntime {
         let model_url = std::path::Path::new(model_path);
         if !model_url.exists() {
             return Err(NPUError::ModelLoadFailed(format!(
-                "Model not found: {}",
-                model_path
+                "Model not found: {model_path}"
             )));
         }
 

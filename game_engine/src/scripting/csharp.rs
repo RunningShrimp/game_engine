@@ -199,7 +199,7 @@ impl NetValue {
             ScriptValue::Number(n) => NetValue::Number(*n),
             ScriptValue::String(s) => NetValue::String(s.clone()),
             ScriptValue::Array(arr) => {
-                NetValue::Array(arr.iter().map(|v| NetValue::from_script_value(v)).collect())
+                NetValue::Array(arr.iter().map(NetValue::from_script_value).collect())
             }
             ScriptValue::Object(map) => NetValue::Object(
                 map.iter().map(|(k, v)| (k.clone(), NetValue::from_script_value(v))).collect(),
@@ -223,7 +223,7 @@ impl NetValue {
             }
             serde_json::Value::String(s) => NetValue::String(s.clone()),
             serde_json::Value::Array(arr) => {
-                NetValue::Array(arr.iter().map(|v| NetValue::from_json(v)).collect())
+                NetValue::Array(arr.iter().map(NetValue::from_json).collect())
             }
             serde_json::Value::Object(obj) => NetValue::Object(
                 obj.iter().map(|(k, v)| (k.clone(), NetValue::from_json(v))).collect(),
@@ -489,9 +489,9 @@ impl CSharpContext {
 
         // 创建临时编译目录
         std::fs::create_dir_all(&self.temp_compile_dir)
-            .map_err(|e| format!("Failed to create compile directory: {}", e))?;
+            .map_err(|e| format!("Failed to create compile directory: {e}"))?;
 
-        let assembly_path = self.temp_compile_dir.join(format!("{}.dll", assembly_name));
+        let assembly_path = self.temp_compile_dir.join(format!("{assembly_name}.dll"));
 
         #[cfg(target_os = "windows")]
         {
@@ -585,7 +585,7 @@ impl CSharpContext {
         &self,
         _source_code: &str,
         assembly_name: &str,
-        assembly_path: &PathBuf,
+        assembly_path: &Path,
         start_time: &Instant,
     ) -> Result<CompilationResult> {
         tracing::warn!(target: "scripting.csharp", "macOS compilation is simplified (netcorehost support limited)");
@@ -600,7 +600,7 @@ impl CSharpContext {
 
         Ok(CompilationResult {
             success: false,
-            assembly_path: Some(assembly_path.clone()),
+            assembly_path: Some(assembly_path.to_path_buf()),
             diagnostics: vec![
                 "macOS compilation is simplified due to netcorehost limitations".to_string(),
                 "Recommendation: Use dotnet CLI for pre-compilation or compile on CI".to_string(),
@@ -622,7 +622,7 @@ impl CSharpContext {
         );
 
         if !assembly_path.exists() {
-            return Err(format!("Assembly file not found: {:?}", assembly_path));
+            return Err(format!("Assembly file not found: {assembly_path:?}"));
         }
 
         // 提取程序集名称
@@ -675,7 +675,7 @@ impl CSharpContext {
     /// 3. 解析函数签名和参数类型
     fn scan_assembly_metadata(
         &self,
-        assembly_path: &PathBuf,
+        assembly_path: &Path,
         assembly_name: &str,
     ) -> Result<AssemblyMetadataDetail> {
         tracing::debug!(
@@ -690,7 +690,7 @@ impl CSharpContext {
         let base = AssemblyMetadata {
             name: assembly_name.to_string(),
             version: "1.0.0.0".to_string(),
-            path: assembly_path.clone(),
+            path: assembly_path.to_path_buf(),
             is_loaded: true,
         };
 
@@ -714,7 +714,7 @@ impl CSharpContext {
             // 当前框架实现：返回空列表
             Ok(Vec::new())
         } else {
-            Err(format!("Assembly '{}' not found", assembly_name))
+            Err(format!("Assembly '{assembly_name}' not found"))
         }
     }
 
@@ -724,7 +724,7 @@ impl CSharpContext {
         let entry_names = vec!["Main", "Run", "Execute", "Start", "OnStart"];
 
         for entry_name in entry_names {
-            let full_name = format!("{}.{}", assembly_name, entry_name);
+            let full_name = format!("{assembly_name}.{entry_name}");
             if let Some(signature) = self.find_function(&full_name) {
                 return Some(signature);
             }
@@ -894,6 +894,7 @@ impl CSharpContext {
     /// - String → string (System.String)
     /// - Array → object[] (System.Object[])
     /// - Object → Dictionary<string, object> (expando)
+    #[allow(clippy::only_used_in_recursion)]
     fn script_value_to_net(&self, value: &ScriptValue) -> Result<NetValue> {
         match value {
             ScriptValue::Null => Ok(NetValue::Null),
@@ -902,14 +903,39 @@ impl CSharpContext {
             ScriptValue::Number(n) => Ok(NetValue::Number(*n)),
             ScriptValue::String(s) => Ok(NetValue::String(s.clone())),
             ScriptValue::Array(arr) => {
-                let elements: Result<Vec<NetValue>> =
-                    arr.iter().map(|v| self.script_value_to_net(v)).collect();
+                let elements: Result<Vec<NetValue>> = arr
+                    .iter()
+                    .map(|v| match v {
+                        ScriptValue::Null => Ok(NetValue::Null),
+                        ScriptValue::Boolean(b) => Ok(NetValue::Boolean(*b)),
+                        ScriptValue::Integer(i) => Ok(NetValue::Integer(*i)),
+                        ScriptValue::Number(n) => Ok(NetValue::Number(*n)),
+                        ScriptValue::String(s) => Ok(NetValue::String(s.clone())),
+                        ScriptValue::Array(_) | ScriptValue::Object(_) => {
+                            Self::script_value_to_net(self, v)
+                        }
+                    })
+                    .collect();
                 Ok(NetValue::Array(elements?))
             }
             ScriptValue::Object(map) => {
                 let props: Result<HashMap<String, NetValue>> = map
                     .iter()
-                    .map(|(k, v)| Ok((k.clone(), self.script_value_to_net(v)?)))
+                    .map(|(k, v)| {
+                        Ok((
+                            k.clone(),
+                            match v {
+                                ScriptValue::Null => NetValue::Null,
+                                ScriptValue::Boolean(b) => NetValue::Boolean(*b),
+                                ScriptValue::Integer(i) => NetValue::Integer(*i),
+                                ScriptValue::Number(n) => NetValue::Number(*n),
+                                ScriptValue::String(s) => NetValue::String(s.clone()),
+                                ScriptValue::Array(_) | ScriptValue::Object(_) => {
+                                    Self::script_value_to_net(self, v)?
+                                }
+                            },
+                        ))
+                    })
                     .collect();
                 Ok(NetValue::Object(props?))
             }
@@ -917,6 +943,7 @@ impl CSharpContext {
     }
 
     /// 将C#值转换为ScriptValue
+    #[allow(clippy::only_used_in_recursion)]
     fn net_value_to_script(&self, value: &NetValue) -> ScriptValue {
         match value {
             NetValue::Null => ScriptValue::Null,
@@ -924,11 +951,38 @@ impl CSharpContext {
             NetValue::Integer(i) => ScriptValue::Integer(*i),
             NetValue::Number(n) => ScriptValue::Number(*n),
             NetValue::String(s) => ScriptValue::String(s.clone()),
-            NetValue::Array(arr) => {
-                ScriptValue::Array(arr.iter().map(|v| self.net_value_to_script(v)).collect())
-            }
+            NetValue::Array(arr) => ScriptValue::Array(
+                arr.iter()
+                    .map(|v| match v {
+                        NetValue::Null => ScriptValue::Null,
+                        NetValue::Boolean(b) => ScriptValue::Boolean(*b),
+                        NetValue::Integer(i) => ScriptValue::Integer(*i),
+                        NetValue::Number(n) => ScriptValue::Number(*n),
+                        NetValue::String(s) => ScriptValue::String(s.clone()),
+                        NetValue::Array(_) | NetValue::Object(_) => {
+                            Self::net_value_to_script(self, v)
+                        }
+                    })
+                    .collect(),
+            ),
             NetValue::Object(map) => ScriptValue::Object(
-                map.iter().map(|(k, v)| (k.clone(), self.net_value_to_script(v))).collect(),
+                map.iter()
+                    .map(|(k, v)| {
+                        (
+                            k.clone(),
+                            match v {
+                                NetValue::Null => ScriptValue::Null,
+                                NetValue::Boolean(b) => ScriptValue::Boolean(*b),
+                                NetValue::Integer(i) => ScriptValue::Integer(*i),
+                                NetValue::Number(n) => ScriptValue::Number(*n),
+                                NetValue::String(s) => ScriptValue::String(s.clone()),
+                                NetValue::Array(_) | NetValue::Object(_) => {
+                                    Self::net_value_to_script(self, v)
+                                }
+                            },
+                        )
+                    })
+                    .collect(),
             ),
         }
     }
@@ -959,15 +1013,16 @@ impl CSharpContext {
     }
 
     /// 将ScriptValue转换为C#字面量
+    #[allow(clippy::only_used_in_recursion)]
     fn script_value_to_csharp_literal(&self, value: &ScriptValue) -> Result<String> {
         match value {
             ScriptValue::Null => Ok("null".to_string()),
             ScriptValue::Boolean(b) => Ok(b.to_string()),
-            ScriptValue::Integer(i) => Ok(format!("{}L", i)), // C# long literal
+            ScriptValue::Integer(i) => Ok(format!("{i}L")), // C# long literal
             ScriptValue::Number(n) => {
                 // 检查是否为整数
                 if n.fract() == 0.0 {
-                    Ok(format!("{}.0", n)) // double literal
+                    Ok(format!("{n}.0")) // double literal
                 } else {
                     Ok(n.to_string())
                 }
@@ -980,11 +1035,36 @@ impl CSharpContext {
                     .replace('\n', "\\n")
                     .replace('\r', "\\r")
                     .replace('\t', "\\t");
-                Ok(format!("\"{}\"", escaped))
+                Ok(format!("\"{escaped}\""))
             }
             ScriptValue::Array(arr) => {
-                let elements: Result<Vec<String>> =
-                    arr.iter().map(|v| self.script_value_to_csharp_literal(v)).collect();
+                let elements: Result<Vec<String>> = arr
+                    .iter()
+                    .map(|v| match v {
+                        ScriptValue::Null => Ok("null".to_string()),
+                        ScriptValue::Boolean(b) => Ok(b.to_string()),
+                        ScriptValue::Integer(i) => Ok(format!("{i}L")),
+                        ScriptValue::Number(n) => {
+                            if n.fract() == 0.0 {
+                                Ok(format!("{n}.0"))
+                            } else {
+                                Ok(n.to_string())
+                            }
+                        }
+                        ScriptValue::String(s) => {
+                            let escaped = s
+                                .replace('\\', "\\\\")
+                                .replace('"', "\\\"")
+                                .replace('\n', "\\n")
+                                .replace('\r', "\\r")
+                                .replace('\t', "\\t");
+                            Ok(format!("\"{escaped}\""))
+                        }
+                        ScriptValue::Array(_) | ScriptValue::Object(_) => {
+                            Self::script_value_to_csharp_literal(self, v)
+                        }
+                    })
+                    .collect();
                 Ok(format!("new object[] {{{}}}", elements?.join(", ")))
             }
             ScriptValue::Object(_) => {
@@ -1109,7 +1189,7 @@ impl ScriptContext for CSharpContext {
             Ok(result) => result,
             Err(e) => {
                 *self.runtime_state.lock().unwrap() = RuntimeState::Error(e.clone());
-                return ScriptResult::Error(format!("Compilation failed: {}", e));
+                return ScriptResult::Error(format!("Compilation failed: {e}"));
             }
         };
 
@@ -1126,7 +1206,7 @@ impl ScriptContext for CSharpContext {
         if let Some(assembly_path) = &compile_result.assembly_path {
             if let Err(e) = self.load_assembly(assembly_path) {
                 *self.runtime_state.lock().unwrap() = RuntimeState::Error(e.clone());
-                return ScriptResult::Error(format!("Failed to load assembly: {}", e));
+                return ScriptResult::Error(format!("Failed to load assembly: {e}"));
             }
         }
 
@@ -1197,8 +1277,7 @@ impl ScriptContext for CSharpContext {
             Some(sig) => sig,
             None => {
                 return ScriptResult::Error(format!(
-                    "Function '{}' not found in loaded assemblies",
-                    function
+                    "Function '{function}' not found in loaded assemblies"
                 ));
             }
         };
@@ -1239,7 +1318,7 @@ impl ScriptContext for CSharpContext {
         tracing::debug!(target: "scripting.csharp", "Evaluating C# expression: {}", expression);
 
         // 简化实现：包装表达式并"执行"
-        let code = format!("return ({});", expression);
+        let code = format!("return ({expression});");
         self.execute(&code, Some(&code))
     }
 
@@ -1258,7 +1337,7 @@ impl ScriptContext for CSharpContext {
 
         match globals.get(name) {
             Some(value) => ScriptResult::Success(value.clone()),
-            None => ScriptResult::Error(format!("Global variable '{}' not found", name)),
+            None => ScriptResult::Error(format!("Global variable '{name}' not found")),
         }
     }
 

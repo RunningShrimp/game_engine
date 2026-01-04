@@ -167,7 +167,7 @@ impl PerlinNoise {
             z
         };
 
-        ((if h & 1 == 0 { u } else { -u }) + (if h & 2 == 0 { v } else { -v })) as f32
+        ((if h & 1 == 0 { u } else { -u }) + (if h & 2 == 0 { v } else { -v }))
     }
 
     /// Permutation lookup
@@ -297,11 +297,6 @@ impl SimplexNoise {
 
     /// Sample 3D simplex noise
     pub fn sample3d(&self, xin: f32, yin: f32, zin: f32) -> f32 {
-        let n0: f32;
-        let n1: f32;
-        let n2: f32;
-        let n3: f32;
-
         let s = (xin + yin + zin) * self.f3;
         let i = (xin + s).floor() as i32;
         let j = (yin + s).floor() as i32;
@@ -347,7 +342,7 @@ impl SimplexNoise {
 
         let gi0 = self.perm(i32::from(self.perm(i32::from(self.perm(ii)) + jj)) + kk) % 12;
         let t0 = 0.6 - x0 * x0 - y0 * y0 - z0 * z0;
-        n0 = if t0 < 0.0 {
+        let n0: f32 = if t0 < 0.0 {
             0.0
         } else {
             let t0 = t0 * t0;
@@ -357,7 +352,7 @@ impl SimplexNoise {
         let gi1 =
             self.perm(i32::from(self.perm(i32::from(self.perm(ii + i1)) + jj + j1)) + kk + k1) % 12;
         let t1 = 0.6 - x1 * x1 - y1 * y1 - z1 * z1;
-        n1 = if t1 < 0.0 {
+        let n1: f32 = if t1 < 0.0 {
             0.0
         } else {
             let t1 = t1 * t1;
@@ -367,7 +362,7 @@ impl SimplexNoise {
         let gi2 =
             self.perm(i32::from(self.perm(i32::from(self.perm(ii + i2)) + jj + j2)) + kk + k2) % 12;
         let t2 = 0.6 - x2 * x2 - y2 * y2 - z2 * z2;
-        n2 = if t2 < 0.0 {
+        let n2: f32 = if t2 < 0.0 {
             0.0
         } else {
             let t2 = t2 * t2;
@@ -377,7 +372,7 @@ impl SimplexNoise {
         let gi3 =
             self.perm(i32::from(self.perm(i32::from(self.perm(ii + 1)) + jj + 1)) + kk + 1) % 12;
         let t3 = 0.6 - x3 * x3 - y3 * y3 - z3 * z3;
-        n3 = if t3 < 0.0 {
+        let n3: f32 = if t3 < 0.0 {
             0.0
         } else {
             let t3 = t3 * t3;
@@ -668,7 +663,7 @@ impl NoiseGenerator {
         let bytes_per_pixel = 1;
 
         let texture = device.create_texture(&wgpu::TextureDescriptor {
-            label: Some(&format!("3D Noise Texture ({:?})", noise_type)),
+            label: Some(&format!("3D Noise Texture ({noise_type:?})")),
             size: wgpu::Extent3d {
                 width: size,
                 height: size,
@@ -748,7 +743,7 @@ impl NoiseGenerator {
         let bytes_per_pixel = 1;
 
         let texture = device.create_texture(&wgpu::TextureDescriptor {
-            label: Some(&format!("2D Noise Texture ({:?})", noise_type)),
+            label: Some(&format!("2D Noise Texture ({noise_type:?})")),
             size: wgpu::Extent3d {
                 width,
                 height,

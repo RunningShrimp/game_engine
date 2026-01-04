@@ -262,35 +262,33 @@ impl GestureRecognizer {
         let duration = crate::core::utils::current_timestamp_f64() - state.start_time;
         let delta = *position - state.start_position;
 
-        if duration < self.swipe_config.max_duration {
-            if delta.length() > self.swipe_config.min_distance {
-                let angle = delta.y.atan2(delta.x).to_degrees();
+        if duration < self.swipe_config.max_duration
+            && delta.length() > self.swipe_config.min_distance
+        {
+            let angle = delta.y.atan2(delta.x).to_degrees();
 
-                let direction = if angle.abs() < 45.0 {
-                    if angle > 0.0 {
-                        SwipeDirection::Right
-                    } else {
-                        SwipeDirection::Left
-                    }
+            let direction = if angle.abs() < 45.0 {
+                if angle > 0.0 {
+                    SwipeDirection::Right
                 } else {
-                    if angle > 0.0 {
-                        SwipeDirection::Down
-                    } else {
-                        SwipeDirection::Up
-                    }
-                };
+                    SwipeDirection::Left
+                }
+            } else if angle > 0.0 {
+                SwipeDirection::Down
+            } else {
+                SwipeDirection::Up
+            };
 
-                return Some(GestureEvent {
-                    gesture_type: GestureType::Swipe { direction },
-                    position: *position,
-                    parameters: {
-                        let mut params = HashMap::new();
-                        params.insert("distance".to_string(), delta.length());
-                        params.insert("angle".to_string(), angle);
-                        params
-                    },
-                });
-            }
+            return Some(GestureEvent {
+                gesture_type: GestureType::Swipe { direction },
+                position: *position,
+                parameters: {
+                    let mut params = HashMap::new();
+                    params.insert("distance".to_string(), delta.length());
+                    params.insert("angle".to_string(), angle);
+                    params
+                },
+            });
         }
 
         None

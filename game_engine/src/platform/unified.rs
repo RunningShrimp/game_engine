@@ -548,7 +548,7 @@ impl std::fmt::Display for PlatformServiceError {
             }
             PlatformServiceError::NotInitialized => write!(f, "Platform service not initialized"),
             PlatformServiceError::NotAuthenticated => write!(f, "User not authenticated"),
-            PlatformServiceError::ServiceError(msg) => write!(f, "Service error: {}", msg),
+            PlatformServiceError::ServiceError(msg) => write!(f, "Service error: {msg}"),
         }
     }
 }

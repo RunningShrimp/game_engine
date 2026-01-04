@@ -79,7 +79,7 @@ impl ResourceScriptApi {
                 }
             } else {
                 // 从路径提取文件名
-                path.split('/').last().unwrap_or(&path).to_string()
+                path.split('/').next_back().unwrap_or(&path).to_string()
             };
 
             if let Ok(mut resources_guard) = resources.try_lock() {
@@ -93,7 +93,7 @@ impl ResourceScriptApi {
                 );
             }
 
-            ScriptResult::Success(ScriptValue::String(format!("Texture loaded: {}", name)))
+            ScriptResult::Success(ScriptValue::String(format!("Texture loaded: {name}")))
         });
 
         // 卸载纹理
@@ -111,8 +111,7 @@ impl ResourceScriptApi {
             if let Ok(mut resources_guard) = resources.try_lock() {
                 if resources_guard.remove(&name).is_some() {
                     return ScriptResult::Success(ScriptValue::String(format!(
-                        "Texture unloaded: {}",
-                        name
+                        "Texture unloaded: {name}"
                     )));
                 }
             }
@@ -142,7 +141,7 @@ impl ResourceScriptApi {
                     _ => path.clone(),
                 }
             } else {
-                path.split('/').last().unwrap_or(&path).to_string()
+                path.split('/').next_back().unwrap_or(&path).to_string()
             };
 
             if let Ok(mut resources_guard) = resources.try_lock() {
@@ -156,7 +155,7 @@ impl ResourceScriptApi {
                 );
             }
 
-            ScriptResult::Success(ScriptValue::String(format!("Mesh loaded: {}", name)))
+            ScriptResult::Success(ScriptValue::String(format!("Mesh loaded: {name}")))
         });
 
         // 卸载网格
@@ -174,8 +173,7 @@ impl ResourceScriptApi {
             if let Ok(mut resources_guard) = resources.try_lock() {
                 if resources_guard.remove(&name).is_some() {
                     return ScriptResult::Success(ScriptValue::String(format!(
-                        "Mesh unloaded: {}",
-                        name
+                        "Mesh unloaded: {name}"
                     )));
                 }
             }
@@ -216,7 +214,7 @@ impl ResourceScriptApi {
                     name.clone(),
                     ResourceInfo {
                         resource_type: ResourceType::Material,
-                        path: format!("material://{}", name),
+                        path: format!("material://{name}"),
                         loaded: true,
                     },
                 );
@@ -249,8 +247,7 @@ impl ResourceScriptApi {
             let value = args[2].as_number().unwrap_or(0.0);
 
             ScriptResult::Success(ScriptValue::String(format!(
-                "Material property set: {}[{}] = {}",
-                name, property, value
+                "Material property set: {name}[{property}] = {value}"
             )))
         });
     }
@@ -277,7 +274,7 @@ impl ResourceScriptApi {
                     _ => path.clone(),
                 }
             } else {
-                path.split('/').last().unwrap_or(&path).to_string()
+                path.split('/').next_back().unwrap_or(&path).to_string()
             };
 
             if let Ok(mut resources_guard) = resources.try_lock() {
@@ -291,7 +288,7 @@ impl ResourceScriptApi {
                 );
             }
 
-            ScriptResult::Success(ScriptValue::String(format!("Prefab loaded: {}", name)))
+            ScriptResult::Success(ScriptValue::String(format!("Prefab loaded: {name}")))
         });
 
         // 实例化Prefab

@@ -120,6 +120,16 @@ where
 }
 
 #[cfg(feature = "dashmap")]
+impl<K, V> Default for DashMapAdapter<K, V>
+where
+    K: Eq + Hash + Clone + Send + Sync,
+    V: Clone + Send + Sync,
+{
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<K, V> DashMapAdapter<K, V>
 where
     K: Eq + Hash + Clone + Send + Sync,

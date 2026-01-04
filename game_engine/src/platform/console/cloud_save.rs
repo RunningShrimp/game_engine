@@ -178,7 +178,7 @@ impl CloudSaveManager {
 
     /// Get save path for slot
     fn get_save_path(&self, slot_id: u32) -> PathBuf {
-        self.save_dir.join(format!("save_{}.dat", slot_id))
+        self.save_dir.join(format!("save_{slot_id}.dat"))
     }
 
     /// Load save index
@@ -225,9 +225,9 @@ pub enum CloudSaveError {
 impl std::fmt::Display for CloudSaveError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            CloudSaveError::SaveNotFound(slot) => write!(f, "Save slot {} not found", slot),
-            CloudSaveError::IoError(msg) => write!(f, "IO error: {}", msg),
-            CloudSaveError::PlatformError(msg) => write!(f, "Platform error: {}", msg),
+            CloudSaveError::SaveNotFound(slot) => write!(f, "Save slot {slot} not found"),
+            CloudSaveError::IoError(msg) => write!(f, "IO error: {msg}"),
+            CloudSaveError::PlatformError(msg) => write!(f, "Platform error: {msg}"),
             CloudSaveError::QuotaExceeded => write!(f, "Cloud save quota exceeded"),
             CloudSaveError::CorruptedSave => write!(f, "Save file is corrupted"),
         }
@@ -288,7 +288,7 @@ mod tests {
                 player_level: i * 10,
                 current_chapter: format!("Chapter {}", i),
                 completion_percentage: i as f32 * 25.0,
-                playtime_seconds: i * 3600,
+                playtime_seconds: (i * 3600) as u64,
                 custom_data: HashMap::new(),
             };
 

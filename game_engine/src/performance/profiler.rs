@@ -218,7 +218,7 @@ impl MetricsCollector {
 
     /// 记录CPU使用率
     pub fn record_cpu_usage(&mut self, usage: f32) {
-        self.current.cpu_usage = usage.max(0.0).min(1.0);
+        self.current.cpu_usage = usage.clamp(0.0, 1.0);
     }
 
     /// 记录内存使用
@@ -228,7 +228,7 @@ impl MetricsCollector {
 
     /// 记录GPU使用率
     pub fn record_gpu_usage(&mut self, usage: f32) {
-        self.current.gpu_usage = usage.max(0.0).min(1.0);
+        self.current.gpu_usage = usage.clamp(0.0, 1.0);
     }
 
     /// 记录Draw Calls
@@ -398,7 +398,7 @@ impl BottleneckDetector {
             Some(Bottleneck::new(
                 PerformanceCategory::Rendering,
                 severity,
-                format!("Frame time too high: {:.2}ms", frame_time_ms),
+                format!("Frame time too high: {frame_time_ms:.2}ms"),
                 frame_time_ms,
                 self.thresholds.target_frame_time_ms,
                 "Frame drops will be noticeable to players".to_string(),
@@ -531,7 +531,7 @@ impl BottleneckDetector {
             Some(Bottleneck::new(
                 PerformanceCategory::Memory,
                 severity,
-                format!("High memory usage: {}MB / {}MB", mb_used, mb_max),
+                format!("High memory usage: {mb_used}MB / {mb_max}MB"),
                 metrics.memory_usage as f64,
                 self.thresholds.max_memory_usage as f64,
                 "May cause issues on low-memory devices".to_string(),

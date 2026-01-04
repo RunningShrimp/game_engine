@@ -126,10 +126,10 @@ fn test_memory_leak_long_running() {
         // 每10个周期检查一次
         if cycles % 10 == 0 {
             let entity_count = world.entities().len();
-            println!("Cycle {}: {} entities remaining", cycles, entity_count);
+            println!("Cycle {cycles}: {entity_count} entities remaining");
 
             // 验证没有实体泄漏
-            assert_eq!(entity_count, 0, "Memory leak detected at cycle {}", cycles);
+            assert_eq!(entity_count, 0, "Memory leak detected at cycle {cycles}");
         }
     }
 
@@ -156,7 +156,7 @@ fn test_resource_accumulation() {
     while start_time.elapsed() < TEST_DURATION {
         // 创建资源
         for i in 0..RESOURCES_PER_CYCLE {
-            let key = format!("resource_{}_{}", cycles, i);
+            let key = format!("resource_{cycles}_{i}");
             resources.insert(key, vec![0u8; 1024]); // 1KB资源
         }
 
@@ -174,7 +174,7 @@ fn test_resource_accumulation() {
         // 每10个周期检查一次
         if cycles % 10 == 0 {
             let resource_count = resources.len();
-            println!("Cycle {}: {} resources", cycles, resource_count);
+            println!("Cycle {cycles}: {resource_count} resources");
 
             // 验证资源数量在合理范围内
             assert!(resource_count <= 100, "Resource accumulation detected");
@@ -239,10 +239,7 @@ fn test_performance_degradation() {
             let avg_time = frame_times.iter().sum::<f64>() / frame_times.len() as f64;
             let max_time = frame_times.iter().copied().fold(0.0, f64::max);
 
-            println!(
-                "Cycle {}: avg {:.2}ms, max {:.2}ms",
-                cycles, avg_time, max_time
-            );
+            println!("Cycle {cycles}: avg {avg_time:.2}ms, max {max_time:.2}ms");
 
             // 验证性能没有显著退化（平均时间不应超过初始的2倍）
             if cycles > 100 {
@@ -252,9 +249,7 @@ fn test_performance_degradation() {
 
                 assert!(
                     recent_avg < early_avg * 2.0,
-                    "Performance degradation detected: early avg {:.2}ms, recent avg {:.2}ms",
-                    early_avg,
-                    recent_avg
+                    "Performance degradation detected: early avg {early_avg:.2}ms, recent avg {recent_avg:.2}ms"
                 );
             }
         }

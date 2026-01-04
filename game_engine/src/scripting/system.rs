@@ -59,10 +59,7 @@ pub trait ScriptContext: Send + Sync {
     /// 检查函数是否存在
     fn has_function(&mut self, name: &str) -> bool {
         // 默认实现：尝试eval typeof检查
-        match self.eval(&format!("typeof {}", name)) {
-            ScriptResult::Success(ScriptValue::String(s)) if s == "function" => true,
-            _ => false,
-        }
+        matches!(self.eval(&format!("typeof {name}")), ScriptResult::Success(ScriptValue::String(s)) if s == "function")
     }
 }
 
@@ -554,7 +551,7 @@ impl ScriptContext for JavaScriptContext {
         if self.sender.send(JsCommand::GetGlobal(name.to_string(), tx)).is_ok() {
             match rx.recv().ok().flatten() {
                 Some(value) => ScriptResult::Success(value),
-                None => ScriptResult::Error(format!("Global '{}' not found", name)),
+                None => ScriptResult::Error(format!("Global '{name}' not found")),
             }
         } else {
             ScriptResult::Error("Failed to send command".to_string())
@@ -595,13 +592,12 @@ impl PythonContext {
 impl ScriptContext for PythonContext {
     fn execute(&mut self, script: &str, _source_code: Option<&str>) -> ScriptResult {
         // 占位实现 - 后续会被真实的Python绑定替换
-        ScriptResult::Success(ScriptValue::String(format!("Executed Python: {}", script)))
+        ScriptResult::Success(ScriptValue::String(format!("Executed Python: {script}")))
     }
 
     fn call(&mut self, function: &str, _args: &[ScriptValue]) -> ScriptResult {
         ScriptResult::Success(ScriptValue::String(format!(
-            "Called Python function: {}",
-            function
+            "Called Python function: {function}"
         )))
     }
 
@@ -617,7 +613,7 @@ impl ScriptContext for PythonContext {
     fn get_global(&mut self, name: &str) -> ScriptResult {
         match self.globals.get(name) {
             Some(value) => ScriptResult::Success(value.clone()),
-            None => ScriptResult::Error(format!("Global '{}' not found", name)),
+            None => ScriptResult::Error(format!("Global '{name}' not found")),
         }
     }
 

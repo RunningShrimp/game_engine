@@ -196,7 +196,7 @@ impl std::fmt::Display for AchievementError {
         match self {
             AchievementError::NotFound => write!(f, "Achievement not found"),
             AchievementError::AlreadyUnlocked => write!(f, "Achievement already unlocked"),
-            AchievementError::PlatformError(msg) => write!(f, "Platform error: {}", msg),
+            AchievementError::PlatformError(msg) => write!(f, "Platform error: {msg}"),
         }
     }
 }

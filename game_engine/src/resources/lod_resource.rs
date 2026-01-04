@@ -263,7 +263,7 @@ impl LODResourceManager {
         // Create resource
         let resource = LODResource::new(
             mesh_id.clone(),
-            PathBuf::from(format!("{}.lod", mesh_id)),
+            PathBuf::from(format!("{mesh_id}.lod")),
             lods,
             assessment.overall_score,
         );

@@ -575,7 +575,7 @@ impl UVEditor {
 
             for island in &mut self.uv_islands {
                 for _ in 0..iterations {
-                    let mut new_uvs: Vec<Vec2> = island.uvs.iter().map(|uv| *uv).collect();
+                    let mut new_uvs: Vec<Vec2> = island.uvs.to_vec();
 
                     // 对每个UV点
                     for (i, uv) in island.uvs.iter().enumerate() {

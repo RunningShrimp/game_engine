@@ -533,7 +533,7 @@ impl MeshEditor {
                     }
                 }
 
-                if self.selected_vertices.len() > 0 && normal.length() > 0.0001 {
+                if !self.selected_vertices.is_empty() && normal.length() > 0.0001 {
                     normal = normal.normalize();
 
                     // 沿法线方向移动顶点
@@ -863,7 +863,7 @@ impl MeshEditor {
                     let mirrored_pos = mirror_transform.transform_point3(original_pos);
 
                     // 创建新顶点
-                    let mut mirrored_vertex = original_vertex.clone();
+                    let mut mirrored_vertex = original_vertex;
                     mirrored_vertex.pos = mirrored_pos.to_array();
 
                     // 镜像法线

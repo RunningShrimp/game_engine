@@ -5,8 +5,8 @@
 #[cfg(test)]
 mod tests {
     use super::super::*;
-    use crate::render::gi::*;
     use crate::error::RenderError;
+    use crate::render::gi::*;
 
     #[test]
     fn test_ddgi_config_default() {

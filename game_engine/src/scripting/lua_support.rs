@@ -183,8 +183,8 @@ impl ScriptContext for LuaContext {
 
     fn get_global(&mut self, name: &str) -> ScriptResult {
         match LuaContext::get_global(self, name) {
-            Some(value) => ScriptResult::Success(lua_value_to_script_value(&value)),
-            None => ScriptResult::Error(format!("Global '{}' not found", name)),
+            Some(value) => ScriptResult::Success(lua_value_to_script_value(value)),
+            None => ScriptResult::Error(format!("Global '{name}' not found")),
         }
     }
 
@@ -198,10 +198,10 @@ impl ScriptContext for LuaContext {
     }
 
     fn has_function(&mut self, name: &str) -> bool {
-        match self.eval(&format!("type({}) == 'function'", name)) {
-            ScriptResult::Success(ScriptValue::Boolean(true)) => true,
-            _ => false,
-        }
+        matches!(
+            self.eval(&format!("type({name}) == 'function'")),
+            ScriptResult::Success(ScriptValue::Boolean(true))
+        )
     }
 }
 

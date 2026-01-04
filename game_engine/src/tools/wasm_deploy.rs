@@ -742,9 +742,9 @@ self.addEventListener('fetch', (event) => {{
         let mut hints = String::new();
 
         // 预加载核心WASM文件
-        hints.push_str(&format!(
-            "<link rel=\"preload\" href=\"game_engine.wasm\" as=\"fetch\" crossorigin>\n"
-        ));
+        hints.push_str(
+            "<link rel=\"preload\" href=\"game_engine.wasm\" as=\"fetch\" crossorigin>\n",
+        );
 
         // 预连接到CDN（如果配置了）
         hints.push_str("<link rel=\"preconnect\" href=\"https://cdn.example.com\">\n");
@@ -753,8 +753,7 @@ self.addEventListener('fetch', (event) => {{
         // 预加载关键资源
         for asset in &self.precache_assets {
             hints.push_str(&format!(
-                "<link rel=\"preload\" href=\"{}\" as=\"fetch\">\n",
-                asset
+                "<link rel=\"preload\" href=\"{asset}\" as=\"fetch\">\n"
             ));
         }
 
@@ -824,7 +823,7 @@ impl CdnConfig {
     pub fn generate_cdn_url(&self, asset_path: &str) -> String {
         let protocol = if self.enable_https { "https" } else { "http" };
         let domain = self.custom_domain.as_ref().unwrap_or(&self.cdn_domain);
-        format!("{}://{}/{}", protocol, domain, asset_path)
+        format!("{protocol}://{domain}/{asset_path}")
     }
 
     /// 生成CDN缓存配置
@@ -837,8 +836,7 @@ impl CdnConfig {
     }
 
     fn generate_cloudflare_config(&self) -> String {
-        format!(
-            r#"
+        r#"
 # Cloudflare CDN Cache Configuration
 # TTL Configuration
 _ttl: 2y
@@ -851,11 +849,11 @@ browser_ttl: 604800
 edge_cache_ttl: 604800
 
 # Cache Key (ignore query strings for WASM files)
-cache_key: {{
-    main: {{
-        path: {{ ignore: true }}
-    }}
-}}
+cache_key: {
+    main: {
+        path: { ignore: true }
+    }
+}
 
 # Security
 https: true
@@ -867,7 +865,7 @@ minify: true
 rocket_loader: false
 brotli: true
 "#
-        )
+        .to_string()
     }
 
     fn generate_cloudfront_config(&self) -> String {
@@ -969,11 +967,10 @@ impl WasmPerformanceMonitor {
 
     /// 生成性能监控脚本
     pub fn generate_monitoring_script(&self) -> String {
-        format!(
-            r#"
+        r#"
 // WASM Performance Monitoring
-(function() {{
-    const perfData = {{
+(function() {
+    const perfData = {
         loadTime: 0,
         fcp: 0,
         lcp: 0,
@@ -981,106 +978,105 @@ impl WasmPerformanceMonitor {
         cls: 0,
         wasmCompilationTime: 0,
         memoryUsage: 0
-    }};
+    };
 
     // Measure page load time
-    window.addEventListener('load', () => {{
+    window.addEventListener('load', () => {
         const perfData = performance.getEntriesByType('navigation')[0];
-        if (perfData) {{
+        if (perfData) {
             perfData.loadTime = perfData.loadEventEnd - perfData.fetchStart;
-        }}
-    }});
+        }
+    });
 
     // Measure FCP
-    new PerformanceObserver((list) => {{
+    new PerformanceObserver((list) => {
         const entries = list.getEntries();
         const fcpEntry = entries.find(entry => entry.name === 'first-contentful-paint');
-        if (fcpEntry) {{
+        if (fcpEntry) {
             perfData.fcp = Math.round(fcpEntry.startTime);
-        }}
-    }}).observe({{ type: 'paint', buffered: true }});
+        }
+    }).observe({ type: 'paint', buffered: true });
 
     // Measure LCP
-    new PerformanceObserver((list) => {{
+    new PerformanceObserver((list) => {
         const entries = list.getEntries();
         const lastEntry = entries[entries.length - 1];
         perfData.lcp = Math.round(lastEntry.startTime);
-    }}).observe({{ type: 'largest-contentful-paint', buffered: true }});
+    }).observe({ type: 'largest-contentful-paint', buffered: true });
 
     // Measure CLS
     let clsValue = 0;
-    new PerformanceObserver((list) => {{
-        for (const entry of list.getEntries()) {{
-            if (!entry.hadRecentInput) {{
+    new PerformanceObserver((list) => {
+        for (const entry of list.getEntries()) {
+            if (!entry.hadRecentInput) {
                 clsValue += entry.value;
-            }}
-        }}
+            }
+        }
         perfData.cls = clsValue.toFixed(3);
-    }}).observe({{ type: 'layout-shift', buffered: true }});
+    }).observe({ type: 'layout-shift', buffered: true });
 
     // Measure WASM compilation time
     const wasmStartTime = performance.now();
-    WebAssembly.instantiateStreaming(fetch('game_engine.wasm')).then(results => {{
+    WebAssembly.instantiateStreaming(fetch('game_engine.wasm')).then(results => {
         perfData.wasmCompilationTime = Math.round(performance.now() - wasmStartTime);
         return results;
-    }});
+    });
 
     // Measure memory usage
-    setInterval(() => {{
-        if (performance.memory) {{
+    setInterval(() => {
+        if (performance.memory) {
             perfData.memoryUsage = performance.memory.usedJSHeapSize;
-        }}
-    }}, 1000);
+        }
+    }, 1000);
 
     // Send metrics to endpoint
-    function sendMetrics() {{
-        fetch('/api/metrics', {{
+    function sendMetrics() {
+        fetch('/api/metrics', {
             method: 'POST',
-            headers: {{ 'Content-Type': 'application/json' }},
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(perfData)
-        }}).catch(console.error);
-    }}
+        }).catch(console.error);
+    }
 
     // Send metrics on page unload
     window.addEventListener('beforeunload', sendMetrics);
 
     // Expose metrics globally for debugging
     window.wasmPerformanceData = perfData;
-}})();
+})();
 "#
-        )
+        .to_string()
     }
 
     /// 生成Web Vitals报告
     pub fn generate_web_vitals_report(&self) -> String {
-        format!(
-            r#"
+        r#"
 <!-- Web Vitals Report -->
 <script>
-function sendWebVitals() {{
+function sendWebVitals() {
     // Use web-vitals library to measure Core Web Vitals
-    import('https://unpkg.com/web-vitals').then(({{ getCLS, getFID, getLCP }}) => {{
-        getCLS((metric) => {{
+    import('https://unpkg.com/web-vitals').then(({ getCLS, getFID, getLCP }) => {
+        getCLS((metric) => {
             console.log('CLS:', metric.value);
             // Send to analytics
-        }});
+        });
 
-        getFID((metric) => {{
+        getFID((metric) => {
             console.log('FID:', metric.value);
             // Send to analytics
-        }});
+        });
 
-        getLCP((metric) => {{
+        getLCP((metric) => {
             console.log('LCP:', metric.value);
             // Send to analytics
-        }});
-    }});
-}}
+        });
+    });
+}
 
 sendWebVitals();
 </script>
 "#
-        )
+        .to_string()
     }
 
     /// 记录性能指标
