@@ -116,6 +116,11 @@
                               // Performance-critical paths use unchecked indexing after bounds validation.
 )]
 
+// External crates for macros
+// 外部宏crate
+#[macro_use]
+extern crate paste;
+
 // Public module re-exports
 // 公开模块重导出
 pub mod acceleration;

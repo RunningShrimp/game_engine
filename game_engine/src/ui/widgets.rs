@@ -1321,6 +1321,6 @@ mod tests {
         let mut progress = ProgressBar::new();
         progress.set_progress(0.75);
         assert_eq!(progress.progress, 0.75);
-        assert_eq!(progress.get_text(), "75%");
+        assert_eq!(progress.get_formatted_text(), "75%");
     }
 }

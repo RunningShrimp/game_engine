@@ -743,7 +743,7 @@ mod tests {
 
     #[test]
     fn test_performance_optimization_generation() {
-        let optimizer = MobilePerformanceOptimizer::default();
+        let mut optimizer = MobilePerformanceOptimizer::default();
         let optimizations = optimizer
             .update(16.6) // 60 FPS
             .unwrap();

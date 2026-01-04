@@ -209,7 +209,7 @@ mod tests {
 
     #[test]
     fn test_achievement_registration() {
-        let system = AchievementSystem::new(ConsolePlatform::PlayStation5);
+        let mut system = AchievementSystem::new(ConsolePlatform::PlayStation5);
 
         let achievement = Achievement {
             id: "test_achievement".to_string(),

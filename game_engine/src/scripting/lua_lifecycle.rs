@@ -485,8 +485,16 @@ impl LuaLifecycleHooksFactory {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(feature = "mlua")]
+    #[allow(unexpected_cfgs, reason = "mlua is a custom feature")]
+    use mlua::{Lua, Function, Value as LuaValueInternal};
+    #[cfg(feature = "mlua")]
+    #[allow(unexpected_cfgs, reason = "mlua is a custom feature")]
+    use crate::ecs::Entity;
 
     #[test]
+    #[cfg(feature = "mlua")]
+    #[allow(unexpected_cfgs, reason = "mlua is a custom feature")]
     fn test_lua_lifecycle_hooks_creation() {
         let lua: Arc<Mutex<Lua>> = Arc::new(Mutex::new(Lua::new()));
         let entity = Entity::from_raw(1);
@@ -498,6 +506,8 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "mlua")]
+    #[allow(unexpected_cfgs, reason = "mlua is a custom feature")]
     fn test_lua_lifecycle_hooks_enable_disable() {
         let lua: Arc<Mutex<Lua>> = Arc::new(Mutex::new(Lua::new()));
         let entity = Entity::from_raw(1);
@@ -517,6 +527,8 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "mlua")]
+    #[allow(unexpected_cfgs, reason = "mlua is a custom feature")]
     fn test_lua_lifecycle_hooks_factory() {
         let lua: Arc<Mutex<Lua>> = Arc::new(Mutex::new(Lua::new()));
         let entity = Entity::from_raw(1);
@@ -544,6 +556,8 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "mlua")]
+    #[allow(unexpected_cfgs, reason = "mlua is a custom feature")]
     fn test_lua_lifecycle_hooks_integration() {
         use crate::scripting::lifecycle::LifecycleHooksComponent;
 

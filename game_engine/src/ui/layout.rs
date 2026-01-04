@@ -289,11 +289,11 @@ mod tests {
         let layout = HorizontalLayout::default();
         let mut children = vec![
             (
-                ComponentId::new(),
+                ComponentId::new(0),
                 RectTransform::new().with_size(100.0, 50.0),
             ),
             (
-                ComponentId::new(),
+                ComponentId::new(1),
                 RectTransform::new().with_size(100.0, 50.0),
             ),
         ];
