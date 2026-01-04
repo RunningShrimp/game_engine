@@ -456,7 +456,7 @@ mod tests {
     #[test]
     fn test_python_lifecycle_hooks_creation() {
         let context: Arc<Mutex<dyn ScriptContext>> = Arc::new(Mutex::new(PythonContext::new()));
-        let entity = Entity::from_raw(1);
+        let entity = Entity::from_raw_u32(1).unwrap();
 
         let hooks = PythonLifecycleHooks::new("test_script".to_string(), context, entity);
 
@@ -467,7 +467,7 @@ mod tests {
     #[test]
     fn test_python_lifecycle_hooks_enable_disable() {
         let context: Arc<Mutex<dyn ScriptContext>> = Arc::new(Mutex::new(PythonContext::new()));
-        let entity = Entity::from_raw(1);
+        let entity = Entity::from_raw_u32(1).unwrap();
 
         let hooks = PythonLifecycleHooks::new("test_script".to_string(), context, entity);
 
@@ -486,7 +486,7 @@ mod tests {
     #[test]
     fn test_python_lifecycle_hooks_factory() {
         let context: Arc<Mutex<dyn ScriptContext>> = Arc::new(Mutex::new(PythonContext::new()));
-        let entity = Entity::from_raw(1);
+        let entity = Entity::from_raw_u32(1).unwrap();
 
         // 创建简单的Python脚本
         let script_source = r#"
@@ -513,7 +513,7 @@ def on_update(entity, delta_time):
         use crate::scripting::lifecycle::LifecycleHooksComponent;
 
         let context: Arc<Mutex<dyn ScriptContext>> = Arc::new(Mutex::new(PythonContext::new()));
-        let entity = Entity::from_raw(1);
+        let entity = Entity::from_raw_u32(1).unwrap();
 
         // 创建完整的生命周期钩子组件
         let script_source = r#"

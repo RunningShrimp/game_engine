@@ -566,6 +566,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "serde_yaml")]
     fn test_animation_curve_serialization() {
         let curve = AnimationCurve {
             bone_name: "root".to_string(),

@@ -64,7 +64,7 @@ mod tests {
         println!("Testing {} ScriptContext compatibility...", language_name);
 
         // 1. 测试execute方法
-        let result = context.execute("1 + 1");
+        let result = context.execute("1 + 1", None);
         match language_name {
             "Lua" | "JavaScript" => {
                 assert!(
@@ -158,7 +158,7 @@ mod tests {
     /// 测试Lua特定功能
     fn test_lua_specific_features(context: &mut LuaContext) {
         // 测试函数调用
-        let _ = context.execute("function add(a, b) return a + b end");
+        let _ = context.execute("function add(a, b) return a + b end", None);
 
         let args = vec![
             crate::scripting::LuaValue::Number(3.0),
@@ -173,7 +173,7 @@ mod tests {
         );
 
         // 测试表操作
-        let _ = context.execute("t = {x = 10, y = 20}");
+        let _ = context.execute("t = {x = 10, y = 20}", None);
         let table_value = context.get_global("t");
 
         // 表可能被转换为Object或Array，只要不是None就算成功
@@ -184,7 +184,7 @@ mod tests {
         }
 
         // 测试引擎API绑定
-        let result = context.execute("engine.log('Lua API test')");
+        let result = context.execute("engine.log('Lua API test')", None);
         assert!(
             result.is_ok(),
             "Lua engine API should work, got {:?}",
@@ -209,7 +209,7 @@ mod tests {
         );
 
         // 测试引擎API绑定
-        let result = context.execute("Engine.log('JS API test')");
+        let result = context.execute("Engine.log('JS API test')", None);
         assert!(
             matches!(result, ScriptResult::Success(_) | ScriptResult::Void),
             "JavaScript engine API should work, got {:?}",
@@ -374,8 +374,8 @@ mod tests {
         let mut js_context = JavaScriptContext::new();
 
         // 测试语法错误
-        let lua_syntax_error = lua_context.execute("invalid syntax here");
-        let js_syntax_error = js_context.execute("invalid syntax here");
+        let lua_syntax_error = lua_context.execute("invalid syntax here", None);
+        let js_syntax_error = js_context.execute("invalid syntax here", None);
 
         assert!(
             lua_syntax_error.is_err(),

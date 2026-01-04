@@ -497,7 +497,7 @@ mod tests {
     #[allow(unexpected_cfgs, reason = "mlua is a custom feature")]
     fn test_lua_lifecycle_hooks_creation() {
         let lua: Arc<Mutex<Lua>> = Arc::new(Mutex::new(Lua::new()));
-        let entity = Entity::from_raw(1);
+        let entity = Entity::from_raw_u32(1).unwrap();
 
         let hooks = LuaLifecycleHooks::new("test_script".to_string(), lua, entity);
 
@@ -510,7 +510,7 @@ mod tests {
     #[allow(unexpected_cfgs, reason = "mlua is a custom feature")]
     fn test_lua_lifecycle_hooks_enable_disable() {
         let lua: Arc<Mutex<Lua>> = Arc::new(Mutex::new(Lua::new()));
-        let entity = Entity::from_raw(1);
+        let entity = Entity::from_raw_u32(1).unwrap();
 
         let hooks = LuaLifecycleHooks::new("test_script".to_string(), lua, entity);
 
@@ -531,7 +531,7 @@ mod tests {
     #[allow(unexpected_cfgs, reason = "mlua is a custom feature")]
     fn test_lua_lifecycle_hooks_factory() {
         let lua: Arc<Mutex<Lua>> = Arc::new(Mutex::new(Lua::new()));
-        let entity = Entity::from_raw(1);
+        let entity = Entity::from_raw_u32(1).unwrap();
 
         // 创建简单的Lua脚本
         let script_source = r#"
@@ -562,7 +562,7 @@ mod tests {
         use crate::scripting::lifecycle::LifecycleHooksComponent;
 
         let lua: Arc<Mutex<Lua>> = Arc::new(Mutex::new(Lua::new()));
-        let entity = Entity::from_raw(1);
+        let entity = Entity::from_raw_u32(1).unwrap();
 
         // 创建完整的生命周期钩子组件
         let script_source = r#"

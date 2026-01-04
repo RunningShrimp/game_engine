@@ -371,7 +371,7 @@ mod tests {
 
     #[test]
     fn test_occlusion_without_physics() {
-        let occlusion = AudioOcclusion::new();
+        let mut occlusion = AudioOcclusion::new(44100.0);
         let result = occlusion.compute_occlusion((0.0, 0.0, 0.0), (10.0, 0.0, 0.0));
 
         assert_eq!(result.occlusion_factor, 0.0);
@@ -393,7 +393,7 @@ mod tests {
     #[test]
     fn test_occlusion_clamping_in_compute() {
         // 测试compute_occlusion会对结果进行限制
-        let occlusion = AudioOcclusion::new();
+        let mut occlusion = AudioOcclusion::new(44100.0);
 
         // 没有物理世界时，结果应该是0（无遮挡）
         let result = occlusion.compute_occlusion((0.0, 0.0, 0.0), (10.0, 0.0, 0.0));

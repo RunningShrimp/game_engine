@@ -231,7 +231,7 @@ mod tests {
 
     #[test]
     fn test_simple_new() {
-        let s = TestStruct::new("hello".to_string(), 42);
+        let s = TestStruct::new("hello".to_string(), 42, Vec::new());
         assert_eq!(s.field1, "hello");
         assert_eq!(s.field2, 42);
         assert!(s.private_field.is_empty());

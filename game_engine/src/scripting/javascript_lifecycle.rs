@@ -452,7 +452,7 @@ mod tests {
     #[test]
     fn test_javascript_lifecycle_hooks_creation() {
         let context: Arc<Mutex<dyn ScriptContext>> = Arc::new(Mutex::new(JavaScriptContext::new()));
-        let entity = Entity::from_raw(1);
+        let entity = Entity::from_raw_u32(1).unwrap();
 
         let hooks = JavaScriptLifecycleHooks::new("test_script".to_string(), context, entity);
 
@@ -463,7 +463,7 @@ mod tests {
     #[test]
     fn test_javascript_lifecycle_hooks_enable_disable() {
         let context: Arc<Mutex<dyn ScriptContext>> = Arc::new(Mutex::new(JavaScriptContext::new()));
-        let entity = Entity::from_raw(1);
+        let entity = Entity::from_raw_u32(1).unwrap();
 
         let hooks = JavaScriptLifecycleHooks::new("test_script".to_string(), context, entity);
 
@@ -482,7 +482,7 @@ mod tests {
     #[test]
     fn test_javascript_lifecycle_hooks_factory() {
         let context: Arc<Mutex<dyn ScriptContext>> = Arc::new(Mutex::new(JavaScriptContext::new()));
-        let entity = Entity::from_raw(1);
+        let entity = Entity::from_raw_u32(1).unwrap();
 
         // 创建简单的JavaScript脚本
         let script_source = r#"
@@ -511,7 +511,7 @@ mod tests {
         use crate::scripting::lifecycle::LifecycleHooksComponent;
 
         let context: Arc<Mutex<dyn ScriptContext>> = Arc::new(Mutex::new(JavaScriptContext::new()));
-        let entity = Entity::from_raw(1);
+        let entity = Entity::from_raw_u32(1).unwrap();
 
         // 创建完整的生命周期钩子组件
         let script_source = r#"
@@ -536,7 +536,7 @@ mod tests {
         )
         .unwrap();
 
-        let component = LifecycleHooksComponent::new(hooks);
+        let mut component = LifecycleHooksComponent::new(hooks);
         assert!(component.enabled);
 
         // 测试调用钩子
