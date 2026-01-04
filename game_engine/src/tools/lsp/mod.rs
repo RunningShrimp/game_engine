@@ -42,6 +42,7 @@ pub mod formatting;
 pub mod hover;
 pub mod registry;
 pub mod server;
+pub mod signature;
 pub mod symbols;
 
 // Re-exports

@@ -179,6 +179,11 @@ impl GIDebugVisualizer {
         self.show_probes = show;
     }
 
+    /// 获取是否显示探针
+    pub fn show_probes(&self) -> bool {
+        self.show_probes
+    }
+
     /// 设置是否显示辐照度
     pub fn set_show_irradiance(&mut self, show: bool) {
         self.show_irradiance = show;
@@ -187,6 +192,11 @@ impl GIDebugVisualizer {
     /// 设置探针可视化模式
     pub fn set_probe_visualization(&mut self, mode: ProbeVisualization) {
         self.probe_visualization = mode;
+    }
+
+    /// 获取探针可视化模式
+    pub fn probe_visualization(&self) -> ProbeVisualization {
+        self.probe_visualization
     }
 
     /// 渲染调试信息

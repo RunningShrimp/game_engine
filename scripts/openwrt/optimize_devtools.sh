@@ -69,9 +69,17 @@ ssh_run '
     # For dev tools stability, avoid forced closes and avoid touching OpenAI/Copilot flows.
     uci set openclash.config.stream_auto_select_close_con="0" 2>/dev/null || true
     uci set openclash.config.stream_auto_select_openai="0" 2>/dev/null || true
+
+    # The periodic streaming auto-select tasks themselves can also trigger config writes
+    # and OpenClash restarts, which will drop long-lived HTTP/2/WebSocket sessions.
+    # For stability (Copilot/Cursor), disable these background tasks.
+    uci set openclash.config.stream_auto_select="0" 2>/dev/null || true
+    uci set openclash.config.auto_restart="0" 2>/dev/null || true
+    uci set openclash.config.smart_auto_switch="0" 2>/dev/null || true
+    uci set openclash.config.auto_smart_switch="0" 2>/dev/null || true
     uci commit openclash 2>/dev/null || true
     /etc/init.d/openclash restart >/dev/null 2>&1 || true
-    echo "Applied: stream_auto_select_close_con=0, stream_auto_select_openai=0"
+    echo "Applied: stream_auto_select=0, auto_restart=0, smart_auto_switch=0, auto_smart_switch=0, stream_auto_select_close_con=0, stream_auto_select_openai=0"
   else
     echo "OpenClash not enabled, skip"
   fi

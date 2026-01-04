@@ -114,6 +114,43 @@ impl ScriptValue {
             _ => None,
         }
     }
+
+    /// 检查值是否为Some（非Null）
+    pub fn is_some(&self) -> bool {
+        !matches!(self, ScriptValue::Null)
+    }
+
+    /// 检查值是否为None（Null）
+    pub fn is_none(&self) -> bool {
+        matches!(self, ScriptValue::Null)
+    }
+
+    /// 解包值（简化版本，直接克隆）
+    pub fn unwrap(&self) -> ScriptValue {
+        self.clone()
+    }
+}
+
+impl ScriptResult {
+    /// 检查结果是否成功
+    pub fn is_success(&self) -> bool {
+        matches!(self, ScriptResult::Success(_) | ScriptResult::Void)
+    }
+
+    /// 检查结果是否失败
+    pub fn is_error(&self) -> bool {
+        matches!(self, ScriptResult::Error(_))
+    }
+
+    /// 检查结果是否有值（非Void且非Error）
+    pub fn is_some(&self) -> bool {
+        matches!(self, ScriptResult::Success(_))
+    }
+
+    /// 检查结果是否为None（Void或Error）
+    pub fn is_none(&self) -> bool {
+        matches!(self, ScriptResult::Void | ScriptResult::Error(_))
+    }
 }
 
 /// 脚本系统 - 管理多个脚本上下文

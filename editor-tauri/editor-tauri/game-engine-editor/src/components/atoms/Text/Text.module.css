@@ -1,0 +1,272 @@
+/**
+ * Text Atom Component Styles
+ *
+ * 使用CSS Modules实现文本组件的样式
+ */
+
+/* 基础文本样式 */
+.text {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* 标题变体 */
+.h1 {
+  font-size: 2.25rem;
+  font-weight: 700;
+  line-height: 2.5rem;
+  letter-spacing: -0.02em;
+}
+
+.h2 {
+  font-size: 1.875rem;
+  font-weight: 700;
+  line-height: 2.25rem;
+  letter-spacing: -0.02em;
+}
+
+.h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 2rem;
+  letter-spacing: -0.01em;
+}
+
+.h4 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.75rem;
+}
+
+.h5 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.5rem;
+}
+
+.h6 {
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.5rem;
+}
+
+/* 正文变体 */
+.body {
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.body-lg {
+  font-size: 1.125rem;
+  font-weight: 400;
+  line-height: 1.75;
+}
+
+.body-sm {
+  font-size: 0.875rem;
+  font-weight: 400;
+  line-height: 1.25rem;
+}
+
+/* 说明文字 */
+.caption {
+  font-size: 0.75rem;
+  font-weight: 400;
+  line-height: 1rem;
+}
+
+.overline {
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.subtitle1 {
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.75rem;
+  letter-spacing: 0.00938em;
+}
+
+.subtitle2 {
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.375rem;
+  letter-spacing: 0.00714em;
+}
+
+/* 按钮文字 */
+.button {
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02857em;
+}
+
+/* 代码 */
+.code {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.875rem;
+  font-weight: 400;
+  line-height: 1.25rem;
+  background-color: rgba(0, 0, 0, 0.05);
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.25rem;
+}
+
+/* 尺寸变体 */
+.size-xs {
+  font-size: 0.75rem;
+}
+
+.size-sm {
+  font-size: 0.875rem;
+}
+
+.size-base {
+  font-size: 1rem;
+}
+
+.size-lg {
+  font-size: 1.125rem;
+}
+
+.size-xl {
+  font-size: 1.25rem;
+}
+
+.size-2xl {
+  font-size: 1.5rem;
+}
+
+.size-3xl {
+  font-size: 1.875rem;
+}
+
+.size-4xl {
+  font-size: 2.25rem;
+}
+
+.size-5xl {
+  font-size: 3rem;
+}
+
+.size-6xl {
+  font-size: 3.75rem;
+}
+
+/* 字体粗细 */
+.weight-thin {
+  font-weight: 100;
+}
+
+.weight-extralight {
+  font-weight: 200;
+}
+
+.weight-light {
+  font-weight: 300;
+}
+
+.weight-normal {
+  font-weight: 400;
+}
+
+.weight-medium {
+  font-weight: 500;
+}
+
+.weight-semibold {
+  font-weight: 600;
+}
+
+.weight-bold {
+  font-weight: 700;
+}
+
+.weight-extrabold {
+  font-weight: 800;
+}
+
+.weight-black {
+  font-weight: 900;
+}
+
+/* 文本对齐 */
+.align-left {
+  text-align: left;
+}
+
+.align-center {
+  text-align: center;
+}
+
+.align-right {
+  text-align: right;
+}
+
+.align-justify {
+  text-align: justify;
+}
+
+/* 斜体 */
+.italic {
+  font-style: italic;
+}
+
+/* 文本装饰 */
+.decoration-none {
+  text-decoration: none;
+}
+
+.decoration-underline {
+  text-decoration: underline;
+}
+
+.decoration-line-through {
+  text-decoration: line-through;
+}
+
+/* 文本截断（单行） */
+.truncate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 多行省略 */
+.multiline {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* 响应式设计 */
+@media (max-width: 640px) {
+  .h1 {
+    font-size: 1.875rem;
+    line-height: 2.25rem;
+  }
+
+  .h2 {
+    font-size: 1.5rem;
+    line-height: 2rem;
+  }
+
+  .h3 {
+    font-size: 1.25rem;
+    line-height: 1.75rem;
+  }
+}
+
+/* 暗色主题支持 */
+@media (prefers-color-scheme: dark) {
+  .code {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+}

@@ -1,0 +1,226 @@
+{
+  "Game Engine - Main Function": {
+    "prefix": "gemain",
+    "description": "Game Engine main function template",
+    "body": [
+      "use game_engine::prelude::*;",
+      "",
+      "fn main() {",
+      "    App::new()",
+      "        .add_plugins(DefaultPlugins)",
+      "        .add_system(${1:system_name})",
+      "        .run();",
+      "}"
+    ]
+  },
+  "Game Engine - System": {
+    "prefix": "gesys",
+    "description": "Game Engine system function",
+    "body": [
+      "fn ${1:system_name}(${2:query}: Query<${3:&Component}>) {",
+      "    ${0:// TODO: implement system}",
+      "}"
+    ]
+  },
+  "Game Engine - Resource System": {
+    "prefix": "gesysres",
+    "description": "Game Engine system with resource access",
+    "body": [
+      "fn ${1:system_name}(${2:query}: Query<${3:&Component}>, ${4:res}: Res<${5:Resource}>) {",
+      "    ${0:// TODO: implement system}",
+      "}"
+    ]
+  },
+  "Game Engine - Event System": {
+    "prefix": "gesysevent",
+    "description": "Game Engine event system",
+    "body": [
+      "fn ${1:system_name}(mut ${2:events}: EventReader<${3:EventType}>) {",
+      "    for event in ${2:events}.iter() {",
+      "        ${0:// TODO: handle event}",
+      "    }",
+      "}"
+    ]
+  },
+  "Game Engine - Component": {
+    "prefix": "gecomp",
+    "description": "Game Engine component definition",
+    "body": [
+      "#[derive(Component, Debug, ${1:Reflect})]",
+      "pub struct ${2:ComponentName} {",
+      "    ${3:pub field}: ${4:Type},",
+      "}"
+    ]
+  },
+  "Game Engine - Resource": {
+    "prefix": "geres",
+    "description": "Game Engine resource definition",
+    "body": [
+      "#[derive(Resource, Debug)]",
+      "pub struct ${1:ResourceName} {",
+      "    ${2:pub field}: ${3:Type},",
+      "}"
+    ]
+  },
+  "Game Engine - Event": {
+    "prefix": "geevent",
+    "description": "Game Engine event definition",
+    "body": [
+      "#[derive(Event, Debug)]",
+      "pub struct ${1:EventName} {",
+      "    ${2:pub field}: ${3:Type},",
+      "}"
+    ]
+  },
+  "Game Engine - Plugin": {
+    "prefix": "geplugin",
+    "description": "Game Engine plugin",
+    "body": [
+      "#[derive(Default)]",
+      "pub struct ${1:PluginName}Plugin;",
+      "",
+      "impl Plugin for ${1:PluginName}Plugin {",
+      "    fn build(&self, app: &mut App) {",
+      "        app.add_systems(${2:Update}, ${3:system_name});",
+      "    }",
+      "}"
+    ]
+  },
+  "Game Engine - State": {
+    "prefix": "gestate",
+    "description": "Game Engine state definition",
+    "body": [
+      "#[derive(States, Debug, Clone, Copy, Default, Eq, PartialEq, Hash)]",
+      "pub enum ${1:StateName} {",
+      "    #[default]",
+      "    ${2:Variant1},",
+      "    ${3:Variant2},",
+      "}"
+    ]
+  },
+  "Game Engine - Query Filter": {
+    "prefix": "gequery",
+    "description": "Game Engine query with filters",
+    "body": [
+      "Query<${1:&Component}, ${2:With<AnotherComponent>}>"
+    ]
+  },
+  "Game Engine - Entity Command": {
+    "prefix": "gecmd",
+    "description": "Game Engine entity commands",
+    "body": [
+      "fn ${1:system_name}(mut ${2:commands}: Commands) {",
+      "    ${2:commands}.spawn(${3:ComponentBundle});",
+      "}"
+    ]
+  },
+  "Game Engine - Spawn Entity": {
+    "prefix": "gespawn",
+    "description": "Spawn a new entity with components",
+    "body": [
+      "commands.spawn((${1:Component1}, ${2:Component2}));"
+    ]
+  },
+  "Game Engine - Asset Loading": {
+    "prefix": "geasset",
+    "description": "Game Engine asset loading",
+    "body": [
+      "fn ${1:system_name}(assets: Res<AssetServer>, mut ${2:res}: ResMut<${3:Handle<Texture>}>) {",
+      "    *${2:res} = assets.load(\"${4:path/to/asset.png}\");",
+      "}"
+    ]
+  },
+  "Game Engine - Timer": {
+    "prefix": "getimer",
+    "description": "Game Engine timer resource",
+    "body": [
+      "#[derive(Resource)]",
+      "pub struct ${1:TimerName} {",
+      "    timer: Timer,",
+      "}",
+      "",
+      "impl ${1:TimerName} {",
+      "    pub fn new(duration: Duration) -> Self {",
+      "        Self {",
+      "            timer: Timer::new(duration, TimerMode::Repeating),",
+      "        }",
+      "    }",
+      "}"
+    ]
+  },
+  "Game Engine - Input System": {
+    "prefix": "geinput",
+    "description": "Game Engine input handling",
+    "body": [
+      "fn ${1:system_name}(",
+      "    keys: Res<Input<KeyCode>>,",
+      "    ${2:mouse}: Res<Input<MouseButton>>",
+      ") {",
+      "    if keys.just_pressed(KeyCode::${3:Space}) {",
+      "        ${0:// TODO: handle input}",
+      "    }",
+      "}"
+    ]
+  },
+  "Game Engine - Transform": {
+    "prefix": "getransform",
+    "description": "Game Engine transform bundle",
+    "body": [
+      "TransformBundle::from(Transform::from_translation(Vec3::new(${1:x}, ${2:y}, ${3:z})))"
+    ]
+  },
+  "Game Engine - Camera Setup": {
+    "prefix": "gecamera",
+    "description": "Game Engine 2D camera setup",
+    "body": [
+      "commands.spawn(Camera2dBundle {",
+      "    transform: Transform::from_translation(Vec3::new(${1:0.0}, ${2:0.0}, ${3:999.9})),",
+      "    ..default()",
+      "});"
+    ]
+  },
+  "Game Engine - Sprite": {
+    "prefix": "gesprite",
+    "description": "Game Engine sprite bundle",
+    "body": [
+      "commands.spawn(SpriteBundle {",
+      "    texture: assets.load(\"${1:path/to/sprite.png}\"),",
+      "    transform: Transform::from_scale(Vec3::splat(${2:1.0})),",
+      "    ..default()",
+      "});"
+    ]
+  },
+  "Game Engine - Marker Component": {
+    "prefix": "gemarker",
+    "description": "Game Engine marker component",
+    "body": [
+      "#[derive(Component)]",
+      "pub struct ${1:MarkerName};"
+    ]
+  },
+  "Game Engine - System Set": {
+    "prefix": "gesysset",
+    "description": "Game Engine system set",
+    "body": [
+      "#[derive(SystemSet, Debug, Clone, Copy, PartialEq, Eq, Hash)]",
+      "pub struct ${1:SetName};",
+      "",
+      "// Configure in app:",
+      "// .configure_sets(${2:Update}.run_if(${3:condition}).in_set(${1:SetName}))"
+    ]
+  },
+  "Game Engine - Insert Resource": {
+    "prefix": "geinsertres",
+    "description": "Insert a resource",
+    "body": [
+      "app.insert_resource(${1:Resource}::new());"
+    ]
+  },
+  "Game Engine - Init Resource": {
+    "prefix": "geinitres",
+    "description": "Initialize a resource",
+    "body": [
+      "app.init_resource::<${1:Resource}>();"
+    ]
+  }
+}

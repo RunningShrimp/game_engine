@@ -1,0 +1,182 @@
+/* Resizable Panel Container */
+.resizable-panel {
+  position: relative;
+  display: flex;
+  height: 100%;
+  overflow: hidden;
+  transition: box-shadow 0.2s ease;
+}
+
+.resizable-panel.dragging {
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Panel Content */
+.resizable-panel-content {
+  flex: 1;
+  overflow: auto;
+  height: 100%;
+}
+
+/* Panel Handle */
+.resizable-panel-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  cursor: ew-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  transition: background 0.2s ease;
+  z-index: 10;
+}
+
+.resizable-panel-handle:hover,
+.resizable-panel-handle.hovered {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.resizable-panel-handle.dragging {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+/* Left Handle */
+.resizable-panel-handle-left {
+  right: 0;
+}
+
+.resizable-panel-handle-left:hover,
+.resizable-panel-handle-left.hovered {
+  background: linear-gradient(to left, rgba(0, 0, 0, 0.03), transparent);
+}
+
+.resizable-panel-handle-left.dragging {
+  background: linear-gradient(to left, rgba(0, 0, 0, 0.05), transparent);
+}
+
+/* Right Handle */
+.resizable-panel-handle-right {
+  left: 0;
+}
+
+.resizable-panel-handle-right:hover,
+.resizable-panel-handle-right.hovered {
+  background: linear-gradient(to right, rgba(0, 0, 0, 0.03), transparent);
+}
+
+.resizable-panel-handle-right.dragging {
+  background: linear-gradient(to right, rgba(0, 0, 0, 0.05), transparent);
+}
+
+/* Handle Grip */
+.handle-grip {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.resizable-panel-handle:hover .handle-grip,
+.resizable-panel-handle.hovered .handle-grip,
+.resizable-panel-handle.dragging .handle-grip {
+  opacity: 1;
+}
+
+.grip-line {
+  width: 3px;
+  height: 3px;
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 50%;
+}
+
+.resizable-panel-handle-left .handle-grip {
+  align-items: flex-end;
+  margin-right: 2px;
+}
+
+.resizable-panel-handle-right .handle-grip {
+  align-items: flex-start;
+  margin-left: 2px;
+}
+
+/* Dark Theme Support */
+@media (prefers-color-scheme: dark) {
+  .grip-line {
+    background-color: rgba(255, 255, 255, 0.3);
+  }
+
+  .resizable-panel-handle:hover,
+  .resizable-panel-handle.hovered {
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  .resizable-panel-handle.dragging {
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .resizable-panel-handle-left:hover,
+  .resizable-panel-handle-left.hovered {
+    background: linear-gradient(to left, rgba(255, 255, 255, 0.05), transparent);
+  }
+
+  .resizable-panel-handle-left.dragging {
+    background: linear-gradient(to left, rgba(255, 255, 255, 0.08), transparent);
+  }
+
+  .resizable-panel-handle-right:hover,
+  .resizable-panel-handle-right.hovered {
+    background: linear-gradient(to right, rgba(255, 255, 255, 0.05), transparent);
+  }
+
+  .resizable-panel-handle-right.dragging {
+    background: linear-gradient(to right, rgba(255, 255, 255, 0.08), transparent);
+  }
+
+  .resizable-panel.dragging {
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+  }
+}
+
+/* Prevent text selection during drag */
+.resizable-panel.dragging * {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+}
+
+/* Smooth transitions */
+.resizable-panel-handle {
+  -webkit-transition: background 0.2s ease;
+  -moz-transition: background 0.2s ease;
+  -o-transition: background 0.2s ease;
+  transition: background 0.2s ease;
+}
+
+.handle-grip {
+  -webkit-transition: opacity 0.2s ease;
+  -moz-transition: opacity 0.2s ease;
+  -o-transition: opacity 0.2s ease;
+  transition: opacity 0.2s ease;
+}
+
+/* Accessibility */
+.resizable-panel-handle:focus-visible {
+  outline: 2px solid var(--vscode-focusBorder, #007acc);
+  outline-offset: 2px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .resizable-panel-handle {
+    width: 12px;
+  }
+
+  .grip-line {
+    width: 4px;
+    height: 4px;
+  }
+}

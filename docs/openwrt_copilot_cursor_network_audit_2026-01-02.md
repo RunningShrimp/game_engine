@@ -31,11 +31,16 @@
 
 ## 2. 发现的问题（与 Copilot/Cursor 的 “net::ERR_CONNECTION_CLOSED” 高相关）
 
-### P0：OpenClash 自动选节点/解锁检测导致连接被主动关闭
+### P0：OpenClash 自动任务/重启导致连接被中断（高优先级）
 
-现象：在路由器侧 `/tmp/openclash.log` 可见 OpenClash 每隔数分钟执行一次“Auto Select Proxy … Unlock”，其中包含 OpenAI/相关组的检测与可能的策略切换。
+现象：在路由器侧 `/tmp/openclash.log` 可见 OpenClash 每隔数分钟执行一次“Auto Select Proxy … Unlock”。此外，在实际报错时刻附近可见 OpenClash 因检测到 `/etc/config/openclash` 被修改而执行一次完整重启（Stop Core → 删除/重建防火墙规则 → 重启 dnsmasq → Start Core）。
 
-关键风险点：当 `openclash.config.stream_auto_select_close_con='1'` 时，OpenClash 在切换/更新期间可能**主动关闭现有连接**，浏览器/VS Code 侧会表现为：
+关键风险点：
+
+- 当 `openclash.config.stream_auto_select_close_con='1'` 时，OpenClash 在切换/更新期间可能**主动关闭现有连接**。
+- 即便 `close_con=0`，如果后台任务导致 OpenClash 发生重启（或智能切换触发策略/规则重载），长连接/HTTP2/WebSocket 也会被打断。
+
+浏览器/VS Code 侧会表现为：
 
 - `Sorry, there was a network error. Please try again later.`
 - `Error Code: net::ERR_CONNECTION_CLOSED`
@@ -45,6 +50,10 @@
 ```sh
 uci set openclash.config.stream_auto_select_close_con='0'
 uci set openclash.config.stream_auto_select_openai='0'
+uci set openclash.config.stream_auto_select='0'
+uci set openclash.config.auto_restart='0'
+uci set openclash.config.smart_auto_switch='0'
+uci set openclash.config.auto_smart_switch='0'
 uci commit openclash
 /etc/init.d/openclash restart
 ```

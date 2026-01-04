@@ -170,45 +170,47 @@ macro_rules! builder {
             $(,)?
         }
     ) => {
-        $(#[$struct_meta])*
-        pub struct $struct_name {
-            $(
-                $(#[$field_meta])*
-                $field_vis $field_name : $field_ty,
-            )*
-        }
-
-        impl $struct_name {
-            /// 创建Builder
-            pub fn builder() -> $struct_name Builder {
-                $struct_name Builder::default()
+        paste! {
+            $(#[$struct_meta])*
+            pub struct $struct_name {
+                $(
+                    $(#[$field_meta])*
+                    $field_vis $field_name : $field_ty,
+                )*
             }
-        }
 
-        #[derive(Default)]
-        pub struct $struct_name Builder {
-            $(
-                $field_name : std::option::Option<$field_ty>,
-            )*
-        }
-
-        impl $struct_name Builder {
-            $(
-                pub fn $field_name(mut self, value: $field_ty) -> Self {
-                    self.$field_name = Some(value);
-                    self
+            impl $struct_name {
+                /// 创建Builder
+                pub fn builder() -> [<$struct_name Builder>] {
+                    [<$struct_name Builder>]::default()
                 }
-            )*
+            }
 
-            pub fn build(self) -> Result<$struct_name, String> {
-                Ok($struct_name {
-                    $(
-                        $field_name : self.$field_name.ok_or_else(|| concat!(
-                            "Missing field: ",
-                            stringify!($field_name)
-                        ).to_string())?,
-                    )*
-                })
+            #[derive(Default)]
+            pub struct [<$struct_name Builder>] {
+                $(
+                    $field_name : std::option::Option<$field_ty>,
+                )*
+            }
+
+            impl [<$struct_name Builder>] {
+                $(
+                    pub fn $field_name(mut self, value: $field_ty) -> Self {
+                        self.$field_name = Some(value);
+                        self
+                    }
+                )*
+
+                pub fn build(self) -> Result<$struct_name, String> {
+                    Ok($struct_name {
+                        $(
+                            $field_name : self.$field_name.ok_or_else(|| concat!(
+                                "Missing field: ",
+                                stringify!($field_name)
+                            ).to_string())?,
+                        )*
+                    })
+                }
             }
         }
     };

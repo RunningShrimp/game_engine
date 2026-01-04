@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { Toolbar } from './components/Toolbar/Toolbar';
+import { Activity, Folder, Film } from 'lucide-react';
+import { Toolbar } from './components/organisms';
 import { EntityTree } from './components/EntityTree/EntityTree';
 import { Viewport } from './components/Viewport/Viewport';
 import { PropertyInspector } from './components/PropertyInspector/PropertyInspector';
@@ -24,6 +25,7 @@ import {
 } from './types/commands';
 import { HistoryManager } from './utils/HistoryManager';
 import './App.css';
+import './styles/animations.css';
 
 // Sample data for demonstration
 const sampleEntities: Entity[] = [
@@ -444,16 +446,16 @@ function App() {
       </div>
 
       {/* Bottom Status Bar */}
-      <div className="h-8 bg-slate-800 border-t border-slate-700 px-4 flex items-center justify-between text-xs text-slate-400">
+      <div className="h-8 bg-slate-800 border-t border-slate-700 px-4 flex items-center justify-between text-xs text-slate-400 animate-fade-in">
         <div className="flex items-center gap-4">
-          <span>Game Engine Editor v0.1.0</span>
+          <span className="animate-fade-in">Game Engine Editor v0.1.0</span>
           <span>|</span>
           <span>{entities.length} entities</span>
           <span>|</span>
           <span>{selectedEntities.length} selected</span>
         </div>
         <div className="flex items-center gap-4">
-          <span className={isPlaying ? 'text-green-400' : 'text-slate-400'}>
+          <span className={isPlaying ? 'text-green-400 animate-pulse-custom' : 'text-slate-400'}>
             {isPlaying ? (isPaused ? '● Paused' : '● Playing') : '○ Stopped'}
           </span>
           <span>|</span>
@@ -461,43 +463,53 @@ function App() {
           <span>|</span>
           <button
             onClick={() => setShowPerformanceDashboard(true)}
-            className="hover:text-slate-200 transition-colors"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md hover:bg-slate-700 active:bg-slate-600 transition-smooth hover-lift text-slate-300 hover:text-slate-100"
             title="Open Performance Monitor (F12)"
+            aria-label="Open Performance Monitor"
           >
-            📊 Performance
+            <Activity className="w-3.5 h-3.5" />
+            <span>Performance</span>
           </button>
           <span>|</span>
           <button
             onClick={() => setShowAssetBrowser(true)}
-            className="hover:text-slate-200 transition-colors"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md hover:bg-slate-700 active:bg-slate-600 transition-smooth hover-lift text-slate-300 hover:text-slate-100"
             title="Open Asset Browser (Ctrl+O)"
+            aria-label="Open Asset Browser"
           >
-            📁 Assets
+            <Folder className="w-3.5 h-3.5" />
+            <span>Assets</span>
           </button>
           <span>|</span>
           <button
             onClick={() => setShowTimeline(prev => !prev)}
-            className="hover:text-slate-200 transition-colors"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md hover:bg-slate-700 active:bg-slate-600 transition-smooth hover-lift text-slate-300 hover:text-slate-100"
             title="Toggle Timeline (Ctrl+T)"
+            aria-label="Toggle Timeline"
           >
-            🎬 Timeline
+            <Film className="w-3.5 h-3.5" />
+            <span>Timeline</span>
           </button>
         </div>
       </div>
 
       {/* Performance Dashboard - Lazy Loaded */}
       {showPerformanceDashboard && (
-        <LazyPerformanceDashboard onClose={() => setShowPerformanceDashboard(false)} />
+        <div className="animate-scale-in modal-enter">
+          <LazyPerformanceDashboard onClose={() => setShowPerformanceDashboard(false)} />
+        </div>
       )}
 
       {/* Asset Browser - Lazy Loaded */}
       {showAssetBrowser && (
-        <LazyAssetBrowser isOpen={showAssetBrowser} onClose={() => setShowAssetBrowser(false)} />
+        <div className="animate-scale-in modal-enter">
+          <LazyAssetBrowser isOpen={showAssetBrowser} onClose={() => setShowAssetBrowser(false)} />
+        </div>
       )}
 
       {/* Timeline - Lazy Loaded */}
       {showTimeline && (
-        <div className="fixed bottom-0 left-0 right-0 z-50">
+        <div className="fixed bottom-0 left-0 right-0 z-50 animate-slide-in-bottom panel-slide-in-bottom">
           <LazyTimeline
             clip={currentClip}
             onClipChange={(clip) => {

@@ -28,6 +28,12 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "snippets": [
+      {
+        "language": "rust",
+        "path": "./snippets/game-engine.code-snippets"
+      }
+    ],
     "commands": [
       {
         "command": "gameEngine.restartLSP",
@@ -149,5 +155,22 @@
     "url": "https://github.com/game-engine/vscode-extension/issues"
   },
   "homepage": "https://github.com/game-engine/vscode-extension#readme",
-  "license": "MIT"
+  "license": "MIT",
+  "icon": "icon.png",
+  "galleryBanner": {
+    "color": "#1e1e1e",
+    "theme": "dark"
+  },
+  "badges": [
+    {
+      "url": "https://img.shields.io/badge/LSP-Protocol-blue",
+      "href": "https://microsoft.github.io/language-server-protocol/",
+      "description": "LSP Protocol"
+    },
+    {
+      "url": "https://img.shields.io/badge/Rust-1.70+-orange",
+      "href": "https://www.rust-lang.org/",
+      "description": "Rust 1.70+"
+    }
+  ]
 }

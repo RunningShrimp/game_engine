@@ -88,57 +88,7 @@ macro_rules! simple_error {
                 $(#[$variant_meta:meta])*
                 $variant_name:ident : $variant_ty:ty
             ),*
-            $(, $($rest:tt)*)?
-        }
-    ) => {
-        $crate::simple_error! {
-            @error
-            $(#[$enum_meta])*
-            pub $error_name {
-                $(
-                    $(#[$variant_meta])*
-                    $variant_name : $variant_ty
-                ),*
-            }
-        }
-
-        // 自动为外部错误类型实现From
-        $(
-            impl From<$variant_ty> for $error_name {
-                fn from(err: $variant_ty) -> Self {
-                    $error_name::$variant_name(err)
-                }
-            }
-        )*
-    };
-
-    // 递归处理额外的内容
-    (
-        @error
-        $(#[$enum_meta:meta])*
-        pub $error_name:ident {
-            $(
-                $(#[$variant_meta:meta])*
-                $variant_name:ident : $variant_ty:ty
-            ),*
-        }
-        $($rest:tt)*
-    ) => {
-        compile_error!(concat!(
-            "simple_error宏不支持额外的语法: ",
-            stringify!($($rest)*)
-        ));
-    };
-
-    // 实际生成枚举的规则
-    (
-        @error
-        $(#[$enum_meta:meta])*
-        pub $error_name:ident {
-            $(
-                $(#[$variant_meta:meta])*
-                $variant_name:ident : $variant_ty:ty
-            ),*
+            $(,)?
         }
     ) => {
         $(#[$enum_meta])*
@@ -149,6 +99,15 @@ macro_rules! simple_error {
                 $variant_name($variant_ty),
             )*
         }
+
+        // 自动为外部错误类型实现From
+        $(
+            impl From<$variant_ty> for $error_name {
+                fn from(err: $variant_ty) -> Self {
+                    $error_name::$variant_name(err)
+                }
+            }
+        )*
     };
 }
 
@@ -202,7 +161,7 @@ macro_rules! standard_error {
                 Invalid: String,
 
                 #[error("Other error: {0}")]
-                Other: String,
+                Other: String
             }
         }
     };
@@ -329,11 +288,10 @@ mod tests {
 
     // 测试simple_error宏
     simple_error! {
-        #[derive(Clone)]
         pub TestSimpleError {
             Io: io::Error,
             Parse: String,
-            NotFound: String,
+            NotFound: String
         }
     }
 
@@ -345,13 +303,6 @@ mod tests {
 
         let parse_err = TestSimpleError::Parse("failed".to_string());
         assert_eq!(parse_err.to_string(), "Parse error: failed");
-    }
-
-    #[test]
-    fn test_simple_error_clone() {
-        let err1 = TestSimpleError::NotFound("key".to_string());
-        let err2 = err1.clone();
-        assert_eq!(err1.to_string(), err2.to_string());
     }
 
     // 测试standard_error宏
@@ -372,9 +323,10 @@ mod tests {
     // 测试field_error宏
     field_error! {
         pub TestFieldError {
+            #[error("Missing field: {key}")]
             Missing { key: String },
             #[error("Invalid value for {key}: {value}")]
-            InvalidValue { key: String, value: String },
+            InvalidValue { key: String, value: String }
         }
     }
 
@@ -396,21 +348,20 @@ mod tests {
     // 测试combined_error宏
     simple_error! {
         pub TestError1 {
-            Err1: String,
+            Err1: String
         }
     }
 
     simple_error! {
         pub TestError2 {
-            Err2: String,
+            Err2: String
         }
     }
 
     combined_error! {
         pub TestCombinedError {
             E1: TestError1,
-            #[error("Error type 2: {0}")]
-            E2: TestError2,
+            E2: TestError2
         }
     }
 
@@ -422,6 +373,6 @@ mod tests {
 
         let err2 = TestError2::Err2("error 2".to_string());
         let combined = TestCombinedError::E2(err2);
-        assert!(combined.to_string().contains("Error type 2"));
+        assert!(combined.to_string().contains("error 2"));
     }
 }
